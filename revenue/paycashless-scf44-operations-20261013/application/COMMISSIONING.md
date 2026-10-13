@@ -98,3 +98,11 @@ At a narrow/mobile width, reopen the same workspace and use the navigation, tabl
 Download and actually open every JSON/CSV/HTML report. Inspect the actual full records and original amount strings. Extract the full delivered archive, open the included application with its selected runtime and received workspace, make the authorized customer edit, and open the returned project. Complete this with the original course, not a separate example that changes the case.
 
 The producing peer must LOOK at rendered output or actual screenshots and use the controls and attachments before calling the product client/demo-ready. HTTP success, source compilation, a peer review or a screenshot merely captured is not that operation. Record the exact outgoing source, workspace, runtime, viewport, source/attachment identities and actual result when the equipped owner completes it.
+
+## Continue the same mounted course through browser portability
+
+Use the existing original merchant/browser owner and retained operation. This source extension adds no independent provider or native producer.
+
+On the exact current app, keep a partially edited provider JSON field, source metadata, a chosen original source file and report name/destination. Download the complete working copy; inspect it in its original workspace. Make a later visible edit and restore explicitly. Reopen the application and verify the restored raw form text, complete retained selection, original request IDs and previous-view receipt. Download and actually open both the selected original file and prior-view JSON. A malformed or different-workspace working copy must leave the current view unchanged.
+
+At the narrow viewport, operate the same controls and Recovery. Newly imported pending requests must remain unsent until the operator uses the original explicit recovery control. Inspect both the browser file and the independently received native archive according to the original all-attachments requirement. Record actual results in this same commissioning operation; source review alone is not that result.

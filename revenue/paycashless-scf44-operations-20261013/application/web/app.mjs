@@ -1,5 +1,5 @@
 // MIT. Paycashless operator interface. Provider credentials stay on the host.
-import { canonical, verifyRequest, prepareRequest, initializeJournal, listRequests, getRequest, beginAttempt, finishAttempt, rebaseRequest, markApplied, saveView, fileHash } from './journal.mjs';
+import { canonical, verifyRequest, prepareRequest, initializeJournal, listRequests, getRequest, beginAttempt, finishAttempt, rebaseRequest, markApplied, saveView, fileHash, exportWorkingCopy, inspectWorkingCopy, restoreWorkingCopy, listWorkingCopyRestores, packWorkingFile, openWorkingFile } from './journal.mjs';
 import { exactObservation, resourceSummary, amountLabel, REGISTER_KINDS, OBSERVATION_SECTIONS } from './payment-display.mjs';
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
 const text=value=>value===null||value===undefined?'—':typeof value==='object'?JSON.stringify(value):String(value);
@@ -76,7 +76,8 @@ function renderOverview(){
  $('#overview-metrics').replaceChildren();for(const [label,key]of [['Payment books','books'],['Retained payments/resources','resources'],['Reconciliation editions','reconciliations'],['Report editions','reports']]){const metric=document.createElement('div');metric.className='metric';metric.innerHTML='<span>'+esc(label)+'</span><strong>'+esc(bootstrap.summary[key]??0)+'</strong>';$('#overview-metrics').append(metric);}
  $('#received-notice').replaceChildren();if(bootstrap.workspace.receivedFrom)$('#received-notice').append(jsonDetails('Received workspace provenance',bootstrap.workspace.receivedFrom));
 }
-async function remember(){await saveView(workspaceId,view);}
+let viewSaveTail=Promise.resolve();
+async function remember(){const id=workspaceId,snapshot=structuredClone(view);const next=viewSaveTail.then(()=>saveView(id,snapshot));viewSaveTail=next.catch(()=>{});return next;}
 async function navigate(next,{keepSelection=false}={}){
  const generation=++navigationGeneration;detailGeneration++;if(!titles[next])next='overview';page=next;view.page=next;$('#page-title').textContent=titles[next];
  for(const b of $$('#navigation [data-view]'))b.setAttribute('aria-current',b.dataset.view===next?'page':'false');
@@ -220,7 +221,7 @@ async function selectRecord(table,id){
 
 
 function addAction(label,callback,style){$('#detail-actions').append(button(label,callback,style));}
-function appendContent(node){$('#detail-content').append(node);}
+function appendContent(...nodes){$('#detail-content').append(...nodes);}
 async function renderDetail(table,row,generation=detailGeneration){
  if(table==='books'||table==='links'){await renderBookDetail(table,row);return;}
  if(table==='streams'){
@@ -273,10 +274,12 @@ async function renderDetail(table,row,generation=detailGeneration){
  }else if(table==='reconciliations'){
  appendContent(renderReconciliation(row.data));appendContent(jsonDetails('Pinned source and version selection',{sourceIds:row.sourceIds,versionIds:row.versionIds,linkIds:row.linkIds,bookVersionId:row.bookVersionId}));
  const form=document.createElement('form');form.id='report-form';form.innerHTML='<h3>Create report from this edition</h3><label>Report name<input name="name" value="'+esc(row.name??'Payment and settlement report')+'"></label><button type="submit">Create full JSON, CSV and HTML report</button>';
+ bindDetailDraft(form,'report-name:'+row.id);
  form.addEventListener('submit',event=>{event.preventDefault();handle(()=>command('report.create',{reconciliationId:row.id,name:form.elements.name.value}));});appendContent(form);
  }else if(table==='reports'){
  appendContent(definitions({Edition:row.reconciliationId,Created:row.createdAt}));appendContent(fileList(row.files??[]));appendContent(jsonDetails('Report scope',row.scope));
  const form=document.createElement('form');form.id='report-export-form';form.innerHTML='<h3>Export this report</h3><label>Destination directory<input name="destination" required placeholder="/private/deliveries/paycashless-report"></label><button type="submit">Create complete report delivery</button>';
+ bindDetailDraft(form,'report-export:'+row.id);
  form.addEventListener('submit',event=>{event.preventDefault();handle(()=>command('report.export',{reportId:row.id,destination:form.elements.destination.value}));});appendContent(form);
  }else appendContent(jsonDetails('Full record',row,true));
 }
@@ -460,12 +463,14 @@ async function renderBookDetail(table,row){
  }
 }
 let draftTimer=null;
-const draftForms=['stream-form','book-form','link-form','operation-form','reconciliation-form','source-form','export-form','receive-form','profile-form','dispatch-form','record-filter'];
-async function rememberDrafts(){
- if(!workspaceId)return;const drafts={};
+const draftForms=['stream-form','book-form','link-form','operation-form','reconciliation-form','source-form','file-form','export-form','unpack-form','receive-form','profile-form','dispatch-form','record-filter'];
+function captureWorkingView(){
+ const drafts={};
  for(const id of draftForms){const form=$('#'+id),values={};for(const e of form.elements){if(!e.name||e.type==='file'||['submit','button'].includes(e.type))continue;values[e.name]=e.type==='checkbox'?e.checked:e.value;}drafts[id]=values;}
  for(const section of ['params','query','body'])drafts['operation-form']['action-'+section]=$('#action-'+section).value;
- view.drafts=drafts;view.dirtyForms=['profile-form','dispatch-form','receive-form'].filter(id=>$('#'+id).dataset.dirty==='true');await remember();
+ view.drafts=drafts;view.dirtyForms=['profile-form','dispatch-form','receive-form'].filter(id=>$('#'+id).dataset.dirty==='true');return structuredClone(view);
+}
+async function rememberDrafts(){if(!workspaceId)return;captureWorkingView();await remember();
 }
 function restoreDrafts(){
  for(const [id,values]of Object.entries(view.drafts??{})){if(!draftForms.includes(id))continue;const f=$('#'+id);for(const [name,value]of Object.entries(values)){if(name.startsWith('action-')){const e=$('#'+name);if(e)e.value=value;continue;}const e=f.elements[name];if(e&&e.type!=='file'){if(e.type==='checkbox')e.checked=value===true;else e.value=value;}}}
@@ -478,7 +483,7 @@ bindForm('#stream-form',form=>{const v=formObject(form),args={connectionAlias:v.
 bindForm('#book-form',f=>{const v=formObject(f),args={definition:bookDefinition(f),sourceIds:ids(v.sourceIds)};if(v.bookId.trim())args.bookId=v.bookId.trim();return command('book.save',args);});
 bindForm('#link-form',f=>command('link.save',{bookVersionId:f.elements.bookVersionId.value.trim(),decision:linkDecision(f)}));
 bindForm('#file-form',form=>{
- const file=form.elements.file.files[0];if(!file)throw fail('SOURCE_FILE_REQUIRED','Select a complete file.');
+ const file=selectedOriginalFile(form,'file');if(!file)throw fail('SOURCE_FILE_REQUIRED','Select a complete file.');
  const args={filename:file.name},submittedWorkspace=workspaceId;
  return serialized(async()=>{if(workspaceId!==submittedWorkspace)throw fail('WORKSPACE_CHANGED','Reopen the submitted file in its original workspace.');
  const record=await prepareRequest({workspaceId,revision:bootstrap.workspace.revision,kind:'file-upload',method:'file.retain',args,file,label:'Retain '+file.name});return transmit(record);});
@@ -554,7 +559,7 @@ async function applyResult(record){
 let recoveryPasses=0;
 function scheduleRecovery(){if(pollTimer||recoveryPasses>=8)return;pollTimer=setTimeout(()=>{pollTimer=null;recoveryPasses++;handle(()=>recoverRequests({quiet:true}));},6000);}
 async function recoverRequests({quiet=false}={}){
- const all=await listRequests(workspaceId);const unfinished=all.filter(row=>row.status==='COMPLETE'&&!row.appliedAt||['PENDING','RUNNING','UNCERTAIN'].includes(row.status));
+ const all=await listRequests(workspaceId);const unfinished=all.filter(row=>(!quiet||!row.needsExplicitRecovery)&&(row.status==='COMPLETE'&&!row.appliedAt||['PENDING','RUNNING','UNCERTAIN'].includes(row.status)));
  for(const row of unfinished){try{await serialized(()=>transmit(row,{recover:true}));}catch(error){if(!quiet)report(error);}}
  await renderRecovery();
 }
@@ -563,7 +568,7 @@ async function renderRecovery(){
  const host=$('#recovery-list');host.replaceChildren();if(!requests.length){host.innerHTML='<p class="empty">No browser requests have been recorded in this workspace.</p>';return;}
  const table=document.createElement('table');table.innerHTML='<thead><tr><th>Request</th><th>State</th><th>Attempts</th><th>Outcome / recovery</th></tr></thead>';const body=document.createElement('tbody');
  for(const row of requests){const tr=document.createElement('tr'),name=document.createElement('td'),state=document.createElement('td'),attempt=document.createElement('td'),action=document.createElement('td');tr.dataset.requestId=row.id;tr.dataset.requestStatus=row.status;name.textContent=row.label;const id=document.createElement('small');id.className='mono';id.textContent=row.id;name.append(id);if(row.source){const detail=document.createElement('small');detail.textContent=row.source.name+' · '+row.source.size+' bytes · '+short(row.source.sha256);name.append(detail);}
- state.append(badge(row.status));attempt.textContent=String(row.attempts.length);
+ state.append(badge(row.status));if(row.needsExplicitRecovery){const note=document.createElement('small');note.textContent='Restored request · explicit recovery required';state.append(note);}attempt.textContent=String(row.attempts.length);
  if(row.error){const p=document.createElement('p');p.textContent=row.error.code+': '+row.error.message;action.append(p);}
  if(row.status==='REJECTED'&&row.error?.code==='REVISION_CONFLICT')action.append(button('Refresh revision and retry same request',()=>serialized(async()=>{await refreshBootstrap();const fresh=await getRequest(row.id);const rebased=await rebaseRequest(fresh,bootstrap.workspace.revision);await transmit(rebased);})));
  else if(row.status!=='REJECTED'&&(row.status!=='COMPLETE'||!row.appliedAt))action.append(button(row.status==='COMPLETE'?'Restore completed result':'Check original request',()=>serialized(()=>transmit(row,{recover:true}))));
@@ -573,7 +578,88 @@ async function renderRecovery(){
  const details=jsonDetails('Request arguments and attempts',{request:row.request,intentSha256:row.intentSha256,source:row.source,attempts:row.attempts,revisionHistory:row.revisionHistory,response:row.response,error:row.error});action.append(details);tr.append(name,state,attempt,action);body.append(tr);}
  table.append(body);host.append(table);
 }
+
+const selectedFileFields=[['source-form','file'],['file-form','file'],['unpack-form','archive']];
+let retainedFileObjects=new Map(),workingCopyPacket=null,workingCopyGeneration=0,workingCopyBusy=false;
+const fileSelectionGenerations=new Map();
+function selectedOriginalFile(form,name){return form.elements[name].files[0]??retainedFileObjects.get(form.id+':'+name)??null;}
+function showSelectedFiles(){
+ for(const [formId,name]of selectedFileFields){const key=formId+':'+name,input=$('#'+formId).elements[name];let holder=document.getElementById('retained-'+formId+'-'+name);
+  if(!holder){holder=document.createElement('div');holder.id='retained-'+formId+'-'+name;holder.className='muted';input.after(holder);}holder.replaceChildren();
+  input.required=!retainedFileObjects.has(key);
+  const receipt=view.fileSelections?.[key];if(!receipt)continue;
+  holder.append(document.createTextNode('Retained selection: '+receipt.name+' · '+receipt.bytes+' bytes · '+receipt.sha256));
+  holder.append(button('Download complete selected file',async()=>{const file=await openWorkingFile(receipt);saveBlob(file,receipt.name);}));
+  holder.append(button('Clear this file selection',async()=>{fileSelectionGenerations.set(key,(fileSelectionGenerations.get(key)??0)+1);input.value='';retainedFileObjects.delete(key);delete view.fileSelections[key];showSelectedFiles();await remember();}));
+ }
+}
+async function checkedWorkingView(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw fail('WORKING_COPY_VIEW_INVALID','Retain a complete browser working view.');
+ for(const key of ['drafts','fileSelections','detailDrafts'])if(value[key]!==undefined&&(!value[key]||typeof value[key]!=='object'||Array.isArray(value[key])))throw fail('WORKING_COPY_VIEW_INVALID','Retain the complete '+key+' object.');
+ if(value.page!==undefined&&typeof value.page!=='string')throw fail('WORKING_COPY_VIEW_INVALID','Keep the original page name.');
+ if(value.dirtyForms!==undefined&&(!Array.isArray(value.dirtyForms)||value.dirtyForms.some(id=>typeof id!=='string')))throw fail('WORKING_COPY_VIEW_INVALID','Keep the complete original dirty-form selection.');
+ if(value.selected!==undefined&&value.selected!==null&&(!value.selected||typeof value.selected!=='object'||typeof value.selected.table!=='string'||typeof value.selected.id!=='string'))throw fail('WORKING_COPY_VIEW_INVALID','Keep the exact selected native record.');
+ const files=new Map(),known=new Set(selectedFileFields.map(([f,n])=>f+':'+n));
+ for(const [key,receipt]of Object.entries(value.fileSelections??{})){if(!known.has(key))throw fail('WORKING_COPY_FILE_FIELD_INVALID','This selected file does not belong to an original intake form.');files.set(key,await openWorkingFile(receipt));}
+ for(const [id,fields]of Object.entries(value.drafts??{})){if(!fields||typeof fields!=='object'||Array.isArray(fields))throw fail('WORKING_COPY_VIEW_INVALID','Keep each full form draft.');if(draftForms.includes(id))for(const field of Object.values(fields))if(typeof field!=='string'&&typeof field!=='boolean')throw fail('WORKING_COPY_VIEW_INVALID','Keep form draft values as their original text or check state.');}
+ for(const fields of Object.values(value.detailDrafts??{}))if(!fields||typeof fields!=='object'||Array.isArray(fields)||Object.values(fields).some(x=>typeof x!=='string'))throw fail('WORKING_COPY_VIEW_INVALID','Keep the complete original report fields.');
+ return files;
+}
+async function restoreSelectedFiles(value){retainedFileObjects=await checkedWorkingView(value);for(const[f,n]of selectedFileFields)$('#'+f).elements[n].value='';showSelectedFiles();}
+async function captureSelectedFiles(){
+ const files={...(view.fileSelections??{})};
+ for(const [formId,name]of selectedFileFields){const key=formId+':'+name,file=$('#'+formId).elements[name].files[0];if(file){files[key]=await packWorkingFile(file);retainedFileObjects.set(key,file);}}
+ view.fileSelections=files;showSelectedFiles();
+}
+for(const [formId,name]of selectedFileFields){
+ const input=$('#'+formId).elements[name],key=formId+':'+name;
+ input.addEventListener('change',()=>{const file=input.files[0],id=workspaceId,generation=(fileSelectionGenerations.get(key)??0)+1;fileSelectionGenerations.set(key,generation);
+  retainedFileObjects.delete(key);view.fileSelections??={};delete view.fileSelections[key];showSelectedFiles();
+  handle(async()=>{if(file){const receipt=await packWorkingFile(file);if(workspaceId!==id||fileSelectionGenerations.get(key)!==generation||input.files[0]!==file)return;view.fileSelections[key]=receipt;retainedFileObjects.set(key,file);}await rememberDrafts();showSelectedFiles();});
+ });
+}
+function bindDetailDraft(form,key){
+ const saved=view.detailDrafts?.[key]??{};for(const [name,value]of Object.entries(saved))if(form.elements[name])form.elements[name].value=value;
+ form.addEventListener('input',()=>{view.detailDrafts??={};view.detailDrafts[key]=formObject(form);handle(remember);});
+}
+async function renderWorkingCopyHistory(){
+ if(!workspaceId)return;const id=workspaceId,generation=workingCopyGeneration,records=await listWorkingCopyRestores(id);if(id!==workspaceId||generation!==workingCopyGeneration)return;
+ const host=$('#working-copy-history');host.replaceChildren();if(!records.length)return;host.append(jsonDetails('Complete retained restore history',records));
+ for(const record of records)host.append(button('Download previous full view · '+record.id,()=>downloadText(pretty(record)+'\n','paycashless-prior-view-'+record.id+'.json')));
+}
+async function freezeWorkingCopy(task){
+ if(workingCopyBusy)throw fail('WORKING_COPY_BUSY','Finish the current working-copy operation.');
+ workingCopyBusy=true;const shell=$('#shell'),previous=shell.inert;shell.inert=true;clearTimeout(draftTimer);draftTimer=null;clearTimeout(pollTimer);pollTimer=null;
+ const done=busy('Working with complete browser file…');try{await viewSaveTail;return await task();}finally{done();workingCopyBusy=false;shell.inert=previous||!$('#access-screen').hidden;}
+}
+$('#export-working-copy').addEventListener('click',()=>handle(()=>serialized(()=>freezeWorkingCopy(async()=>{
+ await captureSelectedFiles();const current=captureWorkingView(),packet=await exportWorkingCopy(workspaceId,{view:current});
+ downloadText(pretty(packet)+'\n','paycashless-working-copy-'+workspaceId+'.json');notice('Downloaded complete working view, original requests and all retained file bytes.');
+}))));
+$('#working-copy-file').addEventListener('change',()=>{workingCopyGeneration++;workingCopyPacket=null;$('#restore-working-copy').disabled=true;$('#working-copy-inspection').replaceChildren();});
+$('#inspect-working-copy').addEventListener('click',()=>handle(async()=>{
+ const file=$('#working-copy-file').files[0];if(!file)throw fail('WORKING_COPY_FILE_REQUIRED','Select the complete browser working-copy file.');
+ const generation=++workingCopyGeneration,id=workspaceId;let packet;try{packet=JSON.parse(await file.text());}catch(e){throw fail('WORKING_COPY_JSON_INVALID','Select the complete JSON file: '+e.message);}
+ const inspection=await inspectWorkingCopy(packet,id);await checkedWorkingView(inspection.view);
+ if(generation!==workingCopyGeneration||id!==workspaceId)return;workingCopyPacket=packet;$('#working-copy-inspection').replaceChildren(renderData({...inspection,selectedFiles:Object.keys(inspection.view.fileSelections??{}).length},'Complete working-copy inspection'));$('#restore-working-copy').disabled=false;
+}));
+$('#restore-working-copy').addEventListener('click',()=>handle(()=>serialized(()=>freezeWorkingCopy(async()=>{
+ if(!workingCopyPacket)throw fail('WORKING_COPY_INSPECTION_REQUIRED','Inspect the complete working copy first.');
+ const packet=workingCopyPacket;workingCopyGeneration++;navigationGeneration++;listGeneration++;detailGeneration++;
+ for(const key of fileSelectionGenerations.keys())fileSelectionGenerations.set(key,fileSelectionGenerations.get(key)+1);
+ const inspection=await inspectWorkingCopy(packet,workspaceId),files=await checkedWorkingView(inspection.view);
+ await captureSelectedFiles();await rememberDrafts();const result=await restoreWorkingCopy(packet,workspaceId);view=result.view;retainedFileObjects=files;
+ for(const id of draftForms){$('#'+id).reset();delete $('#'+id).dataset.dirty;}for(const[f,n]of selectedFileFields)$('#'+f).elements[n].value='';
+ await refreshBootstrap();restoreDrafts();showSelectedFiles();selected=null;$('#record-detail').hidden=true;$('#file-result').replaceChildren();
+ if(view.lastFile)$('#file-result').replaceChildren(definitions({'Retained file':view.lastFile.id,'SHA-256':view.lastFile.sha256,Bytes:view.lastFile.bytes}),fileList([view.lastFile]));
+ const restoredPage=view.page??'overview',restoredSelection=view.selected;await navigate(restoredPage,{keepSelection:true});if(restoredSelection?.table===page&&tables.has(page))await selectRecord(restoredSelection.table,restoredSelection.id);
+ renderAction();await renderRecovery();await renderWorkingCopyHistory();workingCopyPacket=null;$('#restore-working-copy').disabled=true;
+ $('#working-copy-inspection').replaceChildren(renderData(result,'Restored complete working copy'));notice('Restored working copy. Imported requests require explicit recovery; no request was dispatched.');
+}))));
+window.addEventListener('pagehide',()=>{workingCopyGeneration++;workingCopyPacket=null;$('#restore-working-copy').disabled=true;});
+
 function renderTransfer(){
+ handle(renderWorkingCopyHistory);
  const exported=view.lastExport,host=$('#export-result');host.hidden=!exported;host.replaceChildren();
  if(exported){const heading=document.createElement('h2');heading.textContent='Complete export';host.append(heading,definitions({ID:exported.id??exported.exportId,Directory:exported.directory??exported.sourceDirectory,'Manifest SHA-256':exported.manifestSha256}));const id=exported.id??exported.exportId;if(id)host.append(button('Download full archive',()=>download('/api/exports/'+encodeURIComponent(id)+'/archive','paycashless-'+id+'.tar.gz')));host.append(jsonDetails('Complete export result',exported));}
  const form=$('#receive-form');if(view.receiveSource&&!form.dataset.dirty)form.elements.sourceDirectory.value=view.receiveSource;if(view.receiveHash&&!form.dataset.dirty)form.elements.expectedManifestSha256.value=view.receiveHash;
@@ -605,7 +691,7 @@ bindForm('#record-filter',()=>loadRecords(false));
 $('#records-more').addEventListener('click',()=>handle(()=>loadRecords(true)));
 $('#close-detail').addEventListener('click',()=>{$('#record-detail').hidden=true;});
 bindForm('#source-form',form=>{
- const input=formObject(form),file=form.elements.file.files[0];if(!file)throw fail('SOURCE_FILE_REQUIRED','Select a complete file.');
+ const input=formObject(form),file=selectedOriginalFile(form,'file');if(!file)throw fail('SOURCE_FILE_REQUIRED','Select a complete file.');
  const args={connectionAlias:input.connectionAlias,action:input.action,input:objectInput(input.input,'Source request input'),bodyComplete:form.elements.bodyComplete.checked,filename:file.name};
  if(input.observedAt)args.observedAt=nativeDate(input.observedAt);if(input.status)args.status=Number(input.status);
  const submittedWorkspace=workspaceId;
@@ -621,7 +707,7 @@ bindForm('#dispatch-form',form=>command('delivery.configure',{enabled:form.eleme
 for(const id of ['#profile-form','#dispatch-form','#receive-form'])$(id).addEventListener('input',()=>{$(id).dataset.dirty='true';});
 bindForm('#export-form',form=>command('workspace.export',{destination:form.elements.destination.value.trim()}));
 bindForm('#unpack-form',form=>{
- const file=form.elements.archive.files[0];if(!file)throw fail('ARCHIVE_REQUIRED','Select the full delivery archive.');
+ const file=selectedOriginalFile(form,'archive');if(!file)throw fail('ARCHIVE_REQUIRED','Select the full delivery archive.');
  const manifestSha256=form.elements.manifestSha256.value.trim().toLowerCase()||null;
  if(manifestSha256&&!/^[a-f0-9]{64}$/.test(manifestSha256))throw fail('MANIFEST_HASH_INVALID','Enter a complete SHA-256 hash.');
  const submittedWorkspace=workspaceId;delete $('#receive-form').dataset.dirty;
@@ -641,7 +727,7 @@ $('#refresh').addEventListener('click',()=>handle(async()=>{await refreshBootstr
 bindForm('#access-form',async form=>{token=form.elements['operator-token'].value.trim();try{await open();sessionStorage.setItem('paycashless.operator.token',token);form.reset();}catch(error){$('#access-error').textContent=error.message;throw error;}});
 async function open(){
  const done=busy('Opening selected workspace…');try{
- await refreshBootstrap();const saved=await initializeJournal(workspaceId);view=saved.view??{};requests=saved.requests;restoreDrafts();if(view.lastFile){$('#file-result').replaceChildren(definitions({'Retained file':view.lastFile.id,'SHA-256':view.lastFile.sha256,Bytes:view.lastFile.bytes}),fileList([view.lastFile]));}$('#access-screen').hidden=true;$('#shell').inert=false;await navigate(view.page??'overview',{keepSelection:true});if(view.selected?.table===page&&tables.has(page))await selectRecord(view.selected.table,view.selected.id);renderAction();await renderRecovery();await recoverRequests({quiet:true});
+ await refreshBootstrap();const saved=await initializeJournal(workspaceId);view=saved.view??{};requests=saved.requests;restoreDrafts();await restoreSelectedFiles(view);if(view.lastFile){$('#file-result').replaceChildren(definitions({'Retained file':view.lastFile.id,'SHA-256':view.lastFile.sha256,Bytes:view.lastFile.bytes}),fileList([view.lastFile]));}$('#access-screen').hidden=true;$('#shell').inert=false;await navigate(view.page??'overview',{keepSelection:true});if(view.selected?.table===page&&tables.has(page))await selectRecord(view.selected.table,view.selected.id);renderAction();await renderRecovery();await recoverRequests({quiet:true});
  }finally{done();}
 }
 $('.brand').addEventListener('click',event=>{event.preventDefault();handle(()=>navigate('overview'));});

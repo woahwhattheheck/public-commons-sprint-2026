@@ -6,7 +6,7 @@ import {
   readJSON, writeExact, fileDescriptor, copyDeclared, verifyFile, lease, syncDirectory,
 } from './files.mjs';
 import {
-  REQUIRED_APPLICATION_FILES, capturePaycashlessSource, verifyPaycashlessRuntime, readPaycashlessRuntimeManifest,
+  completePaycashlessSource, capturePaycashlessSource, verifyPaycashlessRuntime, readPaycashlessRuntimeManifest,
   restorePaycashlessRuntime, publicPaycashlessRuntime,
 } from './runtime.mjs';
 
@@ -85,7 +85,7 @@ export async function inspectPaycashlessDelivery(args) {
       need(sameMember(declared.get('application/source/' + file.path), file),
         'APPLICATION_SOURCE_COHORT_MISMATCH');
     }
-    need(REQUIRED_APPLICATION_FILES.every(name => names.has(name)) &&
+    need(completePaycashlessSource(source, hash(sourceBytes)) &&
       application.entrypoints?.server === 'server.mjs' &&
       application.entrypoints?.cli === 'cli.mjs' && application.entrypoints?.worker === 'worker.mjs',
       'APPLICATION_ENTRYPOINT_MISMATCH');
