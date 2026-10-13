@@ -8,6 +8,16 @@ Needs expert review before applying demonstration criteria to an actual monitori
 
 Read [the complete field/laboratory chapter](SIMULATED_FIELDWORK.md) for the authored laboratory inputs, explicit project criteria and original native continuation. All collection dates, sample values, control relationships and review decisions in that chapter are demonstration inputs. The maintained application calculates the QC metrics and produces the saved scientific reports. Preserve that distinction in the presentation.
 
+## Use the report's original companion links
+
+The same course now opens each selected native QC and corrective-action HTML report through the existing Operator file session. For every internal link in that report, it follows the actual browser anchor and checks the downloaded/opened member against the original native ticket's byte count and SHA-256. This exercises relative JSON/CSV/evidence navigation directly from the readable report, including reports selected through the explicit presentation mapping. It leaves external method/source websites as their original cited links.
+
+The course uses a temporary tab in the existing authenticated context for these read/download actions, closes only that tab, and returns to the original field-plan/task view. It never installs a token into the report or loosens the application's general HTML policy. The report permits only its original SHA-256-bound `window.print()` event handler; other scripts and forms remain disabled; the report-specific route provides only its verified original members. The temporary tab has its own actual desktop and390px screenshots. Inspect those returned images as part of the producing peer's complete attachment review; the helper's byte/navigation checks do not substitute for LOOK/use.
+
+When an original Print control is present, the course clicks that unchanged control and observes the actual `beforeprint` event. A headed browser may require the producing operator to close its native print dialog before continuing. This does not select a printer or purchase a print service. Each report leg retains `*-linked-report.png`, `*-linked-report-narrow.png`, its clicked original companions and a complete `*-report-navigation.json` listing the report/member hashes. Any inline member opened by the browser also receives an `*-opened-*.png` view. Paths remain within the current attempt directory. The fresh-browser leg repeats the same report navigation against the newly opened Operator session. Existing native export tasks, complete ZIPs, report identities, original-plan equality checks and private-draft isolation/recovery are retained.
+
+If a report link returns an authorization error, an absent member or changed bytes, keep the original course/attempt and return that actual error to the report-route owner. Resume the same accepted export identities after the source correction. Use the original full ZIP and extract all members together for offline relative navigation; do not treat a lone downloaded HTML as a complete report package.
+
 ## What the operator will show
 
 Open the completed plan in **Implementation & fieldwork**. The two original sampling rounds tell one useful story:
