@@ -21,6 +21,16 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/joint_delivery.py",
+    "operator/joint_delivery.py",
+    "source/joint-delivery/20261013/profile.json",
+    "operator/web/joint_delivery.mjs",
+    "operator/web/joint_delivery.css",
+    "operator/extensions/joint-delivery.json",
+    "source_tools/receive_joint_delivery.py",
+    "source_tools/receive_joint_delivery_browser.mjs",
+    "JOINT_DELIVERY.md",
+    "integration/component_fragments/joint-delivery.json",
     "operator/web/conservation_working.mjs",
     "operator/web/conservation_working_view.mjs",
     "operator/CONSERVATION_WORKING_FILES.md",
@@ -639,6 +649,16 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/joint_delivery.py",
+    "operator/joint_delivery.py",
+    "source/joint-delivery/20261013/profile.json",
+    "operator/web/joint_delivery.mjs",
+    "operator/web/joint_delivery.css",
+    "operator/extensions/joint-delivery.json",
+    "source_tools/receive_joint_delivery.py",
+    "source_tools/receive_joint_delivery_browser.mjs",
+    "JOINT_DELIVERY.md",
+    "integration/component_fragments/joint-delivery.json",
     "operator/web/conservation_working.mjs",
     "operator/web/conservation_working_view.mjs",
     "operator/CONSERVATION_WORKING_FILES.md",
@@ -2541,7 +2561,82 @@ def verify_conservation_working_dependencies(application, pending):
     for name in component.get("paths", []):
         assembled_data(application, pending, name)
 
+def verify_joint_delivery_dependencies(application, pending):
+    """Receive Joint delivery with the original Customer reviews authority."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+    if (source("model/joint_delivery.py") is None
+            and source("operator/extensions/joint-delivery.json") is None):
+        return
+    for name in (
+        "model/joint_delivery.py",
+        "operator/joint_delivery.py",
+        "source/joint-delivery/20261013/profile.json",
+        "operator/web/joint_delivery.mjs",
+        "operator/web/joint_delivery.css",
+        "operator/extensions/joint-delivery.json",
+        "source_tools/receive_joint_delivery.py",
+        "source_tools/receive_joint_delivery_browser.mjs",
+        "JOINT_DELIVERY.md",
+        "integration/component_fragments/joint-delivery.json",
+        "model/common.py",
+        "model/reviews.py",
+        "model/review_handback.py",
+        "model/review_receiving.py",
+        "model/review_worklist.py",
+        "operator/customer_reviews.py",
+        "operator/review_app.html",
+        "operator/web/reviews.mjs",
+        "model/portable.py",
+        "model/workspace.py",
+        "operator/web/app.mjs",
+    ):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending,
+        "operator/extensions/joint-delivery.json"))
+    if (descriptor.get("schema") != "upstate.operator-extension/v1"
+            or descriptor.get("id") != "joint-delivery"
+            or not {"joint_delivery.mjs", "joint_delivery.css"}.issubset(
+                descriptor.get("assets", []))):
+        raise ValueError("Receive both registered original Joint delivery assets")
+    if not {"customer.review.create", "customer.review.export"}.issubset(
+            descriptor.get("requires_actions", [])):
+        raise ValueError("Retain original Customer reviews actions for Joint delivery")
+    if (descriptor.get("backend", {}).get("module") != "joint_delivery"
+            or descriptor.get("client", {}).get("module") != "/web/joint_delivery.mjs"):
+        raise ValueError("Retain original Joint delivery model and browser registration")
+    app = assembled_data(application, pending, "operator/web/app.mjs")
+    if b"openSavedCustomerReview" not in app:
+        raise ValueError("Receive the original operator's Customer review opener")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/joint-delivery.json"))
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "joint-delivery"):
+        raise ValueError("Retain the original Joint delivery component identity")
+    component = fragment.get("components", {}).get("joint-delivery", {})
+    expected_paths = {
+        "model/joint_delivery.py",
+        "operator/joint_delivery.py",
+        "source/joint-delivery/20261013/profile.json",
+        "operator/web/joint_delivery.mjs",
+        "operator/web/joint_delivery.css",
+        "operator/extensions/joint-delivery.json",
+        "source_tools/receive_joint_delivery.py",
+        "source_tools/receive_joint_delivery_browser.mjs",
+        "JOINT_DELIVERY.md",
+        "integration/component_fragments/joint-delivery.json",
+    }
+    if not expected_paths.issubset(component.get("paths", [])):
+        raise ValueError("Receive the complete original Joint delivery component paths")
+    if not {"core", "study-transfer", "project-transfer"}.issubset(
+            component.get("requires", [])):
+        raise ValueError("Retain original review, Study and Project receiving dependencies")
+    for name in component.get("paths", []):
+        assembled_data(application, pending, name)
+
+
 def verify_composition(application, pending):
+    verify_joint_delivery_dependencies(application, pending)
     verify_conservation_joint_dependencies(application, pending)
     verify_advancing_study_dependencies(application, pending)
     verify_conservation_sampling_dependencies(application, pending)
