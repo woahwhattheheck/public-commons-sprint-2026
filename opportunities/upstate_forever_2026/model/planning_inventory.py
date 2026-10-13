@@ -22,7 +22,16 @@ from .rasters import (MASS_UNITS, native_vector_path, polygon_union,
 
 KIND = "planning-inventories"
 SCHEMA = "upstate.planning-unit-inventory/v1"
-METHOD = "common-valid-original-polygons/1"
+METHOD = "common-valid-original-polygons/2"
+LEGACY_METHOD = "common-valid-original-polygons/1"
+PRECISION_METHOD = (
+    "For each original polygon on the same common-valid cells, sum half an ULP "
+    "of every retained baseline and alternative mass value in its actual raster "
+    "dtype, then add a conservative float64 summation/subtraction bound. Raw "
+    "changes remain unchanged; portfolio scoring treats changes within this "
+    "encoding bound as zero. This is a numeric resolution bound, not model "
+    "uncertainty or a minimum ecological benefit."
+)
 METRICS = {
     "nitrogen_export": ("nitrogen", "nitrogen_kg_year", "kg/year"),
     "phosphorus_export": ("phosphorus", "phosphorus_kg_year", "kg/year"),
@@ -33,7 +42,7 @@ FIELDS = (
     "reporting_area_ha", "protected_fraction", "source_water",
     "high_quality_context", "nitrogen_kg_year", "phosphorus_kg_year",
     "sediment_t_year", "priority_mean", "reporting_pixels", "valid_pixels",
-    "coverage_fraction", "scenario_changes",
+    "coverage_fraction", "scenario_changes", "scenario_precision",
 )
 CONTEXT = {
     "protected_fraction": None, "source_water": None,
@@ -152,7 +161,7 @@ def _native_cohort(runs, outputs):
     }
 
 
-def _inputs(workspace, selection):
+def _inputs(workspace, selection, *, method=METHOD):
     runs = [workspace.inspect_run(key) for key in
             [selection["baseline_run_id"], *selection["scenario_run_ids"]]]
     outputs = common_comparison_outputs(runs)
@@ -189,7 +198,7 @@ def _inputs(workspace, selection):
     reporting_mask = verify_file(grid_root, grid["files"]["reporting_mask"])
     reporting_area = verify_file(grid_root, grid["files"]["reporting_area"])
     identity = {
-        "method": METHOD, "selection": selection, "grid_id": grid_id,
+        "method": method, "selection": selection, "grid_id": grid_id,
         "profile_id": profile_id, "source": entry,
         "native_versions": native_versions,
         "reporting_mask": grid["files"]["reporting_mask"],
@@ -225,6 +234,35 @@ def _window_tiles(bounds, dataset, size=512):
     for row in range(y0, y1, size):
         for column in range(x0, x1, size):
             yield Window(column, row, min(size, x1-column), min(size, y1-row))
+
+
+def _encoding_half_ulp(values, dtype):
+    """Round-to-nearest encoding radius in the actual retained mass dtype."""
+    import numpy as np
+    kind = np.dtype(dtype)
+    if np.issubdtype(kind, np.integer):
+        return 0.0
+    if not np.issubdtype(kind, np.floating):
+        raise ValueError("Native mass precision requires a real numeric raster dtype")
+    encoded = np.asarray(values, dtype=kind)
+    # Promote spacing before halving; round outward to retain subnormal bounds.
+    spacing = np.spacing(np.abs(encoded)).astype("float64")
+    if not np.isfinite(spacing).all():
+        raise ValueError("Retained mass is too large to bound its encoding precision")
+    half = np.nextafter(spacing * 0.5, np.inf)
+    return float(half.sum(dtype="float64"))
+
+
+def _change_precision(a, b, a_encoding, b_encoding, count):
+    # Two additions per cell enclose tile sums, accumulation and subtraction.
+    count_epsilon = (2 * count + 2) * math.ulp(1.0)
+    if count_epsilon >= 1:
+        raise ValueError("Native mass cell count exceeds finite precision bounds")
+    arithmetic = count_epsilon / (1 - count_epsilon) * (abs(a) + abs(b))
+    bound = a_encoding + b_encoding + arithmetic
+    if not math.isfinite(bound):
+        raise ValueError("Native mass encoding bound overflowed")
+    return math.nextafter(bound, math.inf) if bound else 0.0
 
 
 def _commit_csv(pending, destination):
@@ -359,6 +397,8 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                                 "Planning intake requires " + expected_units + " in both the "
                                 "retained artifact and raster tags: " + run["id"] + "/" + name)
                         datasets[run["id"]][name] = dataset
+                raster_dtypes = {run["id"]: {name: datasets[run["id"]][name].dtypes[0]
+                                  for name in outputs} for run in runs}
                 reporting_rows, _ = vector_geometry(inputs["reporting_area"], target_crs=grid_crs)
                 reporting_geometry = polygon_union(reporting_rows)
                 stack.enter_context(vector_environment())
@@ -431,6 +471,7 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                         counters["outside_reporting_area"] += 1
                         continue
                     totals = {run["id"]: {name: 0.0 for name in outputs} for run in runs}
+                    encoding = {run["id"]: {name: 0.0 for name in outputs} for run in runs}
                     reporting_pixels = valid_pixels = 0
                     for window in _window_tiles(reporting_intersection.bounds, mask):
                         window_shape = (int(window.height), int(window.width))
@@ -459,8 +500,10 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                         valid_pixels += int(common.sum())
                         for run in runs:
                             for pollutant in outputs:
-                                totals[run["id"]][pollutant] += float(
-                                    values[run["id"]][pollutant][common].sum(dtype="float64"))
+                                cell_values = values[run["id"]][pollutant][common]
+                                totals[run["id"]][pollutant] += float(cell_values.sum(dtype="float64"))
+                                encoding[run["id"]][pollutant] += _encoding_half_ulp(
+                                    cell_values, datasets[run["id"]][pollutant].dtypes[0])
                     if not reporting_pixels:
                         counters["features_without_reporting_pixels"] += 1
                     if not valid_pixels:
@@ -487,6 +530,14 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                             for name in outputs
                         }
                     row["scenario_changes"] = _json(changes)
+                    row["scenario_precision"] = _json({
+                        run["id"]: {
+                            name: (_change_precision(
+                                totals[baseline["id"]][name], totals[run["id"]][name],
+                                encoding[baseline["id"]][name], encoding[run["id"]][name],
+                                valid_pixels) if valid_pixels else None)
+                            for name in outputs}
+                        for run in runs[1:]})
                     if any(not math.isfinite(total) for total in
                            (value for group in totals.values() for value in group.values())):
                         raise ValueError("Retained feature mass aggregation overflowed")
@@ -523,6 +574,8 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                 "computation_crs": inputs["grid"]["grid"]["crs"],
                 "area_method": "Original polygons projected to the retained metre CRS; geometric hectares.",
                 "mass_method": "Float64 sums of retained annual mass per pixel, with no further area conversion.",
+                "precision_method": PRECISION_METHOD,
+                "raster_dtypes": raster_dtypes,
                 "csv_fields": list(FIELDS), "files": {"csv": csv_description},
             }
             inventory_path = directory / "inventory.json"
@@ -585,7 +638,7 @@ def inspect(workspace, inventory_id):
     inventory_path = verify_file(workspace.root, record["files"]["inventory"])
     verify_file(workspace.root, record["files"]["csv"])
     inventory = read_json(inventory_path)
-    if inventory.get("schema") != SCHEMA or inventory.get("method") != METHOD:
+    if inventory.get("schema") != SCHEMA or inventory.get("method") not in (METHOD, LEGACY_METHOD):
         raise ValueError("Planning inventory artifact schema differs")
     for key in ("selection", "selection_id", "unit_kind", "baseline_run_id", "grid_id",
                 "profile_id", "source", "available_metrics", "features", "coverage",
@@ -597,7 +650,7 @@ def inspect(workspace, inventory_id):
     selection = _selection(record["selection"])
     if selection != record["selection"]:
         raise ValueError("Planning selection was not normalized")
-    inputs = _inputs(workspace, selection)
+    inputs = _inputs(workspace, selection, method=inventory["method"])
     _verify_native_binding(record, inventory, inputs)
     return record
 

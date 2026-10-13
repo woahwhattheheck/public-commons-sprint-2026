@@ -28,7 +28,8 @@ def parser():
                        help="Maximum original subwatershed units selected; default 3")
     value.add_argument("--area-ha", type=float,
                        help="Optional maximum selected reporting-area hectares")
-    value.add_argument("--min-coverage", type=float, default=0.95)
+    value.add_argument("--min-coverage", type=float, default=0.90,
+                       help="Minimum retained common-valid feature coverage (default: 90%%); original measured coverage remains in the inventory and report")
     value.add_argument("--feature-id-field",
                        help="Original subwatershed ID property; omitted preserves the original feature IDs")
     value.add_argument("--solver", choices=("deterministic", "scipy-milp"), default="deterministic")
@@ -53,8 +54,9 @@ def checked_conversion(originals, receiving_driver):
         if 5 not in rows or 8 not in rows:
             raise ValueError("Original Gura table does not contain both proposed class codes 5 and 8")
         descriptions = {
-            code: " ".join(str(value or "") for key, value in rows[code].items()
-                           if key not in native_fields)
+            code: (str(rows[code].get("description") or "").strip() or
+                   " ".join(str(value or "") for key, value in rows[code].items()
+                            if key not in native_fields))
             for code in (5, 8)
         }
         if not re.search(r"\bagricultur\w*\b", descriptions[5], re.IGNORECASE):
