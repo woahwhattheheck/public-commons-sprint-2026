@@ -92,6 +92,8 @@ def _source(closure, choice, expected_source):
     from . import published_review_study_transfer
     published_review_study_transfer.include_source(closure, collection_id, entry)
     ensemble_study_transfer.include_source(closure, collection_id, entry)
+    from . import parameter_study_transfer
+    parameter_study_transfer.include_source(closure, collection_id, entry)
     from . import paired_ensemble_study_transfer
     paired_ensemble_study_transfer.include_source(closure, collection_id, entry)
     gauge_study_transfer.include_source(closure, collection_id, entry)
