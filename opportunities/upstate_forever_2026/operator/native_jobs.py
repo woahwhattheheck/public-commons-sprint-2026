@@ -361,7 +361,11 @@ class NativeJobs:
                 if cancelled:
                     raise NativeJobCancelled("NATIVE_STOPPED",
                                              "Calculation stopped. Its retained completed stages remain available when you resume.")
-                raise NativeJobError("NATIVE_PROCESS_EXIT", message, 500)
+                error = NativeJobError("NATIVE_PROCESS_EXIT", message, 500)
+                native_failure = execution["workspace"].inspect_run(request["run_id"]).get("error")
+                if isinstance(native_failure, dict):
+                    error.native_failure = native_failure
+                raise error
             if self.operator.closing:
                 # Let Operator.close finish while the detached native worker continues.
                 self._record_exit(execution, "detached")
@@ -395,6 +399,7 @@ class NativeJobs:
                  "run_id": run["id"], "task_state": task["state"],
                  "run_state": run["state"], "selection": run["selection"],
                  "stages": run.get("stages", {}), "artifacts": run.get("artifacts", {}),
+                 "native_execution": run.get("execution"), "run_error": run.get("error"),
                  "alive": False, "stop_requested": False,
                  "storage_free_bytes": shutil.disk_usage(ws.root).free}
         if task.get("_native_context"):

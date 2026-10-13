@@ -234,8 +234,21 @@ def main():
                     "The retained native experiment is " + str(original.get("state")) +
                     "; continue its existing Run programmes operation, then resume this same receiving directory.")
 
-            scientific_before = get("/api/experiments/summary", experiment_id=args.experiment_id)
-            report["native_summary_before_refresh"] = save_json("native-summary-before-refresh.json", scientific_before)
+            before_record = report.get("native_summary_before_refresh")
+            if before_record:
+                actual = file_record(before_record["path"])
+                require(actual["bytes"] == before_record["bytes"]
+                        and actual["sha256"] == before_record["sha256"],
+                        "The original pre-refresh scientific summary changed.")
+                scientific_before = read_json(before_record["path"])
+            else:
+                scientific_before = get("/api/experiments/summary", experiment_id=args.experiment_id)
+                report["native_summary_before_refresh"] = save_json(
+                    "native-summary-before-refresh.json", scientific_before)
+                persist()
+            require(scientific_before.get("id") == args.experiment_id
+                    and scientific_before.get("state") == "complete",
+                    "Retain the completed original experiment summary before refreshing it.")
 
             page.goto(operator_url, wait_until="domcontentloaded")
             expect(page.locator("#workspace-select")).to_have_value(workspace)
