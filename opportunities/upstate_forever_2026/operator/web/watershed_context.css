@@ -131,3 +131,7 @@
   .wc-desk table tr { break-inside: avoid; }
   .wc-coverage, .wc-detail, .wc-downloads { break-inside: avoid; }
 }
+
+.wc-upstream{border-top:1px solid #d0d0d0;margin-top:18px;padding-top:14px}
+.wc-upstream .wc-metrics{margin:12px 0}
+.wc-upstream .wc-actions{margin:10px 0}
