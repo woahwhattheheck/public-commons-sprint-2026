@@ -26,8 +26,10 @@ SCHEMA = "upstate.native-process-report/v1"
 ROOT = "native-process-reports"
 
 
-def _code_sources():
+def _code_sources(include_figures=False):
     names = ("native_process_report.py", "process_quantities.py", "native_versions.py")
+    if include_figures:
+        names += ("native_process_figures.py", "scientific_figures.py")
     return {name: describe_file(Path(__file__).parent, Path(__file__).with_name(name))
             for name in names}
 
@@ -35,9 +37,12 @@ def _code_sources():
 def _selected(ws, supplied):
     if not isinstance(supplied, dict) or supplied.get("schema", SELECTION_SCHEMA) != SELECTION_SCHEMA:
         raise ValueError("Select a native process report")
-    unknown = set(supplied) - {"schema", "title", "run_ids", "models"}
+    unknown = set(supplied) - {"schema", "title", "run_ids", "models", "include_figures"}
     if unknown:
         raise ValueError("Unknown process selection fields: " + ", ".join(sorted(unknown)))
+    include_figures = supplied.get("include_figures", False)
+    if not isinstance(include_figures, bool):
+        raise ValueError("include_figures must be true or false")
     title = supplied.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError("Give the actual model comparison a title")
@@ -90,10 +95,12 @@ def _selected(ws, supplied):
                              "reused_from": stage.get("reused_from")}
         proofs.append({"id": run["id"], "selection": run["selection"], "stages": stages})
     selection = {"schema": SELECTION_SCHEMA, "title": title.strip(), "run_ids": ids, "models": models}
+    if include_figures:
+        selection["include_figures"] = True
     grid = ws.get_grid(runs[0]["selection"]["grid_id"])
     identity = {"schema": SCHEMA, "edition": EDITION, "selection": selection,
                 "project_id": ws.project.get("id"), "runs": proofs, "grid": grid,
-                "versions": versions, "implementation": _code_sources()}
+                "versions": versions, "implementation": _code_sources(include_figures)}
     return selection, proofs, grid, identity
 
 
@@ -577,16 +584,34 @@ def build(ws, supplied, *, render=True):
             _write_csv(directory / "paired-support.csv", paired_rows, ("model", "baseline_run_id",
                        "alternative_run_id", "watershed", "field", "units", "common_cells",
                        "common_change", "common_relative_change_pct"))
+            figure_product = None
+            if selection.get("include_figures"):
+                from .native_process_figures import produce
+                figure_product = produce(
+                    directory, selection, packets, comparisons,
+                    {(p["run_id"], p["model"]): describe_file(
+                        directory, directory / ("derived/" + p["run_id"] + "-" + p["model"] + ".json"))
+                     for p in packets},
+                    {(p["alternative_run_id"], p["model"]): describe_file(
+                        directory, directory / ("derived/compare-" + p["alternative_run_id"] + "-" + p["model"] + ".json"))
+                     for p in comparisons},
+                )
+                state.update(phase="figures_retained", updated_at=now(),
+                             figure_count=figure_product["figure_count"],
+                             panel_count=figure_product["panel_count"])
+                atomic_json(state_path, state)
             summary = {"schema": SCHEMA, "id": key, "selection": selection,
                        "versions": identity["versions"], "grid": grid["grid"],
                        "packets": packets, "comparisons": comparisons, "methods": NOTES,
                        "documentation": GUIDES, "scope": "original_native_model_domain_watersheds"}
+            if figure_product is not None:
+                summary["figure_product"] = {k: v for k, v in figure_product.items() if k != "blocks"}
             atomic_json(directory / "processes.json", summary, immutable=True)
             source_files = [describe_file(directory, path) for path in sorted(directory.rglob("*"))
                             if path.is_file() and not path.is_symlink()
                             and not any(part.startswith(".") for part in path.relative_to(directory).parts)
                             and (path.relative_to(directory).parts[0] in
-                            ("original", "implementation", "derived") or path.name in
+                            ("original", "implementation", "derived", "figures") or path.name in
                             ("identity.json", "processes.json", "quantities.csv", "support.csv", "changes.csv",
                              "paired-support.csv"))]
             recipe = {"schema": "upstate.observed-report/v1", "title": selection["title"],
@@ -596,6 +621,10 @@ def build(ws, supplied, *, render=True):
                                        "identity.json", *[item["path"] for item in source_files
                                        if item["path"].endswith(("watershed_results_ndr.gpkg",
                                                                  "watershed_results_sdr.shp"))]]}
+            if figure_product is not None:
+                recipe.update(figure_spec=figure_product["figure_spec"], figures=figure_product["figures"])
+                recipe["source_links"] += [figure_product["figure_spec"], "figures/rendering.json",
+                                           *[item["path"] for item in figure_product["figures"]]]
             atomic_json(directory / "report.json", recipe, immutable=True)
             body = describe_file(directory, directory / "report.json")
             source_id = "native-process-" + key
@@ -621,12 +650,15 @@ def build(ws, supplied, *, render=True):
             atomic_json(state_path, state)
             if render:
                 from . import scientific_report
+                render_sections = list(recipe["sections"])
+                if figure_product is not None and figure_product["blocks"]:
+                    render_sections.append(["Native process figures", figure_product["blocks"]])
                 source_records = [{"id": source_id, "source_id": source_id,
                                    "title": selection["title"], "vintage": manifest["entries"][0]["vintage"],
                                    "uri": manifest["entries"][0]["uri"], "sha256": body["sha256"]}]
                 scientific_report.report_pdf(directory / "report.pdf", selection["title"],
-                                             recipe["sections"], contact={}, source_records=source_records)
-                scientific_report.write_companions(directory, selection["title"], recipe["sections"],
+                                             render_sections, contact={}, source_records=source_records)
+                scientific_report.write_companions(directory, selection["title"], render_sections,
                                                    contact={}, source_records=source_records,
                                                    binding={"native_process_identity": key})
             # The formatter writes report-data.json; the immutable source recipe stays report.json.
@@ -638,7 +670,9 @@ def build(ws, supplied, *, render=True):
                      and not any(part.startswith(".") for part in path.relative_to(directory).parts)]
             state.update(state="complete", phase="rendered" if render else "source_imported",
                          rendered=bool(render), completed_at=now(), updated_at=now(), files=files,
-                         source_choice=choice, sections=len(recipe["sections"]),
+                         source_choice=choice, sections=len(recipe["sections"]) + bool(figure_product and figure_product["blocks"]),
+                         figure_count=figure_product["figure_count"] if figure_product else 0,
+                         panel_count=figure_product["panel_count"] if figure_product else 0,
                          report_selector={"source_roles": {"OBSERVED_CONTEXT": choice}})
             atomic_json(state_path, state)
             return state

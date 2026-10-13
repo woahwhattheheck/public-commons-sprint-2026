@@ -47,7 +47,8 @@ def _original_values(activity):
     value = activity.get("source_values", {})
     if not isinstance(value, dict):
         raise ContractError("Retain the activity's original structured source values")
-    retained = value.get("fieldwork_evidence", {}).get("original_source_values")
+    nested = value.get("fieldwork_evidence")
+    retained = nested.get("original_source_values") if isinstance(nested, dict) else None
     return deepcopy(retained if isinstance(retained, dict)
                     else {key: item for key, item in value.items() if key not in RESERVED})
 

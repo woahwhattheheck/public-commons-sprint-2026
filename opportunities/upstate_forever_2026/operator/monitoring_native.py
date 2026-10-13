@@ -21,7 +21,7 @@ def perform(operator, task):
         return export_task(operator, workspace, task)
     result = invoke(workspace, action.removeprefix("monitoring."), task["payload"],
                     export_root=operator.root / "outputs" / "monitoring")
-    if action == "monitoring.campaign.fieldwork":
+    if action in {"monitoring.campaign.fieldwork", "monitoring.campaign.fieldwork.return"}:
         result["workspace_key"] = task["workspace"]
     return result
 
@@ -64,10 +64,29 @@ def export_task(operator, workspace, task):
 
 def read(operator, workspace_key, action, payload):
     if action not in READS: raise ValueError("Select a registered monitoring read")
-    return invoke(operator.ws(workspace_key), action, payload)
+    result = invoke(operator.ws(workspace_key), action, payload)
+    if action == "campaign.fieldwork.preview-return":
+        result["workspace_key"] = workspace_key
+    return result
 
 
 def decorate_task(operator, task):
+    if task.get("action") == "monitoring.campaign.fieldwork.return" and task.get("state") == "complete":
+        public = deepcopy(task)
+        result = public["result"]
+        workspace = operator.ws(task["workspace"])
+        report = result["campaign_report"]
+        root = workspace.root / "monitoring_field_returns" / identifier(result["request_id"])
+        path = root / "campaign-report.html"
+        if (path.is_symlink() or not path.resolve().is_relative_to(root.resolve())
+                or path.stat().st_size != report["bytes"] or file_sha256(path) != report["sha256"]):
+            raise ValueError("The retained returned campaign report changed")
+        ticket = operator._ticket(task["workspace"], path, report, "Returned campaign report")
+        result["campaign_report"].pop("path", None)
+        result["campaign_report"]["download_url"] = "/api/file/" + ticket["id"] + "?download=1"
+        public["_downloads"] = [ticket]
+        public["_item"] = {"kind": "implementation_plans", "id": result["fieldwork"]["plan_id"]}
+        return public
     if task.get("action") == "monitoring.campaign.fieldwork" and task.get("state") == "complete":
         public = deepcopy(task)
         result = public["result"]
@@ -128,6 +147,9 @@ def verify_workspace(workspace):
                     if service.get("plans", plan_id)["network_id"] != record["network_id"]:
                         raise ValueError("Monitoring frontier names a different source network")
             elif kind in {"revisions", "events"}:
+                if kind == "events" and record.get("values", {}).get("fieldwork_return") is not None:
+                    from model.monitoring_field_return import source_binding
+                    source_binding(workspace, record)
                 plan = service.get("plans", record["plan_id"])
                 if plan["network_id"] != record["network_id"]:
                     raise ValueError("Monitoring field history names a different source network")
