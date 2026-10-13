@@ -116,6 +116,15 @@ python3 -B "$BOOTSTRAP" seal-conda \
 A donor probe describes its actual host; the receiver performs a new probe after
 installation. A completed package capture is not treated as a receiving result.
 
+A complete retained tar may place the environment files at archive root or under
+one original directory, such as `runtime/bin/python`. The helper records that
+archive prefix and validates paths and links within the selected environment.
+Installation removes only that common directory from extraction destinations;
+the complete original tar bytes and digest remain unchanged in the capsule.
+Python and `conda-unpack` receive into the requested final prefix in either case.
+A sibling payload or a link leaving the selected environment is rejected before
+extraction. Do not manually move the received prefix after relocation.
+
 Conda-pack depends on the original conda package cache and a consistent source
 environment. Its own errors are retained verbatim in `conda-pack.log`; use the
 actual equipped environment/package cache, rather than ignoring missing or

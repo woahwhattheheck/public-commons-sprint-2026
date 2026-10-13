@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import email
+import copy
 import time
 import hashlib
 import json
@@ -175,13 +176,49 @@ def private_path_check(name):
         raise ValueError("Credential/configuration path is outside a runtime capsule: " + name)
 
 
+def conda_members(archive):
+    """Retain payload bytes while selecting a flat or single-directory layout."""
+    members = archive.getmembers()
+    names = set()
+    for member in members:
+        name = member.name.rstrip("/")
+        safe_relative(name)
+        private_path_check(name)
+        if name in names:
+            raise ValueError("Duplicate conda archive member: " + name)
+        names.add(name)
+    required = {"bin/python", "bin/conda-unpack"}
+    wrapper = ""
+    if not required <= names and names:
+        candidate = next(iter(names)).split("/", 1)[0]
+        if (all(name == candidate or name.startswith(candidate + "/") for name in names)
+                and {candidate + "/" + name for name in required} <= names):
+            wrapper = candidate
+    selected = []
+    for original in members:
+        member = copy.copy(original)
+        if wrapper:
+            if member.name.rstrip("/") == wrapper:
+                if not member.isdir():
+                    raise ValueError("Conda archive wrapper is not a directory")
+                continue
+            member.name = member.name[len(wrapper) + 1:]
+            if member.islnk():
+                if not member.linkname.startswith(wrapper + "/"):
+                    raise ValueError("Conda hard link leaves the selected runtime")
+                member.linkname = member.linkname[len(wrapper) + 1:]
+        selected.append(member)
+    return selected, wrapper, len(members)
+
+
 def scan_conda(path):
     """Read all tar headers and declared destinations before unpacking any byte."""
     seen = set()
     total = 0
     links = {}
     with tarfile.open(path, "r:*") as archive:
-        for member in archive:
+        members, wrapper, original_count = conda_members(archive)
+        for member in members:
             name = member.name.rstrip("/")
             safe_relative(name)
             private_path_check(name)
@@ -223,7 +260,34 @@ def scan_conda(path):
                 target = links[target]
         if "bin/python" not in seen or "bin/conda-unpack" not in seen:
             raise ValueError("Select a complete conda-pack archive with bin/python and bin/conda-unpack")
-    return {"members": len(seen), "unpacked_bytes": total}
+    result = {"members": original_count, "unpacked_bytes": total}
+    if wrapper:
+        result["archive_prefix"] = wrapper
+    return result
+
+
+def extract_conda(path, prefix):
+    """Validate the selected layout, then extract into the final stable prefix."""
+    info = scan_conda(path)
+    with tarfile.open(path, "r:*") as archive:
+        members, wrapper, _ = conda_members(archive)
+        hardlinks = {member.name: member for member in members if member.islnk()}
+        ordered = [member for member in members if not member.islnk()]
+        retained = set()
+        def retain_link(member):
+            if member.name in retained:
+                return
+            if member.linkname in hardlinks:
+                retain_link(hardlinks[member.linkname])
+            retained.add(member.name)
+            ordered.append(member)
+        for member in hardlinks.values():
+            retain_link(member)
+        # TarFile resolves forward hard links by member name. Use the same
+        # selected names and put their source before each hard-link member.
+        archive.members = ordered
+        archive.extractall(prefix, members=ordered, filter="data")
+    return info
 
 
 def seal(payload, output, selection, target, *, kind, donor_probe=None, require_native=True):
@@ -485,8 +549,7 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
                     prefix.mkdir(exist_ok=True)
                     def unpack():
                         # Python's data filter additionally checks chained real paths.
-                        with tarfile.open(original, "r:*") as archive:
-                            archive.extractall(prefix, filter="data")
+                        extract_conda(original, prefix)
                     stage("extract_environment", unpack)
                 interpreter = prefix / "bin" / "python"
                 if "relocate_environment" not in state["stages"]:
@@ -500,6 +563,7 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
             if actual["state"] != "ready":
                 raise RuntimeError("Receiving native probe failed; see " + str(operation / "probe" / "runtime-probe.json"))
             state.pop("error", None)
+            state.pop("active_stage", None)
             state.update(state="ready", python=str(interpreter), updated_at=stamp(),
                          application=str(application), compatibility=compatibility)
             atomic_json(state_path, state)
