@@ -73,6 +73,15 @@ function cleanPath(value) {
     problem(400,"INVALID_PATH","Encoded separators and normalized traversal are not accepted.");
   return parsed.pathname+parsed.search;
 }
+function validFilePathname(pathname) {
+  if(!pathname.startsWith("/api/file/"))return false;
+  try {
+    return pathname.slice("/api/file/".length).split("/").every(part=>{
+      const decoded=decodeURIComponent(part);
+      return decoded.length>0&&decoded!=="."&&decoded!==".."&&!/[\u0000-\u001f\u007f\\/]/.test(decoded);
+    });
+  } catch { return false; }
+}
 function selectedHeaders(value,allowed) {
   const source=value instanceof Headers?value:new Headers(value||{});
   const out={};
@@ -211,7 +220,7 @@ export class EcoRelay {
     path=cleanPath(path); const pathname=path.split("?")[0];
     if(DENIED.has(pathname)||pathname.startsWith("/_eco/")) return false;
     if(method==="GET"&&(pathname==="/"||pathname==="/health"||pathname==="/favicon.ico"||
-      /^\/web\/[A-Za-z0-9_./-]+$/.test(pathname)||/^\/api\/file\/[A-Za-z0-9_./-]+$/.test(pathname))) return true;
+      /^\/web\/[A-Za-z0-9_./-]+$/.test(pathname)||validFilePathname(pathname))) return true;
     if(CORE_ROUTES.some(row=>row[0]===method&&row[1]===pathname)) return true;
     return this.sql.exec("SELECT path FROM relay_routes WHERE method=? AND path=?",method,pathname).toArray().length>0;
   }
