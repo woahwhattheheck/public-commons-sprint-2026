@@ -53,6 +53,7 @@ let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'o
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
 let formRevision=0,navigationRevision=0,workspaceRevision=0;
+let deliveryFormRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 
@@ -1093,8 +1094,19 @@ function retainedDeliveryCohort(selection,baseline,alternatives){
   throw Error('Keep the attached analysis’s original baseline and alternatives. Start a separate delivery to choose another native cohort.');
  return [...original];
 }
+function deliveryOpening(){
+ const request=++deliveryFormRequest,ticket=admissionContext('delivery.build',null);
+ const context=formContext,formOpen=formDialog.open,detailOpen=detailDialog.open;
+ return ()=>request===deliveryFormRequest&&currentAdmission(ticket)&&
+  formContext===context&&formDialog.open===formOpen&&detailDialog.open===detailOpen;
+}
 async function deliveryForm(id,initialSelection){
- requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;
+ requireSources();const current=deliveryOpening();
+ let saved;
+ try{saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null;}
+ catch(error){if(current())throw error;return;}
+ if(!current())return;
+ const row=saved?.selection||initialSelection;
  const nativeStudy=row?.delivery_mode==='native_study',originalStudy=row?.native_study;
  if(row?.delivery_mode!==undefined&&!['regional_rfp','native_study'].includes(row.delivery_mode))throw Error('Open a regional or native-study delivery with its original mode.');
  if(nativeStudy&&(!originalStudy||['title','purpose'].some(key=>typeof originalStudy[key]!=='string'||!originalStudy[key].trim())||(originalStudy.reference!=null&&typeof originalStudy.reference!=='string')))throw Error('The native study must retain its original title, purpose and optional reference.');
@@ -1281,7 +1293,15 @@ async function dispatch(button){
  if(action==='run-completed-models')return completedModelsForm(id);
  if(action==='run-compare')return compareForm();
  if(action==='run-compare-selection'){detailDialog.close();detailContext=null;return compareForm({baseline_run_id:id});}
- if(action==='comparison-delivery'){const comparison=await api(endpoint('/api/item',{kind:'comparisons',id}));detailDialog.close();detailContext=null;return deliveryForm(undefined,{baseline_run_id:comparison.baseline_run_id,scenario_run_ids:comparison.alternatives.map(x=>x.run_id)});}
+ if(action==='comparison-delivery'){
+  const current=deliveryOpening();
+  let comparison;
+  try{comparison=await api(endpoint('/api/item',{kind:'comparisons',id}));}
+  catch(error){if(current())throw error;return;}
+  if(!current())return;
+  detailDialog.close();detailContext=null;
+  return deliveryForm(undefined,{baseline_run_id:comparison.baseline_run_id,scenario_run_ids:comparison.alternatives.map(x=>x.run_id)});
+ }
  if(action==='run-log'||action==='run-log-more')return showRunLog(id,action==='run-log-more');
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
