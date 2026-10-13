@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 
 from model.common import describe_file
-from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path
+from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
@@ -75,6 +75,7 @@ class PublishedStudyProvider:
             self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
             self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
             self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_microcystin_reconciliation.sources.json",
         )
         for manifest_path in manifests:
             if not manifest_path.is_file():
@@ -295,7 +296,17 @@ class PublishedStudyProvider:
                     if name in evidence:
                         self._fail("STUDY_EVIDENCE", "Each report evidence filename must be unique.")
                     evidence[name] = path.read_bytes()
-                result = store.import_source(source, evidence=evidence, operation_id=task["operation_id"])
+                include_context = payload.get("include_installed_context", False)
+                if not isinstance(include_context, bool):
+                    self._fail("STUDY_REQUEST", "Choose whether to include the installed study context.")
+                context_manifests = []
+                if include_context and builtin_id is None:
+                    application = self.builtin.parent.parent
+                    context_manifests = [application / name for name in INSTALLED_CONTEXT_PATHS if (application / name).is_file()]
+                result = store.import_source(
+                    source, evidence=evidence, operation_id=task["operation_id"],
+                    context_manifests=context_manifests,
+                )
                 record = result["record"]
                 manifest_path = Path(record["source_manifest"]["path"])
                 return {

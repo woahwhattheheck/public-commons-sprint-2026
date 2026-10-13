@@ -29,6 +29,7 @@ FILES = (
 OPTIONAL = (
     "integration/run_watershed_context_operator.py",
     "integration/WATERSHED_CONTEXT_RECEIVING.md",
+    "source_tools/receive_watershed_edition.py",
     "integration/watershed_completed_receiving.json",
     "model/WATERSHED_BRIEF.md",
     "model/WATERSHED_CONTEXT.md",
@@ -54,14 +55,18 @@ SOURCE_MANIFESTS = (
 )
 
 
-def source_manifest_files(source_root):
+def source_manifest_files(source_root, application):
     """Snapshot each available source manifest and its exact native members."""
     result = {}
     for manifest_name in SOURCE_MANIFESTS:
         manifest_path = source_root / manifest_name
+        owner_root = source_root
+        if not manifest_path.exists():
+            manifest_path = application / manifest_name
+            owner_root = application
         if not manifest_path.exists():
             continue
-        if not manifest_path.resolve(strict=True).is_relative_to(source_root):
+        if not manifest_path.resolve(strict=True).is_relative_to(owner_root):
             raise ValueError("Source manifest leaves the prepared application: " + manifest_name)
         manifest_body = manifest_path.read_bytes()
         manifest = json.loads(manifest_body)
@@ -81,16 +86,20 @@ def source_manifest_files(source_root):
                 if (relative.is_absolute() or relative.as_posix() != name
                         or any(part in ("", ".", "..") for part in name.split("/"))):
                     raise ValueError("Source manifest member leaves its native directory: " + name)
-                path = manifest_path.parent / name
+                member = (PurePosixPath(manifest_name).parent / relative).as_posix()
+                path = source_root / member
+                member_root = source_root
+                if not path.is_file():
+                    path = application / member
+                    member_root = application
                 resolved = path.resolve(strict=True)
-                if not resolved.is_relative_to(source_root) or not resolved.is_file():
+                if not resolved.is_relative_to(member_root) or not resolved.is_file():
                     raise ValueError("Source member leaves the prepared application: " + name)
                 body = resolved.read_bytes()
                 if row.get("bytes") is not None and row["bytes"] != len(body):
                     raise ValueError("Source member byte count changed: " + name)
                 if row.get("sha256") is not None and row["sha256"] != digest(body):
                     raise ValueError("Source member hash changed: " + name)
-                member = path.relative_to(source_root).as_posix()
                 if member in result and result[member] != body:
                     raise ValueError("Source manifests name conflicting member bytes: " + member)
                 result[member] = body
@@ -123,7 +132,7 @@ def install(application, source_root, *, dry_run=False):
             raise ValueError("Install the current shared extension host first: missing " + required)
     originals = {}
     prepared = {}
-    source_bodies = source_manifest_files(source_root)
+    source_bodies = source_manifest_files(source_root, application)
     names = dict.fromkeys(FILES + tuple(
         name for name in OPTIONAL if (source_root / name).is_file()) + tuple(source_bodies))
     for name in names:
@@ -133,7 +142,7 @@ def install(application, source_root, *, dry_run=False):
             ast.parse(body.decode("utf-8"), filename=name)
         if name.endswith(".json"):
             value = json.loads(body)
-            if name.endswith("watershed-context.json") and (
+            if name == "operator/extensions/watershed-context.json" and (
                 value.get("schema") != "upstate.operator-extension/v1"
                 or value.get("id") != "watershed-context"
             ):

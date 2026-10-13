@@ -1,11 +1,12 @@
 """Operator actions and fast reads for source-bound scenario ensembles."""
 from __future__ import annotations
-from model.common import identifier, read_json, relative_file
+from model.common import identifier, read_json, relative_file, describe_file
 from model.ensembles import Ensembles, parameter_catalog
-from model import ensemble_report
+from model import ensemble_report, ensemble_consumers
 
-ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report"})
-READS = frozenset({"catalog", "inspect", "report"})
+ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report",
+                     "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume"})
+READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer"})
 WRITES = frozenset({"preview"})
 
 class EnsembleService:
@@ -30,6 +31,51 @@ class EnsembleService:
                   "METHODS.md": "Comparison method", "ensemble-report.zip": "Complete report package"}
         return [self.operator._ticket(workspace, relative_file(directory, item["path"]),
                     item, labels.get(name, name)) for name, item in report["files"].items()]
+
+    def _consumer(self, workspace, key):
+        ws = self.operator.ws(workspace)
+        plan = ws._get(ensemble_consumers.KIND, identifier(key))
+        if plan.get("workspace_id") != ws.project["id"]:
+            raise self.Fault("ENSEMBLE_CONSUMER", "The saved scientific handoff belongs to another workspace.", 409)
+        path = ws.root / "ensemble-consumer-results" / plan["id"] / "state.json"
+        result = read_json(path) if path.exists() else {"state": "prepared"}
+        if path.exists() and (result.get("consumer_id") != plan["id"] or
+                              result.get("workspace_id") != ws.project["id"]):
+            raise self.Fault("ENSEMBLE_CONSUMER", "The retained consumer result has another identity.", 409)
+        files = dict(result.get("files", {}))
+        files["handoff"] = describe_file(ws.root, ws.root / ensemble_consumers.KIND / (plan["id"] + ".json"))
+        if plan["mode"] == "calibration":
+            for name, kind, key_field in (("calibration", "calibrations", "calibration_id"),
+                                         ("uncertainty", "calibration-uncertainties", "uncertainty_id")):
+                key = result.get(key_field)
+                if key:
+                    ws._get(kind, identifier(key))
+                    files[name] = describe_file(ws.root, ws.root / kind / (key + ".json"))
+        labels = {"html": "Open physical decision report", "archive": "Complete decision ZIP",
+                  "physical_input": "Original physical input", "report": "Complete decision JSON",
+                  "manifest": "Decision file manifest", "handoff": "Saved scientific handoff",
+                  "calibration": "Original annual-load calibration", "uncertainty": "Published-source sensitivity"}
+        downloads = [self.operator._ticket(workspace, relative_file(ws.root, item["path"]),
+                                          item, labels.get(name, name))
+                     for name, item in files.items()]
+        return {"workspace_key": workspace, "plan": plan, "result": result, "downloads": downloads}
+
+    def _consumer_rows(self, ws, ensemble_id):
+        rows = []
+        for plan in ws._list(ensemble_consumers.KIND):
+            if plan.get("ensemble_id") != ensemble_id:
+                continue
+            path = ws.root / "ensemble-consumer-results" / plan["id"] / "state.json"
+            result = read_json(path) if path.exists() else {"state": "prepared"}
+            rows.append({"id": plan["id"], "mode": plan["mode"],
+                         "title": plan["selection"].get("title", plan["mode"]),
+                         "state": result.get("state", "prepared"),
+                         "selected_member_count": plan["selected_member_count"],
+                         "planned_member_count": plan["catalog"]["planned_member_count"],
+                         "pollutants": plan["pollutants"], "updated_at": result.get("completed_at") or result.get("updated_at"),
+                         "calibration_id": result.get("calibration_id"),
+                         "uncertainty_id": result.get("uncertainty_id")})
+        return rows
 
     def overview(self, workspace):
         """Small JSON-only rows for the existing operator polling response."""
@@ -63,6 +109,26 @@ class EnsembleService:
                     "ensembles": self.overview(workspace),
                     "profiles": state["profiles"], "scenarios": state["scenarios"],
                     "grids": state["grids"]}
+        if operation == "consumer":
+            return self._consumer(workspace, payload.get("consumer_id"))
+        if operation == "consumers":
+            key = self._ensemble_id(payload)
+            selected = ensemble_consumers.inspect(ws, key)
+            observed = [{"id": row["id"], "title": row["metadata"]["title"],
+                         "parameters": sorted({item["parameter"] for item in row["rows"] if item.get("admitted")}),
+                         "admitted_count": row["admitted_count"]}
+                        for row in ws._list("observations")]
+            sources = [{"collection_id": collection["id"], "id": entry["id"],
+                        "title": entry.get("title", entry["id"]), "layer": entry.get("layer")}
+                       for collection in ws._list("sources") for entry in collection.get("entries", [])
+                       if entry.get("kind") == "vector"]
+            references = [{"id": row["id"], "title": row["selection"]["title"],
+                           "selection": {name: value for name, value in row["selection"].items()
+                                         if name not in {"candidate_run_ids", "reference_run_id"}}}
+                          for row in ws._list("calibration-plans")]
+            return {"workspace_key": workspace, "catalog": selected, "observations": observed,
+                    "catchment_sources": sources, "reference_selections": references,
+                    "scenarios": ws._list("scenarios"), "consumers": self._consumer_rows(ws, key)}
         if operation == "preview":
             spec = payload.get("spec")
             if not isinstance(spec, dict):
@@ -76,11 +142,17 @@ class EnsembleService:
             return {"workspace_key": workspace, "ensemble": ensemble,
                     "summary": data, "report": report,
                     "export_state": ensemble_report.export_state(report, data),
-                    "downloads": self._downloads(workspace, report)}
+                    "downloads": self._downloads(workspace, report),
+                    "consumers": self._consumer_rows(ws, key)}
         raise self.Fault("ENSEMBLE_READ", "Choose a supported ensemble operation.")
 
     def decorate_task(self, task):
         """Refresh report tickets when an original queued task is reopened."""
+        if task.get("action") in {"ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume"}:
+            result = task.get("result") or {}
+            if result.get("consumer_id"):
+                task["_downloads"] = self._consumer(task["workspace"], result["consumer_id"])["downloads"]
+            return task
         if task.get("action") != "ensemble.report" or task.get("state") != "complete":
             return task
         result = task.get("result") or {}
@@ -122,4 +194,25 @@ class EnsembleService:
                     "state": report["state"], "paired_results": report["paired_results"],
                     "parameter_results": report.get("parameter_results", 0),
                     "downloads": self._downloads(workspace, report)}
+        if action in {"ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume"}:
+            if action == "ensemble.consumer.resume":
+                plan = ws._get(ensemble_consumers.KIND, identifier(payload.get("consumer_id")))
+            elif action == "ensemble.decision":
+                plan = ensemble_consumers.prepare_decision(
+                    ws, self._ensemble_id(payload), profile_ids=payload.get("profile_ids"),
+                    scenario_ids=payload.get("scenario_ids"),
+                    reference_profile_id=payload.get("reference_profile_id"),
+                    pollutants=payload.get("pollutants"), criteria=payload.get("criteria"))
+            else:
+                plan = ensemble_consumers.prepare_calibration(
+                    ws, self._ensemble_id(payload), payload.get("reference_selection"),
+                    profile_ids=payload.get("profile_ids"), pollutants=payload.get("pollutants"))
+            if plan["mode"] == "decision":
+                result = ensemble_consumers.build_decision(ws, plan["id"])
+            else:
+                result = ensemble_consumers.run_calibration(
+                    ws, plan["id"], standard_errors=payload.get("standard_errors"))
+            return {"consumer_id": plan["id"], "ensemble_id": plan["ensemble_id"],
+                    "mode": plan["mode"], "state": result["state"],
+                    "result": result, "downloads": self._consumer(workspace, plan["id"])["downloads"]}
         raise self.Fault("ENSEMBLE_ACTION", "Choose a supported ensemble action.")

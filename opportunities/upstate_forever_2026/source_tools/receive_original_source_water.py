@@ -61,6 +61,89 @@ def emit(stage, **values):
     print(json.dumps({"operation": OPERATION, "stage": stage, **values}), flush=True)
 
 
+def retain_domain_source(workspace, network, output):
+    """Register the original domain and complete graph context as a native vector source."""
+    import shutil
+    from model.common import describe_file, read_json, verify_file
+
+    original = Path(network["directory"]).resolve(strict=True)
+    if (network["network_huc12_count"] != 217
+            or network["source_binding"]["decoded_sha256"] != DECODED_SHA256):
+        raise ValueError("Register the complete original 217-HUC model domain")
+    descriptors = list(network["files"].values())
+    descriptors.append(describe_file(original, original / "result.json"))
+    by_path = {}
+    directory = output / "original-domain-source" / network["id"]
+    directory.mkdir(parents=True, exist_ok=True)
+    for descriptor in descriptors:
+        source = verify_file(original, descriptor)
+        path = descriptor["path"]
+        previous = by_path.get(path)
+        if previous is not None:
+            if previous["sha256"] != descriptor["sha256"] or previous["bytes"] != descriptor["bytes"]:
+                raise ValueError("Original graph companions repeat a conflicting path")
+            continue
+        target = directory / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            if target.stat().st_size != descriptor["bytes"] or sha256(target) != descriptor["sha256"]:
+                raise ValueError("An existing original-domain companion differs: " + path)
+        else:
+            pending = target.with_name("." + target.name + "." + str(os.getpid()) + ".tmp")
+            try:
+                shutil.copyfile(source, pending)
+                if pending.stat().st_size != descriptor["bytes"] or sha256(pending) != descriptor["sha256"]:
+                    raise ValueError("Original-domain companion copy differs: " + path)
+                os.replace(pending, target)
+            finally:
+                pending.unlink(missing_ok=True)
+        by_path[path] = descriptor
+
+    body = network["files"]["source_body"]
+    graph = read_json(verify_file(original, network["files"]["network"]))
+    reference = network["identity"]["receptor_spec"].get("source_reference") or {}
+    entry = {
+        "id": "original-model-domain", "kind": "vector",
+        "title": "Original model domain — complete 217 HUC12 watersheds",
+        "role": "MODEL_DOMAIN", "format": "esri-json",
+        "path": body["path"], "sha256": body["sha256"],
+        "uri": reference.get("uri") or "urn:sha256:" + DECODED_SHA256,
+        "vintage": reference.get("vintage") or network["created_at"][:10],
+        "id_field": graph["source_fields"]["huc12"],
+        "network_result_id": network["id"],
+        "original_decoded_sha256": DECODED_SHA256,
+        "companions": [{"path": path, "sha256": descriptor["sha256"]}
+                       for path, descriptor in sorted(by_path.items()) if path != body["path"]],
+    }
+    manifest = {
+        "schema": "upstate.sources/v1",
+        "title": "Original 217-HUC model domain and source-water graph",
+        "captured_at": network["created_at"], "entries": [entry],
+        "scope": {"network_result_id": network["id"], "network_huc12_count": 217,
+                  "source_binding": network["source_binding"],
+                  "source_reference": reference},
+        "notes": ["Original polygon body retained byte for byte.",
+                  "Complete original profile, link/membership tables, result and map/report context are companions."],
+    }
+    manifest_path = directory / "source-manifest.json"
+    if manifest_path.exists():
+        if read_json(manifest_path) != manifest:
+            raise ValueError("The retained original-domain source manifest differs")
+    else:
+        atomic_json(manifest_path, manifest)
+    collection = workspace.import_sources(manifest_path)
+    retained, saved_entry = workspace.source_file(collection["id"], entry["id"])
+    if saved_entry["body"]["sha256"] != body["sha256"]:
+        raise ValueError("The imported original model domain changed its source body")
+    return {
+        "source_collection_id": collection["id"], "source_id": entry["id"],
+        "source_sha256": body["sha256"], "decoded_sha256": DECODED_SHA256,
+        "huc12_count": 217, "id_field": entry["id_field"],
+        "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
+        "retained_source": str(retained),
+    }
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     output = None
@@ -114,6 +197,9 @@ def main(argv=None):
                         expected_decoded_sha256=DECODED_SHA256)
         atomic_json(output / "network-result.json", network)
         emit("network-retained", workspace=str(workspace.root), network_id=network["id"])
+        domain_source = retain_domain_source(workspace, network, output)
+        atomic_json(output / "original-domain-source.json", domain_source)
+        emit("original-domain-imported", **domain_source)
         prepared = prepare(workspace, {"network_result_id": network["id"]})
         atomic_json(output / "prepared-areas-result.json", prepared)
         actual_counts = {area["id"]: area["huc12_count"] for area in prepared["areas"]}
@@ -142,6 +228,7 @@ def main(argv=None):
             "prepared_id": prepared["id"],
             "prepared_directory": str(workspace.root / "receptor-scenario-areas" / prepared["id"]),
             "source_collection_id": prepared["source_collection_id"],
+            "original_domain_source": domain_source,
             "areas": [{"id": area["id"], "huc12_count": area["huc12_count"]}
                       for area in prepared["areas"]],
             "original_source": network["source_binding"],

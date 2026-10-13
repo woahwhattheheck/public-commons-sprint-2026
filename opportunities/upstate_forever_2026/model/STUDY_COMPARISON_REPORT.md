@@ -14,7 +14,7 @@ python -B -m model.study_report \
 
 The programme-result JSON is the existing output of `source_tools.upstate_study_profiles`. Supplying it carries the published choice names, citations and original spatial preparation into the report. The ordinary experiment summary supplies the actual completed case results. The report also works from a retained experiment without that optional programme-result file.
 
-Open the returned `index.html` from the existing operator download or the retained `experiments/<id>/study-report` directory. It contains its data downloads, so forwarding the HTML preserves the report's CSV/JSON links. The existing experiment transfer retains the complete report and its marker. Rebuild after additional cases finish to include their results.
+Open the returned `index.html` from the existing operator download or the retained `experiments/<id>/study-report` directory. It contains its data downloads, so forwarding the HTML preserves the report's CSV/JSON links. The existing experiment transfer retains the complete report and its marker. The ordinary experiment run/summarize and completed programme synchronization refresh an existing report using its verified retained source context. The explicit report command also rebuilds it from the same retained programme.
 
 ## Read the scientific result in three steps
 
@@ -25,6 +25,12 @@ Second, read each alternative against its own profile's baseline. Nitrogen and p
 Third, compare alternatives under the same profile. The pairwise comparison evaluates A and B only when they use the same baseline, identical paired valid cells and the same annual units for the constituent being compared. A's advantage is B's annual export minus A's annual export. Positive values favor A. Calculating that difference directly from the two alternatives avoids losing small differences when a much larger common baseline is subtracted twice.
 
 The report identifies physical dominance across the selected constituents. A dominates B when at least one constituent improves and every other selected constituent improves or stays equal. A tradeoff means one constituent favors A while another favors B. The comparison keeps physical units separate and leaves implementation cost and preferences as their own decision inputs.
+
+The **Alternatives to examine together** section turns those pairwise results into a physical shortlist for each profile. An alternative joins that profile's frontier only after all selected opponents have comparable completed outputs and none dominates it. Equal alternatives can both remain on the frontier. When outputs are incomplete or valid-cell supports differ, the unresolved comparison remains visible. An observed dominator can already establish that an alternative is dominated even while its other comparisons remain unfinished.
+
+The source-profile summary distinguishes an alternative that stays on the frontier in every selected profile from one whose frontier membership depends on the source. It requires complete opponent coverage in every expected profile before describing that source-wide result. The downloadable `study-alternative-shortlist.csv` retains each profile/alternative, opponent counts, dominators, equals, tradeoffs, unavailable comparison reasons and original run identities. The same records are included in `study-summary.json` and the forwarded HTML.
+
+This shortlist compares the selected land-cover alternatives with one another. Use their baseline effects to assess improvement over current land cover, and retain implementation costs, feasibility and policy priorities as separate decision inputs.
 
 Read **compared profiles / expected profiles** beside every pair. A result becomes complete when all selected profiles have comparable completed alternatives for all selected constituents. Until then, its response describes the compared profiles. Ranges across profiles are grouped by each constituent's exact valid-cell support; different support groups remain separate.
 

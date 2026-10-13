@@ -1,0 +1,68 @@
+# Observed concentrations in the scientific delivery
+
+The maintained `model.observed_context` collector now adds the same original
+concentration coverage and mean-interval tables used by Published Studies.
+The selected OBSERVED_CONTEXT source still supplies the complete original report
+recipe, all source members, and the four numeric figures. Its binding edition is
+`observed-context-20261013-v2`, so a new delivery retains this complete collector
+edition while earlier reports keep their original identity.
+
+## Original source and calculation
+
+The collector reads the exact source-bound `study.json`, `stations.csv`,
+`seasonal_summaries.csv`, `wqp/derived/measurements.csv`, and
+`wqp/derived/selected_chlorophyll.csv`. Every member is verified by the original
+collector before use. It calls the maintained Published Studies row reader,
+combined-observation selector, typed seasonal/station CSV readers and observation
+context producer. It then calls the original observation-support enrichment and
+report-section functions.
+
+This selects the same original study stations, grab-sampling period and surface
+concentration parameters as that source. Chlorophyll uses the reconciled original
+cohort. Microcystins retain all original campaign rows, with project and activity
+type defining separate series. Original activity/result IDs, dates, units,
+qualifiers, reporting limits and published summary counts remain attached.
+The collector does not read another Workspace study, choose a replacement cohort,
+or convert concentration context to an annual watershed load.
+
+The supplied original source contains 75 selected chlorophyll results and
+85 campaign microcystin results. The latter contain 64 quantified values and
+21 lower-censored values. Their complete source-row identifiers and numerical
+interval endpoints were retained in merged PR2978 and independently recomputed.
+Printed seasonal-summary counts remain a separate publisher table.
+
+## Report and export closure
+
+`collect(workspace, selection, directory, state)` retains its existing return:
+`sections`, `binding`, and ordinary `files` descriptors. The concentration
+addition appends the original `observation_support.report_sections` exactly
+once and writes a complete `observed-support/<original-body-sha256>/concentration-context.json`.
+The new `files.concentration_support` descriptor includes the file's actual
+path, bytes, SHA256 and original source ID. That document retains the source
+binding, five input-member hashes, selected study scope and enriched original
+observation context. A normal relative report link opens the complete document.
+
+The maintained delivery integration copies every returned file descriptor into
+its observed_context files, includes these paths in the archive's project_assets,
+and uses the same ordered sections for PDF, HTML, Markdown and report-data JSON.
+The existing typed report renderer wraps the two support tables and repeats
+their headers; its figure renderer retains the original four figures.
+
+Install the collector with the original `model/scientific_figures.py`, current
+scientific renderer/delivery integration, and merged PR2978
+`measurement_workspace/published_studies.py` plus `observation_support.py`.
+The original 114-file source bank is F0C8JQP3LRZ, JSON SHA256
+`74687a79209cb3858abd1cdf2e1adc52334a048b514352f6a7789e5c7b23e54f`.
+Its repaired collector preimage is 7,661 bytes, SHA256
+`21d5b3b980d84a01d642b060256503be930c73049759d12ea104183cb3715128`.
+All original source members and source manifests remain unchanged.
+
+## Existing receiving operation
+
+Continue the existing selected delivery in the original application and Workspace
+through native report receive1791855942.340849. Open the scientific report's
+chlorophyll and microcystin support tables in PDF and offline HTML, follow its
+complete concentration-context link, export the same delivery and reopen it.
+The tables and original row selectors must remain the same across the report and
+archive. Current merged atlas2969 and authenticated inspection3009 retain the
+atlas-to-report and source-companion navigation.

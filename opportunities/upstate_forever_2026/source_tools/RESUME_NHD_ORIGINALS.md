@@ -12,7 +12,7 @@ The retained source operation is indexed from Slack Canvas F0C8UD4L25S and the c
 
 The exact target is 217 original HUC12 IDs with SHA256 ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52. Supply the retained original domain ZIP whose members include model-domain.esri.json.gz, feature-bindings.json and domain-summary.json.
 
-## Recover the three larger original responses
+## Recover the retained original responses
 
 inventory-progress.json within the bank contains native_geometry_pages. For each row, its stable_reference identifies the exact original file attached to the existing Eco source page:
 
@@ -56,7 +56,7 @@ Use the real existing collection/source values. The source binding supplies the 
 
 ## Coverage and interruption behavior
 
-The bank contains the complete 4x4 grid of the original domain envelope. The receiver recomputes those 16 cells from the actual ZIP's domain-summary.json and compares every coordinate. A completed scope covers a whole cell only when its original unrestricted where=1=1 query has exactly that cell's envelope. Retained smaller scopes remain original query companions and contribute their IDs; they never stand in for a missing whole cell.
+The bank contains the complete 4x4 grid of the original domain envelope. The receiver recomputes those 16 cells from the actual ZIP's domain-summary.json and compares every coordinate. Each completed scope must have paired original unrestricted where=1=1 requests with equal spatial relations. The receiver proves whole-cell coverage from the exact union of these source-query envelopes. It partitions at every recorded x boundary and checks the complete vertical interval in every resulting strip, preserving gaps of any positive width. Adjoining complete child queries can therefore replace their parent query, while incomplete child groups still trigger the missing cell's native acquisition.
 
 The retained first cell used exact Intersects; the next whole cell used the supported conservative IndexIntersects relation. Both are valid candidate sources for subsequent exact polygon selection. Each missing cell uses the maintained collector's adaptive IndexIntersects inventory path in its own directory. Every native count/ID response is preserved. Shared boundaries can repeat IDs; the final candidate set is their union.
 

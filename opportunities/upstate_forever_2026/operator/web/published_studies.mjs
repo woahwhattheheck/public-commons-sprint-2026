@@ -78,6 +78,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-wide">Source file or study directory<input name="relative_path" placeholder="studies/eighteenmile-2023.json" required></label>' +
       '<label>Original report file<input name="report_path" placeholder="Optional PDF in the same folder"></label>' +
       '<label>Table 7 image<input name="image_path" placeholder="Optional PNG in the same folder"></label></div>' +
+      '<label class="ps-check"><input type="checkbox" name="include_installed_context" checked>Include installed Eighteenmile reports and analyses</label>' +
       '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
@@ -225,6 +226,9 @@ export function createPublishedStudiesDesk(host) {
       const paired = arr(complete?.source_artifacts).find(item => item.path === "paired_analysis/paired-observations-report.html");
       if (paired) output += '<p>' + link(paired.preview_url || paired.download?.url, "Original matched-activity and paired-station analysis") +
         ' · The report export includes its linked tables and complete original source files.</p>';
+      const microcystinReport = arr(complete?.source_artifacts).find(item => item.path === "microcystin_reconciliation/report-reconciliation.html");
+      if (microcystinReport) output += '<p>' + link(microcystinReport.preview_url || microcystinReport.download?.url, "Table 8 candidate cohort and original microcystin reconciliation") +
+        ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
@@ -351,6 +355,9 @@ export function createPublishedStudiesDesk(host) {
         arr(context.source_artifacts).map(item => "<li>" + link(item.preview_url || item.download?.url,item.path) +
           (item.preview_url ? " · " + link(item.download?.url + "?download=1", "Original HTML") : "") + '<span class="ps-help">' +
           Number(item.bytes).toLocaleString() + " bytes</span></li>").join("") + "</ul></section>";
+      const composed = arr(complete?.record?.origin?.installed_context);
+      if (composed.length) output += '<section class="ps-methods"><h2>Included study context</h2><p>This source version retains the imported edition with these installed original report and analysis manifests.</p><ul>' +
+        composed.map(item => '<li>' + esc(item.manifest) + ' · ' + Number(item.native_entry_count).toLocaleString() + ' source entries</li>').join("") + '</ul></section>';
       for (const visual of arr(context.visual_context)) {
         const reading = visual.visual_reading || {};
         output += '<section class="ps-visual"><h2>Table 7 original page reading</h2><p>' + esc(reading.result) +
@@ -461,7 +468,7 @@ export function createPublishedStudiesDesk(host) {
     if (!event.target.matches("[data-ps-import]")) return;
     event.preventDefault();
     const data = new FormData(event.target), root_id = data.get("root_id");
-    const payload = {source:{root_id,relative_path:String(data.get("relative_path") || "").trim()},evidence:[]};
+    const payload = {source:{root_id,relative_path:String(data.get("relative_path") || "").trim()},evidence:[],include_installed_context:data.has("include_installed_context")};
     for (const [field,filename] of [["report_path","2023LakeProgramFinalReport.pdf"],["image_path","table7-page21.png"]]) {
       const relative_path = String(data.get(field) || "").trim();
       if (relative_path) payload.evidence.push({filename,source:{root_id,relative_path}});

@@ -54,7 +54,10 @@ def main(argv=None):
     for command in ('preview', 'build', 'resume', 'pause'):
         child = commands.add_parser(command)
         child.add_argument('--workspace', required=True)
-        child.add_argument('--selection', required=True, help='Native paired-run JSON selection')
+        source = child.add_mutually_exclusive_group(required=True)
+        source.add_argument('--selection', help='Native paired-run JSON selection')
+        if command != 'pause':
+            source.add_argument('--ensemble-id', help='Retained native analysis ID; recover its original pairs and execution controls')
     child = commands.add_parser('list')
     child.add_argument('--workspace', required=True)
     child = commands.add_parser('inspect')
@@ -81,7 +84,8 @@ def main(argv=None):
             if args.command == 'list':
                 result = app.list()
             else:
-                selection = read(args.selection)
+                selection = (app.retained_selection(args.ensemble_id)
+                             if getattr(args, 'ensemble_id', None) else read(args.selection))
                 fn = getattr(app, 'cancel' if args.command == 'pause' else args.command)
                 result = fn(selection, on_progress=progress) if args.command in ('build', 'resume') else fn(selection)
         elif args.command == 'receive':

@@ -15,9 +15,13 @@ from .portable_databases import snapshot_databases, without_database_files, veri
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
+    "observed_hydrology_context.report.json",
+    "observed_hydrology_context.sources.json",
+    "eighteenmile_scientific_figures.sources.json",
     "README.md",
     "PACKAGING_LIMITS.md",
     "audit.py",
+    "native_study_audit.py",
     "raster_checks.py",
     "package_delivery.py",
     "delivery_snapshot.py",
@@ -43,6 +47,8 @@ APPLICATION_FILES = (
     "eighteenmile_point_source_context.sources.json",
     "eighteenmile_lake_observation_report.sources.json",
     "eighteenmile_lake_paired_analysis.sources.json",
+    "published_studies_family.json",
+    "eighteenmile_lake_microcystin_reconciliation.sources.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
@@ -79,6 +85,7 @@ APPLICATION_FILES = (
     "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
+    "assessment",
     "scenario-design",
     "model",
     "operator",
