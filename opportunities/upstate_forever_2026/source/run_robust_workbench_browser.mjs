@@ -14,6 +14,7 @@ const { values: args } = parseArgs({ options: {
   url: { type: 'string' }, 'url-file': { type: 'string' }, workspace: { type: 'string' },
   experiment: { type: 'string' }, diagnostic: { type: 'string' }, 'report-sha256': { type: 'string' },
   configuration: { type: 'string' }, output: { type: 'string' },
+  'receiving-receipt': { type: 'string' },
   objective: { type: 'string', default: 'worst_case' }, 'time-limit': { type: 'string', default: '60' },
   'run-label': { type: 'string' }, 'browser-channel': { type: 'string' },
   'delivery-profile': { type: 'string' }, 'delivery-point': { type: 'string' },
@@ -23,6 +24,7 @@ const { values: args } = parseArgs({ options: {
 } });
 if (args.help) {
   process.stdout.write('Usage: node source/run_robust_workbench_browser.mjs --url-file PRIVATE_URL_FILE (--experiment RETAINED_EXPERIMENT_ID | --diagnostic RETAINED_DIAGNOSTIC_ID --report-sha256 EXACT_REPORT_SHA256) --configuration DECISION_CONFIG_JSON [--workspace OPERATOR_WORKSPACE_KEY] [--output DIRECTORY] [--objective worst_case|minimax_regret|expected] [--time-limit SECONDS] [--delivery-profile NATIVE_PROFILE_ID [--delivery-point ZERO_BASED_INDEX --delivery-budgets EXPLICIT_COMMA_SEPARATED_BUDGETS]] [--video] [--headed]\nDecision configuration supplies actual candidate/profile/metric IDs, costs, capacity use, cost units, metric scales and weights. Optional ceilings, targets, probabilities and group limits are honored. Outcome cells come from the selected original retained experiment or diagnostic. Diagnostic mode pins the exact report SHA and honors source.diagnostic_design structural choices. Optional delivery mode opens the original atlas using an explicit native profile, checks its original run pair, backlink and retained mobile draft. An explicit frontier point also requires explicit delivery budgets; it is calculated through the original frontier action.\n');
+  process.stdout.write('Receiving: --url-file PRIVATE_URL_FILE --receiving-receipt NATIVE_RECEIVING_JSON [--output DIRECTORY] [--video]. Reopens the exact restored saved calculation and completed map/client release, original file tickets, source backlink and 390px draft without another preparation or calculation.\n');
   process.exit(0);
 }
 const runLabel = args['run-label'] || new Date().toISOString().replace(/[:.]/g, '-');
@@ -238,13 +240,16 @@ async function exportFile(selector, name, extension) {
   return { path, bytes, task };
 }
 
-async function exerciseNativeDelivery(saved, solved, allowance) {
+async function exerciseNativeDelivery(saved, solved, allowance, retained = null) {
   if (!args['delivery-profile']) return;
   const profileId = args['delivery-profile'];
-  let calculation = solved.task.result, pointIndex = null;
+  let calculation = retained ? { run_id: retained.run.id, revision: retained.run.revision,
+    answer: retained.run.result } : solved.task.result;
+  let pointIndex = retained ? retained.pin.point_index : null;
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await ready(); await openStudy(saved.id);
-  if (args['delivery-budgets']) {
+  await ready();
+  if (!retained) await openStudy(saved.id);
+  if (!retained && args['delivery-budgets']) {
     const budgets = args['delivery-budgets'].split(',').map(value => Number(value.trim()));
     await page.locator('#rw-budgets').fill(budgets.join(', '));
     const frontier = await action('#rw-frontier', 'robust.frontier', (allowance + 180) * 1000);
@@ -267,11 +272,11 @@ async function exerciseNativeDelivery(saved, solved, allowance) {
     await page.locator('#rw-nativeDelivery').click();
     return nativeJSON(await pending, 'Saved decision delivery options');
   };
-  let options = await getOptions();
+  let options = await getOptions(retained ? pointIndex : null);
   requireValue(options.study_id === saved.id && options.run_id === calculation.run_id &&
     options.revision === saved.revision, 'Delivery options changed the saved calculation identity.');
   await page.locator('#rw-nativeDeliveryCard').waitFor({ state: 'visible' });
-  if (pointIndex !== null) {
+  if (pointIndex !== null && !retained) {
     const pending = page.waitForResponse(matches('/api/robust-workbench/delivery-options',
       { ...expected, point_index: pointIndex }));
     await page.locator('#rw-nativePoint').selectOption(String(pointIndex));
@@ -367,8 +372,114 @@ async function exerciseNativeDelivery(saved, solved, allowance) {
   };
 }
 
+
+async function reopenReceivedStudy(receipt) {
+  requireValue(receipt?.schema === 'upstate.native-decision-receiving-workflow/v1',
+    'Use the completed original native-decision-receiving.json receipt.');
+  const key = args.workspace || receipt.restored_workspace_key;
+  requireValue(key === receipt.restored_workspace_key,
+    'The receiving receipt belongs to its exact restored registered Workspace.');
+  const pin = receipt.source_decision, files = receipt.restored_delivery_files;
+  requireValue(/^study_[0-9a-f]{32}$/.test(receipt.study_id || '') &&
+    /^run_[0-9a-f]{32}$/.test(receipt.run_id || '') &&
+    /^[0-9a-f]{64}$/.test(receipt.delivery_id || '') &&
+    pin?.study_id === receipt.study_id && pin.run_id === receipt.run_id &&
+    pin.revision === receipt.revision && /^[0-9a-f]{64}$/.test(pin.profile_id || '') &&
+    (pin.point_index === null || Number.isSafeInteger(pin.point_index) && pin.point_index >= 0) &&
+    files && typeof files === 'object',
+    'The receipt lacks its exact saved study, calculation, native profile and completed release.');
+  args['delivery-profile'] = pin.profile_id;
+  args['delivery-point'] = pin.point_index === null ? undefined : String(pin.point_index);
+  await changeWorkspace(key); await ready();
+  journal.operator_workspace_key = key;
+  journal.receiving_operation_id = receipt.operation_id;
+  journal.received_study_id = receipt.study_id;
+  journal.saved_revision = receipt.revision;
+  const nav = page.locator('[data-view="map-atlas"]');
+  await nav.click();
+  await page.locator('.map-atlas').waitFor({ state: 'visible' });
+  const showReleases = page.locator('.map-atlas [data-atlas-action="releases"]');
+  if (await showReleases.count()) await showReleases.first().click();
+  const open = page.locator('.map-atlas [data-atlas-action="open"][data-id=' +
+    JSON.stringify(receipt.delivery_id) + ']').first();
+  await open.waitFor({ state: 'visible' });
+  const pending = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === '/api/item' && url.searchParams.get('kind') === 'deliveries' &&
+      url.searchParams.get('id') === receipt.delivery_id;
+  });
+  await open.click();
+  const release = await nativeJSON(await pending, 'Reopen original completed received release');
+  requireValue(release.id === receipt.delivery_id && release.state === 'complete' &&
+    canonical(release.selection?.source_decision) === canonical(pin),
+    'The received atlas changed its original saved Decision binding.');
+  for (const [role, descriptor] of Object.entries(files)) {
+    requireValue(canonical(release.files?.[role]) === canonical(descriptor),
+      'The received release changed its retained file descriptor: ' + role);
+  }
+  for (const role of ['decision_binding', 'decision_report_html', 'client_report_html', 'native_execution']) {
+    const expected = files[role], ticket = release._downloads?.find(item =>
+      item.sha256 === expected?.sha256 && item.bytes === expected?.bytes);
+    requireValue(ticket && /^\/api\/file\/[0-9a-f]{64}$/.test(ticket.url || ''),
+      'The original received release lacks its authenticated ' + role + ' file ticket.');
+    const link = page.locator('.map-atlas a[href=' + JSON.stringify(ticket.url + '?download=1') + ']').first();
+    requireValue(await link.count() === 1, 'The retained file is absent from the original atlas downloads: ' + role);
+    const parents = await link.locator('xpath=ancestor::details').all();
+    for (const detail of parents) {
+      if (await detail.getAttribute('open') === null) await detail.locator('summary').first().click();
+    }
+    const downloading = page.waitForEvent('download');
+    await link.click();
+    const download = await downloading, target = join(output, 'exports', role + '-' + basename(download.suggestedFilename()));
+    await download.saveAs(target);
+    const bytes = await readFile(target), hash = createHash('sha256').update(bytes).digest('hex');
+    requireValue(bytes.length === expected.bytes && hash === expected.sha256,
+      'The original restored ' + role + ' download differs from its retained source bytes.');
+    journal.exports.push({ role, file: relative(output, target), bytes: bytes.length, sha256: hash,
+      delivery_id: release.id, restored_workspace_key: key });
+  }
+  await shot('10-restored-completed-map-client-release', '.map-atlas');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot('11-restored-map-client-release-mobile', '.map-atlas');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const backlink = page.locator('.map-atlas [data-atlas-action="source-decision"]').first();
+  await backlink.waitFor({ state: 'visible' });
+  requireValue(await backlink.getAttribute('data-study-id') === receipt.study_id &&
+    await backlink.getAttribute('data-run-id') === receipt.run_id &&
+    Number(await backlink.getAttribute('data-revision')) === receipt.revision &&
+    await backlink.getAttribute('data-profile-id') === pin.profile_id &&
+    (await backlink.getAttribute('data-point-index')) ===
+      (pin.point_index === null ? null : String(pin.point_index)),
+    'The completed release backlink changed its exact saved calculation.');
+  const reading = page.waitForResponse(matches('/api/robust-workbench/run',
+    { study_id: receipt.study_id, run_id: receipt.run_id }));
+  const studyReading = page.waitForResponse(matches('/api/robust-workbench/study',
+    { study_id: receipt.study_id, revision: receipt.revision }));
+  await backlink.click();
+  const run = await nativeJSON(await reading, 'Reopen received original Decision calculation');
+  const saved = await nativeJSON(await studyReading, 'Reopen its original saved revision');
+  requireValue(run.id === receipt.run_id && run.study_id === receipt.study_id &&
+    run.revision === receipt.revision && run.status === 'completed' && run.result &&
+    saved.id === receipt.study_id && saved.revision === receipt.revision,
+    'The received Decision desk did not reopen the exact completed original calculation.');
+  await opened(saved);
+  await page.locator('#rw-results').waitFor({ state: 'visible' });
+  journal.received_calculation = { study_id: saved.id, revision: saved.revision, run_id: run.id,
+    result_sha256: pin.result_sha256, delivery_id: release.id };
+  await exerciseNativeDelivery(saved, null, 0, { run, pin });
+  requireValue(canonical(journal.native_delivery.source_decision) === canonical(pin),
+    'Reopening the restored map draft changed the completed release source pin.');
+  journal.status = 'complete';
+}
+
 async function main() {
   await mkdir(join(output, 'exports'), { recursive: true });
+  const receiving = args['receiving-receipt'] ? JSON.parse(await readFile(resolve(args['receiving-receipt']), 'utf8')) : null;
+  if (receiving) requireValue(!args.experiment && !args.diagnostic && !args.configuration &&
+    !args['report-sha256'] && !args['delivery-profile'] && args['delivery-point'] === undefined &&
+    args['delivery-budgets'] === undefined,
+    '--receiving-receipt reopens its exact restored calculation and profile; keep creation inputs separate.');
+  if (!receiving) {
   requireValue(Boolean(args.experiment) !== Boolean(args.diagnostic),
     'Choose exactly one original --experiment or --diagnostic.');
   requireValue(args.configuration, 'Supply --configuration with the explicit decision inputs.');
@@ -392,7 +503,9 @@ async function main() {
     requireValue(Number(args['delivery-point']) < ordered.length,
       '--delivery-point is outside the original sorted unique budget list.');
   }
-  const supplied = JSON.parse(await readFile(resolve(args.configuration), 'utf8'));
+  }
+  const allowance = receiving ? 0 : number(Number(args['time-limit']), 'calculation time allowance', { positive: true });
+  const supplied = receiving ? null : JSON.parse(await readFile(resolve(args.configuration), 'utf8'));
   privateURL = (args['url-file'] ? await readFile(args['url-file'], 'utf8') : args.url || process.env.ECO_OPERATOR_URL || '').trim();
   requireValue(privateURL, 'Supply the original private operator URL via --url-file, --url or ECO_OPERATOR_URL.');
   let parsed; try { parsed = new URL(privateURL); } catch { throw Error('The private operator URL is not valid.'); }
@@ -405,7 +518,9 @@ async function main() {
   page.on('pageerror', error => journal.browser_errors.push(redact(error.message)));
   page.on('response', response => { void observeResponse(response); });
   await page.goto(privateURL, { waitUntil: 'domcontentloaded' });
-  await page.locator('#workspace-select').waitFor({ state: 'visible' }); await findSource();
+  await page.locator('#workspace-select').waitFor({ state: 'visible' });
+  if (receiving) { await reopenReceivedStudy(receiving); return; }
+  await findSource();
   journal.operator_workspace_key = await page.locator('#workspace-select').inputValue();
   const configureSelector = args.diagnostic ? '#rw-configureDiagnostic' : '#rw-configureExperiment';
   const sourceSelector = args.diagnostic ? '#rw-diagnostics' : '#rw-experiments';
