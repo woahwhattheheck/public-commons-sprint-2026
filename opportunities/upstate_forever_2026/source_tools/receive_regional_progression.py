@@ -34,6 +34,23 @@ def item(path):
     return read_json(path) if Path(path).is_file() else None
 
 
+def monitoring_report_input(title, delivery=None):
+    """Match the explicit maintained browser report input without changing old requests."""
+    if title is None:
+        require(delivery is None, "Choose a Monitoring report title before its delivery")
+        return None
+    whitespace = " \t\n\r\v\f\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+    require(isinstance(title, str), "Provide the Monitoring report source title")
+    title = title.strip(whitespace)
+    require(title and len(title.encode("utf-16-le")) // 2 <= 300,
+            "Use a Monitoring report source title of 1-300 browser characters")
+    delivery = delivery or None
+    require(delivery is None or isinstance(delivery, str) and len(delivery) == 64
+            and all(value in "0123456789abcdef" for value in delivery),
+            "Choose an original saved scientific delivery ID")
+    return {"title": title, "delivery_id": delivery}
+
+
 class Progression:
     def __init__(self, args, regional_args):
         self.args = args
@@ -78,6 +95,10 @@ class Progression:
                         "operator_state": str(self.operator_state),
                         "regional_arguments": regional_args,
                         "documents": documents, "run_models": not args.prepare_only}
+        report_input = monitoring_report_input(args.monitoring_comparison_report_title,
+                                               args.monitoring_comparison_report_delivery)
+        if report_input is not None:
+            self.request["monitoring_comparison_report"] = report_input
         require(existing is None or existing.get("request") == self.request,
                 "This receiving directory retains another selection; continue its exact original command")
         self.state = existing or {"schema": SCHEMA, "request": self.request,
@@ -309,6 +330,10 @@ class Progression:
                                 if "--comparison-selection" in choices else None)
             require(journal.get("input", {}).get("comparison") == comparison_input,
                     "The completed Monitoring browser selected another budget comparison input")
+            report_input = monitoring_report_input(choices.get("--comparison-report-title"),
+                                                   choices.get("--comparison-report-delivery"))
+            require(journal.get("input", {}).get("comparison_report") == report_input,
+                    "The completed Monitoring browser selected another scientific report input")
             if "--restored-selection" in choices:
                 selected_path = Path(choices["--restored-selection"])
                 selected = read_json(selected_path)
@@ -322,6 +347,8 @@ class Progression:
                     **expected_selection}
                 if comparison_input is not None:
                     expected_input["comparison"] = comparison_input
+                if report_input is not None:
+                    expected_input["comparison_report"] = report_input
                 require(selected["project_id"] == self.operator.ws(workspace).project["id"]
                         and journal.get("schema") == "upstate.monitoring-browser/v1"
                         and journal.get("workspace_key") == workspace
@@ -362,6 +389,24 @@ class Progression:
                         and sorted(comparison["selection"]["context_ids"]) ==
                             sorted(chosen["context_ids"]),
                         "The completed browser comparison differs from its original frontier or observed support")
+            if report_input is not None:
+                from model import monitoring_report_source, scientific_report_editions, observed_context
+                ws = self.operator.ws(workspace)
+                require(journal.get("comparison_report_id") and journal.get("scientific_report_edition_id"),
+                        "The completed Monitoring browser omitted its report source or scientific edition")
+                report = monitoring_report_source.inspect(ws, journal["comparison_report_id"], verify=True)
+                require(report["selection"].get("comparison_id") == journal.get("comparison_id")
+                        and report["selection"].get("title") == report_input["title"].strip()
+                        and report["state"] == "complete",
+                        "The retained Monitoring report differs from this comparison and title")
+                edition, _, _ = scientific_report_editions.inspect(ws, journal["scientific_report_edition_id"])
+                choices_in_edition = observed_context.source_choices(edition["render_identity"]["selection"])
+                selected_delivery = monitoring_report_source.delivery_selection(
+                    ws, report["source"], report_input["delivery_id"])
+                required_sources = observed_context.source_choices(selected_delivery)
+                require(edition["project_id"] == ws.project["id"] and edition["state"] == "complete"
+                        and all(source in choices_in_edition for source in required_sources),
+                        "The completed scientific edition omitted an original selected report source")
         elif script == "source/run_chemistry_browser.mjs":
             if "--restored-selection" in choices:
                 selected_path = Path(choices["--restored-selection"])
@@ -884,6 +929,11 @@ class Progression:
                 "monitoring-comparison-selection.json")
             self.monitoring_comparison_input(comparison_path)
             comparison_arguments = ["--comparison-selection", str(comparison_path)]
+        report_input = self.request.get("monitoring_comparison_report")
+        if report_input is not None:
+            comparison_arguments.extend(["--comparison-report-title", report_input["title"]])
+            if report_input["delivery_id"]:
+                comparison_arguments.extend(["--comparison-report-delivery", report_input["delivery_id"]])
         if self.args.monitoring_restored_selection:
             require(outcome and outcome.get("kind") == "retained_campaign",
                     "Reopen the original native Monitoring campaign before its browser continuation")
@@ -1069,6 +1119,10 @@ def main(argv=None):
                         help="Open exact native project/network/plan/campaign IDs from an already received full Workspace")
     parser.add_argument("--monitoring-comparison-selection", type=Path,
                         help="Operate an original saved budget frontier through the same Monitoring browser and full receiving")
+    parser.add_argument("--monitoring-comparison-report-title",
+                        help="Prepare the selected comparison source and complete original scientific report")
+    parser.add_argument("--monitoring-comparison-report-delivery",
+                        help="Retain this original saved delivery's ordered scientific source choices")
     parser.add_argument("--prepare-only", action="store_true", help="Prepare source dependencies without executing native models")
     parser.add_argument("--node", default="node")
     parser.add_argument("--port", type=int, default=0)
@@ -1094,6 +1148,10 @@ def main(argv=None):
     require(not args.monitoring_comparison_selection or
             args.monitoring_restored_selection or args.monitoring_opening,
             "--monitoring-comparison-selection requires the original Monitoring browser input")
+    report_input = monitoring_report_input(args.monitoring_comparison_report_title,
+                                           args.monitoring_comparison_report_delivery)
+    require(report_input is None or args.monitoring_comparison_selection,
+            "--monitoring-comparison-report-title requires --monitoring-comparison-selection")
     require(bool(args.opening) != bool(regional_args),
             "Supply either --opening or the original regional preparation arguments after --")
     require(0 <= args.port <= 65535 and 0 < args.timeout <= 86400,

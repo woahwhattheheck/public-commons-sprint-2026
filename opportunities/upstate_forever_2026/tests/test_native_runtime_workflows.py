@@ -181,7 +181,10 @@ class RuntimeWorkflows(unittest.TestCase):
             self.assertEqual(result["members"], 4)
             selected = probe.selected_source(fixture_application(root))
             sealed = root / "archive-fixture.zip"
-            capsule.seal(original, sealed, selected, probe.identity(), kind="conda-pack")
+            donor = {"state": "ready", "identity": probe.identity(), "packages": {}}
+            sealing_probe = {**donor, "probe_record": "resumed-publication-fixture"}
+            capsule.seal(original, sealed, selected, sealing_probe["identity"],
+                         kind="conda-pack", donor_probe=sealing_probe)
             manifest = capsule.read_capsule(sealed)
             destination = root / "received"
             capsule.extract_payload(sealed, destination, manifest)
@@ -191,6 +194,32 @@ class RuntimeWorkflows(unittest.TestCase):
                 archive.extractall(extracted, filter="data")
             self.assertEqual((extracted / "lib/retained-link").read_bytes(), b"full original bytes\0\xff")
             self.assertTrue(os.access(extracted / "bin/python", os.X_OK))
+            # Reproduce publication succeeding while its capture receipt is lost.
+            # This is the same archive-management fixture, not a native model probe.
+            prefix = root / "donor-prefix-fixture"
+            (prefix / "conda-meta").mkdir(parents=True)
+            app = root / "application-pin-fixture"
+            stage = sealed.with_name("." + sealed.name + ".capture")
+            stage.mkdir()
+            retained = stage / "runtime.tar.gz"
+            transport.copy_verified(original, retained)
+            request = {"prefix": str(prefix), "application": str(app),
+                       "selection": selected,
+                       "pack_python": str(capsule.resolve_python(sys.executable)),
+                       "output": str(sealed)}
+            transport.atomic_json(stage / "capture.json", {
+                "request": request, "state": "capturing",
+                "complete_archive": transport.descriptor(stage, retained),
+                "donor_probe": donor, "sealing_probe": sealing_probe})
+            before = transport.file_hash(sealed)
+            with self.assertRaisesRegex(ValueError, "original owned capture"):
+                capsule.capture_conda(prefix, app, sealed)
+            recovered = capsule.capture_conda(prefix, app, sealed, resume=True)
+            self.assertEqual(recovered["sha256"], before)
+            self.assertEqual(transport.read_json(stage / "capture.json")["state"], "complete")
+            self.assertEqual(capsule.capture_conda(prefix, app, sealed, resume=True), recovered)
+            self.assertEqual(transport.file_hash(retained), transport.file_hash(original))
+            self.assertFalse((prefix / "bin").exists())
             unsafe = root / "escaping.tar.gz"
             with tarfile.open(unsafe, "w:gz") as archive:
                 link = tarfile.TarInfo("escape"); link.type = tarfile.SYMTYPE

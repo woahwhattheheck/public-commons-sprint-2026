@@ -186,8 +186,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 40760,
-      "sha256": "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46",
+      "bytes": 41625,
+      "sha256": "42382f846120d9b729e903f17a85f25abc03c1933ff2599942ec2499736296fd",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -203,7 +203,8 @@
         "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
         "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
         "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
-        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c"
+        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c",
+        "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46"
       ]
     },
     {
@@ -650,12 +651,13 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 24031,
-      "sha256": "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4",
+      "bytes": 24573,
+      "sha256": "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
         "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
-        "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f"
+        "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
+        "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4"
       ]
     },
     {

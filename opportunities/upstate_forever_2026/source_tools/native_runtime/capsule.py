@@ -278,7 +278,7 @@ def seal(payload, output, selection, target, *, kind, donor_probe=None, require_
                     "archive": archive_info, "created_at": stamp(),
                     "donor_probe": donor_probe,
                     "runtime_readiness": "requires receiving-host native probe",
-                    "original_driver": "model.native.runtime / original Workspace.execute_run"}
+                    "original_driver": "model.native.runtime / original Workspace.run"}
         atomic_json(stage / "capsule.json", manifest)
         temporary_zip = stage / "capsule.zip"
         with zipfile.ZipFile(temporary_zip, "x", compression=zipfile.ZIP_STORED,
@@ -511,11 +511,47 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
             raise
 
 
+def _recover_capture_output(output, stage, state, request):
+    """Reopen one published capsule after its original capture lost the response.
+
+    The operation lease is held by capture_conda. Its retained request, complete
+    original pack and donor probe establish ownership before any state is
+    completed. No donor command or new packing work is required.
+    """
+    if output.is_symlink():
+        raise ValueError("Captured runtime output cannot be a symlink")
+    original = state.get("complete_archive")
+    donor = state.get("sealing_probe", state.get("donor_probe"))
+    if original is None or not isinstance(donor, dict) or donor.get("state") != "ready":
+        raise ValueError("Published output has no complete original owned capture")
+    original_path = verify_file(stage, original)
+    inspected = inspect_capsule(output)
+    manifest = inspected["manifest"]
+    expected_payload = {"path": "payload/runtime.tar.gz",
+                        "bytes": original["bytes"], "sha256": original["sha256"]}
+    if (manifest["kind"] != "conda-pack"
+            or manifest["selection"] != request["selection"]
+            or manifest["target"] != donor.get("identity")
+            or manifest.get("donor_probe") != donor
+            or manifest["files"] != [expected_payload]
+            or manifest.get("archive") != scan_conda(original_path)):
+        raise ValueError("Published capsule differs from this original owned capture")
+    captured = {key: inspected[key] for key in ("path", "bytes", "sha256")}
+    if state.get("capsule") is not None and state["capsule"] != captured:
+        raise ValueError("Completed capture capsule bytes changed")
+    state.update(state="complete", capsule=captured,
+                 completed_at=state.get("completed_at") or stamp())
+    state.pop("error", None)
+    atomic_json(stage / "capture.json", state)
+    return {**captured, "manifest": manifest, "reused": True}
+
+
 def capture_conda(prefix, application, output, *, pack_python=sys.executable, resume=False):
     """Use maintained conda-pack relocation; keep complete logs on every outcome.
 
-    Capturing reads the existing donor, never installs into it. Repeated capture
-    re-probes its current native sources and reuses only a completely sealed pack.
+    Capturing reads the existing donor, never installs into it. Resume reuses
+    a verified complete original pack. An already-published owned capsule is
+    reopened without another donor probe or packing command.
     """
     prefix = Path(prefix).resolve(strict=True)
     if not (prefix / "conda-meta").is_dir():
@@ -523,8 +559,8 @@ def capture_conda(prefix, application, output, *, pack_python=sys.executable, re
     application = Path(application).resolve(strict=True)
     output = Path(output).absolute()
     output.parent.mkdir(parents=True, exist_ok=True)
-    if output.exists() or output.is_symlink():
-        raise FileExistsError(output)
+    if output.is_symlink():
+        raise ValueError("Captured runtime output cannot be a symlink")
     if output.is_relative_to(prefix):
         raise ValueError("Keep captured output outside the donor environment")
     selected = probe.selected_source(application)
@@ -539,12 +575,16 @@ def capture_conda(prefix, application, output, *, pack_python=sys.executable, re
             if not resume or state["request"] != request:
                 raise ValueError("Resume only this original owned capture with --resume")
         else:
+            if output.exists():
+                raise FileExistsError("Published output has no original capture request: " + str(output))
             if stage.exists():
                 raise ValueError("Existing capture directory is unowned")
             stage.mkdir()
             state = {"request": request, "state": "capturing", "started_at": stamp()}
             atomic_json(state_path, state)
         try:
+            if output.exists() or output.is_symlink():
+                return _recover_capture_output(output, stage, state, request)
             actual = probe_python(prefix / "bin" / "python", selected, stage / "probe",
                                   application=application, prefix=prefix, lease_fd=lease_fd)
             if actual["state"] != "ready":
@@ -563,6 +603,10 @@ def capture_conda(prefix, application, output, *, pack_python=sys.executable, re
                 scan_conda(archive)
                 state.update(complete_archive=descriptor(stage, archive), donor_probe=actual)
                 atomic_json(state_path, state)
+            # Retain the exact probe used by this publication before create-only
+            # sealing, including a resumed capture's fresh compatible probe.
+            state["sealing_probe"] = actual
+            atomic_json(state_path, state)
             result = seal(archive, output, selected, actual["identity"], kind="conda-pack", donor_probe=actual)
             state.update(state="complete", capsule={k: result[k] for k in ("path", "bytes", "sha256")}, completed_at=stamp())
             state.pop("error", None)
@@ -570,7 +614,11 @@ def capture_conda(prefix, application, output, *, pack_python=sys.executable, re
             return result
         except BaseException as exc:
             state.update(state="failed", error={"type": type(exc).__name__, "message": str(exc)}, updated_at=stamp())
-            atomic_json(state_path, state)
+            try:
+                atomic_json(state_path, state)
+            except OSError as recording_error:
+                if hasattr(exc, "add_note"):
+                    exc.add_note("Could not record capture failure: " + str(recording_error))
             raise
 
 
