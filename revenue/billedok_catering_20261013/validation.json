@@ -1,0 +1,9 @@
+{
+  "companies": 6,
+  "editions": 2,
+  "customer_files": 9,
+  "customer_packages": 2,
+  "whole_record_receive_equal": true,
+  "package_receive_equal": true,
+  "visual_review": "pending_actual_rendered_review"
+}

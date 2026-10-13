@@ -1,0 +1,88 @@
+[
+  {
+    "id": "billedok-sample-customer-package-20261013",
+    "packet": {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "billedok-sample-customer-package-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "edition_id": "billedok-free-vegetaria-20261013",
+      "edition_sha256": "ce2899a4f9b03a31d9ad178da558765378ef7b430ef4325c95bb53532d3c39cc",
+      "title": "Ein recherchierter Catering-Betrieb für BilledOK",
+      "instructions": "Öffnen Sie START-HERE.md und die vollständige HTML-Datei. CSV, Markdown und JSON enthalten die weitere verwendbare Ausgabe. Originalquellen vor dem individuellen Geschäftskontakt erneut öffnen.",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "files": [
+        {
+          "id": "billedok-file-1-20261013",
+          "revision": 1,
+          "sha256": "57a6e0fd6dfbba196bcc07fc1a5d95f685ee44b7a914103d4d00687869ddaa0b"
+        },
+        {
+          "id": "billedok-file-2-20261013",
+          "revision": 1,
+          "sha256": "62a02acf132b93208f1125e739ab7b6227e517eb27f55a125142e62314f7bd9c"
+        },
+        {
+          "id": "billedok-file-3-20261013",
+          "revision": 1,
+          "sha256": "aff6e14b17d8b391cee6508bf37ca05ba475e2e7e92fd55912043fe38d9bc10a"
+        },
+        {
+          "id": "billedok-file-4-20261013",
+          "revision": 1,
+          "sha256": "d1d957fe8a890597cb7d460d23b5a665e72e26a501075cc2d4b8f92fe7f0c3d1"
+        },
+        {
+          "id": "billedok-file-9-20261013",
+          "revision": 1,
+          "sha256": "f53ea5e2eb34e4ba241d59301501e7b13c00eb6a41bb13140873422f8c4dde9b"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "bca79e82a6cc99e5b8f89e8bec4edf60227a40211f9cab3a073fb8b5c6c212fb"
+    }
+  },
+  {
+    "id": "billedok-paid-customer-package-20261013",
+    "packet": {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "billedok-paid-customer-package-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "edition_id": "billedok-paid-five-20261013",
+      "edition_sha256": "3fa413c792bd1438da1e1d90d07af186c4c75b73946ac64d77759b6e960825b4",
+      "title": "Fünf weitere Catering-Betriebe für BilledOK",
+      "instructions": "Öffnen Sie START-HERE.md und die vollständige HTML-Datei. CSV, Markdown und JSON enthalten die weitere verwendbare Ausgabe. Originalquellen vor dem individuellen Geschäftskontakt erneut öffnen.",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "files": [
+        {
+          "id": "billedok-file-5-20261013",
+          "revision": 1,
+          "sha256": "f8bf67fa6d90f485102ed99c7c8a89d38c016f39b0a3faf7ae504cc4525b6a36"
+        },
+        {
+          "id": "billedok-file-6-20261013",
+          "revision": 1,
+          "sha256": "dc92e1fb2c09717da7ffd232fde857f49a0d5c50bef94c5b722988dc94eb0bbb"
+        },
+        {
+          "id": "billedok-file-7-20261013",
+          "revision": 1,
+          "sha256": "c9ca9e7db601e444f1f215a932f1f0d8f9126380829525afa0feb1ef57edcfad"
+        },
+        {
+          "id": "billedok-file-8-20261013",
+          "revision": 1,
+          "sha256": "08a6135cc345d72bde484301f4e09499731506cde7a8438eeeb790e0351ac3b8"
+        },
+        {
+          "id": "billedok-file-9-20261013",
+          "revision": 1,
+          "sha256": "f53ea5e2eb34e4ba241d59301501e7b13c00eb6a41bb13140873422f8c4dde9b"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "4d604533487e8adaf8b81657a9e248b3aa079ba6651d4f2ff16ec5c96c6e7f0e"
+    }
+  }
+]
