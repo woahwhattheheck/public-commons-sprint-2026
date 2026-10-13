@@ -2,13 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
     "published_studies.css",
     "published_review_reports.mjs",
-    "published_microbial_selection.mjs"
+    "published_microbial_selection.mjs",
+    "published_original_reports.mjs"
   ],
   "backend": {
     "module": "published_study_operator",
@@ -180,6 +181,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/report-preview",
+        "operation": "report-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -196,6 +210,15 @@
           "route.workspace_key",
           "route.collection_id",
           "route.member_path"
+        ],
+        "response": "ticket_policy_pair"
+      },
+      {
+        "path": "/api/file/published-study-preview/{workspace_key}/{ticket_id}",
+        "handler": "report_preview_file",
+        "args": [
+          "route.workspace_key",
+          "route.ticket_id"
         ],
         "response": "ticket_policy_pair"
       }
