@@ -2,6 +2,23 @@
 
 The complete companion explains the original quantities used by the six-question utility review. It covers those six whole HUCs and the five original utility focus/upstream groups, with the combined 36-HUC union counted once. The saved six-question project remains byte-identical.
 
+## Saved questions and original class pathways
+
+Open [COMPACT_READING_EDITION.html](../../deliverables/utility-review-attribution-20261013/COMPACT_READING_EDITION.html) for all eleven subjects, the six saved review questions and expandable original notes, and all six complete downloads including the saved project. This 175,588-byte file retains the native reading edition's complete presentation and original download bytes in a compressed local payload. It needs no network request for the selections, notes or downloads.
+
+The source reading edition was produced and operated in Chromium at desktop and phone widths by C827; its original HTML SHA-256 is `00bc91720adedeb03fdddb30277f385e5abe8093d03495ea18b36cc26ebea7a8`. The compact file's SHA-256 is `3dbaed8a9d9d1fb6f91705fd3714dd5264268e09b2b7add2e8d951b53a8d5c76`. Compaction changes only the six download representations and adds the shared local download handler. The original panels, saved questions, expandable notes and styling stay intact. Each of the six decoded files was compared byte for byte to its retained scientific original; the ordinary compaction entrypoint also reproduced the exact compact file when executed with file adapters. Native browser operation of the original reading edition is recorded in [READING_EDITION.md](../../source_tools/watershed_review/READING_EDITION.md).
+
+Create both editions from the complete native twenty-file delivery using the maintained tools:
+
+```sh
+python source_tools/watershed_review/make_portable_class_pathway_reader.py \\
+  --delivery ORIGINAL_DELIVERY --output NEW_READING_EDITION.html
+node source_tools/watershed_review/compact_reading_edition.mjs \\
+  NEW_READING_EDITION.html NEW_COMPACT_READING_EDITION.html
+```
+
+Both producers preserve existing output files. The compact producer checks complete UTF-8/base64 input, the six expected download names, and the shared project/analysis source edition, then reports the exact input, output and download hashes. The original twenty-file source collection and saved project are unchanged.
+
 ## Open the portable reader
 
 [PORTABLE_REVIEW.html](../../deliverables/utility-review-attribution-20261013/PORTABLE_REVIEW.html) contains all eleven views and all five complete CSV/JSON downloads in one file. Save and open it in a current browser. Its embedded tables are byte-identical to the separately retained originals: 810,189 bytes across the five files. No network request is used to select a subject or download a table. The full editable source delivery remains the twenty-file package described below.
