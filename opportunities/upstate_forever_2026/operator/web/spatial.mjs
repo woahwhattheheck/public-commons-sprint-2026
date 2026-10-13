@@ -128,6 +128,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const add=c.root.querySelector('[data-spatial-input="add-overlay"]'),addValue=add.value;
     add.innerHTML=layerOptions(c,'vector',addValue,'Choose a vector source');
     if(focused)controls.querySelector('[data-spatial-input="'+focused+'"]')?.focus({preventScroll:true});
+    c.regions?.updateSources();
   }
   function renderMarkers(c){
     c.root.querySelector('[data-spatial-markers]').innerHTML=c.model.markers.length?c.model.markers.map((item,index)=>
@@ -798,6 +799,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     current=c;root.innerHTML=shell();
     model.regions||={};
     c.regions=createRegionAnalysis({root,model:model.regions,workspace:c.key,request,alive:()=>alive(c),refreshState,showTask,
+      getSources:()=>({layers:model.catalog?.layers||[],overlays:model.overlays}),
       getSelection:()=>{
         if(c.busy||!validView(model.view)||!model.frame||frameIdentity(model)!==model.renderedKey)throw Error('Wait for the selected native map view to finish rendering.');
         return {primary:clone(model.primary),comparison:clone(model.comparison),view:clone(model.view)};
