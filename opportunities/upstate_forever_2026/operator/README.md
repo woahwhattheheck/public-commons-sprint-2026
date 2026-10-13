@@ -46,8 +46,10 @@ against the same project and scientific records. Distinct prior notes remain
 available in the guide's note versions.
 
 The original reference resolution is preserved when revising a prepared grid.
-For the official Gura study, the cell size is 300 m and the upstream context
-buffer is an independent 300 m setting. The issuer requires final Upper Savannah map data on a 30 × 30 m regional
+The grid form reads the selected original land-cover header and uses that
+edition's native square-cell resolution. Previously saved grid revisions keep
+their original selection. Cell size and upstream context buffer remain
+independent values. The issuer requires final Upper Savannah map data on a 30 × 30 m regional
 grid, with an external modeling buffer chosen for the catchment (RFP p. 2).
 The Gura grid supports the original working demonstration. An omitted `resolution_m` retains the historic
 30 m selection identity.
