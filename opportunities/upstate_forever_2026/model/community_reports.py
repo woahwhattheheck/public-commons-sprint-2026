@@ -14,7 +14,7 @@ from .common import atomic_bytes, canonical, describe_file, digest, held, verify
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
                           get_plan, get_table, text, verify_plan_context)
 
-FORMAT_VERSION = 4
+FORMAT_VERSION = 5
 
 SCIENTIFIC_SCOPE_NOTES = (
     "Community summaries describe the selected whole source block groups. "
@@ -187,7 +187,7 @@ def _regional_rows(plan):
             )},
         })
         for state in original.get("nrcs_state_rows", []):
-            states.append({**shared, **state})
+            states.append({**shared, "nrcs_edition": original.get("nrcs_edition"), **state})
     return context, rows, states
 
 
@@ -289,21 +289,23 @@ def _contents(plan, table, title):
     ]
     if regional:
         regional_heads = ["Utility / HUC12", "Watershed", "Whole-HUC acres",
-                          "State-portion acres", "FY26 priority states",
+                          "State-portion acres", "NRCS edition / priority states",
                           "Selected SC class records", "Query coverage / jurisdiction"]
         regional_display = [
             [row["utility_ids"] + " / " + row["huc12"], row["watershed_name"],
              _area(row["area_acres"]), _area(row["state_portion_acres"]),
-             ", ".join(row["priority_states"] or []) or "; ".join(row["priority_statuses"] or []) or "Unspecified",
+             str(row["nrcs_edition"] or "Unspecified") + " / " + (
+                 ", ".join(row["priority_states"] or []) or "; ".join(row["priority_statuses"] or []) or "Unspecified"),
              _number(row["selected_classification_count"]),
              str(row["classification_query_coverage"] or "Unspecified").replace("_", " ")
              + " / " + str(row["classification_scope"] or "Unspecified").replace("_", " ")]
             for row in regional_rows]
-        state_heads = ["HUC12", "State", "State acres", "FY26 designation",
+        state_heads = ["HUC12", "State", "State acres", "NRCS edition / designation",
                        "Programme type", "Resource concern"]
         state_display = [
             [row["huc12"], row["st_usps"], _area(row.get("st_ac")),
-             row.get("fy26_status") or "Unspecified", row.get("system_type") or "Unspecified",
+             str(row.get("nrcs_edition") or "Unspecified") + " / " + (row.get("fy26_status") or "Unspecified"),
+             row.get("system_type") or "Unspecified",
              row.get("resource_concern") or "Unspecified"]
             for row in regional_states]
         sections[2:2] = [
