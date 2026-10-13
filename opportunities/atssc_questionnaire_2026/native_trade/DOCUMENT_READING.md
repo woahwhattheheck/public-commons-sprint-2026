@@ -122,3 +122,48 @@ delivery together with the full selected source.
 Runtime installation remains in **DOCUMENT_DOWNLOADS.md**. Preserve its pinned
 document requirements, licensed fonts and complete runtime inventory when
 moving the original customer project.
+
+## Receive the complete pages from an existing customer project
+
+`DOCUMENT_RECEIVING.py` is the document phase of the original customer operation.
+It opens `questionnaires.sqlite3` with SQLite `mode=ro` and `query_only`,
+selects only the requested frozen reports, and writes into a new directory
+outside the retained workspace. Each selected public/protected payload is saved
+with its original report, publication, release and exact retained-JSON identity.
+
+Use the actual installed document runtime with PyMuPDF for page inspection.
+The delivered renderer still uses its original python-docx and ReportLab
+dependencies. For Word page receiving, supply the original installed
+LibreOffice executable explicitly:
+
+```sh
+python3 application/DOCUMENT_RECEIVING.py \
+  --workspace /absolute/customer-project/workspace \
+  --expected-workspace-id ORIGINAL_WORKSPACE_ID \
+  --report-id ORIGINAL_SAVED_REPORT_ID \
+  --output /absolute/new-document-receiving \
+  --render-pages \
+  --office /absolute/installed/soffice
+```
+
+Repeat `--report-id` to include another original family report. Both English
+and French reader labels are rendered by default; `--language en` or
+`--language fr` selects one. This changes the document's reader labels while
+preserving the saved source wording, answers, tables, report selection and
+calculations.
+
+The output contains all paired DOCX/PDF files, their actual page PNGs, the
+original selected report JSON, a linked `DOCUMENT_PAGES.html` gallery,
+`DOCUMENT_RECEIVING.json`, and the full `DOCUMENT_FILES.json` byte inventory.
+Word navigation is checked against its actual internal bookmark destinations;
+PDF navigation is checked against its actual outline and page destinations.
+Protected selected-response references remain visible for summary reports.
+The optional LibreOffice step renders each original Word file to a separate
+PDF and complete page set using a private temporary profile.
+
+If a native rendering step is interrupted, its already produced files and the
+exact error remain in that output directory. Use those concrete outputs to
+repair the original source, then choose a new receiving directory for the same
+selected report IDs. The saved workspace, frozen editions and earlier document
+files remain available. Review the actual page images before publishing the
+documents; successful structural checks alone do not finish the page review.
