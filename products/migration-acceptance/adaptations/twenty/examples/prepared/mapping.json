@@ -1,0 +1,366 @@
+{
+  "schema": "twenty.mapping.v1",
+  "id": "authored_crm_mapping",
+  "tables": [
+    {
+      "name": "companies",
+      "sourceObject": "companies",
+      "targetObject": "companies",
+      "primaryKey": [
+        "company_key"
+      ],
+      "columns": [
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "website",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/website",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/domainName/primaryLinkUrl",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "people",
+      "sourceObject": "people",
+      "targetObject": "people",
+      "primaryKey": [
+        "person_key"
+      ],
+      "columns": [
+        {
+          "name": "person_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "first_name",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/firstName",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name/firstName",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "last_name",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/lastName",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name/lastName",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/email",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/emails/primaryEmail",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/companyKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/companyId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "companies",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "opportunities",
+      "sourceObject": "opportunities",
+      "targetObject": "opportunities",
+      "primaryKey": [
+        "opportunity_key"
+      ],
+      "columns": [
+        {
+          "name": "opportunity_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "stage",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/stage",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "lookup",
+              "entries": [
+                {
+                  "from": "Proposal",
+                  "to": "PROPOSAL"
+                },
+                {
+                  "from": "Qualification",
+                  "to": "QUALIFICATION"
+                }
+              ]
+            }
+          },
+          "target": {
+            "pointer": "/stage",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "decimal",
+          "nullable": true,
+          "source": {
+            "pointer": "/amount",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/amount/amountMicros",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "decimal-shift",
+              "places": 6
+            }
+          },
+          "precision": 20,
+          "scale": 2
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/currency",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/amount/currencyCode",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/companyKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/companyId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "companies",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        },
+        {
+          "name": "contact_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/contactKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/pointOfContactId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "people",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "person_company",
+      "childTable": "people",
+      "childColumns": [
+        "company_key"
+      ],
+      "parentTable": "companies",
+      "parentColumns": [
+        "company_key"
+      ],
+      "nulls": "allow-all-null"
+    },
+    {
+      "id": "opportunity_company",
+      "childTable": "opportunities",
+      "childColumns": [
+        "company_key"
+      ],
+      "parentTable": "companies",
+      "parentColumns": [
+        "company_key"
+      ],
+      "nulls": "allow-all-null"
+    },
+    {
+      "id": "opportunity_person",
+      "childTable": "opportunities",
+      "childColumns": [
+        "contact_key"
+      ],
+      "parentTable": "people",
+      "parentColumns": [
+        "person_key"
+      ],
+      "nulls": "allow-all-null"
+    }
+  ]
+}

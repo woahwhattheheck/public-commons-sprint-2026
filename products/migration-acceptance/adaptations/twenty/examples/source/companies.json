@@ -1,0 +1,12 @@
+[
+  {
+    "legacyId": "001",
+    "name": "Cedar Workshop",
+    "website": "https://cedar.example.test"
+  },
+  {
+    "legacyId": "002",
+    "name": "Northline Studio",
+    "website": "https://northline.example.test"
+  }
+]

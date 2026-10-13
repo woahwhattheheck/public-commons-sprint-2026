@@ -1,0 +1,98 @@
+{
+  "schema": "dlthub.expected-table.v1",
+  "table": "opportunities",
+  "complete": true,
+  "rowCount": 2,
+  "columns": [
+    {
+      "name": "opportunity_key",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "stage",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "amount",
+      "type": "DECIMAL(20,2)"
+    },
+    {
+      "name": "currency",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "company_key",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "contact_key",
+      "type": "VARCHAR"
+    }
+  ],
+  "rows": [
+    [
+      {
+        "type": "text",
+        "value": "O001"
+      },
+      {
+        "type": "text",
+        "value": "CRM setup"
+      },
+      {
+        "type": "text",
+        "value": "PROPOSAL"
+      },
+      {
+        "type": "decimal",
+        "value": "1250.12"
+      },
+      {
+        "type": "text",
+        "value": "USD"
+      },
+      {
+        "type": "text",
+        "value": "001"
+      },
+      {
+        "type": "text",
+        "value": "P001"
+      }
+    ],
+    [
+      {
+        "type": "text",
+        "value": "O002"
+      },
+      {
+        "type": "text",
+        "value": "Support renewal"
+      },
+      {
+        "type": "text",
+        "value": "QUALIFICATION"
+      },
+      {
+        "type": "decimal",
+        "value": "0.00"
+      },
+      {
+        "type": "text",
+        "value": "CAD"
+      },
+      {
+        "type": "text",
+        "value": "002"
+      },
+      {
+        "type": "text",
+        "value": "P002"
+      }
+    ]
+  ]
+}

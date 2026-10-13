@@ -1,0 +1,94 @@
+{
+  "schema": "dlthub.expected-table.v1",
+  "table": "people",
+  "complete": true,
+  "rowCount": 3,
+  "columns": [
+    {
+      "name": "person_key",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "first_name",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "last_name",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "email",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "company_key",
+      "type": "VARCHAR"
+    }
+  ],
+  "rows": [
+    [
+      {
+        "type": "text",
+        "value": "P001"
+      },
+      {
+        "type": "text",
+        "value": "Alex"
+      },
+      {
+        "type": "text",
+        "value": "Reed"
+      },
+      {
+        "type": "text",
+        "value": "alex@example.test"
+      },
+      {
+        "type": "text",
+        "value": "001"
+      }
+    ],
+    [
+      {
+        "type": "text",
+        "value": "P002"
+      },
+      {
+        "type": "text",
+        "value": "Jo"
+      },
+      {
+        "type": "text",
+        "value": "Mills"
+      },
+      {
+        "type": "null"
+      },
+      {
+        "type": "text",
+        "value": "002"
+      }
+    ],
+    [
+      {
+        "type": "text",
+        "value": "P003"
+      },
+      {
+        "type": "text",
+        "value": "Casey"
+      },
+      {
+        "type": "text",
+        "value": "Lin"
+      },
+      {
+        "type": "text",
+        "value": ""
+      },
+      {
+        "type": "null"
+      }
+    ]
+  ]
+}

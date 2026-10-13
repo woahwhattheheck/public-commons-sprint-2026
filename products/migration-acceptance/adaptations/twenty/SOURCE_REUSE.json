@@ -1,0 +1,84 @@
+{
+  "schema": "tjlabs.source-reuse.v1",
+  "source_repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "original_directory": "products/migration-acceptance/adaptations/airtable-netsuite",
+  "reuse": [
+    {
+      "path": "project.mjs",
+      "original": {
+        "bytes": 6336,
+        "sha256": "fa16d1f5382e3f1c7fe124cdc525770481d26a9580ee452a70d1d6e41524a909"
+      },
+      "current": {
+        "bytes": 6779,
+        "sha256": "caae5db22a1866e09d91d3875e1f7f346c77f0d6f4132051daf3fbb56f5c1eca"
+      },
+      "change": "Complete original project model; strengthened request/history/approval attribution and update-time consistency."
+    },
+    {
+      "path": "native-intake.mjs",
+      "original": {
+        "bytes": 10158,
+        "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+      },
+      "current": {
+        "bytes": 10158,
+        "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+      },
+      "change": "Exact original complete module. Its existing local provider-input import resolves the Twenty adapter."
+    },
+    {
+      "path": "receive.mjs",
+      "original": {
+        "bytes": 22078,
+        "sha256": "eba36c92b397ef9f425a16d4f272c58a9d421b1e79690cac3d24d15b740d0ceb"
+      },
+      "current": {
+        "bytes": 22446,
+        "sha256": "ac52d6518acf61e4f27439e937835090495a2563e5e0df70d13f4dc038f6c95e"
+      },
+      "change": "Complete original source adapted to Twenty directory/schema and full current review controls; original native engine retained."
+    },
+    {
+      "path": "acceptance.mjs",
+      "original": {
+        "bytes": 1763,
+        "sha256": "b6d82cea828b87409ecbbd810865b8b6df135100f6d97bd3a61e8fa75f917253"
+      },
+      "current": {
+        "bytes": 1754,
+        "sha256": "71226c0d14dc699296ffa5348265f29ddf065728f657b582cb960d73da02f472"
+      },
+      "change": "Complete original source adapted to Twenty directory/schema and full current review controls; original native engine retained."
+    },
+    {
+      "path": "build-review.mjs",
+      "original": {
+        "bytes": 9304,
+        "sha256": "6fa067ea3533cfc5db15e0eba3e61a3e011aa8b165176fecc85874e5b0831261"
+      },
+      "current": {
+        "bytes": 9293,
+        "sha256": "3765a81e048c449ce9742af9f86b2710eaaa74ba8abc3aea93cea17f5d3d9f75"
+      },
+      "change": "Complete original source adapted to Twenty directory/schema and full current review controls; original native engine retained."
+    },
+    {
+      "path": "browser-receive.mjs",
+      "original": {
+        "bytes": 9697,
+        "sha256": "5bb69dfd8196c56cd18ce2ebcc075ebcde53bfafbd9321b8ef2cabedfab58c1b"
+      },
+      "current": {
+        "bytes": 12266,
+        "sha256": "fc03ad6219c7ae1541249d6a458f5ef0df414a4cff270511f757cf2a9cd7168a"
+      },
+      "change": "Complete original source adapted to Twenty directory/schema and full current review controls; original native engine retained."
+    }
+  ],
+  "workbench_manifest": {
+    "bytes": 38875,
+    "sha256": "fbabde0b35342409e652fab1514e1892876ad865591067ddd59b4d4eb7bd90a5"
+  },
+  "runtime_changes": "No change to original Workbench, native loader, acceptance engine, uploads or request journals."
+}
