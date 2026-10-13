@@ -1,0 +1,32 @@
+{
+  "name": "@tokenjunkielabs/tiptap-hocuspocus-workshare",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "start": "node cli.mjs serve",
+    "build": "node scripts/build.mjs",
+    "inspect": "node cli.mjs runtime"
+  },
+  "dependencies": {
+    "@hocuspocus/server": "4.7.1",
+    "@hocuspocus/provider": "4.7.1",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "@tiptap/extension-collaboration": "3.31.4",
+    "@tiptap/extension-collaboration-caret": "3.31.4",
+    "@tiptap/html": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "yjs": "13.6.33",
+    "y-prosemirror": "1.3.7",
+    "y-indexeddb": "9.0.12",
+    "crossws": "0.4.15",
+    "esbuild": "0.28.2",
+    "parse5": "8.0.1",
+    "ws": "8.22.0"
+  }
+}

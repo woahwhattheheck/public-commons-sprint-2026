@@ -1,0 +1,149 @@
+{
+  "schema": "tjlabs.tiptap-reference-documents.v1",
+  "provenance": "Authored public reference content for the Tiptap/Hocuspocus application workshare; no customer documents.",
+  "documents": [
+    {
+      "id": "migration-guide",
+      "title": "Migration field guide",
+      "tenantId": "tenant-a",
+      "documentName": "migration-guide",
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Migration field guide"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This retained source is the first edition of the collaborative migration guide."
+              }
+            ]
+          },
+          {
+            "type": "bulletList",
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Review original schema and tenant access."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Confirm persisted native document bytes."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "handoff-notes",
+      "title": "Receiving engineer notes",
+      "tenantId": "tenant-a",
+      "documentName": "handoff-notes",
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 2
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Receiving engineer notes"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "marks": [
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "The original document is retained as binary Yjs state."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "An explicit content restore creates a new epoch; a runtime rollback preserves current content."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "private-tenant-plan",
+      "title": "Second tenant plan",
+      "tenantId": "tenant-b",
+      "documentName": "private-tenant-plan",
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Second tenant plan"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This reference is available only to actors granted access in tenant-b."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schema": "tjlabs.original-source-copy.v1",
+  "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "source": "original retained A2A source closure",
+  "files": [
+    {
+      "path": "vendor/stellar-expert/LICENSE",
+      "originalPath": "LICENSE",
+      "gitBlob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8"
+    },
+    {
+      "path": "vendor/stellar-expert/store.mjs",
+      "originalPath": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-expert/store.mjs",
+      "gitBlob": "f1362ac98774ca0970768bc770fc11e9923dde08",
+      "bytes": 9506,
+      "sha256": "fe12c5dbd3fddfe91b82b6898358375a1d90d3984ad921dfb718d85f71addd38"
+    },
+    {
+      "path": "vendor/stellar-expert/provider.mjs",
+      "originalPath": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-expert/provider.mjs",
+      "gitBlob": "60b8804e32cc45ce44ccb295f8f086e703bc9406",
+      "bytes": 10426,
+      "sha256": "109bc181030e9b795cb34a1b7c29d636a78c959f9f47c43735ecba60be613cfc"
+    },
+    {
+      "path": "vendor/stellar-expert/exact-json.mjs",
+      "originalPath": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-expert/exact-json.mjs",
+      "gitBlob": "f24ed2620ee2460c780e6efea22c738edffbff75",
+      "bytes": 2861,
+      "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26"
+    },
+    {
+      "path": "vendor/stellar-expert/schema.mjs",
+      "originalPath": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-expert/schema.mjs",
+      "gitBlob": "7538d26e74fa21fa4b1b388b6d80bb18dde0928c",
+      "bytes": 5972,
+      "sha256": "d34b64253374f9d2f3b74975b458758797ae7c9e5acdf5e23c1226c8d6d7dcef"
+    }
+  ]
+}
