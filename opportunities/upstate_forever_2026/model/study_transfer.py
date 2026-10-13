@@ -57,7 +57,7 @@ from . import chemistry_study_transfer as chemistry_transfer
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "runs", "robust-decisions",
+ROOT_KINDS = ("sources", "experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
               "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
@@ -1229,6 +1229,20 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind == "sources":
+            for path in sorted((workspace.root / "sources").glob("*.json")):
+                key = identifier(path.stem)
+                value = read_json(_member(workspace.root, path.relative_to(workspace.root).as_posix()))
+                if value.get("schema") != "upstate.sources/v1" or digest(value) != key:
+                    raise ValueError("The retained source collection changed: " + key)
+                entries = value.get("entries", [])
+                row = {"kind": "sources", "id": key,
+                       "title": value.get("title") or (entries[0].get("title") if entries else None) or key[:12],
+                       "state": "complete", "updated_at": value.get("created_at", ""),
+                       "selection": {}, "counts": {"sources": len(entries)}}
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind == "climate-working":
             for row in climate_working_transfer.catalogue(workspace):
