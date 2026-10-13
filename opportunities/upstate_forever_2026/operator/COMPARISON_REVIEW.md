@@ -111,3 +111,5 @@ The last command returns the verified `archive_path` and original archive descri
 | Original portable verification | Existing ECO13 `verify_workspace`, extended with `model.comparison_review.verify_all` |
 
 No native model is launched by review capture, review export or reopening. The source capture verifies the selected edition before and after making its copy, imports all members through ordinary Workspace source storage, and uses the original review constructor. Its operation lock and original Workspace lock retain coherent generations; recovery removes only its interrupted private capture candidates.
+
+After the complete source collection, original review and capture record are committed and verified, the operation removes its private capture staging copy under the Workspace lock. The complete original bytes remain in ordinary source object storage and its verified views. A completed retry can finish that cleanup without creating a second review.
