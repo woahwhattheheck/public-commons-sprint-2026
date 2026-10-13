@@ -218,3 +218,67 @@ The result exposes:
 All returned values are independent JSON values. Import validates the complete histories and recomputes a completed result before accepting it. The original operating-plan schema and reader remain unchanged.
 
 The maintained operator-discovery contribution registers the typed API. Its existing command delegates plan-return to the complete CLI, and its browser asset map carries the page, pure model and original dependencies into selected toolkit builds.
+
+
+## Keep complete customer result files through a return
+
+When either procedure carries attached result files, the review compares each step's complete ordered file collection. A file choice retains every original byte, name, media type and note. Compatible one-branch file changes travel with the resulting step; divergent file changes require an explicit current, incoming, shared or custom complete collection choice. A custom collection uses the original Operating Plans file format and limits.
+
+File changes are recorded results. When one branch changes the work and the other changes its files, the review requires a complete contextual step choice, just as it does for changed progress or recorded result text. Read the whole work and result before carrying those files onto different instructions.
+
+The complete review JSON retains both original file histories, decisions and the exact completed result. The grant submission receiving desk accepts that completed review directly and keeps its branches, file bytes and decisions with the original planning preparation. Use the original grant procedure guide for full draft receiving and later review export.
+
+
+## Editable offline review workbook
+
+Use **Download editable workbook** in Returned procedures to hand another operator one complete HTML file. The file includes the maintained review editor, its original plan and return models, the full guide, both entire source histories, recorded decisions and every attached file byte. It opens directly from disk without the installed listener or a network connection.
+
+The workbook also carries current reviewer text, receiving notes, decision notes and unfinished custom JSON exactly as typed. A custom choice does not have to be valid yet to download or reopen the work. **Working review JSON** keeps that same complete portable working state; **Complete editable review JSON** exports the recorded, valid review after pending choices have been recorded or discarded.
+
+### One complete handover
+
+1. Prepare or reopen the original return review. Compare both histories and enter the reviewing operator and any initial decisions.
+2. Download the editable workbook. Send that whole HTML file through the existing handover.
+3. The recipient opens the file in a modern browser, reviews the original comparison and records each intended choice. Complete attached bytes remain in both source branches and in the selected full-file decisions.
+4. Before moving to another browser or sending unfinished work onward, choose **Download editable workbook** again. This produces a new full file with current working text and decisions. Browsers do not overwrite the original opened HTML.
+5. Complete the review and download **Complete editable review JSON**. Return that full JSON document to the original operator. Its reviewed operating-plan JSON is also available in the original format.
+6. The original operator receives the result against their current complete procedure or receives the completed review in the original Grant Operations desk. That existing receiver checks current history and preserves the full review. Later local work remains part of the receiving comparison.
+
+A completed review remains immutable inside its workbook. Prepare another review from the actual later complete procedure to review new changes.
+
+### Local recovery and separate copies
+
+Offline workbooks use their own browser review store. They do not open or write the installed Operating plans database. The destination is always a complete file handover.
+
+When browser storage is available, reopening the same workbook resumes the latest locally retained work for that workbook identity. Retained reviews keeps other saved copies. The original editor's compare-and-save version check preserves a second tab's divergent work as a separate copy rather than overwriting the first.
+
+Some browsers decline persistent storage for files. The workbook remains editable in that tab and clearly labels its current state. Download the updated workbook or Working review JSON before closing. The page warns about undownloaded work when local storage is unavailable. The workbook's **Download the original embedded working review** button also recovers the exact initial portable data if its editor cannot start.
+
+A newly downloaded workbook receives its own workbook identity while preserving the original review identity and both complete histories. Its initial data is the exact working state at download time, so it can move independently of another browser's local storage.
+
+### Original CLI and typed API
+
+The installed CLI packages the same maintained sources and uses the existing create-only output writer:
+
+```sh
+starforge discover plan-return export --file review.json --format workbook --out review-workbook.html
+starforge discover plan-return export --file review-working.json --format workbook --out review-workbook-next.html
+```
+
+Only workbook export accepts the working-review envelope. Other CLI actions keep their existing complete-review validation. A reviewed plan or full completed review is returned through the original prepare/show/decide/complete/export course.
+
+The typed export `./operator/operating-plan-returns/workbook` provides:
+
+- `inspectOperatingReturnWorking(value)` to validate and normalize a complete review or original working-review envelope.
+- `OPERATING_RETURN_WORKBOOK_ASSETS` to identify the exact eight maintained application source files and installed browser routes.
+- `renderOperatingReturnWorkbook(value, sources, { id? })` to generate one self-contained editable HTML file from complete trusted application sources.
+
+The source map contains `catalog`, `plan`, `review`, `workbook`, `editor`, `html`, `css` and `guide`. Supply complete source text from one maintained installed edition. The editor, CLI and packager reuse the original return model's comparison and completion interpretation; packaging does not change or recompute a saved review under a different format.
+
+### Complete file boundaries
+
+Each source plan keeps its original 32 MiB limit. The full review keeps its 128 MiB limit. Working review JSON allows 192 MiB to retain complete pending text, and the resulting single HTML workbook allows 256 MiB including original application sources and JSON escaping. Application source files are limited to 4 MiB each.
+
+The offline document embeds complete application sources and portable data using escaped JSON. Its original modules load from local Blob URLs. The document's content policy disables network connections, forms and external resource loading. Imported procedure text and file bytes remain data interpreted by the original models. The included guide and review text are rendered as text.
+
+The complete file can contain customer material and attachments from both branches, including work that is not selected for the final procedure. Send it through the same authorized customer handover as the original complete review.

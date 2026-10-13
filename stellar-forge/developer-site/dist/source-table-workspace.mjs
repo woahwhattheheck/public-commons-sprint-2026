@@ -1,5 +1,7 @@
 // MIT. Source-table authoring for the existing Stellar Forge merchant workspace.
 import { DEFAULT_STARTER, DEFAULT_RESOURCE, SOURCE_CONTRACT, createDatasetWorkspace, zipWorkspace } from './onboarding.mjs';
+import { validateDocumentTableSource, validateDocumentTableProjection } from './source-document-tables.mjs';
+import { validateDocumentIntake } from './source-table-intake.mjs';
 
 export const PROJECT_SCHEMA = 'stellar-forge.source-table-project.v1';
 export const MAPPING_SCHEMA = 'stellar-forge.source-table-mapping.v1';
@@ -215,6 +217,7 @@ export function normalizeTable(edition, mapping) {
   const parsed = parseTable(edition.sourceText, mapping);
   validateMapping(mapping, parsed);
   const columns = mapping.columns.filter(c => c.include), names = keyNames(mapping);
+  const projectedRecords = edition.documentTable ? new Map(edition.documentTable.projection.rows.map(row => [row.record, row])) : null;
   const rows = [], records = [], issues = [], seenKeys = new Map();
   let issueCount = 0;
   const issue = value => { issueCount++; if (issues.length < 200) issues.push(value); };
@@ -232,11 +235,26 @@ export function normalizeTable(edition, mapping) {
         else seenKeys.set(key, record.record);
       } catch (error) { invalid = true; issue({ record: record.record, line: record.line, message: error.message }); }
     }
-    if (!invalid) { rows.push(row); records.push({ record: record.record, line: record.line }); }
+    if (!invalid) {
+      rows.push(row);
+      const origin = { record: record.record, line: record.line };
+      if (edition.documentTable) {
+        const retained = edition.documentTable, projection = retained.projection;
+        const projected = projectedRecords.get(record.record);
+        origin.documentTable = { sourceId: retained.sourceId, projectionId: projection.id,
+          tableIndex: projection.selection.tableIndex,
+          ...(projected ? { row: projected.row, cells: copy(projected.cells) } :
+            { headerRows: copy(projection.selection.headerRows), cells: copy(projection.headerCells) }) };
+      }
+      records.push(origin);
+    }
   }
   if (issueCount) fail('FIELD_VALUES', 'Review ' + issueCount + ' source field or key issue' + (issueCount === 1 ? '' : 's') + ' before retaining this edition.', { issues, issueCount, issuesTruncated: issueCount > issues.length });
   const fields = columns.map(c => ({ name: c.name, sourceName: c.sourceName, sourceIndex: c.index, type: c.type, empty: c.empty, trim: c.trim, unit: c.unit, timeBasis: c.timeBasis }));
-  const data = { schema: RESOURCE_SCHEMA, source: { editionId: edition.id, filename: edition.filename, sha256: edition.sha256, bytes: edition.bytes },
+  const data = { schema: RESOURCE_SCHEMA, source: { editionId: edition.id, filename: edition.filename, sha256: edition.sha256, bytes: edition.bytes,
+      ...(edition.documentTable ? { documentTable: { sourceId: edition.documentTable.sourceId,
+        sourceSha256: edition.documentTable.sourceSha256, projectionId: edition.documentTable.projection.id,
+        tableIndex: edition.documentTable.projection.selection.tableIndex, document: copy(edition.documentTable.document) } } : {}) },
     fields, keyFields: names, rows };
   const dataText = json(data), dataBytes = bytes(dataText);
   if (dataBytes > SOURCE_CONTRACT.maximumDataBytes) fail('OUTPUT_SIZE', 'The complete mapped output is ' + dataBytes + ' bytes; the native dataset resource accepts ' + SOURCE_CONTRACT.maximumDataBytes + '. Select fewer fields or use the existing native database/dataset workflow.');
@@ -290,11 +308,50 @@ export async function addDocument(project, { filename, sourceText: value, resour
 }
 export async function addEdition(project, documentId, { filename, sourceText: value }) {
   const next = copy(project), doc = documentIn(next, documentId), edition = await newEdition(filename, value);
-  const previous = doc.editions.find(e => e.sha256 === edition.sha256);
+  const previous = doc.editions.find(e => e.sha256 === edition.sha256 && !e.documentTable);
   if (!previous) doc.editions.push(edition);
   doc.selectedEditionId = previous ? previous.id : edition.id;
   return { project: next, documentId, editionId: doc.selectedEditionId, reused: Boolean(previous) };
 }
+function documentTableMetadata(source, projection) {
+  return { sourceId: source.id, sourceSha256: source.sha256, document: copy(source.document), projection: copy(projection) };
+}
+async function editionIdentity(edition) {
+  return 'e-' + edition.sha256 + (edition.documentTable ? '-d-' + await sha256(JSON.stringify(edition.documentTable)) : '');
+}
+
+/** Receive a selected document table into the existing editable resource and edition flow. */
+export async function addDocumentTable(project, { source, projection, filename, resourceId, documentId } = {}) {
+  const verified = await validateDocumentTableProjection({ source, projection });
+  source = verified.source; projection = verified.projection;
+  let next = copy(project);
+  if (next.documentTableSources !== undefined && !Array.isArray(next.documentTableSources))
+    fail('DOCUMENT_TABLE_SOURCES', 'The retained document extraction register must be an array.');
+  next.documentTableSources ||= [];
+  const original = next.documentTableSources.find(item => item.id === source.id);
+  if (original && !same(original, source))
+    fail('DOCUMENT_TABLE_IDENTITY', 'This document source identifier already refers to a different retained extraction.');
+  if (!original) next.documentTableSources.push(copy(source));
+  const name = filename || (source.document.filename || source.filename).replace(/\.[^.]+$/, '') + '-table-' + projection.selection.tableIndex + '.csv';
+  let doc, edition, reused = false;
+  if (documentId) {
+    if (resourceId) fail('DOCUMENT_TABLE_RESOURCE', 'An existing table keeps its original resource. Omit resourceId when adding an edition.');
+    doc = documentIn(next, documentId);
+    edition = await newEdition(name, projection.csv);
+    edition.documentTable = documentTableMetadata(source, projection);
+    edition.id = await editionIdentity(edition);
+    const prior = doc.editions.find(item => item.id === edition.id);
+    if (prior) { edition = prior; reused = true; } else doc.editions.push(edition);
+    doc.selectedEditionId = edition.id;
+  } else {
+    const received = await addDocument(next, { filename: name, sourceText: projection.csv, resourceId, delimiter: ',', header: true, skipEmptyRecords: false });
+    next = received.project; doc = documentIn(next, received.documentId); edition = doc.editions[0];
+    edition.documentTable = documentTableMetadata(source, projection);
+    edition.id = await editionIdentity(edition); doc.selectedEditionId = edition.id;
+  }
+  return { project: next, documentId: doc.id, editionId: edition.id, reused, sourceId: source.id, projectionId: projection.id };
+}
+
 export function resetMapping(project, documentId, options = {}) {
   const next = copy(project), doc = documentIn(next, documentId);
   doc.mapping = initialMapping(selectedEdition(doc).sourceText, options);
@@ -388,6 +445,15 @@ export async function importProject(input) {
   if (!object(project) || project.schema !== PROJECT_SCHEMA || !/^project-[0-9a-f-]{36}$/.test(project.id || '') || !Array.isArray(project.documents) || project.documents.length > LIMITS.documents ||
     !object(project.starter) || !Array.isArray(project.starter.resources)) fail('PROJECT_SCHEMA', 'This file is not a complete source-table project.');
   text(project.name, 'Project name', 200);
+  if (project.documentTableSources !== undefined && !Array.isArray(project.documentTableSources))
+    fail('DOCUMENT_TABLE_SOURCES', 'The retained document extraction register must be an array.');
+  const documentSources = new Map();
+  for (const source of project.documentTableSources || []) {
+    await validateDocumentTableSource(source);
+    if (documentSources.has(source.id)) fail('DOCUMENT_TABLE_SOURCE', 'A retained document source is duplicated.');
+    documentSources.set(source.id, source);
+  }
+  if (project.documentIntake !== undefined) project.documentIntake = await validateDocumentIntake(project.documentIntake, project.documentTableSources || []);
   const ids = new Set(), resources = new Set();
   for (const doc of project.documents) {
     if (!object(doc) || !/^table-[0-9a-f-]{36}$/.test(doc.id || '') || ids.has(doc.id) || !Array.isArray(doc.editions) || !doc.editions.length || !Array.isArray(doc.reviews))
@@ -400,7 +466,14 @@ export async function importProject(input) {
     for (const edition of doc.editions) {
       text(edition.filename, 'Original filename', 500); sourceText(edition.sourceText);
       const hash = await sha256(edition.sourceText);
-      if (edition.sha256 !== hash || edition.id !== 'e-' + hash || edition.bytes !== bytes(edition.sourceText) || editions.has(edition.id))
+      if (edition.documentTable) {
+        const retained = edition.documentTable, source = documentSources.get(retained.sourceId);
+        if (!source) fail('DOCUMENT_TABLE_SOURCE', 'A projected table is missing its complete original document extraction.');
+        await validateDocumentTableProjection({ source, projection: retained.projection });
+        if (!same(retained, documentTableMetadata(source, retained.projection)) || edition.sourceText !== retained.projection.csv)
+          fail('DOCUMENT_TABLE_PROJECTION', 'The retained table CSV and original document projection do not agree.');
+      }
+      if (edition.sha256 !== hash || edition.id !== await editionIdentity(edition) || edition.bytes !== bytes(edition.sourceText) || editions.has(edition.id))
         fail('PROJECT_SOURCE', 'The retained source bytes or source identity do not match.');
       editions.set(edition.id, edition);
     }
@@ -442,7 +515,8 @@ export function projectSummary(project) {
   return { schema: project.schema, id: project.id, name: project.name, folder: project.starter.folder,
     tables: project.documents.map(doc => ({ id: doc.id, label: doc.label, resourceId: doc.resourceId, sourceEditions: doc.editions.length,
       reviews: doc.reviews.length, selectedEditionId: doc.selectedEditionId, selectedReviewId: doc.selectedReviewId, reviewedCurrentInput: reviewIsCurrent(doc),
-      summary: doc.selectedReviewId ? selectedReview(doc).summary : null })) };
+      summary: doc.selectedReviewId ? selectedReview(doc).summary : null,
+      ...(selectedEdition(doc).documentTable ? { documentTable: { sourceId: selectedEdition(doc).documentTable.sourceId, projectionId: selectedEdition(doc).documentTable.projection.id, tableIndex: selectedEdition(doc).documentTable.projection.selection.tableIndex } } : {}) })) };
 }
 export async function createTableWorkspace(project) {
   const verified = await importProject(project);
@@ -458,11 +532,31 @@ export async function createTableWorkspace(project) {
   const append = (path, content) => { files.push({ path: prefix + path, content }); return 'source-tables/' + path; };
   const portable = { ...verified, starter: native.draft };
   append('project.json', json(portable));
+  if (verified.documentTableSources?.length) {
+    manifest.documentTableSources = [];
+    for (const source of verified.documentTableSources) {
+      const base = 'documents/' + source.id + '/';
+      const original = append(base + 'extracted-source.txt', source.sourceText);
+      const record = append(base + 'source.json', json(source));
+      manifest.documentTableSources.push({ id: source.id, filename: source.filename, original, record,
+        bytes: source.bytes, sha256: source.sha256, document: copy(source.document) });
+    }
+  }
   for (const doc of verified.documents) {
     const entry = { id: doc.id, label: doc.label, resourceId: doc.resourceId, selectedReviewId: doc.selectedReviewId, sources: [], reviews: [], comparisons: [] };
     for (const edition of doc.editions) {
       const path = append('sources/' + doc.id + '/' + edition.id + '.txt', edition.sourceText);
-      entry.sources.push({ id: edition.id, filename: edition.filename, path, bytes: edition.bytes, sha256: edition.sha256, receivedAt: edition.receivedAt });
+      const sourceEntry = { id: edition.id, filename: edition.filename, path, bytes: edition.bytes, sha256: edition.sha256, receivedAt: edition.receivedAt };
+      if (edition.documentTable) {
+        const base = 'projections/' + doc.id + '/' + edition.id + '/';
+        const retained = edition.documentTable, projection = retained.projection;
+        sourceEntry.documentTable = { sourceId: retained.sourceId, projectionId: projection.id,
+          document: copy(retained.document),
+          projection: append(base + 'projection.json', json(projection)),
+          selection: append(base + 'selection.json', json(projection.selection)),
+          rows: append(base + 'row-origins.json', json(projection.rows)) };
+      }
+      entry.sources.push(sourceEntry);
     }
     for (const review of doc.reviews) {
       const base = 'reviews/' + doc.id + '/' + review.id + '/';
@@ -478,11 +572,13 @@ export async function createTableWorkspace(project) {
     }
     manifest.documents.push(entry);
   }
+  if (verified.documentIntake) manifest.documentIntake = { source: 'source-tables/project.json', sources: verified.documentIntake.sources.length, tables: verified.documentIntake.sources.reduce((count, item) => count + item.tables.length, 0) };
   append('materials.json', json(manifest));
   const guide = '# ' + verified.name + ': source-table operation\n\n' +
     'This directory contains the original source editions, explicit mappings, reviewed complete outputs and editable project. The merchant uses the original seller.json and workspace.json in the parent directory.\n\n' +
     '## Reopen and update\n\nOpen source-tables.html in the maintained Stellar Forge front door and choose Open project JSON, then select source-tables/project.json. Select a table, add the next source edition, inspect the declared header and mapping, and retain its review. The prior source and output remain available. Record keys identify changed rows; with no keys, comparisons report whole-row additions and removals including duplicates. Unit and time-basis fields document meaning and do not convert values.\n\n' +
     'Export the complete native workspace after reviewing every current mapping. The parent README.md contains the original installation and merchant commands. Keep the original source version and receiving application with the commissioned installation. The current dataset resource is a startup snapshot; follow the native release/change operation when replacing a serving source.\n\n' +
+    '## Document tables\n\nDocument-derived resources retain complete extracted text under documents/, original document identity and extraction metadata in source.json, and each explicit table selection plus projected row and cell origins under projections/. The selected CSV is an ordinary source edition in the same mapping and review workflow. Saving and reopening preserves unselected original rows for later remapping. Selecting a new projection creates a new edition even when its CSV text matches an earlier projection.\n\n' +
     '## Receiving and commissioning\n\nReceive the entire directory. materials.json lists every original source and reviewed output with its exact identity. Each output has fields, keyFields, source and rows. Integers of arbitrary size and exact decimals use their explicitly selected text types. An empty string, null and an omitted value retain distinct policies. The same project reopens in the browser or original source-table CLI.\n\n' +
     'For an existing SF49 commissioning case, retain this complete directory as the source material attached through its existing source-bundle operation. Use that case owner’s original source handoff, terms, operation ID and source-bundle writer. The original case/bundle keeps the selected customer workorder and native receiving result alongside these files.\n\n' +
     '## Terminal use from the maintained source\n\nnode stellar-forge/developer-site/dist/source-table-cli.mjs show --project /absolute/path/to/source-tables/project.json\nnode stellar-forge/developer-site/dist/source-table-cli.mjs export --project /absolute/path/to/source-tables/project.json --out /absolute/new-workspace.zip\n\n' +
