@@ -568,6 +568,16 @@ def _html(result):
                                 number(field.get("baseline_mean")), number(field.get("case_mean")),
                                 number(field.get("baseline_denominator")), number(field.get("case_denominator")),
                                 field.get("changed_cells"), field.get("common_count")])
+    reuse_rows = []
+    for case in result["cases"]:
+        observed = result.get("native_reuse", {}).get(case["id"], {})
+        for model, stage in observed.get("models", {}).items():
+            donor = stage.get("source") or {}
+            outcome = {"reused_original_stage": "Verified original stage reused",
+                       "completed_without_reuse_record": "Completed; no stage-reuse record",
+                       "not_complete": "Not complete"}.get(stage.get("outcome"), stage.get("outcome"))
+            reuse_rows.append([case["label"], model.upper(), outcome,
+                               donor.get("run_id", "—"), (stage.get("transfer") or {}).get("bytes", "—")])
     version_rows = []
     version_record = result.get("native_versions") or {}
     for model, version in (version_record.get("versions") or {}).items():
@@ -578,7 +588,8 @@ def _html(result):
                     for row in result["rows"]]
     source_details = canonical({"selection": result["selection"], "cases": result["cases"],
                                 "forcing_diagnostics": result["forcing_diagnostics"],
-                                "native_versions": result["native_versions"]}).decode("utf-8")
+                                "native_versions": result["native_versions"],
+                                "native_reuse": result.get("native_reuse", {})}).decode("utf-8")
     return ("<!doctype html><html lang='en'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>" + esc(result["title"]) + "</title><style>"
@@ -603,6 +614,8 @@ def _html(result):
             table(["Case", "Input", "Normalization", "Effective input units", "Baseline field mean", "Case field mean",
                    "Baseline denominator", "Case denominator", "Changed compared cells", "Common input cells"], normal_rows) +
             "<p>The retained native masked-proxy and index diagnostics, where present, are available in the complete source detail and JSON.</p>"
+            "<h2>Observed native stage reuse</h2><p>A requested baseline donor is only a candidate. The original native runner compares the actual model inputs, effective land cover and runtime before reuse; otherwise it computes that stage. Reused original outputs retain their donor and verified hashes. Logical transferred bytes are not a runtime-savings estimate.</p>" +
+            table(["Case", "Model", "Observed outcome", "Original donor run", "Logical transferred bytes"], reuse_rows) +
             "<h2>Native model versions</h2>" + table(["Model", "Comparison version"], version_rows) +
             "<details><summary>Valid support and independent full-area totals</summary><p>The main results compare paired finite cells. These independent totals preserve the context when input or output coverage differs.</p>" +
             table(["Case", "Reporting area", "Export", "Baseline valid cells", "Case valid cells",
@@ -828,6 +841,7 @@ def report(ws, key):
                   "rows": rows, "areas": [{k: v for k, v in a.items() if k != "geometry"} for a in areas],
                   "forcing_diagnostics": diagnostics, "native_versions": versions,
                   "landcover_binding": landcover_binding,
+                  "native_reuse": {case["id"]: _native_reuse(runs[case["run_id"]]) for case in completed},
                   "aggregation": aggregation, "difference_maps": maps, "limitations": list(LIMITATIONS),
                   "comparison_basis": "Alternative minus original baseline on common finite retained annual-mass pixels.",
                   "mean_basis": "Native own valid full model-domain proxy support; reporting-mask totals never define NDR normalization."}
@@ -916,13 +930,98 @@ def report(ws, key):
         return _publish_report(ws, key, _report_record(ws, directory))
 
 
+def native_case_context(ws, study_id, case_id):
+    """Bind an ordinary native request to one original forcing case and donor.
+
+    This is a read-only eligibility request. The original native input matcher
+    remains responsible for each actual model-stage reuse decision, including
+    effective land cover, runtime, native flags and every selected input.
+    """
+    state = get(ws, identifier(study_id))
+    case = next((row for row in state["cases"] if row["id"] == case_id), None)
+    if case is None or case.get("baseline") or case_id == "baseline":
+        raise ValueError("Select a prepared alternative forcing case, preserving the completed baseline")
+    identity = read_json(_directory(ws, study_id) / "selection.json")
+    donor = ws.inspect_run(identity["baseline"]["run_id"])
+    validate_completed_run(donor)
+    if donor["state"] != "complete" or donor["selection"] != identity["baseline"]["run_selection"]:
+        raise ValueError("The original completed forcing baseline changed selection")
+    active = run_models(donor)
+    artifacts = {name: deepcopy(donor["artifacts"][name]) for name in required_outputs(active)}
+    if artifacts != identity["baseline"]["artifacts"]:
+        raise ValueError("The original forcing donor changed its captured annual mass edition")
+    versions = comparison_versions([donor], active)
+    if versions != identity["baseline"]["native_versions"]:
+        raise ValueError("The original forcing donor changed native model provenance")
+    stages = {}
+    for model in active:
+        stage = donor.get("stages", {}).get(model)
+        if not isinstance(stage, dict) or not stage.get("completed_at") or not stage.get("files"):
+            raise ValueError("The original forcing donor lost a completed native stage")
+        stages[model] = digest(stage)
+    if identity["baseline"]["scenario"]["kind"] == "landcover":
+        actual = donor.get("stages", {}).get("landcover", {}).get("artifact")
+        expected = identity["baseline"]["landcover_artifact"]
+        if actual is None or _body(actual) != _body(expected):
+            raise ValueError("The original forcing donor changed its effective native land cover")
+    roles = sorted(case["overrides"])
+    unchanged = [model for model in active
+                 if (model == "ndr" and "PRECIPITATION" not in roles)
+                 or (model == "sdr" and "R_FACTOR" not in roles)]
+    return {"schema": "upstate.climate-forcing-native-case/v1",
+            "workspace_id": ws.project["id"], "study_id": state["id"], "case_id": case_id,
+            "run_id": case["run_id"], "run_selection": deepcopy(case["run_selection"]),
+            "baseline_run_id": donor["id"], "baseline_selection": deepcopy(donor["selection"]),
+            "baseline_stages": stages, "baseline_artifacts": artifacts,
+            "source_preview_id": case["source_preview_id"],
+            "forcing_roles": roles, "expected_unchanged_models": unchanged}
+
+
+def run_request(ws, study_id, case_id):
+    """Return the complete payload for the original run.start action."""
+    context = native_case_context(ws, study_id, case_id)
+    if context["run_id"] == context["baseline_run_id"]:
+        raise ValueError("A forcing alternative cannot execute its original baseline")
+    return {"run_id": context["run_id"],
+            "reuse_source_run_ids": [context["baseline_run_id"]],
+            "climate_forcing_context": context}
+
+
+def _native_reuse(run):
+    """Describe observed original stages without claiming a requested reuse."""
+    observed = {}
+    for model in run_models(run):
+        stage = run.get("stages", {}).get(model)
+        if stage is None:
+            observed[model] = {"outcome": "not_complete"}
+            continue
+        original = stage.get("reused_from")
+        observed[model] = {
+            "outcome": "reused_original_stage" if original else "completed_without_reuse_record",
+            "completed_at": stage.get("completed_at"),
+            "started_at": stage.get("started_at"),
+            "reuse_started_at": stage.get("reuse_started_at"),
+            "reused_at": stage.get("reused_at"),
+            "source": deepcopy(original),
+            "input_signature": deepcopy(stage.get("input_signature")),
+            "arguments": deepcopy(stage.get("arguments")),
+            "requested_arguments": deepcopy(stage.get("requested_arguments")),
+            "runtime": deepcopy(stage.get("runtime") or run.get("runtime")),
+            "transfer": deepcopy(stage.get("transfer")),
+            "reuse_lookup": deepcopy(stage.get("reuse_lookup")),
+        }
+    return {"run_id": run["id"],
+            "requested_source_run_ids": deepcopy(run.get("reuse_source_run_ids", [])),
+            "models": observed,
+            "rejected_candidates": deepcopy(run.get("reuse_observations", {})),
+            "interpretation": "Requested donors are candidates only. Original native input/runtime "
+                              "matching decides each stage; all retained output bodies are verified."}
+
+
 def run_case(ws, key, case_id):
     """CLI continuation of one existing prepared native run; no alternate engine."""
-    state = get(ws, key)
-    selected = next((x for x in state["cases"] if x["id"] == case_id), None)
-    if selected is None or selected["id"] == "baseline":
-        raise ValueError("Select one prepared alternative case; preserve the completed baseline")
-    return ws.run(selected["run_id"])
+    payload = run_request(ws, key, case_id)
+    return ws.run(payload["run_id"], reuse_source_run_ids=payload["reuse_source_run_ids"])
 
 
 def verify(ws, key):

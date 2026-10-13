@@ -60,11 +60,13 @@ def read(operator, workspace_key, operation, payload):
     study_id = identifier(one(payload, "id"))
     if operation == "study":
         return climate_forcing.get(workspace, study_id)
+    if operation == "run-request":
+        return climate_forcing.run_request(workspace, study_id, one(payload, "case_id"))
     if operation == "report":
         report_id = one(payload, "report_id")
         report = climate_forcing.get_report(workspace, study_id, identifier(report_id) if report_id else None)
         return decorate_report(operator, workspace_key, report)
-    raise ValueError("Choose a climate-forcing catalogue, study or report")
+    raise ValueError("Choose a climate-forcing catalogue, study, case request or report")
 
 def updates(workspace):
     return {"studies": climate_forcing.list_studies(workspace)}

@@ -43,7 +43,9 @@ class _RetainedWorkspace:
     def __getattr__(self, name):
         return getattr(self._workspace, name)
 
-    def run(self, run_id):
+    def run(self, run_id, *, reuse_source_run_ids=None):
+        if reuse_source_run_ids != self._task["payload"].get("reuse_source_run_ids"):
+            raise NativeJobError("NATIVE_DONOR_SELECTION", "Preserve the selected original stage donors.", 422)
         if run_id != self._task["payload"].get("run_id"):
             raise NativeJobError("NATIVE_SELECTION", "Retain the originally selected native run.", 422)
         return self._supervisor.execute(self._task, self._workspace)
@@ -101,6 +103,23 @@ class NativeJobs:
                 raise NativeJobError("PROGRAMME_SELECTION", "The retained programme binding changed.")
             run_id = context["run_id"]
         run = ws.inspect_run(run_id)
+        if task.get("action") == "run.start":
+            payload = task["payload"]
+            if "reuse_source_run_ids" in payload:
+                donors = payload["reuse_source_run_ids"]
+                if (not isinstance(donors, list) or not donors
+                        or any(not isinstance(value, str) for value in donors)
+                        or len(set(donors)) != len(donors) or "source_runs" in payload):
+                    raise NativeJobError("NATIVE_DONOR_SELECTION", "Select unique original stage donors separately from full-model assembly.", 422)
+                donors = [identifier(value) for value in donors]
+                if run_id in donors:
+                    raise NativeJobError("NATIVE_DONOR_SELECTION", "An original run cannot be its own donor.", 422)
+            context = payload.get("climate_forcing_context")
+            if context is not None:
+                from model.climate_forcing import run_request
+                expected = run_request(ws, identifier(context["study_id"]), context["case_id"])
+                if payload != expected:
+                    raise NativeJobError("CLIMATE_FORCING_SELECTION", "The original forcing case or donor selection changed.", 422)
         return ws, run
 
     def _latest(self, task):
@@ -190,6 +209,13 @@ class NativeJobs:
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
                         "model/native.py", "model/workspace.py", "model/common.py",
                         "model/verified_files.py")
+        if "reuse_source_run_ids" in task["payload"]:
+            source_paths += ("model/stage_cache.py", "model/native_equivalence.py",
+                             "model/native_arguments.py", "model/reuse.py",
+                             "ecsa_runs/upstate.py")
+        if task["payload"].get("climate_forcing_context") is not None:
+            source_paths += ("model/climate_forcing.py", "model/forcing_sources.py",
+                             "model/native_versions.py", "model/model_selection.py")
         source = {name: file_digest(APPLICATION / name) for name in source_paths}
         request = {"schema": SCHEMA, "task_id": task["id"],
                    "operation_id": task["operation_id"], "attempt": len(task["attempts"]),
