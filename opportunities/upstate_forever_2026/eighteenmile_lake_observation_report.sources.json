@@ -21,6 +21,11 @@
       "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61",
       "companions": [
         {
+          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174",
+          "bytes": 281844
+        },
+        {
           "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
           "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
         },
@@ -30,6 +35,7 @@
         },
         {
           "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+          "bytes": 24946,
           "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
         },
         {
@@ -58,15 +64,56 @@
         },
         {
           "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
-          "sha256": "e40a3e927acdeac30a4461d27b87a316bed99336376a2ac238af1ce40501f649"
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
         },
         {
           "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
           "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
         },
         {
-          "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
-          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+          "bytes": 43187,
+          "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+          "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902",
+          "bytes": 7667
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+          "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a",
+          "bytes": 8424
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+          "bytes": 8067,
+          "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+          "bytes": 1926,
+          "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+          "bytes": 8581,
+          "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+          "bytes": 1149,
+          "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+          "bytes": 4380,
+          "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+        },
+        {
+          "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+          "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36",
+          "bytes": 644
         }
       ]
     },
@@ -291,7 +338,7 @@
         },
         {
           "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
-          "sha256": "e40a3e927acdeac30a4461d27b87a316bed99336376a2ac238af1ce40501f649"
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
         },
         {
           "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
@@ -348,6 +395,7 @@
   "notes": [
     "Original lake concentration observations and the maintained reconciled75-record study retain separate identities and original activity fields.",
     "Study selection at the two duplicate dates retains the source owner's explicit inference, routine-activity evidence and original EST/EDT labels.",
-    "All report, generator, original CSV, selection evidence and source-owner methods are retained as the original Workspace source collection."
+    "All report, generator, original CSV, selection evidence and source-owner methods are retained as the original Workspace source collection.",
+    "The original lake table and report document each independently retain both complete source directory trees for Workspace.source_file materialization and reproduction."
   ]
 }
