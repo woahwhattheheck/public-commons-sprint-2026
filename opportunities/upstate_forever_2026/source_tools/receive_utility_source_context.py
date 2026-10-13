@@ -115,15 +115,17 @@ def receive(application, output):
             "sha256": identities["network"]["sha256"]}]
         folder = destination / choice["key"]
         folder.mkdir()
+        (folder / "original-utility-profile.json").write_bytes(profile_body)
         _write(folder / "selected-watersheds.json", selection)
         (folder / "selected-watersheds.csv").write_bytes(
             context._csv_bytes(selection["hucs"], context.HUC_COLUMNS))
         files = brief.write_selection_brief(folder, selection)
         if observed is not None:
             files.update(observed_module.retain(folder, observed, observed_bodies))
-        for name in ("selected-watersheds.json", "selected-watersheds.csv"):
+        for name in ("selected-watersheds.json", "selected-watersheds.csv", "original-utility-profile.json"):
             body = (folder / name).read_bytes()
             files[name] = {"path": name, "bytes": len(body), "sha256": _sha(body)}
+        files["utility-watershed-packet.zip"] = observed_module.write_packet(folder, files)
         utility_results.append({
             "utility_id": choice["utility_id"], "selection_id": choice["key"],
             "directory": folder.relative_to(destination).as_posix(),

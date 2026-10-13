@@ -4,6 +4,9 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
+import tempfile
+import zipfile
 from pathlib import Path, PurePosixPath
 
 SCHEMA = "upstate.utility-observed-context/v1"
@@ -65,10 +68,10 @@ def load_for_utility(application, utility):
         if body is None or len(body) != identity["bytes"] or _hash(body) != identity["sha256"]:
             raise ValueError("The observed result and its retained original input differ: " + member)
     if original.get("profile_sha256") != utility["profile_source"]["sha256"]:
-        raise ValueError("Observed context uses a different original utility profile")
+        return None, {}
     selected = [row for row in original["utilities"] if row["utility_id"] == utility["utility_id"]]
     if len(selected) != 1 or sorted(selected[0]["huc12s"]) != sorted(utility["huc12s"]):
-        raise ValueError("Observed context uses a different utility watershed membership")
+        return None, {}
     result = {
         "schema": "upstate.utility-observed-selection/v1",
         "version": original["version"], "edition": original["edition"],
@@ -177,7 +180,46 @@ def catalog(application):
         raise ValueError("The original utility observation summary has a different schema")
     return {"schema": SCHEMA, "profile_sha256": result["profile_sha256"],
             "source_id": SOURCE_ID, "body_sha256": entry["sha256"],
-            "utilities": [{"utility_id": row["utility_id"], "summary": row["summary"],
+            "utilities": [{"utility_id": row["utility_id"], "huc12s": row["huc12s"], "summary": row["summary"],
                            "huc12_coverage": row["huc12_coverage"],
                            "geographic_basis": row["geographic_basis"]}
                           for row in result["utilities"]]}
+
+
+def write_packet(directory, files):
+    """Archive verified original export members at their actual relative paths."""
+    root = Path(directory).resolve(strict=True)
+    filename = "utility-watershed-packet.zip"
+    selected = {}
+    for key, descriptor in files.items():
+        name = _relative(descriptor["path"])
+        if name == filename:
+            continue
+        path = (root / name).resolve(strict=True)
+        if not path.is_relative_to(root) or not path.is_file():
+            raise ValueError("A utility packet member leaves its saved export: " + name)
+        body = path.read_bytes()
+        if len(body) != descriptor["bytes"] or _hash(body) != descriptor["sha256"]:
+            raise ValueError("A utility packet member changed: " + name)
+        if name in selected and selected[name][0] != body:
+            raise ValueError("The utility packet repeats a different source member")
+        selected[name] = (body, dict(descriptor))
+    inventory = {"schema": "upstate.utility-watershed-packet/v1",
+                 "path_basis": "archive_root", "open": "watershed-selection-brief.html",
+                 "files": {name: descriptor for name, (_, descriptor) in sorted(selected.items())}}
+    fd, pending = tempfile.mkstemp(prefix=".utility-watershed-packet-", suffix=".zip", dir=root)
+    os.close(fd)
+    try:
+        with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+            for name, (body, _) in sorted(selected.items()):
+                archive.writestr(name, body)
+            archive.writestr("packet.json", (json.dumps(inventory, ensure_ascii=False,
+                             allow_nan=False, indent=2) + "\n").encode("utf-8"))
+        with open(pending, "rb") as stream:
+            os.fsync(stream.fileno())
+        os.replace(pending, root / filename)
+    finally:
+        Path(pending).unlink(missing_ok=True)
+    body = (root / filename).read_bytes()
+    return {"path": filename, "bytes": len(body), "sha256": _hash(body),
+            "media_type": "application/zip", "title": "Complete utility watershed report and original sources"}
