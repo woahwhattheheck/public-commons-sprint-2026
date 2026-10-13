@@ -8,8 +8,9 @@ import "./portable.js";
 const [command,...words]=process.argv.slice(2),args={};
 for(let i=0;i<words.length;i+=2){if(!words[i]?.startsWith("--")||!words[i+1])throw Error("Use --option value pairs.");args[words[i].slice(2)]=words[i+1];}
 const sha=data=>createHash("sha256").update(data).digest("hex");
+const readText=async file=>new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await fs.readFile(file));
 const ownDir=path.dirname(fileURLToPath(import.meta.url));
-const names=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md"];
+const names=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md"];
 async function verify(root) {
  const manifest=JSON.parse(await fs.readFile(path.join(root,"manifest.json"),"utf8"));
  if(manifest.schema!=="rainfall-handover/v1"||!Array.isArray(manifest.files))throw Error("Unknown handover manifest.");
@@ -28,10 +29,10 @@ try{
  if(command==="verify"){if(!args.dir)throw Error("verify needs --dir.");process.stdout.write(JSON.stringify(await verify(args.dir),null,2)+"\n");}
  else if(command==="build"){
   if(!args.before||!args.out)throw Error("build needs --before CAPTURE --out NEW_DIRECTORY; optionally --after CAPTURE --notes FILE --public-sources PACKET.");
-  const sourceFiles=Object.fromEntries(await Promise.all(names.map(async name=>[name,await fs.readFile(path.join(ownDir,name),"utf8")])));
-  const captureTexts=[await fs.readFile(args.before,"utf8")];if(args.after)captureTexts.push(await fs.readFile(args.after,"utf8"));
-  const notes=args.notes?await fs.readFile(args.notes,"utf8"):"";
-  const publicSourceTexts=args["public-sources"]?[await fs.readFile(args["public-sources"],"utf8")]:[];
+  const sourceFiles=Object.fromEntries(await Promise.all(names.map(async name=>[name,await readText(path.join(ownDir,name))])));
+  const captureTexts=[await readText(args.before)];if(args.after)captureTexts.push(await readText(args.after));
+  const notes=args.notes?await readText(args.notes):"";
+  const publicSourceTexts=args["public-sources"]?[await readText(args["public-sources"])]:[];
   const result=RainfallHandover.build({R:RainfallReview,sourceFiles,captureTexts,notes,publicSourceTexts});
   const destination=path.resolve(args.out),parent=path.dirname(destination),staging=destination+".building-"+randomUUID();
   await fs.mkdir(parent,{recursive:true});

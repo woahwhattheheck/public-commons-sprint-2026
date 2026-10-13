@@ -23,18 +23,20 @@ function zip(entries) {
 function preparedHtml(html,project) {
  if(!html.includes("async function importFiles(files)")||!html.includes("</body>"))throw Error("The maintained reviewer import seam is missing.");
  const body=JSON.stringify(project).replace(/</g,"\\u003c").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029");
+ if(bytes(body).length>40*1024*1024)throw Error("The complete embedded project exceeds the reviewer\u0027s 40 MB import limit.");
  const preload='<script type="application/json" id="prepared-project">'+body+'</script><script>importFiles([new File([document.getElementById("prepared-project").textContent],"review-project.json",{type:"application/json"})]);</script>';
- return html.replace("</body>",preload+"</body>");
+ const close=html.lastIndexOf("</body>");return html.slice(0,close)+preload+html.slice(close);
 }
 function build({R,sourceFiles,captureTexts,notes="",publicSourceTexts=[],createdAt=new Date().toISOString()}) {
  if(!R||!sourceFiles||!Array.isArray(captureTexts)||captureTexts.length<1||captureTexts.length>2)throw Error("Provide maintained source and one or two original captures.");
  if(typeof notes!=="string")throw Error("Reviewer notes must be text.");
- const required=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md"];
+ const required=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md"];
  for(const name of required)if(typeof sourceFiles[name]!=="string")throw Error("Missing complete source: "+name);
+ if(!sourceFiles["index.html"].includes("<script>"+sourceFiles["core.js"]+"</script>"))throw Error("The reviewer and editable calculation source differ. Build from one complete source edition.");
  const releases=captureTexts.map(text=>R.release(JSON.parse(text)));
  if(releases.length===2)R.compare(...releases);
- const project=R.project(releases,notes);if(bytes(JSON.stringify(project)).length>40*1024*1024)throw Error("The complete prepared project exceeds the reviewer\u0027s 40 MB import limit. Choose a smaller original review window.");const members=[],add=(path,content)=>{if(typeof content!=="string")throw Error("Text content required: "+path);members.push({path,content});};
- add("review-project.json",JSON.stringify(project,null,2)+"\n");
+ const project=R.project(releases,notes),projectText=JSON.stringify(project,null,2)+"\n";if(bytes(projectText).length>40*1024*1024)throw Error("The complete saved project exceeds the reviewer\u0027s 40 MB import limit. Choose a smaller original review window.");const members=[],add=(path,content)=>{if(typeof content!=="string")throw Error("Text content required: "+path);members.push({path,content});};
+ add("review-project.json",projectText);
  add("reviewer.html",preparedHtml(sourceFiles["index.html"],project));
  add("report.html",R.report(releases,notes));
  add("OPEN_FIRST.html",opening(R,releases));
