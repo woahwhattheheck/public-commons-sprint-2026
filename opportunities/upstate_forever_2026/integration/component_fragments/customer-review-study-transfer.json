@@ -1,0 +1,44 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "customer-review-study-transfer",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/4abad5482dce1085fc99443020d49a4c42a22d6e/opportunities/upstate_forever_2026",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/customer_review_study_transfer.py",
+        "model/SCIENTIFIC_REPORT_REVIEW.md",
+        "model/reviews.py",
+        "model/review_handback.py",
+        "model/review_receiving.py",
+        "model/review_reconciliation.py",
+        "model/review_worklist.py",
+        "model/scientific_report_editions.py",
+        "model/scientific_report_review.py",
+        "model/scientific_report_study_transfer.py",
+        "operator/customer_reviews.py",
+        "operator/review_reconciliation.py",
+        "operator/extensions/review-reconciliation.json",
+        "operator/web/reviews.mjs",
+        "operator/web/reviews.css",
+        "operator/web/review_reconciliation.mjs",
+        "operator/web/extensions/study_transfer.mjs",
+        "integration/customer-review-study-transfer.patch.json",
+        "integration/component_fragments/customer-review-study-transfer.json",
+        "operator/review_app.html",
+        "delivery_snapshot.py",
+        "model/spatial_exports.py",
+        "source/acceptance/20261012/review-requirements.json"
+      ]
+    },
+    "scientific-report-review": {
+      "paths": [
+        "model/customer_review_study_transfer.py",
+        "model/SCIENTIFIC_REPORT_REVIEW.md"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": []
+}

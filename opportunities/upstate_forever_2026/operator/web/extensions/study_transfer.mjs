@@ -7,6 +7,7 @@ const ROOTS = [
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['reviews', 'Customer reviews'],
   ['receiving-water-plans', 'Receiving-water source plans'],
   ['receiving-water-analyses', 'Receiving-water analyses'],
   ['community-tables', 'Community source tables'],
@@ -17,9 +18,16 @@ const ROOTS = [
   ['conservation-plans', 'Conservation portfolio'],
   ['conservation-exports', 'Conservation decision packet'],
   ['conservation-report-sources', 'Conservation report source'],
+  ['receptor-networks', 'Original watershed networks'],
+  ['receptor-scenario-areas', 'Prepared source-water areas'],
+  ['receptor-programmes', 'Source-water native programmes'],
+  ['receptor-experiments', 'Source-water experiment comparisons'],
+  ['receptor-inventories', 'Native receiving-area inventories'],
+  ['receptor-report-sources', 'Source geography report sources'],
   ['monitoring_networks', 'Monitoring networks'],
   ['monitoring_plans', 'Monitoring designs'],
-  ['monitoring_frontiers', 'Monitoring budget comparisons'],
+  ['monitoring_frontiers', 'Monitoring budget frontiers'],
+  ['monitoring_frontier_comparisons', 'Saved Monitoring budget choices'],
   ['monitoring_heads', 'Monitoring campaigns'],
   ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
@@ -99,7 +107,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved reports and scientific, Monitoring, Community or Conservation studies. The receiving workspace keeps original source editions, results and editable study history.</p>'+
+      '<p>Choose saved scientific reports, studies and customer reviews. The receiving workspace keeps original source editions, results and editable study history.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
