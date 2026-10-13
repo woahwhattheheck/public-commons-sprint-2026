@@ -14,30 +14,31 @@ All 52 Python modules, the complete retention guide and the owner instructions a
 
 Use the existing accepting Linux or WSL Linux host and an ordinary checkout of this public repository at the selected publication commit. Select a new private source directory beside the original operation's retained records. Keep an active supervisor on its current source and its original record until its lifecycle completes.
 
-The original runtime_source.py uses Python's standard library. From this directory, choose your own private paths and run its existing commands:
+The original runtime_source.py uses Python's standard library. From this directory, choose your own private paths. Create the owner-private archive parent first; the existing pack implementation writes its temporary archive in that parent. Then run its original commands:
 
 ~~~sh
-python3 -B host/runtime_source.py pack \\
-  --root host \\
-  --out /absolute/private/receiving/native-runtime-source.zip \\
-  --entrypoint native_foreground.py \\
-  --entrypoint swarm_cloud_job.py \\
-  --entrypoint swarm_cloud_worker.py \\
-  --entrypoint runtime_source.py \\
-  --asset NATIVE_ARTIFACT_RETENTION.md \\
+mkdir -p -m 700 /absolute/private/receiving
+python3 -B host/runtime_source.py pack \
+  --root host \
+  --out /absolute/private/receiving/native-runtime-source.zip \
+  --entrypoint native_foreground.py \
+  --entrypoint swarm_cloud_job.py \
+  --entrypoint swarm_cloud_worker.py \
+  --entrypoint runtime_source.py \
+  --asset NATIVE_ARTIFACT_RETENTION.md \
   --asset AGENTS.md
 ~~~
 
 The pack response contains the exact archive file, bytes and sha256. Preserve that response with the existing operation. Pass its returned hash to the same inspector and receiver:
 
 ~~~sh
-python3 -B host/runtime_source.py inspect \\
-  --archive /absolute/private/receiving/native-runtime-source.zip \\
+python3 -B host/runtime_source.py inspect \
+  --archive /absolute/private/receiving/native-runtime-source.zip \
   --sha256 RETURNED_ARCHIVE_SHA256
 
-python3 -B host/runtime_source.py receive \\
-  --archive /absolute/private/receiving/native-runtime-source.zip \\
-  --sha256 RETURNED_ARCHIVE_SHA256 \\
+python3 -B host/runtime_source.py receive \
+  --archive /absolute/private/receiving/native-runtime-source.zip \
+  --sha256 RETURNED_ARCHIVE_SHA256 \
   --out /absolute/private/received-native-runtime
 ~~~
 
@@ -50,6 +51,10 @@ Read the received AGENTS.md and NATIVE_ARTIFACT_RETENTION.md, then load that exa
 For a new command already authorized in that original operation, its existing start path uses:
 
 ~~~python
+import sys
+
+# Set this to the exact private directory returned by runtime_source receive.
+sys.path.insert(0, str(selected_received_host_root))
 from native_foreground import load_native, start_foreground
 
 native = load_native(selected_received_host_root)
