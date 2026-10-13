@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import zipfile
 import traceback
 from urllib.parse import quote
 
@@ -31,6 +33,7 @@ from model.portable_implementation import report_edition
 from model import field_deployment, implementation_report_source, observed_context
 from model import scientific_briefing, scientific_report_editions, study_receiving, study_transfer
 from model.project_transfer_workspace import NativeProjectTransfer
+from model.portable import member_name
 
 SCHEMA = "upstate.scientific-fieldwork-course/v1"
 
@@ -289,6 +292,47 @@ def fresh_process(root, received, expected_path, kind, state, checkpoint):
     return answer
 
 
+def briefing_view(root, workspace, key):
+    """Materialize the complete original briefing ZIP at its intended layout."""
+    record = scientific_briefing.export(workspace, key)
+    directory = workspace.root / "scientific-report-briefings" / key
+    archive = verify_file(directory, record["archive"])
+    _, _, members = scientific_briefing.members(workspace, key)
+    destination = root / "briefing-view"
+    destination.mkdir(exist_ok=True)
+    with zipfile.ZipFile(archive) as package:
+        if len(package.namelist()) != len(members) or set(package.namelist()) != set(members):
+            raise ValueError("The complete briefing ZIP differs from its original member inventory")
+        for name, descriptor in sorted(members.items()):
+            relative = member_name(name)
+            target = destination.joinpath(*relative.parts)
+            if target.is_symlink():
+                raise ValueError("The local briefing member is a file alias")
+            if target.is_file():
+                verify_file(destination, {**descriptor, "path": name})
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.parent.resolve().is_relative_to(destination.resolve()):
+                raise ValueError("The local briefing member leaves its original layout")
+            checksum, size = hashlib.sha256(), 0
+            fd, temporary_name = tempfile.mkstemp(prefix=".briefing-", dir=target.parent)
+            temporary = Path(temporary_name)
+            try:
+                with os.fdopen(fd, "wb") as output, package.open(name) as source:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        output.write(chunk)
+                        checksum.update(chunk)
+                        size += len(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                if size != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
+                    raise ValueError("The original briefing ZIP member changed: " + name)
+                os.replace(temporary, target)
+            finally:
+                temporary.unlink(missing_ok=True)
+    return destination / record["files"]["html"]["path"]
+
+
 def start_page(root, result):
     """A simple local entrypoint over the actual reopened original members."""
     original = result["original"]
@@ -304,11 +348,12 @@ def start_page(root, result):
     study = Path(result["study_receiving"]["workspace"])
     source = read_json(whole / "scientific-report-editions" / result["scientific_edition_id"] / "edition.json")
     add("Scientific report", whole / "scientific-report-editions" / source["id"] / source["files"]["report_html"]["path"])
-    saved = read_json(whole / "scientific-report-briefings" / result["briefing_id"] / "briefing.json")
-    add("Scientific briefing", whole / "scientific-report-briefings" / saved["id"] / saved["files"]["html"]["path"])
+    from model.workspace import Workspace
+    add("Complete offline scientific briefing", briefing_view(root, Workspace(whole), result["briefing_id"]))
     packet_root = study / "implementation" / "plans" / original["plan_id"] / "deployments" / result["deployment_id"]
     packet = read_json(packet_root / "deployment.json")
-    for label, name in (("Field crew packet", "crew-packet.html"), ("Offline field workbench", "field-workbench.html")):
+    for label, name in (("Field crew packet", "crew-packet.html"), ("Complete crew ZIP", "crew-packet.zip"),
+                        ("Offline field workbench", "field-workbench.html"), ("Original editable plan", "original-plan.json")):
         add(label, packet_root / name)
     add("Complete original Study archive", result["study_archive"]["path"])
     add("Complete original Workspace archive", result["workspace_archive"])
@@ -318,7 +363,9 @@ def start_page(root, result):
             'code{overflow-wrap:anywhere}</style><main><h1>' + html.escape(original["title"]) + '</h1><p>Original project '
             '<code>' + html.escape(result["project_id"]) + '</code>. Saved plan revision ' + str(original["revision"]) +
             '; ' + str(len(original["visit_ids"])) + ' selected visits.</p><ul>' + "".join(links) +
-            '</ul><p>The Study opens its captured scientific report, editable plan history and crew packet. '
+            '</ul><p>Open the offline field workbench and import the Original editable plan linked above. '
+            'The complete crew ZIP contains these same original files for the field team.</p><p>'
+            'The Study opens its captured scientific report, editable plan history and crew packet. '
             'The whole Workspace also contains the complete scientific briefing. Both copies reopened in fresh '
             'processes using their own received application source.</p></main></html>')
     atomic_bytes(root / "START_HERE.html", body.encode("utf-8"))
