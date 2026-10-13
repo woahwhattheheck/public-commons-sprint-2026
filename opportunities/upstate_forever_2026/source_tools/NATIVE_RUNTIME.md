@@ -89,6 +89,16 @@ its request, probe, complete pack and process log, including on a failed attempt
 `--resume` selects that same capture request. An interrupted incomplete pack is
 preserved before a new packing attempt; a verified complete pack is reusable.
 
+If capture published its final ZIP before the controlling process lost its
+response, repeat the exact command with `--resume`. Under the original capture
+lease, the command verifies the complete capsule against the retained capture
+request, original packed bytes, donor identity and probe. It completes that same
+capture receipt and returns the original capsule with `reused: true`. An already
+completed capture follows the same verified reopening path. Neither case
+re-probes or repacks the donor. Unowned, changed or symlink outputs remain errors;
+use `inspect` for a standalone retained capsule without its original capture
+operation directory.
+
 For an already retained pack, first retain its actual donor probe:
 
 ```sh
