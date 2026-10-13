@@ -123,7 +123,9 @@ operation ID derives from the handover digest. Continue interruptions with the
 same command and directory. For a later approved edition of the same customer's
 monitoring workbook, use the [recurring customer workflow](RECURRING.md): it keeps
 the same view, edited SQL, report definition and workbook while retaining prior
-editions. Use a separate prepare operation/view only for an independent analysis.
+editions. The [named-programme guide](PROGRAMMES.md#receive-the-next-original-handover)
+gives the complete next-handover intake and source-selection commands. Use a
+separate prepare operation/view only for an independent analysis.
 
 The maintained adapter first runs the original package importer and World Bank
 review/export engine. Its regenerated CSV must match the customer CSV byte for
@@ -156,12 +158,12 @@ original workbook handover, complete Analysis workspace and receiving guide.
 Receive its workspace through the original engine:
 
 ~~~sh
-starforge worldbank-product analysis receive \
+starforge worldbank-product analysis --python /srv/starforge/python/bin/python receive \
   --archive /srv/customer/incoming/WorldBank_Analysis_Workspace.zip \
   --sha256 ACTUAL_WORKSPACE_ARCHIVE_SHA256 \
   --workspace /srv/customer/economic-analysis \
   --operation-id 431e21b8c6e44f65a3d6c279f5b8e012
-starforge worldbank-product analysis serve \
+starforge worldbank-product analysis --python /srv/starforge/python/bin/python serve \
   --workspace /srv/customer/economic-analysis
 ~~~
 
