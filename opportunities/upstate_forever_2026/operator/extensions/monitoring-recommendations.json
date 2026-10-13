@@ -1,0 +1,82 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "monitoring-recommendations",
+  "title": "Sampling priorities",
+  "version": "1.0.0",
+  "order": 86,
+  "requires_actions": [
+    "monitoring.design",
+    "monitoring.context.prepare"
+  ],
+  "assets": [
+    "monitoring_recommendations.mjs",
+    "monitoring_recommendations.css"
+  ],
+  "backend": {
+    "module": "monitoring_recommendations",
+    "actions": [
+      "monitoring.recommendations.prepare",
+      "monitoring.recommendations.design",
+      "monitoring.recommendations.export"
+    ],
+    "invoke": {
+      "handler": "perform",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/monitoring-recommendations",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/monitoring_recommendations.mjs",
+    "factory": "attachMonitoringRecommendations",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "showTask",
+      "toast",
+      "openDesk"
+    ],
+    "styles": [
+      "/web/monitoring_recommendations.css"
+    ],
+    "view": {
+      "id": "monitoring-recommendations",
+      "title": "Sampling priorities",
+      "after": "monitoring"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
