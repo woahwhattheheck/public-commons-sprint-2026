@@ -13,12 +13,14 @@ import re
 import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
-from model import reviews
+from model import reviews, review_handback
 
 ACTIONS = frozenset({
     "customer.review.create", "customer.review.export", "customer.review.response.import",
+    "customer.review.handback.save", "customer.review.handback.export", "customer.review.handback.import",
 })
-READS = frozenset({"catalog", "review", "template", "compare", "spatial-export"})
+READS = frozenset({"catalog", "review", "template", "compare", "spatial-export",
+                   "handbacks", "handback", "handback-template"})
 APPLICATION = Path(__file__).resolve().parents[1]
 
 
@@ -73,6 +75,22 @@ class CustomerReviews:
             })
         return result
 
+    def _handback_exports(self, workspace, handback_id=None):
+        result = []
+        for task in self.operator.task_list(workspace):
+            if task["action"] != "customer.review.handback.export" or task["state"] != "complete":
+                continue
+            value = task["result"]
+            if handback_id is not None and value["handback_id"] != handback_id:
+                continue
+            result.append({
+                "task_id": task["id"], "review_id": value["review_id"], "handback_id": value["handback_id"],
+                "created_at": task["created_at"], "completed_at": task.get("ended_at"),
+                "package_sha256": value["package_sha256"], "members": value["members"],
+                "archive_bytes": value["archive"]["bytes"], "desk_url": self._desk_url(task["id"]),
+            })
+        return result
+
     @staticmethod
     def _desk_url(task_id, member="index.html"):
         return "/api/file/review-desk/" + task_id + "/" + urllib.parse.quote(member, safe="/")
@@ -114,6 +132,21 @@ class CustomerReviews:
                 "spatial_exports": spatial_exports,
                 "issuer": self._issuer(), "exports": self._exports(workspace),
             }
+        if operation == "handbacks":
+            review_id = self._id(value, "review_id")
+            return {"review_id": review_id, "handbacks": review_handback.list_handbacks(ws, review_id)}
+        if operation == "handback-template":
+            kwargs = {name: self._id(value, name) for name in ("response_id", "handback_id") if value.get(name)}
+            if "revised_review_id" in value and value["revised_review_id"] is not None:
+                kwargs["revised_review_id"] = self._id(value, "revised_review_id") if value["revised_review_id"] else None
+            return review_handback.template(ws, self._id(value, "review_id"), **kwargs)
+        if operation == "handback":
+            handback_id = self._id(value, "handback_id")
+            result = review_handback.show(ws, handback_id)
+            result["_exports"] = self._handback_exports(workspace, handback_id)
+            result["_downloads"] = [self._json_ticket(workspace, result["handback"], "engineering-handback.json",
+                                                        "Complete retained engineering edition")]
+            return result
         if operation == "spatial-export":
             export_id = self._id(value, "export_id")
             result = self.operator.item(workspace, "spatial_exports", export_id)
@@ -141,6 +174,7 @@ class CustomerReviews:
                                     "Response by " + record["response"]["reviewer"]["name"]),
             } for record in packet["responses"]]
             packet["_exports"] = self._exports(workspace, review_id)
+            packet["_handbacks"] = review_handback.list_handbacks(ws, review_id)
             return packet
         if operation == "template":
             review_id = self._id(value, "review_id")
@@ -172,6 +206,24 @@ class CustomerReviews:
         workspace, payload = task["workspace"], task["payload"]
         ws = self.operator.ws(workspace)
         action = task["action"]
+        if action == "customer.review.handback.save":
+            record = review_handback.save(ws, payload.get("handback"), created_at=task["created_at"])
+            return {"review_id": record["review_id"], "handback_id": record["id"], "handback": record}
+        if action == "customer.review.handback.export":
+            return self._export_handback(task)
+        if action == "customer.review.handback.import":
+            uploaded = self.operator.upload(self._id(payload, "upload_id"))
+            directory = self.operator.root / "outputs" / "customer-review-handback-imports" / task["id"]
+            directory.mkdir(parents=True, exist_ok=True)
+            desk = directory / "desk"
+            if desk.exists():
+                inspected = review_handback.inspect_packet(desk)
+                incoming = review_handback.inspect_packet(uploaded["path"])
+                if inspected["manifest"] != incoming["manifest"]:
+                    raise ValueError("This receiving task retained a different original handback")
+                joined = review_handback._join(ws, inspected)
+                return {**review_handback.describe_export(desk), "joined": joined}
+            return review_handback.receive_packet(uploaded["path"], desk, workspace=ws)
         if action == "customer.review.create":
             selection = payload.get("selection")
             record = reviews.create_review(ws, selection, created_at=task["created_at"])
@@ -226,19 +278,42 @@ class CustomerReviews:
                               "sha256": file_digest(manifest_path)}
         return result
 
+    def _export_handback(self, task):
+        ws = self.operator.ws(task["workspace"])
+        handback_id = self._id(task["payload"], "handback_id")
+        directory = self.operator.root / "outputs" / "customer-review-handbacks" / task["id"]
+        directory.mkdir(parents=True, exist_ok=True)
+        desk, archive = directory / "desk", directory / "engineering-handback.zip"
+        if desk.exists():
+            result = review_handback.describe_export(desk)
+        else:
+            result = review_handback.export_handback(ws, handback_id, desk)
+        if result["handback_id"] != handback_id or result["project_id"] != ws.project["id"]:
+            raise ValueError("This export belongs to a different original engineering edition")
+        if not archive.exists():
+            review_handback.archive_packet(desk, archive)
+        result = review_handback.describe_export(desk, archive=archive)
+        manifest = desk / review_handback.MANIFEST
+        result["manifest"] = {"path": str(manifest), "bytes": manifest.stat().st_size, "sha256": file_digest(manifest)}
+        return result
+
     def _export_manifest(self, task):
-        if task["action"] != "customer.review.export" or task["state"] != "complete":
+        if task["action"] not in ("customer.review.export", "customer.review.handback.export") or task["state"] != "complete":
             raise self.Fault("REVIEW_EXPORT_PENDING", "Open a completed review export.", 409)
         result = task["result"]
-        expected_root = self.operator.root / "outputs" / "customer-review-exports" / task["id"] / "desk"
+        engineering = task["action"] == "customer.review.handback.export"
+        family = "customer-review-handbacks" if engineering else "customer-review-exports"
+        expected_root = self.operator.root / "outputs" / family / task["id"] / "desk"
         directory = Path(result["directory"])
         if directory != expected_root:
             raise self.Fault("REVIEW_EXPORT_PATH", "The retained export is outside its original task directory.", 409)
-        file = directory / "review-manifest.json"
+        file = directory / (review_handback.MANIFEST if engineering else "review-manifest.json")
         descriptor = result["manifest"]
         if file.is_symlink() or file.stat().st_size != descriptor["bytes"] or file_digest(file) != descriptor["sha256"]:
             raise self.Fault("REVIEW_MANIFEST_CHANGED", "The original review export inventory changed.", 409)
         manifest = read_json(file)
+        if engineering and manifest.get("handback_id") != result.get("handback_id"):
+            raise self.Fault("REVIEW_EXPORT_CHANGED", "The retained engineering edition changed.", 409)
         if (manifest["package_sha256"] != result["package_sha256"]
                 or manifest["review_id"] != result["review_id"]
                 or manifest["project_id"] != result["project_id"]):
@@ -250,7 +325,24 @@ class CustomerReviews:
             return task
         result = task["result"]
         task["_review"] = {"review_id": result["review_id"]}
-        if task["action"] == "customer.review.export":
+        if task["action"].startswith("customer.review.handback."):
+            task["_review"].update(handback_id=result["handback_id"], kind="engineering-handback")
+        if task["action"] == "customer.review.handback.export":
+            directory, manifest = self._export_manifest(task)
+            task["_downloads"] = [
+                self.operator._ticket(task["workspace"], result["archive"]["path"], result["archive"],
+                                      "Complete engineering handback with both original review desks"),
+                self.operator._ticket(task["workspace"], directory / "handback.json",
+                                      manifest["members"]["handback.json"], "Complete engineering history"),
+                self.operator._ticket(task["workspace"], directory / "request-resolutions.csv",
+                                      manifest["members"]["request-resolutions.csv"], "All request resolutions"),
+            ]
+            task["_review"].update(desk_url=self._desk_url(task["id"]), package_sha256=result["package_sha256"])
+        elif task["action"] in ("customer.review.handback.save", "customer.review.handback.import"):
+            record = review_handback.show(self.operator.ws(task["workspace"]), result["handback_id"])["handback"]
+            task["_downloads"] = [self._json_ticket(task["workspace"], record, "engineering-handback.json",
+                                                    "Retained engineering response")]
+        elif task["action"] == "customer.review.export":
             directory, manifest = self._export_manifest(task)
             files = [self.operator._ticket(task["workspace"], result["archive"]["path"],
                                             result["archive"], "Complete offline review desk")]
@@ -276,7 +368,7 @@ class CustomerReviews:
         if ("\\" in member or "\0" in member or relative.is_absolute()
                 or str(relative) != member or any(part in (".", "..") for part in relative.parts)):
             raise self.Fault("REVIEW_MEMBER", "Choose an original review package member.", 404)
-        if member == "review-manifest.json":
+        if member == (review_handback.MANIFEST if task["action"] == "customer.review.handback.export" else "review-manifest.json"):
             descriptor = task["result"]["manifest"]
         else:
             descriptor = manifest["members"].get(member)
@@ -287,7 +379,9 @@ class CustomerReviews:
             raise self.Fault("REVIEW_MEMBER_CHANGED", "The original review package member changed.", 409)
         ticket = self.operator._ticket(task["workspace"], path, descriptor, path.name)
         policy = None
-        if member == "index.html":
+        engineering_desk = (task["action"] == "customer.review.handback.export"
+                            and re.fullmatch(r"reviews/[0-9a-f]{64}/(?:[0-9a-f]{64}|original)/index\.html", member))
+        if member == "index.html" or engineering_desk:
             # Only the original exporter-created application gets executable
             # scripts.  Arbitrary selected HTML retains the normal file sandbox.
             content = path.read_bytes()
