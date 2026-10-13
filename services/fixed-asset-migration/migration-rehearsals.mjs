@@ -74,11 +74,11 @@ function origins(ws){
   supporting:ws.supportingFiles.map(({base64,...f})=>f),
   workOrders:W.read(ws).sources.map(s=>({id:s.id,role:s.role,domain:s.domain,filename:s.filename,bytes:s.bytes,sha256:s.sha256,rows:s.rows.length}))};
 }
-export function preview(workspace){
- const ws=E.validateWorkspace(workspace),reports=evidence(ws);
+function observation(ws,reports){
  return {schema:'tjlabs.migration-rehearsal-preview.v1',workspaceId:ws.id,revision:ws.revision,prefix_sha256:prefixIdentity(ws),evidence_sha256:hash(reports),summary:summary(reports),sources:origins(ws),
   meaning:'Observation of this exact original revision. Saving adds a supporting event; original financial policies must be reaffirmed afterward.'};
 }
+export function preview(workspace){const ws=E.validateWorkspace(workspace);return observation(ws,evidence(ws));}
 export function list(workspace){
  const ws=E.validateWorkspace(workspace),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),editions=[];let head=null;
  for(const op of ws.operations){
@@ -105,7 +105,7 @@ export function save(workspace,input){
  text(input.operationId,'stable operation ID',128);text(input.label,'named edition',240);text(input.actor,'reviewer',300);text(input.reference,'actual export/rehearsal reference',2000);text(input.note,'review note',8000);
  need(KINDS.includes(input.kind),'Select rehearsal, returned-export, handover-review or checkpoint.');
  const history=list(workspace);need(input.previous===history.head,'The last review edition changed.','REHEARSAL_HEAD_CHANGED');
- const captured=evidence(workspace),current=preview(workspace);need(input.expectedEvidenceSha256===current.evidence_sha256,'The actual evidence changed; review the current original results.','REHEARSAL_EVIDENCE_CHANGED');
+ const captured=evidence(workspace),current=observation(workspace,captured);need(input.expectedEvidenceSha256===current.evidence_sha256,'The actual evidence changed; review the current original results.','REHEARSAL_EVIDENCE_CHANGED');
  const at=input.at||new Date().toISOString(),body={schema:SCHEMA,workspaceId:workspace.id,operationId:input.operationId,sequence:history.editions.length+1,previous:history.head,revision:workspace.revision,savedRevision:workspace.revision+1,at,
   kind:input.kind,label:input.label,actor:input.actor,reference:input.reference,note:input.note,request:clone(input),request_sha256:hash(input),
   prefix_sha256:current.prefix_sha256,evidence_sha256:current.evidence_sha256,summary:current.summary,sources:current.sources,evidence:packEvidence(captured),keyDefinitions:Object.fromEntries(Object.entries(inventory(captured)).map(([name,value])=>[name,value.keys]))};
