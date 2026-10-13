@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-source-returns-edition2-benchmarks-and-receiving-20261013",
+  "edition": "complete-measurements-workbook-lineage-source-returns-edition2-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -81,6 +81,13 @@
       "flow_report_merge": "a3a1d13d2981a8e2617f7e47e74916f648dce852",
       "preserves": "Complete Guided Intake, source returns, Source Versions, historical reports, Flow/Load products and original receiving workspaces.",
       "observed_benchmark_merge": "9484a3a73aa1dbe24717572a83eb0bc4bdbd849a"
+    },
+    "workbook_measurements": {
+      "operation_id": "ECO-WORKBOOK-MEASUREMENTS-BRIDGE-20261013",
+      "composed_main": "a23e68eeec9263ac481b10d4159a44d0bf509eed",
+      "source_intake_merge": "e6dafd460fdd2a58f57f3dd70d71a931c19b544d",
+      "guided_intake_merge": "25b0f344adfb1cfa7ee20f83073948e781a363ac",
+      "intake_receiver_repairs": "12af6f66b736bbe1bbdaa5d9a07c658b149dac80"
     }
   },
   "files": [
@@ -103,6 +110,11 @@
       "path": "CURRENT_OWNER_DIRECTION.md",
       "bytes": 6093,
       "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
+    },
+    {
+      "path": "environment.yml",
+      "bytes": 293,
+      "sha256": "c936fa143df287115eb88fae80ca5ced1556338338300befdfcd979ab1d9f963"
     },
     {
       "path": "install_measurement_large_files.py",
@@ -296,8 +308,8 @@
     },
     {
       "path": "measurement_workspace/engine/intake.mjs",
-      "bytes": 16156,
-      "sha256": "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a"
+      "bytes": 18426,
+      "sha256": "b7930eea0b7980d5668889fa9ada87a206d166804ed72463e596aaac4bde450b"
     },
     {
       "path": "measurement_workspace/engine/large_archive.py",
@@ -398,6 +410,11 @@
       "path": "measurement_workspace/engine/source_handback.mjs",
       "bytes": 28600,
       "sha256": "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
+    },
+    {
+      "path": "measurement_workspace/engine/source_lineage.mjs",
+      "bytes": 9101,
+      "sha256": "f0208ea12a2a87ba5874382d38f0513f9430d7461b471941e080eb66b1167f95"
     },
     {
       "path": "measurement_workspace/engine/source_reconciliation.mjs",
@@ -516,8 +533,8 @@
     },
     {
       "path": "measurement_workspace/web/intake.mjs",
-      "bytes": 21960,
-      "sha256": "02ab47a9bf7b7dca747a064ad7159a41b86d050f692e12e3704aff4d9af4aecf"
+      "bytes": 25206,
+      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb"
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
@@ -565,6 +582,16 @@
       "sha256": "19ad95139b181e31289e6dc76d827d0ad81cfb247715133cb82ed6bda39bfca4"
     },
     {
+      "path": "model/client_measurement_sources.py",
+      "bytes": 7697,
+      "sha256": "f54de330cf24fae5ee0341459aa2281515b35f296e030f180e90a1b29145be81"
+    },
+    {
+      "path": "model/client_source_files.py",
+      "bytes": 20802,
+      "sha256": "38114021ae5da768d404d49829a9172efb0c25e8dd4fedf56881ca6654430461"
+    },
+    {
       "path": "model/MEASUREMENTS_PORTABLE.md",
       "bytes": 10829,
       "sha256": "d3d21072dce0e4ed2fc548c704cf83e8b40a39d14da4c77458affcb26efd8ebe"
@@ -578,6 +605,26 @@
       "path": "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py",
       "bytes": 16516,
       "sha256": "6d629814e4d97d39cd23ebb17b308176592102f8f2090132868a0e217ce4ae6a"
+    },
+    {
+      "path": "operator/client_measurement_sources.py",
+      "bytes": 16590,
+      "sha256": "ebd0af9f1182b4073d69299d81fe2ebfffd5b6b85de90b56e605bba284140c3a"
+    },
+    {
+      "path": "operator/client_source_intake.py",
+      "bytes": 22699,
+      "sha256": "98994a0841a6ea9121d4ec67985989e1c14628f83ce88eb7002e5d71d72d7445"
+    },
+    {
+      "path": "operator/extensions/client-measurement-sources.json",
+      "bytes": 1938,
+      "sha256": "3945a6abae4acd4af5792a936806b8d368debf6c4f9d9af3936f755d849bffde"
+    },
+    {
+      "path": "operator/extensions/client-source-intake.json",
+      "bytes": 1931,
+      "sha256": "46cb65ecafa6060ba6082b22a497950725b4da2b0645f28d640be026ac326d09"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -620,6 +667,21 @@
       "sha256": "269b0fa7d2570325fa987c0b98f798859a04149bec2b073d95539e24be7c143a"
     },
     {
+      "path": "operator/web/client_measurement_sources.mjs",
+      "bytes": 12935,
+      "sha256": "f96e0bf6d4ed1b1c8c49176ce62228c881ae565371c5cd30d2312daa6d16397b"
+    },
+    {
+      "path": "operator/web/client_source_intake.css",
+      "bytes": 3253,
+      "sha256": "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2"
+    },
+    {
+      "path": "operator/web/client_source_intake.mjs",
+      "bytes": 41396,
+      "sha256": "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8"
+    },
+    {
       "path": "operator/web/flow_editions.css",
       "bytes": 4490,
       "sha256": "9a5f279697e6be5b6266a8653a6c8f6a423eb9bee4311ff3914b32f37d0c6e38"
@@ -646,8 +708,8 @@
     },
     {
       "path": "operator/web/measured_intake.mjs",
-      "bytes": 21960,
-      "sha256": "02ab47a9bf7b7dca747a064ad7159a41b86d050f692e12e3704aff4d9af4aecf"
+      "bytes": 25206,
+      "sha256": "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb"
     },
     {
       "path": "operator/web/measured_large_files.mjs",
@@ -700,6 +762,11 @@
       "sha256": "ea44cd53d2d07710dff71e92fa759a0d0ba4e319fd5440df3384c64ce78a2930"
     },
     {
+      "path": "operator/WORKBOOK_MEASUREMENTS.md",
+      "bytes": 7564,
+      "sha256": "fef138ac193244054c57a3e2bb0fa4a11d553e0b77c0f7595bdaad50ae049368"
+    },
+    {
       "path": "source_tools/capture_wqp_edition.py",
       "bytes": 8903,
       "sha256": "72aca089811176b08f08f8119670dc4bf2c13753b71fb4a6fd8cd6ca0c5637df"
@@ -743,6 +810,11 @@
       "path": "source_tools/receive_flow_delivery.py",
       "bytes": 2961,
       "sha256": "ca9a262ed46d5563c96f142545e4e0e773bd3e9a689af3b18f806a288d58349b"
+    },
+    {
+      "path": "source_tools/receive_workbook_measurements.mjs",
+      "bytes": 11131,
+      "sha256": "a0fb56401dbc7c933ec009f9545baaa6029123c626bc1bcfa3a036b97cd450cf"
     },
     {
       "path": "source_tools/WQP_OFFICIAL_EDITION.md",
@@ -1009,7 +1081,8 @@
       "02dd78e1d5a3efbb361344677f7e2dbc3499f4069d5a94dac8a026248e7716a0",
       "6362435703fc01930e44426162e73866b0703cb582d6e676c5415180891f7a08",
       "5aed00039a416d079fbc561edd20f0427b6fa6a92eeb32056392d3cd4e08de87",
-      "f20740c3b339a2583f54245006b8bc742ed3de39e426c5419a865fd614dc367a"
+      "f20740c3b339a2583f54245006b8bc742ed3de39e426c5419a865fd614dc367a",
+      "f319ea6572b623fc749d904a1b3ada6de89cb91ca4aa7d95f415a7f803d7ed49"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -1256,6 +1329,33 @@
     ],
     "measurement_workspace/SOURCE_HANDBACK.md": [
       "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+    ],
+    "model/client_source_files.py": [
+      "b06aa9fbdd6550c9b170332e73c0e05491f221adaab96597d4c7e8932140caab"
+    ],
+    "operator/client_source_intake.py": [
+      "9c8ac9ae52e42b02113c364a1cfdb0750291d217090f4726506b52df56d4038b"
+    ],
+    "operator/web/client_source_intake.mjs": [
+      "4165a38f7c53578025dad6df047131ff6b00aa4bafd73922a776d8dea76073bd"
+    ],
+    "measurement_workspace/engine/intake.mjs": [
+      "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a"
+    ],
+    "measurement_workspace/web/intake.mjs": [
+      "02ab47a9bf7b7dca747a064ad7159a41b86d050f692e12e3704aff4d9af4aecf"
+    ],
+    "operator/web/measured_intake.mjs": [
+      "02ab47a9bf7b7dca747a064ad7159a41b86d050f692e12e3704aff4d9af4aecf"
+    ],
+    "operator/web/client_source_intake.css": [
+      "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2"
+    ],
+    "operator/extensions/client-source-intake.json": [
+      "46cb65ecafa6060ba6082b22a497950725b4da2b0645f28d640be026ac326d09"
+    ],
+    "environment.yml": [
+      "c936fa143df287115eb88fae80ca5ced1556338338300befdfcd979ab1d9f963"
     ]
   },
   "requires": [
@@ -1289,6 +1389,7 @@
   ],
   "runtime": {
     "node_minimum": "22.16",
-    "python": "Original scientific application environment with maintained Chemistry 0.3 observation operators"
+    "python": "Original scientific application environment with maintained Chemistry 0.3 observation operators",
+    "workbook_reader": "openpyxl from the original scientific environment.yml"
   }
 }

@@ -18,6 +18,7 @@ from .portable_implementation import report_edition
 from . import gauge_study_receiving
 from . import ensemble_study_receiving
 from . import parameter_study_receiving
+from . import calibration_study_receiving
 from . import report_review_study_receiving
 from . import report_changes_study_transfer
 from . import observation_comparability_study_transfer as comparability_transfer
@@ -63,6 +64,7 @@ def _summary(value):
         **gauge_study_receiving.summary(identity),
         **ensemble_study_receiving.summary(identity),
         **parameter_study_receiving.summary(identity),
+        **calibration_study_receiving.summary(identity),
         **report_review_study_receiving.summary(identity),
         **report_changes_study_transfer.receiving_summary(identity),
         **comparability_transfer.summary(identity),
@@ -101,6 +103,7 @@ def detail(workspace, key):
     identity = retained["identity"]
     closure = study_transfer._Closure(
         workspace, identity["selection"],
+        joint_parameter_lineage="joint_parameter_studies" in identity,
         report_lineage="scientific_report_sources" in identity,
         implementation_lineage="implementation_report_sources" in identity,
         customer_review_lineage="customer_reviews" in identity,
@@ -108,6 +111,7 @@ def detail(workspace, key):
                                     for row in identity.get("implementation_report_sources", [])},
         report_source_keys={(row["source_collection_id"], row["source_id"])
                             for row in identity.get("scientific_report_sources", [])},
+        calibration_studies=identity.get("calibration_studies", []),
         geographic_native_studies=identity.get("geographic_native_studies", []),
         management_case_studies=identity.get("management_case_studies", []),
     ).resolve(identity.get("investigation_dependencies", ()))
@@ -194,6 +198,7 @@ def detail(workspace, key):
     gauge_study_receiving.augment(closure, retained, result)
     ensemble_study_receiving.augment(closure, retained, result)
     parameter_study_receiving.augment(closure, retained, result)
+    calibration_study_receiving.augment(closure, retained, result)
     report_review_study_receiving.augment(closure, retained, result)
     report_changes_study_transfer.augment_receiving(closure, retained, result)
     comparability_transfer.augment(closure, retained, result)

@@ -1,0 +1,2159 @@
+{
+  "schema": "commons.discovery.cohort-manifest.v1",
+  "edition": "water-migration-demo-a",
+  "label": "Demonstration A — original unresolved export",
+  "data_class": "DEMONSTRATION",
+  "source_authorization": {
+    "owner": "TJLabs demonstration source author",
+    "reference": "Invented original software commissioning records; no utility/customer exports, field observations or approved migration results."
+  },
+  "tables": [
+    {
+      "id": "source_customers",
+      "path": "source_customers.csv",
+      "sha256": "f485c57221ffcf93fdfe3ff22ab584879be197e35051e257b4ec16150383d1f5",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "customer_id"
+      ],
+      "foreign_keys": []
+    },
+    {
+      "id": "target_customers",
+      "path": "target_customers.csv",
+      "sha256": "cc39c12420ed95b4c42c29d897084fa74ff6b62ab6e5eef0aa3ae12c8bf5398b",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "customer_id"
+      ],
+      "foreign_keys": []
+    },
+    {
+      "id": "source_accounts",
+      "path": "source_accounts.csv",
+      "sha256": "471af1ee4bdea580edb7cfea9991f8441cc49de5d48af2e85aa4b8fedb2af9f6",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_customer",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "account_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_customer_id",
+          "columns": [
+            "customer_id"
+          ],
+          "references": {
+            "table": "source_customers",
+            "columns": [
+              "customer_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_accounts",
+      "path": "target_accounts.csv",
+      "sha256": "3345ef8055e61d961791b374b1827e04fcbef888a55f51f41b16bac6c0cc1fd9",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_customer",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "account_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_customer_id",
+          "columns": [
+            "customer_id"
+          ],
+          "references": {
+            "table": "target_customers",
+            "columns": [
+              "customer_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_premises",
+      "path": "source_premises.csv",
+      "sha256": "3cc37e29c3b17fb9cc13fc795a7877f0c8af144fb4a7a9c049e15b88510ef212",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "premise_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "postcode",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "since",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit_label",
+          "type": "text",
+          "required": false,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "premise_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "source_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_premises",
+      "path": "target_premises.csv",
+      "sha256": "339fc51961ba1f86ecc22c4a2c7c5e45f6fa32ea526eee8a99be87415c27649b",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "premise_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "postcode",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "since",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit_label",
+          "type": "text",
+          "required": false,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "premise_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "target_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_meters",
+      "path": "source_meters.csv",
+      "sha256": "70f0246fb0a4ded620b87e6bc458eea839c65400fea74890cd0d3aac526ad38a",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "meter_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "premise_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "serial",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "meter_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_premise_id",
+          "columns": [
+            "premise_id"
+          ],
+          "references": {
+            "table": "source_premises",
+            "columns": [
+              "premise_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_meters",
+      "path": "target_meters.csv",
+      "sha256": "fc39c55c75ad2059d3537b35e4db2d511226edb4226c2f0473b69e750333e3de",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "meter_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "premise_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "serial",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "meter_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_premise_id",
+          "columns": [
+            "premise_id"
+          ],
+          "references": {
+            "table": "target_premises",
+            "columns": [
+              "premise_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_reads",
+      "path": "source_reads.csv",
+      "sha256": "f27f64d3bb720107b33f28aea341204fcccbfc2638471d3f17b63074cf416a1c",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "read_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "meter_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "read_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "quantity",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "read_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_meter_id",
+          "columns": [
+            "meter_id"
+          ],
+          "references": {
+            "table": "source_meters",
+            "columns": [
+              "meter_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_reads",
+      "path": "target_reads.csv",
+      "sha256": "051021d6b530384753e0661d5a4525edc61ebf6e0bd93cfa801cdb704d4c7984",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "read_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "meter_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "read_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "quantity_litres",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "read_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_meter_id",
+          "columns": [
+            "meter_id"
+          ],
+          "references": {
+            "table": "target_meters",
+            "columns": [
+              "meter_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_tariffs",
+      "path": "source_tariffs.csv",
+      "sha256": "a75ab5882e2e35a50b68a458d1d62acc5c7d483afb7617f48a1103bd92d0556e",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "tariff_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "valid_to",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "quantity_unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "rate",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "tariff_id"
+      ],
+      "foreign_keys": []
+    },
+    {
+      "id": "target_tariffs",
+      "path": "target_tariffs.csv",
+      "sha256": "987d22fec8f095c25d998ae0b69448c43047a951125a608687ed01b21878a61d",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "tariff_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "valid_to",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "quantity_unit",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "rate_milli_gbp",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "tariff_id"
+      ],
+      "foreign_keys": []
+    },
+    {
+      "id": "source_bills",
+      "path": "source_bills.csv",
+      "sha256": "a6181a2c83b58bd18b0a20a75e56efd64b577dbfd0de9047be9b7e6f7e022ddd",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "bill_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "tariff_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "bill_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "water_charge",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "bill_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "source_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        },
+        {
+          "id": "original_tariff_id",
+          "columns": [
+            "tariff_id"
+          ],
+          "references": {
+            "table": "source_tariffs",
+            "columns": [
+              "tariff_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_bills",
+      "path": "target_bills.csv",
+      "sha256": "d9be553efc8b905a97e9f36cf27089b7eaf5c8aae20bf675cb9018471655d0fb",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "bill_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "tariff_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "bill_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "water_charge_minor",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "bill_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "target_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        },
+        {
+          "id": "original_tariff_id",
+          "columns": [
+            "tariff_id"
+          ],
+          "references": {
+            "table": "target_tariffs",
+            "columns": [
+              "tariff_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_payments",
+      "path": "source_payments.csv",
+      "sha256": "4d5a308ae47bd29ea84ee2698633bbb2bd7ce41fbd45f13eb7821d96318d7401",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "payment_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "payment_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "signed_amount",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "payment_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "source_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_payments",
+      "path": "target_payments.csv",
+      "sha256": "16878791521cc72faef85e71d264481ce2e31def6dcbc5f212d9d2af056b1fe6",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "payment_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "canonical_account",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "payment_date",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "credit_minor",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "payment_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "target_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_allocations",
+      "path": "source_allocations.csv",
+      "sha256": "7ee51a5a5cb9b898b6bc00f815a794eef6f963116b5ef1833f79ba43c66fd625",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "allocation_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "payment_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "bill_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "applied_amount",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "allocation_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_payment_id",
+          "columns": [
+            "payment_id"
+          ],
+          "references": {
+            "table": "source_payments",
+            "columns": [
+              "payment_id"
+            ]
+          }
+        },
+        {
+          "id": "original_bill_id",
+          "columns": [
+            "bill_id"
+          ],
+          "references": {
+            "table": "source_bills",
+            "columns": [
+              "bill_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_allocations",
+      "path": "target_allocations.csv",
+      "sha256": "786e7403e0f7b7f38783bf91817283592799c17d4169e34ec1a1dfa0ac06cb83",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "allocation_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "payment_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "bill_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "signed_credit_minor",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "allocation_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_payment_id",
+          "columns": [
+            "payment_id"
+          ],
+          "references": {
+            "table": "target_payments",
+            "columns": [
+              "payment_id"
+            ]
+          }
+        },
+        {
+          "id": "original_bill_id",
+          "columns": [
+            "bill_id"
+          ],
+          "references": {
+            "table": "target_bills",
+            "columns": [
+              "bill_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "source_balances",
+      "path": "source_balances.csv",
+      "sha256": "291cdb6cf6e325eb894e3489769eae90decf3b703833a0bbc174eee296dc8f84",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "as_of",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "balance",
+          "type": "decimal",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "account_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "source_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "target_balances",
+      "path": "target_balances.csv",
+      "sha256": "6d19eb8353cc1e6e396de83b2c1a77a5bb54830af6f4553a869fd04bbbd9d6fe",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "as_of",
+          "type": "date",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "credit_balance_minor",
+          "type": "integer",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "account_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "original_account_id",
+          "columns": [
+            "account_id"
+          ],
+          "references": {
+            "table": "target_accounts",
+            "columns": [
+              "account_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "customer_crosswalk",
+      "path": "customer_crosswalk.csv",
+      "sha256": "e4eeb981bf464e87c256a5adaac91dd6b9cbac00aa999c92895dd2a86788fbf0",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "old_customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "new_customer_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "old_customer_id",
+        "new_customer_id"
+      ]
+    },
+    {
+      "id": "account_crosswalk",
+      "path": "account_crosswalk.csv",
+      "sha256": "83c6865a9a561bf6c127a17d03c6f2487fcd2d86167e69f60f1ded4849df895d",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "old_account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        },
+        {
+          "name": "new_account_id",
+          "type": "text",
+          "required": true,
+          "trim": false,
+          "null_values": [
+            ""
+          ]
+        }
+      ],
+      "primary_key": [
+        "old_account_id",
+        "new_account_id"
+      ]
+    }
+  ],
+  "metrics": [],
+  "source_register": [
+    {
+      "id": "source_customers",
+      "name": "Complete invented source_customers",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_customers.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "customer_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_customers",
+      "name": "Complete invented target_customers",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_customers.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "customer_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_accounts",
+      "name": "Complete invented source_accounts",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_accounts.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "account_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_accounts",
+      "name": "Complete invented target_accounts",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_accounts.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "account_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_premises",
+      "name": "Complete invented source_premises",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_premises.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "premise_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_premises",
+      "name": "Complete invented target_premises",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_premises.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "premise_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_meters",
+      "name": "Complete invented source_meters",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_meters.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "meter_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_meters",
+      "name": "Complete invented target_meters",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_meters.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "meter_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_reads",
+      "name": "Complete invented source_reads",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_reads.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "read_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_reads",
+      "name": "Complete invented target_reads",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_reads.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "read_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_tariffs",
+      "name": "Complete invented source_tariffs",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_tariffs.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "tariff_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_tariffs",
+      "name": "Complete invented target_tariffs",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_tariffs.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "tariff_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_bills",
+      "name": "Complete invented source_bills",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_bills.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "bill_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_bills",
+      "name": "Complete invented target_bills",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_bills.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "bill_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_payments",
+      "name": "Complete invented source_payments",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_payments.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "payment_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_payments",
+      "name": "Complete invented target_payments",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_payments.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "payment_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_allocations",
+      "name": "Complete invented source_allocations",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_allocations.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "allocation_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_allocations",
+      "name": "Complete invented target_allocations",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_allocations.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "allocation_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "source_balances",
+      "name": "Complete invented source_balances",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/source_balances.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "account_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "target_balances",
+      "name": "Complete invented target_balances",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/target_balances.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "account_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "customer_crosswalk",
+      "name": "Complete invented customer_crosswalk",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/customer_crosswalk.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "old_customer_id",
+        "new_customer_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "account_crosswalk",
+      "name": "Complete invented account_crosswalk",
+      "owner": "TJLabs demonstration author",
+      "source_reference": "examples/a/account_crosswalk.csv",
+      "extract_method": "Full authored frozen CSV, exact byte hash retained",
+      "identifiers": [
+        "old_account_id",
+        "new_account_id"
+      ],
+      "refresh_window": "One immutable demonstration source edition",
+      "retention": "Original receiving case and full archive",
+      "authorised_access": "DEMONSTRATION only",
+      "volume": "Complete file, measured on receiving",
+      "consumers": [
+        "migration-reconciliation"
+      ],
+      "depends_on": []
+    }
+  ],
+  "mappings": [
+    {
+      "id": "customers_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_customers",
+          "column": "customer_name"
+        },
+        {
+          "table": "source_customers",
+          "column": "country"
+        }
+      ],
+      "target": "target_customers",
+      "transformation": "DEMONSTRATION reviewed export meanings for customers. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "accounts_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_accounts",
+          "column": "canonical_customer"
+        },
+        {
+          "table": "source_accounts",
+          "column": "currency"
+        },
+        {
+          "table": "source_accounts",
+          "column": "status"
+        }
+      ],
+      "target": "target_accounts",
+      "transformation": "DEMONSTRATION reviewed export meanings for accounts. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "premises_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_premises",
+          "column": "canonical_account"
+        },
+        {
+          "table": "source_premises",
+          "column": "postcode"
+        },
+        {
+          "table": "source_premises",
+          "column": "since"
+        },
+        {
+          "table": "source_premises",
+          "column": "unit_label"
+        }
+      ],
+      "target": "target_premises",
+      "transformation": "DEMONSTRATION reviewed export meanings for premises. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "meters_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_meters",
+          "column": "premise_id"
+        },
+        {
+          "table": "source_meters",
+          "column": "serial"
+        },
+        {
+          "table": "source_meters",
+          "column": "unit"
+        }
+      ],
+      "target": "target_meters",
+      "transformation": "DEMONSTRATION reviewed export meanings for meters. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "reads_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_reads",
+          "column": "meter_id"
+        },
+        {
+          "table": "source_reads",
+          "column": "read_date"
+        },
+        {
+          "table": "source_reads",
+          "column": "quantity"
+        },
+        {
+          "table": "source_reads",
+          "column": "unit"
+        }
+      ],
+      "target": "target_reads",
+      "transformation": "DEMONSTRATION reviewed export meanings for reads. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "tariffs_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_tariffs",
+          "column": "valid_from"
+        },
+        {
+          "table": "source_tariffs",
+          "column": "valid_to"
+        },
+        {
+          "table": "source_tariffs",
+          "column": "currency"
+        },
+        {
+          "table": "source_tariffs",
+          "column": "quantity_unit"
+        },
+        {
+          "table": "source_tariffs",
+          "column": "rate"
+        }
+      ],
+      "target": "target_tariffs",
+      "transformation": "DEMONSTRATION reviewed export meanings for tariffs. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "bills_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_bills",
+          "column": "canonical_account"
+        },
+        {
+          "table": "source_bills",
+          "column": "tariff_id"
+        },
+        {
+          "table": "source_bills",
+          "column": "bill_date"
+        },
+        {
+          "table": "source_bills",
+          "column": "currency"
+        },
+        {
+          "table": "source_bills",
+          "column": "water_charge"
+        }
+      ],
+      "target": "target_bills",
+      "transformation": "DEMONSTRATION reviewed export meanings for bills. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "payments_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_payments",
+          "column": "canonical_account"
+        },
+        {
+          "table": "source_payments",
+          "column": "payment_date"
+        },
+        {
+          "table": "source_payments",
+          "column": "currency"
+        },
+        {
+          "table": "source_payments",
+          "column": "signed_amount"
+        }
+      ],
+      "target": "target_payments",
+      "transformation": "DEMONSTRATION reviewed export meanings for payments. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "allocations_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_allocations",
+          "column": "payment_id"
+        },
+        {
+          "table": "source_allocations",
+          "column": "bill_id"
+        },
+        {
+          "table": "source_allocations",
+          "column": "currency"
+        },
+        {
+          "table": "source_allocations",
+          "column": "applied_amount"
+        }
+      ],
+      "target": "target_allocations",
+      "transformation": "DEMONSTRATION reviewed export meanings for allocations. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    },
+    {
+      "id": "balances_meaning",
+      "status": "DEMONSTRATION",
+      "source_fields": [
+        {
+          "table": "source_balances",
+          "column": "currency"
+        },
+        {
+          "table": "source_balances",
+          "column": "as_of"
+        },
+        {
+          "table": "source_balances",
+          "column": "balance"
+        }
+      ],
+      "target": "target_balances",
+      "transformation": "DEMONSTRATION reviewed export meanings for balances. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred.",
+      "owner": "TJLabs demonstration author",
+      "decision_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result."
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tjlabs:upstate:gis-working-selection:v1",
+  "title": "Complete GIS working selection",
+  "type": "object",
+  "required": [
+    "schema",
+    "project_id",
+    "selection",
+    "active_source_collection_id",
+    "source_descriptions",
+    "import_history"
+  ],
+  "properties": {
+    "schema": {
+      "const": "upstate.gis-working-selection/v1"
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "source_collection_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "source_id"
+            ],
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_collection_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "active_source_collection_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_descriptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source_collection_id",
+          "source_id",
+          "collection",
+          "entry"
+        ],
+        "properties": {
+          "source_collection_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "collection": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "additionalProperties": true
+          },
+          "entry": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "import_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$comment": "The module validates project equality, original pair/description identity and finite JSON. Original source-byte/native-GIS validation belongs to the maintained native writer. Import history may contain full earlier working documents; source rows may share a pair when original layer IDs/settings differ."
+}

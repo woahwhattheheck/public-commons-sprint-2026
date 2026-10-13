@@ -1,0 +1,96 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "client-measurement-sources",
+  "title": "Workbook measurements",
+  "version": "1",
+  "order": 20,
+  "assets": [
+    "client_measurement_sources.mjs",
+    "client_source_intake.css"
+  ],
+  "backend": {
+    "module": "client_measurement_sources",
+    "factory": {
+      "handler": "ClientMeasurementSources",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "client-measurement.prepare"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-measurement/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-measurement/result",
+        "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/client_measurement_sources.mjs",
+    "factory": "createClientMeasurementSources",
+    "requires": [
+      "getWorkspace",
+      "api",
+      "refresh",
+      "navigate",
+      "showTask"
+    ],
+    "styles": [
+      "/web/client_source_intake.css"
+    ],
+    "view": {
+      "id": "client-measurement-sources",
+      "title": "Workbook measurements",
+      "after": "client-source-intake"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "suspend"
+    }
+  }
+}

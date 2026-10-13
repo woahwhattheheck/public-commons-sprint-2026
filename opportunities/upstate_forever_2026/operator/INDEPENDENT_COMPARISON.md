@@ -46,7 +46,7 @@ Working JSON includes all retained local history and exact incoming working-file
 
 ## Installed source and original boundaries
 
-The additive extension manifest registers one task action and four read routes. The browser assets and original task hooks are discovered by the maintained ExtensionRegistry/extension_host. No shared server, app navigation or native Workspace state machine is replaced.
+The additive extension manifest registers one task action and six read routes. The browser assets and original task hooks are discovered by the maintained ExtensionRegistry/extension_host. No shared server, app navigation or native Workspace state machine is replaced.
 
 - Task action: independent.comparison.save.
 - Read catalogue: GET /api/independent-comparison/catalog.
@@ -126,3 +126,40 @@ Each reach/constituent opens all eight original metric budgets with full source 
 The following calibration section preserves its earlier source edition. Its original dictionary-only unit uncertainty is historical; the adjoining current publisher configuration now resolves those field units and identifies ACTUAL as Beale or Fluxmaster estimated load. Raw fitted-minus-calibration-estimate differences and separately derived published-method SSC context remain distinct. All eleven overlapping old PLOAD/current ACCL values differ; neither source is overwritten, and their difference is not a time trend or native-model residual.
 
 The complete nine-member publisher-context source, its seven original inputs, repeatable recipe, three CSVs and report join the same component and portable Study closure. The earlier seven-member fit-context edition remains byte-identical. Open the actual final tab at screenshare and narrow widths, operate all reach/budget disclosures, view the actual complete downloads, and reopen the original Study through the same equipped course under the standing rendered-product/all-attachments instructions above. Source-only composition is not rendered acceptance.
+
+
+## Saved maps and descriptive figures
+
+Open a complete saved comparison, then choose **Maps and figures**. New scientific editions retain spatial-support maps and per-constituent paired-value and difference figures in the same immutable comparison directory. Display filters choose the figure type, constituent and saved panel; they do not change scientific selection, exclude records, run a model or recompute comparison statistics.
+
+The operator displays the original generated SVG through its authenticated file ticket. Each image and download is matched to the saved edition's file name, full byte count, SHA-256 and Workspace. The caption, full specification, underlying original pair table and complete source data remain available beside the visual. If an image cannot load, the source table and exact SVG/data downloads remain usable; reopen that same edition to receive fresh original file tickets.
+
+### Read geographic support accurately
+
+Native support uses the original selected catchment source, layer, filter and identity field in the original run's grid coordinate system. The full original catchment file and required sidecars remain in the saved package. A missing, unsupported or invalid map feature must remain explicit rather than being replaced with a generated area.
+
+Independent reference geometry must come from that selected source's retained original companions with a matching literal reference identity. In the current USGS source, the five original NLDI files contain NHDPlus **LineString reaches**. They are not stations, catchment polygons or an independent measure of upstream support. A line crossing a native polygon does not establish equivalent source boundaries. The mapper prediction packet was queried without geometry and cannot itself supply catchment polygons.
+
+Only actual independently retained point coordinates may be labeled as source points. Do not infer a station from a reach endpoint, line midpoint, polygon centroid or similar drawing convenience. The figure data records original and displayed geometry, CRS/transform information, source files and unavailable-geometry reasons. Displayed spatial overlap is descriptive context; the explicit original quantity, fraction, space and time review still governs comparison.
+
+### Read paired values and differences
+
+Only pairs the saved comparison actually admitted as comparable enter the comparable-value and native-minus-converted-reference panels. The source algorithm's values, conversions, unit labels and signs are preserved. Reference zero has no defined relative percentage; it is not replaced by a denominator. Context-only pairs, unpaired native rows, unused original reference rows and all source disagreements remain in the full data, CSV, reader and original result.
+
+Review the original model period separately from each source observation/reference period. The chart does not reinterpret a long-term model output as a time series, establish independence or holdout performance, or treat shared calibration data as validation. Repeated spatial support is still repeated support. The saved comparison's descriptive statistics retain their original qualifications.
+
+### Whole export and earlier editions
+
+Download the full comparison ZIP to receive the standalone figure reader, each original SVG, complete figure specification/data/CSV, original result and inputs, editable selection, all selected source/geometry companions and exact implementation. Extract the ZIP and open the actual figure reader and source files. Individual reader/SVG files do not replace that complete package. Scientific Reports and selected Study export use the same saved source and figure specification; full Workspace backup remains the complete executable scientific project route.
+
+An earlier saved comparison without figures stays readable and byte-identical. The operator shows that the old edition has no figure package. To create a successor, reopen it, read the current original inputs and producer selection, review and preview the intended choices, then save a new complete edition. The current source identity is retained and the previous comparison remains its parent. There is no silent regeneration of an old report with changed code.
+
+The existing unfinished-draft store also retains display choices. Figure navigation does not edit a scientific selection, clear a pending task, or overwrite a raw JSON draft. It uses the same original Workspace/person namespace and compare-and-save recovery as the other tabs.
+
+### Continue the original receiving course
+
+Use the SAME existing operation and equipped receiving request. No new native model run is required to render retained outputs. The receiving operator supplies an actual saved original comparison and its current source bindings; a source-only or engineering example remains labeled as such.
+
+Open the exact saved maps and figures at screenshare and narrow width. View the actual map, the different support symbols and missing-geometry state, then operate constituent/type/panel selection and inspect the full original pair table. Check a contextual or incompatible pair, a zero-reference case when actually present, and an earlier immutable edition without figures. Open the actual SVG, complete HTML reader, figure CSV/JSON, original geometry and full comparison ZIP; inspect the extracted contents and reopen the saved source through Scientific Reports, Study and the original Workspace restore route.
+
+The complete standing rendered-product/all-attachments owner instruction above applies unchanged: actually LOOK at the exact outgoing result and its downloaded files. Captured screenshots must be viewed, source review does not establish visual readiness, and focused fixes remain part of producing the usable product. Preserve the existing native owner, retained operation, task history and completed scientific results.

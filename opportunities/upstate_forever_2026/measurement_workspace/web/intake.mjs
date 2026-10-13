@@ -6,9 +6,18 @@ const json=x=>JSON.stringify(x);
 const clone=x=>JSON.parse(json(x));
 const digest=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const read=async file=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());
-function download(name,value,type='application/json'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([typeof value==='string'?value:json(value)],{type}));a.href=u;a.download=name.replace(/[\\/:*?"<>|]/g,'_').slice(0,200)||'source.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000);}
+function download(name,value,type='application/json'){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([typeof value==='string'||value instanceof Uint8Array?value:json(value)],{type}));a.href=u;a.download=name.replace(/[\\/:*?"<>|]/g,'_').slice(0,200)||'source.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),10000);}
 async function database(){
   return new Promise((resolve,reject)=>{const r=indexedDB.open('eco-measurement-intake-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('drafts',{keyPath:'key'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+}
+async function originalFiles(working){
+  const lineage=working.value?.lineage,files=working.originals||[];
+  if(!lineage){if(files.length)throw Error('An unrelated original binary entered this text preparation.');return;}
+  if(!Array.isArray(files)||files.length!==1)throw Error('Keep the complete original workbook with this working preparation.');
+  const file=files[0],raw=Uint8Array.from(atob(file.data),c=>c.charCodeAt(0));
+  const checksum=[...new Uint8Array(await crypto.subtle.digest('SHA-256',raw))].map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(raw.length!==file.bytes||checksum!==file.sha256||file.sha256!==lineage.original?.sha256||file.bytes!==lineage.original?.bytes||working.value.sourceSha!==lineage.derived?.sha256)
+    throw Error('The complete original workbook or selected worksheet identity changed.');
 }
 const liveRecovery=new Map();
 export function mountGuidedIntake({api,onImported=()=>{}}){
@@ -53,14 +62,27 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     remember();
   }
   function dirty(){return selected&&json(selected.value)!==selected.savedValue;}
+  function sourceLine(line){
+    const lineage=selected?.value?.lineage;if(!lineage)return String(line);
+    const source=lineage.rows.find(row=>row.line===line);
+    return source?(lineage.source_row_kind==='worksheet-row'?'Worksheet row '+source.source_row:'Original lines '+source.source_line_start+'–'+source.source_line_end)+' · native line '+line:String(line);
+  }
+  function lineageBody(){
+    const value=selected?.value?.lineage;if(!value)return '';
+    return '<section class="mw-notice"><h3>Retained original worksheet</h3><p>'+esc(value.original.filename)+(value.sheet?' · worksheet '+esc(value.sheet):'')+
+      ' · '+value.original.bytes+' bytes</p><p>Header row '+value.reading.header_row+' · '+esc(value.reading.encoding)+' · '+esc(value.reading.formula_mode)+
+      ' formula reading. '+value.rows.length+' projected rows and '+value.excluded_rows.length+' explicitly accounted header/preamble/empty rows; '+value.original_record_count+
+      ' original records in all.</p><p>Scientific source <code>'+esc(value.source_id)+'</code> in collection <code>'+esc(value.source_collection_id)+
+      '</code>. Original labels and physical row positions are retained.</p><div class="mi-actions"><button type="button" data-action="derived">Download selected worksheet CSV</button><button type="button" data-action="lineage">Download complete original row and column map</button></div></section>';
+  }
   function body(){if(!selected)return '<p>Select a complete source file. Its original rows appear before mapping is required.</p>';
     const v=selected.value,i=inspection;
-    return '<div class="mi-facts"><span>File <strong>'+esc(v.sourceName)+'</strong></span><span>Saved edition <strong>'+selected.revision+'</strong></span><span>Preparation <code>'+esc(selected.id)+'</code></span></div><form data-edit><label>Source name<input name="label" value="'+esc(v.label)+'"></label><div class="mi-grid"><label>Mapping reviewer<input name="reviewer" value="'+esc(v.reviewer)+'"></label><label>Review note<input name="note" value="'+esc(v.note)+'"></label></div><label>Original context: workbook/sheet, agency, date window or supplied instructions<textarea name="context" rows="2">'+esc(v.context)+'</textarea></label>'+
-      (i?'<p><strong>'+i.rawRows+'</strong> source rows; '+i.rawRejectedCount+' malformed rows. Showing up to twelve original rows. Complete original is retained.</p><details open><summary>Original columns and sample rows</summary><div class="mw-table-wrap"><table><thead><tr><th>Source line</th>'+i.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+i.sample.map(r=>'<tr><td>'+r.line+'</td>'+i.headers.map(h=>'<td>'+esc(r.raw[h])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>':'')+
+    return lineageBody()+'<div class="mi-facts"><span>File <strong>'+esc(v.sourceName)+'</strong></span><span>Saved edition <strong>'+selected.revision+'</strong></span><span>Preparation <code>'+esc(selected.id)+'</code></span></div><form data-edit><label>Source name<input name="label" value="'+esc(v.label)+'"></label><div class="mi-grid"><label>Mapping reviewer<input name="reviewer" value="'+esc(v.reviewer)+'"></label><label>Review note<input name="note" value="'+esc(v.note)+'"></label></div><label>Original context: workbook/sheet, agency, date window or supplied instructions<textarea name="context" rows="2">'+esc(v.context)+'</textarea></label>'+
+      (i?'<p><strong>'+i.rawRows+'</strong> source rows; '+i.rawRejectedCount+' malformed rows. Showing up to twelve original rows. Complete original is retained.</p><details open><summary>Original columns and sample rows</summary><div class="mw-table-wrap"><table><thead><tr><th>Source line</th>'+i.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+i.sample.map(r=>'<tr><td>'+esc(sourceLine(r.line))+'</td>'+i.headers.map(h=>'<td>'+esc(r.raw[h])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>':'')+
       (v.kind!=='usgs-daily'&&i?.headers.length?'<h3>Map the columns you recognise</h3><p>Suggestions use the original importer’s exact header aliases. Review dates, units, time zones and fractions; no missing unit or location is invented.</p><div class="mi-grid">'+i.mappingFields.map(k=>'<label>'+esc(labels[k]||k)+'<select data-map="'+k+'">'+opt('','Not supplied',v.mapping[k]||'')+i.headers.map(h=>opt(h,h,v.mapping[k]||'')).join('')+(!i.headers.includes(v.mapping[k])&&v.mapping[k]?opt(v.mapping[k],'Missing column: '+v.mapping[k],v.mapping[k]):'')+'</select></label>').join('')+'</div>':'')+
       (v.kind==='stations'?'':'<label>Scientific interpretation<select name="interpretation">'+opt('','Original unpinned interpretation',v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+opt(interpretations[v.kind],interpretations[v.kind],v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+'</select><small>Changing this choice creates a separate native source interpretation. Earlier imports stay intact.</small></label>')+'<div class="mi-actions"><button type="button" data-action="save">Save preparation</button><button type="button" data-action="preview">Review mapped measurements</button><button type="button" data-action="copy">Save separate copy</button><button type="button" data-action="original">Download original</button><button type="button" data-action="project">Download complete preparation</button><button type="button" data-action="rescue">Download unsaved inputs</button></div></form>'+
       (i?.issues.length?'<div class="mw-notice">'+i.issues.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'')+
-      (i?.native?'<section class="mi-preview"><h3>Review the native interpretation</h3><p>'+i.native.rows+' accepted; '+i.native.rejectedCount+' rejected; '+i.native.stationCount+' stations; '+i.native.censored+' censored results.</p><p>These values come from the existing scientific normaliser. Censored values remain bounds; units, fractions and source times remain distinct.</p><div class="mw-table-wrap"><table><thead><tr><th>Source line</th><th>Station</th><th>Date / precision</th><th>Characteristic</th><th>Value / bounds</th><th>Unit / basis / fraction</th><th>Issues</th></tr></thead><tbody>'+i.native.sample.map(r=>'<tr><td>'+r.sourceLine+'</td><td>'+esc(r.stationId||r.id)+'</td><td>'+esc([r.sampledDate,r.timePrecision,r.sourceTime,r.timeZone].filter(Boolean).join(' / '))+'</td><td>'+esc(r.characteristic||r.name)+'</td><td>'+esc(r.censor&&r.censor!=='none'?r.censor+' ['+r.lower+', '+r.upper+']':r.value??'')+'</td><td>'+esc([r.unit,r.basis,r.fraction].filter(Boolean).join(' / '))+'</td><td>'+esc((r.issues||[]).join('; '))+'</td></tr>').join('')+'</tbody></table></div><details><summary>Complete preview accounting and rejection sample</summary><pre>'+esc(JSON.stringify(i.native,null,2))+'</pre></details>'+
+      (i?.native?'<section class="mi-preview"><h3>Review the native interpretation</h3><p>'+i.native.rows+' accepted; '+i.native.rejectedCount+' rejected; '+i.native.stationCount+' stations; '+i.native.censored+' censored results.</p><p>These values come from the existing scientific normaliser. Censored values remain bounds; units, fractions and source times remain distinct.</p><div class="mw-table-wrap"><table><thead><tr><th>Source line</th><th>Station</th><th>Date / precision</th><th>Characteristic</th><th>Value / bounds</th><th>Unit / basis / fraction</th><th>Issues</th></tr></thead><tbody>'+i.native.sample.map(r=>'<tr><td>'+esc(sourceLine(r.sourceLine))+'</td><td>'+esc(r.stationId||r.id)+'</td><td>'+esc([r.sampledDate,r.timePrecision,r.sourceTime,r.timeZone].filter(Boolean).join(' / '))+'</td><td>'+esc(r.characteristic||r.name)+'</td><td>'+esc(r.censor&&r.censor!=='none'?r.censor+' ['+r.lower+', '+r.upper+']':r.value??'')+'</td><td>'+esc([r.unit,r.basis,r.fraction].filter(Boolean).join(' / '))+'</td><td>'+esc((r.issues||[]).join('; '))+'</td></tr>').join('')+'</tbody></table></div><details><summary>Complete preview accounting and rejection sample</summary><pre>'+esc(JSON.stringify(i.native,null,2))+'</pre></details>'+
       (i.previewSha?'<label class="mi-confirm"><input type="checkbox" data-confirm> I reviewed this source edition, its mapping, accepted/rejected counts and scientific interpretation.</label><button data-action="import" '+(!i.native.rows?'disabled':'')+'>Import reviewed source</button>':'<p>Save and review the mapped preparation to enable import.</p>')+'</section>':'')+
       (selected.receipt?'<p class="mw-notice">Native source retained: <code>'+esc(selected.receipt.importId)+'</code>. Reopening this preparation does not create another import.</p>':'');
   }
@@ -86,7 +108,7 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
   async function save(){
     capture();const owner=selected;if(!owner)throw new Error('Choose a complete original file first.');
     if(owner.pending){await reconcilePending(owner);}
-    active();const request={id:owner.id,expectedRevision:owner.revision,value:clone(owner.value),text:owner.text};
+    active();await originalFiles(owner);const request={id:owner.id,expectedRevision:owner.revision,value:clone(owner.value),text:owner.text,originals:clone(owner.originals||[])};
     owner.pending={kind:'save',request};await retain(owner);active();
     const result=await api('/intake/'+encodeURIComponent(owner.id),'PUT',request);
     if(dead||selected!==owner)return;
@@ -112,9 +134,9 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     if(liveRecovery.get(workspaceId)?.working.id===id){const memory=liveRecovery.get(workspaceId);candidate=clone(memory.working);lockRevision=memory.localRevision;}
     else if(local){candidate=clone(local.working);lockRevision=local.localRevision;}
     else{
-      const r=await api('/intake/'+encodeURIComponent(id));candidate={id:r.id,revision:r.revision,value:r.value,text:r.text,savedValue:json(r.value),receipt:r.receipt,pending:null};lockRevision=0;
+      const r=await api('/intake/'+encodeURIComponent(id));candidate={id:r.id,revision:r.revision,value:r.value,text:r.text,originals:r.originals||[],savedValue:json(r.value),receipt:r.receipt,pending:null};lockRevision=0;
     }
-    active();selected=candidate;inspection=null;render();await inspect();render();
+    await originalFiles(candidate);active();selected=candidate;inspection=null;render();await inspect();render();
     if(candidate.pending)message('An earlier native request has no confirmed browser receipt. Use Save preparation to reconcile that exact request first.',true);
   }
   async function fileOpen(form){
@@ -141,12 +163,12 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
       await protect();const p=JSON.parse(await read(f));
       if(p.format==='upper-savannah-measurement-intake-working/v1'){
         const w=p.working;if(!w?.value||typeof w.text!=='string'||await digest(w.text)!==w.value.sourceSha)throw new Error('Unsaved source checksum mismatch.');
-        const candidate={...clone(w),id:crypto.randomUUID(),revision:0,savedValue:'',receipt:null,pending:null};active();const kept=await retain(candidate,0);active();lockRevision=kept.localRevision;selected=candidate;inspection=null;render();await inspect();await lists();render();message('Unsaved inputs received as a separate draft. No prior native request was replayed.');
+        await originalFiles(w);await api('/intake/validate-working','POST',{value:w.value,text:w.text,originals:w.originals||[]});const candidate={...clone(w),id:crypto.randomUUID(),revision:0,savedValue:'',receipt:null,pending:null};active();const kept=await retain(candidate,0);active();lockRevision=kept.localRevision;selected=candidate;inspection=null;render();await inspect();await lists();render();message('Unsaved inputs received as a separate draft. No prior native request was replayed.');
       }else{
         const last=p.editions?.at(-1),file=p.sources?.find(x=>x.sha===last?.value?.sourceSha);
         if(p.format!=='upper-savannah-measurement-intake/v1'||!last||typeof file?.text!=='string'||await digest(file.text)!==file.sha)throw new Error('Complete preparation source checksum mismatch.');
-        const id=crypto.randomUUID(),candidate={id,revision:0,value:clone(last.value),text:file.text,savedValue:'',receipt:null,pending:{kind:'copy',request:{id,project:p}}};
-        active();const kept=await retain(candidate,0);active();lockRevision=kept.localRevision;selected=candidate;inspection=null;render();await reconcilePending(candidate);await inspect();await lists();render();message('Complete original history received as a separate native preparation.');
+        const id=crypto.randomUUID(),candidate={id,revision:0,value:clone(last.value),text:file.text,originals:(p.originals||[]).filter(x=>x.sha256===last.value.lineage?.original?.sha256),savedValue:'',receipt:null,pending:{kind:'copy',request:{id,project:p}}};
+        await originalFiles(candidate);await api('/intake/validate-working','POST',{value:candidate.value,text:candidate.text,originals:candidate.originals||[]});active();const kept=await retain(candidate,0);active();lockRevision=kept.localRevision;selected=candidate;inspection=null;render();await reconcilePending(candidate);await inspect();await lists();render();message('Complete original history received as a separate native preparation.');
       }
     });}
   });
@@ -156,7 +178,9 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     run(async()=>{
       capture();if(!selected)throw new Error('Choose an original source first.');
       const action=b.dataset.action;
-      if(action==='original'){download(selected.value.sourceName,selected.text,'text/plain;charset=utf-8');return;}
+      if(action==='original'){await originalFiles(selected);if(selected.value.lineage){const file=selected.originals[0];download(selected.value.lineage.original.filename,Uint8Array.from(atob(file.data),c=>c.charCodeAt(0)),'application/octet-stream');}else download(selected.value.sourceName,selected.text,'text/plain;charset=utf-8');return;}
+      if(action==='derived'){download(selected.value.sourceName,selected.text,'text/csv;charset=utf-8');return;}
+      if(action==='lineage'){download('worksheet-lineage.json',selected.value.lineage);return;}
       if(action==='copy'){
         capture();const previous=selected,id=crypto.randomUUID(),candidate={...clone(previous),id,revision:0,savedValue:'',receipt:null,pending:null,copiedFrom:{id:previous.id,revision:previous.revision,pending:previous.pending}};
         if(previous.revision>0){const project=await api('/intake/'+encodeURIComponent(previous.id)+'/export');candidate.pending={kind:'copy',request:{id,project}};}

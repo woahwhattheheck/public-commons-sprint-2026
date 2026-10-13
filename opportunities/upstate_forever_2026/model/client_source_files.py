@@ -80,8 +80,8 @@ def headers(values):
             for i, name in enumerate(raw)]
 
 
-def table_rows(path, selected, sheet=None):
-    """Yield original row number plus original cells. Caller closes generator."""
+def table_records(path, selected, sheet=None):
+    """Yield original record and physical row/line positions through the same readers."""
     path = Path(path)
     opts = options(selected)
     if path.suffix.lower() in {".xlsx", ".xlsm"}:
@@ -95,7 +95,7 @@ def table_rows(path, selected, sheet=None):
         try:
             need(sheet in book.sheetnames, "Choose an original worksheet.")
             for number, row in enumerate(book[sheet].iter_rows(values_only=True), 1):
-                yield number, list(row)
+                yield {"row": number, "line_start": number, "line_end": number, "values": list(row)}
         finally:
             book.close()
         return
@@ -113,8 +113,21 @@ def table_rows(path, selected, sheet=None):
                 except csv.Error:
                     delimiter = ","
         reader = csv.reader(stream, delimiter=delimiter, strict=True)
+        previous_line = 0
         for number, row in enumerate(reader, 1):
-            yield number, row
+            yield {"row": number, "line_start": previous_line + 1,
+                   "line_end": reader.line_num, "values": row}
+            previous_line = reader.line_num
+
+
+def table_rows(path, selected, sheet=None):
+    """Backward-compatible row view of the original native reader."""
+    source = table_records(path, selected, sheet)
+    try:
+        for record in source:
+            yield record["row"], record["values"]
+    finally:
+        source.close()
 
 
 def table_preview(path, opts, sheet=None):

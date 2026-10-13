@@ -255,6 +255,9 @@ async function resolveRequests(c,key,s,consumerId) {
   if(row.nativeAccepted){
    row.phase="RETURNED_TO_NATIVE";s.queue.shift();retain(c,key,s);continue;
   }
+  if(actual?.phase==="AWAITING_DELEGATED_PROVIDER"){
+   row.phase=actual.phase;s.phase="DELEGATED_PROVIDER_REQUEST";retain(c,key,s);return false;
+  }
   if(actual?.phase==="CALLING"||actual?.phase==="RESULT_UNKNOWN"){
    row.phase=actual.phase;s.phase="LIBRARY_RESULT_RECONCILIATION";retain(c,key,s);return false;
   }
@@ -269,7 +272,7 @@ async function resolveRequests(c,key,s,consumerId) {
    continue;
   }
   const name=ACTIONS[f.action],tool=c.tools[name];
-  if(typeof tool!=="function"){s.phase="SUPPORTED_TOOL_NOT_EXPOSED";retain(c,key,s);throw Error("Missing supported "+name+".");}
+  if(s.providerMode!=="delegated"&&typeof tool!=="function"){s.phase="SUPPORTED_TOOL_NOT_EXPOSED";retain(c,key,s);throw Error("Missing supported "+name+".");}
   // A unique consumer is native-arbitrated; stale functions snapshots cannot grant themselves dispatch.
   row.phase="CLAIMING";retain(c,key,s);
   await sendControl(c,key,s,"tool_claim",{request_id:id,consumer_id:consumerId});
@@ -282,9 +285,10 @@ async function resolveRequests(c,key,s,consumerId) {
   if(!grant||!grant.granted||!grant.dispatch_allowed||!grant.grant_token){
    row.phase="NATIVE_GRANT_RECONCILIATION";s.phase="LIBRARY_RESULT_RECONCILIATION";retain(c,key,s);return false;
   }
-  actual={phase:"CALLING",requestId:id,action:f.action,argumentsSha256:f.arguments_sha256,
+  actual={phase:s.providerMode==="delegated"?"AWAITING_DELEGATED_PROVIDER":"CALLING",requestId:id,action:f.action,argumentsSha256:f.arguments_sha256,
    grant,startedAt:new Date().toISOString()};
-  saveReceipt(c,key,id,actual);row.phase="CALLING";retain(c,key,s);
+  saveReceipt(c,key,id,actual);row.phase=actual.phase;retain(c,key,s);
+  if(s.providerMode==="delegated"){s.phase="DELEGATED_PROVIDER_REQUEST";retain(c,key,s);return false;}
   try{
    const result=await tool(f.arguments);
    if(!result||typeof result!=="object")throw Error("Supported Library action returned no complete result.");
@@ -299,12 +303,13 @@ async function resolveRequests(c,key,s,consumerId) {
  return true;
 }
 /** Start exactly once under one durable key, after the existing owner is reconciled. */
-export async function startConnectedOriginal(c,{key,selection,sourceBootstrap}) {
+export async function startConnectedOriginal(c,{key,selection,sourceBootstrap,providerMode="connected"}) {
  if(c.load(key))throw Error("Resume the retained original invocation; do not admit it twice.");
  if(selection.operation!==OPERATION||!selection.connected_source?.content||!selection.receiver?.content||
     typeof sourceBootstrap!=="string")throw Error("Supply the complete reviewed original receiving input.");
- for(const name of Object.values(ACTIONS))if(typeof c.tools[name]!=="function")throw Error("Missing supported "+name+".");
- const s={operation:OPERATION,phase:"ADMISSION_PENDING",selection,sourceBootstrap,
+ if(!["connected","delegated"].includes(providerMode))throw Error("Choose the actual connected or delegated provider binding.");
+ if(providerMode==="connected")for(const name of Object.values(ACTIONS))if(typeof c.tools[name]!=="function")throw Error("Missing supported "+name+".");
+ const s={operation:OPERATION,phase:"ADMISSION_PENDING",selection,sourceBootstrap,providerMode,
   queue:[],requests:{},frames:[],rawChunks:[],buffer:"",nativeBuffers:{},wire:{},wireOrder:[],
   messages:{},commands:{},ackQueue:[],wireErrors:[],sourceReady:false,sourceSent:false,invocationId:null,closed:false};
  retain(c,key,s);
@@ -404,4 +409,90 @@ export async function reattachConnectedOriginal(c,{key,previousSessionObservatio
    ?"REATTACH_PREPROCESS_FAILED":"REATTACH_ADMISSION_RECONCILIATION";retain(c,key,s);throw error;
  }
  return resumeConnectedOriginal(c,{key});
+}
+
+
+function delegatedIdentity(s,row,actual) {
+ return {operation:OPERATION,invocationId:s.invocationId,receiverPid:s.receiverPid,
+  receiverSha256:s.nativeAdmission?.receiver_source_sha256,requestId:row.frame.request_id,
+  action:row.frame.action,argumentsSha256:row.frame.arguments_sha256,
+  consumerId:actual.grant?.consumer_id,identitySha256:actual.grant?.identity_sha256};
+}
+/** Private whole request for the original authorized peer; contains no native grant token. */
+export function readDelegatedProviderRequest(c,{key,requestId}={}) {
+ const s=c.load(key),row=s?.requests?.[requestId],actual=receipt(c,key,requestId);
+ if(s?.providerMode!=="delegated"||!row||actual?.phase!=="AWAITING_DELEGATED_PROVIDER"||
+    !actual.grant?.granted||!actual.grant?.dispatch_allowed||!actual.grant?.grant_token)
+  throw Error("Select the original pending native provider grant.");
+ return {schema:"commons.datasette.delegated-library-request.v1",
+  identity:delegatedIdentity(s,row,actual),arguments:row.frame.arguments};
+}
+/** Accept the actual complete peer result; native validation and helper continuation are unchanged. */
+export function retainDelegatedProviderResult(c,{key,response}={}) {
+ const s=c.load(key),id=response?.identity?.requestId,row=s?.requests?.[id],actual=receipt(c,key,id);
+ if(s?.providerMode!=="delegated"||!row||!actual||
+    !sameValue(response?.identity,delegatedIdentity(s,row,actual))||
+    !response?.result||typeof response.result!=="object"||Array.isArray(response.result))
+  throw Error("Return the complete actual provider result for this original grant.");
+ if(actual.result){
+  if(!sameValue(actual.result,response.result))throw Error("An original delegated result cannot change.");
+  return summary(s);
+ }
+ if(actual.phase!=="AWAITING_DELEGATED_PROVIDER")throw Error("The original delegated request is not awaiting its result.");
+ saveReceipt(c,key,id,{...actual,phase:"RESULT_RETAINED",returnedAt:new Date().toISOString(),
+  result:response.result,providerBinding:"authorized-delegated-peer"});
+ row.result=response.result;row.phase="RESULT_RETAINED";retain(c,key,s);
+ return summary(s);
+}
+function canonical(value) {
+ if(value===null||typeof value==="string"||typeof value==="boolean")return JSON.stringify(value);
+ if(typeof value==="number"&&Number.isSafeInteger(value))return JSON.stringify(value);
+ if(Array.isArray(value))return "["+value.map(canonical).join(",")+"]";
+ if(value&&typeof value==="object"&&Object.getPrototypeOf(value)===Object.prototype)
+  return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+canonical(value[k])).join(",")+"}";
+ throw Error("The original Library arguments must contain plain JSON and exact integer sizes.");
+}
+/**
+ * Run on the already-authorized provider peer, with its ACTUAL supported tools.
+ * expected binds the actual accepting invocation and receiver, learned from its admission.
+ * Never log the full request/result: prepared transfer URLs stay in private custody.
+ */
+export async function performDelegatedLibraryAction(c,{key,request,expected,reconciledResult}={}) {
+ const id=request?.identity;
+ if(request?.schema!=="commons.datasette.delegated-library-request.v1"||id?.operation!==OPERATION||
+    !expected||expected.operation!==OPERATION||id.invocationId!==expected.invocationId||
+    id.receiverPid!==expected.receiverPid||id.receiverSha256!==expected.receiverSha256||
+    typeof id.invocationId!=="string"||!id.invocationId||!Number.isSafeInteger(id.receiverPid)||
+    id.receiverPid<=0||!/^[a-f0-9]{64}$/.test(id.receiverSha256||"")||
+    typeof id.requestId!=="string"||!id.requestId||typeof id.consumerId!=="string"||!id.consumerId||
+    !/^[a-f0-9]{64}$/.test(id.identitySha256||"")||!ACTIONS[id.action]||
+    sha256(utf8(canonical(request.arguments)))!==id.argumentsSha256)
+  throw Error("Supply the exact granted request from the selected original native admission.");
+ const scopeKey=key+":delegated-invocation",priorScope=c.load(scopeKey);
+ if(priorScope&&!sameValue(priorScope,expected))throw Error("Continue the retained original provider invocation.");
+ if(!priorScope)c.store(scopeKey,expected);
+ const recordKey=key+":delegated:"+id.requestId;
+ let record=c.load(recordKey);
+ if(record&&!sameValue(record.request,request))throw Error("The original delegated request cannot change.");
+ if(record?.result)return {identity:id,result:record.result};
+ if(reconciledResult!==undefined){
+  if(!record||!["CALLING","RESULT_UNKNOWN"].includes(record.phase)||!reconciledResult||
+     typeof reconciledResult!=="object"||Array.isArray(reconciledResult))
+   throw Error("Reconcile only the actual original uncertain provider result.");
+  record={...record,phase:"RESULT_RETAINED",result:reconciledResult,reconciledAt:new Date().toISOString()};
+  c.store(recordKey,record);return {identity:id,result:record.result};
+ }
+ if(record)throw Error("Reconcile the retained original provider call before another dispatch.");
+ const tool=c.tools[ACTIONS[id.action]];
+ if(typeof tool!=="function")throw Error("The selected peer lacks the actual supported Library action.");
+ record={request,phase:"CALLING",startedAt:new Date().toISOString()};c.store(recordKey,record);
+ try{
+  const result=await tool(request.arguments);
+  if(!result||typeof result!=="object"||Array.isArray(result))throw Error("The provider returned no complete result.");
+  record={...record,phase:"RESULT_RETAINED",result,returnedAt:new Date().toISOString()};
+  c.store(recordKey,record);return {identity:id,result};
+ }catch(error){
+  c.store(recordKey,{...record,phase:"RESULT_UNKNOWN",error:String(error),failedAt:new Date().toISOString()});
+  throw error;
+ }
 }
