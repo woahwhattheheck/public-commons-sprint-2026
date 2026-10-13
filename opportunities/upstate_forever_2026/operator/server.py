@@ -29,6 +29,8 @@ sys.path.insert(0, str(APPLICATION))
 from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json
 from model.workspace import Workspace
 from model import portable
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS
 from model.spatial import SpatialReview
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS, READS as CUSTOMER_REVIEW_READS
@@ -47,6 +49,7 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "observation.compare", "delivery.build", "workspace.backup", "workspace.restore",
            "spatial.review.save", "spatial.review.export", "community.table.import", "community.plan.save",
            "community.report.build"}
+ACTIONS.update(CONSERVATION_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
@@ -112,6 +115,7 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
+        self.conservation = Conservation(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
         self.programmes = Programmes(self, Fault)
@@ -285,6 +289,8 @@ class Operator:
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
+        if action in CONSERVATION_ACTIONS:
+            return self.conservation.invoke(task)
         if self.extensions.handles_action(action):
             return self.extensions.invoke(task)
         if action in EXPERIMENT_ACTIONS:
@@ -692,7 +698,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task))))
+        return self.conservation.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
 
     def open_download(self, key):
         with self.lock:
@@ -819,6 +825,10 @@ class Handler(BaseHTTPRequestHandler):
             if url.path.startswith("/api/"):
                 self.authorized()
                 workspace = one("workspace", self.app.primary)
+                conservation_reads = {"/api/conservation/" + name: name for name in CONSERVATION_READS}
+                if url.path in conservation_reads:
+                    return self.send_json(200, self.app.conservation.read(workspace,
+                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))
                 if url.path == "/api/extensions":
                     return self.send_json(200, self.app.extensions.manifest())
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
@@ -871,7 +881,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in ({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets):
+            if selected not in ({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', "conservation.mjs", "conservation.css"} | self.app.extensions.web_assets):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
