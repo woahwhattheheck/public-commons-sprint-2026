@@ -13,6 +13,7 @@ import time
 
 from model.common import (atomic_json, digest, file_digest, held, identifier,
                           now, read_json, verify_file)
+from model.verified_files import verified_operation
 from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
 from model.native_execution import (process_failure, record_process_interruption,
                                     resource_status, storage_exhausted)
@@ -175,7 +176,8 @@ class NativeJobs:
 
     def _new(self, task, ws, run):
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
-                        "model/native.py", "model/workspace.py", "model/common.py")
+                        "model/native.py", "model/workspace.py", "model/common.py",
+                        "model/verified_files.py")
         source = {name: file_digest(APPLICATION / name) for name in source_paths}
         request = {"schema": SCHEMA, "task_id": task["id"],
                    "operation_id": task["operation_id"], "attempt": len(task["attempts"]),
@@ -277,14 +279,17 @@ class NativeJobs:
         from programme_jobs import create_pair_completion
         return create_pair_completion(self, task, manager, key, expected_preview_id=expected_preview_id)
 
+    @verified_operation
     def execute_parameter_study(self, task, workspace, key):
         from parameter_study_jobs import execute_study
         return execute_study(self, task, workspace, key)
 
+    @verified_operation
     def execute_programme(self, task, manager, key, *, only_runs=None):
         from programme_jobs import execute_programme
         return execute_programme(self, task, manager, key, only_runs=only_runs)
 
+    @verified_operation
     def execute_retained(self, task, ws):
         """Keep original ECO-RUN12 retention outside the same detached worker."""
         from ecsa_runs.upstate import invoke_original_run
@@ -373,6 +378,7 @@ class NativeJobs:
             raise error from recording_error
         raise error
 
+    @verified_operation
     def execute(self, task, ws):
         _, run = self._selection(task)
         gate = ws.root / "runs" / run["id"] / ".native-supervision.lock"
@@ -396,6 +402,7 @@ class NativeJobs:
                 execution, process = self._new(task, ws, run)
             return self._monitor(execution, process)
 
+    @verified_operation
     def reconnect_existing(self, task, ws):
         """Drain or reconcile the owned child without starting another case."""
         _, run = self._selection(task)

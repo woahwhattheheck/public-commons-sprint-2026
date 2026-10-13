@@ -310,10 +310,8 @@ def retain_file(project, source, expected_sha256=None):
             "filename": source.name}
 
 def verify_file(root, item):
-    path = relative_file(root, item["path"])
-    if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:
-        raise ValueError("Retained output changed: " + item["path"])
-    return path
+    from .verified_files import verify_path
+    return verify_path(relative_file(root, item["path"]), item)
 
 def describe_file(root, path, **metadata):
     path = Path(path).resolve(strict=True)
