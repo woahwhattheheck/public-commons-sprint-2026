@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "water-source-review",
   "title": "Water source review",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "order": 35,
   "assets": [
     "extensions/water_source_review.mjs",
