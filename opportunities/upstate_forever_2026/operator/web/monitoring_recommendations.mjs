@@ -46,9 +46,14 @@ function blankTarget(){return {id:'target-'+crypto.randomUUID(),station_id:'',co
 function money(cents){return cents===null||cents===undefined?'Unknown':(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});}
 export function attachMonitoringRecommendations(host){
   const {getState,api,endpoint,showTask,toast,openDesk}=host;
-  const states=new Map();let root=null,active=null,generation=0,request=0;
+  const states=new Map();let root=null,active=null,generation=0,request=0,events=null;
   const workspace=()=>getState()?.workspace_key||null;
   const current=(state,version=generation)=>Boolean(root&&active===state&&workspace()===state.key&&version===generation);
+  function clearEvents(){
+    if(!events)return;
+    for(const [name,handler] of Object.entries(events.handlers))if(events.node[name]===handler)events.node[name]=null;
+    events=null;
+  }
   const storageKey=state=>'eco-sampling-request:'+state.key;
   function stateFor(key){if(!states.has(key))states.set(key,{key,catalog:{contexts:[],recommendations:[]},context:null,draft:null,saved:null,preview:null,dirty:false,designDirty:false,busy:false,busyOwner:null,filters:{station:'',gapsOnly:false},status:'Choose a retained observational context.',error:false,pending:stored('eco-sampling-request:'+key),lastTask:null,design:null,downloads:[],designDraft:designDraft()});return states.get(key);}
   function status(state,message,error=false){state.status=message;state.error=error;if(current(state)){const node=root.querySelector('[data-status]');if(node){node.textContent=message;node.classList.toggle('sampling-error',error);}}}
@@ -223,9 +228,15 @@ export function attachMonitoringRecommendations(host){
       '<section class="sampling-card">'+designPanel(state)+'</section>'+
       '<div class="sampling-downloads" data-downloads></div></section>';
     for(const item of state.downloads)appendDownload(state,item);
-    root.oninput=event=>input(state,event);
-    root.onchange=event=>change(state,event);
-    root.onclick=event=>{const button=event.target.closest('[data-action]');if(button&&root.contains(button)){event.preventDefault();return act(state,button.dataset.action,button.dataset.id).catch(error=>{if(current(state))fail(state,error);});}};
+    clearEvents();
+    const node=root,version=generation;
+    const handlers={
+      oninput:event=>{if(current(state,version))input(state,event);},
+      onchange:event=>{if(current(state,version))change(state,event);},
+      onclick:event=>{if(!current(state,version))return;const button=event.target.closest('[data-action]');if(button&&node.contains(button)){event.preventDefault();return act(state,button.dataset.action,button.dataset.id).catch(error=>{if(current(state,version))fail(state,error);});}}
+    };
+    events={node,handlers};
+    for(const [name,handler] of Object.entries(handlers))node[name]=handler;
     updateActions(state);
   }
   function updateActions(state){
@@ -362,9 +373,9 @@ export function attachMonitoringRecommendations(host){
   }
   function unload(event){if([...states.values()].some(s=>s.dirty||s.designDirty)){event.preventDefault();event.returnValue='';}}
   window.addEventListener('beforeunload',unload);
-  async function mount(node){root=node;generation++;request++;const key=workspace();if(!key){root.innerHTML='<p>Select an original Workspace to review sampling priorities.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}
-  async function update(){if(root&&workspace()!==active?.key){generation++;request++;const key=workspace();if(!key){active=null;root.innerHTML='<p>Select an original Workspace.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}}
-  function detach(){generation++;request++;root=null;active=null;}
+  async function mount(node){clearEvents();root=node;generation++;request++;const key=workspace();if(!key){root.innerHTML='<p>Select an original Workspace to review sampling priorities.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}
+  async function update(){if(root&&workspace()!==active?.key){clearEvents();generation++;request++;const key=workspace();if(!key){active=null;root.innerHTML='<p>Select an original Workspace.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}}
+  function detach(){clearEvents();generation++;request++;root=null;active=null;}
   async function openSavedEntry(selection){if(selection?.workspace_key&&selection.workspace_key!==workspace())throw Error('Open this recommendation in its original Workspace.');if(!root||!active)throw Error('Open Sampling priorities first.');if(active.busy||(active.pending&&!terminal.has(active.pending.state)))throw Error('Resume the original sampling operation before opening another saved edition.');await openSaved(active,selection?.recommendation_id||selection?.id);return {workspace_key:active.key,recommendation_id:active.saved?.id||active.saved?.recommendation_id};}
   return {mount,update,detach,render:()=>'',dispatch:()=>false,openSaved:openSavedEntry};
 }
