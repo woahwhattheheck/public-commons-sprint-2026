@@ -26,6 +26,11 @@ async function receive(out){
    await page.screenshot({path:path.join(root,filename),type:"jpeg",quality:85,fullPage:true});views.push({name,width,...dims,file:filename});save();};
   const download=async(selector,name)=>{const waiting=page.waitForEvent("download");await click(selector);const d=await waiting;await d.saveAs(path.join(root,name));return path.join(root,name);};
   await page.goto(origin+"/release/Open_CMDB_Workspace.html");await page.locator('[data-action="new"]').first().waitFor();
+  await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await click('footer [data-action="guide"]');await page.locator("#content .guide").waitFor();
+  const initialGuide=await download('[data-action="save-guide"]',"operating-guide-before-workspace.md");
+  assert.equal(fs.readFileSync(initialGuide,"utf8"),fs.readFileSync(path.join(__dirname,"OPERATOR.md"),"utf8"));
+  record("operating_guide_opened_before_workspace");
   await page.locator("#actor").fill("Authored browser operator");await page.locator("#actor").blur();await click('.workspace-bar [data-action="new"]');
   for(const [name,value]of Object.entries({label:"Original hardware receiving",customer:"Authored acceptance customer",tableClass:"Authored hardware assets",owner:"Authored delivery owner"}))await page.locator('#new-form [name="'+name+'"]').fill(value);
   await click('#new-form button[type="submit"]');await page.locator("#new-dialog").waitFor({state:"hidden"});
