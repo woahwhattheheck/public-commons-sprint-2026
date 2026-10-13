@@ -16,6 +16,7 @@ import {
   reviewDocumentMerchant
 } from './setup.mjs';
 import {readDocumentSupplierUsage} from './renderer.mjs';
+import {runDocumentCommissioningCommand} from './commissioning-cli.mjs';
 import {runDocumentAssemblyCommand} from './assembly-cli.mjs';
 import {runDocumentBatchCommand} from './batch-cli.mjs';
 import {runDocumentCompositionCommand} from './composition-cli.mjs';
@@ -26,6 +27,7 @@ const HELP = [
   'Starforge document merchant', '',
   'Install and run a complete HTML or Markdown document service on the existing paid Jobs engine.', '',
   '  document-merchant providers',
+  '  document-merchant commission --help',
   '  document-merchant batch --help',
   '  document-merchant assemble --help',
   '  document-merchant compose --help',
@@ -126,6 +128,7 @@ function serviceOptions(out) {
 export async function runDocumentCommand(argv = process.argv.slice(2), {print = value => console.log(value)} = {}) {
   if (!argv.length || argv.length === 1 && ['--help', '-h', 'help'].includes(argv[0])) return print(HELP);
   const [command, ...tail] = argv;
+  if (command === 'commission') return runDocumentCommissioningCommand(tail,{print});
   if (command === 'assemble') return runDocumentAssemblyCommand(tail,{print});
   if (command === 'batch') return runDocumentBatchCommand(tail,{print});
   if (command === 'compose') return runDocumentCompositionCommand(tail,{print});

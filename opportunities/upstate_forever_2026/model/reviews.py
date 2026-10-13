@@ -562,8 +562,15 @@ def _checked_response(value, review):
 
 def history(workspace, review_id):
     review = workspace._get("reviews", identifier(review_id))
-    _validate_bindings(workspace, review)
     records = [record for record in workspace._list("review-responses") if record.get("review_id") == review_id]
+    return history_from_records(workspace, review, records)
+
+
+def history_from_records(workspace, review, records):
+    """Validate one review's already-retained records using the original chain rules."""
+    _validate_bindings(workspace, review)
+    if any(record.get("review_id") != review["id"] for record in records):
+        raise ValueError("Review history contains records from another selected review")
     by_previous = {}
     for record in records:
         checked = _checked_response(record["response"], review)

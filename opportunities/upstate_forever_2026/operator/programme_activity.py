@@ -62,7 +62,26 @@ class ProgrammeActivity:
             from model.compute_programme import ComputeProgrammes
 
             key = identifier(payload.get("programme_id"))
-            manager = ComputeProgrammes(self.operator.ws(workspace_key))
+            parent, task_id = None, payload.get("task_id")
+            workspace = self.operator.ws(workspace_key)
+            if task_id is not None:
+                # The payload names the parent; the maintained supervisor binds
+                # a pair-completion task to its actual retained child programme.
+                task_id = identifier(task_id)
+                task = self.operator.task(task_id)
+                if (task.get("workspace") != workspace_key or
+                        task.get("action") != "compute.programme.pair-completion" or
+                        task.get("payload", {}).get("run") is not True or
+                        task["payload"].get("programme_id") != key):
+                    raise ValueError("The paired execution task belongs to another selection")
+                from programme_jobs import programme_id
+                from native_jobs import NativeJobError
+                parent = key
+                try:
+                    key = programme_id(task, workspace)
+                except NativeJobError as error:
+                    raise self.fault(error.code, str(error), error.status) from error
+            manager = ComputeProgrammes(workspace)
             # These are the maintained manager's identity and workspace checks.
             # _load verifies both immutable selection and original run bindings.
             record = self._record(manager, key)
@@ -91,6 +110,9 @@ class ProgrammeActivity:
                 "pause_requested": control["pause_requested"],
                 "updated_at": progress["updated_at"],
             }
+            if task_id is not None:
+                response["source_task_id"] = task_id
+                response["parent_programme_id"] = parent
             # The programme identity binds these native selections. A client
             # holding this identity already has the same immutable bindings.
             if payload.get("bindings_id") != key:

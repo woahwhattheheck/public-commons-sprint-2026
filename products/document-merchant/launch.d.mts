@@ -59,6 +59,7 @@ export function normalizeDocumentServiceOptions(options: DocumentServiceOptions)
 export function assertDocumentServiceSource(launchSourceDirectory?: string): Promise<{
   sourceDirectory: string; launchSourceDirectory: string;
 }>;
+export function readDocumentServiceSources(): Promise<JobSourceFile[]>;
 export function readDocumentServiceSelection(options: DocumentServiceOptions): Promise<DocumentServiceSelection>;
 export function assertDocumentServiceSelection(value: unknown, expectedSha256?: string): DocumentServiceSelection;
 export function openDocumentService(options: DocumentServiceOptions,

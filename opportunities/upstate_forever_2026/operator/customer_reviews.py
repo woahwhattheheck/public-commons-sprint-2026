@@ -8,13 +8,15 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path, PurePosixPath
 import re
 import stat
 import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
-from model import reviews, review_handback, review_receiving
+from model import reviews, review_handback, review_receiving, review_worklist
 
 ACTIONS = frozenset({
     "customer.review.create", "customer.review.export", "customer.review.response.import",
@@ -22,7 +24,8 @@ ACTIONS = frozenset({
     "customer.review.packet.receive", "customer.review.packet.open",
 })
 READS = frozenset({"catalog", "review", "template", "compare", "spatial-export",
-                   "handbacks", "handback", "handback-template", "packets", "packet"})
+                   "handbacks", "handback", "handback-template", "packets", "packet",
+                   "worklist", "worklist-item", "worklist-export"})
 APPLICATION = Path(__file__).resolve().parents[1]
 EXPORT_ACTIONS = frozenset({"customer.review.export", "customer.review.handback.export"})
 PACKET_ACTIONS = frozenset({"customer.review.packet.receive", "customer.review.packet.open"})
@@ -390,9 +393,70 @@ class CustomerReviews:
             "members": receipt["members"], "archive_bytes": receipt["archive"]["bytes"],
         }
 
+
+    def _worklist_csv(self, workspace, result):
+        body = review_worklist.csv_document(result).encode("utf-8-sig")
+        checksum = hashlib.sha256(body).hexdigest()
+        directory = self.operator.root / "outputs" / "customer-review-documents" / checksum
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / "current-customer-requests.csv"
+        pending = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=directory, prefix=".requests-", delete=False) as output:
+                pending = Path(output.name)
+                output.write(body)
+                output.flush()
+                os.fsync(output.fileno())
+            try:
+                os.link(pending, target)
+            except FileExistsError:
+                original = reviews._regular(directory, target.name)
+                if original.stat().st_size != len(body) or file_digest(original) != checksum:
+                    raise ValueError("The retained worklist CSV changed")
+        finally:
+            if pending is not None:
+                pending.unlink(missing_ok=True)
+        return self.operator._ticket(workspace, target, {
+            "bytes": len(body), "sha256": checksum, "filename": target.name,
+        }, "All matching current customer requests — complete CSV")
+
+    def _worklist_item(self, workspace, selection):
+        ws = self.operator.ws(workspace)
+        result = review_worklist.item(ws, selection)
+        row, downloads = result["item"], []
+        for key, label, review_id in (
+                ("original_evidence", "Original", row["review_id"]),
+                ("replacement_evidence", "Revised", row["revised_review_id"])):
+            for item in row[key]["artifacts"]:
+                path, original = reviews.review_file(ws, review_id, item["id"])
+                downloads.append({
+                    **self.operator._ticket(workspace, path, {
+                        **original, "filename": PurePosixPath(item["original_path"]).name,
+                    }, label + ": " + item["label"]),
+                    "artifact_id": item["id"], "review_id": review_id, "evidence_kind": key,
+                })
+        result["workspace_key"] = workspace
+        result["_downloads"] = downloads
+        result["_document"] = self._json_ticket(
+            workspace, result["item"], "customer-request.json", "Complete original request and engineering treatment")
+        return result
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
+        if operation == "worklist":
+            return {**review_worklist.select(ws, value), "workspace_key": workspace}
+        if operation == "worklist-item":
+            return self._worklist_item(workspace, value)
+        if operation == "worklist-export":
+            result = review_worklist.select(ws, value, complete=True)
+            return {"workspace_key": workspace, "snapshot_id": result["snapshot_id"],
+                    "filters": result["filters"], "total": result["total"],
+                    "_downloads": [
+                        self._json_ticket(workspace, result, "current-customer-requests.json",
+                                          "All matching requests and original snapshot — complete JSON"),
+                        self._worklist_csv(workspace, result),
+                    ]}
         if operation == "packets":
             selected = self._id(value, "review_id") if value.get("review_id") else None
             return {"workspace_key": workspace, "project": ws.project, "review_id": selected,

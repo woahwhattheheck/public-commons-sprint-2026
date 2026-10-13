@@ -9,12 +9,14 @@ from typing import Any
 from urllib.parse import quote
 
 from model.common import describe_file
+from measurement_workspace.study_reviews import PublishedStudyReviews
 from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace import sv833_observations as sv833
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
-ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
+ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
+           "published-study.review.save", "published-study.review.export", "published-study.review.import")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
 BUILTIN_DIRECTORIES = {
     BUILTIN_ID: "eighteenmile_2023",
@@ -282,10 +284,15 @@ class PublishedStudyProvider:
                     builtin.append(microbial_source)
                 return {
                     **store.list_studies(),
+                    "reviews": PublishedStudyReviews(store).catalog(),
                     "builtin_studies": builtin,
                     "source_roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()],
                     "table_titles": TABLE_TITLES,
                 }
+            if operation == "review":
+                result = PublishedStudyReviews(store).get(payload.get("review_id"))
+                result["context"] = self._source_links(workspace_key, ws, store, result["context"])
+                return result
             study_id, version_id = self._selection(payload)
             if operation == "study":
                 return self._source_links(workspace_key, ws, store, store.get_study(study_id, version_id))
@@ -352,6 +359,28 @@ class PublishedStudyProvider:
                     "view": "published-studies",
                     "artifacts": [self._artifact(ws, manifest_path, "Study context source manifest")],
                 }
+            if action.startswith("published-study.review."):
+                reviews = PublishedStudyReviews(store)
+                if action == "published-study.review.save":
+                    result = reviews.save(payload)
+                    artifacts = [self._artifact(ws, reviews._path(result["review"]["id"]), "Exact saved study review")]
+                elif action == "published-study.review.import":
+                    result = reviews.receive(self._source_path(ws, payload.get("source")),
+                                             operation_id=task["operation_id"])
+                    artifacts = [self._artifact(ws, reviews._path(result["review"]["id"]), "Received exact study review")]
+                elif action == "published-study.review.export":
+                    task_id = task["id"]
+                    if not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", task_id):
+                        self._fail("STUDY_TASK", "The queued task has an invalid identifier.", 500)
+                    result = reviews.export(payload.get("review_id"), ws.root / "published_study_exports" / task_id)
+                    artifacts = [self._artifact(ws, path, "Complete saved review and original sources" if path.suffix == ".zip" else "Exact saved review selection")
+                                 for path in result.pop("files")]
+                else:
+                    self._fail("STUDY_ACTION", "Unknown saved-review task.", 404)
+                body = result["review"]["content"]
+                return {**result, **{key: body["binding"][key] for key in ("study_id", "version_id")},
+                        "selection": body["selection"], "table": body["table"],
+                        "view": "published-studies", "artifacts": artifacts}
             study_id, version_id = self._selection(payload)
             task_id = task["id"]
             if not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", task_id):

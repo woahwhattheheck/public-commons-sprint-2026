@@ -142,18 +142,40 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return pollutants;
   }
   function sharedParameters(group,ids){
-    const selected=ids.length?(group?.runs??[]).filter(row=>ids.includes(row.id||row.run_id)):group?.runs??[];
+    const selected=ids.length?(group?.runs??[]).filter(row=>ids.includes(row.id||row.run_id)):(group?.runs??[]).filter(row=>row.calibration_eligible!==false);
     if(!selected.length)return [];
     return pollutants.filter(parameter=>selected.every(row=>candidateParameters(row).includes(parameter)));
   }
   function candidateModels(row){
     return Array.isArray(row.selected_models)?row.selected_models.map(name=>String(name).toUpperCase()).join(' + '):'Original native run';
   }
+  function candidateVersionLabel(row){
+    const labels=Object.entries(row.native_version_labels??{}).map(([model,label])=>String(model).toUpperCase()+': '+String(label));
+    return labels.join('; ')||'Original native run records';
+  }
+  function candidateOutputUnits(row){
+    return Object.entries(row.output_mass_basis??{}).map(([parameter,value])=>
+      human(parameter)+': '+(value.version_supported===false?'Unsupported output convention for this producing version':String(value.raster_units)+' → '+String(value.annual_units))).join('; ');
+  }
+  function candidateIssue(row){
+    return (row.execution_issues??[]).join('; ')||(row.calibration_eligible===false?'This retained run does not satisfy the current calibration output contract.':'');
+  }
   function candidateTable(catalog,draft){
     const group=catalog.candidate_groups.find(row=>groupKey(row)===draft.group);
     if(!group)return '<p class="note">Choose a retained grid and unchanged land-cover baseline.</p>';
-    return table(['Use','Completed parameter profile','Native outputs','Model period',''],group.runs.map(row=>
-      '<tr><td><input type="checkbox" name="calibration_candidates" value="'+esc(row.id||row.run_id)+'" '+(draft.selection.candidate_run_ids?.includes(row.id||row.run_id)?'checked':'')+' aria-label="Use '+esc(row.title)+'"></td><td><strong>'+esc(row.title||named('profiles',row.profile_id))+'</strong><small class="mono">'+esc(short(row.id||row.run_id))+'</small></td><td>'+esc(candidateModels(row))+'<small>'+esc(candidateParameters(row).map(human).join(', '))+'</small></td><td>'+esc(typeof row.model_period==='object'?pretty(row.model_period):row.model_period||'Recorded with profile')+'</td><td>'+nativeButton('runs',row.id||row.run_id,'Open run')+'</td></tr>'));
+    return table(['Use','Completed parameter profile','Native outputs','Model version and units','Model period',''],group.runs.map(row=>{
+      const id=row.id||row.run_id,selected=Boolean(draft.selection.candidate_run_ids?.includes(id)),issue=candidateIssue(row);
+      return '<tr><td><input type="checkbox" name="calibration_candidates" value="'+esc(id)+'" '+
+        (selected?'checked ':'')+(!selected&&row.calibration_eligible===false?'disabled ':'')+
+        'data-calibration-execution-issue="'+esc(issue)+'" aria-label="Use '+esc(row.title)+'"></td><td><strong>'+
+        esc(row.title||named('profiles',row.profile_id))+'</strong><small class="mono">'+esc(short(id))+'</small>'+
+        (issue?'<p class="note"><strong>Unavailable for new calibration.</strong> '+esc(issue)+
+          (selected?' Uncheck this retained candidate to continue with compatible outputs.':'')+'</p>':'')+
+        '</td><td>'+esc(candidateModels(row))+'<small>'+esc(candidateParameters(row).map(human).join(', '))+
+        '</small></td><td>'+esc(candidateVersionLabel(row))+'<small>'+esc(candidateOutputUnits(row))+
+        '</small></td><td>'+esc(typeof row.model_period==='object'?pretty(row.model_period):row.model_period||'Recorded with profile')+
+        '</td><td>'+nativeButton('runs',id,'Open run')+'</td></tr>';
+    }));
   }
   function filterRow(name='',value='',type=null){
     type=type||(value===null?'null':typeof value==='number'?'number':typeof value==='boolean'?'boolean':'text');
@@ -192,6 +214,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function collectSelection({split=false}={}){
     const candidate_run_ids=chosen('calibration_candidates');
+    const unavailable=$$('[name="calibration_candidates"]',form()).filter(node=>node.checked&&node.dataset.calibrationExecutionIssue);
+    if(unavailable.length)throw Error('Remove unavailable retained candidates before preparing a new calibration: '+
+      unavailable.map(node=>short(node.value)+': '+node.dataset.calibrationExecutionIssue).join('; '));
     const objective={};
     for(const pollutant of pollutants){
       const weightText=val('calibration_weight_'+pollutant).trim(),weight=Number(weightText);
@@ -311,8 +336,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(!Array.isArray(value.candidate_run_ids)||!value.candidate_run_ids.length)
       throw Error('Select at least one completed unchanged-baseline case.');
     if(activeDraft?.workspace===workspace)captureDraft();
+    const request=++formRequest;
     const packet=await api(endpoint('/api/parameter-studies/calibration',{id:value.study_id}));
     if(current()!==workspace)throw Error('The workspace changed while opening the selected parameter study.');
+    if(request!==formRequest)return;
     const ids=[...new Set(value.candidate_run_ids)];
     if(ids.some(id=>typeof id!=='string'||!packet.eligible?.some(row=>row.run_id===id)))
       throw Error('Refresh the study to select its completed unchanged-baseline cases.');
@@ -554,7 +581,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
             const node=value.name==='calibration_candidates'?
               nodes.find(candidate=>candidate.value===value.value):nodes[position];
             if(!node)continue;
-            if(value.type==='checkbox')node.checked=value.checked;else node.value=value.value;
+            if(value.type==='checkbox'){
+              node.checked=value.checked;
+              if(node.checked&&node.dataset.calibrationExecutionIssue)node.disabled=false;
+            }else node.value=value.value;
           }
         }
         updatePeriod();
@@ -628,7 +658,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return rows;
   }
   const columns={
-    ranking:[['rank','Rank'],['title','Candidate profile'],['selected_models','Native models'],['objective_score','Calibration loss'],['status','Outcome'],['run_id','Native run']],
+    execution:[['run_id','Native run'],['model','Model'],['parameter','Pollutant'],['version_label','Version and source'],['requested_version','Requested version'],['raster_units','Raster units'],['annual_units','Annual units'],['reduction','Catchment reduction'],['reused_from','Original stage reuse']],
+    ranking:[['rank','Rank'],['title','Candidate profile'],['selected_models','Native models'],['native_version_labels','Native execution'],['objective_score','Calibration loss'],['status','Outcome'],['run_id','Native run']],
     metrics:[['partition','Partition'],['profile_title','Profile'],['parameter','Pollutant'],['units','Units'],['groups','Groups'],['n','Catchments'],['rmse','RMSE'],['mean_bias','Mean bias'],['nash_sutcliffe_efficiency','NSE'],['normalized_mse','Normalized MSE']],
     validation:[['parameter','Pollutant'],['units','Units'],['groups','Groups'],['n','Catchments'],['rmse','RMSE'],['mean_bias','Mean bias'],['nash_sutcliffe_efficiency','NSE']],
     observations:[['partition','Partition'],['group_id','Group'],['catchment_id','Catchment'],['parameter','Pollutant'],['units','Units'],['observed','Observed annual load'],['modeled','Selected modeled load'],['residual','Residual'],['records','Original records']],
@@ -637,7 +668,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     stability:[['group_id','Omitted calibration group'],['state','Fold outcome'],['selected_run_id','Selected without group'],['selected_profile_id','Selected profile'],['same_as_full_selection','Run unchanged'],['same_profile_as_full_selection','Profile unchanged'],['objective_score','Calibration loss']],
     exclusions:[['run_id','Candidate run'],['observation_id','Observation'],['catchment_id','Catchment'],['parameter','Pollutant'],['reason','Reason']],
   };
-  const tabTitles={ranking:'Profile ranking',metrics:'Physical fit',validation:'Held-out validation',observations:'Observed and modeled',groups:'Catchment groups',envelope:'Candidate envelope',stability:'Group stability',exclusions:'Exclusions'};
+  const tabTitles={ranking:'Profile ranking',execution:'Native execution',metrics:'Physical fit',validation:'Held-out validation',observations:'Observed and modeled',groups:'Catchment groups',envelope:'Candidate envelope',stability:'Group stability',exclusions:'Exclusions'};
   function rowCell(row,key){
     const value=row[key];
     if(key==='run_id'&&value)return nativeButton('runs',value,short(value));
@@ -646,6 +677,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(key==='same_as_full_selection'||key==='same_profile_as_full_selection')return value===true?'Yes':value===false?'No':'—';
     if(activeUncertainty&&(key==='state'||key==='first_tie_state'))return esc(sensitivityLabel(value));
     if(key==='selected_models'&&Array.isArray(value))return esc(value.map(name=>String(name).toUpperCase()).join(' + '));
+    if(key==='native_version_labels'&&value&&typeof value==='object')return Object.entries(value).map(([model,label])=>'<small>'+esc(String(model).toUpperCase()+': '+String(label))+'</small>').join('');
     if(Array.isArray(value))return esc(value.map(item=>typeof item==='object'?pretty(item):item).join(', '));
     if(value&&typeof value==='object')return '<details><summary>Details</summary><pre class="json-view">'+esc(pretty(value))+'</pre></details>';
     if(['id','group_id'].includes(key))return '<span class="mono" title="'+esc(value)+'">'+esc(short(value))+'</span>';
@@ -701,6 +733,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         '<div class="calibration-tabs" role="tablist" aria-label="Calibration results">'+Object.entries(tabTitles).map(([key,title])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(title)+' <small>'+number((view[key]??[]).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a result',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, catchment or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
       section('Original files and interpretation','The JSON record keeps the complete native references, source vintages, groups and every metric.',fileList(activeReport._downloads||[])+notesList(view.notes)+
+        (view.native_execution?.fingerprint?'<details class="technical"><summary>Producing model versions, original output identities and physical-unit conventions</summary><pre class="json-view">'+esc(pretty(view.native_execution))+'</pre></details>':'')+
         '<details class="technical"><summary>Original complete analysis record</summary><pre class="json-view">'+esc(pretty(report))+'</pre></details>');
   }
   function bindReport(){

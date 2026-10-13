@@ -1,0 +1,311 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile 2023 routine nutrient and flow contrasts",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "path": "dated_values.csv",
+      "bytes": 171981,
+      "sha256": "0cccdbcc3831f376caad25bb81b783ab76dda3430197ace0927ec42a126e5a2b",
+      "id": "observed-hydrology-nutrient-flow-dated-20261013",
+      "title": "Routine nutrient concentration intervals and original flow context",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 120,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    },
+    {
+      "path": "sampling_calendar.csv",
+      "bytes": 8008,
+      "sha256": "c7775e8948e8ed775776bb3dab17a3f5b66252e88adc4bd5a8a80b4088674a89",
+      "id": "observed-hydrology-nutrient-flow-calendar-20261013",
+      "title": "Routine nutrient sampling dates and observed flow",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 24,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    },
+    {
+      "path": "station_flow_summary.csv",
+      "bytes": 37633,
+      "sha256": "6034e6740be5fd3fd87be57c189b3acf62cedab8c68bc1e2eb16c37a28224fd7",
+      "id": "observed-hydrology-nutrient-flow-summary-20261013",
+      "title": "Routine nutrient station means by observed flow group",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 65,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    },
+    {
+      "path": "station_contrasts.csv",
+      "bytes": 13645,
+      "sha256": "ee99785f67ecdd1673bee08d818e31b918d05c7690354fc17e77d71b6fb8b09b",
+      "id": "observed-hydrology-nutrient-flow-contrasts-20261013",
+      "title": "Descriptive station contrasts with censor bounds",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 30,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    },
+    {
+      "path": "same_date.csv",
+      "bytes": 1922,
+      "sha256": "47d4516fee1f7a14089270b2ee1d3b270a3edb3c5ee1412d66c9bb8d31231392",
+      "id": "observed-hydrology-nutrient-flow-same-date-20261013",
+      "title": "Original shared-date station nutrient contrasts",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 5,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    },
+    {
+      "path": "june12_contrast.csv",
+      "bytes": 3669,
+      "sha256": "fa4eef5696dbb8cca9cbc7aa0e031eebd89f269cf41ef3bc034a295ef4a2e93f",
+      "id": "observed-hydrology-nutrient-flow-june12-20261013",
+      "title": "June 12 nutrient-specific high-flow contrasts",
+      "kind": "table",
+      "role": "OBSERVED_NUTRIENT_FLOW_CONTEXT",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-268&startDateLo=01-01-2023&startDateHi=12-31-2023&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "metadata": {
+        "row_count": 5,
+        "guide_file": "README.md",
+        "method_file": "methods.json",
+        "inputs_file": "inputs.json",
+        "cohort": "SWS-2023 routine nutrients; actual dates retained"
+      },
+      "companions": [
+        {
+          "path": "methods.json",
+          "bytes": 1544,
+          "sha256": "8ddc526972d3ec669d4b25a5de8dd886db7b3242cdf620bfe05ef4d8dc48222c"
+        },
+        {
+          "path": "inputs.json",
+          "bytes": 1236,
+          "sha256": "bd74db1c9e62b5ec1726ce2242814b97c5ee04e7ab8946970018199e0b946e29"
+        },
+        {
+          "path": "compute.mjs",
+          "bytes": 14115,
+          "sha256": "7b6e2e6b3aeca619d965ac83bb7904f53c44c0939ee6334a3be3c6261e838d46"
+        },
+        {
+          "path": "replay.mjs",
+          "bytes": 1379,
+          "sha256": "9365a67a04973b1662724d779fdfe3ec336fa7290315c321a61b49263899950e"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 4092,
+          "sha256": "19d5ab4e4e39c40c73add805af0b52bedb6d6a40260f45709e30a043dcaff724"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5573,
+          "sha256": "33ef6a32859f72cb81a935c41d976dfb160fd75057868bfd1b39472b310db852"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Descriptive unmatched station visits stratified by common observed gauge flow.",
+    "Censor endpoints retain source strict relations; TN uses matched original components."
+  ]
+}

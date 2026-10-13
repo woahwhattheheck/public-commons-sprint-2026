@@ -24,6 +24,7 @@ from . import calibration_uncertainty as uncertainty
 from . import calibration_maps as maps
 
 VERSION = 1
+PRESENTATION_EDITION = "native-execution-v1"
 KIND = "calibration-reviews"
 DIRECTORY = "calibration-review-exports"
 STYLE = """
@@ -177,6 +178,26 @@ def _basis(workspace, calibration_id, uncertainty_id, map_id):
     return report, plan, observed, detail, atlas, entry, stamp
 
 
+NATIVE_EXECUTION_FIELDS = ("run_id", "profile_id", "model", "parameter", "output",
+                           "comparison_version", "basis", "version_label",
+                           "requested_version", "observed_stage_version", "observed_run_version",
+                           "raster_units", "annual_units", "reduction", "unit_basis",
+                           "stage_completed_at", "reused_from", "source_guide",
+                           "export_sha256", "stream_sha256", "arguments_sha256")
+
+
+def native_execution(report, plan):
+    """Read the original execution snapshot without changing historical records."""
+    value = report.get("native_execution") or plan.get("native_execution")
+    if value is None:
+        return {}
+    if (not isinstance(value, dict)
+            or value.get("schema") != "upstate.calibration-native-execution/v1"
+            or not isinstance(value.get("rows"), list)):
+        raise ValueError("Select the original calibration execution-provenance snapshot")
+    return value
+
+
 def _tables(report, plan):
     reference = {unit["id"]: unit for unit in report["reference_units"]}
     selected_rows = []
@@ -195,6 +216,7 @@ def _tables(report, plan):
                             "run_id": report["selected_run_id"], "profile_id": report["selected_profile_id"]})
     return {
         "candidate-ranking": (RANK_FIELDS, report["ranked_candidates"]),
+        "native-execution": (NATIVE_EXECUTION_FIELDS, native_execution(report, plan).get("rows", [])),
         "physical-metrics": (METRIC_FIELDS, metric_rows),
         "selected-catchments": (REFERENCE_FIELDS, selected_rows),
         "candidate-predictions": (tuple(dict.fromkeys(
@@ -270,12 +292,15 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         introduction += '<h3>Review notes</h3><p class="notes">' + _escape(selection["notes"]) + "</p>"
     sections.append(_section("summary", "Selected model and review scope", introduction))
     objective = [{"parameter": key, "weight": value["weight"],
-                  "normalization_scale": report["normalization"].get(key),
+                  "normalization_scale": (report["normalization"].get(key, {}).get("value")
+                      if isinstance(report["normalization"].get(key), dict) else report["normalization"].get(key)),
+                  "normalization_basis": (report["normalization"].get(key, {}).get("basis")
+                      if isinstance(report["normalization"].get(key), dict) else None),
                   "units": next((row["units"] for row in report["reference_units"] if row["parameter"] == key), None)}
                  for key, value in report["objective"].items()]
     sections.append(_section("design", "Original references and evaluation design",
         "<p>" + _escape(report["temporal_method"]) + "</p><h3>Declared objective</h3>" +
-        _table(("parameter", "weight", "normalization_scale", "units"), objective) +
+        _table(("parameter", "weight", "normalization_scale", "units", "normalization_basis"), objective) +
         "<h3>Catchment groups</h3>" + _table(("id", "partition", "catchment_ids", "station_ids", "observation_records"),
         [{**row, "partition": "validation" if row["id"] in validation_groups else "calibration"
           if row["id"] in calibration_groups else "unselected"} for row in groups]) +
@@ -286,6 +311,20 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         _table(RANK_FIELDS, report["ranked_candidates"]) + "<p>" +
         _link("tables/candidate-ranking.csv", "Complete ranking CSV") + " · " +
         _link("tables/candidate-failures.csv", "All excluded candidate outcomes") + "</p>"))
+    execution = native_execution(report, plan)
+    execution_rows = tables["native-execution"][1]
+    sections.append(_section("execution", "Native model versions and output quantities",
+        ("<p>These are the original completed-model version sources and output-unit conventions "
+         "retained with this calibration. Each parameter row names its original export, stream "
+         "and arguments identities. The producing-stage version, observed run fallback and "
+         "requested legacy declaration remain distinct.</p>" if execution else
+         "<p>This historical calibration keeps its original native run records in the source inventory. "
+         "It predates the retained per-output execution snapshot.</p>") +
+        _table(("run_id", "model", "parameter", "version_label", "requested_version",
+                "raster_units", "annual_units", "reduction"), execution_rows) +
+        "<p>" + _link("tables/native-execution.csv", "Complete original execution and output-unit CSV") + "</p>" +
+        ("<details><summary>Output identities, version sources and compatibility policy</summary><pre>" +
+         _escape(execution) + "</pre></details>" if execution else "")))
     selected_metrics = [row for row in tables["physical-metrics"][1] if row["run_id"] == report["selected_run_id"]]
     sections.append(_section("validation", "Selected-model performance",
         "<p>Held-out assessment: <strong>" + _escape(validation["state"]) + "</strong>. " +
@@ -364,7 +403,7 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         _table(("member", "bytes", "sha256"), inventory) + "</details><p>" +
         _link("manifest.json", "Complete package manifest") + "</p>"))
     navigation = "".join('<a href="#' + key + '">' + label + "</a>" for key, label in (
-        ("summary", "Summary"), ("design", "Design"), ("ranking", "Selection"),
+        ("summary", "Summary"), ("design", "Design"), ("ranking", "Selection"), ("execution", "Native outputs"),
         ("validation", "Performance"), ("stability", "Stability"), ("uncertainty", "Source errors"),
         ("maps", "Maps"), ("records", "Catchment rows"), ("sources", "Sources")))
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
@@ -386,7 +425,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         raise ValueError("Enter a review title of 1–300 characters")
     if not isinstance(notes, str) or len(notes) > 20000:
         raise ValueError("Review notes must contain at most 20,000 characters")
-    selection = {"version": VERSION, "workspace_id": workspace.project["id"],
+    selection = {"version": VERSION, "presentation_edition": PRESENTATION_EDITION,
+                 "workspace_id": workspace.project["id"],
                  "calibration_id": report["id"], "plan_id": plan["id"],
                  "uncertainty_id": detail["id"] if detail else None, "map_id": atlas["id"] if atlas else None,
                  "title": title.strip(), "notes": notes, "source_stamp": stamp}
@@ -482,7 +522,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         if latest != stamp:
             raise ValueError("The original calibration dependencies changed during review packaging")
         result = workspace._save(KIND, {
-            "version": VERSION, "workspace_id": workspace.project["id"], "state": "complete",
+            "version": VERSION, "presentation_edition": PRESENTATION_EDITION,
+            "workspace_id": workspace.project["id"], "state": "complete",
             "selection_id": selection_id, "selection": selection, "title": selection["title"],
             "calibration_id": report["id"], "plan_id": plan["id"],
             "uncertainty_id": selection["uncertainty_id"], "map_id": selection["map_id"],

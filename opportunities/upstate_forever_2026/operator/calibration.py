@@ -24,7 +24,9 @@ ACTIONS = frozenset({"calibration.prepare", "calibration.analyze", "calibration.
 READS = frozenset({"catalog", "plan", "report", "uncertainty", "maps", "review", "report-source"})
 UNITS = {"nitrogen": "kg/year", "phosphorus": "kg/year", "sediment": "metric_tonnes/year"}
 COLUMNS = {
+    "execution": review_science.NATIVE_EXECUTION_FIELDS,
     "ranking": ("rank", "run_id", "profile_id", "title", "selected_models", "available_parameters",
+                "native_version_labels",
                 "objective_score", "status", "reason"),
     "metrics": ("partition", "run_id", "profile_id", "profile_title", "parameter", "units",
                 "groups", "n", "rmse", "mean_bias", "nash_sutcliffe_efficiency"),
@@ -40,7 +42,7 @@ COLUMNS = {
                   "same_profile_as_full_selection", "objective_score"),
     "exclusions": ("run_id", "observation_id", "catchment_id", "parameter", "reason"),
 }
-TABLE_TITLES = {"ranking": "Candidate ranking", "metrics": "Calibration fit",
+TABLE_TITLES = {"ranking": "Candidate ranking", "execution": "Native versions and output units", "metrics": "Calibration fit",
                 "validation": "Held-out validation", "observations": "Catchment annual reference and modeled load",
                 "groups": "Catchment groups", "envelope": "Candidate envelope",
                 "stability": "Selection stability", "exclusions": "Retained exclusions"}
@@ -156,6 +158,8 @@ def _presentation(workspace, plan, report):
     return {"title": report["title"], "candidate_count": candidate_count,
             "distinct_profile_count": profile_count, "selected_models": selected_models,
             "predicted_parameters": report.get("predicted_parameters", []), "ranking": ranking, "metrics": metrics,
+            "native_execution": review_science.native_execution(report, plan),
+            "execution": review_science.native_execution(report, plan).get("rows", []),
             "validation": validation_metrics, "validation_state": validation["state"],
             "validation_missing_units": validation.get("missing_units", []),
             "validation_parameters_without_reference": validation.get("parameters_without_reference", []),

@@ -4,6 +4,14 @@ The workbench brings original file-share inventories, Migration Manager reports,
 
 It extends the original migration audit in this directory. The original audit.mjs and audit.test.mjs keep their existing strict input contract. Use the operating workbench when real reports contain partial, missing or unknown fields.
 
+## Current navigation and case workflow
+
+Sources, Rounds, Mappings & evidence, Reconciliation, Corrections and Handover & history retain the original file-evidence workflow below. **Cases & cutover** adds six views in the same project: Source mappings, Destination plans, Rehearsals, Finding decisions, Cutover and All case records.
+
+For a case migration, import the actual originals in Sources, review the complete field projections, select explicit source editions and cutoff/status policy, reconcile independent target inventories separately from loader receipts, then record finding responses and cutover tasks. [CASE_MIGRATION.md](CASE_MIGRATION.md) gives the full operator sequence, request shapes, exports and customer-return steps. [CASE_RECEIVING.md](CASE_RECEIVING.md) describes the complete actual-input native programme.
+
+Expand the Cases working-file panel to download or restore complete form drafts and original pending commands. These browser drafts are separate from accepted SQLite records. A conflicting tab preserves its own downloadable work; load the selected saved edition explicitly.
+
 ## Open an operating workspace
 
 Use Linux with Python 3.10 or later. The operating application uses the Python standard library. Node is only needed to run the existing standalone audit.
@@ -120,11 +128,14 @@ Handover & history prepares the full editable project at the selected revision. 
 The ZIP contains:
 
 - the complete application, original audit, Python core, HTTP interface, browser assets and guides;
-- the original SQLite workspace snapshot, including source interpretations, rounds, mappings, findings, decisions and operation history;
+- the original SQLite workspace snapshot, including source interpretations, rounds, mappings, findings, decisions, case datasets/plans/rehearsals/reviews/cutovers, complete case rows and operation history;
 - every original object in that snapshot's file table, including retained inputs that have not yet been imported;
 - every earlier completed delivery archive that the snapshot's delivery records reference;
 - reports/review.html, a readable review of selected populations, coverage, reconciliation runs and current correction decisions;
-- complete per-reconciliation CSV and NDJSON finding tables, plus machine-readable catalogues.
+- complete per-reconciliation CSV and NDJSON finding tables, plus machine-readable catalogues;
+- reports/case-review.html, all five case descriptor inventories and complete selected descriptor/row exports for each case edition.
+
+Current deliveries bind all 21 application files under commons.case-migration-application/v1. Complete old 16-file deliveries and preparations already frozen to that roster retain their original application identity. See the portable contract in [CASE_MIGRATION.md](CASE_MIGRATION.md).
 
 The readable report is an offline document and can be printed from a browser. It contains no external scripts, fonts or tracking. The full original decision history remains in SQLite even where a readable recent-history projection is shorter.
 
@@ -171,6 +182,14 @@ A completed exact request returns its recorded result. Reusing an operation ID w
 For an interrupted operation, choose the original operation ID and give the reason for continuation. The original source bytes, selected round/mappings, parser/engine version and request remain bound. A delivery continuation uses the captured application and database, including when the current deployment has since changed.
 
 If an application capture stopped before copying every originally selected source file, the remaining bytes must still match the retained original inventory. The operation retains its partial capture and does not silently substitute a new deployment.
+
+## Case API and complete exports
+
+The case module uses the same POST /api/operations envelope and POST /api/read transport as the existing workbench. Its five create operations are case.dataset.create, case.plan.create, case.rehearsal.create, case.review.create and case.cutover.create. Read case.schema for the installed fields; use case.list/get and the original paged row/item/compare readers for complete history.
+
+For full files, GET /api/exports?kind=case.rehearsal&id=ACTUAL_ID&format=csv (or ndjson) streams the exact selected complete descriptor plus all original result records. The five export kinds are case.dataset, case.plan, case.rehearsal, case.review and case.cutover. The server completes the selected stream under the original workspace mutex before sending the response length.
+
+The native CLI exposes the same full export and a revision-bound report command. Its case schema/list/get/preview/create commands are documented in [CASE_MIGRATION.md](CASE_MIGRATION.md). New mutations always use a current state revision; an old successful request's replay returns its original result revision.
 
 ## Operating limits and verification
 

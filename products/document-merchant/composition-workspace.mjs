@@ -7,6 +7,7 @@ import {
 } from '../../stellar/scf-starforge-20261009/sf101-merchant-receiver/api-application/workspace/configuration.mjs';
 import {verifyFile} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/resource-library/files.mjs';
 import {documentProvider,documentError,defaultDocumentSettings} from './contracts.mjs';
+import {openDocumentAssemblyWorkspace} from './assembly-workspace.mjs';
 import {
   composeDocumentSources,readDocumentComposition,
   receiveDocumentComposition,prepareDocumentCompositionBatch,
@@ -94,6 +95,8 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
     'DOCUMENT_COMPOSITION_SOURCE_ROOT_NOT_DECLARED',
     'Keep document compositions inside an original customer file root.');
   await ownedDirectory(sourceRoot,{create:true});
+  const bundles=await openDocumentAssemblyWorkspace({workspace,sourceRoot:join(sourceRoot,'.pdf-bundles'),
+    intakeAccessToken,merchantOrigin:provider==='pdfmint'?merchantOrigin:null,deadlineMs,pollMs});
   const operations=new Map(),active=new Map(),summaries=new Map();
   let closing=false,closePromise;
   function directoryFor(id){return join(sourceRoot,identifier(id));}
@@ -531,8 +534,8 @@ export async function openDocumentCompositionWorkspace({workspace,sourceRoot,pro
     const pending=[...active.values()];
     for(const entry of pending)entry.controller.abort(
       documentError('DOCUMENT_COMPOSITION_WORKSPACE_CLOSING','The document workspace is closing.'));
-    closePromise=Promise.allSettled(pending.map(entry=>entry.promise)).then(()=>undefined);
+    closePromise=Promise.allSettled([...pending.map(entry=>entry.promise),bundles.close()]).then(()=>undefined);
     return closePromise;
   }
-  return Object.freeze({workspace,sourceRoot,status,list,get,assembly,operation,start,cancel,download,close});
+  return Object.freeze({workspace,sourceRoot,bundles,status,list,get,assembly,operation,start,cancel,download,close});
 }

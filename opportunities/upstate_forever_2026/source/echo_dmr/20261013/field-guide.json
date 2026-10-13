@@ -1,0 +1,255 @@
+{
+  "schema": "upstate.echo-field-guide/v1",
+  "title": "EPA ECHO original measurements, calculated monitoring-period loads and annual context",
+  "captured_at": "2026-10-13T01:22:10Z",
+  "permits": [
+    "SC0042994",
+    "SC0047856",
+    "SC0000477",
+    "SC0035700"
+  ],
+  "primary_method_sources": [
+    "https://echo.epa.gov/help/loading-tool/custom-search/custom-search-results-help",
+    "https://echo.epa.gov/help/loading-tool/custom-search/custom-search-help",
+    "https://echo.epa.gov/help/reports/effluent-charts-help",
+    "https://echo.epa.gov/trends/loading-tool/resources/technical-background-methodology"
+  ],
+  "tables": {
+    "dmr_measurements_2023.csv": {
+      "rows": 2282,
+      "basis": "One complete original DischargeMonitoringReports object per row, with its original facility, permitted feature and parameter parents.",
+      "measured_value": "DMRValueNmbr",
+      "measured_qualifier": "DMRValueQualifierCode",
+      "standard_value": "DMRValueStdUnits",
+      "standard_units": "StdUnitDesc",
+      "original_units": "DMRUnitDesc",
+      "months_per_report": "NmbrOfSubmission",
+      "original_period_end": "MonitoringPeriodEndDate",
+      "identity": [
+        "SourceId",
+        "PermFeatureNmbr",
+        "ParameterCode",
+        "MonitoringLocationCode",
+        "DMREventId",
+        "DMRValueId",
+        "LimitValueId",
+        "LimitTypeCode",
+        "VersionNmbr"
+      ],
+      "missing_original_units": "Keep DMRUnitDesc null. StdUnitDesc applies specifically to DMRValueStdUnits; it does not rewrite the original DMRUnitDesc.",
+      "quantity_note": "Quantity values may be rates such as kg/d; no mass is obtained by summing arbitrary raw measured values."
+    },
+    "dmr_loads_monitoring_period_2023.csv": {
+      "rows": 374,
+      "basis": "EPA-selected DMR measurements and calculated load for each original monitoring-period row.",
+      "load": "PollutantLoad0",
+      "load_unit": "kg/period",
+      "average_load": "AvgPollutantLoad0",
+      "average_load_unit": "kg/day",
+      "concentration": "AvgConcentration0",
+      "concentration_unit": "mg/L",
+      "volume": "WastewaterFlow",
+      "volume_unit": "million US gallons/period",
+      "flow": "AvgWastewaterFlow",
+      "flow_unit": "million US gallons/day",
+      "measurement_choice": "MeasurementType",
+      "original_period_end": "Mped",
+      "months_per_report": "NmbrOfReport",
+      "identity": [
+        "ExternalPermitNmbr",
+        "PermFeatureNmbr",
+        "MonitoringLocationCode",
+        "ParameterCode",
+        "Mped",
+        "LimitSetDesignator",
+        "LimitSeasonID"
+      ],
+      "original_measurement_fields": [
+        "Q1Qual",
+        "Mq1",
+        "Q2Qual",
+        "Mq2",
+        "C1Qual",
+        "Mc1",
+        "C2Qual",
+        "Mc2",
+        "C3Qual",
+        "Mc3"
+      ],
+      "missingness_fields": [
+        "NodiDesc",
+        "NdFlag",
+        "QcFlag"
+      ]
+    },
+    "dmr_annual_history_2007_2026.csv": {
+      "rows": 663,
+      "years": [
+        2007,
+        2026
+      ],
+      "query": {
+        "p_est": "N",
+        "p_nd": "ZERO",
+        "p_loads_data": "DMR",
+        "p_param_group": "N"
+      },
+      "load": "PollutantLoad",
+      "load_unit": "kg/year",
+      "annualization": "Treat values as EPA published annual outputs. A p_est=N request is not sufficient evidence that the returned load is an unscaled sum; the 2023 period comparison demonstrates otherwise for upper/middle TN.",
+      "current_year": "2026 is incomplete at capture. The original period source includes seven December 31 placeholders with nonnumeric load and NmbrOfReport=0; all are retained and marked as future periods."
+    },
+    "dmr_annual_estimation_2023.csv": {
+      "rows": 34,
+      "query": {
+        "p_est": "Y",
+        "p_nd": "ZERO",
+        "p_loads_data": "DMR",
+        "p_param_group": "N"
+      },
+      "factor": "EstFactor",
+      "factor_basis": "EPA defines factor as 12 divided by months with DMR data plus months with no discharge. Published factors are retained as displayed and never applied a second time."
+    },
+    "dmr_2023_mass_context.csv": {
+      "rows": 34,
+      "period_sum": "Sum numeric original PollutantLoad0 values for the exact permit/feature/location/parameter; leave nonnumeric periods missing and count them. No annual extrapolation or raw EFF aggregation.",
+      "comparison": "Published annual values and both query estimation selectors remain separate from the period sum. Both annual captures return the same displayed pollutant loads; factors differ.",
+      "source_rounding": "Annual and period values are API display strings. Sums use the retained displayed period values; rounding differences are expected."
+    },
+    "dmr_facility_coordinates.csv": {
+      "rows": 4,
+      "role": "facility reference point",
+      "crs": "EPSG:4269 (NAD83), per official CWA schema",
+      "method_fields": [
+        "CollectionMethod",
+        "ReferencePoint",
+        "CalculatedAccuracyMeters"
+      ],
+      "original_fields": [
+        "FacLat",
+        "FacLong"
+      ],
+      "scope": "Each method applies only to that CWA facility coordinate pair."
+    },
+    "dmr_permit_feature_coordinates.csv": {
+      "rows": 6,
+      "role": "ICIS-NPDES permitted discharge feature",
+      "original_fields": [
+        "LatitudeMeasure",
+        "LongitudeMeasure"
+      ],
+      "units": "decimal degrees",
+      "source_methods": "The loading response provides no coordinate determination method or datum field. Preserve original null method and exact source record; do not borrow the facility method.",
+      "historical_scope": "All unique permit-feature coordinate pairs from the annual history are retained. Milliken feature 001 appears in historical load records; its 2023 EFF records are toxicity parameters."
+    },
+    "dmr_loads_monitoring_period_history_2007_2026.csv": {
+      "rows": 6492,
+      "years": [
+        2007,
+        2026
+      ],
+      "basis": "Every original monitoring-period row from one complete annual query per reporting year, with exact parameter, feature and location identity.",
+      "reporting_year": "Year of original Mped; period mass is not prorated over calendar-year boundaries.",
+      "non_mass_parameters": {
+        "74055": "Coliform, fecal general",
+        "01290": "Color [admi units]"
+      },
+      "non_mass_handling": "Retain original numeric source fields; set added mass/concentration unit annotations to null and calculation_dimension='non_mass'.",
+      "future_periods": "The seven December 31, 2026 rows remain original source context and are excluded from period totals at the capture date."
+    },
+    "dmr_annual_estimation_history_2007_2026.csv": {
+      "rows": 663,
+      "years": [
+        2007,
+        2026
+      ],
+      "query": {
+        "p_est": "Y",
+        "p_nd": "ZERO",
+        "p_loads_data": "DMR",
+        "p_param_group": "N"
+      },
+      "factor": "Original EstFactor; never applied a second time."
+    },
+    "dmr_annual_period_history_context.csv": {
+      "rows": 663,
+      "mass_groups": 636,
+      "non_mass_groups": 27,
+      "basis": "Union of exact reporting year, permit, feature, monitoring location and original parameter code.",
+      "period_sum": "Available numeric EPA-calculated period loads with end date in the reporting year and on/before capture; no annualization or cross-year mass proration.",
+      "annual_multiplicity": "27 group keys have multiple original annual records. All original annual rows remain arrays with source pointers. A single numeric annual comparison is emitted only when exactly one numeric original annual value exists.",
+      "coverage": "Original reporting ends, known months covered by period rows, months covered by numeric loads, nonnumeric/future counts and cross-calendar-year periods remain explicit.",
+      "non_mass": "Bacterial-count and color records have no kilogram subtotal."
+    }
+  },
+  "numeric_handling": {
+    "blank": "null",
+    "null": "null",
+    "dash_or_NA": "null",
+    "zero": "0 remains numeric zero",
+    "thousands_separator": "commas removed in added numeric columns only",
+    "qualifiers": "original qualifier retained; no replacement of <, <=, estimated, or NODI values",
+    "nodi_B": "Below Detection Limit/No Detection is retained explicitly; a dash is not silently converted to zero."
+  },
+  "source_choices": {
+    "loads": "DMR only",
+    "non_detect": "ZERO requested explicitly for loading calculations; original EFF qualifiers and detection-limit values remain unchanged.",
+    "parameter_grouping": "N preserves original parameter species. TN includes constituent forms; do not sum TN with ammonia/nitrate/TKN.",
+    "source_coordinates": "Facilities and discharge features occupy separate tables.",
+    "period_dates": "Added ISO end dates decode original dates. Added start dates use the officially defined integer months-per-report only at month-end; they are identified as derived."
+  },
+  "specific_2023_findings": [
+    {
+      "permit": "SC0042994",
+      "parameter": "00600",
+      "reported_period_count": 11,
+      "period_load_sum_kg": 2138.04,
+      "published_annual_query_est_N_kg": 2333,
+      "published_annual_query_est_Y_kg": 2333,
+      "published_factor_Y": "1.09"
+    },
+    {
+      "permit": "SC0047856",
+      "parameter": "00600",
+      "reported_period_count": 11,
+      "period_load_sum_kg": 3009.99,
+      "published_annual_query_est_N_kg": 3284,
+      "published_annual_query_est_Y_kg": 3284,
+      "published_factor_Y": "1.09"
+    },
+    {
+      "permit": "SC0000477",
+      "parameter": "00610",
+      "feature": "T1Q",
+      "period_records": 4,
+      "numeric_periods": 1,
+      "numeric_load_kg": 0,
+      "nonnumeric_periods": 3,
+      "nodi": "B - Below Detection Limit/No Detection",
+      "note": "A zero numeric subtotal does not establish four quantified zero discharges."
+    },
+    {
+      "permit": "SC0000477",
+      "available_N_parameter": "00620",
+      "basis": "nitrate as N",
+      "note": "No reported TN, TKN or combined nitrate/nitrite parameter appears in the complete captured 2023 effluent response."
+    }
+  ],
+  "edition": "20261013-eighteenmile-epa-echo-2",
+  "specific_history_findings": {
+    "original_responses": 70,
+    "monitoring_period_rows": 6492,
+    "annual_rows_per_selector": 663,
+    "multiple_annual_key_groups": 27,
+    "future_period_rows": 7,
+    "future_original_date": "12/31/2026",
+    "future_original_months": "0",
+    "non_mass_period_rows": 298,
+    "duplicate_monitoring_period_identity_rows": 0
+  },
+  "joined_science_companion": {
+    "canvas": "F0C8J1E75FV",
+    "url": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8J1E75FV",
+    "scope": "Existing 2023 original target-series, DES native outfall geometry, calendar-weighted science and observation consumer. Reuse this current source crosswalk/consumer instead of creating a second lake-response application."
+  }
+}
