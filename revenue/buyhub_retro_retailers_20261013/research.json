@@ -1,0 +1,490 @@
+{
+  "schema": "commons.buyhub-complete-prospect-research/v1",
+  "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+  "checked_date": "2026-10-13",
+  "buyer": {
+    "name": "BuyHub",
+    "company_domain": "buyhub.app",
+    "contact": "contact@buyhub.app",
+    "founder_name_from_launch_catalogue": "Pablo Becerra",
+    "product_url": "https://buyhub.app/en",
+    "terms_url": "https://buyhub.app/en/terms",
+    "launch_source": "https://www.firstusers.tech/startups/buyhub",
+    "case_url": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791916757214049",
+    "scope": "Marketplace search and Radar for collectors/resellers; current plan/account availability governs any trial."
+  },
+  "records": [
+    {
+      "id": "buyhub-8bitbeyond",
+      "organization": "8Bit Beyond",
+      "company_domain": "8bitbeyond.com",
+      "company_url": "https://www.8bitbeyond.com/",
+      "person": "Buying team",
+      "contact_url": "mailto:info@8bitbeyond.com",
+      "geography": "Cardiff, Wales, United Kingdom",
+      "selection": "paid",
+      "source_ids": [
+        "8bit-trade",
+        "8bit-contact"
+      ],
+      "contact_instructions": "Published general business email; ask for the buying team. Contact page also lists 07850 856585.",
+      "demand": "Purchases vintage games and consoles through photo-led valuation. Its trade page distinguishes tested and untested hardware, original boxes/manuals, disc wear and cartridge save batteries.",
+      "fit": "BuyHub saved terms and listing filters could support a retailer-selected console category while staff retain condition, completeness and delivered cost. Existing sourcing software and interest are unknown.",
+      "opening_message": "Your trade-in guide keeps boxed completeness, working condition and save batteries separate when valuing stock. Would your buying team consider comparing actual listings for one platform you already buy, using BuyHub saved searches with region and condition kept visible?",
+      "qualification": "Agree one platform and actual purchase limits. Separate PAL and other releases, original/replacement packaging, working/untested units and shipping costs. Staff still verify every listing; published marketplace alternatives do not establish the shop’s own buying tools.",
+      "source_url": "https://www.8bitbeyond.com/pages/games-trade-in",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-geeky-blinders",
+      "organization": "Geeky Blinders",
+      "company_domain": "geeky-blinders.co.uk",
+      "company_url": "https://www.geeky-blinders.co.uk/",
+      "person": "Shop buying team",
+      "contact_url": "mailto:geeky-blinders@outlook.com",
+      "geography": "Havant, Hampshire, United Kingdom",
+      "selection": "paid",
+      "aliases": [
+        "Super Games World"
+      ],
+      "source_ids": [
+        "geeky-home",
+        "geeky-contact"
+      ],
+      "contact_instructions": "Published shop email. Opening times can vary with collections/events; current site directs visitors to its Facebook notice.",
+      "demand": "Independent shop explicitly buys, sells and trades retro and modern games/consoles. Its stocked platforms include Mega Drive, PlayStation, SNES, Nintendo 64 and Game Boy.",
+      "fit": "One currently accepted platform could be compared through BuyHub saved searches with separate boxed/loose and region/condition terms. Existing collection and trade activity supplies the business fit.",
+      "opening_message": "You buy and trade across Mega Drive, PlayStation, SNES and Game Boy alongside the Havant shop. Would a BuyHub comparison for one platform you are actively buying be useful, with separate saved terms for boxed and loose copies and your own region and delivered-price limits?",
+      "qualification": "Confirm currently wanted stock, countries and acceptable faults. Catalogue listings are not an active replenishment request. Super Games World in the same site footer is an alias of this one profile; current software, budget and interest are unknown.",
+      "source_url": "https://www.geeky-blinders.co.uk/",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-spacebridge",
+      "organization": "The Spacebridge",
+      "company_domain": "thespacebridge.co.uk",
+      "company_url": "https://www.thespacebridge.co.uk/",
+      "person": "Shop buying team",
+      "contact_url": "mailto:contact@thespacebridge.co.uk",
+      "geography": "New Milton, Hampshire, United Kingdom",
+      "selection": "paid",
+      "source_ids": [
+        "spacebridge-wanted",
+        "spacebridge-home"
+      ],
+      "contact_instructions": "Published shop email and 07494 006888. Current shop:66 Station Road, New Milton BH25 6LE.",
+      "demand": "Buys Nintendo/Sega consoles and games from individual items to entire collections. Named wanted formats include NES, SNES, N64, GameCube, Game Boy, Saturn and Dreamcast; travels nationwide for larger or rarer collections.",
+      "fit": "A reviewed BuyHub watchlist could support one wanted console family, keeping seller location and collection/delivery cost visible alongside its existing collection-buying service.",
+      "opening_message": "Your wanted list includes Nintendo and Sega collections, and you travel for larger or rarer lots. Would a BuyHub saved-search trial for one console family help your team compare actual collection listings by country, contents and total collection or delivery cost?",
+      "qualification": "Keep the trial on the explicitly wanted video-game range; the shop also buys toys. Agree region, testing, missing-accessory and travel limits. Import policy and available buying budget have not been established.",
+      "source_url": "https://www.thespacebridge.co.uk/wanted",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-flashback-retro",
+      "organization": "Flashback Retro",
+      "company_domain": "flashbackretro.co.uk",
+      "company_url": "https://flashbackretro.co.uk/",
+      "person": "Shop buying team",
+      "contact_url": "mailto:info@flashbackretro.co.uk",
+      "geography": "Rotherham, South Yorkshire, United Kingdom",
+      "selection": "paid",
+      "source_ids": [
+        "flashback-contact",
+        "flashback-shop"
+      ],
+      "contact_instructions": "Published shop email and WhatsApp07542899495. Indexed contact source gives Unit13 Steelbox Works, Canklow Meadows Industrial Estate, Rotherham; no owner name inferred.",
+      "demand": "Its public contact page advertises buying individual retro games through complete collections. The shop offers Nintendo, Sega and PlayStation games, consoles and accessories.",
+      "fit": "BuyHub could compare one staff-selected stock category across supported marketplaces with location, platform and described condition kept separate.",
+      "opening_message": "Your Rotherham shop buys individual retro games and whole collections. Would your buying team consider a BuyHub saved-search comparison for one platform you currently source, with region, condition and total delivered cost recorded before reviewing listings?",
+      "qualification": "Official indexed contact/shop text supports this record; direct fetches timed out. Re-open the public contact page before outreach. Confirm accepted formats and PAL/import requirements; current sourcing software, purchase need and budget are unknown.",
+      "source_url": "https://flashbackretro.co.uk/contact-flashback-retro-rotherham/",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-gamers-attic",
+      "organization": "Gamers Attic",
+      "company_domain": "gamersattic.co.uk",
+      "company_url": "https://gamersattic.co.uk/",
+      "person": "Trade enquiries team",
+      "contact_url": "mailto:info@gamersattic.co.uk",
+      "geography": "United Kingdom",
+      "selection": "reserve",
+      "source_ids": [
+        "gamers-home"
+      ],
+      "contact_instructions": "Official homepage explicitly invites questions and trade enquiries at info@gamersattic.co.uk.",
+      "demand": "The official indexed homepage advertises buying/selling, a sell-to-us route and public trade enquiries. It describes two brothers continuing their father’s interest in games.",
+      "fit": "Reserve for a single-category sourcing comparison after current locality, buying range and preferred countries are reconfirmed.",
+      "opening_message": "Your site invites trade enquiries and games for sale. Would a comparison of current marketplace listings for one platform your team already buys be useful, with condition, region and delivered cost retained?",
+      "qualification": "Reserve: exact locality and current accepted formats need reconfirmation. Email is supported by official indexed text; direct retrieval was unavailable. No names or catalogue availability inferred.",
+      "source_url": "https://gamersattic.co.uk/",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-retroelectro",
+      "organization": "RetroElectro",
+      "company_domain": "retroelectro.co.uk",
+      "company_url": "https://retroelectro.co.uk/",
+      "person": "Jason and Jools",
+      "contact_url": "tel:+447590387918",
+      "geography": "United Kingdom; nationwide collection buying",
+      "selection": "reserve",
+      "source_ids": [
+        "retroelectro-buy",
+        "retroelectro-about",
+        "retroelectro-contact"
+      ],
+      "contact_instructions": "Published phone07590 387918. Same page carries a protected email link under source recovery; no address guessed.",
+      "demand": "Small independent collection buyer/reseller started by Jason and Jools. Buys older Nintendo/Sega/PlayStation games and hardware plus vintage computers; photo/known-fault valuation also covers unusual Japanese hardware.",
+      "fit": "BuyHub could support comparison of actual collection listings for one agreed hardware family while retaining its existing condition, rarity, demand and processing-work considerations.",
+      "opening_message": "Jason and Jools, your gaming page covers older consoles, vintage computers and unusual Japanese hardware. Would a BuyHub comparison for one collection category you buy be useful, with seller country, known faults, included parts and total delivered cost kept visible?",
+      "qualification": "Reserve until the actual published email is recovered or buyer selects the phone route. Confirm models, region, power, testing/repair tolerance and total collection costs; current software and interest are unknown.",
+      "source_url": "https://retroelectro.co.uk/sell-my-video-games-consoles/",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "published_on": "",
+      "author_updated_on": "",
+      "deadline_on": "",
+      "deadline_at": "",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-hidden-chest-retrogear",
+      "organization": "Hidden Chest Gaming / RetroGear",
+      "company_domain": "hiddenchest.co.uk",
+      "company_url": "https://www.hiddenchest.co.uk/",
+      "person": "Ant Harper",
+      "contact_url": "mailto:ant@hiddenchest.co.uk",
+      "geography": "The Central Market Hall, High Street, Cradley Heath, B64 5HA, UK",
+      "demand": "Hidden Chest describes itself as an independent shop, names Ant Harper as its console/computer specialist, and advertises refurbished Sinclair hardware. RetroGear explicitly states that it is part of Hidden Chest and buys old consoles, computers, games, peripherals and whole collections.",
+      "fit": "A focused BuyHub sourcing trial could use separate saved searches and radars for a retailer-selected UK console or 8-bit-computer category. It could bring candidate listings into one review list while Ant retains physical condition, parts, modification, seller and purchase decisions. This is a hypothesis; the retailer's current marketplace use and software are unknown.",
+      "opening_message": "Ant, Hidden Chest's refurbished Sinclair range and RetroGear's collection-buying service caught my eye. Would a saved-search trial for one console or computer category you already buy be useful? BuyHub could surface candidate listings for your review, keeping model, region, condition and delivered cost separate.",
+      "qualification": "Ask which hardware families and countries the shop currently sources, whether PAL/UK units and imports need separate searches, what modifications or faults are acceptable, and whether peripherals, manuals or original packaging are required. Agree buyer-entered purchase and delivered-cost limits, then inspect actual listings; no sourcing budget, margin, active marketplace account or buying intent has been verified. Current Hidden Chest contact page gives Cradley Heath; RetroGear's Brierley Hill location and online sales text are older. Treat the two brands as one prospect, not two leads. RetroGear is browse-only and must not be described as a current online checkout.",
+      "source_ids": [
+        "hiddenchest-current",
+        "retrogear-buying"
+      ],
+      "source_url": "https://www.hiddenchest.co.uk/",
+      "contact_instructions": "Co-manager; old-computer and console specialist. RetroGear invites collection sellers to request a quote by email. Current Hidden Chest contact information provides Ant's named business address plus the general shop mailbox hiddenchestgaming@gmail.com.",
+      "selection": "sample",
+      "aliases": [
+        "Hidden Chest",
+        "RetroGear",
+        "retrogear.co.uk"
+      ],
+      "proposed_trial": {
+        "scope": "One hardware family selected by the buyer, with region and condition constraints recorded before searching.",
+        "search_terms_examples": [
+          "Sinclair ZX Spectrum",
+          "ZX Spectrum Plus 2",
+          "ZX Spectrum 128"
+        ],
+        "human_review": [
+          "Exact model and region",
+          "Working/refurbished/modified status",
+          "Included power supply and peripherals",
+          "Seller description and photographs",
+          "Delivered price and collection/shipping terms"
+        ],
+        "success_measure": "Retailer reviews actual surfaced listings and records relevance; no promised savings or purchase outcome."
+      },
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    },
+    {
+      "id": "buyhub-retro-world-derby",
+      "organization": "Retro World",
+      "company_domain": "retroworlds.uk",
+      "company_url": "https://retroworlds.uk/trade",
+      "person": "Shop buying team",
+      "contact_url": "mailto:derbyretroworld@aol.com",
+      "geography": "20 Osmaston Road, Derby, DE1 2HR, UK",
+      "demand": "The Derby shop buys, sells and trades retro games and consoles, offers collection for larger lots, and describes cleaning/testing controllers. Its catalogue separately labels a PAL Super Mario Kart set and a Japanese-import Sega Saturn bundle. Both example listings were marked out of stock when read.",
+      "fit": "A BuyHub trial could keep UK/PAL software searches separate from explicitly selected Japanese hardware, using saved terms, country filters and auction alerts. Staff would review complete-box condition, authenticity, included accessories and landed cost before deciding. The two catalogue examples demonstrate distinct product categories; their stock status is not evidence of a restocking request.",
+      "opening_message": "Your PAL SNES and Japanese Saturn catalogue entries show why region and completeness need to stay visible when sourcing retro stock. Would your buying team consider a BuyHub trial for one category you already purchase, with separate saved searches and a review of actual listings?",
+      "qualification": "Confirm the shop's currently accepted formats, whether it wants UK-only sourcing or imports, boxed/manual requirements, testing standard and acceptable repairs/modifications. Its Japanese Saturn page specifies a step-down converter for UK use; retain that as an item-specific requirement and verify every proposed console separately. Ask the retailer to set purchase limits and shipping/import assumptions. No current sourcing software, margin, budget or buying intent is known. The first-party site presents one local Derby shop and identifies Retro World as its owner; legal ownership and wider group structure have not been independently established.",
+      "source_ids": [
+        "retroworld-trade",
+        "retroworld-pal",
+        "retroworld-import",
+        "retroworld-ownership"
+      ],
+      "source_url": "https://retroworlds.uk/trade",
+      "contact_instructions": "Public buying, selling and trade enquiries. The published trade route accepts email enquiries and advertises a collection service for larger groups of items. No appointment, active purchasing request or account relationship is assumed.",
+      "selection": "paid",
+      "aliases": [
+        "Retro World Derby"
+      ],
+      "proposed_trial": {
+        "scope": "One retailer-approved platform/category, with PAL and import searches kept separate.",
+        "search_terms_examples": [
+          "Super Nintendo PAL boxed",
+          "SNES PAL manual",
+          "Sega Saturn Japan boxed"
+        ],
+        "human_review": [
+          "Platform and PAL/NTSC/import region",
+          "Original versus replacement box/manual/accessories",
+          "Actual tested condition and modifications",
+          "Power requirements for the specific unit",
+          "Seller photographs, delivery and total cost"
+        ],
+        "success_measure": "Retailer labels the relevance of actual candidate listings and decides whether to continue; no guaranteed margin or stock acquisition."
+      },
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "source_status": "open",
+      "budget": "No software or sourcing budget published.",
+      "tags": [
+        "UK",
+        "retro-game-retailer",
+        "published-buying",
+        "prepared-prospect"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "spacebridge-wanted",
+      "url": "https://www.thespacebridge.co.uk/wanted",
+      "supports": "Explicit Nintendo/Sega buying, individual items and whole collections, nationwide travel for larger/rarer collections; public email, phone and New Milton address.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "spacebridge-home",
+      "url": "https://www.thespacebridge.co.uk/",
+      "supports": "Current open New Milton shop and public contact.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "geeky-home",
+      "url": "https://www.geeky-blinders.co.uk/",
+      "supports": "Independent shop, buying/selling/trading retro/modern games and consoles; named stocked formats and Super Games World footer alias.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "geeky-contact",
+      "url": "https://www.geeky-blinders.co.uk/contact-us",
+      "supports": "Current Havant address and geeky-blinders@outlook.com.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "8bit-trade",
+      "url": "https://www.8bitbeyond.com/pages/games-trade-in",
+      "supports": "Buys vintage games/consoles by photo valuation; distinguishes working condition, completeness, original boxes/manuals and cartridge save batteries.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "8bit-contact",
+      "url": "https://www.8bitbeyond.com/pages/contact-us",
+      "supports": "Published info@8bitbeyond.com, telephone and Cardiff address.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "flashback-contact",
+      "url": "https://flashbackretro.co.uk/contact-flashback-retro-rotherham/",
+      "supports": "Primary indexed contact page: individual games through complete collections, info@flashbackretro.co.uk,07542899495 and Rotherham address. Direct fetch timed out.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website",
+      "retrieval": "Official indexed text retrieved 13 October 2026; direct-fetch failure retained."
+    },
+    {
+      "id": "flashback-shop",
+      "url": "https://flashbackretro.co.uk/shop/",
+      "supports": "Current primary indexed shop: Nintendo/Sega/PlayStation games, consoles and accessories.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website",
+      "retrieval": "Official indexed text retrieved 13 October 2026; direct-fetch failure retained."
+    },
+    {
+      "id": "gamers-home",
+      "url": "https://gamersattic.co.uk/",
+      "supports": "Current primary indexed homepage: buying/selling and trade enquiries at info@gamersattic.co.uk; two brothers continuing their father’s interest. Direct fetch unavailable.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website",
+      "retrieval": "Official indexed text retrieved 13 October 2026; direct-fetch failure retained."
+    },
+    {
+      "id": "retroelectro-buy",
+      "url": "https://retroelectro.co.uk/sell-my-video-games-consoles/",
+      "supports": "UK-wide collection buying, original games/consoles/computers, valuation from photos/known faults, including Japanese hardware.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "retroelectro-about",
+      "url": "https://retroelectro.co.uk/about/",
+      "supports": "Founders Jason and Jools; small independent buyer/reseller; condition, rarity, demand and processing effort inform valuation.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "retroelectro-contact",
+      "url": "https://retroelectro.co.uk/contact/",
+      "supports": "Business phone 07590 387918 and a protected email link.",
+      "checked_date": "2026-10-13",
+      "type": "First-party website"
+    },
+    {
+      "id": "hiddenchest-current",
+      "url": "https://www.hiddenchest.co.uk/",
+      "type": "First-party retailer",
+      "retrieved_date": "2026-10-13",
+      "supports": "Independent shop, named console specialist/contact, current address and hardware range."
+    },
+    {
+      "id": "retrogear-buying",
+      "url": "https://retrogear.co.uk/",
+      "type": "First-party linked retailer brand",
+      "retrieved_date": "2026-10-13",
+      "supports": "Hidden Chest affiliation, explicit collection buying, browse-only site and older location copy."
+    },
+    {
+      "id": "retroworld-trade",
+      "url": "https://retroworlds.uk/trade",
+      "type": "First-party retailer",
+      "retrieved_date": "2026-10-13",
+      "supports": "Buying/trading workflow, collection, tested controllers, shop address and published business contact."
+    },
+    {
+      "id": "retroworld-pal",
+      "url": "https://retroworlds.uk/super-mario-kart-pal-version-for-super-nintendo",
+      "type": "First-party catalogue",
+      "retrieved_date": "2026-10-13",
+      "supports": "PAL and boxed composition, observed out-of-stock status."
+    },
+    {
+      "id": "retroworld-import",
+      "url": "https://retroworlds.uk/boxed-sega-saturn-console-le-derby-stallion-japan-import",
+      "type": "First-party catalogue",
+      "retrieved_date": "2026-10-13",
+      "supports": "Japanese import, bundle contents, item-specific power requirement, observed out-of-stock status."
+    },
+    {
+      "id": "retroworld-ownership",
+      "url": "https://retroworlds.uk/privacy-policy",
+      "type": "First-party policy",
+      "retrieved_date": "2026-10-13",
+      "supports": "Site identifies Retro World as owner; its text spells the domain differently, so current contact/trade source governs canonical retroworlds.uk."
+    },
+    {
+      "id": "buyhub-current",
+      "url": "https://buyhub.app/en",
+      "type": "First-party product",
+      "retrieved_date": "2026-10-13",
+      "supports": "Saved searches, Radar, multi-term search, country/condition filters and auction alarms."
+    },
+    {
+      "id": "buyhub-terms",
+      "url": "https://buyhub.app/en/terms",
+      "type": "First-party product terms",
+      "retrieved_date": "2026-10-13",
+      "published_date": "2026-10-13",
+      "supports": "Current plan/marketplace boundaries and buyer responsibility for item/transaction checks; no plan entitlement is promised in the retailer opening."
+    }
+  ],
+  "excluded": [
+    {
+      "company": "Console Passion",
+      "reason": "Current FAQ says temporarily closed, no orders or replies while moving."
+    },
+    {
+      "company": "ConsoleMAD",
+      "reason": "Home hobby-store candidate with buying pause context; stronger complete business routes selected."
+    }
+  ],
+  "terms": {
+    "sample_count": 1,
+    "paid_count": 5,
+    "reserve_count": 2,
+    "price_usd": 20,
+    "replacement": "One correction or replacement within seven days for a duplicate, existing customer, dead published contact or clear mismatch."
+  }
+}
