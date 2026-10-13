@@ -54,11 +54,19 @@ export function attachParameterCaseConsole(host) {
     node.hidden = !error; node.textContent = error?.message || String(error || '');
   }
 
-  function reset(nextAttempt = attemptId, nextStream = stream) {
+  function restart({nextAttempt = attemptId, nextStream = stream, nextOffset = offset,
+                    clearLog = false} = {}) {
     generation++; request?.abort(); request = null; clearTimeout(timer); busy = false;
-    attemptId = nextAttempt; stream = nextStream; offset = null; expectedAttempt = '';
-    if (current()) panel.querySelector('[data-case-log]').textContent = '';
+    attemptId = nextAttempt; stream = nextStream; offset = nextOffset;
+    if (clearLog) {
+      expectedAttempt = '';
+      if (current()) panel.querySelector('[data-case-log]').textContent = '';
+    }
     return update();
+  }
+
+  function reset(nextAttempt = attemptId, nextStream = stream) {
+    return restart({nextAttempt, nextStream, nextOffset: null, clearLog: true});
   }
 
   function paint(value) {
@@ -189,10 +197,10 @@ export function attachParameterCaseConsole(host) {
     if (name === 'attempt') return reset(node.dataset.attemptId, 'native');
     if (name === 'latest') return reset('', 'native');
     if (name === 'refresh') return update();
-    if (name === 'start') { offset = 0; panel.querySelector('[data-case-log]').textContent = ''; return update(); }
+    if (name === 'start') return restart({nextOffset: 0, clearLog: true});
     if (name === 'previous' || name === 'next') {
       historyOffset = Math.max(0, historyOffset + (name === 'previous' ? -25 : 25));
-      return update();
+      return restart();
     }
     if (name === 'native') { const id = runId; detach(); return host.openItem('runs', id); }
     if (name === 'task') { const id = node.dataset.taskId; detach(); return host.openItem('tasks', id); }
