@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
 import time
@@ -15,7 +16,7 @@ import uuid
 
 from .analysis_workbooks import WorkbookDelivery
 from .errors import StateError
-from .storage import digest, parse, private_directory, read, write
+from .storage import digest, lock, parse, private_directory, read, write
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -147,6 +148,75 @@ class WorkspaceWorkbookClient:
         saved = self.call("/api/workbooks/" + request["definition"]["name"] + "/refresh", request)
         return self._complete_delivery(saved, intent, operation, wait_seconds=wait_seconds)
 
+
+    def retry_build(self, operation, request_id, *, failed_job_id=None, wait_seconds=300):
+        """Continue a reviewed delivery with an explicit, retained build attempt.
+
+        The source definition and original save/refresh request stay unchanged.
+        Reuse request_id after a lost reply; use a new ID only for a new explicit
+        retry of a terminal attempt. Completed or active parents are continued.
+        """
+        if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise StateError("ANALYSIS_WORKBOOK_RETRY_ID_REQUIRED")
+        operation = private_directory(Path(operation), create=False)
+        with lock(operation):
+            original_raw = read(operation / "intent.json", 4 * 1024 * 1024)
+            original = parse(original_raw)
+            if (original.get("schema") not in {
+                    "stellar-forge.workbook-client-operation.v1",
+                    "stellar-forge.workbook-refresh-client-operation.v1"}
+                    or original.get("database") != str(self.database)):
+                raise StateError("ANALYSIS_WORKBOOK_OPERATION_REUSED")
+            self.workspace_id = original["workspace_id"]
+            build_raw = read(operation / "build-request.json", 64 * 1024)
+            build = parse(build_raw)
+            if build.get("id") != original["build_id"]:
+                raise StateError("ANALYSIS_WORKBOOK_BUILD_REQUEST_CHANGED")
+            saved = {key: build[key] for key in ("name", "revision", "definition_sha256")}
+            parent_id = failed_job_id or original["build_id"]
+            if (not isinstance(parent_id, str) or not re.fullmatch(r"[a-f0-9]{32}", parent_id)
+                    or request_id in {parent_id, original["build_id"]}):
+                raise StateError("ANALYSIS_WORKBOOK_RETRY_ID_REQUIRED")
+            attempts = private_directory(operation / "build-attempts")
+            parent_directory = operation if parent_id == original["build_id"] else attempts / parent_id
+            if parent_id != original["build_id"]:
+                parent_intent = parse(read(parent_directory / "intent.json", 64 * 1024))
+                if (parent_intent.get("original_intent_sha256") != digest(original_raw)
+                        or parent_intent.get("original_build_sha256") != digest(build_raw)
+                        or parent_intent.get("build_id") != parent_id):
+                    raise StateError("ANALYSIS_WORKBOOK_RETRY_PARENT_CHANGED")
+            target = private_directory(attempts / request_id)
+            intent_path = target / "intent.json"
+            intent = {
+                "schema": "stellar-forge.workbook-build-retry.v1",
+                "database": str(self.database), "workspace_id": self.workspace_id,
+                "original_intent_sha256": digest(original_raw),
+                "original_build_sha256": digest(build_raw),
+                "original_job_id": original["build_id"], "parent_job_id": parent_id,
+                "build_id": request_id, "definition": saved,
+            }
+            if intent_path.exists():
+                if parse(read(intent_path, 64 * 1024)) != intent:
+                    raise StateError("ANALYSIS_WORKBOOK_RETRY_ID_REUSED")
+            else:
+                parent = self.call("/api/jobs/" + parent_id)
+                if (parent.get("kind") != "workbook"
+                        or parent.get("request") != {"id": parent_id, **saved}):
+                    raise StateError("ANALYSIS_WORKBOOK_RETRY_PARENT_CHANGED")
+                if parent["status"] in {"RUNNING", "COMPLETE"}:
+                    return self._complete_delivery(saved, {"build_id": parent_id},
+                                                   parent_directory, wait_seconds=wait_seconds)
+                if parent["status"] not in {"INTERRUPTED", "FAILED", "CANCELLED"}:
+                    raise StateError("ANALYSIS_WORKBOOK_TERMINAL_BUILD_REQUIRED")
+                # Keep the exact previous outcome beside the successor's intent.
+                write(target / "previous-job.json",
+                      json.dumps(parent, ensure_ascii=False, allow_nan=False, indent=2).encode())
+                write(intent_path,
+                      json.dumps(intent, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode(),
+                      exclusive=True)
+            result = self._complete_delivery(saved, intent, target, wait_seconds=wait_seconds)
+            return {**result, "source_operation": str(operation), "retry_of": parent_id}
+
     def _complete_delivery(self, saved, intent, operation, *, wait_seconds):
         definition = self.call(f"/api/workbooks/{saved['name']}?revision={saved['revision']}")
         if saved["definition_sha256"] != definition["definition_sha256"]:
@@ -185,17 +255,25 @@ def main():
     inputs = parser.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--recipe", help="Private JSON workbook definition with expected_revision")
     inputs.add_argument("--refresh-recipe", help="Reviewed successor definition with base revision, digest and edition note")
+    inputs.add_argument("--retry-build", metavar="REQUEST_ID", help="Explicit retry of the same saved workbook; reuse this 32-character lowercase hex ID after interruption")
+    parser.add_argument("--failed-job", help="Prior retry build ID; defaults to the original operation build")
     parser.add_argument("--operation", required=True, help="Private durable request and receiving directory; reuse it to reconnect")
     parser.add_argument("--wait-seconds", type=int, default=300)
     args = parser.parse_args()
     if args.wait_seconds < 0:
         parser.error("--wait-seconds must be nonnegative")
-    recipe = parse(read(Path(args.recipe or args.refresh_recipe), 1024 * 1024))
-    if not isinstance(recipe, dict):
-        parser.error("the recipe must be a JSON object")
+    if args.failed_job and not args.retry_build:
+        parser.error("--failed-job requires --retry-build")
     client = WorkspaceWorkbookClient(args.database)
-    deliver = client.refresh if args.refresh_recipe else client.deliver
-    result = deliver(recipe, args.operation, wait_seconds=args.wait_seconds)
+    if args.retry_build:
+        result = client.retry_build(args.operation, args.retry_build,
+                                    failed_job_id=args.failed_job, wait_seconds=args.wait_seconds)
+    else:
+        recipe = parse(read(Path(args.recipe or args.refresh_recipe), 1024 * 1024))
+        if not isinstance(recipe, dict):
+            parser.error("the recipe must be a JSON object")
+        deliver = client.refresh if args.refresh_recipe else client.deliver
+        result = deliver(recipe, args.operation, wait_seconds=args.wait_seconds)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")))
 
 
