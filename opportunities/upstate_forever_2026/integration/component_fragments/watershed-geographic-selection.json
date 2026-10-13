@@ -7,7 +7,8 @@
         "model/watershed_map_context.py",
         "operator/web/water_context_map.mjs",
         "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
-        "integration/component_fragments/watershed-geographic-selection.json"
+        "integration/component_fragments/watershed-geographic-selection.json",
+        "source_tools/prepare_watershed_map_context.py"
       ],
       "source_manifests": [
         "observations/watershed_profile_overlay_20261013/model-sources.json"

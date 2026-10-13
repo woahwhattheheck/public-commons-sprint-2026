@@ -57,6 +57,7 @@ FILES = (
     "operator/WATERSHED_CONTEXT.md",
 )
 OPTIONAL = (
+    "source_tools/prepare_watershed_map_context.py",
     "integration/run_watershed_context_operator.py",
     "integration/component_fragments/watershed-observation-exports.json",
     "integration/component_fragments/watershed-geographic-selection.json",

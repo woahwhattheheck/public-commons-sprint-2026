@@ -108,6 +108,72 @@ Use the maintained [regional delivery workflow](model/REGIONAL_DELIVERY.md) to a
 
 The prime can retrieve the original inputs, inspect the saved method choices, compare the selected scenarios and open the same release on the receiving host. That complete operating handoff is the acceptance outcome for the engineering workshare.
 
+## Regional evidence available for the workshare
+
+The current Upper Savannah source release gives the prime a concrete starting
+point for its source and scenario review. It joins the original 217 watershed
+polygons, the original drainage network, paired 2023/2025 Annual NLCD
+classifications and retained assessment/flow-station locations. The
+[regional evidence section](RFP_RESPONSE_MAP.md#current-regional-evidence-and-geographic-review)
+records the quantities, geographic bases and complete source paths.
+
+Across 1,885,457.43 hectares of original raster support, 98,015.67 hectares
+changed annual land-cover class. Each watershed retains its complete
+class-pair matrix and eight land-cover group balances. Gross gains and losses
+remain visible beside net change. The observation inventory retains 87
+draft-2026 assessment station identities in 49 watersheds and 22 observed-flow
+gauge identities in 21 watersheds. The prime can examine local station
+membership and the original measurement/catchment context while selecting
+appropriate observations for the production models.
+
+The two utilities have concrete, separately retained planning selections:
+
+| Utility | Appendix anchors | Distinct contributing union | Useful source-review comparison |
+| --- | --- | --- | --- |
+| ARJWS | Upper and Lower Six and Twenty Creek; 2 HUC12s, 18,911.97 ha of raster support | 4 HUC12s, 42,799.77 ha | Developed net change is +170.37 ha in the anchors and +288.54 ha in their contributing union; forest net change is −172.53 ha and −335.34 ha respectively. |
+| PRWD | Choestoea Creek and Lower Tugaloo River; 2 HUC12s, 34,096.23 ha of raster support | 32 HUC12s, 256,297.14 ha | Developed net change is +80.91 ha in the anchors and +322.20 ha in their contributing union; forest net change is −61.20 ha and −313.20 ha respectively. |
+
+Developed covers NLCD classes 21–24, including vegetated developed open
+space; forest covers classes 41–43. The union calculation removes repeated
+upstream watersheds. The source
+explorer, regional table and geographic map let the prime examine the
+individual watershed contributions behind each utility total. Land-cover
+classification changes supply a reproducible source-review question for
+the two proposed alternatives. The original native NDR/SDR programme
+calculates the corresponding nutrient and sediment consequences after the
+prime selects the actual changes, parameter profile and production baseline.
+
+The maintained operator displays all 217 original polygons with their full
+273,049 vertices, 29 numerical attributes, fixed-domain grayscale legends
+and separate selected/upstream outlines. A saved geographic selection
+retains complete GeoJSON, original attributes and the exact source edition.
+The accompanying observed-evidence export includes the selected class/group
+quantities, original local station records and source files. These outputs
+remain editable in the same application and contribute to its maintained
+Scientific Report and complete working archive.
+
+The partner demonstration targets the original Upper Savannah geography,
+a 30 m grid, the upstream model domain, the South Carolina reporting mask
+and utility focus with realistic, explicitly simulated inputs. The maintained
+native course is being bound to those geographic inputs for baseline,
+restoration and matched-control cases. Completed commissioning cases retain
+their own source footprints. This production workflow serves Tim's existing
+scientific practice:
+choose assumptions, compute, inspect differences, revise and hand over an
+editable case. Annual nitrogen/phosphorus kg/year and sediment tonnes/year
+retain their stream-delivery meaning. The presentation uses actual outputs
+and elapsed execution history from the original operation.
+
+Engineering is also completing the original-source
+receiving course: operate the actual populated map and report, inspect the
+exported files, and reopen the transferred project. The same operated
+workflow becomes part of the source/method setup and final receiving
+milestones. Source years, draft assessment status, local point membership
+and whole-HUC planning footprints stay visible during scientific review.
+The agreed production data freeze, 30 m grid, baseline, two alternatives,
+seven map families and proposed commercial terms below govern the
+contracted delivery.
+
 ## Fee and payment milestones
 
 The proposed engineering subcontract is **USD18,600 fixed fee** for the scope above.

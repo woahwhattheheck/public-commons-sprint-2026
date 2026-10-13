@@ -139,6 +139,81 @@ qualified observations and explains the sediment/nutrient pathways relevant
 to bacterial pollution and harmful algal blooms. The engineering workshare
 allocates that source interpretation with the prime and the utility programme.
 
+## Current regional evidence and geographic review
+
+The retained 2023–2025 Annual NLCD comparison covers all 217 original HUC12 watersheds in the retained
+hydrologic domain on the source raster grid. Original cell-centre inclusion assigns
+20,949,527 cells to one watershed each, totaling 1,885,457.43 hectares of
+land-cover support. Of these, 1,089,063 cells changed annual class:
+98,015.67 hectares, or 5.19851%. The complete per-watershed class-pair matrix
+retains the original 16 classes. Eight group summaries preserve gross gain,
+gross loss and net change, including changes that cancel in a net total.
+The area basis is the retained raster support; the NRCS full-watershed and
+state-portion records above keep their separate original quantities.
+
+The joined profile retains 87 draft-2026 assessment station identities in
+49 watersheds and 22 observed-flow gauge identities located in 21 watersheds.
+Five watersheds have both kinds of local source point. Point membership,
+assessment cause, measurement period and original coordinate variants remain
+inspectable. Those location counts describe the retained inventory. Flow
+catchments and the existing annual-load comparison provide the appropriate
+upstream support for model-to-observation interpretation.
+
+The appendix's four focal HUC12s can be reviewed at two useful scales:
+
+| Original selection | HUC12s | Raster support, ha | Changed annual class, % | Developed net change, ha | Forest net change, ha | Assessment / flow identities |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ARJWS: Upper and Lower Six and Twenty anchors | 2 | 18,911.97 | 3.18037 | +170.37 | −172.53 | 2 / 0 |
+| ARJWS: distinct contributing union | 4 | 42,799.77 | 2.97443 | +288.54 | −335.34 | 5 / 0 |
+| PRWD: Choestoea and Lower Tugaloo anchors | 2 | 34,096.23 | 2.87240 | +80.91 | −61.20 | 2 / 0 |
+| PRWD: distinct contributing union | 32 | 256,297.14 | 1.78380 | +322.20 | −313.20 | 16 / 6 |
+
+Developed covers NLCD classes 21–24, including vegetated developed open
+space; forest covers classes 41–43. The developed-class change is interpreted
+with those original class definitions.
+
+These are whole-HUC planning selections derived from the original ToHUC
+network. Each union counts a HUC12 once. Summing the two anchors’ individual upstream
+catchments would repeat 7,740.90 hectares for ARJWS and 9,940.68 hectares for
+PRWD. The selected and contributing tables retain their exact membership,
+all eight land-cover groups and the original local observation identities.
+
+The comparison helps the prime frame source review and scenario choices.
+For example, the two PRWD anchor watersheds contain 277.47 hectares of gross
+forest loss and 216.27 hectares of gross forest gain, producing a much smaller
+net loss of 61.20 hectares. The complete transition matrix identifies the
+source and destination classes behind those quantities. The future-impact
+map families then use explicitly selected alternatives and original native
+NDR/SDR outputs to evaluate pollutant consequences on common support.
+
+The Regional Watersheds desk connects those tables to all 217 original
+polygons, preserving 273,049 vertices and the source EPSG:3857 coordinates.
+It offers 29 numerical attributes, full-domain grayscale legends, native
+attribute inspection, selected and upstream outlines, geographic selection
+and saved export reopening. A geographic export includes the complete
+selected and contributing GeoJSON, the full original map, source geometry,
+profile table, field meanings and maintained rebuild source. Its observed
+evidence export retains the selected profile/group/location tables and all
+original inputs.
+
+The report source combines the regional comparison, local observation
+inventory and both utility scales in the maintained Scientific Report
+workflow. The original-source report has been generated and independently reopened;
+its producer is repairing the actual narrow-screen and PDF presentation.
+The geographic receiving course is preparing the complete original source,
+then operating the populated map at normal and narrow widths, inspecting
+downloads and reopening its working project. Their completed products join
+the same regional delivery and scientific review.
+
+Original source and operating references:
+
+- [217-watershed profiles and complete class/group methods](observations/landcover_observation_profiles_20261013/README.md).
+- [Original polygon overlay and exact rebuild](observations/watershed_profile_overlay_20261013/README.md).
+- [Regional geographic and observed-evidence workflow](operator/WATERSHED_CONTEXT.md).
+- [Original utility focus profile](source/receptor-topology/20261013/utility-focus-profile.json).
+- [Original utility contributing-membership calculations](outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv).
+- [Complete scientific report source manifest](landcover_observation_profiles.report.sources.json).
+
 ## Operating and transferring the project
 
 The original Gura workflow is maintained in
