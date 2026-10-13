@@ -14,6 +14,7 @@ import {createRequestDetail,requestPackage,previewReview,reconcileReview} from '
 import {createHouseholdMCP,PROTOCOL} from './mcp.mjs';
 import {renderWeekReviewPage} from './week-review-page.mjs';
 import {createTariffService} from './tariff-service.mjs';
+import {createEnergyService} from './energy-service.mjs';
 import {inspectTariff,tariffRowsCSV,tariffHTML} from './tariff-source.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const LIMIT=100;
@@ -36,7 +37,7 @@ function acceptsHost(req,boundHost){
 }
 export function start({port=Number(process.env.PORT||'4181'),host=process.env.HOST||'127.0.0.1',
   workspace=process.env.GRIDKIND_WORKSPACE||join(homedir(),'.local','share','gridkind')}={}){
-  const capturedSources=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs','week-review.mjs','week-review-page.mjs','exact-inputs.js','tariff-source.mjs','tariff-service.mjs'].map(name=>[name,readFileSync(join(ROOT,name))]));
+  const capturedSources=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs','week-review.mjs','week-review-page.mjs','exact-inputs.js','tariff-source.mjs','tariff-service.mjs','energy-source.mjs','energy-service.mjs'].map(name=>[name,readFileSync(join(ROOT,name))]));
   const sourcePins=Object.fromEntries(Object.entries(capturedSources).map(([name,bytes])=>[name,createHash('sha256').update(bytes).digest('hex')]));
   const reviewSources=Object.freeze(Object.fromEntries(['engine.mjs','weekly.mjs','exact-inputs.js','week-review.mjs'].map(name=>[name,capturedSources[name].toString('utf8')])));
   const store=openHouseholdWorkspace({directory:workspace,sourcePins});
@@ -205,6 +206,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     return {...result,householdId:live.householdId,state:view(id),replayed:false};
   }
   const tariffs=createTariffService({store,check,view,committed});
+  const energy=createEnergyService({store,check,view,committed});
   function workspaceAction(id,body){
     let live=check(id,body,true);
     if(body.action==='preview-import')return {preview:store.inspectImport(body.bundle)};
@@ -315,9 +317,9 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(!['127.0.0.1','::1','localhost'].includes(host))return respond(res,403,{error:'Assistant access is supported only on the original loopback server.'});
         return await mcp.handle(req,res,{readBody,origin:'http://'+req.headers.host});
       }
-      if(req.method==='GET'&&['/','/week','/tariffs','/tariffs.js','/tariffs.css','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/assistant.js','/style.css'].includes(path)){
-        const file=path==='/'?'index.html':path==='/week'?'week.html':path==='/tariffs'?'tariffs.html':path.slice(1);
-        const mime=path==='/'||path==='/week'||path==='/tariffs'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
+      if(req.method==='GET'&&['/','/week','/energy','/energy.js','/energy.css','/tariffs','/tariffs.js','/tariffs.css','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/assistant.js','/style.css'].includes(path)){
+        const file=path==='/'?'index.html':path==='/week'?'week.html':path==='/tariffs'?'tariffs.html':path==='/energy'?'energy.html':path.slice(1);
+        const mime=path==='/'||path==='/week'||path==='/tariffs'||path==='/energy'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(await readFile(join(ROOT,file)));
       }
@@ -327,6 +329,17 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(path==='/api/assistant'){
           if(!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
           return respond(res,200,assistantView(id,'http://'+req.headers.host+'/mcp'));
+        }
+        if(path==='/api/energy')return respond(res,200,store.catalogue(id,{householdId:url.searchParams.get('householdId')||undefined,kind:url.searchParams.get('kind')||'energy-source',offset:Number(url.searchParams.get('offset')||0)}));
+        if(path==='/api/energy/outcome'){
+          const householdId=url.searchParams.get('householdId'),requestId=url.searchParams.get('requestId');
+          const record=store.energyOutcome(id,householdId,requestId);
+          return respond(res,200,{householdId,requestId,record});
+        }
+        if(path==='/api/energy/export'){
+          const result=energy.exportRecord(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('recordId'),url.searchParams.get('format'));
+          res.writeHead(200,{'content-type':result.mime+'; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-disposition':'attachment; filename="gridkind-energy-'+url.searchParams.get('recordId')+'.'+result.suffix+'"'});
+          return res.end(result.text);
         }
         if(path==='/api/tariffs')return respond(res,200,store.catalogue(id,{householdId:url.searchParams.get('householdId')||undefined,kind:url.searchParams.get('kind')||'tariff',offset:Number(url.searchParams.get('offset')||0)}));
         if(path==='/api/tariffs/export'){
@@ -376,19 +389,19 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
           return respond(res,200,bundle,{'content-disposition':`attachment; filename="gridkind-household-${bundle.payload.household.id.slice(0,8)}.json"`});
         }
       }
-      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review','/api/assistant','/api/tariffs'].includes(path))return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review','/api/assistant','/api/tariffs','/api/energy'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
       if(path==='/api/assistant'&&!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
-      const body=await readBody(req,path==='/api/tariffs'?8*1024*1024:path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
+      const body=await readBody(req,(path==='/api/tariffs'||path==='/api/energy')?8*1024*1024:path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
       // Resolve current selection after the complete request is read. Every UI
       // mutation carries its saved revision, active household and live generation.
-      const result=path==='/api/tariffs'?tariffs.action(id,body):path==='/api/assistant'?assistantAction(id,body):path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
+      const result=path==='/api/energy'?energy.action(id,body):path==='/api/tariffs'?tariffs.action(id,body):path==='/api/assistant'?assistantAction(id,body):path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
       return respond(res,200,result);
     }catch(error){
       const status=error instanceof WorkspaceError?error.status:([400,401,403,404,409,413].includes(error.status)?error.status:400);
       let state;
       if(status===409&&id){try{state=view(id);}catch{}}
-      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{}),...(error?.tariffOutcome?{tariffOutcome:error.tariffOutcome}:{})});
+      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{}),...(error?.tariffOutcome?{tariffOutcome:error.tariffOutcome}:{}),...(error?.energyOutcome?{energyOutcome:error.energyOutcome}:{})});
     }
   });
   server.once('close',()=>{mcp.close();clients.clear();store.close();});

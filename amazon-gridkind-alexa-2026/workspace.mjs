@@ -7,9 +7,10 @@ import {inspectWeek} from './weekly.mjs';
 import {createAssistantAccess} from './assistant-access.mjs';
 import {inspectRequestRecord,resolveReviewInput} from './week-review.mjs';
 import {inspectTariff,tariffWeekPreview} from './tariff-source.mjs';
+import {inspectEnergySource,inspectEnergyReview,energySourceFields} from './energy-source.mjs';
 
 const FORMAT='gridkind-household/v1';
-const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week','week-request','week-return','tariff','tariff-application']);
+const KINDS=new Set(['scenario','plan','approval','execution','cancel','comparison','restore','week','week-request','week-return','tariff','tariff-application','energy-source','energy-review']);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const clone=value=>structuredClone(value);
 function stable(value){
@@ -106,9 +107,15 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     requireValue(children.length===1,'The saved tariff application is incomplete.',409);
     return {requestRecord,record:record(owner,householdId,children[0].id)};
   }
+  function energyOutcome(owner,householdId,requestId){
+    household(owner,householdId);requireValue(UUID.test(requestId),'Invalid energy request identity.');
+    const rows=db.prepare("SELECT id FROM records WHERE household_id=? AND json_extract(data_json,'$.kind') IN ('energy-source','energy-review') AND json_extract(data_json,'$.detail.requestId')=?").all(householdId,requestId);
+    requireValue(rows.length<=1,'Conflicting saved energy outcomes.',409);
+    return rows.length?record(owner,householdId,rows[0].id):null;
+  }
   function catalogue(owner,{householdId=visitor(owner).selected_id,kind,offset=0,limit=50}={}){
     household(owner,householdId);
-    requireValue(['tariff','week'].includes(kind)&&Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=100,'Invalid tariff catalogue page.');
+    requireValue(['tariff','week','energy-source','energy-review'].includes(kind)&&Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=100,'Invalid tariff catalogue page.');
     const total=Number(db.prepare("SELECT COUNT(*) AS n FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')=?").get(householdId,kind).n);
     const rows=db.prepare("SELECT data_json,sha256 FROM records WHERE household_id=? AND json_extract(data_json,'$.kind')=? ORDER BY sequence DESC LIMIT ? OFFSET ?").all(householdId,kind,limit,offset);
     return {householdId,kind,offset,limit,total,hasMore:offset+rows.length<total,records:rows.map(r=>{
@@ -179,6 +186,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         readRecord:recordId=>record(id,selectedId,recordId),
         reviewOutcome:(requestId,responseId)=>weekReviewOutcome(id,selectedId,requestId,responseId),
         tariffOutcome:requestId=>tariffOutcome(id,selectedId,requestId),
+        energyOutcome:requestId=>energyOutcome(id,selectedId,requestId),
         setScenario:scenario=>db.prepare('UPDATE households SET scenario_json=? WHERE id=?').run(JSON.stringify(inputs(scenario)),selectedId),
         create:(name,scenario)=>{selectedId=create(id,name,scenario);return selectedId;},
         select:householdId=>{household(id,householdId);selectedId=householdId;db.prepare('UPDATE visitors SET selected_id=? WHERE id=?').run(householdId,id);},
@@ -206,7 +214,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     assistant.inspectRecords(bundle.payload.assistantRequests??[]);
     requireValue(home&&UUID.test(home.id)&&Array.isArray(records)&&records.length>0&&records.length<=5000,'Invalid household history.');
     label(home.name);inputs(home.scenario);
-    const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set(),tariffRequests=new Set(),tariffOutcomes=new Map();let sequence=0;
+    const ids=new Set(),known=new Map(),reviewOutcomes=new Map(),responseKeys=new Set(),tariffRequests=new Set(),tariffOutcomes=new Map(),energyRequests=new Set();let sequence=0;
     for(const row of records){
       const {sha256,...data}=row??{};
       requireValue(UUID.test(data.id)&&!ids.has(data.id)&&Number.isSafeInteger(data.sequence)&&data.sequence>sequence&&KINDS.has(data.kind),'Invalid saved record order or identity.');
@@ -238,6 +246,20 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
         requireValue(preview.complete&&detail.previewSha256===preview.sha256&&digest(detail.selectedRows)===digest(preview.selectedRows),'Tariff application source rows changed.');
         requireValue(detail.requestSha256===digest({action:'apply',tariffId:tariff.id,targetId:target.id,previewSha256:preview.sha256}),'The tariff application request changed.');
         tariffOutcomes.set(data.id,{child:null,input:preview.input,binding:{applicationId:data.id,applicationSha256:sha256,tariffId:tariff.id,tariffSha256:tariff.sha256,targetId:target.id,targetSha256:target.sha256}});
+      }
+      if(['energy-source','energy-review'].includes(data.kind)){
+        const d=data.detail;
+        requireValue(data.state===null&&UUID.test(d?.requestId)&&/^[a-f0-9]{64}$/.test(d?.requestSha256)&&!energyRequests.has(d.requestId),'Invalid or duplicate energy request.');
+        energyRequests.add(d.requestId);
+        if(data.kind==='energy-source'){
+          inspectEnergySource(d.edition);
+          requireValue(data.parentId===null&&d.requestSha256===digest({action:'save-source',source:energySourceFields(d.edition),previewSha256:d.edition.sha256}),'Energy request no longer binds its exact source.');
+        }else{
+          const b=d.review?.binding,source=known.get(b?.sourceId),week=known.get(b?.weekId);
+          requireValue(source?.kind==='energy-source'&&week?.kind==='week'&&data.parentId===source.id,'Missing earlier energy source or weekly plan.');
+          inspectEnergyReview(d.review,source,week);
+          requireValue(d.requestSha256===digest({action:'save-review',sourceId:source.id,weekId:week.id,title:d.review.title,note:d.review.note,previewSha256:d.review.sha256}),'Energy review request changed.');
+        }
       }
       if(data.kind==='comparison')requireValue(data.detail?.report?.schema==='gridkind-rate-robustness-v1'&&Array.isArray(data.detail.report.alternatives),'Invalid saved tariff comparison.');
       if(data.kind==='week'){
@@ -285,7 +307,7 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     }
     requireValue([...tariffOutcomes.values()].every(outcome=>outcome.child),'A tariff application is missing its atomically saved week.');
     requireValue([...reviewOutcomes.values()].every(outcome=>outcome.child),'A returned review is missing its atomically saved weekly result.');
-    return {name:home.name,records:records.length,tariffSources:records.filter(r=>r.kind==='tariff').length,tariffApplications:records.filter(r=>r.kind==='tariff-application').length,weekRequests:records.filter(r=>r.kind==='week-request').length,weekReturns:records.filter(r=>r.kind==='week-return').length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
+    return {name:home.name,records:records.length,energySources:records.filter(r=>r.kind==='energy-source').length,energyReviews:records.filter(r=>r.kind==='energy-review').length,tariffSources:records.filter(r=>r.kind==='tariff').length,tariffApplications:records.filter(r=>r.kind==='tariff-application').length,weekRequests:records.filter(r=>r.kind==='week-request').length,weekReturns:records.filter(r=>r.kind==='week-return').length,plans:records.filter(r=>r.kind==='plan').length,comparisons:records.filter(r=>r.kind==='comparison').length,weeks:records.filter(r=>r.kind==='week').length,sourceId:home.id,sha256:bundle.sha256};
   }
   function importHousehold(id,expected,bundle,name){
     const preview=inspectImport(bundle);
@@ -300,5 +322,5 @@ export function openHouseholdWorkspace({directory,sourcePins={}}){
     });
   }
   function close(){if(!closed){db.close();closed=true;}}
-  return {directory:root,assistant,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,tariffOutcome,catalogue,exportHousehold,inspectImport,importHousehold,close};
+  return {directory:root,assistant,ensure,current,view,record,history,mutate,assertRevision,weekReviewOutcome,tariffOutcome,energyOutcome,catalogue,exportHousehold,inspectImport,importHousehold,close};
 }

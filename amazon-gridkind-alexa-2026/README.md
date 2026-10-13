@@ -112,3 +112,10 @@ The original local application now exposes a household-bound MCP2025-11-25 Strea
 ## Original hourly tariff sources
 
 Open **Hourly tariff sources** from the household week planner to receive an original UTF-8 CSV, inspect mapped dates/hours/units and coverage, save an immutable source, and deliberately apply its exact168 hourly values to a saved week. Existing load constraints, historical weeks and daily fresh approval remain intact. Source CSV/JSON, complete row CSV, readable HTML and household restore preserve the original source and application links. See [TARIFF_SOURCES.md](TARIFF_SOURCES.md) for the complete operator/API/receiving workflow and explicit nominal-clock, 0–10 USD/kWh and source-size limits. The included example is authored solely from GridKind's original DEMO prices.
+
+
+## Measured interval-energy review
+
+Open **Measured energy** in the original household app. The workspace retains the exact interval CSV, explicit meter boundary, source mapping and all row diagnostics. An energy review binds that saved source to one immutable weekly plan, reports complete hourly coverage and energy-only price comparisons, and exports the original rows, readable report and complete household recovery file. Whole-household readings remain separate from flexible-load modeled values.
+
+[ENERGY_REVIEW.md](ENERGY_REVIEW.md) documents timestamp/DST and overlap behavior, source attribution, original-request CLI, real-input browser and cold receiving chapter, and exact complete artifacts. The chapter borrows the existing operator's author/receiver pages; it launches no browser, server, solver or new queue.
