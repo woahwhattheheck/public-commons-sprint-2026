@@ -6,7 +6,8 @@
   "order": 59,
   "assets": [
     "observation_comparability.mjs",
-    "observation_comparability.css"
+    "observation_comparability.css",
+    "comparability_received_studies.mjs"
   ],
   "backend": {
     "module": "observation_comparability_operator",

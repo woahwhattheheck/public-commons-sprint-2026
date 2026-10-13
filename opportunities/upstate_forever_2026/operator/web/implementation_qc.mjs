@@ -48,7 +48,7 @@ export class SampleQCEditor{
   }finally{this.controllers.delete(c);}
  }
  async start(){const r=await this.request('/api/implementation-qc/records',{plan_id:this.plan.id,revision:this.plan.revision});if(r.workspace_key!==this.workspace||r.plan_id!==this.plan.id||r.revision!==this.plan.revision)throw Error('The native result belongs to another plan.');this.records=r.records;this.reviews=r.reviews;this.render();if(this.followReport)await this.followOpen(this.followReport);if(this.pending?.id)await this.poll();else if(!this.follow&&this.savedReport)await this.inspect(this.savedReport);}
- close(){this.persist();this.closed=true;clearTimeout(this.timer);for(const c of this.controllers)c.abort();this.controllers.clear();this.node.close();this.node.remove();if(this.wb.qcEditor===this)this.wb.qcEditor=null;}
+ close(){this.comparisonEditor?.close();this.persist();this.closed=true;clearTimeout(this.timer);for(const c of this.controllers)c.abort();this.controllers.clear();this.node.close();this.node.remove();if(this.wb.qcEditor===this)this.wb.qcEditor=null;}
  changed(e){
   const el=e.target;if(this.followChanged(el))return;if(el.dataset.role){const s=el.dataset.role==='control'?this.selected:this.associated;el.checked?s.add(el.value):s.delete(el.value);this.persist();this.counts();return;}
   if(el.name==='filter'){this.filter=el.value;this.page=0;this.renderRecords();return;}
@@ -77,7 +77,7 @@ export class SampleQCEditor{
    '<h3>Complete selected review · '+s.groups.length+' groups</h3><div class="qc-table"><table><thead><tr><th>Group</th><th>Relationship</th><th>Original IDs</th><th>Criterion</th><th>Edit</th></tr></thead><tbody>'+s.groups.map((g,i)=>'<tr><td>'+esc(g.id)+'</td><td>'+esc(g.relationship)+'</td><td>'+esc(g.observation_ids.join(', '))+'</td><td>'+esc(g.criterion?LABEL[g.criterion.metric]+' ≤ '+g.criterion.maximum:'Descriptive')+'</td><td>'+button('edit','Edit','data-index="'+i+'"')+' '+button('remove','Remove','data-index="'+i+'"')+'</td></tr>').join('')+'</tbody></table></div>'+
    '<div class="qc-actions">'+button('preview','Calculate review',this.busy?'disabled':'')+button('save','Save complete native review',this.busy||p?'disabled':'')+button('export-selection','Export selection JSON')+button('import-selection','Open selection JSON')+'</div>'+
    (p?'<section class="qc-notice"><p>Original '+esc(p.action)+' operation '+esc(p.id||p.operation_id)+' · '+esc(p.state||'awaiting response')+'</p><div class="qc-actions">'+(!p.id?button('retry','Recover original submit'):button('task','Open native task')+button('recover','Refresh original task'))+(p.state==='interrupted'?button('resume','Resume original task'):'')+(p.state==='failed'?button('clear-pending','Retain failed request and start a new operation'):'')+'</div></section>':'')+
-   this.resultHtml()+'<h3>Saved reviews in this original plan</h3><div class="qc-actions">'+button('refresh','Refresh saved reviews')+'</div><div class="qc-table"><table><thead><tr><th>Title</th><th>Revision / date</th><th>Reviewer</th><th>Open</th></tr></thead><tbody>'+this.reviews.map(r=>'<tr><td>'+esc(r.title)+'</td><td>'+r.revision+' · '+esc(r.as_of)+'</td><td>'+esc(r.reviewer)+'</td><td>'+button('open-review','Open exact review','data-report="'+esc(r.report_id)+'"')+'</td></tr>').join('')+'</tbody></table></div><input hidden type="file" accept=".json,application/json" data-qc-file></main>';
+   this.resultHtml()+'<h3>Saved reviews in this original plan</h3><div class="qc-actions">'+button('refresh','Refresh saved reviews')+button('compare-reviews','Compare saved QC reviews')+'</div><div class="qc-table"><table><thead><tr><th>Title</th><th>Revision / date</th><th>Reviewer</th><th>Open</th></tr></thead><tbody>'+this.reviews.map(r=>'<tr><td>'+esc(r.title)+'</td><td>'+r.revision+' · '+esc(r.as_of)+'</td><td>'+esc(r.reviewer)+'</td><td>'+button('open-review','Open exact review','data-report="'+esc(r.report_id)+'"')+'</td></tr>').join('')+'</tbody></table></div><input hidden type="file" accept=".json,application/json" data-qc-file></main>';
   this.renderRecords();this.node.querySelector('[data-qc-file]').addEventListener('change',e=>this.receiveFile(e.target.files?.[0]).catch(x=>this.fail(x)));
  }
 
@@ -295,6 +295,7 @@ export class SampleQCEditor{
  async action(b){
   const a=b.dataset.qc;
   if(a.startsWith('follow-'))return this.followAction(b);
+  if(a==='compare-reviews'){const module=await import('./implementation_qc_comparison.mjs');if(!this.alive())return;this.persist();this.comparisonEditor?.close();await module.openQCComparison(this);return;}
   if(a==='close'){this.close();return;}
   if(a==='prev'||a==='next'){this.page+=a==='prev'?-1:1;this.renderRecords();return;}
   if(a==='result-prev'||a==='result-next'){this.rowPage+=a==='result-prev'?-1:1;this.render();return;}

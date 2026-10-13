@@ -1,0 +1,162 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile 2023 trace metals — selected original observations",
+  "entries": [
+    {
+      "id": "eighteenmile-trace-metals-061bcd7ad5d40ced49cb",
+      "title": "Eighteenmile 2023 trace metals — selected original observations",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "path": "report.json",
+      "sha256": "a3f182e568354141027504498346f032de6e870678905705934457a9d8cfc3e1",
+      "uri": "urn:upstate:eighteenmile-trace-metals:061bcd7ad5d40ced49cb5ab787a6a23864ec3312889a11dc2b7c1d2fee2c29fe",
+      "vintage": "Original 2023 observations; retained source edition 2026-10-13",
+      "companions": [
+        {
+          "path": "README.md",
+          "sha256": "80f368ff6aca01aa29be20b9ff8b7eec6c117a5cc9a2b011037536333d06fb7b"
+        },
+        {
+          "path": "analysis_core.mjs",
+          "sha256": "d224064693fff07defebeabfc8b898cc17192c93753fcf083dae38faf0c06d7b"
+        },
+        {
+          "path": "build.mjs",
+          "sha256": "b9d499596ed1e5e9d683c9b1a02ea32b8df7263d0ea0689001774650e2432cd8"
+        },
+        {
+          "path": "explorer.css",
+          "sha256": "4cb8299aaff8f54ba320e3048b034ccb5f345b75bd4197da6e1c413dde15a312"
+        },
+        {
+          "path": "explorer.mjs",
+          "sha256": "7aff2700f83bf41497314af5addf8b30ad5f2ec1ba85d191239f5285391c87a6"
+        },
+        {
+          "path": "explorer_template.mjs",
+          "sha256": "ee8dc64d4abc344c490c4cc0d32f03accebe0af944672a3da21443f94cb261b4"
+        },
+        {
+          "path": "figure-spec.json",
+          "sha256": "202b63f6c669d46adb94e847db33334d2e0d5ec8398e29d01a934b021cefd972"
+        },
+        {
+          "path": "figures/trace-cadmium.svg",
+          "sha256": "68474a331be351bbe058a21dd6a46c12a0de7ee6529cd3f2e35d89a76c168ed6"
+        },
+        {
+          "path": "figures/trace-chromium.svg",
+          "sha256": "4ce718bde252b762fe572bc8e6e55ca336e5420d5106af438a11e2cf337a3d2b"
+        },
+        {
+          "path": "figures/trace-copper.svg",
+          "sha256": "71fe2ec88807ad97ac00bd30762831c6bf7a49b9b322f242db0374fe038ea6cd"
+        },
+        {
+          "path": "figures/trace-iron.svg",
+          "sha256": "a6094232606f792b9204f72354a1c0ca5e78c5039afd8418bf3c0e6ce6fe213e"
+        },
+        {
+          "path": "figures/trace-lead.svg",
+          "sha256": "bf27dc07d3b80525ca393dd26e55b0a8df4323ba6f48c6c5b8079abd432f23ff"
+        },
+        {
+          "path": "figures/trace-manganese.svg",
+          "sha256": "370d3ff9b9fb42edfbc84893ded0eb3e38d5d49b4b1d7ff97eabc453ca06a777"
+        },
+        {
+          "path": "figures/trace-mercury.svg",
+          "sha256": "d9e45ee9cc09376e6a4d9e7e2360eb079d02bafe20477901382f01b0ef3f71fa"
+        },
+        {
+          "path": "figures/trace-nickel.svg",
+          "sha256": "f381a6409e983ea1e70eb5c7eb7c9df8d439698ac885580787112435080f3802"
+        },
+        {
+          "path": "figures/trace-zinc.svg",
+          "sha256": "8e22b8574e12364d07ff6ee523c835e3028f48577d4c945363a4cb959307a0ec"
+        },
+        {
+          "path": "hash.mjs",
+          "sha256": "05dc6f9c8a8ae3e40f582d32ad5619eb4d690605708ed3c63fde3d3eaf9ff377"
+        },
+        {
+          "path": "inputs.json",
+          "sha256": "f9b8ec464b3c0e0a3bc8f1ac7571b83c474d07523fa90dc9f17dda16531d81a3"
+        },
+        {
+          "path": "report.html",
+          "sha256": "a2ade2e31306e9f253404ad69b284d50a16ee47e48d77ce37228d671734dfa81"
+        },
+        {
+          "path": "report_core.mjs",
+          "sha256": "17cb51f6936373943f8e028475a865f563f2958bc63b61dab496b59c53864d05"
+        },
+        {
+          "path": "same-activity-context.csv",
+          "sha256": "4df663be093c39f337cf271000109416d2c111dbb02480a533ee6ee42f8c3889"
+        },
+        {
+          "path": "selected-activities.csv",
+          "sha256": "45abc7d8dd82bd2409c9bde1706d251648fb0ffd177d13b896fd67e31c886aee"
+        },
+        {
+          "path": "selected-records.csv",
+          "sha256": "2b37bed5a992b6e0182a327290fbd54a2a95002afcaf1a5745650cec227f6275"
+        },
+        {
+          "path": "selected-summary.csv",
+          "sha256": "7bfe9404e93947d8b936a9ce7e94c92cb95ffc31f4e844c8d210e38cd7085f5c"
+        },
+        {
+          "path": "selection.json",
+          "sha256": "047281f8e02edf71233c93626ff4218aa4b81e941a14dc4f6986d49ab1191894"
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f"
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Station: all; metal: all; result: all; month: all; search: none; chart: Iron.",
+    "Source record IDs and original quantification conditions remain unchanged."
+  ]
+}

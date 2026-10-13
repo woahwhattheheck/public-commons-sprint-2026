@@ -139,3 +139,56 @@ The provider exposes:
 The preview route preserves original HTML bytes. It uses an opaque-origin sandbox with only original inline script hashes, downloads, printing and separate publisher windows enabled. It provides no same-origin application authority, network-fetch permission, form submission or nested frame capability. Relative links stay within the selected source member route. The generic original file endpoint and application content policy remain unchanged.
 
 The archive path deliberately uses original `source_path` names, while the preview path uses entry-specific `view_path` names. This distinction preserves both relative report navigation and a complete original manifest on reimport, including the cross-directory assessment source companions.
+
+
+## Typed scientific documents and assessment editions
+
+Available source editions includes original `document` entries and `OBSERVED_CONTEXT` recipes even when the edition has no HTML preview. This keeps the original source kind, role, identifier, vintage, file paths and manifest identity. Discovery does not convert a JSON recipe into an HTML report or render a second interpretation.
+
+The maintained bundled manifests now include these original source families:
+
+| Original manifest | Scientific report source | Intake |
+| --- | --- | --- |
+| `source/north-carolina-assessment-2022/sources.json` | `ncdeq-final-2022-savannah-scientific-report` | Original NC2022 assessment context and document recipe |
+| `source/georgia-assessment-2024/publisher-savannah-20261013/sources.json` | `ga2024-gis-observed-report` | Original GA2024 assessment documents, including its separate report-section source |
+| `nc_assessment_history.sources.json` | `nc-assessment-history-2008-2022` | Original assessment-history recipe and retained HTML companion |
+| `eighteenmile_trace_metals.sources.json` | Original manifest's trace-metals source ID | Original scientific document and retained companions |
+
+All source family files must be present in the existing application or configured source root. This provider addition does not replace those families or acquire their input data. Missing declared files remain visible as source-file issues, and the existing import remains unavailable until its original manifest is ready.
+
+### Preview, import and append the exact retained studies
+
+1. In **Sources**, search the available editions by title, source ID, role, vintage or document path. The contents list identifies a typed **Scientific report source** independently of any HTML preview.
+2. Choose **Preview and import**. This opens the original registered-manifest import form. Inspect its exact source records and files, then use the existing **Import source edition** queue action. The native Workspace import remains responsible for file hashes and source identity.
+3. Refresh Sources after that original import completes. The edition is matched to retained collections by the original manifest SHA256. **Inspect retained edition** opens the existing source record even when no HTML report exists.
+4. Choose **Add source studies to report** beside the retained edition. The action appends only that exact collection's `document` entries with role `OBSERVED_CONTEXT` to the original ordered scientific-report composer. It passes the original `source_collection_id` and `source_id` pairs; it does not infer IDs from titles or silently choose another collection.
+5. Review the ordered selection, title and contact fields, then use the composer's existing preview and saved-report controls. The original `observed_context` binding validates each recipe schema, section/table structure and retained body/companion hashes. A discoverable document is not a promise that its scientific recipe is valid.
+
+Appending preserves the existing source order, current nonempty title and other draft fields. A pair already selected is not added again. A pending report write must first complete or be recovered using the composer's existing controls; an unrelated draft alone does not prevent adding these sources.
+
+HTML preview routes remain limited to actual retained HTML members. A document-only NC2022 or GA2024 edition therefore opens through source inspection and the scientific composer. Its JSON recipe is not placed in the HTML iframe. A recipe with an original report companion continues to use that exact readable document through the existing preview.
+
+### Same-operation native receiving
+
+Use the existing NC2022/GA2024 source operation and its original Workspace, source manifests, source files and domain selections. If its source import has already completed, reopen that retained collection. If the original operator was already running when the application source changed, follow that operation's normal restart/continuation procedure so the maintained provider is loaded. Do not start another model, assessment calculation or source acquisition solely to exercise discovery.
+
+For this intake continuation, retain the actual manifest SHA, registered source ID, completed original import task ID, returned collection ID and selected source IDs. Inspect the original import metadata, append each assessment recipe, then inspect the original scientific preview's ordered source identities. Download and reopen the actual final report and its source files. Continue the existing saved-edition, full/selected Workspace export and receiving course when those phases are already part of the accepted operation.
+
+The producing peer must run the exact outgoing application and LOOK at the actual Sources and report screens: desktop/screenshare and narrow/mobile, ready and missing-file editions, empty/search results, loading and actionable errors. Operate import, append, preview, downloads and reopen. Check readable titles, source IDs, tables and controls without clipping or overflow. Literally open the final HTML/PDF/source documents and extracted archive contents. Source review, controlled-DOM checks, HTTP responses and captured-but-unviewed screenshots do not replace this inspection; repair defects in the original implementation.
+
+### Provider and client contract
+
+`/api/source-reports/catalog` retains its existing `reports` array for HTML previews. Each `available_editions` row additionally returns `documents`: exact original source ID, title, kind, role, vintage, manifest-relative path and a `scientific_report` dispatch label. It also returns `retained_scientific_sources` only from collections whose original manifest SHA matches that row.
+
+The client invokes the existing nested scientific composer with:
+
+```javascript
+scientific.openForSources({
+  workspace_key: currentWorkspace,
+  sources: exactRetainedCollectionSources,
+  title: originalEditionTitle,
+  selection_mode: 'append'
+});
+```
+
+The incoming source list is validated against the original current scientific catalogue. Current Workspace and generation guards reject stale selections. Existing saved-edition `openForStudy` navigation, report draft recovery, source import ownership and HTML member transport remain intact.

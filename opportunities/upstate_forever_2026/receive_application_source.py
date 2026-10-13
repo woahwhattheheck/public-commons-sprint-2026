@@ -19,7 +19,8 @@ import stat
 import tempfile
 import zipfile
 
-MAX_BYTES = 16 * 1024 * 1024
+MAX_BYTES = 512 * 1024 * 1024
+MAX_FILES = 10000
 PART_SCHEMA = "upstate.application-source-part/v1"
 
 def digest(data):
@@ -78,7 +79,7 @@ def read_carrier(path):
     if value.get("schema") != "commons.source-map/1" or value.get("kind") != "upstate.complete-application-source/v1":
         raise ValueError("This is not the selected complete application carrier")
     source_files, metadata = value.get("files"), value.get("file_metadata")
-    if not isinstance(source_files, dict) or not isinstance(metadata, dict) or not source_files or len(source_files) > 1000:
+    if not isinstance(source_files, dict) or not isinstance(metadata, dict) or not source_files or len(source_files) > MAX_FILES:
         raise ValueError("Invalid complete application file map")
     if set(source_files) != set(metadata):
         raise ValueError("Source file and metadata inventories differ")
@@ -107,6 +108,8 @@ def read_carrier(path):
         if entry.get("mode") not in ("100644", "100755"):
             raise ValueError("Unsupported source member mode")
         verified[name] = body
+    if sum(map(len, verified.values())) > MAX_BYTES:
+        raise ValueError("Source members exceed the receiving limit")
     receipt = {"schema": "upstate.application-source-receipt/v1",
                "source_ref": value["source_ref"], "repository": value["repository"],
                "payload_sha256": digest(decoded), "payload_bytes": len(decoded),

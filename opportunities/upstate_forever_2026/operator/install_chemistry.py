@@ -144,6 +144,14 @@ COMPOSED_INTERVAL_PREVIOUS_SHA256 = {
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "75df65613e75aa3a505a5154ea451f4b88921ce75ffc36561308c42caaca4d4e"
 }
 
+LIFETIME_PREVIOUS_SHA256 = {
+    "operator/web/chemistry.mjs": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3",
+    "operator/web/chemistry-native.mjs": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a",
+    "operator/CHEMISTRY_OPERATOR.md": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c",
+    "operator/install_chemistry.py": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "d4af6b37bf397b1f98088ce0ef909eaeb999242e317e3d8af2d9d8b203e29264"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -172,6 +180,12 @@ REPORT_SELECTION_PREVIOUS_SHA256 = {
     "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md": "ba82be927a9fac599a8cf93bb2db57e4efe331228fdbb77ea908d633df766c2d",
     "model/CHEMISTRY_REPORT_SOURCE.md": "cf3f23b24fa0c68735ecc10caf028b2f6e4101888df65b0ba358c9e671fe651d",
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "69f6be7b9e30ef6f76ab6bdbf2163ab1e0325fb6a606c84d359e75155236e65b"
+}
+STUDY_EDITION_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "9f9fbee45a3879a75376e2b1f0b0d628adf944724c4b9346b513d2c118126e9e",
+    "model/chemistry_study_transfer.py": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c",
+    "model/CHEMISTRY_STUDY_TRANSFER.md": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "9e10b404582297988923a69ed0adf86c31b1579dc223a620f9d0585d5a6681dd"
 }
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
@@ -307,7 +321,8 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name),
                      BANK_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
                      PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
-                     BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name)}):
+                     BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
+                     STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"

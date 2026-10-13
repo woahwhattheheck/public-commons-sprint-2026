@@ -23,13 +23,13 @@
   "files": [
     {
       "path": "model/chemistry_study_transfer.py",
-      "bytes": 23808,
-      "sha256": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c"
+      "bytes": 24377,
+      "sha256": "2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca"
     },
     {
       "path": "model/CHEMISTRY_STUDY_TRANSFER.md",
-      "bytes": 7956,
-      "sha256": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923"
+      "bytes": 10077,
+      "sha256": "8bc2ff5f3ba72f1e25ee2f94f2b9f7c10d5898da4c57d60312f7f380eabd0a61"
     },
     {
       "path": "source_tools/chemistry_study_composition.py",
@@ -143,13 +143,13 @@
     },
     {
       "path": "operator/web/chemistry.mjs",
-      "bytes": 30779,
-      "sha256": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3"
+      "bytes": 35351,
+      "sha256": "3a80140d808eb0d419641f02b6a25fea1111baf0fe93fd8cdb422b06e4c20065"
     },
     {
       "path": "operator/web/chemistry-native.mjs",
-      "bytes": 4213,
-      "sha256": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a"
+      "bytes": 4558,
+      "sha256": "4166b96a2e031926a49faf49f5063dc2a63546dbc0c74d76ebaa9ec95db82da0"
     },
     {
       "path": "operator/web/chemistry.css",
@@ -158,8 +158,8 @@
     },
     {
       "path": "operator/CHEMISTRY_OPERATOR.md",
-      "bytes": 19277,
-      "sha256": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c"
+      "bytes": 24586,
+      "sha256": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a"
     },
     {
       "path": "CHEMISTRY.md",
@@ -178,8 +178,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 23553,
-      "sha256": "9f9fbee45a3879a75376e2b1f0b0d628adf944724c4b9346b513d2c118126e9e"
+      "bytes": 24710,
+      "sha256": "7c41a00527032a004988b1db9902e63b73f8f11103a7baaf90d294eeed2ecdaf"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -226,7 +226,12 @@
     "model": "Original native saved-case/run, scientific report/source and whole Workspace receiving APIs",
     "source_bank": "python operator/install_chemistry.py --application APPLICATION --source-bank SOURCE_BANK.json",
     "source_bank_rule": "Use the exact matching installer retained in the verified packet; omitted required source stays bound to the actual installed application under the original lock.",
-    "prepared_source_selection": "Open this report only uses replace-v1; Add to current report preserves the original append behavior."
+    "prepared_source_selection": "Open this report only uses replace-v1; Add to current report preserves the original append behavior.",
+    "selected_study_editions": [
+      "native-chemistry-scientific-source-v1",
+      "native-chemistry-scientific-source-v2"
+    ]
   },
-  "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard."
+  "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard.",
+  "editor_lifetime": "pinned-workspace-and-native-activation"
 }

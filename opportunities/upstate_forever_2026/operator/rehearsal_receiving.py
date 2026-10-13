@@ -223,7 +223,7 @@ def validate(value):
         raise ValueError("Select the complete original rehearsal receiving input")
     expected = {"schema", "operation_id", "workspace_directory", "output_directory",
                 "rehearsal", "fresh_run_ids", "step_notes", "task_timeout_seconds", "browser",
-                "programme_receiving", "customer_review"}
+                "programme_receiving", "customer_review", "fieldwork_receiving"}
     if set(value) - expected:
         raise ValueError("Unexpected receiving input fields: " + ", ".join(sorted(set(value) - expected)))
     if not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", value.get("operation_id", "")):
@@ -272,6 +272,9 @@ def validate(value):
     if "customer_review" in value:
         from source_tools.simulated_customer_review_recording import validate_choice
         validate_choice(value["customer_review"])
+    if "fieldwork_receiving" in value:
+        from source_tools.simulated_fieldwork_recording import validate_choice as validate_fieldwork
+        validate_fieldwork(value["fieldwork_receiving"])
     return value
 
 
@@ -803,6 +806,12 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
             from source_tools.simulated_customer_review_recording import verify_choice
             customer_choice = verify_choice(Workspace(value["workspace_directory"]), output,
                                             value["customer_review"])
+        fieldwork_choice = None
+        if value.get("fieldwork_receiving") is not None:
+            from model.workspace import Workspace
+            from source_tools.simulated_fieldwork_recording import verify_choice as verify_fieldwork
+            fieldwork_choice = verify_fieldwork(Workspace(value["workspace_directory"]), output,
+                                               value["fieldwork_receiving"])
         complete_path = output / "results" / "complete.json"
         native_path = output / "results" / "native.json"
         saved_complete = read_json(complete_path) if complete_path.exists() else None
@@ -853,6 +862,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                           "playwright_module": browser["playwright_module"], "executable": browser["executable"]}
                 if customer_choice is not None:
                     config["customer_review"] = customer_choice
+                if fieldwork_choice is not None:
+                    config["fieldwork_receiving"] = fieldwork_choice
                 browser_input = output / "private" / "browser-input.json"
                 publish(browser_input, canonical(config) + b"\n", immutable=False)
                 child = run_browser_child([browser["node"], str(APP / "operator" / "rehearsal_browser.mjs"),

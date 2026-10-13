@@ -55,7 +55,7 @@ def document(path):
 
 
 def target(root, name):
-    if not isinstance(name, str) or "\\" in name:
+    if not isinstance(name, str) or re.search(r"[\\:\x00-\x1f\x7f]", name):
         raise ValueError("Source member needs an original relative POSIX path")
     relative = PurePosixPath(name)
     if relative.is_absolute() or not relative.parts or any(part in (".", "..", "") for part in name.split("/")):
@@ -84,6 +84,51 @@ def retain(path, data):
     finally:
         pending.unlink(missing_ok=True)
 
+
+
+def source_inventory(source):
+    """Read retained source contracts without changing their original JSON."""
+    schemas = ("commons.source-bank/v1", "commons.source-text-bank/v1", "upstate.source-bank/v1")
+    if not isinstance(source, dict) or source.get("schema") not in schemas or not isinstance(source.get("files"), list):
+        raise ValueError("Unexpected original source bank")
+    optional_inventory = source["schema"] == "upstate.source-bank/v1"
+    for key in ("file_count", "source_bytes"):
+        if not optional_inventory or key in source:
+            if type(source.get(key)) is not int or source[key] < 0:
+                raise ValueError("Invalid original source inventory: " + key)
+    if "file_count" in source and len(source["files"]) != source["file_count"]:
+        raise ValueError("Original source bank file count differs")
+    rows, bank_bytes = [], 0
+    for item in source["files"]:
+        if not isinstance(item, dict):
+            raise ValueError("Expected original source file metadata")
+        has_text, has_base64 = "content" in item, "content_base64" in item
+        if has_text == has_base64 or (has_base64 and source["schema"] != "commons.source-bank/v1"):
+            raise ValueError("Source member needs one declared content representation")
+        if has_text:
+            if not isinstance(item["content"], str):
+                raise ValueError("Expected original UTF-8 source text")
+            data = item["content"].encode("utf-8")
+        else:
+            encoded = item["content_base64"]
+            if not isinstance(encoded, str):
+                raise ValueError("Expected original base64 source content")
+            data = base64.b64decode(encoded, validate=True)
+            if base64.b64encode(data).decode("ascii") != encoded:
+                raise ValueError("Expected canonical base64 source content")
+        name = item["path"]
+        if type(item.get("bytes")) is not int or item["bytes"] < 0:
+            raise ValueError("Invalid original source byte count")
+        checked(data, item["bytes"], item["sha256"], str(name))
+        git_blob = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+        if (has_base64 or "git_blob" in item) and item.get("git_blob") != git_blob:
+            raise ValueError("Original Git source identity differs: " + str(name))
+        rows.append((name, data, {"path": name, "bytes": len(data),
+                                "sha256": item["sha256"], "git_blob": git_blob}))
+        bank_bytes += len(data)
+    if "source_bytes" in source and bank_bytes != source["source_bytes"]:
+        raise ValueError("Original source bank byte count differs")
+    return rows
 
 def receive(manifest_path, parts_root, output):
     manifest = document(manifest_path)
@@ -122,33 +167,28 @@ def receive(manifest_path, parts_root, output):
         checked(stream, bank["gzip_bytes"], bank["gzip_sha256"], bank["name"] + ".gz")
         original = checked(gzip.decompress(stream), bank["original_bytes"],
                            bank["original_sha256"], bank["name"] + ".json")
+        original_git = hashlib.sha1(
+            b"blob " + str(len(original)).encode("ascii") + b"\0" + original).hexdigest()
+        if bank.get("original_git_blob") != original_git:
+            raise ValueError("Original source bank Git identity differs")
         source = json.loads(original)
-        if source.get("schema") != "commons.source-bank/v1":
-            raise ValueError("Unexpected original source bank")
-        if len(source["files"]) != source["file_count"]:
-            raise ValueError("Original source bank file count differs")
-        bank_bytes = 0
-        for item in source["files"]:
-            name = item["path"]
-            path = target(output / "source", name)
+        inventory = source_inventory(source)
+        for name, data, metadata in inventory:
+            target(output / "source", name)
             if name in combined:
                 raise ValueError("Source banks repeat a member: " + name)
-            data = checked(base64.b64decode(item["content_base64"], validate=True),
-                           item["bytes"], item["sha256"], name)
-            git_blob = hashlib.sha1(
-                b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
-            if item.get("git_blob") != git_blob:
-                raise ValueError("Original Git source identity differs: " + name)
             combined[name] = data
-            bank_bytes += len(data)
-            members.append({key: item[key] for key in ("path", "bytes", "sha256", "git_blob")})
-        if bank_bytes != source["source_bytes"]:
-            raise ValueError("Original source bank byte count differs")
+            members.append(metadata)
         banks.append({"name": bank["name"], "bytes": len(original),
                       "sha256": sha(original), "files": len(source["files"])})
         retain(output / "banks" / (bank["name"] + ".json"), original)
     if len(combined) != manifest["file_count"] or sum(map(len, combined.values())) != manifest["source_bytes"]:
         raise ValueError("Complete source inventory differs from the transfer manifest")
+    for name in combined:
+        parts = name.split("/")
+        for index in range(1, len(parts)):
+            if "/".join(parts[:index]) in combined:
+                raise ValueError("Source file is also a directory: " + name)
     # Validate all overlapping existing source files before any source publish.
     for name, data in combined.items():
         path = target(output / "source", name)

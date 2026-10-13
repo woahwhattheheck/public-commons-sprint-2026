@@ -118,7 +118,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         ['Saved selections',all.length,'Original observations, candidate runs and group assignments.'],
         ['Completed comparisons',reports().length,'Retained parameter rankings and physical error metrics.'],
         ['Candidate baseline runs',(sourceData().runs??[]).filter(row=>row.state==='complete'&&(sourceData().scenarios??[]).find(s=>s.id===row.selection?.scenario_id)?.kind==='baseline').length,'Completed native runs using unchanged source land cover.'],
-        ['Observation editions',(sourceData().observations??[]).filter(row=>row.admitted_count>0).length,'Original editions containing admitted annual mass rates.'],
+        ['Annual-rate editions at import',(sourceData().observations??[]).filter(row=>row.admitted_count>0).length,'Original import counts. Current source admission is reviewed in the calibration selector.'],
       ].map(([title,count,note])=>'<div class="card"><h3>'+esc(title)+'</h3><strong class="number">'+number(count)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
       section('Saved calibration selections','Each selection retains its source catchments, original observation records, candidate profiles, objective and calibration/validation assignments.',
         all.length?table(['Selection','State','Candidate runs','Group split',''],all.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title||row.selection?.title||short(row.id))+'</strong><small>'+esc(when(row.created_at))+' · <span class="mono">'+esc(short(row.id))+'</span></small></td><td>'+stateBadge(row)+'</td><td>'+number(row.candidate_count??row.selection?.candidate_run_ids?.length)+'</td><td>'+number(row.calibration_groups??row.selection?.calibration_group_ids?.length)+' calibration<br>'+number(row.validation_groups??row.selection?.validation_group_ids?.length)+' validation</td><td class="actions-cell">'+button('plan','Open',row.id)+button('revise','Revise',row.id)+(row.result_id?button('report','Results',row.result_id):button('analyze','Analyze',row.id))+'</td></tr>')):
@@ -206,6 +206,20 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function candidateIssue(row){
     return (row.execution_issues??[]).join('; ')||(row.calibration_eligible===false?'This retained run does not satisfy the current calibration output contract.':'');
+  }
+  function observationAdmissionHTML(catalog){
+    const rows=catalog.observations??[];
+    if(!rows.length)return '<p class="note full">No original observation editions are retained in this study.</p>';
+    return '<details class="full"><summary>Current source admission and original import</summary>'+
+      '<p class="note">Eligible rows satisfy the current original-source rules. Native model availability, catchment matching and raster coverage are checked separately. Each original source remains available, including excluded quantities. Reason counts can overlap.</p>'+
+      table(['Original source','At import','Eligible now','Current source exclusions',''],rows.map(row=>{
+        const admission=row.admission,original=row.original_admitted_count??admission?.original_admitted_count;
+        const reasons=(admission?.exclusion_reasons??[]).map(item=>number(item.count)+' rows: '+esc(item.reason)).join('<br>');
+        return '<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong><small class="mono">'+esc(short(row.id||row.observation_id))+'</small></td>'+
+          '<td>'+number(original)+'</td><td>'+number(row.admitted_count)+'</td><td>'+
+          (reasons||esc(admission?'No source-admission exclusions.':'Refresh the application for current source-admission details.'))+'</td>'+
+          '<td>'+button('inspect-observation-edition','Original source',row.id||row.observation_id)+'</td></tr>';
+      }))+'</details>';
   }
   function candidateTable(catalog,draft){
     const group=catalog.candidate_groups.find(row=>groupKey(row)===draft.group);
@@ -459,8 +473,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       Boolean(planId||periodWeighting(retainedPeriod)||periodWeighting(selection.temporal_weighting));
     if(temporalExplicit&&periodWeighting(retainedPeriod))selection.temporal_weighting=retainedPeriod;
     if(handoff){
-      const observation=catalog.observations.find(row=>(row.id||row.observation_id)===handoff.observation_id&&row.admitted_count>0);
-      if(!observation)throw Error('This observation edition is not admitted in the current study.');
+      const observation=catalog.observations.find(row=>(row.id||row.observation_id)===handoff.observation_id);
+      if(!observation)throw Error('This original observation edition is not retained in the current study.');
       const collection=(sourceData().sources??[]).find(row=>row.id===handoff.catchments.source_collection_id);
       if(!collection?.entries?.some(row=>row.id===handoff.catchments.source_id&&row.kind==='vector'))
         throw Error('Refresh the study to load the original catchment source for this binding.');
@@ -490,8 +504,6 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       throw Error(handoff?'Observation and catchment choices are saved. Complete a native baseline run before preparing a calibration.':
         'Complete a native baseline run before preparing a calibration.');
     }
-    if(!catalog.observations?.some(row=>row.admitted_count>0)&&!draft.parameter_study)
-      throw Error('Retain an original observation edition with admitted annual load records first.');
     const first=catalog.candidate_groups[0];
     const selectedGroup=catalog.candidate_groups.find(group=>group.runs.some(row=>selection.candidate_run_ids?.includes(row.id||row.run_id)));
     draft.group=draft.group||groupKey(selectedGroup||first);
@@ -502,6 +514,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const collection=selection.catchments?.source_collection_id||(collections.length===1?collections[0].id:'');
     const vectorSources=sourceRows(collection);
     const objective=selection.objective??{},retainedRaw=draft.raw;
+    const selectedObservation=retainedRaw?.find(row=>row.name==='calibration_observation')?.value||selection.observation_id;
     openForm(planId?'Revise calibration selection':'New calibration',
       'Choose completed baseline profiles, original annual loads and source catchments. Inspect their connected groups, then retain the selection and validation split.',
       '<div class="calibration-form">'+
@@ -510,13 +523,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         ' original completed runs. Observation, catchment and objective choices remain editable.</p><p class="mono">'+
         esc(draft.parameter_study.id)+'</p></div>':'')+
       (!catalog.observations?.some(row=>row.admitted_count>0)?
-        '<div class="notice"><p>The completed candidate selection is retained. Import original annual-load observations to evaluate it against field measurements.</p>'+
+        '<div class="notice"><p>No retained edition currently has eligible annual-load rows. Inspect the original sources and exclusion reasons below, then import or explicitly select a suitable original edition. Your candidate selection remains retained.</p>'+
         '<button type="button" data-action="observation-new">Import original observations</button></div>':'')+
       '<div class="form-grid">'+
       field('Selection title',input('calibration_title',selection.title,'text','required'),'Use the scientific question or retained study name.',true)+
       field('Native grid and unchanged baseline',select('calibration_run_group',catalog.candidate_groups.map(group=>[groupKey(group),named('grids',group.grid_id)+' · '+named('scenarios',group.scenario_id)]),draft.group),'Profiles compared together must use this same grid and baseline.',true)+
       '<fieldset class="full"><legend>Completed candidate runs and profiles</legend><div id="calibration-candidates">'+candidateTable(catalog,draft)+'</div></fieldset>'+
-      field('Original annual-load observations',select('calibration_observation',catalog.observations.filter(row=>row.admitted_count>0).map(row=>[row.id||row.observation_id,row.title+' · '+row.admitted_count+' annual records']),selection.observation_id),'',true)+
+      field('Original annual-load observations',select('calibration_observation',catalog.observations.filter(row=>row.admitted_count>0||(row.id||row.observation_id)===selectedObservation).map(row=>[row.id||row.observation_id,row.title+' · '+row.admitted_count+' currently eligible annual records']),selectedObservation),'Current source eligibility is separate from the retained import. Inspect the reasons below before choosing another edition.',true)+
+      observationAdmissionHTML(catalog)+
       '<div class="full page-actions">'+button('inspect-observation','Inspect original observations')+'</div>'+
       field('Catchment source edition',select('calibration_collection',collections.map(row=>[row.id,row.title]),collection))+
       field('Original polygon source',select('calibration_source',vectorSources.map(row=>[row.id,row.title]),selection.catchments?.source_id))+
@@ -996,6 +1010,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       setTimeout(()=>URL.revokeObjectURL(url),1000);return;
     }
     if(action==='inspect-source')return inspectSource();
+    if(action==='inspect-observation-edition')return openItem('observations',id);
     if(action==='inspect-observation'){
       const observation=val('calibration_observation');
       if(!observation)throw Error('Choose the original observation edition.');

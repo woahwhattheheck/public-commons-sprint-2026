@@ -9,7 +9,7 @@
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
   "source_files": 40,
   "installed_files": 38,
-  "source_bytes": 418891,
+  "source_bytes": 438449,
   "parts": [
     {
       "path": "source-01.json",
@@ -20,10 +20,10 @@
     },
     {
       "path": "source-02.json",
-      "bytes": 188175,
-      "sha256": "7fc4759c39c84803aba6e7a000337b1a2af8ac4e1950eeec2a821df3aacc769e",
+      "bytes": 214487,
+      "sha256": "eaf444073c2488460bae5da4f7838ecb25186d9048e11d12a8d02db9485f6352",
       "members": 13,
-      "source_bytes": 138954
+      "source_bytes": 158512
     }
   ],
   "files": [
@@ -295,17 +295,19 @@
     },
     {
       "path": "source/CHEMISTRY_COMPOUND_RECEIVING.md",
-      "bytes": 6849,
-      "sha256": "8f595d5a4c443561f769c0869882e98279cceb1a085bf33d5fb5a548669cb676",
+      "bytes": 15972,
+      "sha256": "206ddf19ce47cdd83d606bef0e59f7756711c5bcd21649fec3ab1a739d25f119",
       "role": "receiving_driver",
-      "source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
+      "original_source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4",
+      "source_git_blob": "c5e8e1334b31ec9a5f29c32bd75b78c1f35db939"
     },
     {
       "path": "source/run_chemistry_compound_receiving.py",
-      "bytes": 31117,
-      "sha256": "5fd1fea30210ea37d9b6c661c4f60a3d58809464857bf04b49c697c2077e7d92",
+      "bytes": 41552,
+      "sha256": "e1e459b8aef8ad9c8d26e5e04fdeb75dd4014349a8b045595d5c64788e8f5e44",
       "role": "receiving_driver",
-      "source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
+      "original_source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4",
+      "source_git_blob": "46424b4a2098173a4e04f4797f60d00b724d7dd9"
     }
   ],
   "bootstrap": {
@@ -313,7 +315,16 @@
     "bytes": 83770,
     "sha256": "a0010a624c9d1fc5a765eaf7a0e99474f88c41df1f4f6dbefdd54f22902b3ce7",
     "source_path": "opportunities/upstate_forever_2026/source_tools/application_assembly.py",
-    "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
+    "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df",
+    "companions": [
+      {
+        "path": "bootstrap/source_tools/application_components.py",
+        "bytes": 53962,
+        "sha256": "c5acff552d59c0b55d4bda1a63f96241b7cc260ee068d9dd5ed7a741e92d7270",
+        "source_path": "opportunities/upstate_forever_2026/source_tools/application_components.py",
+        "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
+      }
+    ]
   },
   "base_contract": {
     "application": "Existing complete registered Upper Savannah scientific application received with the original regional Workspace",
@@ -347,5 +358,23 @@
     ],
     "guard": "Original operator/install_chemistry.py holds the shared extension-install.lock, validates complete installed source, admits only exact documented predecessor bodies, and composes the original shared Study-transfer paths."
   },
-  "data_custody": "The actual retained Workspace supplies the original authored four-reach case and completed calibration, 512-draw uncertainty and monitoring analyses. This source bank retains original0.1 source manifest bytes and includes the maintained0.3 complete installer inventory. The receiving course explicitly constructs its declared numerical compound/interval exercise from the retained authored observations."
+  "data_custody": "The actual retained Workspace supplies the original authored four-reach case and completed calibration, 512-draw uncertainty and monitoring analyses. This source bank retains original0.1 source manifest bytes and includes the maintained0.3 complete installer inventory. The receiving course explicitly constructs its declared numerical compound/interval exercise from the retained authored observations.",
+  "owner_instruction": {
+    "path": "AGENTS.md",
+    "bytes": 7593,
+    "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+    "source_path": "AGENTS.md",
+    "source_git_blob": "46be323017be913780d0d2850b7658861744508d",
+    "version": "2026-10-13.1"
+  },
+  "native_receiving": {
+    "path": "source/run_chemistry_compound_receiving.py",
+    "source_git_blob": "46424b4a2098173a4e04f4797f60d00b724d7dd9",
+    "sha256": "e1e459b8aef8ad9c8d26e5e04fdeb75dd4014349a8b045595d5c64788e8f5e44",
+    "bytes": 41552,
+    "archive": "original complete Workspace archive and saved identity",
+    "resume_api": "portable.resume_restore",
+    "application": "fresh isolated Python using original received archive application",
+    "retained_science": "original case, original and compound runs, reports, sources, rendered edition and prior report/source identities"
+  }
 }

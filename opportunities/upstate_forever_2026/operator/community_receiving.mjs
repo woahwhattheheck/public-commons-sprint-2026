@@ -11,12 +11,13 @@ import {pathToFileURL} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
+import {parseCommunityCsv,readInterventionCsv} from './web/community.mjs';
 
 const argv=process.argv.slice(2),options={};
 const flags=new Set(['resume-failed-tasks','help']);
 const names=new Set(['control','url','workspace','output','mode','node-modules','chromium','python',
  'progress','source-collection','source-id','source-sha256','registered-source','task-timeout-seconds',
- 'project-id','context','source-revision','resume-failed-tasks','help']);
+ 'project-id','context','source-revision','mapped-plan','mapped-report','resume-failed-tasks','help']);
 for(let i=0;i<argv.length;i++){
  const key=argv[i].replace(/^--/,'');
  assert.ok(argv[i].startsWith('--')&&names.has(key),'Unknown receiving option '+argv[i]);
@@ -24,7 +25,7 @@ for(let i=0;i<argv.length;i++){
  else{assert.ok(argv[i+1]&&!argv[i+1].startsWith('--'),'Supply --'+key);options[key.replaceAll('-','_')]=argv[++i];}
 }
 if(options.help){
- console.log('node operator/community_receiving.mjs --url ORIGINAL_OPERATOR_URL --workspace WORKSPACE_KEY --output PRIVATE_DIRECTORY [--node-modules ORIGINAL_NODE_MODULES] [--chromium ORIGINAL_CHROMIUM] [--python ORIGINAL_PYTHON] [--mode operate|reopen]\nOr supply the same original values in a private --control JSON. Reuse its output directory to continue retained tasks.');
+ console.log('node operator/community_receiving.mjs --url ORIGINAL_OPERATOR_URL --workspace WORKSPACE_KEY --output PRIVATE_DIRECTORY [--node-modules ORIGINAL_NODE_MODULES] [--chromium ORIGINAL_CHROMIUM] [--python ORIGINAL_PYTHON] [--mode operate|reopen]\nOr supply the same original values in a private --control JSON. Add --mapped-plan ORIGINAL_PLAN_ID --mapped-report ORIGINAL_REPORT_ID to continue an existing programme through explicitly mapped original CSV columns. Reuse its output directory to continue retained tasks.');
  process.exit(0);
 }
 const control=options.control?JSON.parse(await fs.readFile(options.control,'utf8')):{};
@@ -42,6 +43,11 @@ c.source_sha256=c.source_sha256||'377d4f860fb545215534070309b67e1d26135cdab1ee03
 c.source_collection=c.source_collection||c.source_collection_id;
 c.registered_source=c.registered_source||c.registered_source_id;
 c.context=typeof c.context==='string'?JSON.parse(await fs.readFile(c.context,'utf8')):(c.context||{});
+const mappingCourse=Boolean(c.mapped_plan||c.mapped_report);
+if(mappingCourse){
+ assert.match(c.mapped_plan||'',/^[0-9a-f]{64}$/,'Select the original saved Community plan.');
+ assert.match(c.mapped_report||'',/^[0-9a-f]{64}$/,'Select that plan’s original saved report.');
+}
 assert.ok(c.url&&c.workspace&&c.output,'Supply the actual original URL, workspace key and private output directory.');
 assert.ok(['operate','reopen'].includes(c.mode),'Choose operate or reopen.');
 if(c.source_revision)assert.match(c.source_revision,/^[0-9a-f]{40}$/,'Use the complete original application commit.');
@@ -55,15 +61,21 @@ const capability=new URLSearchParams(selectedURL.hash.slice(1)).get('token');
 assert.ok(capability,'Use the original operator_url containing its current #token.');
 const output=path.resolve(c.output);
 await fs.mkdir(output,{recursive:true,mode:0o700});
-const statePath=path.resolve(c.progress||path.join(output,'community-browser-progress.json'));
-const resultPath=path.join(output,'community-browser-result.json');
-const operation='UPSTATE-UTILITY-COMMUNITY-APPLICATION-64B7-20261012';
+const stem=mappingCourse?'community-mapping-browser':'community-browser';
+const statePath=path.resolve(c.progress||path.join(output,stem+'-progress.json'));
+const resultPath=path.join(output,stem+'-result.json');
+const operation=mappingCourse?'UPSTATE-COMMUNITY-MAPPED-ORIGINAL-264B-20261013':'UPSTATE-UTILITY-COMMUNITY-APPLICATION-64B7-20261012';
 const initial={schema:'upstate.community-browser-receiving/v1',operation,
  original_workspace_key:c.workspace,source_id:c.source_id,source_sha256:c.source_sha256,stages:{},attempts:[]};
 let saved;
 try{saved=JSON.parse(await fs.readFile(statePath,'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;saved=initial;}
 assert.equal(saved.schema,initial.schema);assert.equal(saved.operation,operation);
 assert.equal(saved.source_id,c.source_id);assert.equal(saved.source_sha256,c.source_sha256);
+if(mappingCourse){
+ const selection={plan_id:c.mapped_plan,report_id:c.mapped_report};
+ if(saved.mapping_selection)assert.deepEqual(saved.mapping_selection,selection,'Continue the same original plan/report pair.');
+ else saved.mapping_selection=selection;
+}
 if(c.mode==='operate')assert.equal(saved.original_workspace_key,c.workspace,'Continue the same original workspace.');
 else assert.ok(saved.received&&saved.report,'Complete the original operate segment before reopening its saved output.');
 saved.complete=false;
@@ -183,9 +195,12 @@ async function retainedStage(name,action,fill){
   assert.equal(stage.request.workspace,workspace,'The original task workspace changed.');
   assert.equal(stage.request.action,action);
   const state=await getState();
-  let task=state.tasks.find(row=>row.operation_id===stage.request.operation_id);
+  let task=stage.task_id?await api('/api/task?id='+stage.task_id):state.tasks.find(row=>row.operation_id===stage.request.operation_id);
   if(!task)task=await api('/api/actions',stage.request);
-  stage.task_id=task.id;await checkpoint();
+  assert.equal(task.workspace,stage.request.workspace);assert.equal(task.action,stage.request.action);
+  assert.deepEqual(task.payload,stage.request.payload,'Retain the exact original task selection.');
+  if(stage.accepted_operation_id)assert.equal(task.operation_id,stage.accepted_operation_id);
+  stage.task_id=task.id;stage.accepted_operation_id=task.operation_id;await checkpoint();
  }else{
   stage=saved.stages[name]={action,started_at:new Date().toISOString()};await checkpoint();
   let captured=false;
@@ -203,7 +218,9 @@ async function retainedStage(name,action,fill){
    await page.locator('#form-submit').click();
    const returned=await response,value=await returned.json();
    assert.ok(returned.ok(),redact(JSON.stringify(value)));assert.ok(captured,'Retain the original UI request before dispatch.');
-   stage.task_id=value.id;await checkpoint();
+   assert.equal(value.workspace,stage.request.workspace);assert.equal(value.action,stage.request.action);
+   assert.deepEqual(value.payload,stage.request.payload);
+   stage.task_id=value.id;stage.accepted_operation_id=value.operation_id;await checkpoint();
    await page.locator('#form-dialog').waitFor({state:'hidden'});
    await page.locator('#detail-dialog[open]').waitFor();
   }finally{await page.unroute('**/api/actions',capture);}
@@ -446,9 +463,16 @@ async function inspectReport(report,plan,folder='report'){
  await frame.locator('h1').waitFor();assert.equal(await frame.locator('h1').innerText(),report.title);
  const presentation=await frame.locator('main').evaluate(node=>({padding:getComputedStyle(node).paddingTop,text:node.textContent}));
  assert.ok(parseFloat(presentation.padding)>0,'The original report stylesheet should render.');
- assert.ok(presentation.text.includes('7,360'));assert.ok(presentation.text.includes(c.source_sha256));
+ if(!mappingCourse)assert.ok(presentation.text.includes('7,360'));
+ assert.ok(presentation.text.includes(c.source_sha256));
+ if(mappingCourse){assert.ok(report.format_version>=7);assert.ok(presentation.text.includes('Original intervention field mapping'));}
  assert.equal(await page.locator('iframe.community-report-preview').getAttribute('sandbox'),'');
  await screenshot(folder+'-preview');
+ if(mappingCourse){
+  await page.setViewportSize({width:390,height:844});
+  await screenshot(folder+'-preview-mobile');
+  await page.setViewportSize({width:1440,height:1080});
+ }
  const records={};
  for(const ticket of report._downloads){
   assert.equal(path.basename(ticket.filename),ticket.filename);
@@ -456,13 +480,27 @@ async function inspectReport(report,plan,folder='report'){
  }
  const expected=['community-report.html','community-report.md','community-report.json','communities.csv','utilities.csv',
   'watersheds.csv','interventions.csv','scientific-context.csv','plan.json','original-community-source.csv','REPORT.json','community-report.zip'];
- assert.deepEqual(Object.keys(records).sort(),expected.sort());
+ for(const name of expected)assert.ok(records[name],'Complete report member '+name);
+ if(mappingCourse){
+  for(const name of ['received-interventions.csv','INTERVENTION_IMPORT.json'])assert.ok(records[name],'Complete mapped report member '+name);
+ }
+ if(plan.previous_plan_id&&report.format_version>=7){
+  for(const name of ['plan-revision-summary.json','previous-plan.json','plan-revision-changes.csv'])
+   assert.ok(records[name],'Complete saved-plan revision member '+name);
+ }
  assert.equal(records['original-community-source.csv'].sha256,c.source_sha256);
  const payload=JSON.parse(await fs.readFile(records['community-report.json'].path,'utf8'));
  assert.equal(payload.schema,'upstate.community-report/v1');
  assert.deepEqual(payload.original_table,publicItem(saved.table));assert.deepEqual(payload.plan,publicItem(plan));
- assert.equal(payload.communities.length,6);assert.equal(payload.interventions.length,2);
+ if(mappingCourse){
+  assert.equal(payload.communities.length,plan.selected_groups.length);assert.equal(payload.interventions.length,plan.interventions.length);
+  assert.equal(await fs.readFile(records['received-interventions.csv'].path,'utf8'),saved.mapping_input.text);
+  const imported=JSON.parse(await fs.readFile(records['INTERVENTION_IMPORT.json'].path,'utf8'));
+  assert.deepEqual(imported.column_mapping,saved.mapping_input.column_mapping);
+  assert.deepEqual(imported.field_provenance,plan.intervention_import.field_provenance);
+ }else{assert.equal(payload.communities.length,6);assert.equal(payload.interventions.length,2);}
  const manifest=JSON.parse(await fs.readFile(records['REPORT.json'].path,'utf8'));
+ assert.deepEqual(Object.keys(records).sort(),[...Object.keys(manifest.files),'REPORT.json','community-report.zip'].sort());
  for(const [name,value]of Object.entries(manifest.files)){
   assert.equal(records[name]?.sha256,value.sha256,'Downloaded report member '+name);
   assert.equal(records[name]?.bytes,value.bytes,'Downloaded report size '+name);
@@ -479,16 +517,107 @@ async function inspectReport(report,plan,folder='report'){
  return {files:records,archive_members:zipResult,html_presentation:{padding:presentation.padding,status:received.status()},plan_id:plan.id,report_id:report.id};
 }
 
+
+const mappedNames={id:'Original intervention identifier',title:'Original work title',priority:'Original priority',
+ strategy:'Original strategy',status:'Original status',utility_id:'Original utility identifier',
+ watershed_id:'Original watershed HUC12',geoids:'Original block group identifiers',reason:'Original reason',
+ owner:'Original work owner',next_step:'Original next action',cost_estimate_usd:'Original estimate USD',notes:'Original work notes'};
+function assertMappedPlan(plan,previous){
+ assert.equal(plan.previous_plan_id,previous.id);assert.equal(plan.revision_number,previous.revision_number+1);
+ for(const key of ['table_id','title','purpose','selection','context','interventions','cost_summary','notes'])
+  assert.deepEqual(plan[key],previous[key],'Mapped intake must preserve original '+key);
+ const imported=plan.intervention_import;
+ assert.equal(imported.source.text,saved.mapping_input.text);
+ assert.equal(imported.source.sha256,saved.mapping_input.sha256);
+ assert.equal(imported.source.bytes,Buffer.byteLength(saved.mapping_input.text,'utf8'));
+ assert.deepEqual(imported.column_mapping,saved.mapping_input.column_mapping);
+ assert.deepEqual(imported.source_headers,saved.mapping_input.headers);
+ assert.deepEqual(imported.imported_interventions,previous.interventions);
+ assert.deepEqual(imported.summary.added_ids,[]);assert.deepEqual(imported.summary.removed_ids,[]);
+ assert.deepEqual(imported.summary.changed_ids,[]);
+ assert.equal(imported.summary.unchanged_ids.length,previous.interventions.length);
+ for(const row of imported.field_provenance){
+  assert.equal(row.source_column,mappedNames[row.field]);
+  assert.equal(row.source_column_number,saved.mapping_input.headers.indexOf(row.source_column)+1);
+  assert.equal(row.basis,'original-column');
+ }
+}
+async function operateMappedOriginal(){
+ const original=await item('community_plans',c.mapped_plan),originalReport=await item('community_reports',c.mapped_report);
+ assert.equal(originalReport.plan_id,original.id,'Use the report of the selected retained original plan.');
+ assert.ok(original.interventions.length,'Select an existing programme with original intervention data.');
+ const table=await item('community_tables',original.table_id);
+ saved.source={collection_id:table.source.collection_id,id:table.source.source_id,sha256:table.source.sha256};
+ saved.table=table;saved.initial_plan=original;saved.mapping_original_report=originalReport;assertTable(table);
+ await navigate('communities');await page.locator('[name="community_table"]').selectOption(table.id);
+ const ticket=originalReport._downloads.find(row=>row.filename==='interventions.csv');assert.ok(ticket);
+ await openReport(originalReport.id);
+ const originalFile=await download(ticket,path.join(output,'mapping-original-interventions.csv'));
+ const originalText=await fs.readFile(originalFile.path,'utf8');
+ const parsed=parseCommunityCsv(originalText),headers=parsed[0]?.cells;
+ assert.ok(headers?.length);assert.equal(new Set(headers).size,headers.length);
+ for(const field of Object.keys(mappedNames))assert.ok(headers.includes(field),'Original report field '+field);
+ const order=headers.map((_,index)=>index).reverse();
+ const renamed=headers.map(name=>mappedNames[name]||'Original exported '+name);
+ const newHeaders=order.map(index=>renamed[index]);
+ const cells=parsed.slice(1).filter(row=>row.cells.some(value=>value.trim()));
+ for(const row of cells)assert.equal(row.cells.length,headers.length);
+ const encode=value=>'"'+String(value).replaceAll('"','""')+'"';
+ const text=[newHeaders,...cells.map(row=>order.map(index=>row.cells[index]))].map(row=>row.map(encode).join(',')).join('\r\n')+'\r\n';
+ const checksum=createHash('sha256').update(text,'utf8').digest('hex');
+ const mappingInput={filename:'original-interventions-remapped.csv',text,sha256:checksum,bytes:Buffer.byteLength(text,'utf8'),
+  headers:newHeaders,column_mapping:mappedNames,original_report_id:originalReport.id,original_csv:originalFile,
+  transformation:'Original CSV columns reversed and explicitly renamed; every original cell and row order retained.'};
+ if(saved.mapping_input)assert.deepEqual(saved.mapping_input,mappingInput,'The original mapping input changed.');
+ else saved.mapping_input=mappingInput;
+ const mappedPath=path.join(output,mappingInput.filename);
+ try{assert.equal(await fs.readFile(mappedPath,'utf8'),text);}catch(error){
+  if(error.code!=='ENOENT')throw error;await fs.writeFile(mappedPath,text,{flag:'wx',mode:0o600});
+ }
+ const preview=readInterventionCsv(text,table,original.interventions,checksum,original.selection,mappedNames);
+ for(const key of ['added_ids','removed_ids','changed_ids'])assert.deepEqual(preview.summary[key],[]);
+ assert.equal(preview.records.length,original.interventions.length);
+ await retainedJSON('original-column-mapping.json',mappingInput);await checkpoint();
+ const revisionStage=await retainedStage('mapped-original-revision','community.plan.save',async()=>{
+  await openPlan(original.id);await page.locator('#detail-dialog [data-action="community-plan-revise"]').click();
+  await input('community_plan_title',original.title);
+  await form().locator('[name="community_intervention_csv"]').setInputFiles(mappedPath);
+  await form().locator('[data-action="community-intervention-import-columns"]').click();
+  await form().locator('[name="community_import_map_id"]').waitFor();
+  for(const [field,column]of Object.entries(mappedNames))
+   await form().locator('[name="community_import_map_'+field+'"]').selectOption(column);
+  await form().locator('[data-action="community-intervention-import-preview"]').click();
+  await form().locator('[data-action="community-intervention-import-apply"]').waitFor();
+  await screenshot('original-mapped-columns-preview');
+  await page.setViewportSize({width:390,height:844});await screenshot('original-mapped-columns-preview-mobile');
+  await page.setViewportSize({width:1440,height:1080});
+  await form().locator('[data-action="community-intervention-import-apply"]').click();
+  await form().locator('#community-import-applied').filter({hasText:'interventions loaded'}).waitFor();
+  assert.equal(await form().locator('[data-community-intervention]').count(),original.interventions.length);
+ });
+ saved.revised_plan=await item('community_plans',revisionStage.result.id);
+ assertMappedPlan(saved.revised_plan,original);await checkpoint();await refresh();
+ const reportStage=await retainedStage('mapped-original-report','community.report.build',async()=>{
+  await openPlan(saved.revised_plan.id);await page.locator('#detail-dialog [data-action="community-report-new"]').click();
+  await input('community_report_title',originalReport.title);
+ });
+ saved.report=await item('community_reports',reportStage.result.id);
+ await checkpoint();await refresh();
+}
+
 async function retainCommunityJourney(edition){
  if(edition.community_journey){saved.community_journey=edition.community_journey;return;}
  await openCommunityTab('explore');
  await page.locator('[name="community_table"]').selectOption(saved.table.id);
- await page.locator('[name="community_utility"]').selectOption('PRWD');
- await page.locator('[name="community_watershed"]').selectOption('030601020502');
+ const utility=mappingCourse?(saved.initial_plan.selection.utility_ids.length===1?saved.initial_plan.selection.utility_ids[0]:''):'PRWD';
+ const watershed=mappingCourse?(saved.initial_plan.selection.watershed_ids.length===1?saved.initial_plan.selection.watershed_ids[0]:''):'030601020502';
+ await page.locator('[name="community_utility"]').selectOption(utility);
+ await page.locator('[name="community_watershed"]').selectOption(watershed);
  await page.locator('[name="community_sort"]').selectOption('income_asc');
- await page.locator('[name="community_query"]').fill('450730309');
+ const query=mappingCourse?'':'450730309';
+ await page.locator('[name="community_query"]').fill(query);
  await page.locator('[data-action="community-clear-comparison"]').click();
- const geoids=['450730309011','450730309041'];
+ const geoids=mappingCourse?[]:['450730309011','450730309041'];
  for(const geoid of geoids)await page.locator('[data-community-compare="'+geoid+'"]').setChecked(true);
  await openReport(saved.report.id);await closeOverlays();
  await navigate('journey');
@@ -505,7 +634,7 @@ async function retainCommunityJourney(edition){
  const state=await getState(),session=state.data.operator_session;
  assert.equal(session?.project_id,saved.project_id);
  const expected={schema:'upstate.community-view/v1',project_id:saved.project_id,table_id:saved.table.id,
-  tab:'reports',utility_id:'PRWD',watershed_id:'030601020502',query:'450730309',sort:'income_asc',
+  tab:'reports',utility_id:utility,watershed_id:watershed,query,sort:'income_asc',
   compare_geoids:geoids,plan_id:saved.revised_plan.id,report_id:saved.report.id};
  assert.deepEqual(session.journey.community,expected);
  assert.equal(session.journey.notes,notes);
@@ -550,7 +679,8 @@ async function verifyReopened(){
  assert.deepEqual(publicItem(table),publicItem(saved.table));
  const original=await item('community_plans',saved.initial_plan.id),revision=await item('community_plans',saved.revised_plan.id);
  assert.deepEqual(publicItem(original),publicItem(saved.initial_plan));
- assert.deepEqual(publicItem(revision),publicItem(saved.revised_plan));assertPlan(revision,original);
+ assert.deepEqual(publicItem(revision),publicItem(saved.revised_plan));
+ if(mappingCourse)assertMappedPlan(revision,original);else assertPlan(revision,original);
  const report=await item('community_reports',saved.report.id);
  assert.deepEqual(publicItem(report),publicItem(saved.report));
  await openPlan(revision.id);
@@ -574,6 +704,7 @@ try{
  else saved.project_id=first.data.project.id;
  await checkpoint();
  if(c.mode==='operate'){
+  if(mappingCourse){await operateMappedOriginal();}else{
   await retainOriginalSource();
   const tableStage=await retainedStage('table','community.table.import',async()=>{
    await navigate('communities');await page.locator('[data-action="community-import"]').first().click();
@@ -596,6 +727,7 @@ try{
    await input('community_report_title','Pioneer source-water community work program');
   });
   saved.report=await item('community_reports',reportStage.result.id);await checkpoint();await refresh();
+  }
   saved.report_downloads=await inspectReport(saved.report,saved.revised_plan);
   saved.original_records=await retainedJSON('original-community-records.json',{
    schema:'upstate.community-browser-original-records/v1',project_id:saved.project_id,source:saved.source,
@@ -647,6 +779,7 @@ try{
   comparison:saved.comparison,report_downloads:saved.report_downloads,workspace_archive:saved.workspace_archive,
   received:saved.received,reopened:saved.reopened,community_journey:saved.community_journey,original_records:saved.original_records,progress:statePath,
   source_revision:c.source_revision??null,delivery_editions:saved.delivery_editions??{},
+  ...(mappingCourse?{mapping_selection:saved.mapping_selection,mapping_input:saved.mapping_input}:{}),
   attempts:saved.attempts.map(row=>({mode:row.mode,started_at:row.started_at,completed_at:row.completed_at,
    complete:Boolean(row.complete),error:row.error,screenshots:row.screenshots,page_errors:row.page_errors,http_errors:row.http_errors}))};
  await atomicJSON(resultPath,result);
@@ -655,7 +788,7 @@ try{
 }catch(error){
  attempt.error={name:error.name,message:redact(error.message),stack:redact(error.stack)};
  attempt.completed_at=new Date().toISOString();await checkpoint();
- await atomicJSON(path.join(output,'community-browser-failure.json'),{operation,attempt:attempt.error,progress:statePath,
+ await atomicJSON(path.join(output,stem+'-failure.json'),{operation,attempt:attempt.error,progress:statePath,
   original_task_ids:Object.fromEntries(Object.entries(saved.stages).map(([name,row])=>[name,row.task_id]))});
  await atomicJSON(resultPath,{schema:'upstate.community-browser-result/v1',operation,complete:false,state:'failed',mode:c.mode,error:attempt.error,progress:statePath,received:saved.received});
  throw Error(attempt.error.message,{cause:attempt.error.name});

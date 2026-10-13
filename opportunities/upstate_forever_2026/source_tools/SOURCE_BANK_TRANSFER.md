@@ -32,9 +32,19 @@ const transfer = prepareTransfer([
 
 `text` is the exact original UTF-8 JSON, including its whitespace and terminal newline. `git_blob` and `sha256` are optional expected identities; provide the source's known identity whenever available. A parsed tool response alone does not establish its original serialization. Recover the complete original text or reproduce and verify its known byte identity before preparing a transfer.
 
-Each bank must use `commons.source-bank/v1`, with top-level `file_count`, `source_bytes` and `files`. Every file needs its original relative POSIX `path`, `bytes`, `sha256`, `git_blob` and canonical `content_base64`. The encoder checks all members against the actual decoded bytes before preparing any parts. It rejects duplicate bank names, duplicate member paths, a file used as another file's directory, unsafe paths, malformed Unicode, noncanonical base64 and inconsistent inventory.
+The original bank may use one of these retained contracts:
 
-A differently shaped historical bank needs an explicitly authored compatible successor that retains the historical artifact and records its relationship. The encoder never silently inserts missing totals or changes the original JSON bytes.
+| Original schema | Member content | Inventory and source identities |
+| --- | --- | --- |
+| `commons.source-bank/v1` | Exactly one of canonical `content_base64` or literal UTF-8 `content` | `file_count` and `source_bytes` are required. Base64 members require their original `git_blob`. |
+| `commons.source-text-bank/v1` | Literal UTF-8 `content` | `file_count` and `source_bytes` are required. |
+| `upstate.source-bank/v1` | Literal UTF-8 `content` | Original totals and member Git identities are optional; every declared value is checked. |
+
+Every member requires its original relative POSIX `path`, `bytes` and `sha256`. If a text member declares `git_blob`, it must match. The sender and receiver derive the transfer inventory and actual Git identity directly from the complete file bytes when that historical text contract omits them. Those derived values appear in transfer/receiving metadata; the original JSON remains byte-for-byte unchanged, including its schema, whitespace, input associations and missing optional fields.
+
+The encoder rejects duplicate bank names, duplicate member paths, a file used as another file's directory, unsafe paths, malformed Unicode, ambiguous text-plus-base64 content, noncanonical base64 and inconsistent declared inventory. Binary files remain supported through the base64 contract. Plain-text members must be real strings, including an empty string where the original file is empty.
+
+An unknown bank schema still needs an explicitly authored compatible successor with its relationship to the original recorded. The tool does not infer a schema from arbitrary tool output. Metadata describing an external input is retained as metadata; it is not counted as a file supplied by the bank.
 
 The returned object has:
 
@@ -66,6 +76,32 @@ python -B source_tools/materialize_source_banks.py \
 Then use the maintained component installer or compose the received source with the working application, retaining the exact active Workspace and current local changes. See [MATERIALIZE_SOURCE_BANKS.md](MATERIALIZE_SOURCE_BANKS.md).
 
 Keep overlays in separate receiving directories when they intentionally repeat existing paths. A single transfer rejects duplicate source paths across its banks, even when the duplicated bytes are identical. The caller's application composition decides which reviewed successor replaces an older file.
+
+## Receive one complete small transfer from a pasted script
+
+When a receiver specifically needs copyable source instead of a file download, `prepareInlineReceiver` frames the same transfer with the exact maintained Python materializer. It does not add a separate source decoder. Supply the reviewed full materializer text and its known Git identity:
+
+~~~js
+const inline = prepareInlineReceiver(transfer, exactMaterializerSource, {
+  materializerGitBlob: knownMaterializerBlob,
+  maxScriptBytes: 250000
+});
+// Publish inline.script and retain inline.scriptIdentity.
+~~~
+
+The returned script has three unindented ASCII lines. Both its payload and its Python bootstrap body are base64-encoded, so repeated-space conversion in a Slack Canvas cannot alter Python indentation. The packet includes the original part JSON, original transfer manifest and exact materializer. It preserves original part/manifest identities and checks the full packet, helper and part bodies before receiving.
+
+Save those three lines as an ordinary local Python file and run:
+
+~~~sh
+python -B receive-original-source.py /path/to/new-owned-receiving
+~~~
+
+The script takes exactly one owned directory. It retains `input/materialize_source_banks.py`, `input/transfer.json` and `input/parts/<git_blob>.json`, then calls that exact materializer into `received/`. Original source files are in `received/source/`; original bank JSON and the complete receiving inventory accompany them. Existing different inputs or source files remain untouched. The bootstrap rejects symlinked paths in its receiving input tree.
+
+The sender returns `scriptIdentity`, `packetIdentity`, `materializerIdentity` and `transferManifestIdentity` for the actual generated bytes. Its budget measures the entire script. If it exceeds the configured limit, publish the existing manifest and parts separately. Large inline scripts are a fallback for an observed receiving constraint; ordinary native files or repository archives remain the preferred handoff.
+
+The complete original seasonal-comparison bank from PR3886 is an exercised text-contract example: Git `ab08fa5b981826c33a91e7b36c3d3188150da041`, 2,387,238 JSON bytes, six source files and 2,161,616 original source bytes. Its unchanged original JSON compresses to 129,721 bytes and one 173,181-byte part. All eight original input associations remain in the bank; they do not silently become extra supplied files.
 
 ## Size budget
 

@@ -34,6 +34,7 @@ export function attachEconomicDesk(host) {
   let rowFingerprint='',completedTask=null,worksheetPreview=null;
   let editionEpoch=0,implementationOptions=null,implementationRun='';
   let requestedEdition=null,mountReady=null;
+  let comparisonEditor=null,comparisonOpening=null;
   let recoveryStore=null;
   let recoveryBlocked='',storageIssue='',lastReceipt=null,retiredRequest=null,taskTimer=null,taskReading=false,requestSending=false,mountTurn=0;
   const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
@@ -451,8 +452,8 @@ export function attachEconomicDesk(host) {
   function renderSaved(value=catalog) {
     if(!value)return;
     const editions=value.editions||[],drafts=value.drafts||[];
-    let body='<div class="econ-saved-grid"><div><h4>Completed editions</h4>';
-    body+=editions.length?'<ul class="econ-saved-list">'+editions.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.candidate_count+' scenarios · '+row.costed_count+' costs · '+row.eligible_count+' eligible</span><div>'+button('open-edition','Open desk','data-id="'+escape(row.id)+'"')+button('edit-edition','Reuse inputs','data-id="'+escape(row.id)+'"')+
+    let body='<div class="econ-actions">'+button('compare-editions','Compare saved editions')+'</div><div class="econ-saved-grid"><div><h4>Completed editions</h4>';
+    body+=editions.length?'<ul class="econ-saved-list">'+editions.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.candidate_count+' scenarios · '+row.costed_count+' costs · '+row.eligible_count+' eligible</span><div>'+button('open-edition','Open desk','data-id="'+escape(row.id)+'"')+button('edit-edition','Reuse inputs','data-id="'+escape(row.id)+'"')+button('compare-editions','Compare this edition','data-id="'+escape(row.id)+'"')+
       (typeof host.openExtension==='function'?button('client-report','Prepare client report','data-id="'+escape(row.id)+'"')+button('implementation-choose','Plan implementation','data-id="'+escape(row.id)+'"'):'')+'</div></li>').join('')+'</ul>':'<p class="econ-empty">Completed economic editions appear here.</p>';
     body+='</div><div><h4>Saved inputs</h4>';
     body+=drafts.length?'<ul class="econ-saved-list">'+drafts.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.costed_count+' sourced costs</span>'+button('open-draft','Reopen inputs','data-id="'+escape(row.id)+'"')+'</li>').join('')+'</ul>':'<p class="econ-empty">Save the actual source, zone and completed cost inputs for another operator.</p>';
@@ -616,6 +617,21 @@ export function attachEconomicDesk(host) {
     if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;
     completedTask=null;renderRecovery();await recoverOriginal();
   }
+  async function openComparison(selection={}) {
+    const selectedWorkspace=getState()?.workspace_key,selectedFrame=frame,turn=mountTurn;
+    if(!selectedWorkspace||selection.workspace_key&&selection.workspace_key!==selectedWorkspace||!frame)throw Error('Open the original Economic desk before comparing its saved editions.');
+    if(comparisonEditor?.alive()){comparisonEditor.node.focus();return comparisonEditor;}
+    if(comparisonOpening)return comparisonOpening;
+    current();remember();
+    const operation=(async()=>{
+      const module=await import('./economic_comparison.mjs');
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))throw Error('The original Economic workspace changed before its comparison opened.');
+      return module.openEconomicComparison(host,{...selection,workspace_key:selectedWorkspace},editor=>{
+        if(activeTaskContext(selectedWorkspace,selectedFrame,turn))comparisonEditor=editor;else editor.close();
+      });
+    })();
+    comparisonOpening=operation;try{return await operation;}finally{if(comparisonOpening===operation)comparisonOpening=null;}
+  }
   async function onClick(event) {
     const target=event.target.closest('[data-econ]');
     if(!target||!frame.contains(target))return;
@@ -623,6 +639,7 @@ export function attachEconomicDesk(host) {
     try{
       const action=target.dataset.econ;
       if(action.startsWith('recovery-'))return await recoveryAction(action);
+      if(action==='compare-editions')return await openComparison({first_edition_id:target.dataset.id||undefined});
       if((pending||recoveryBlocked)&&!['refresh-saved','close-edition','open-edition','worksheet-csv','worksheet-json','worksheet-source'].includes(action))throw Error('Finish or recover the original Economic request before changing its inputs.');
       if(action==='refresh')return await loadCatalog();
       if(action==='refresh-saved'){if(typeof host.refreshState==='function')await host.refreshState();catalog={...catalog,...getState()?.data?.economic_editions};return renderSaved(catalog);}
@@ -736,6 +753,7 @@ export function attachEconomicDesk(host) {
     mountReady.then(()=>consumeSavedEdition()).catch(error=>{message(error.message||String(error),true);rejectSavedEdition(error);});
   }
   function detach() {
+    comparisonEditor?.close();comparisonEditor=null;
     clearTimeout(taskTimer);mountTurn++;taskReading=false;requestSending=false;
     if(frame)rejectSavedEdition(Error('The Economic desk closed before the retained edition opened.'));
     mountReady=null;
@@ -787,5 +805,5 @@ export function attachEconomicDesk(host) {
       }catch(error){rejectSavedEdition(error);}
     });
   }
-  return {mount,update,detach,openReport,openEdition,openSavedEdition,loadSaved,prepareClientReport,prepareImplementation};
+  return {mount,update,detach,openReport,openEdition,openSavedEdition,openComparison,loadSaved,prepareClientReport,prepareImplementation};
 }

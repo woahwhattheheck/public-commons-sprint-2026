@@ -54,6 +54,9 @@ def inspect(workspace, key):
         raise ValueError("The saved report's original scientific source edition changed")
     for item in result["files"].values():
         verify_file(selected, item)
+    if value.get("capture_origin") is not None:
+        from .scientific_report_capture import verify_origin
+        verify_origin(workspace, value, selected)
     return value, selected, result
 
 
@@ -121,6 +124,14 @@ def _save_edition(workspace, identity, result):
              **{name: result[name] for name in (
                  "state", "operation_id", "source_count", "section_count",
                  "figure_count", "sources", "files")}}
+    if (selected / "edition.json").is_file():
+        previous = read_json(selected / "edition.json")
+        if previous.get("capture_origin") is not None:
+            original = dict(previous)
+            original.pop("capture_origin")
+            if original != value:
+                raise ValueError("The completed report differs from its adopted original edition.")
+            value = previous
     atomic_json(selected / "edition.json", value, immutable=True)
     inspect(workspace, key)
     return {"scientific_report_edition_id": key, "title": value["title"],

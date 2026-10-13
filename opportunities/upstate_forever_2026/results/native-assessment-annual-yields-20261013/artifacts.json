@@ -1,0 +1,684 @@
+{
+  "schema": "commons.artifacts/v1",
+  "title": "Physical assessment coverage, measured E. coli and annual references",
+  "source_id": "native-assessment-observed-bef411c2954fc3e7deb6-microbial-f53df7b5a31d-annual-yields-v1",
+  "interactive_source_id": "assessment-association-report-ddae857afc24b47de43d",
+  "archive": {
+    "path": "native-assessment-microbial-delivery.zip",
+    "bytes": 2867503,
+    "sha256": "14041f85f6ec686137c4f06e745a460f875de4db8e012832f5aca3bb042f5058",
+    "manifest_member": "sources.json"
+  },
+  "files": [
+    {
+      "path": "source/annual-reference-assessment-20261013/sources.json",
+      "bytes": 7322,
+      "sha256": "6d3d3a781aadbd17d4e4c4d36a17871b0df735d69977a0143d1446db95d2fddb"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/assessment-geography-context.geojson",
+      "bytes": 169064,
+      "sha256": "e5b920eeb4b9afab55dd384c0aaeedbb39715808187021e4dd9b1a4c5d4dec8a"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/README.md",
+      "bytes": 11203,
+      "sha256": "933b95dd404e62281d5d0264c31324acf6885d4b61d4eceac083ff94c13a8fd3"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/annual-reference-assessment-summary.json",
+      "bytes": 36973,
+      "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/assessment-native-huc-context.json",
+      "bytes": 441989,
+      "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/assessment-native-huc-stations.csv",
+      "bytes": 42270,
+      "sha256": "291be0108b81e07009a30c976b230a84a14b97a964eb0791db8a9d8fb49e4c60"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/assessment-native-huc-records.csv",
+      "bytes": 49799,
+      "sha256": "31ef5aa8d2aa0bb48a856857fb4421feef6ab35bc11cdee61db9b3ee4ed18c35"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/annual-reference-station-memberships.csv",
+      "bytes": 184897,
+      "sha256": "5eb2333c54b727c790f6b007e8c31fc59fde8b589dd093e5224753073fb02c92"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
+      "bytes": 19306,
+      "sha256": "c2a21d9809eb8065aafaf571aee15edc98c80f7aac06ff39623386fe312360fc"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson",
+      "bytes": 2433,
+      "sha256": "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json",
+      "bytes": 12827,
+      "sha256": "eaa608090903f409ddd89ac93982c580f60da709ab09075ce5bcf97f55a0ba6b"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json",
+      "bytes": 2502,
+      "sha256": "72be42d0b6294b9950641cf75bd51dc0db0065bacf847bb6e0902a5ab89f943f"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv",
+      "bytes": 42751,
+      "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+      "bytes": 1043696,
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/scdes_savannah705_20261013/original-count-response.html",
+      "bytes": 41,
+      "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/scdes_savannah705_20261013/source-provenance.json",
+      "bytes": 931,
+      "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+      "bytes": 17794,
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_eight_20261013/wqp_eight_native.csv",
+      "bytes": 3640,
+      "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+      "bytes": 4364,
+      "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+      "bytes": 50756,
+      "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_coordinate_context73_20261013/wqp_coordinate_context.geojson",
+      "bytes": 90279,
+      "sha256": "2c9a06c77e9d55320c779af7edea68fd091c0c8458b85b0ec32de9d999cc687e"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_coordinate_context73_20261013/wqp_station_pages.json",
+      "bytes": 489141,
+      "sha256": "059da5e2e898286b6249356c9ef4a1771516eccb6462a5fd0e1ae523dd1e8640"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/results/station-assessment-context.csv",
+      "bytes": 109332,
+      "sha256": "4ca9e11c10f2da79144622a9aec5bf89f7dadad5d2adbbd4972f7df3aa0d21d9"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/README.md",
+      "bytes": 5613,
+      "sha256": "14ca780aeeb1c04cd39ad6c3ed9c0bc4b5649b9d222b8c8b4cd0f52672e6f855"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/artifact-manifest.json",
+      "bytes": 4756,
+      "sha256": "c575d9d042e533b7820483f9a14ae325beb1f7455069e608d4fdce09fd5afd2c"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/assessment-context-sources.json",
+      "bytes": 2618,
+      "sha256": "b81ae2360bf075c6117428e733dd7bd3255b70477f68214fe8624ec697657ea5"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/inputs/303d-2024-pdf-table-normalized.json",
+      "bytes": 2674649,
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+      "bytes": 688155,
+      "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/inputs/tmdl-attainment-native-20260728.json",
+      "bytes": 1260570,
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/normalized-assessment-sources.json",
+      "bytes": 2155,
+      "sha256": "353b4fac9e1f2cecd694aef14a0e41ab468c75bbe6cd13fb7b7d2ed4ef0dc60f"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/results/OPEN_STATION_ASSESSMENTS.html",
+      "bytes": 39730,
+      "sha256": "90c554509eeea8f99c1762c8ca470aa17a0099807f0fdf11a005c53d39d428cd"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/results/station-assessment-context.json",
+      "bytes": 1187125,
+      "sha256": "9bce42134d1c9434539c2982eef8f511f9966fd4f1a52150852ae04d2e9bc54a"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/results/station-assessment-summary.json",
+      "bytes": 2075,
+      "sha256": "51a2f02fa357d409f49150d4ff0916e3022512ef72f522f9377bf5972a8bb5ce"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/scdes_savannah705_20261013/sources.json",
+      "bytes": 1525,
+      "sha256": "4f586bfe326c485ce917622e5d091082c17e407b0d5005ae9fe2f79a39dd273a"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/README.md",
+      "bytes": 2209,
+      "sha256": "ca70ca241bbf5d93e9bdbea04f7e9df2351e3012b400d2c5f06b16e2a6d8a46b"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_assessment159_additional_two_20261013/sources.json",
+      "bytes": 2222,
+      "sha256": "3cd6a6b9a7244808ca45491f45d851330b2321fb903efddcf859ba5bc1531fc6"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_coordinate_context73_20261013/sources.json",
+      "bytes": 1523,
+      "sha256": "e7be50103b7034d89eba19216ce4170f23f94aebf98f04356190fb31614aeb3e"
+    },
+    {
+      "path": "source/station-assessment-context/native159-source-context-20261013/source_data/wqp_eight_20261013/sources.json",
+      "bytes": 1533,
+      "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nitrogen-calibration.json",
+      "bytes": 139120,
+      "sha256": "f7e2bb7c22c644bf618d48e8fbb0729b44ab5c1f5343fb4a61261fd460911f48"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/phosphorus-calibration.json",
+      "bytes": 136921,
+      "sha256": "6e70bccc5666d8e4bd3389026bfc1242516817c462e4149c063b5e678c8a1ec0"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/sediment-calibration.json",
+      "bytes": 107033,
+      "sha256": "81b0ee67b2898e4b3c9c95a04253eb98a9f3dabc29bb5a41f463ee609041b91e"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/P9A682GW-original-metadata.xml",
+      "bytes": 174636,
+      "sha256": "236439342336e3ceb0fe749335f5893910793eeb6fad25cd6aad8ebe099f067d"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/service-definition.json",
+      "bytes": 11453,
+      "sha256": "7fd8d3587b0a6da5f63270f0ab0551ea344d9db74a62d8ddbf57cc21acc5c6fa"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/flowline-definition.json",
+      "bytes": 4899,
+      "sha256": "0b2822f3d1e332eb9ccf1427fd850e73f00aeb76dcde6e9fdb42cf844008b3a6"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/reach-crosswalk-1.json",
+      "bytes": 16246,
+      "sha256": "af3b3e5b81f969031c3799aaea16888c3d280fdcb103957e7e76c02655905442"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/reach-crosswalk-2.json",
+      "bytes": 15891,
+      "sha256": "a9d7f5779373f72d671372b0e1d47c57fd38b8f67b55cd3521121c96ea02961c"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/reach-crosswalk-3.json",
+      "bytes": 16050,
+      "sha256": "0cf0535842dd4f5f756f367cbb027c5d889b0ea1e250ae0f58fc0ce5d1a58e4f"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/reach-crosswalk-4.json",
+      "bytes": 16386,
+      "sha256": "a4e03d4581829d5ac0b8106d4fefbe3a6edeb6b59203e088b06c5d12bb4dbe54"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/reach-crosswalk-5.json",
+      "bytes": 12341,
+      "sha256": "b400a6ab05d31c8037908235efa009486b868e4a96bf39bfe9e522665283d5c2"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6269342.json",
+      "bytes": 27736,
+      "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6280111.json",
+      "bytes": 63709,
+      "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-11730084.json",
+      "bytes": 37813,
+      "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-22724211.json",
+      "bytes": 167485,
+      "sha256": "992240027a83b262ffe4dcd854f4b0acce2cc45fcf6138005849e4c40a4cb89c"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/comid-22724211.json",
+      "bytes": 647,
+      "sha256": "5d5b2f754d06053178638a4c89c1cce2be35eeff3f3a6d7d5d504431dbe500e4"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-22726623.json",
+      "bytes": 197133,
+      "sha256": "1c73ac19a6fe22e1e5397e1e7aad07445ee71b9bbd8aab3efb4e44c079745594"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/comid-22726623.json",
+      "bytes": 2306,
+      "sha256": "e302840ee846b7975a5160aa2e997d629bf20fd5e774cc9ad96b9e532a83d448"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/comid-6269342.json",
+      "bytes": 567,
+      "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/comid-11730084.json",
+      "bytes": 803,
+      "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/nldi/comid-6280111.json",
+      "bytes": 878,
+      "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/geometry-review.json",
+      "bytes": 7418,
+      "sha256": "af9bf4e190b8fb70f7e2b8381615480aa2f4dc5fc011a1bf4d5a107daade47ae"
+    },
+    {
+      "path": "source/usgs-southeast-sparrow-2012/upper-savannah-all-targets-selection.json",
+      "bytes": 16329,
+      "sha256": "45d7c333521a78cc5ee933993f740acc5a93c0b6acf6e7870dcc28f1752ae21d"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/inputs/303d-2024-pdf-table-normalized.json",
+      "bytes": 2674649,
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/inputs/tmdl-attainment-native-20260728.json",
+      "bytes": 1260570,
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+      "bytes": 688155,
+      "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+    },
+    {
+      "path": "association/assessment-native-identity.csv",
+      "bytes": 152915,
+      "sha256": "edb21a1f9de63caa71cf4a3786c7414f3e5ea21b80c32980132bc78f68484aff"
+    },
+    {
+      "path": "association/publisher-huc-differences.csv",
+      "bytes": 5550,
+      "sha256": "eb7970663ae3fb80a7a2b56fb104d57d90049bd7b02e9c6ba15b398a39bc83f1"
+    },
+    {
+      "path": "association/identity-summary.json",
+      "bytes": 2077,
+      "sha256": "2b767119426e61835b0944702f0fa813c9ca7d949254d5581b3f315c0f7dbc4f"
+    },
+    {
+      "path": "association/inputs/assessment-records-domain217.csv",
+      "bytes": 111624,
+      "sha256": "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7"
+    },
+    {
+      "path": "association/inputs/assessment159-native-identity-crosswalk.csv",
+      "bytes": 42751,
+      "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+    },
+    {
+      "path": "association/inputs/source-priority-assessment-domain217.json",
+      "bytes": 629194,
+      "sha256": "5474827855ed902441d4cf0f65b17a606fefe715d902dc0c3c5fa0855f17b61f"
+    },
+    {
+      "path": "association/inputs/assessment-native-huc-context.json",
+      "bytes": 441989,
+      "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+    },
+    {
+      "path": "association/inputs/microbial-assessment-overlap.json",
+      "bytes": 277647,
+      "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+    },
+    {
+      "path": "association/inputs/microbial-assessment-observations.csv",
+      "bytes": 240366,
+      "sha256": "72814c13c14624e4f800f9b23a40264f212a4c568d30ad5b42033eee8e9b88ba"
+    },
+    {
+      "path": "association/assessment-associations.json",
+      "bytes": 2076751,
+      "sha256": "ddae857afc24b47de43d97e6c57c0c5cf1e5c4d48b4313b90c3222496e4794cd"
+    },
+    {
+      "path": "association/assessment-associations.csv",
+      "bytes": 285925,
+      "sha256": "78d8bd6ea60fe3201d0db7d091432ddaf8a795c374939165eb44dedccfdca5df"
+    },
+    {
+      "path": "association/publisher-differences-and-priorities.csv",
+      "bytes": 9717,
+      "sha256": "803990850b0fec8cc910026786d56cce65502f3cc7ab35e3cac74ef3baea125d"
+    },
+    {
+      "path": "association/watershed-membership-comparison.csv",
+      "bytes": 130493,
+      "sha256": "30192b215c5a1c605233c18748f9f06afd3cb2be771e01268cb2ff17294a8bb9"
+    },
+    {
+      "path": "association/assessment-edition-summary.csv",
+      "bytes": 685,
+      "sha256": "bd483f918882910e9fa7af1a8b1199c953f3d2db3c9201a7c6372bd44b6dfee4"
+    },
+    {
+      "path": "association/inputs/annual-reference-assessment-summary.json",
+      "bytes": 36973,
+      "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+    },
+    {
+      "path": "association/annual-reference-yields.json",
+      "bytes": 25470,
+      "sha256": "5d304b05270f96de219f32e2b9304eaa9e3108e9d1871d1c5fd59c2762e43f43"
+    },
+    {
+      "path": "association/annual-reference-yields.csv",
+      "bytes": 8770,
+      "sha256": "bf5907bd9a99b3e68440289d36b104887113fe43bf442dd31f140437a650a68e"
+    },
+    {
+      "path": "association/annual-reference-relations.csv",
+      "bytes": 984,
+      "sha256": "c767054656870dfafbf7ce5e5358d84b0727d64166cdc3f8d7d20e37e24b6182"
+    },
+    {
+      "path": "association/OPEN_ASSESSMENT_ASSOCIATIONS.html",
+      "bytes": 2887455,
+      "sha256": "e488725abb8fe50076b79226c4a300d0d3da5be9a758d312c917ee40f3aa77c9"
+    },
+    {
+      "path": "association/artifacts.json",
+      "bytes": 3380,
+      "sha256": "c475cf9572ea432c280dabc10456e613aa2e343c59162726355e009bf328ed82"
+    },
+    {
+      "path": "association/sources.json",
+      "bytes": 4453,
+      "sha256": "d0e2e55130c6fb8d47db7936c79149a654b7c482ace791be36cecd54f910c14f"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-sources.json",
+      "bytes": 5895,
+      "sha256": "5799f47ffbdf0c12b8b7003a4bd88badb1d30f1a54b874db678d1de2189acffe"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/assessment-microbial-context.geojson",
+      "bytes": 198864,
+      "sha256": "4728c6ca2943821bbe2dc6cee30fa530708f4b8d0587ce7b311d93cb58533fc8"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-coverage.mjs",
+      "bytes": 12715,
+      "sha256": "edc4a9c9f3546eaf60bfd724055a2e3db6df9bc7fd502d4ac0d597003a93ed6a"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-overlap.json",
+      "bytes": 277647,
+      "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/MICROBIAL_COVERAGE.md",
+      "bytes": 8566,
+      "sha256": "89ff8ac8ff8c6690c572ef4b5bc7e4c09067ba91e51071f01e84dea5212a77a7"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-observations.csv",
+      "bytes": 240366,
+      "sha256": "72814c13c14624e4f800f9b23a40264f212a4c568d30ad5b42033eee8e9b88ba"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-observed-stations.csv",
+      "bytes": 16755,
+      "sha256": "048ef5ff9302beed0d049247f1d4732afb2d684e616aff989d4da943db6b9f97"
+    },
+    {
+      "path": "source/annual-reference-assessment-20261013/microbial-assessment-coverage.csv",
+      "bytes": 34741,
+      "sha256": "b663ea6b56132632681a3a215357dc81d833c4532a6508b10a7b5e36e02789e1"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/source-manifest.json",
+      "bytes": 9294,
+      "sha256": "e044c8bad2693b34c3f5912ff1f360d7a2da594b92504fc2ec6ac2f69573f391"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/record-intervals.csv",
+      "bytes": 227126,
+      "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-summary.csv",
+      "bytes": 13740,
+      "sha256": "306f93bda04c2d8727f6c0fef782deff5f599a3818beb30c09e1f3aaed9c94ba"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/README.md",
+      "bytes": 10529,
+      "sha256": "0e986818ee59d1cb6db66e947b5bb53bd9ddcc35d3fdc335be1df6affc547d4e"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-manifest.json",
+      "bytes": 23194,
+      "sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
+      "bytes": 30692,
+      "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-season-summary.csv",
+      "bytes": 48144,
+      "sha256": "9ce54e608a226b26200092b15225bb63d033a3982a03ee897060d88f349fce08"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/station-month-summary.csv",
+      "bytes": 122016,
+      "sha256": "2d3090b1f3e63f42abb2e2950cd71c839ce5fb039667a2e0555ace8cc5f23390"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/field-replicates.csv",
+      "bytes": 708,
+      "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/comment-sensitivity.csv",
+      "bytes": 13752,
+      "sha256": "74d9853ac07b5339a3cdbe2577948cc9393537bb7da0519980610744c5d8ce15"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flagged-source-comments.csv",
+      "bytes": 28893,
+      "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/annual-sampling-coverage.csv",
+      "bytes": 206,
+      "sha256": "8e2d8aa914bb20a28e2403af83ce31c0e7eaea8c3eabd8e48f46ce33b0560d63"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-daily-2022.csv",
+      "bytes": 21567,
+      "sha256": "8fbd91d565fe517080ff8edd45cd309bfdaa31fbd1a745bf001bac48f12d14ad"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/flow-sample-join.csv",
+      "bytes": 7536,
+      "sha256": "d71fee49d8363898397f7039d6ee1beb0100f4fea9373d4f7cb682e96f88e44b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis-summary.json",
+      "bytes": 8450,
+      "sha256": "e492f216935e85cef11ba789cca65f39aaa330f7c8e2b40d6c6825588b1591fd"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/analysis.mjs",
+      "bytes": 20084,
+      "sha256": "4c00450d05f8e6509ea300af53aeca2cbbb17f87bbd1584fa1353919a8829e0b"
+    },
+    {
+      "path": "source/ecoli_temporal_analysis/20261013/reproduce.mjs",
+      "bytes": 2314,
+      "sha256": "a6f5101449c038a5a3563b644372f8cad5035d2d5dd6efa3583ee85b06de8a76"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-membership.csv",
+      "bytes": 6909,
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+    },
+    {
+      "path": "observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "bytes": 55405,
+      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+      "bytes": 21317,
+      "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+      "bytes": 46598,
+      "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+      "bytes": 183656,
+      "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+      "bytes": 59535,
+      "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+      "bytes": 8731,
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/README.md",
+      "bytes": 7374,
+      "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+      "bytes": 45810,
+      "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/index.html",
+      "bytes": 568315,
+      "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/source-inputs.json",
+      "bytes": 8181,
+      "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/station-year-method-summary.csv",
+      "bytes": 9986,
+      "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/summary.json",
+      "bytes": 3448,
+      "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d"
+    },
+    {
+      "path": "source/ecoli_utility_context/20261013/selected-stations.geojson",
+      "bytes": 106741,
+      "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"
+    },
+    {
+      "path": "observed-report.json",
+      "bytes": 57743,
+      "sha256": "bc3c25a93e1b44176edb123dce1cfc6c8218e01b9312275ce1c75e6e746dff50"
+    },
+    {
+      "path": "sources.json",
+      "bytes": 78067,
+      "sha256": "40626591ad77b34d17f1ff838798db27750c90b62574f919f474a4caef5d5f6f"
+    }
+  ]
+}

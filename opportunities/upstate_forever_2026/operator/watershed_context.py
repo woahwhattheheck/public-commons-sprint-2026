@@ -1,6 +1,7 @@
 """Regional watershed context in the original operator and verified file transport."""
 from __future__ import annotations
 
+import base64
 import gzip
 import hashlib
 import json
@@ -13,6 +14,7 @@ from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
 from model import utility_observed_context as observed_model
 from model import watershed_observation_context as evidence_model
+from model import watershed_map_context as map_model
 from model import watershed_briefing as briefing_model
 from model import utility_monitoring
 from model import watershed_source_review
@@ -261,6 +263,67 @@ class WatershedContextActions:
                 bodies[source_hash] = body
         return profiles, bodies
 
+    def _saved_map(self, ws, record, export_id, source_sha256):
+        export_id = identifier(export_id)
+        export_directory = ws.root / "watershed-context-exports" / export_id
+        exported = read_json(export_directory / "export.json")
+        if (exported.get("id") != export_id
+                or exported.get("schema") != "upstate.watershed-context-export/v1"
+                or exported.get("report_id") != record["id"]
+                or exported.get("report_sha256")
+                != record["files"]["watershed-context.json"]["sha256"]):
+            raise ValueError("The saved map selection belongs to a different regional report")
+        context = exported.get("watershed_map_context")
+        if not isinstance(context, dict):
+            raise ValueError("This saved selection does not contain the original polygon map")
+        return map_model.load_retained(export_directory, context, source_sha256), context
+
+    def _source_explorer(self, workspace):
+        """Link the fixed installed source edition through its registered file route."""
+        application = Path(__file__).resolve().parents[1]
+        path = application / "source/utility-source-context/20261013/source-explorer.html"
+        if not path.is_file():
+            return None
+        descriptor = describe_file(application, path)
+        ticket = self.operator._ticket(
+            workspace, path, descriptor,
+            "Original utility source explorer and native report review")
+        return {**ticket, "url": (
+            "/api/file/watershed-explorer/" + workspace + "/" +
+            descriptor["sha256"] + "/source-explorer.html")}
+
+    def source_explorer_file(self, workspace, source_sha256):
+        """Serve one verified installed HTML edition with only its own script hash."""
+        application = Path(__file__).resolve().parents[1]
+        path = application / "source/utility-source-context/20261013/source-explorer.html"
+        body = path.read_bytes()
+        actual_sha256 = hashlib.sha256(body).hexdigest()
+        if not re.fullmatch(r"[0-9a-f]{64}", source_sha256) or actual_sha256 != source_sha256:
+            raise ValueError("The installed source explorer changed; reopen Regional watersheds.")
+        html = body.decode("utf-8")
+        # The maintained self-contained source has two JSON data blocks and one
+        # plain executable script. Browser HTML parsing normalizes line endings.
+        scripts = re.findall(r"<script>([\s\S]*?)</script>", html, flags=re.IGNORECASE)
+        if len(scripts) != 1:
+            raise ValueError("The installed source explorer must retain its one original inline script.")
+        script = scripts[0].replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+        script_hash = base64.b64encode(hashlib.sha256(script).digest()).decode("ascii")
+        descriptor = {
+            "path": path.relative_to(application).as_posix(),
+            "bytes": len(body), "sha256": actual_sha256,
+        }
+        ticket = self.operator._ticket(
+            workspace, path, descriptor,
+            "Original utility source explorer and native report review")
+        policy = (
+            "default-src 'none'; script-src 'sha256-" + script_hash + "'; "
+            "style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; "
+            "object-src 'none'; base-uri 'none'; form-action 'none'; "
+            "sandbox allow-scripts allow-downloads allow-modals "
+            "allow-popups allow-popups-to-escape-sandbox"
+        )
+        return ticket, policy
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
@@ -272,6 +335,7 @@ class WatershedContextActions:
                 "sources": self._sources(ws),
                 "networks": self._network_sources(ws),
                 "utility_monitoring": utility_monitoring.catalog(ws),
+                "source_explorer": self._source_explorer(workspace),
             }
         if operation == "monitoring":
             key = identifier(value.get("monitoring_id") or value.get("id"))
@@ -293,6 +357,29 @@ class WatershedContextActions:
                 workspace, directory, result, "export.json", "Watershed selection and source manifest",
             )}
         directory, record, report = self._report(ws, value)
+        if operation == "map":
+            context = None
+            if value.get("export_id"):
+                loaded, context = self._saved_map(
+                    ws, record, value["export_id"], value.get("map_source_sha256"))
+            else:
+                loaded = map_model.load(
+                    Path(__file__).resolve().parents[1], value.get("map_source_sha256"))
+            result = map_model.preview(loaded, report)
+            full_selection = selection_with_contributing_context(
+                report, result["domain_huc12s"], record["files"]["watershed-context.json"]["sha256"],
+                Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013")
+            contributing = full_selection.get("contributing_context")
+            upstream = ({row["huc12"]: [key for key in row["member_huc12s"] if key != row["huc12"]]
+                         for row in contributing["per_focal"]} if contributing is not None else None)
+            return {
+                **result, "source_fingerprint": record["source_fingerprint"],
+                "saved_selection": context, "upstream_by_huc": upstream,
+                "network_source": contributing["source"] if contributing is not None else None,
+                "geometry": self.operator._ticket(
+                    workspace, loaded["geometry_path"], loaded["geometry_file"],
+                    "Original watershed polygons and observation profiles"),
+            }
         if operation == "huc":
             huc12 = str(value.get("huc12") or "")
             row = next((row for row in report["hucs"] if row["huc12"] == huc12), None)
@@ -312,6 +399,7 @@ class WatershedContextActions:
             "_utility_selections": self._utility_choices(report)[0],
             "_observed_context": observed_model.catalog(Path(__file__).resolve().parents[1]),
             "_evidence_profiles": evidence_model.catalog(Path(__file__).resolve().parents[1]),
+            "_map_source": map_model.catalog(Path(__file__).resolve().parents[1]),
             "_downloads": self._downloads(
                 workspace, directory, record, "operator-report.json", "Regional watershed source manifest",
             ),
@@ -600,6 +688,9 @@ class WatershedContextActions:
         include_evidence = value.get("include_evidence", False)
         if not isinstance(include_evidence, bool):
             raise ValueError("Choose whether this export includes original observations")
+        include_map = value.get("include_map", False)
+        if not isinstance(include_map, bool):
+            raise ValueError("Choose whether this export includes the original watershed map")
         chosen = value.get("huc12s")
         review_text = value.get("source_review_text")
         review, review_bodies = None, {}
@@ -645,6 +736,19 @@ class WatershedContextActions:
             if include_evidence else (None, {}))
         if evidence_context is not None:
             selection["landcover_observation_context"] = evidence_context
+        saved_map = (self._saved_map(ws, record, value["map_export_id"], value.get("map_source_sha256"))[0]
+                     if include_map and value.get("map_export_id") else None)
+        map_context, map_bodies, map_products = (map_model.selection(
+            Path(__file__).resolve().parents[1], selection, value.get("map_source_sha256"), loaded=saved_map)
+            if include_map else (None, {}, {}))
+        if map_context is not None:
+            if evidence_context is not None and (
+                    map_context["source"]["profile_sha256"] != _hash(
+                        evidence_bodies[evidence_model.DIRECTORY + "watershed-profiles.csv"])
+                    or map_context["source"]["original_domain_sha256"]
+                    != evidence_context["source"]["domain_sha256"]):
+                raise ValueError("The map and observed evidence need the same original profile and geometry edition")
+            selection["watershed_map_context"] = map_context
         supporting_references = self._supporting_source_references(record)
         if utility is not None:
             selection["utility_selection"] = utility
@@ -671,6 +775,8 @@ class WatershedContextActions:
             identity["observed_context_sha256"] = digest(observed_context)
         if evidence_context is not None:
             identity["landcover_observation_context_sha256"] = digest(evidence_context)
+        if map_context is not None:
+            identity["watershed_map_context_sha256"] = digest(map_context)
         if supporting_references:
             identity["brief_source_sha256"] = _hash(json.dumps(
                 supporting_references, sort_keys=True, separators=(",", ":"),
@@ -708,6 +814,8 @@ class WatershedContextActions:
                               if observed_context is not None else {})
             evidence_files = (evidence_model.retain(target, evidence_context, evidence_bodies)
                               if evidence_context is not None else {})
+            map_files = (map_model.retain(target, map_context, map_bodies, map_products)
+                         if map_context is not None else {})
             brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
@@ -733,6 +841,9 @@ class WatershedContextActions:
             result["files"].update(briefing_model.write(target, selection))
             result["files"].update(observed_files)
             result["files"].update(evidence_files)
+            result["files"].update(map_files)
+            if map_context is not None:
+                result["watershed_map_context"] = map_context
             if evidence_context is not None:
                 result["landcover_observation_context"] = evidence_model.compact(evidence_context)
             if observed_context is not None:

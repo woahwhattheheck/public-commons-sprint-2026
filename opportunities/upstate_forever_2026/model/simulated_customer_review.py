@@ -200,7 +200,7 @@ def _response(workspace, review_id, created_at):
             "and the original repeat collection and completed corrective-task evidence.",
             "Simulated field engineer"),
         "original-records": (
-            "questions",
+            "question",
             "Show the original sample IDs, laboratory result text and censored blank beside the repeat "
             "review, with the original source QA and intended-use decision kept visible.",
             "Simulated evidence reviewer"),
