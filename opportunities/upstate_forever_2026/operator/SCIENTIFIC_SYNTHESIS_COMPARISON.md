@@ -83,3 +83,7 @@ The existing ECO-CLOUD-6C52 owner retains project b9d5d257-c6bb-4f07-b975-8e8c63
 The producer must actually open/use the populated installed page at desktop and 390 px, read complete before/after sections and evidence, download/open every outgoing HTML/JSON/ZIP and its included files, and LOOK at final captures. All PDF pages, spreadsheets, maps and media in attachments must be opened and inspected through their appropriate original product route. Source review, DOM assertions or screenshot capture alone do not establish pixel inspection. Keep actual completion and outstanding recipient inspection separate in the original handoff.
 
 TJLabs attribution and original authorship remain visible. No customer message, contract signature or provider mutation is part of this contribution.
+
+## Current owner direction
+
+Read the unchanged application AGENTS.md and CURRENT_OWNER_DIRECTION.md version 2026-10-13.4 included with the complete application/source handoff. Keep the actual simulated native cases, original scientific owners and completed outputs in progress; this comparison adds no model rerun, new controller or approval gate. The producing owner personally opens, uses and LOOKs at the populated desktop/390 px product and every outgoing attachment. Source review is not rendered acceptance. Both full instruction files travel unchanged as handoff dependencies.

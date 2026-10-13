@@ -35,7 +35,7 @@ export function validateEdition(value){
   if(i>0)sha(h.previous_collection_id,'Historical prior collection');
   previous=h.revision_id;
  }
- if(v.source&&(!eq(v.source,{source_collection_id:v.collection_id,source_id:v.source_id})))throw Error('The retained authored source selector differs.');
+ if(v.source&&(v.source.source_collection_id!==v.collection_id||v.source.source_id!==v.source_id))throw Error('The retained authored source selector differs.');
  return v;
 }
 function orderedRows(before,after,key){
