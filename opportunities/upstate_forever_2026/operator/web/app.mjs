@@ -1,6 +1,8 @@
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
+import {mountObservedSeries} from './observed_series.mjs';
+import {observedValueMarkup} from './observed_series.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
 import {attachReceivingWaters} from './receiving_waters.mjs';
@@ -303,7 +305,7 @@ async function openItem(kind,id,focus=true){
   }else if(kind==='comparisons'){
     content=defs({baseline:runTitle(row.baseline_run_id),direction:row.direction,compared_outputs:row.common_artifacts||Object.keys(row.alternatives?.[0]?.artifacts||{})})+table(['Alternative','Export','Annual change','Valid cells','Profile also changes'],row.alternatives.flatMap(alt=>Object.entries(alt.artifacts).map(([name,item])=>'<tr><td>'+esc(runTitle(alt.run_id))+'</td><td>'+esc(human(name))+'</td><td>'+number(item.sum_change)+' '+esc((item.units||'').replace('/pixel',''))+'</td><td>'+number(item.valid_cells)+'</td><td>'+esc(alt.profile_changed?'Yes':'No')+'</td></tr>')));
   }else if(kind==='observations'){
-    content=defs({source_uri:row.metadata.source_uri,value_basis:row.metadata.value_basis,annualization_method:row.metadata.annualization_method||'Context observations',rows:row.rows.length,admitted:row.admitted_count,context:row.context_count})+'<div class="filters"><label>Find a record<input id="observation-search" placeholder="Station, catchment, parameter or qualifier"></label><label>Rows<select id="observation-filter"><option value="">All original rows</option value="admitted">Annual loads admitted</option><option value="context">Context and exclusions</option></select></label></div><div id="observation-records"></div>';
+    content=defs({source_uri:row.metadata.source_uri,value_basis:row.metadata.value_basis,annualization_method:row.metadata.annualization_method||'Context observations',rows:row.rows.length,admitted:row.admitted_count,context:row.context_count})+'<div id="observed-series"></div><div class="filters"><label>Find a record<input id="observation-search" placeholder="Station, catchment, parameter or qualifier"></label><label>Rows<select id="observation-filter"><option value="">All original rows</option value="admitted">Annual loads admitted</option><option value="context">Context and exclusions</option></select></label></div><div id="observation-records"></div>';
   }else if(kind==='observation_comparisons'){
      content='<p class="note">'+esc(row.interpretation)+'</p>'+defs({run:runTitle(row.run_id),observations:named('observations',row.observation_id),catchment_source:row.catchment_source,model_period:row.model_period||'Review original source vintages',selected_models:row.model_scope?.selected_models||'Review the retained run selection'});
      content+='<p class="note">'+esc(row.metrics_basis||'This retained comparison predates the complete-catchment coverage check. Create a comparison on the same retained run and observations to calculate current coverage.')+'</p>';
@@ -327,7 +329,7 @@ async function openItem(kind,id,focus=true){
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
   if(kind==='deliveries')deliveryInspection.mount($('#detail-body'));
   if(kind==='portfolios'||kind==='portfolio_reports'){detailContext.portfolio=row;mountPortfolioDetail();}
-  if(kind==='observations'){detailContext.observation=row;renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
+  if(kind==='observations'){detailContext.observation=row;mountObservedSeries($('#observed-series'),row);renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
   if(kind==='observation_comparisons'){
      detailContext.observationComparison=row;
      $('#comparison-parameter').innerHTML=[...new Set(row.comparisons.map(r=>r.parameter))].sort().map(x=>'<option value="'+esc(x)+'">'+esc(human(x))+'</option>').join('');
@@ -340,7 +342,7 @@ async function openItem(kind,id,focus=true){
 function renderObservationRows(){
   const row=detailContext.observation,q=$('#observation-search').value.trim().toLowerCase(),type=$('#observation-filter').value;
   const all=row.rows.filter(r=>(!q||JSON.stringify(r).toLowerCase().includes(q))&&(!type||(type==='admitted')===r.admitted));
-  $('#observation-records').innerHTML='<p class="note">'+Math.min(150,all.length)+' of '+all.length+' matching retained rows. The original CSV download contains every source row.</p>'+table(['Record','Catchment / station','Parameter','Original value / unit','Period','Method / uncertainty','Disposition'],all.slice(0,150).map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(r.catchment_id)+'<br><small>'+esc(r.station_id)+'</small></td><td>'+esc(r.parameter)+'</td><td>'+esc(r.value_text)+' '+esc(r.unit)+'</td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+observationMethod(r)+'</td><td>'+badge(r.admitted?'admitted':'context')+'<small>'+esc(r.issues.join('; '))+'</small></td></tr>'));
+  $('#observation-records').innerHTML='<p class="note">'+Math.min(150,all.length)+' of '+all.length+' matching retained rows. The original CSV download contains every source row.</p>'+table(['Record','Catchment / station','Parameter','Original value / unit','Period','Method / uncertainty','Disposition'],all.slice(0,150).map(r=>'<tr><td>'+esc(r.id)+'</td><td>'+esc(r.catchment_id)+'<br><small>'+esc(r.station_id)+'</small></td><td>'+esc(r.parameter)+'</td><td>'+observedValueMarkup(r,row.metadata)+'</td><td>'+esc(r.period_start)+'<br>'+esc(r.period_end)+'</td><td>'+observationMethod(r)+'</td><td>'+badge(r.admitted?'admitted':'context')+'<small>'+esc(r.issues.join('; '))+'</small></td></tr>'));
 }
 function observationMethod(row){
  const method=row.method||'Original source method retained',uncertainty=row.uncertainty;
@@ -810,7 +812,7 @@ function observationForm(){
  field('Measurement basis',select('basis',[['context','Original contextual measurements'],['annual_mass_rate','Derived annual mass-rate observations']],'context'))+
  field('Original annualization method',area('annualization_method'),'Required for derived annual loads; retain the source method, period and assumptions.',true)+
  field('Fallback period start',input('period_start','date'))+field('Fallback period end',input('period_end','date'),'Used when those period columns are absent.')+
- '<fieldset class="full"><legend>Original CSV columns</legend><p class="note" id="csv-header-note">Choose the original CSV to inspect its actual header.</p><div class="form-grid three">'+keys.map(k=>columnControl(k,['catchment_id','parameter','value','unit'].includes(k))).join('')+'</div></fieldset>'+
+ '<fieldset class="full"><legend>Original CSV columns</legend><p class="note" id="csv-header-note">Choose the original CSV to inspect its actual header.</p><div class="form-grid three">'+keys.map(k=>columnControl(k,['parameter','value','unit'].includes(k))).join('')+'</div></fieldset>'+
  '<fieldset class="full"><legend>Original parameter labels</legend><p class="note">The native names nitrogen, phosphorus and sediment already match. Map other exact source labels when they represent those same annual mass-rate parameters.</p><div id="parameter-rows"></div>'+button('parameter-add','Map an original label','','small')+'</fieldset>'+
  '<fieldset class="full"><legend>Accepted source qualifiers</legend><label class="check"><input name="blank_qualifier" type="checkbox" checked><span>Accept an empty source qualifier</span></label>'+field('Other accepted exact qualifiers',area('qualifiers'),'One original qualifier per line. Unselected qualifiers remain retained as context.',true)+'</fieldset></div>',
  'Retain original observations',async()=>{
@@ -839,7 +841,8 @@ function observationForm(){
   if(formContext!==context||workspace!==selectedWorkspace||csvControl.files[0]!==file||methodControl.files[0]!==methodFile||context.observationCSVToken!==csvToken||context.observationMetadataToken!==methodToken||JSON.stringify(readMetadata())!==selectedMetadata)throw Error('The observation selection changed during upload. Review the current CSV, source method and mapping, then import again.');
   return submitAction('observation.import',{upload_id:uploaded.id,metadata});
  },()=>{
-  form.elements.namedItem('basis').addEventListener('change',()=>form.elements.namedItem('annualization_method').required=val('basis')==='annual_mass_rate');
+  const syncContextColumns=()=>{const annual=val('basis')==='annual_mass_rate',constants=annual?{}:(formContext.observationMetadata?.constants||{});form.elements.namedItem('annualization_method').required=annual;for(const key of ['catchment_id','parameter','value','unit'])form.elements.namedItem('column_'+key).required=key==='catchment_id'?annual:!Object.hasOwn(constants,key);};
+  form.elements.namedItem('basis').addEventListener('change',syncContextColumns);syncContextColumns();
    form.elements.namedItem('observation_metadata').addEventListener('change',async()=>{
     const context=formContext,selectedWorkspace=workspace,control=form.elements.namedItem('observation_metadata'),file=control.files[0],token=crypto.randomUUID();context.observationMetadataToken=token;context.observationMetadataLoading=true;context.observationMetadataError=null;
     const current=()=>formContext===context&&workspace===selectedWorkspace&&context.observationMetadataToken===token&&control.files[0]===file;
@@ -851,6 +854,8 @@ function observationForm(){
      if(!value||typeof value!=='object'||Array.isArray(value))throw Error('The source-method file must contain an observation metadata object.');
      for(const key of ['title','source_uri','annualization_method','period_start','period_end'])if(value[key]!==undefined){if(typeof value[key]!=='string')throw Error('Source metadata '+key+' must be text.');}
      if(value.value_basis!==undefined){if(!['context','annual_mass_rate'].includes(value.value_basis))throw Error('The source method must declare context or annual_mass_rate.');}
+     if(value.constants!==undefined&&(!value.constants||typeof value.constants!=='object'||Array.isArray(value.constants)||Object.values(value.constants).some(v=>typeof v!=='string')))throw Error('Context constants must be explicit source field values.');
+     if(value.series_dimensions!==undefined&&(!Array.isArray(value.series_dimensions)||value.series_dimensions.some(v=>typeof v!=='string')))throw Error('Source series groups must name original CSV fields.');
      if(value.columns!==undefined&&(!value.columns||typeof value.columns!=='object'||Array.isArray(value.columns)||Object.values(value.columns).some(v=>typeof v!=='string')))throw Error('Original column mappings must use source field names.');
      if(value.parameter_mapping!==undefined&&(!value.parameter_mapping||typeof value.parameter_mapping!=='object'||Array.isArray(value.parameter_mapping)||Object.values(value.parameter_mapping).some(v=>!['nitrogen','phosphorus','sediment'].includes(v))))throw Error('Original parameter mappings must select nitrogen, phosphorus or sediment.');
      if(value.accepted_qualifiers!==undefined&&(!Array.isArray(value.accepted_qualifiers)||value.accepted_qualifiers.some(v=>typeof v!=='string')))throw Error('Accepted qualifiers must be exact source strings.');
@@ -863,10 +868,10 @@ function observationForm(){
      if(value.parameter_mapping)$('#parameter-rows').innerHTML=Object.entries(value.parameter_mapping).map(([from,to])=>parameterRow(from,to)).join('');
      if(value.accepted_qualifiers){form.elements.namedItem('blank_qualifier').checked=value.accepted_qualifiers.includes('');form.elements.namedItem('qualifiers').value=value.accepted_qualifiers.filter(Boolean).join('\n');}
      if(formContext.observationHeaders)for(const key of keys){const selected=value.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),formContext.observationHeaders.map(x=>[x,x]),formContext.observationHeaders.includes(selected)?selected:'');}
-     form.elements.namedItem('annualization_method').required=val('basis')==='annual_mass_rate';
+     syncContextColumns();
      $('#form-error').hidden=true;
     }catch(error){if(current()){context.observationMetadata=null;context.observationMetadataFile=null;context.observationMetadataError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
-    finally{if(current())context.observationMetadataLoading=false;}
+    finally{if(current()){context.observationMetadataLoading=false;syncContextColumns();}}
    });
   form.elements.namedItem('observation_file').addEventListener('change',async()=>{
    const context=formContext,selectedWorkspace=workspace,control=form.elements.namedItem('observation_file'),file=control.files[0],token=crypto.randomUUID();
@@ -880,7 +885,7 @@ function observationForm(){
     if(!headers.length||new Set(headers).size!==headers.length)throw Error('The original CSV header is empty or repeats a column name.');
     context.observationHeaders=headers;context.observationCSVFile=file;
     for(const key of keys){const selected=context.observationMetadata?.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),headers.map(x=>[x,x]),headers.includes(selected)?selected:'');}
-    $('#csv-header-note').textContent=headers.length+' original CSV fields: '+headers.join(', ');
+    $('#csv-header-note').textContent=headers.length+' original CSV fields: '+headers.join(', ');syncContextColumns();
     $('#form-error').hidden=true;
    }catch(error){if(current()){context.observationCSVError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
    finally{if(current())context.observationCSVLoading=false;}
@@ -943,6 +948,8 @@ async function deliveryForm(id,initialSelection){
  const roles=[['PROTECTED_LANDS','Protected-lands source'],['PARCEL','Original parcel source'],['NHD','National Hydrography Dataset source'],['NWI','National Wetlands Inventory source']];
  const overlays=[['drinking_water','Critical drinking-water source boundaries',true],['high_quality_waters','Designated high-quality waters',true],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
  const settings=row?.map_settings||{},weights=settings.weights||{};
+ const observedReportChoices=[['','Use modeled results and selected load comparisons'],...state.data.sources.flatMap(collection=>collection.entries.filter(entry=>entry.kind==='document'&&entry.metadata?.report_schema==='upstate.observed-report/v1').map(entry=>[JSON.stringify({source_collection_id:collection.id,source_id:entry.id}),entry.title+' · '+entry.vintage]))];
+ const observedReportSelected=row?.source_roles?.OBSERVED_CONTEXT?JSON.stringify({source_collection_id:row.source_roles.OBSERVED_CONTEXT.source_collection_id,source_id:row.source_roles.OBSERVED_CONTEXT.source_id}):'';
  const attachedAnalysis=row?.source_scenario_analysis_id?{id:row.source_scenario_analysis_id,sha256:row.source_scenario_analysis_sha256,title:row.source_scenario_analysis_title||row.title||'Saved scenario analysis'}:null;
  openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery','Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
  '<div class="form-grid">'+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
@@ -951,6 +958,7 @@ async function deliveryForm(id,initialSelection){
  receivingWaters.deliveryFields(row||{})+
  '<h3 class="subheading full">Actual supporting source editions</h3><p class="note full">The five modeled raster sources and computed LS factor come from the selected original run. Choose these additional original sources for the delivery lineage.</p>'+
  roles.map(([key,label])=>deliverySource('role_'+key,label,row?.source_roles?.[key])).join('')+
+ field('Observed science context',select('observed_report_source',observedReportChoices,observedReportSelected),'Include retained lake measurements, observed flows, source quantities and their scientific figures in this report.',true)+
  '<h3 class="subheading full">Source-backed cartography and parcel priority</h3>'+
  overlays.map(([key,label,requiredField])=>deliverySource('overlay_'+key,label,row?.overlays?.[key],requiredField,true)).join('')+
  '<h3 class="subheading full">Combined export priority</h3><p class="note full">The original engine normalizes actual export values against each pollutant’s positive-cell 95th percentile unless an explicit cap is supplied. Weights are recorded in the retained delivery.</p>'+
@@ -968,6 +976,7 @@ async function deliveryForm(id,initialSelection){
   const alternatives=retainedDeliveryCohort(row,val('baseline'),chosen('alternatives'));if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
   const source_roles={...(row?.source_roles||{})},selectedOverlays={...(row?.overlays||{})},weights={},caps={};
   for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
+  const observedReportSource=val('observed_report_source');if(observedReportSource)source_roles.OBSERVED_CONTEXT=JSON.parse(observedReportSource);else delete source_roles.OBSERVED_CONTEXT;
   for(const [key,,requiredField]of overlays){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
    if(x)selectedOverlays[key]=x;else delete selectedOverlays[key];

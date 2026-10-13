@@ -12,7 +12,7 @@ python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12
 
 The command compiles the two new modules, applies three unique delivery-form anchors, retains the previous app body, uses node --check where Node is available, and imports the source document through Workspace.import_sources. It prints the actual source_collection_id and source_id. The optional delivery selection is source_roles.OBSERVED_CONTEXT. The form lists this source by metadata.report_schema and explicitly clears the selection when its blank option is chosen.
 
-The source directory is observations/eighteenmile_2023/report_context. Its scientific-context.json has five substantive sections and four actual figures. The retained source is bound before delivery identity. collect returns the same binding, source assets and native report sections. The current successor includes those assets in the same portable project archive.
+The application-root observed_hydrology_context.sources.json registers observed_hydrology_context.report.json as the retained source document. Its canonical companions keep the original study under observations/eighteenmile_2023, regional hydrology under observations/observed_hydrology_20261013, and the interactive daily-flow explorer under observations/calibration_context_20261013. The recipe preserves the five original scientific sections and four figures and adds the regional source explorer. The retained source is bound before delivery identity. collect returns the same binding, source assets and native report sections. Current delivery includes those assets in the same portable project archive. The installer accepts --manifest for a separately retained source edition; the default resolves against --application, independent of the command's working directory.
 
 ## Scientific contents
 
@@ -27,15 +27,28 @@ PDF output uses ReportLab vector Drawings from the exact figure specification (o
 ## Reproduce source calculations
 
 ```sh
-node observations/eighteenmile_2023/report_context/figures/rebuild_figures.mjs observations/eighteenmile_2023/report_context /tmp/eighteenmile-figure-rebuild
-node observations/eighteenmile_2023/report_context/hydrology/rebuild_hydrology.mjs --output-dir /tmp/eighteenmile-hydrology-rebuild
+node observations/eighteenmile_2023/figures/rebuild_figures.mjs observations/eighteenmile_2023 /tmp/eighteenmile-figure-rebuild
+node observations/observed_hydrology_20261013/rebuild_hydrology.mjs --output-dir /tmp/upper-savannah-hydrology-rebuild
+node observations/eighteenmile_2023/npdes/flow_context/rebuild_monthly_flow.mjs --output-dir /tmp/eighteenmile-monthly-flow-rebuild
 ```
 
-The first command reproduces four SVGs and three supporting numerical files from the retained observations and pinned D3 modules. The included monthly-flow README carries its exact rebuild command; use the same script beneath this report_context directory. All input SHA-256 identities are recorded in their existing indices. The report recipe's inputs list binds every retained companion.
+The first command reproduces four SVGs and three supporting numerical files from the retained observations and pinned D3 modules. The second reproduces the full regional hydrology edition: 33,459 daily-discharge records at 16 gauges during 2020–2025 and the original annual, monthly and study-window summaries. The third reproduces the original dated monthly discharge/flow tables. All input SHA-256 identities are recorded in their existing indices. The recipe's inputs list binds every retained companion. Filtering the regional daily, annual, monthly and study-window CSVs to site02186702 exactly reproduces the original Eighteenmile subset bytes, so the five curated scientific sections retain their original numerical support.
 
 ## Native report execution
 
 Run the existing paired-model delivery with the returned observed source role. Also render this observed context through the current report_pdf/write_companions APIs in the same native workspace to review original SVG links, vector panel pagination and source tables. The existing current-report successor carries the import and smoke-render guidance. Its source binding is preserved in report-data.
+
+For a direct native rendering into a new retained output directory, run from the application root:
+
+```sh
+python -B source/observed-report-20261013/render.py \
+  --app-root "$PWD" \
+  --workspace /mnt/data/gis12/original-workspace \
+  --manifest "$PWD/observed_hydrology_context.sources.json" \
+  --output /mnt/data/gis12/observed-report-canonical-20261013
+```
+
+The command sets selection.observed_context_binding from the original source before collect. It writes the immutable selection, report.pdf, scientific HTML/Markdown/data companions, all retained source assets and operation.json through the maintained report APIs. On a completed retry, the same source and contact selection must match the retained selection; use a distinct output directory for a changed edition. The actual registered source title is used consistently across report formats. The resulting report's source links open the interactive explorer and original canonical data after export because all relative member paths are preserved.
 
 Related maintained source:
 - Current scientific report successor: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP

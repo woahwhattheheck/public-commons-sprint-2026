@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""Receive original observed hydrology, lake study and public-water context."""
+from __future__ import annotations
+
+import argparse
+import copy
+import csv
+import html
+import json
+import os
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+
+SCHEMA = "upstate.observed-context-receiving/v1"
+HYDROLOGY = "observations/observed_hydrology_20261013/model-sources.json"
+STUDY = "observations/eighteenmile_2023/model-sources.json"
+PUBLIC_WATER = "source/water_context/20261012/public-water"
+ASSESSMENT = "assessment"
+
+
+def _selection(args, application):
+    from model.common import file_digest, read_json
+    paths = [
+        ("assessment", Path(args.assessment_dir or application / ASSESSMENT) / "geography-model-sources.json"),
+        ("observed_hydrology", Path(args.hydrology_manifest or application / HYDROLOGY)),
+        ("lake_study", Path(args.study_manifest or application / STUDY)),
+        ("public_water", Path(args.public_water_dir or application / PUBLIC_WATER) / "sources.public-native.json"),
+    ]
+    for role, relative in (
+            ("reported_discharge", "observations/eighteenmile_2023/npdes/model-sources.json"),
+            ("monthly_discharge_flow", "observations/eighteenmile_2023/npdes/flow_context/model-sources.json"),
+            ("discharge_routing", "observations/eighteenmile_2023/npdes/routing-model-sources.json"),
+            ("study_figures", "eighteenmile_scientific_figures.sources.json"),
+            ("flow_report", "observed_hydrology_context.sources.json")):
+        context_manifest = application / relative
+        if context_manifest.is_file():
+            paths.append((role, context_manifest))
+    report_manifest = application / "eighteenmile_lake_observation_report.sources.json"
+    if report_manifest.is_file():
+        paths.append(("lake_report", report_manifest))
+    paths.extend(("domain", Path(path)) for path in args.domain_manifest)
+    paths.extend(("context", Path(path)) for path in args.context_manifest)
+    manifests, seen = [], set()
+    for role, path in paths:
+        path = path.resolve(strict=True)
+        signature = file_digest(path)
+        if (role, signature) in seen:
+            continue
+        seen.add((role, signature))
+        manifest = read_json(path)
+        if manifest.get("schema") != "upstate.sources/v1" or not manifest.get("entries"):
+            raise ValueError("Select a populated original upstate.sources/v1 manifest: " + str(path))
+        manifests.append({"role": role, "path": path, "sha256": signature,
+                          "title": manifest.get("title", path.name)})
+    spec_path = Path(args.public_water_dir or application / PUBLIC_WATER).resolve() / "receiving-waters.public-spec.json"
+    identity = {
+        "schema": "upstate.observed-context-selection/v1",
+        "manifests": [{key: item[key] for key in ("role", "sha256")} for item in manifests],
+        "public_water_spec_sha256": file_digest(spec_path),
+        "domain_layer_ids": list(dict.fromkeys(args.domain_layer_id)),
+        "context_layer_ids": list(dict.fromkeys(args.context_layer_id)),
+        "primary_layer_id": args.primary_layer_id,
+        "comparison_layer_id": args.comparison_layer_id,
+        "mode": args.mode, "paper": args.paper, "dpi": args.dpi,
+        "skip_export": bool(args.skip_export),
+    }
+    return identity, manifests, spec_path
+
+
+def _public_water(workspace, collection, spec_path, output):
+    """Bind the maintained public-water preparation to this actual source import."""
+    from model.common import atomic_json, read_json
+    from model.receiving_waters import prepare
+    from source_tools.prepare_public_source_water import validate_original_selection
+
+    selection = copy.deepcopy(read_json(spec_path))
+    receptors = selection.get("receptors", [])
+    expected = {"arjws-swpa-1500", "arjws-swpa-200", "prwd-swpa-1500", "prwd-swpa-200"}
+    if (selection.get("analysis_crs") != "EPSG:26917" or len(receptors) != 4
+            or {item.get("id") for item in receptors} != expected):
+        raise ValueError("Select the four original ARJWS/PRWD public-water receptor records")
+    validate_original_selection(spec_path.parent, receptors)
+    entries = {entry["id"]: entry for entry in collection["entries"]}
+    needed = {"scdes-public-surface-intakes-20261012", "scdes-arjws-prwd-swpa-20261012"}
+    if not needed.issubset(entries):
+        raise ValueError("The public-water import lacks its original intake or protection source")
+    for receptor in receptors:
+        if receptor.get("relation", {}).get("method") != "source_area":
+            raise ValueError("The original public-water selection uses source_area")
+        if receptor["source"].get("source_collection_id") not in (None, collection["id"]):
+            raise ValueError("The original public-water selection refers to another collection")
+        receptor["source"]["source_collection_id"] = collection["id"]
+        receptor["metadata"]["intake_reference"]["source_collection_id"] = collection["id"]
+    plan = prepare(workspace, selection)
+    atomic_json(output / "receiving-waters-spec.json", selection)
+    zones = []
+    for receptor in receptors:
+        metadata = copy.deepcopy(receptor.get("metadata", {}))
+        metadata.update(source_plan_id=plan["id"], receptor_ids=[receptor["id"]],
+                        source_relation_method="source_area", source_geometry_scope="published_polygon",
+                        source_classification=copy.deepcopy(receptor.get("classification", {})))
+        zones.append({**copy.deepcopy(receptor["source"]), "id": receptor["id"],
+                      "title": receptor["title"], "map_family": receptor["family"],
+                      "metadata": metadata})
+    source_areas = {
+        "schema": "upstate.scenario-source-areas/v1",
+        "selection": {"title": "Published source-water planning areas", "zones": zones},
+        "origin": {"source_plan_id": plan["id"], "source_collection_id": collection["id"],
+                   "analysis_crs": selection["analysis_crs"],
+                   "original_protection_sha256": entries["scdes-arjws-prwd-swpa-20261012"]["body"]["sha256"]},
+    }
+    atomic_json(output / "scenario-source-areas.json", source_areas)
+    return {"plan_id": plan["id"], "state": plan["state"], "source_collection_id": collection["id"],
+            "analysis_crs": selection["analysis_crs"], "receptor_ids": [item["id"] for item in receptors],
+            "selection": "receiving-waters-spec.json", "source_areas": "scenario-source-areas.json"}
+
+
+def _source_inventory(workspace, collections, output):
+    """Describe original retained tables and point to their complete original bodies."""
+    from model.common import file_digest
+    records = []
+    seen = set()
+    for imported in collections:
+        collection = workspace._get("sources", imported["source_collection_id"])
+        for entry in collection["entries"]:
+            key = (collection["id"], entry["id"])
+            if key in seen:
+                continue
+            seen.add(key)
+            body = entry["body"]
+            path = workspace.root / body["object"]
+            if path.stat().st_size != body["bytes"] or file_digest(path) != body["sha256"]:
+                raise ValueError("The retained observed source body changed: " + entry["id"])
+            record = {
+                "role": imported["role"], "source_collection_id": collection["id"],
+                "source_id": entry["id"], "title": entry["title"], "kind": entry["kind"],
+                "uri": entry["uri"], "vintage": entry["vintage"], "units": entry.get("units"),
+                "source_crs": entry.get("source_crs"), "filename": body["filename"],
+                "bytes": body["bytes"], "sha256": body["sha256"],
+                "download": Path(os.path.relpath(path, output)).as_posix(),
+                "companion_count": len(entry.get("companions", [])),
+                "source_scope": collection.get("scope", {}),
+            }
+            if entry["kind"] == "document" and Path(body["filename"]).suffix.lower() in {".html", ".htm"}:
+                native_path, _ = workspace.source_file(collection["id"], entry["id"])
+                record["native_view"] = Path(os.path.relpath(native_path, output)).as_posix()
+            if entry["kind"] == "table" and Path(body["filename"]).suffix.lower() in {".csv", ".tsv"}:
+                with path.open("r", encoding="utf-8-sig", newline="") as original:
+                    reader = csv.DictReader(original, delimiter="\t" if path.suffix.lower() == ".tsv"
+                                            or body["filename"].lower().endswith(".tsv") else ",")
+                    record["columns"] = reader.fieldnames or []
+                    record["rows"] = sum(1 for _ in reader)
+            records.append(record)
+    return records
+
+
+def _index(output, state, inventory, assessment, workspace):
+    from model.common import atomic_bytes
+    e = lambda value: html.escape(str(value), quote=True)
+    source_rows = []
+    for item in inventory:
+        columns = ", ".join(item.get("columns", []))
+        source_rows.append(
+            "<tr><td>" + e(item["title"]) + "<br><small>" + e(item["source_id"]) +
+            "</small></td><td>" + e(item["kind"]) + "</td><td>" + e(item.get("rows", "")) +
+            "</td><td>" + e(item.get("units") or item.get("source_crs") or "") +
+            "</td><td>" + (("<a href=\"" + e(item["native_view"]) + "\">Open report</a><br>") if item.get("native_view") else "") + "<a href=\"" + e(item["download"]) + "\" download=\"" + e(item["filename"]) +
+            "\">Original file</a><br><a href=\"" + e(item["uri"]) + "\">Agency source</a></td></tr>" +
+            ("<tr><td colspan=\"5\"><details><summary>Table columns</summary>" + e(columns) +
+             "</details></td></tr>" if columns else ""))
+    packs = []
+    for item in assessment.get("map_packs", []):
+        pack_path = workspace.root / "spatial-exports" / item["id"] / "files" / "index.html"
+        packs.append("<li><a href=\"" + e(Path(os.path.relpath(pack_path, output)).as_posix()) +
+                     "\">" + e(item["title"]) + "</a></li>")
+    document = """<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Observed watershed context</title><style>
+:root{font-family:system-ui,sans-serif;color:#202020;background:#fff}body{max-width:1200px;margin:32px auto;padding:0 24px}
+h1{font-size:28px}h2{font-size:20px;margin-top:32px}p{line-height:1.5}a{color:inherit}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:10px;border:1px solid #ccc;text-align:left;vertical-align:top}
+th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}summary{cursor:pointer}
+</style><h1>Observed watershed context</h1>
+<p>The original observed hydrology, dated lake-study measurements, draft assessment and published source-water areas are retained together in this scientific Workspace. Native vector datums, table units, sampling dates, censor conditions and companion files remain attached to their original source IDs.</p>
+"""
+    document += "<p>Workspace: " + e(workspace.project["title"]) + "<br>Receiving operation: <code>" + e(state["id"]) + "</code></p>"
+    observation_import = state.get("observation_import", {})
+    document += "<h2>Dated observation views</h2><p>The existing Observed water quality desk now contains " + e(observation_import.get("views", 0)) + " retained views of original measurements, discharge, stage and available effluent source context. Choose a view, station and parameter to inspect original dated values, censor bounds and coverage. <a href=\"observations.json\">Open the observation import record</a>.</p>"
+    document += "<h2>Maps and geographic joins</h2><ul>" + "".join(packs) + "</ul>"
+    document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
+    document += "<h2>Source tables and geographic layers</h2><p>Table counts describe actual retained rows. Source scope and complete collection identities are in <a href=\"source-inventory.json\">the source inventory</a>. The existing operator Sources desk provides table previews and every original companion download; Spatial review and Exports display these same saved views.</p>"
+    document += "<table><thead><tr><th>Source</th><th>Kind</th><th>Rows</th><th>Units / datum</th><th>Open</th></tr></thead><tbody>" + "".join(source_rows) + "</tbody></table>"
+    document += "<h2>Reading the observations</h2><p>Gauge discharge and stage keep their original units and quality flags. Laboratory concentrations keep their sample dates, fractions, analytical methods and detection conditions. The published 2023 seasonal statistics and independently reconciled individual activities retain separate source identities. Same-date upstream discharge supplies hydrologic context for the lake samples. The four published public-water protection polygons retain their original regulatory footprint and source-area relation.</p>"
+    document += '<p><a href="receiving.json">Receiving record</a> · <a href="source-inventory.json">Complete source inventory</a></p></html>\n'
+    atomic_bytes(output / "index.html", document.encode("utf-8"))
+
+
+def receive(args):
+    application = Path(args.app_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
+    if not (application / "model" / "workspace.py").is_file():
+        raise ValueError("Choose the complete existing native application root")
+    sys.path.insert(0, str(application))
+    from model.common import atomic_json, describe_file, digest, held, now, read_json, file_digest
+    from model.workspace import Workspace
+    from source_tools.operate_assessment_context import operate
+
+    workspace = Workspace(Path(args.workspace).resolve(strict=True), create=False)
+    selection, manifests, spec_path = _selection(args, application)
+    identity = {"project_id": workspace.project["id"], "selection": selection}
+    key = digest(identity)
+    output = workspace.root / "observed-context" / key
+    output.mkdir(parents=True, exist_ok=True)
+    state_path = output / "receiving.json"
+    with held(output / ".receiving.lock", blocking=False):
+        previous = read_json(state_path) if state_path.is_file() else {}
+        if previous and (previous.get("id") != key or previous.get("identity") != identity):
+            raise ValueError("The retained observed-context operation identity changed")
+        state = {
+            "schema": SCHEMA, "id": key, "identity": identity,
+            "state": "receiving", "created_at": previous.get("created_at", now()), "updated_at": now(),
+            "application": str(application), "workspace": str(workspace.root),
+            "source_imports": [], "attempts": previous.get("attempts", []) + [{"started_at": now()}],
+        }
+        atomic_json(state_path, state)
+        try:
+            collections = []
+            for item in manifests:
+                collection = workspace.import_sources(item["path"])
+                record = {key: item[key] for key in ("role", "sha256", "title")}
+                record.update(source_collection_id=collection["id"],
+                              original_manifest_sha256=collection["original_manifest"]["sha256"],
+                              entries=len(collection["entries"]))
+                collections.append(record)
+                state["source_imports"] = collections
+                state["updated_at"] = now()
+                atomic_json(state_path, state)
+            from measurement_workspace.published_studies import PublishedStudyStore
+            study_root = next(item["path"].parent for item in manifests if item["role"] == "lake_study")
+            study_result = PublishedStudyStore(
+                workspace, workspace.root / "published_studies").import_source(
+                    study_root, operation_id=key)
+            study_record = study_result["record"]
+            state["published_study"] = {
+                name: study_record[name] for name in ("study_id", "version_id", "source_collection_id", "counts")}
+            state["published_study"]["reused"] = study_result["reused"]
+            study_collection = workspace._get("sources", study_record["source_collection_id"])
+            collections.append({
+                "role": "published_study", "title": study_record["title"],
+                "source_collection_id": study_record["source_collection_id"],
+                "original_manifest_sha256": study_collection["original_manifest"]["sha256"],
+                "entries": len(study_collection["entries"])})
+            state["source_imports"] = collections
+            state["updated_at"] = now()
+            atomic_json(state_path, state)
+            from source.import_observed_context import import_context
+            context_roles = {
+                "lake_study": STUDY,
+                "observed_hydrology": HYDROLOGY,
+                "monthly_discharge_flow": "observations/eighteenmile_2023/npdes/flow_context/model-sources.json",
+            }
+            observation_manifests = {
+                context_roles[item["role"]]: item["path"]
+                for item in manifests if item["role"] in context_roles
+            }
+            state.update(state="importing_observations", updated_at=now())
+            atomic_json(state_path, state)
+            observations = import_context(
+                workspace.root, application, list(observation_manifests),
+                output / "observations.json", manifest_paths=observation_manifests)
+            state["observation_import"] = {
+                "receipt": "observations.json",
+                "observation_ids": [item["id"] for item in observations["observations"]],
+                "views": len(observations["observations"]),
+                "rows_across_views": sum(item["rows"] for item in observations["observations"]),
+                "context_rows_across_views": sum(item["context_count"] for item in observations["observations"]),
+            }
+            state["updated_at"] = now()
+            atomic_json(state_path, state)
+            water = next(item for item in collections if item["role"] == "public_water")
+            state["public_water"] = _public_water(
+                workspace, workspace._get("sources", water["source_collection_id"]), spec_path, output)
+            state.update(state="mapping", updated_at=now())
+            atomic_json(state_path, state)
+            assessment_path = next(item["path"].parent for item in manifests if item["role"] == "assessment")
+            assessment_args = SimpleNamespace(
+                source_dir=str(assessment_path), workspace=str(workspace.root), create_workspace=False,
+                require_domain=True,
+                domain_manifest=[str(item["path"]) for item in manifests if item["role"] == "domain"],
+                context_manifest=[str(item["path"]) for item in manifests if item["role"] not in {"assessment", "domain"}],
+                domain_layer_id=list(selection["domain_layer_ids"]),
+                context_layer_id=list(selection["context_layer_ids"]),
+                primary_layer_id=args.primary_layer_id, comparison_layer_id=args.comparison_layer_id,
+                mode=args.mode, paper=args.paper, dpi=args.dpi, skip_export=args.skip_export,
+                output=str(output / "assessment"))
+            assessment = operate(assessment_args)
+            inventory = _source_inventory(workspace, collections, output)
+            atomic_json(output / "source-inventory.json", {
+                "schema": "upstate.observed-context-source-inventory/v1",
+                "operation_id": key, "project_id": workspace.project["id"], "sources": inventory})
+            _index(output, state, inventory, assessment, workspace)
+            state.update(state="complete", updated_at=now(),
+                         observed_context={
+                             "observation_views": state["observation_import"]["views"],
+                             "sources": len(inventory),
+                             "tables": sum(item["kind"] == "table" for item in inventory),
+                             "vectors": sum(item["kind"] == "vector" for item in inventory),
+                             "assessment_stations": assessment["located_station_count"],
+                             "inspected_stations": assessment["inspected_stations"],
+                             "domain_join_rows": assessment["domain_join_rows"]},
+                         saved_review_ids=[item["id"] for item in assessment["saved_reviews"]],
+                         map_pack_ids=[item["id"] for item in assessment["map_packs"]],
+                         empty_scopes=assessment.get("empty_scopes", []),
+                         files=[describe_file(workspace.root, output / name) for name in (
+                             "source-inventory.json", "observations.json", "index.html", "receiving-waters-spec.json",
+                             "scenario-source-areas.json", "assessment/operation.json",
+                             "assessment/point-inspections.json", "assessment/station-domain-joins.csv")])
+            state["attempts"][-1].update(state="complete", completed_at=now())
+            atomic_json(state_path, state)
+        except BaseException as error:
+            state.update(state="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
+                         updated_at=now(), error={"type": type(error).__name__, "message": str(error)})
+            state["attempts"][-1].update(state=state["state"], ended_at=now(), error=state["error"])
+            atomic_json(state_path, state)
+            raise
+    return {**state, "directory": str(output), "index": str(output / "index.html")}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workspace", required=True, help="Existing regional scientific Workspace")
+    parser.add_argument("--app-root", help="Complete native application; defaults to this installed source root")
+    parser.add_argument("--assessment-dir", help="Original complete 24-file assessment source directory")
+    parser.add_argument("--hydrology-manifest", help="Original observed-hydrology model-sources.json")
+    parser.add_argument("--study-manifest", help="Original lake-study model-sources.json")
+    parser.add_argument("--public-water-dir", help="Original public-water source directory")
+    parser.add_argument("--domain-manifest", action="append", default=[])
+    parser.add_argument("--domain-layer-id", action="append", default=[])
+    parser.add_argument("--context-manifest", action="append", default=[])
+    parser.add_argument("--context-layer-id", action="append", default=[])
+    parser.add_argument("--primary-layer-id")
+    parser.add_argument("--comparison-layer-id")
+    parser.add_argument("--mode", choices=("single", "compare", "swipe", "difference"))
+    parser.add_argument("--paper", choices=("letter", "a4"), default="letter")
+    parser.add_argument("--dpi", type=int, choices=(150, 220, 300), default=150)
+    parser.add_argument("--skip-export", action="store_true", help="Save the same native views without print rendering")
+    args = parser.parse_args(argv)
+    result = receive(args)
+    print(json.dumps(result, sort_keys=True, ensure_ascii=False, allow_nan=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

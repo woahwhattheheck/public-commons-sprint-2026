@@ -15,6 +15,9 @@ from .portable_databases import snapshot_databases, without_database_files, veri
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
+    "observed_hydrology_context.report.json",
+    "observed_hydrology_context.sources.json",
+    "eighteenmile_scientific_figures.sources.json",
     "README.md",
     "PACKAGING_LIMITS.md",
     "audit.py",
@@ -80,6 +83,7 @@ APPLICATION_FILES = (
     "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
+    "assessment",
     "scenario-design",
     "model",
     "operator",

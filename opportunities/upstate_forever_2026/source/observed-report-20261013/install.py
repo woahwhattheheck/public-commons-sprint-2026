@@ -14,8 +14,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--application", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--workspace", type=Path)
+    parser.add_argument("--manifest", type=Path, default=Path("observed_hydrology_context.sources.json"))
     args = parser.parse_args()
     root = args.application.resolve(strict=True)
+    manifest_path = args.manifest if args.manifest.is_absolute() else root / args.manifest
+    manifest_path = manifest_path.resolve(strict=True)
     if not (root / "model" / "workspace.py").is_file():
         raise ValueError("Select the maintained application directory containing model/workspace.py")
     for name in ("observed_context.py", "scientific_figures.py"):
@@ -48,13 +51,18 @@ def main():
             temporary = Path(pending.name)
         os.replace(temporary, path)
     result = {"picker": str(path), "changed": updated != original,
-              "report_manifest": str(root / "observations/eighteenmile_2023/report_context" / "model-sources.json")}
+              "report_manifest": str(manifest_path)}
     if args.workspace:
         sys.path.insert(0, str(root))
         from model.workspace import Workspace
         workspace = Workspace(args.workspace.resolve())
         manifest = json.loads(Path(result["report_manifest"]).read_text())
-        entry = manifest["entries"][0]
+        reports = [row for row in manifest["entries"]
+                   if row.get("kind") == "document"
+                   and row.get("metadata", {}).get("report_schema") == "upstate.observed-report/v1"]
+        if len(reports) != 1:
+            raise ValueError("Select exactly one retained observed-report source in the manifest")
+        entry = reports[0]
         matching = [collection for collection in workspace.sources()
                     if any(row["id"] == entry["id"] and row["body"]["sha256"] == entry["sha256"]
                            for row in collection["entries"])]
