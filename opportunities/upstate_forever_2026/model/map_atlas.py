@@ -59,26 +59,68 @@ def settings(value=None):
 def bind_water_selections(workspace, selection):
     """Retain complete saved-designation identity before constructing a release."""
     bindings = {}
-    for role, choice in selection.get("overlays", {}).items():
+    overlays = selection.get("overlays", {})
+    for role, choice in overlays.items():
         if not isinstance(choice, dict):
             raise ValueError("Each atlas overlay must name its original source")
         selection_id = choice.get("selection_id")
+        inferred = False
         if not selection_id:
-            continue
+            if choice.get("where"):
+                continue
+            _, entry = workspace.source_file(choice.get("source_collection_id"),
+                                             choice.get("source_id"))
+            scope = entry.get("scope") or {}
+            selection_id = scope.get("selection_id")
+            if not selection_id:
+                continue
+            inferred = True
         from .water_designations import get
         saved = get(workspace, selection_id)
         expected = saved["delivery_overlay"]
+        if inferred:
+            original = saved["source"]
+            source_matches = (
+                entry.get("kind") == "vector" and
+                choice.get("source_collection_id") == expected["source_collection_id"] and
+                choice.get("source_id") == expected["source_id"] and
+                (choice.get("layer") or entry.get("layer")) == expected["layer"] and
+                entry.get("layer") == expected["layer"] and
+                entry.get("body", {}).get("sha256") == saved["files"]["geopackage"]["sha256"] and
+                scope.get("source_collection_id") == original["source_collection_id"] and
+                scope.get("source_id") == original["source_id"] and
+                scope.get("original_source_sha256") == original["sha256"] and
+                scope.get("selected_features") == saved["summary"]["selected_features"]
+            )
+            contradictory = any(
+                key in choice and choice[key] != value
+                for key, value in expected.items() if key != "layer"
+            )
+            if not source_matches or contradictory or role != saved["purpose"]:
+                raise ValueError("Retained designation source " + str(selection_id) +
+                                 " differs from its saved source, edition or purpose; apply that saved designation again")
+            choice = {**choice, **expected}
+            overlays[role] = choice
         if (role != saved["purpose"] or
                 any(choice.get(key) != value for key, value in expected.items()) or
                 choice.get("where")):
-            raise ValueError("Saved water designation " + selection_id +
+            raise ValueError("Saved water designation " + str(selection_id) +
                              " differs from the selected source or field filter; apply that saved designation again")
         bindings[role] = {key: saved[key] for key in (
             "id", "title", "purpose", "selection", "source", "summary",
             "rule_reference", "delivery_overlay", "files")}
-        bindings[role]["workspace_path"] = "water-designations/" + selection_id
+        bindings[role]["workspace_path"] = "water-designations/" + str(selection_id)
+    source_roles = selection.setdefault("source_roles", {})
+    if not isinstance(source_roles, dict):
+        raise ValueError("Delivery source roles must be an object")
+    for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
+                       ("drinking_water", "SOURCE_WATER_PROTECTION_AREAS"),
+                       ("protected_lands", "PROTECTED_LANDS_OVERLAY")):
+        if name in overlays:
+            source_roles[role] = dict(overlays[name])
+        else:
+            source_roles.pop(role, None)
     return bindings
-
 
 def _sheet(plt, options, title, page_number, page_count):
     fig = plt.figure(figsize=PAPER[options["paper"]])
