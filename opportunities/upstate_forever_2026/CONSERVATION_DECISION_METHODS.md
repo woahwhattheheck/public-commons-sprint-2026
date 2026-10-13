@@ -84,7 +84,7 @@ Each named case maps one or more paired criteria to another actual alternative a
 
 The selected case is retained once. Duplicate alternative mappings are not counted twice. Each case has its own original criterion bindings, objective values, coverage, exclusions, ranking, selected portfolio and solver outcome. The report displays candidate-level details for the additional cases.
 
-These comparisons show sensitivity to the chosen native cases. They are not a sampled probability distribution, calibrated prediction interval or joint probability model. Preference profiles and native cases are reported separately; the application does not imply an uncomputed full weight-by-case factorial analysis.
+These comparisons show sensitivity to the chosen native cases. They are not a sampled probability distribution, calibrated prediction interval or joint probability model. The original preference-only and case-only tables retain those separate views. When both comparisons are enabled for a multi-criteria decision, the additional joint view computes every distinct included preference across every retained native case with the same fixed scales and resource limits. It retains full support, original solver outcomes and cross-evaluated portfolio loss bounds. This is a deterministic sensitivity comparison, not a joint probability or a globally robust optimum. See CONSERVATION_JOINT_CHOICES.md for the complete interpretation and receiving workflow.
 
 ## Worked arithmetic example
 

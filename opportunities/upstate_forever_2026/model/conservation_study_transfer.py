@@ -24,7 +24,8 @@ REPORT_SCHEMA = "upstate.conservation-report-source/v1"
 REPORT_EDITIONS = frozenset(("conservation-saved-plan-report/1",
                              "conservation-saved-plan-report/2",
                              "conservation-saved-plan-report/3",
-                             "conservation-saved-plan-report/4"))
+                             "conservation-saved-plan-report/4",
+                             "conservation-saved-plan-report/5"))
 
 
 def _path(kind, key):
@@ -147,6 +148,17 @@ def _study(closure, key, value):
     closure._source_refs(bound, "Original Conservation bound criteria and geography")
 
 
+def _optimization_roles(analysis):
+    roles = {"analysis": "analysis.json", "candidates": "candidates.csv", "report": "index.html"}
+    if "joint_comparison" in analysis:
+        joint = analysis["joint_comparison"]
+        if not isinstance(joint, dict) or joint.get("schema") != "upstate.conservation-joint-comparison/v1":
+            raise ValueError("Keep the original joint Conservation comparison schema.")
+        roles.update({name: name for name in (
+            "joint-cells.csv", "joint-portfolios.csv", "joint-candidates.csv")})
+    return roles
+
+
 def _optimization_analysis(study, plan, analysis):
     """Check the producer's retained decision contract using original JSON only."""
     reference = plan["selection"].get("optimization")
@@ -170,6 +182,8 @@ def _optimization_analysis(study, plan, analysis):
             or len(selected) != len(set(selected))
             or set(selected) != set(plan["selected_ids"])):
         raise ValueError("The original optimization and selected Conservation portfolio differ.")
+    if not isinstance(reference.get("files"), dict) or set(reference["files"]) != set(_optimization_roles(analysis)):
+        raise ValueError("Retain the exact original optimization and joint-comparison companions.")
     return {"id": key, "files": reference["files"]}
 
 
@@ -514,8 +528,14 @@ def include_source(closure, collection_id, entry):
     if recipe["edition"] != "conservation-saved-plan-report/1":
         reference = plan["selection"].get("optimization")
         if reference is not None:
-            roles = {"analysis": "analysis.json", "candidates": "candidates.csv",
-                     "report": "index.html"}
+            analysis = read("optimization/analysis.json")
+            optimization = _optimization_analysis(study, plan, analysis)
+            roles = _optimization_roles(analysis)
+            if "joint_comparison" in analysis and recipe["edition"] != "conservation-saved-plan-report/5":
+                raise ValueError("Joint Conservation report companions require their original edition 5.")
+            if {name for name in members if name.startswith("optimization/")} != {
+                    "optimization/" + name for name in roles.values()}:
+                raise ValueError("The Conservation report optimization member inventory changed.")
             if (not isinstance(reference, dict)
                     or not isinstance(reference.get("files"), dict)
                     or set(reference["files"]) != set(roles)):
@@ -523,7 +543,6 @@ def include_source(closure, collection_id, entry):
             for role, name in roles.items():
                 if not _same(reference["files"][role], members.get("optimization/" + name)):
                     raise ValueError("The Conservation report lost an original optimization companion.")
-            optimization = _optimization_analysis(study, plan, read("optimization/analysis.json"))
         elif any(name.startswith("optimization/") for name in members):
             raise ValueError("The Conservation report has optimization files without its saved decision.")
     local = origin.get("project_id") == closure.workspace.project["id"]
