@@ -19,6 +19,8 @@ from pathlib import Path
 
 SCHEMA = "commons.arches-source-contract.v1"
 CANONICAL = "commons.exact-json.v1"
+SOURCE_FORMATS = ("business_data", "resource", "native_json")
+NATIVE_PUBLICATION = "commons.arches-native-json-publication.v1"
 _UUID = re.compile(r"^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
 _NUMBER = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\Z")
 _STRING_RUN = re.compile(r'[^"\\\x00-\x1f]+')
@@ -363,9 +365,9 @@ class _Reader:
 class ResourceStream:
     """One-record-at-a-time iterator. receipt exists only after complete EOF."""
     def __init__(self, path, max_resource_bytes, source_format):
-        if source_format not in ("business_data", "resource"):
+        if source_format not in SOURCE_FORMATS:
             raise SourceError("SOURCE_FORMAT_REQUIRED",
-                              "Explicitly select source_format='business_data' or 'resource'.")
+                              "Explicitly select source_format='business_data', 'resource' or 'native_json'.")
         if not isinstance(max_resource_bytes, int) or isinstance(max_resource_bytes, bool) or max_resource_bytes < 1:
             raise SourceError("RESOURCE_LIMIT_INVALID", "Use a positive integer resource byte limit.")
         self.reader = _Reader(path, max_resource_bytes)
@@ -743,12 +745,66 @@ def _inspect_value(value, node, context, issues, path):
     return detail
 
 
-def inspect_resource(record, context):
-    """Inspect one unchanged publisher resource; errors block approval, not retention."""
+def _native_publication(instance, graph, issues, path):
+    """Bind native instance meaning without aliasing the exporter's current edition."""
+    stored = _aliases(instance, ("graph_publication_id",), issues,
+                      path + "/graph_publication_id", "RESOURCE_NATIVE_INSTANCE_PUBLICATION",
+                      required=True)
+    current = _aliases(instance, ("publication_id",), issues,
+                       path + "/publication_id", "RESOURCE_NATIVE_EXPORTER_PUBLICATION")
+    if "publication_id" not in instance:
+        _issue(issues, "RESOURCE_NATIVE_EXPORTER_PUBLICATION_MISSING",
+               path + "/publication_id",
+               "The native JSON exporter includes its current publication field, including null.")
+    elif instance["publication_id"] is None:
+        _issue(issues, "RESOURCE_NATIVE_EXPORTER_PUBLICATION_UNSET",
+               path + "/publication_id",
+               "The exporter observed no current graph publication; the saved instance edition remains separate.",
+               severity="warning")
+    selected = graph["publication_id"] if graph else None
+    if graph:
+        if not _uuid(selected):
+            _issue(issues, "RESOURCE_NATIVE_GRAPH_PUBLICATION_REQUIRED", path,
+                   "Native JSON requires the selected graph's original publication identity.",
+                   instance_graph_publication_id=stored)
+        elif stored is not None and selected != stored:
+            _issue(issues, "RESOURCE_NATIVE_PUBLICATION_MISMATCH",
+                   path + "/graph_publication_id",
+                   "The selected graph does not describe the instance's saved publication.",
+                   instance_graph_publication_id=stored,
+                   selected_graph_publication_id=selected,
+                   exporter_current_publication_id=current)
+    if stored is not None and current is not None and stored != current:
+        _issue(issues, "RESOURCE_NATIVE_HISTORICAL_PUBLICATION", path,
+               "The stored instance and exporter-current publications differ; inspect the selected original instance edition.",
+               severity="warning", instance_graph_publication_id=stored,
+               exporter_current_publication_id=current,
+               selected_graph_publication_id=selected)
+    return stored, {
+        "schema": NATIVE_PUBLICATION,
+        "instance_graph_publication_id": stored,
+        "exporter_current_publication_id": current,
+        "exporter_current_field_present": "publication_id" in instance,
+        "selected_graph_publication_id": selected,
+        "selected_instance_matches": (selected == stored
+                                     if _uuid(selected) and stored is not None else None),
+        "instance_is_exporter_current": (stored == current
+                                        if stored is not None and current is not None else None),
+    }
+
+
+def inspect_resource(record, context, *, source_format="business_data"):
+    """Inspect an unchanged resource under its explicit source interpretation."""
+    if source_format not in SOURCE_FORMATS:
+        raise SourceError("SOURCE_FORMAT_REQUIRED", "Choose the original source format explicitly.")
+    native = source_format == "native_json"
     issues = [dict(x) for x in context["issues"]]
     if not isinstance(record, dict):
         raise SourceError("RESOURCE_SHAPE", "Select one original resource object.")
     wrapper = "resourceinstance" in record
+    if native and not wrapper:
+        _issue(issues, "RESOURCE_NATIVE_WRAPPER_REQUIRED", "/",
+               "Native JSON resources require their original resourceinstance and tiles wrapper.")
     instance = record.get("resourceinstance") if wrapper else record
     if not isinstance(instance, dict):
         instance = {}
@@ -756,7 +812,8 @@ def inspect_resource(record, context):
     ip = "/resourceinstance" if wrapper else ""
     rid = _aliases(instance, ("resourceinstanceid", "resourceid"), issues, ip, "RESOURCE_ID", required=True)
     gid = _aliases(instance, ("graph_id",), issues, ip, "RESOURCE_GRAPH", required=True)
-    pubid = _aliases(instance, ("graph_publication_id", "publication_id"), issues, ip, "RESOURCE_PUBLICATION")
+    pubid = (None if native else _aliases(instance, ("graph_publication_id", "publication_id"),
+                                         issues, ip, "RESOURCE_PUBLICATION"))
     if wrapper:
         for key, expected in (("resourceid", rid), ("graph_id", gid)):
             if key in record and record[key] != expected:
@@ -765,11 +822,14 @@ def inspect_resource(record, context):
     graph = context["graphs"].get(gid) if isinstance(gid, str) else None
     if not graph:
         _issue(issues, "RESOURCE_GRAPH_UNKNOWN", ip + "/graph_id", "The original resource graph is not in the selected context.", graph_id=gid)
-    elif pubid is not None and graph["publication_id"] is not None and pubid != graph["publication_id"]:
+    elif not native and pubid is not None and graph["publication_id"] is not None and pubid != graph["publication_id"]:
         _issue(issues, "RESOURCE_PUBLICATION_MISMATCH", ip, "The resource selects a different graph publication.",
                expected=graph["publication_id"], actual=pubid)
-    elif pubid is None:
+    elif not native and pubid is None:
         _issue(issues, "RESOURCE_PUBLICATION_MISSING", ip, "No optional graph publication UUID is present.", severity="warning")
+    publication = None
+    if native:
+        pubid, publication = _native_publication(instance, graph, issues, ip)
     tiles = record.get("tiles")
     if not isinstance(tiles, list):
         _issue(issues, "RESOURCE_TILES_INVALID", "/tiles", "The original tiles array is missing.")
@@ -780,6 +840,9 @@ def inspect_resource(record, context):
         if not isinstance(tile, dict):
             _issue(issues, "TILE_SHAPE", p, "An original tile must be an object.")
             continue
+        if native and "tiles" in tile and tile["tiles"] not in (None, [], {}):
+            _issue(issues, "RESOURCE_NATIVE_NESTED_TILES_UNSUPPORTED", p + "/tiles",
+                   "Select the original flat native JSON export; nested tile content is retained but not inspected as child records.")
         tid = _aliases(tile, ("tileid",), issues, p, "TILE_ID", required=True)
         ng = _aliases(tile, ("nodegroup_id",), issues, p, "TILE_NODEGROUP", required=True)
         owner = _aliases(tile, ("resourceinstance_id", "resourceid"), issues, p, "TILE_RESOURCE", required=True)
@@ -854,8 +917,11 @@ def inspect_resource(record, context):
                 _issue(issues, "NODEGROUP_CARDINALITY", "/tiles", "A single-cardinality group repeats under one parent.",
                        nodegroup_id=ng, parent_id=parent, count=count)
     labels = _labels(instance, issues)
-    return {"schema": SCHEMA, "canonicalization": CANONICAL, "resource_id": rid,
+    result = {"schema": SCHEMA, "canonicalization": CANONICAL, "resource_id": rid,
             "graph_id": gid, "publication_id": pubid, "context_sha256": context["digest"],
             "resource_sha256": _sha(record), "record": record, "labels": labels,
             "tiles_count": len(tiles), "bindings": bindings, "geometries": geometries,
             "issues": issues, "blocking": any(x["severity"] == "error" for x in issues)}
+    if native:
+        result.update(source_format="native_json", publication=publication)
+    return result
