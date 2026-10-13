@@ -1,4 +1,4 @@
-/** Native-grid land-cover areas from retained EPSG:3857, NAD83 or EPSG:5070 polygons.
+/** Native-grid land-cover areas from retained WGS84, EPSG:3857, NAD83 or EPSG:5070 polygons.
  * Albers equations: USGS Professional Paper 1395, equations 3-12,14-12..18.
  * https://pubs.usgs.gov/pp/1395/report.pdf
  * https://proj.org/en/stable/operations/projections/aea.html
@@ -37,7 +37,12 @@ function webMercatorTo5070(x,y) {
   return nad83To5070(lon,lat);
 }
 function coordinateOperation(sourceEpsg) {
-  return sourceEpsg===3857?WEBMERCATOR_OPERATION:sourceEpsg===4269?
+  return sourceEpsg===3857?WEBMERCATOR_OPERATION:sourceEpsg===4326?
+    {source_epsg:4326,target_epsg:5070,
+      description:"Inverse of NAD83 to WGS 84 (1) + Conus Albers",
+      definition:"proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=aea lat_0=23 lon_0=-96 lat_1=29.5 lat_2=45.5 x_0=0 y_0=0 ellps=GRS80",
+      datum_operation:"NAD83/WGS84 (1) null geographic shift, matching the original native domain operation",
+      stated_accuracy_m:4}:sourceEpsg===4269?
     {source_epsg:4269,target_epsg:5070,description:"NAD83 GRS80 ellipsoidal Albers, EPSG:5070"}:
     {source_epsg:5070,target_epsg:5070,description:"Original EPSG:5070 coordinates"};
 }
@@ -50,9 +55,13 @@ function exactRings(feature) {
   if (g.type==="MultiPolygon") return g.coordinates.flat();
   throw Error("Expected polygon or multipolygon geometry");
 }
-function prepareZones(features, sourceEpsg, grid, idField="huc12") {
-  if (![3857,4269,5070].includes(sourceEpsg))
-    throw Error("Declare the actual retained source CRS; supported EPSG:3857, EPSG:4269 and EPSG:5070");
+function prepareZones(features, sourceEpsg, grid, options="huc12") {
+  const {idField="huc12",nameField="name",identifierKind="huc12"} =
+    typeof options==="string"?{idField:options}:options;
+  if (!["huc12","basin"].includes(identifierKind))
+    throw Error("Choose the original HUC12 or named basin identifier kind");
+  if (![3857,4269,4326,5070].includes(sourceEpsg))
+    throw Error("Declare the actual retained source CRS; supported EPSG:3857, EPSG:4269, EPSG:4326 and EPSG:5070");
   const [dx,rx,x0,ry,dy,y0]=grid.affine, {width,height}=grid;
   if (!(dx>0 && dy<0 && rx===0 && ry===0 && Number.isInteger(width) && Number.isInteger(height)))
     throw Error("Expected a north-up regular native grid");
@@ -60,7 +69,8 @@ function prepareZones(features, sourceEpsg, grid, idField="huc12") {
   let vertexCount=0;
   for (const feature of features) {
     const props=feature.attributes||feature.properties||{},id=String(props[idField]??"");
-    if (!/^\d{12}$/.test(id)||ids.has(id)) throw Error("Expected unique original HUC12 identifiers");
+    if (!id.trim()||ids.has(id)||(identifierKind==="huc12"&&!/^\d{12}$/.test(id)))
+      throw Error(identifierKind==="huc12"?"Expected unique original HUC12 identifiers":"Expected nonempty unique original basin identifiers");
     ids.add(id);
     const rings=exactRings(feature),zone=zones.length;
     if (!rings.length) throw Error("Empty original polygon: "+id);
@@ -69,7 +79,7 @@ function prepareZones(features, sourceEpsg, grid, idField="huc12") {
       if(ring.length<4)throw Error("Short original polygon ring: "+id);
       if(ring[0][0]!==ring.at(-1)[0]||ring[0][1]!==ring.at(-1)[1])throw Error("Open original ring: "+id);
       const points=ring.map(p=>{
-        const xy=sourceEpsg===3857?webMercatorTo5070(p[0],p[1]):sourceEpsg===4269?nad83To5070(p[0],p[1]):[p[0],p[1]];
+        const xy=sourceEpsg===3857?webMercatorTo5070(p[0],p[1]):(sourceEpsg===4269||sourceEpsg===4326)?nad83To5070(p[0],p[1]):[p[0],p[1]];
         if(!xy.every(Number.isFinite))throw Error("Nonfinite original coordinate");
         const u=(xy[0]-x0)/dx,v=(xy[1]-y0)/dy;
         minU=Math.min(minU,u);maxU=Math.max(maxU,u);minV=Math.min(minV,v);maxV=Math.max(maxV,v);
@@ -87,11 +97,11 @@ function prepareZones(features, sourceEpsg, grid, idField="huc12") {
     }
     if(minU<0||minV<0||maxU>width||maxV>height)
       throw Error("Full original polygon extends beyond the supplied raster: "+id);
-    zones.push({huc12:id,properties:props,ring_count:rings.length,edge_count:edges,
+    zones.push({id,...(identifierKind==="huc12"?{huc12:id}:{title:String(props[nameField]??id)}),properties:props,ring_count:rings.length,edge_count:edges,
       bounds_pixel:[minU,minV,maxU,maxV],counts:Array(256).fill(0),cell_count:0,nodata_count:0});
   }
   return {schema:"upstate.landcover-zones/v1",grid,source_epsg:sourceEpsg,id_field:idField,
-    vertex_count:vertexCount,zones,starts};
+    vertex_count:vertexCount,zones,starts,...(identifierKind==="basin"?{identifier_kind:identifierKind,name_field:nameField}:{})};
 }
 async function summarizeRows(prepared, readRow, metadata={}) {
   const {grid,zones,starts}=prepared,{width,height}=grid,area=Math.abs(grid.affine[0]*grid.affine[4]);
@@ -112,7 +122,7 @@ async function summarizeRows(prepared, readRow, metadata={}) {
     for(const edge of starts[row]){if(!active.has(edge.zone))active.set(edge.zone,[]);active.get(edge.zone).push(edge);}
     for(const [zone,edges] of active){
       const xs=edges.map(e=>e.u1+(row+0.5-e.v1)*e.slope).sort((a,b)=>a-b);
-      if(xs.length%2)throw Error("Odd scanline intersection count: "+zones[zone].huc12+" row "+row);
+      if(xs.length%2)throw Error("Odd scanline intersection count: "+zones[zone].id+" row "+row);
       const output=zones[zone];
       for(let k=0;k<xs.length;k+=2){
         const first=Math.max(0,Math.ceil(xs[k]-0.5)),last=Math.min(width,Math.ceil(xs[k+1]-0.5));
@@ -121,7 +131,7 @@ async function summarizeRows(prepared, readRow, metadata={}) {
           if(owner[col]===-1){owner[col]=zone;unionCounts[code]++;unionCells++;}
           else if(owner[col]!==zone){
             if(!overlap[col]){overlap[col]=1;overlapCells++;}
-            const pair=[zones[owner[col]].huc12,output.huc12].sort().join("|");
+            const pair=[zones[owner[col]].id,output.id].sort().join("|");
             pairs.set(pair,(pairs.get(pair)||0)+1);
           }
         }
@@ -139,8 +149,9 @@ async function summarizeRows(prepared, readRow, metadata={}) {
     raster:{cell_count:width*height,nodata_count:totalNoData,classes:classRows(fullCounts)},
     domain:{unique_cells:unionCells,overlap_cells:overlapCells,outside_domain_cells:outsideCells,
       nodata_cells:unionCounts[nodata],classes:classRows(unionCounts),
-      overlaps:[...pairs].map(([key,cells])=>({huc12s:key.split("|"),cells}))},
-    watersheds:zones.map(z=>({huc12:z.huc12,properties:z.properties,ring_count:z.ring_count,
+      overlaps:[...pairs].map(([key,cells])=>({[prepared.identifier_kind==="basin"?"basin_ids":"huc12s"]:key.split("|"),cells}))},
+    [prepared.identifier_kind==="basin"?"basins":"watersheds"]:zones.map(z=>({...(
+      prepared.identifier_kind==="basin"?{basin_id:z.id,title:z.title}:{huc12:z.id}),properties:z.properties,ring_count:z.ring_count,
       selected_cells:z.cell_count,nodata_cells:z.nodata_count,area_m2:z.cell_count*area,
       valid_area_m2:(z.cell_count-z.nodata_count)*area,classes:classRows(z.counts)}))};
 }
