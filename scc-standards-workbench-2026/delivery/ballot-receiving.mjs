@@ -142,7 +142,7 @@ async function run(){
    json(resultFile,identity);return identity;
   }
   const url=endpoint()+"/operations";let first=true,resolveResult,rejectResult;
-  const completed=new Promise((r,j)=>{resolveResult=r;rejectResult=j;});
+  const completed=new Promise((r,j)=>{resolveResult=r;rejectResult=j;});completed.catch(()=>{});
   await operator.route(url,async route=>{
    try{
     const request=route.request().postDataJSON();if(request.operation!==operation){await route.continue();return;}
@@ -154,17 +154,42 @@ async function run(){
     await route.fulfill({response});resolveResult(identity);
    }catch(e){rejectResult(e);await route.abort().catch(()=>{});}
   });
+  const page=operator,child=server,timeout=config.operation_timeout_ms??120000;
+  assert.ok(Number.isSafeInteger(timeout)&&timeout>=1000,"Use a positive native operation timeout in milliseconds.");
+  let timer,monitor,checking=false,rejectStopped;
+  const stopped=new Promise((_resolve,reject)=>{rejectStopped=reject;});
+  const abort=message=>rejectStopped(Error(message+" Original request/result files remain in "+out("requests")+"."));
+  const pageClosed=()=>abort("The original operator page closed before its operation returned."),
+    pageCrashed=()=>abort("The original operator page crashed."),
+    pageFailed=error=>abort("The original operator raised "+String(error)),
+    serverEnded=code=>abort("The original native server exited during the operation: "+code);
+  page.once("close",pageClosed);page.once("crash",pageCrashed);page.once("pageerror",pageFailed);child.once("exit",serverEnded);
+  timer=setTimeout(()=>abort("Native operation "+name+" did not complete within "+timeout+" ms."),timeout);
+  monitor=setInterval(async()=>{
+   if(checking||page.isClosed())return;checking=true;
+   try{
+    const messages=await page.locator("#ballot-message.ballot-error,#editor-error").evaluateAll(nodes=>nodes.filter(n=>n.getClientRects().length).map(n=>n.textContent.trim()).filter(Boolean));
+    const failure=messages.find(message=>!(withhold&&!first&&message.includes("Original response interrupted after native commit")));
+    if(failure)abort("The original operator could not dispatch/recover "+name+": "+failure);
+   }catch(error){if(page.isClosed())abort("The original operator closed while its request was pending.");}
+   finally{checking=false;}
+  },250);
   try{
-   await trigger();
-   if(withhold){
-    await operator.locator("#ballot-retry").waitFor();
-    await capture(operator,name+"-retained-request");
-    await operator.reload();await operator.locator('[data-section="ballot-exchange"]').click();
-    await operator.locator("#ballot-retry").waitFor();await operator.locator("#ballot-retry").click();
-   }
-   const result=await completed;await operator.locator("#ballot-retry").waitFor({state:"detached"});
-   return result;
-  }finally{await operator.unroute(url);}
+   return await Promise.race([stopped,(async()=>{
+    await trigger();
+    if(withhold){
+     await page.locator("#ballot-retry").waitFor();
+     await capture(page,name+"-retained-request");
+     await page.reload();await page.locator('[data-section="ballot-exchange"]').click();
+     await page.locator("#ballot-retry").waitFor();await page.locator("#ballot-retry").click();
+    }
+    const result=await completed;await page.locator("#ballot-retry").waitFor({state:"detached"});return result;
+   })()]);
+  }finally{
+   clearTimeout(timer);clearInterval(monitor);
+   page.removeListener("close",pageClosed);page.removeListener("crash",pageCrashed);page.removeListener("pageerror",pageFailed);child.removeListener("exit",serverEnded);
+   await page.unroute(url);
+  }
  }
  async function formFields(form,values){
   for(const [name,value]of Object.entries(values)){if(Array.isArray(value)&&await form.locator('[data-list-field="'+name+'"]').count()){const choices=form.locator('[data-list-field="'+name+'"] input[type="checkbox"]');for(let i=0;i<await choices.count();i++)await choices.nth(i).setChecked(value.includes(await choices.nth(i).getAttribute("value")));continue;}const input=form.locator('[name="'+name+'"],[data-field="'+name+'"]').first();

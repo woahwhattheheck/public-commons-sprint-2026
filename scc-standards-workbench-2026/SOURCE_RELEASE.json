@@ -16,8 +16,8 @@
     },
     {
       "path": "BALLOT-RECEIVING.md",
-      "git_blob_sha": "072ffafc56c35d97c3bfab020be036f6220f72ce",
-      "bytes": 15970
+      "git_blob_sha": "73f83cb79c394c9479a2cd349f4f96c33fa59e37",
+      "bytes": 16417
     },
     {
       "path": "CONSULTATION.md",
@@ -71,8 +71,8 @@
     },
     {
       "path": "delivery/ballot-receiving.mjs",
-      "git_blob_sha": "22dfe649ef6d55dd0f0427a001b485e29d616ae8",
-      "bytes": 44789
+      "git_blob_sha": "2e3d0db6c71d41b4d961287ff4e95d51f17d3a0e",
+      "bytes": 46740
     },
     {
       "path": "delivery/consultation-config.example.json",
