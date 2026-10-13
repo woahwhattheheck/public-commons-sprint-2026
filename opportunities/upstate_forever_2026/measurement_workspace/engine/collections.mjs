@@ -35,7 +35,9 @@ function retain(file,data){
 function rootFor(workspace,id){if(!identifier(id))throw new InputError('Invalid collection identifier');return path.join(workspace.directory,'collections',id);}
 function decode(file){
   if(typeof file.text==='string' && file.base64===undefined)return Buffer.from(file.text,'utf8');
-  if(typeof file.base64==='string' && file.text===undefined && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.base64))return Buffer.from(file.base64,'base64');
+  if(typeof file.base64==='string' && file.text===undefined && file.base64.length%4===0 && /^[A-Za-z0-9+/]*={0,2}$/.test(file.base64)){
+    const data=Buffer.from(file.base64,'base64');if(data.toString('base64')===file.base64)return data;
+  }
   throw new InputError('Each source must contain exactly one UTF-8 text or canonical base64 body');
 }
 function inputFor(file,data){return {kind:file.kind,label:file.label,text:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),mapping:file.mapping,contentSha:file.sha256,origin:file.origin};}
@@ -169,3 +171,6 @@ export function editionBundle(workspace,collectionId,editionId){
   const bytes=zipMembers([...edition.files.map(f=>({name:f.path,data:fs.readFileSync(path.join(root,f.path))})),{name:'edition.json',data:fs.readFileSync(path.join(root,'edition.json'))}]);
   return {name:'measured-study-'+editionId.slice(0,12)+'.zip',type:'application/zip',sha256:hash(bytes),bytes:bytes.length,base64:bytes.toString('base64')};
 }
+
+/** Shared canonical collection primitives for retained streaming originals. */
+export {prepare as prepareCollectionSources,relative as collectionMemberPath,retain as retainCollectionMember,rootFor as collectionRoot,inputFor as collectionSourceInput};
