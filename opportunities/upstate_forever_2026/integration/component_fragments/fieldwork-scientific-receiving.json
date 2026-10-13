@@ -27,7 +27,10 @@
         "docs/implementation-native-guide.md",
         "docs/implementation-operator-guide.md",
         "install_implementation.py",
+        "install_watershed_review.py",
         "integration/implementation_qc.json",
+        "integration/watershed-review-original-20261013.json",
+        "integration/watershed-review-source-20261013.json",
         "model/IMPLEMENTATION_OUTCOMES_METHOD.md",
         "model/IMPLEMENTATION_QC.md",
         "model/briefing_implementation.py",
@@ -100,7 +103,15 @@
         "source_tools/receive_implementation.py",
         "source_tools/receive_implementation_outcome_context.py",
         "source_tools/receive_wqp_field_results.py",
-        "source_tools/receive_wqp_laboratory_cycle.py"
+        "source_tools/receive_wqp_laboratory_cycle.py",
+        "source_tools/watershed_review/NATIVE_HANDOFF.md",
+        "source_tools/watershed_review/OWNER_INSTRUCTIONS.md",
+        "source_tools/watershed_review/apply_native_report_layout.py",
+        "source_tools/watershed_review/build.py",
+        "source_tools/watershed_review/compute.mjs",
+        "source_tools/watershed_review/desk.html",
+        "source_tools/watershed_review/receive_review.py",
+        "source_tools/watershed_review/review_core.mjs"
       ],
       "requires": [
         "scientific-report-editions"
@@ -376,6 +387,12 @@
     "parameter_scientific_reports": "97fdd7ab82676b8ca1c52bd311186c541eb94d44",
     "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f",
     "ensemble_study_scope": "6531fa308c8f2f32216680a80ad810e0cde479f3",
-    "ensemble_parameter_continuation": "3e0b76ddf5aa883d2ea7de229897e6c692b2ada2"
+    "ensemble_parameter_continuation": "3e0b76ddf5aa883d2ea7de229897e6c692b2ada2",
+    "watershed_review_native": {
+      "source_edition": "4b2efdbd79bce5f9327f7c2a94e46d41bd6a975dcd10c2739b66f284c394365e",
+      "original_source_sha256": "ca15acb3f68dc0a202c8a158fa6a97c721d6ea53f91e8403cfdf930443da00fc",
+      "native_archive_sha256": "b998556537f3eec273175fb7f046467d7b1f6259ddde185a45f46e7c7978834e",
+      "source_collection_id": "3066545cc6da2cd39b368017c912c83e60be3491e2d9872175c2cbb3afc6a5a5"
+    }
   }
 }
