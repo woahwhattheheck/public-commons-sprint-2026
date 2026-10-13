@@ -75,8 +75,8 @@ async function writeComplete(path, content) {
   await privateDirectory(parent);
   const temporary = join(parent, '.' + basename(destination) + '.' + randomUUID() + '.part');
   const file = await open(temporary, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
-  try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
   try {
+    try { await file.writeFile(bytes); await file.sync(); } finally { await file.close(); }
     try { await link(temporary, destination); }
     catch (e) {
       if (e.code !== 'EEXIST') throw e;

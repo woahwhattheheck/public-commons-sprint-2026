@@ -19,7 +19,7 @@ The complete example contains:
 
 The product pages were read on 13 October 2026. All 17 page prices agreed with the retained printed observations at that reading. The PDF directs readers to the supplier for its latest prices; its file metadata dates are not a price-validity declaration.
 
-The original source describes 207-1373 as 41.70 mm wide and 1.61 in wide. Those published values remain separate original observations. The 207-1431 product page lists a shorter connector set than the PDF matrix; omission from that description does not establish incompatibility. Source notes stay attached for the receiving operator.
+The original source contains inconsistent metric/inch pairs for 207-1372 depth and 207-1373 width/depth; for example, 207-1373 is printed as 41.70 mm wide and 1.61 in wide. Those published values remain separate original observations. The 207-1431 product page lists a shorter connector set than the PDF matrix; omission from that description does not establish incompatibility. Source notes stay attached for the receiving operator.
 
 ## Product and quantity decisions
 
