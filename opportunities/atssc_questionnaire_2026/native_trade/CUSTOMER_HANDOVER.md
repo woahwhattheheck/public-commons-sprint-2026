@@ -1,5 +1,12 @@
 # Open the complete questionnaire project
 
+If the downloaded ZIP opens to `TRANSPORT_MANIFEST.json`, `complete-customer.zip.xz`
+and `reassemble_customer_project.py`, follow its `START_HERE.md` first. That
+single delivery recreates the complete project ZIP and its checksum sidecar,
+verifies every project member, and supplies the original extracted layout used
+below. The transport index records both the native export and the complete
+member-preserving ZIP reencoding.
+
 Extract the complete project ZIP into a private directory. Keep `application/`,
 `workspace/`, `document-runtime/`, `calculation-runtime/` and `MANIFEST.json`
 together. `HANDOVER.json` indexes the actual packaged questionnaires,
@@ -85,11 +92,41 @@ come from the original calculation engine. The source's formula errors remain
 typed in their original/native cache inventory; they appear as unavailable
 values wherever they affect an answer. Numeric zero remains numeric zero.
 
+The compatible financial-workbook definition treats the original unlocked
+material-name cells **Fin!B42/J42/B43/J43/B44/J44** as their actual source text.
+The earlier published definition stays in history. Choose the current saved
+definition when exchanging that complete original workbook; earlier
+invitations continue to use their own publication.
+
 The retained reporting commissioning programme also has a corrected source
 publication. Its percentage input uses **Pub - Questions!E97**. Delivery rows
 use **Pub - Purch!40,44,48**, with the original fixed labels in column B and
 entered values in columns C/G. The earlier source publication and frozen
 reports remain in history. `HANDOVER.json` lists the actual editions.
+
+## Workbook Exchange
+
+From **Workbooks**, open **Workbook Exchange** in the same operator session.
+Choose an original workbook and inspect its worksheet and source cells,
+including the hidden sheets and original formula caches. Download the unchanged
+workbook or select original answer cells for a reviewed Excel successor. Select
+the explicit text, exact decimal, Boolean, date, blank or absent state before
+retaining the edition. Formula cells remain in the native calculation workflow.
+
+Choose a saved questionnaire definition or publication to read its complete
+source mapping. Extract a selected original or calculated edition, then
+download its four-sheet Excel register and complete JSON source records. The
+register preserves the question mapping, typed source cells, validation and
+original source identities. Original formula issues remain separate from
+answer validation. An unavailable native value keeps its source issue and
+numeric zero remains zero.
+
+Reimport a complete edited original-layout XLSX in **Workbooks**, calculate its
+native edition, and use its source-bound questionnaire invitation to receive
+and review the answers. The full operated five-family examples and their
+original/successor workbooks, extraction registers and native operating history
+are retained in this customer workspace. See `application/WORKBOOK_EXCHANGE.md`
+for the original-cell editing, source-row selections and complete exchange APIs.
 
 ## Original formula library
 
@@ -102,6 +139,11 @@ filters and calculation edition. The complete five-workbook collection and all
 7,661 original/native formula joins reopen from this workspace. See
 `application/SOURCE_FORMULAS.md` for the whole source programme and shipped
 offline reader runtime.
+
+The original author's complete dependency inventory and source manifest are
+retained under `workspace/source-evidence/original-author-formula/`. Their
+`SOURCE_RECEIVING.json` pins the original source revision and exact Annex
+archive alongside the retained native collection.
 
 ## Respondent progress, corrections and downloads
 
@@ -128,6 +170,13 @@ revision history. Public alternatives remain explanatory text; statistical
 calculations use the visible original values. Downloaded Word headings, tables
 and charts remain editable. To change retained questionnaire data, save the
 change in the application and produce its new document edition.
+
+The **Language / Langue** preference selects the PDF/Word reader labels for
+that authenticated user. Linked contents, Word headings and PDF outlines open
+the selected sections. Protected documents retain the selected response and
+permitted worksheet references; public documents use their own disclosure
+projection. See `application/DOCUMENT_READING.md` for English/French copies,
+current draft versus submitted state, and source references.
 
 For a revised XLSX, choose its original template and upload the complete file
 in that original layout. Only that template's declared answer bindings join
