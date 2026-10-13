@@ -74,6 +74,7 @@ def verify_path(path, item):
     """Open and bind the selected regular inode before using a verified body."""
     # Import lazily: common.verify_file retains the public path validation API.
     from .common import _file_state, _stream_identity
+    from .host_files import open_regular, stat_regular
 
     label = "Retained output"
     expected_size, expected_hash = item["bytes"], item["sha256"]
@@ -81,7 +82,7 @@ def verify_path(path, item):
     current = _CURRENT.get()
     if current is not None and not current.owns_context():
         current = None
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    descriptor = open_regular(path, os.O_RDONLY)
     with os.fdopen(descriptor, "rb") as source:
         opened = os.fstat(source.fileno())
         if not stat.S_ISREG(opened.st_mode) or opened.st_size != expected_size:
@@ -101,7 +102,7 @@ def verify_path(path, item):
             raise ValueError("Retained output changed: " + item["path"])
         # A rename, symlink swap or write during this read cannot publish a
         # verified identity for another path or body.
-        at_path = path.lstat()
+        at_path = stat_regular(path)
         if (not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state
                 or _file_state(os.fstat(source.fileno())) != state):
             if current is not None:
@@ -121,6 +122,7 @@ def source_identity(source, path, label, *, expected_state=None, output=None):
     No verified state survives the outer operation, thread, process, or a write.
     """
     from .common import _file_state, _stream_identity
+    from .host_files import stat_regular
 
     path = Path(path)
     opened = os.fstat(source.fileno())
@@ -129,7 +131,7 @@ def source_identity(source, path, label, *, expected_state=None, output=None):
     state = _file_state(opened)
     if expected_state is not None and state != expected_state:
         raise ValueError(label + " changed during intake")
-    at_path = path.lstat()
+    at_path = stat_regular(path)
     if not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state:
         raise ValueError(label + " changed at its original path")
     current = _CURRENT.get()
@@ -151,7 +153,7 @@ def source_identity(source, path, label, *, expected_state=None, output=None):
             current.source_hashed_bytes += size
             if output is not None:
                 current.source_copied_bytes += size
-    at_path = path.lstat()
+    at_path = stat_regular(path)
     if (not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state
             or at_path.st_nlink != links
             or _file_state(os.fstat(source.fileno())) != state
