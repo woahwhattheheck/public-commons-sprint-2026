@@ -17,7 +17,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, relative_file, verify_file)
 
 SCHEMA = "upstate.receiving-water-report-source/v1"
-EDITION = "receiving-water-report-source/3"
+EDITION = "receiving-water-report-source/4"
 FOLDER = "receiving-water-report-sources"
 SOURCE_ID = "receiving-water-scientific-report"
 LOCK = ".receiving-water-report-source.lock"
@@ -381,52 +381,139 @@ def _classification_rows(value):
     return rows or [["Recorded classification", _display_value(value)]]
 
 
+def _attribute_rows(value, prefix=""):
+    """Show every original classification leaf, preserving names and array order."""
+    if isinstance(value, dict) and value:
+        rows = []
+        for key, item in value.items():
+            name = str(key).replace("~", "~0").replace("/", "~1")
+            rows.extend(_attribute_rows(item, prefix + "/" + name))
+        return rows
+    if isinstance(value, list) and value:
+        rows = []
+        for index, item in enumerate(value):
+            rows.extend(_attribute_rows(item, prefix + "/" + str(index)))
+        return rows
+    kind = ("null" if value is None else "boolean" if isinstance(value, bool)
+            else "text" if isinstance(value, str) else "number"
+            if isinstance(value, (int, float)) else "empty object"
+            if isinstance(value, dict) else "empty array")
+    return [[prefix or "/", kind, _text(value)]]
+
+
+def _relation_blocks(receptor):
+    relation = receptor["relation"]
+    blocks = []
+    if "seed_huc_ids" in relation:
+        seeds = set(relation["seed_huc_ids"])
+        associated = relation.get("upstream_huc_ids", [])
+        touches = relation.get("boundary_touch_huc_ids", [])
+        blocks.append(_table(["HUC12 support", "Retained value"], [
+            ["Receiving-HUC selection method", relation.get("seed_method", "")],
+            ["Selected receiving HUCs", len(relation["seed_huc_ids"])],
+            ["Associated receiving and upstream HUCs", len(associated)],
+            ["Boundary-only HUC contacts", len(touches)],
+        ], "The associated list includes the selected receiving HUCs. Boundary-only "
+           "contacts are reported separately; they do not by themselves establish an upstream relation."))
+        membership = [[huc, "Selected receiving HUC" if huc in seeds else
+                       "Upstream HUC in the retained network"] for huc in associated]
+        membership += [[huc, "Boundary-only contact"] for huc in touches]
+        table = _table(["Original HUC12", "Declared relationship"], membership,
+                       "Complete original ordered HUC membership for this receiving area; "
+                       "other receiving areas may share these HUCs.")
+        table["retained_relation"] = copy.deepcopy(relation)
+        blocks.append(table)
+    extras = {key: value for key, value in relation.items()
+              if key not in {"method", "rationale", "buffer_m", "seed_method",
+                             "seed_huc_ids", "upstream_huc_ids", "boundary_touch_huc_ids"}}
+    if extras:
+        table = _table(["Original relationship field", "Value type", "Retained value"],
+                       _attribute_rows(extras),
+                       "Original evidence references and other declared relationship details.")
+        table["retained_relation"] = copy.deepcopy(relation)
+        blocks.append(table)
+    return blocks
+
+
+def _source_table(receptor, rows):
+    table = _table(["Source and method", "Retained value"], rows)
+    table["retained_classification"] = copy.deepcopy(receptor.get("classification", {}))
+    table["retained_relation"] = copy.deepcopy(receptor["relation"])
+    return table
+
+
 def _geometry_note(receptor, analysis_crs):
+    """Retain each selected feature's ordered operation, not a set of operation texts."""
     source = receptor["source"]
     reader = source.get("geometry_reader")
-    details = []
+    blocks = []
     if reader:
         adapter = reader.get("adapter") if isinstance(reader, dict) else reader
         if adapter and "OriginalEsriFeatures" in str(adapter):
             adapter = "Original Esri feature collection"
-        elif adapter:
-            adapter = str(adapter)
-        details.append("Geometry interpretation: " + (adapter or "Recorded source reader")
-                       + "; analysis coordinates " + analysis_crs + ".")
-    features = source.get("selected_features", []) + receptor.get("original_features", [])
-    operations = {}
-    for feature in features:
-        for operation in feature.get("geometry_operations", []):
-            if isinstance(operation, str):
-                try:
-                    parsed = json.loads(operation)
-                except (TypeError, ValueError):
-                    parsed = operation
+        table = _table(["Geometry context", "Retained value"], [
+            ["Recorded geometry reader", adapter or "Recorded source reader"],
+            ["Analysis coordinate reference", analysis_crs],
+        ], "Complete original reader settings, source field definitions and CRS "
+           "values remain in the saved plan and structured report data.")
+        table["retained_geometry_reader"] = copy.deepcopy(reader)
+        blocks.append(table)
+    operations = []
+    index = {}
+    for origin, features in (("source.selected_features", source.get("selected_features", [])),
+                             ("original_features", receptor.get("original_features", []))):
+        for feature in features:
+            for position, original in enumerate(feature.get("geometry_operations", [])):
+                parsed = original
+                if isinstance(original, str):
+                    try:
+                        parsed = json.loads(original)
+                    except (TypeError, ValueError):
+                        pass
+                item = {"native_feature_id": feature.get("native_feature_id"),
+                        "source_array_index": feature.get("source_array_index"),
+                        "operation_position": position, "operation": copy.deepcopy(parsed)}
+                key = _text(item)
+                if key in index:
+                    index[key]["original_records"].append(
+                        {"location": origin, "value": copy.deepcopy(original)})
+                    continue
+                item["original_records"] = [{"location": origin, "value": copy.deepcopy(original)}]
+                index[key] = item
+                operations.append(item)
+    if operations:
+        rows, extra_rows = [], []
+        for item in operations:
+            op = item["operation"]
+            feature = item["native_feature_id"]
+            source_index = item["source_array_index"]
+            ordinal = item["operation_position"] + 1
+            if isinstance(op, dict):
+                rows.append([feature, "" if source_index is None else source_index, ordinal,
+                             op.get("stage", ""), op.get("analysis_operation", ""),
+                             op.get("reason", "")])
+                extra = {key: value for key, value in op.items()
+                         if key not in {"stage", "analysis_operation", "reason"}}
+                for field, kind, value in (_attribute_rows(extra) if extra else []):
+                    extra_rows.append([feature, ordinal, field, kind, value])
             else:
-                parsed = operation
-            operations[_text(parsed)] = parsed
-    for unused, operation in sorted(operations.items()):
-        if not isinstance(operation, dict):
-            details.append("Recorded geometry operation: " + _brief(operation, 650))
-            continue
-        identity = operation.get("identity")
-        prefix = "Feature " + str(identity) if identity is not None else "Selected feature"
-        stage = operation.get("stage")
-        if stage:
-            prefix += " (" + str(stage) + ")"
-        action = operation.get("analysis_operation")
-        reason = operation.get("reason")
-        if action:
-            text = prefix + ": " + str(action).rstrip(".") + "."
-            if reason:
-                text += " Recorded reason: " + str(reason).rstrip(".") + "."
-            details.append(text)
-        else:
-            details.append(prefix + ": " + _brief(operation, 650))
-    if details:
-        details.append("Complete reader settings, original feature attributes and geometry-operation "
-                       "records are retained in the linked saved plan.")
-    return details
+                rows.append([feature, "" if source_index is None else source_index,
+                             ordinal, "", _text(op), ""])
+        table = _table(["Native feature ID", "Source array index", "Operation",
+                        "Stage", "Recorded action", "Recorded reason"], rows,
+                       "Original selected-feature operations in recorded order. Source "
+                       "array positions start at zero; operation numbers start at one. "
+                       "Duplicate source/receptor descriptions of the same event are shown "
+                       "once. Repeated events at different positions remain separate.")
+        table["retained_geometry_operations"] = operations
+        blocks += ["Selected-feature geometry operations", table]
+        if extra_rows:
+            blocks.append(_table(["Native feature ID", "Operation", "Original field",
+                                  "Value type", "Retained value"], extra_rows,
+                                 "Other complete original operation fields. Field paths use JSON Pointer notation."))
+    elif reader:
+        blocks.append("No geometry operations were recorded for the selected features.")
+    return blocks
 
 
 def _plan_sections(plan, analysis, views):
@@ -472,16 +559,14 @@ def _plan_sections(plan, analysis, views):
             ["Publisher reference", source["uri"]],
             ["Selected native feature IDs", _feature_ids(receptor)],
             ["Geographic relationship", receptor["relationship_precision"]],
-            ["Source rationale", _brief(relation["rationale"], 900)],
+            ["Source rationale", relation["rationale"]],
         ]
         if "buffer_m" in relation:
             rows.append(["Explicit geometry buffer (m)", _display_number(relation["buffer_m"])])
-        if "seed_huc_ids" in relation:
-            rows.append(["Selected receiving HUCs", _brief(relation["seed_huc_ids"])])
-            rows.append(["Retained upstream HUC count", len(relation.get("upstream_huc_ids", []))])
         sections.append(["Receiving area: " + receptor["title"], [
             receptor["interpretation"],
-            _table(["Source and method", "Retained value"], rows),
+            _source_table(receptor, rows),
+            *_relation_blocks(receptor),
             *_geometry_note(receptor, plan["analysis_crs_name"]),
         ]])
     sections.append(["Original source register", [
