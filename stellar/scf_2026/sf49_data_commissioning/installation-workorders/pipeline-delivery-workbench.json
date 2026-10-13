@@ -1,0 +1,126 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "pipeline-delivery-workbench",
+  "title": "Pipeline Delivery Workbench customer commissioning",
+  "task": {
+    "name": "Commission a complete customer dbt pipeline, native Dagster operation and independently received release",
+    "purpose": "Give a customer and accountable operator one continuous record from full dbt source and operating criteria through native execution, reviewed results, an approved client release and independently reopened editable history.",
+    "request": "Receive the current Workshare and Installation packet. Identify the actual customer project, approved source period, complete dbt source, native target and data/operations/review/receiving owners. Preserve all source files and original dependency references, dbt selection/variables and explicit operating expectations. Prepare the exact40-file application/programme source with Dagster1.13.26, dbt-core1.12.5 and dbt-duckdb1.11.0; independently receive the complete frozen dependency wheel population and its actual Python environment. Select returned application/programme/runtime/Python/dbt paths. Open the original private Staff application through managed Applications. Retain project, immutable source edition, operating contract and explicit host binding; keep secrets in private original profiles references. Invoke the original pipeline with stable request ID, exact Staff writer selection and global revision. Observe its actual accepted Dagster run and dbt command outcomes, complete manifests/logs/artifacts and every required node criterion. Compare a useful later source/run edition, review full native differences and accept or revise with an accountable person and reason. Create a release only from the original approved successful review. Operate the same history through the Merchant customer agent, including retained requests, source and native file reads. Export full workspace backup and selected client release. HTTP receive independently validates/stages the archive and immediately selects that received Staff writer; open separately switches among existing received/original writers, while standalone CLI receive is receive-only. Cold reopen complete source/history without automatic re-execution. Record actual source/native/output/receiving identities in the existing Installation process.",
+    "completeOutput": "One useful complete customer pipeline edition: selected full source, operating contract and private binding references; actual original Dagster/dbt run/outcome and every declared acceptance criterion; accountable review and approved release; editable complete source/native/history ZIP, independently received runtime/application and actual customer browser/agent operation.",
+    "repeatTrigger": "A distinct approved reporting/source period, useful source/model/contract change or recurring customer pipeline result creates a linked task. Retries, reconcile polls, downloads, formats, ranges and browser reopenings of one result are the same task.",
+    "pricedUnit": "One agreed complete customer pipeline baseline or recurring accepted delivery edition, using original Installation integer atomic price/count/budget/spending selections. Keep source engineering, execution/hosting and continuing operation responsibilities explicit in the original Workshare."
+  },
+  "source": {
+    "reference": "Use the existing Workshare, complete dbt project files and original upstream/license references, approved source period and accountable customer operator. Retain all paths, UTF-8/binary bodies, SHA/bytes, native project/edition/contract/binding/run/review/release IDs and external profile references.",
+    "mode": "The original Python application owns its SQLite history and Dagster instance. Its native runner invokes actual installed Dagster and dbt; managed DuckDB is per native run, while external profiles remain approved private host references. The supplied original Jaffle Shop example is a documented engineering reference, not a measured customer result.",
+    "population": "Retain the entire selected project and all native node outcomes. Original edition file limit32MiB, complete project128MiB, workspace/client archive512MiB compressed and expanded with25000 members. Keep complete native manifests and outputs; a larger customer population requires an explicit supported complete partition/operation, never sampling presented as whole delivery.",
+    "meaning": "Preserve original dbt command, select/exclude, vars, full-refresh, fail-fast, threads, dependency/catalog choices and each node's original unique_id/status. Required missing or failing native results remain unmet. Manifest differences preserve full before/after nodes and downstream dependencies. Approval is a saved accountable review of an actual original succeeded run with satisfied required criteria.",
+    "changePolicy": "Source, contracts, bindings, runs, reviews and release identities remain original history. Retain exact request IDs/global revisions and full writer selection; replay saved bodies after uncertainty. Start, reconcile, cancel and retry have distinct native meanings. Independent receiving does not authorize another native execution or reuse source-host credentials."
+  },
+  "receiving": {
+    "application": "TJLabs Pipeline Delivery Workbench, products/pipeline-delivery-workbench: complete35-file Snowpack application plus5-file original operating programme at Commons3cf4363327938957e886c891a13673064d0206dc. Commands pipeline-delivery-workbench, -prepare, -managed and -receive. Launch uses the exact returned applicationDirectory, programmeDirectory, runtimeReadyFile, Python invocation and separate private directory/control/connection paths.",
+    "acceptanceRule": "All selected full sources and criteria are retained. The actual original Dagster/dbt run is closed with complete outcome files and every required criterion satisfied; review explicitly approves the exact outcome before release.create. Full client ZIP retains that reviewed history and all selected source/native artifacts. Independent runtime/application receiving reproduces exact pinned distributions and original source; workspace receiving validates every original ZIP member and cold reopens without a second native run. Operate actual desktop/narrow controls and inspect screenshots and every outgoing attachment. Only observed outcomes enter Installation acceptance.",
+    "changeAndWithdraw": "Preserve exact original requests and reasons when changing a source edition, contract or binding. Applications Stop closes the Staff observer/listener and its handles, while accepted original native workers retain their inherited lease. run.cancel is explicit; observe original closure before export/switch. An existing received workspace is selected deliberately, and commercial changes use the existing Installation change/return process.",
+    "recovery": "Read original pending, host request observations, request.get and selected run state. Reuse the exact endpoint/body/request ID and originating writer selection after any unknown acknowledgement. Known native400/409 and unexpected500 are retained as actual HTTP outcomes; transport or retention failure does not authorize another pipeline. Native receives/opens preserve their original staged intent. Full archive exports use stable original request IDs and retain actual returned identities.",
+    "maintenance": "Name source owner, native operator, acceptance reviewer and independent receiver. Deliver all editable application/programme source, exact dependency wheels/runtime identity, licenses, complete history and opening instructions. Keep capabilities, profile secrets and private environment credentials outside exported customer artifacts. Preserve original ASTRA3459 native and Snowpack company/contact owners; TJLabs product registration implies no third-party endorsement."
+  },
+  "steps": [
+    {
+      "title": "Receive customer authority and commercial selection",
+      "result": "Join the current Workshare/Installation source, assignments, approved terms and actual source period. Identify the full project and target; retain payment/workorder controls unchanged."
+    },
+    {
+      "title": "Prepare and independently receive the complete installed source/runtime",
+      "result": "Verify40 exact original source leaves and all pinned installed distributions/wheels. Prepare primary and independent receiving environments with actual host Python paths and full source/runtime descriptors."
+    },
+    {
+      "title": "Open the original private Staff application",
+      "result": "Review and start managed Applications with exact launch config. Authenticate using its existing private capability locally; read complete state, selected writer and pending request before editing."
+    },
+    {
+      "title": "Save full source and operating criteria",
+      "result": "Create/select the original project. Inspect complete source ZIP, save an immutable edition against current base, retain contract owner/purpose/command/node expectations and explicit private native binding."
+    },
+    {
+      "title": "Run the actual original Dagster/dbt operation",
+      "result": "Save exact request/body/selection/global revision before dispatch. Observe the original accepted run UUID and native lifecycle. Reconcile uncertain observations; do not create a replacement run."
+    },
+    {
+      "title": "Review every native result and useful source change",
+      "result": "Open complete manifest, results, criteria, logs and source. Compare a later useful edition/run without hiding missing nodes or differences; decide approve/revise against the exact native outcome."
+    },
+    {
+      "title": "Create and inspect the complete customer release",
+      "result": "Create release from original approved review. Export its full scoped ZIP and the required whole workspace backup using stable IDs. Verify all members and actual returned SHA/bytes; open readable handover and source/native outputs."
+    },
+    {
+      "title": "Operate the same history through the customer agent",
+      "result": "Use21 registered tools with declared full inputs, original read/invoke routes, exact request recovery and complete retained response/archive byte reads. Preserve private capability custody."
+    },
+    {
+      "title": "Receive and select the customer edition independently",
+      "result": "Validate every original ZIP member. HTTP receive immediately selects the controlled received writer; use open for later switches among existing writers. Standalone CLI receive only stages the archive. Preserve source/run/request/history IDs and source-host paths as history; new host-native binding remains explicit."
+    },
+    {
+      "title": "Inspect actual outgoing product and cold reopen",
+      "result": "Use the exact desktop/narrow UI, loading/empty/error/recovery states and downloads. View actual screenshots and attachments, then stop/reopen the same application and retained agent reads. Keep original native owner."
+    },
+    {
+      "title": "Record the actual acceptance and next useful task",
+      "result": "Store observed source/runtime/native/review/release/receiving identities in existing Installation Operations. A distinct period or useful result is the next task; repeated processing of one result is not another purchase."
+    }
+  ],
+  "inputs": [
+    "Current complete Workshare/Installation packet, actual customer/merchant, assignments, funded deliverable and approved commercial/payment selections.",
+    "Entire approved dbt project, upstream/license/source-period references and complete file SHA/byte inventory.",
+    "Saved operating contract with original command/select/exclude/vars/options and every required native-node expectation.",
+    "Explicit original native binding: actual venv Python/dbt invocation paths and private external profile/target references or managed DuckDB mode.",
+    "Exact40 application/programme source and full preparation/runtime/wheel authority, independently received on the actual host.",
+    "Original accepted request/Dagster run IDs, complete native attempts/logs/manifests/results and accountable review decision.",
+    "Actual full backup/client release ZIPs, every member identity, independent receiving and cold source/browser/agent reopen.",
+    "Actual viewed desktop/narrow renderings, complete opened outgoing attachments and original operation/owner receipts.",
+    "Original integer atomic unit price/count/budget, network/asset/recipient and spending authority from Installation; no fabricated payment."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/HTTP_API.md",
+      "blob": "5a2fc11b992d5c9da12d3c21f643504123da6ce9"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/workspace.py",
+      "blob": "87e649ff8cd160cc9d0202de490f6a65c727fdd3"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/native.py",
+      "blob": "5fcc0e8eb6f64e07d9407b8d7d42bd5753752824"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/runner.py",
+      "blob": "c9bca97d31a415eb0311870b9d0334a8bb6112e1"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/artifacts.py",
+      "blob": "a8ae73e5cfb9e1b28aed6b5621019e209503fd7a"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/receiving.py",
+      "blob": "8431863d98d3a5188dba6e07ad1b9f51eb222831"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/STAFF_BROWSER.md",
+      "blob": "a06e970e749768f28720a6bd75a8a7bee0e22fe3"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/workbench/requirements.txt",
+      "blob": "0b25b4bf5c997d0f804f1014bc83125f0a096cca"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/original-programme/operate.py",
+      "blob": "9b9ae3305f96fc8218c4f264c00fd2cb02f591e4"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/original-programme/browser-workflow.mjs",
+      "blob": "5f3ffbe65ec5e81cd1f0457fd8c2e43d8c2a7e7a"
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client pipeline delivery</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" type="module"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<div id="session-screen" class="session" hidden>
+<h1>Client pipeline delivery</h1>
+<p>Open the local session link printed by your running server. The project and its saved work remain on that machine.</p>
+<label>Local session capability <input id="session-key" type="password" autocomplete="off"></label>
+<button id="session-connect" type="button">Open workspace</button>
+<p id="session-error" role="alert"></p>
+</div>
+<div id="shell">
+<header class="topbar">
+<div><strong>Client pipeline delivery</strong><span class="quiet">Dagster / dbt</span></div>
+<div class="toolbar"><span id="workspace-badge">Opening workspace…</span><button id="refresh" type="button">Refresh</button></div>
+</header>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<section id="pending-panel" class="pending" hidden aria-label="Retained original request">
+<div><strong>Original request retained</strong><p id="pending-description"></p></div>
+<div class="toolbar"><button id="resume-request" type="button">Resolve original request</button><button id="download-request" type="button">Download request</button></div>
+</section>
+<div class="layout">
+<aside class="sidebar">
+<div class="section-heading"><h2>Client projects</h2><button id="new-project" type="button">New</button></div>
+<label class="sr-only" for="project-filter">Filter projects</label><input id="project-filter" placeholder="Find a client project">
+<div id="projects"></div><button id="projects-more" type="button" hidden>Load more projects</button>
+<div class="sidebar-bottom">
+<button id="show-receiving" type="button">Receiving &amp; workspaces</button>
+<button id="backup" type="button">Download full workspace</button>
+<button id="show-audit" type="button">Workspace history</button>
+<p class="quiet">Source editions, original native runs, operating reviews and complete handovers.</p>
+</div>
+</aside>
+<main id="main" tabindex="-1">
+<section id="empty-project" class="empty">
+<h1>Prepare a client pipeline handover</h1>
+<p>Create a project and import its original dbt source. Save the operating contract and installed runtime, then run the saved edition through Dagster.</p>
+<button id="empty-new-project" type="button">Create client project</button>
+</section>
+<section id="project-workspace" hidden>
+<div class="project-heading"><div><h1 id="project-title"></h1><p id="project-description" class="quiet"></p></div><button id="edit-project" type="button">Edit project</button></div>
+<div class="identity-strip"><span id="selected-edition"></span><span id="execution-slot"></span></div>
+<nav id="tabs" class="tabs" aria-label="Project sections">
+<button data-tab="source" aria-selected="true">Source</button><button data-tab="contract">Operating contract</button>
+<button data-tab="binding">Installed runtime</button><button data-tab="runs">Native runs</button>
+<button data-tab="compare">Compare</button><button data-tab="reviews">Reviews</button><button data-tab="releases">Releases</button>
+</nav>
+
+<section id="tab-source" class="tab-panel">
+<div class="section-heading"><h2>Source editions</h2><div class="toolbar"><button id="source-import-open" type="button">Import files</button><button id="source-add" type="button">Add file</button></div></div>
+<div class="form-row">
+<label>View saved edition<select id="edition-select"></select></label>
+<button id="editions-more" type="button" hidden>Load more editions</button>
+<button id="source-use-current" type="button">View current edition</button>
+</div>
+<p id="source-identity" class="mono quiet"></p>
+<div class="source-layout">
+<div><label class="sr-only" for="file-filter">Filter source files</label><input id="file-filter" placeholder="Filter source paths"><div id="source-files" class="file-list"></div></div>
+<div class="editor-pane">
+<div class="section-heading"><strong id="file-title">Select a source file</strong><div class="toolbar"><button id="file-download" type="button" disabled>Download original bytes</button><button id="file-delete" type="button" disabled>Delete in draft</button></div></div>
+<p id="file-identity" class="mono quiet"></p>
+<label class="sr-only" for="file-editor">UTF-8 source editor</label><textarea id="file-editor" class="code-editor" spellcheck="false" disabled placeholder="Select a saved source file, or import the original project."></textarea>
+<p id="file-binary" class="quiet" hidden>This file is not UTF-8. Its original bytes remain intact; download it or replace it through import.</p>
+</div>
+</div>
+<section class="draft-box">
+<div class="section-heading"><h3>New edition draft</h3><span id="source-draft-status" class="quiet"></span></div>
+<div class="form-row"><label>Edition label<input id="edition-label" maxlength="200"></label><label>Source notes<textarea id="edition-notes" rows="2"></textarea></label></div>
+<div id="source-changes"></div><div id="source-conflicts"></div>
+<div class="toolbar"><button id="source-save" type="button" class="primary">Save new edition</button><button id="source-rebase" type="button">Review current changes</button><button id="source-discard" type="button">Discard source draft</button></div>
+</section>
+</section>
+
+<section id="tab-contract" class="tab-panel" hidden>
+<div class="section-heading"><h2>Operating contract</h2><button id="contract-current" type="button">Load current contract</button></div>
+<p>Selectors, variables and acceptance criteria apply to the saved source edition. Original SQL, YAML and dbt tests remain the executable definitions.</p>
+<div class="form-grid">
+<label>Contract label<input id="contract-label" maxlength="200"></label><label>Operating owner<input id="contract-owner" maxlength="200"></label>
+<label>Original dbt command<select id="contract-command"><option>build</option><option>run</option><option>seed</option><option>compile</option><option>parse</option><option>source freshness</option><option>docs generate</option></select></label>
+<label>Threads<input id="contract-threads" type="number" min="1" max="32" value="1"></label>
+<label>Select<input id="contract-select" placeholder="Original dbt selector"></label><label>Exclude<input id="contract-exclude"></label>
+</div>
+<label>Purpose<textarea id="contract-purpose" rows="2"></textarea></label>
+<div class="checks"><label><input id="contract-full_refresh" type="checkbox"> Full refresh</label><label><input id="contract-fail_fast" type="checkbox"> Fail fast</label><label><input id="contract-install_dependencies" type="checkbox"> Install project dependencies</label><label><input id="contract-generate_catalog" type="checkbox"> Generate native catalog</label></div>
+<label>Complete structured contract JSON<textarea id="contract-json" class="json-editor" rows="22" spellcheck="false"></textarea></label>
+<p class="quiet">The full JSON retains vars, exact node expectations, required flags and notes. Add an expectation from a selected native node in Native runs.</p>
+<p id="contract-status" class="mono quiet"></p>
+<div class="toolbar"><button id="contract-save" type="button" class="primary">Save operating contract</button><button id="contract-rebase" type="button">Use current workspace revision</button><button id="contract-history" type="button">Saved contract history</button></div>
+</section>
+
+<section id="tab-binding" class="tab-panel" hidden>
+<div class="section-heading"><h2>Installed runtime and connection</h2><button id="binding-current" type="button">Load current binding</button></div>
+<p>Keep connection credentials in the operator’s existing profile directory. Saving these installed paths does not test a connection or install Dagster.</p>
+<div class="form-grid">
+<label>Binding label<input id="binding-label" maxlength="200"></label>
+<label>Execution mode<select id="binding-mode"><option value="managed_duckdb">Managed local DuckDB</option><option value="external_profiles">Existing external profiles</option></select></label>
+<label>Installed Python executable<input id="binding-python_executable" placeholder="Server Python when omitted"></label>
+<label>Installed dbt executable<input id="binding-dbt_executable" placeholder="dbt"></label>
+<label>Target name<input id="binding-target" placeholder="local"></label>
+<label>Existing profiles directory<input id="binding-profiles_dir" placeholder="/path/to/operator/profiles"></label>
+</div>
+<p id="binding-mode-description" class="quiet"></p>
+<p id="binding-status" class="mono quiet"></p>
+<div class="toolbar"><button id="binding-save" type="button" class="primary">Save installed binding</button><button id="binding-rebase" type="button">Use current workspace revision</button><button id="runtime-status" type="button">Read original runtime state</button></div>
+</section>
+
+<section id="tab-runs" class="tab-panel" hidden>
+<h2>Run saved selections</h2>
+<div class="form-grid">
+<label>Source edition<select id="run-edition"></select></label><label>Operating contract<select id="run-contract"></select></label>
+<label>Installed binding<select id="run-binding"></select></label><label>Incremental data baseline<select id="run-baseline"><option value="">New managed database</option></select></label>
+</div>
+<p class="quiet">One original Dagster operation runs the selected dbt project. An incremental baseline copies a successful managed DuckDB run from this same client.</p>
+<div class="toolbar"><button id="run-execute" type="button" class="primary">Run saved selections</button><button id="run-options-more" type="button">Load remaining saved selections</button></div>
+<div class="section-heading"><h2>Original native runs</h2><label>State<select id="run-filter"><option value="">All states</option><option>prepared</option><option>launching</option><option>running</option><option>setup_failed</option><option>interrupted</option><option>succeeded</option><option>failed</option><option>cancelled</option></select></label></div>
+<div id="runs-table"></div><button id="runs-more" type="button" hidden>Load more runs</button>
+<section id="run-detail" hidden>
+<div class="section-heading"><h3 id="run-title"></h3><button id="run-refresh" type="button">Refresh original run</button></div>
+<div id="run-summary" class="definition-grid"></div>
+<div class="toolbar"><button id="run-start" type="button">Start retained operation</button><button id="run-reconcile" type="button">Reconcile original outcome</button><button id="run-cancel" type="button">Request cancellation</button><button id="run-retry" type="button">Create linked retry</button><button id="run-outcome" type="button">Download original outcome</button></div>
+<h3>Original log</h3><pre id="run-log" class="log" tabindex="0"></pre><div class="toolbar"><button id="run-log-next" type="button">Read next log page</button><button id="run-log-reset" type="button">Read from beginning</button><span id="run-log-position" class="quiet"></span></div>
+<h3>Native artifacts</h3><div id="run-artifacts"></div>
+<h3>Operating acceptance</h3><div id="run-criteria"></div>
+<div class="section-heading"><h3>Original manifest and node results</h3><span id="node-count" class="quiet"></span></div>
+<div class="form-row"><label>Filter native nodes<input id="node-filter" placeholder="Unique ID, path, description"></label><label>Execution<select id="node-state"><option value="">All nodes</option><option value="unexecuted">Unexecuted</option><option value="executed">Executed</option></select></label><label>Resource type<select id="node-type"><option value="">All types</option></select></label></div>
+<div id="nodes-table"></div><div class="toolbar"><button id="nodes-prev" type="button">Previous</button><button id="nodes-next" type="button">Next</button></div>
+<section id="node-detail" hidden><h3 id="node-title"></h3><pre id="node-record" class="json-view"></pre><div class="form-row"><label>Accepted original statuses<input id="node-accepted-statuses" placeholder="For example: success, pass"></label><label class="check"><input id="node-required" type="checkbox" checked> Required</label><button id="node-add-expectation" type="button">Add to contract draft</button></div></section>
+</section>
+</section>
+
+<section id="tab-compare" class="tab-panel" hidden>
+<h2>Compare original native manifests</h2><p>Review changed source and original node definitions across two runs of this client. Downstream relationships identify potential impact.</p>
+<div class="form-grid"><label>Before run<select id="compare-before"></select></label><label>After run<select id="compare-after"></select></label><label>Comparison label<input id="compare-label" maxlength="200"></label></div>
+<button id="compare-create" type="button" class="primary">Save source comparison</button>
+<div id="comparisons-table"></div><button id="comparisons-more" type="button" hidden>Load more comparisons</button>
+<div id="comparison-detail"></div>
+</section>
+
+<section id="tab-reviews" class="tab-panel" hidden>
+<h2>Review an exact native outcome</h2>
+<div class="form-grid"><label>Original run<select id="review-run"></select></label><label>Reviewer<input id="review-reviewer" maxlength="200"></label><label>Decision<select id="review-decision"><option value="revise">Request revision</option><option value="approve">Approve delivery</option></select></label><label>Related source comparison<select id="review-comparison"><option value="">No comparison</option></select></label></div>
+<label>Review comment<textarea id="review-comment" rows="5"></textarea></label>
+<p id="review-eligibility" class="quiet"></p><button id="review-save" type="button" class="primary">Save review</button>
+<div id="reviews-table"></div><button id="reviews-more" type="button" hidden>Load more reviews</button>
+</section>
+
+<section id="tab-releases" class="tab-panel" hidden>
+<h2>Client releases</h2><p>A release records the approved source, operating contract and original native outcome. Build its complete archive when it is ready to hand over.</p>
+<div class="form-grid"><label>Approved review<select id="release-review"></select></label><label>Release label<input id="release-label" maxlength="200"></label></div>
+<label>Operator and receiving notes<textarea id="release-notes" rows="5"></textarea></label>
+<button id="release-create" type="button" class="primary">Save release</button>
+<div id="releases-table"></div><button id="releases-more" type="button" hidden>Load more releases</button>
+</section>
+</section>
+
+<section id="receiving-workspace" hidden>
+<div class="section-heading"><h1>Receiving &amp; workspaces</h1><button id="receiving-back" type="button">Back to project</button></div>
+<p>Receive a complete workspace or client release, then reopen its retained directory. Existing receiving records keep later edits and original run history.</p>
+<div class="draft-box"><label>Complete delivery ZIP<input id="receiving-file" type="file" accept=".zip,application/zip"></label><p id="receiving-selected" class="quiet"></p><button id="receive-submit" type="button" class="primary">Receive and open selected archive</button></div>
+<h2>Retained workspaces</h2><div id="received-table"></div><button id="open-original" type="button">Open original workspace</button>
+<h2>Last completed transport response</h2><pre id="last-response" class="json-view">No response has been retained in this browser.</pre>
+</section>
+</main>
+</div>
+</div>
+
+<dialog id="project-dialog">
+<form id="project-form"><div class="section-heading"><h2 id="project-dialog-title">New client project</h2><button type="button" data-close="project-dialog" aria-label="Close">Close</button></div><label>Client/project label<input id="project-label" required maxlength="200"></label><label>Work to deliver<textarea id="project-notes" rows="5"></textarea></label><div class="toolbar"><button type="submit" class="primary">Save project</button><button type="button" data-close="project-dialog">Cancel</button></div></form>
+</dialog>
+<dialog id="import-dialog">
+<div class="section-heading"><h2>Import original dbt source</h2><button data-close="import-dialog" type="button">Close</button></div>
+<p>Select a project directory, individual source files, or a source ZIP. Files enter the edition draft; import does not execute the project.</p>
+<label>Project directory<input id="source-directory" type="file" webkitdirectory multiple></label>
+<label>Individual files<input id="source-individual" type="file" multiple></label>
+<label>Source ZIP<input id="source-zip" type="file" accept=".zip,application/zip"></label>
+<label>Project root inside selection, if needed<input id="source-import-root" placeholder="Directory containing dbt_project.yml"></label>
+<p class="quiet">Profiles, environment files, installed dependencies, generated targets and repository internals stay outside the source edition.</p>
+<button id="source-import-stage" type="button" class="primary">Add selected source to draft</button><pre id="source-import-report" class="json-view"></pre>
+</dialog>
+<dialog id="json-dialog"><div class="section-heading"><h2 id="json-dialog-title">Saved record</h2><button data-close="json-dialog" type="button">Close</button></div><pre id="json-dialog-content" class="json-view" tabindex="0"></pre><button id="json-dialog-download" type="button">Download complete JSON</button></dialog>
+</body>
+</html>
