@@ -35,7 +35,7 @@ export function receivedParameterStudiesHTML(detail,disabled=false){
         (local?button('open','Open saved study',index,disabled)+button('baseline','Open reference run',index,disabled):'')+
         (!direct?button('compose','Add source to report',index,disabled):'')+'</div>'+
         '<details class="st-details"><summary>Original selected cases</summary><div class="st-table-scroll"><table class="st-table">'+
-        '<thead><tr><th>Case</th><th>Captured state</th><th>Original profile</th><th>Native run</th></tr></thead><tbody>'+
+        '<thead><tr><th>Case</th><th>'+(direct?'Current retained state':'Captured state')+'</th><th>Original profile</th><th>Native run</th></tr></thead><tbody>'+
         list(row.selected_cases).map((item,position)=>'<tr><td>'+esc(item.label)+'<small>'+esc(item.id)+'</small></td><td>'+
           esc(item.state||'Unspecified')+'</td><td><code>'+esc(item.profile_id)+'</code></td><td>'+
           (local?button('run','Open saved run',index,disabled,'data-parameter-run="'+position+'"'):'<code>'+esc(item.run_id)+'</code>')+
