@@ -3,6 +3,7 @@
  * Persistence, source acquisition and station matching stay with flow_workspace.
  */
 import observedLoads from '../../source_tools/observed_loads.cjs';
+import {canonicalWQPLoadSample,WQP_LOAD_MAPPING} from './flow_wqp_loads.mjs';
 import {buildFlowEdition,joinSampleDates} from './flow_editions.mjs';
 import {hash,stable} from './normalise.mjs';
 import {InputError} from './parse.mjs';
@@ -53,6 +54,12 @@ function originalSamples(study){
   const sample=row.sample;
   if(!sample||typeof sample!=='object'||Array.isArray(sample))
    fail('Retain the complete original concentration sample: '+row.sample_id);
+  if(sample.sourceKind==='wqp'){
+   if(!text(row.sample_id)||ids.has(row.sample_id))
+    fail('Every selected concentration row needs a distinct original sample identity.');
+   ids.add(row.sample_id);
+   return canonicalWQPLoadSample(sample,row);
+  }
   const absent=fields.filter(field=>!own(sample,field));
   if(absent.length)
    fail('Unsupported concentration source mapping for '+row.sample_id+
@@ -147,7 +154,9 @@ export function runFlowStudyLoads(study,contract){
    flow_study_input_sha256:study.id,flow_sources:clone(study.edition.sources),
    sample_sources:study.input.sample_sources.map(({text:body,...source})=>clone(source)),
    station_relationships:clone(study.input.relations),
-   sample_mapping:'original-derived-nutrient-results/v1',
+   sample_mapping:samples.every(s=>s.source_mapping===WQP_LOAD_MAPPING)?WQP_LOAD_MAPPING:
+    samples.some(s=>s.source_mapping===WQP_LOAD_MAPPING)?'explicit-mixed-source-mappings/v1':'original-derived-nutrient-results/v1',
+   ...(samples.some(s=>s.source_mapping===WQP_LOAD_MAPPING)?{sample_mappings:[...new Set(samples.map(s=>s.source_mapping||'original-derived-nutrient-results/v1'))]}:{}),
    sample_identity:'Unchanged selected sample_context.rows[].sample_id',
    flow_selection:'Every original selected candidate; ambiguous days remain excluded from quantified loads',
    reporting_calendar:{start:study.edition.start,end:study.edition.end,end_inclusive:true},

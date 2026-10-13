@@ -41,13 +41,16 @@ function csvString(rows,columns){
   return [columns.join(","),...rows.map(r=>columns.map(k=>enc(r[k])).join(","))].join("\n")+"\n";
 }
 function sampleId(s,i){return text(s.sample_id)||[required(s.source_file,"Sample source_file"),required(s.source_row,"Sample source_row")].join(":");}
-function seriesKey(s){return JSON.stringify([text(s.station_id),text(s.characteristic),text(s.sample_fraction),text(s.method_context),text(s.method_id)]);}
+function seriesKey(s){const key=[text(s.station_id),text(s.characteristic),text(s.sample_fraction),text(s.method_context),text(s.method_id)];if(s.series_context)key.push(s.series_context);return JSON.stringify(key);}
 function normalizeSample(s,i,contract){
   const out={id:sampleId(s,i),date:text(s.date),day:day(s.date),station_id:required(s.station_id,"Sample station_id"),
-    characteristic:required(s.characteristic,"Sample characteristic"),sample_fraction:required(s.sample_fraction,"Sample fraction"),
-    method_id:required(s.method_id,"Sample method_id"),method_context:text(s.method_context),original:clone(s),issues:[]};
+    characteristic:required(s.characteristic,"Sample characteristic"),sample_fraction:s.source_mapping?text(s.sample_fraction):required(s.sample_fraction,"Sample fraction"),
+    method_id:s.source_mapping?text(s.method_id):required(s.method_id,"Sample method_id"),method_context:text(s.method_context),original:clone(s),issues:[],
+    ...(s.series_context?{series_context:clone(s.series_context)}:{})};
   out.series_key=seriesKey(out);
   try{
+    if(s.integration_issues?.length)throw Error(s.integration_issues.join("; "));
+    if(!out.sample_fraction||!out.method_id)throw Error("Sample fraction and analytical method are required for integration");
     const qualifier=text(s.qualifier),status=text(s.result_status);
     if(!contract.accepted_concentration_qualifiers.includes(qualifier))throw Error("Unaccepted concentration qualifier: "+qualifier);
     if(!contract.accepted_concentration_statuses.includes(status))throw Error("Unaccepted concentration status: "+status);
@@ -132,7 +135,8 @@ function integrate(input){
   for(const [key,measurements] of [...groups].sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0)){
     const first=measurements[0],support=supportFor(first.station_id,c);
     const base={series_key:key,station_id:first.station_id,characteristic:first.characteristic,sample_fraction:first.sample_fraction,
-      method_id:first.method_id,method_context:first.method_context,support,sample_ids:measurements.map(s=>s.id),
+      method_id:first.method_id,method_context:first.method_context,
+      ...(first.series_context?{series_context:clone(first.series_context)}:{}),support,sample_ids:measurements.map(s=>s.id),
       source_sample_count:measurements.length,usable_sample_count:measurements.filter(s=>s.usable).length,
       censored_sample_count:measurements.filter(s=>s.censored).length,uncertainty:UNCERTAINTY};
     if(!support.admitted){series.push({...base,status:"context_only_unmatched_support",daily:[],periods:[],annual:[]});continue;}
@@ -194,12 +198,14 @@ function integrate(input){
     uncertainty:UNCERTAINTY};
 }
 function observationExports(result){
+  const otherContext=s=>!!s.original.series_context&&s.original.series_context.unit_kind!=="concentration";
+  const mixedProperties=result.source_samples.some(otherContext);
   const context=result.source_samples.map(s=>({record_id:s.id,station_id:s.station_id,catchment_id:"",
     parameter:s.characteristic,value:s.original.value,unit:s.original.unit,period_start:s.date,period_end:s.date,
     qualifier:text(s.original.qualifier)||text(s.original.detection_condition),method:s.method_id,
     uncertainty:{source_detection_condition:s.original.detection_condition,limit:s.original.limit_value,limit_unit:s.original.limit_unit},
-    source_records:[s.original],measurement_support:"concentration",species:s.characteristic,
-    quantity_basis:"original_concentration",coverage_days:1,expected_days:1,coverage_complete:false,
+    source_records:[s.original],measurement_support:otherContext(s)?"other_context":"concentration",species:s.characteristic,
+    quantity_basis:otherContext(s)?"original_measurement":"original_concentration",coverage_days:1,expected_days:1,coverage_complete:false,
     gauge_relation:supportFor(s.station_id,result.contract).gauge_relation||"",source_quantity:s.original}));
   const annual=[];
   for(const s of result.series){const mapping=(result.contract.native_comparison_mappings||[]).filter(m=>m.series_key===s.series_key);
@@ -209,6 +215,8 @@ function observationExports(result){
     // Fractions never become native total nutrient solely because the series is complete.
     const allowed={nitrogen:["Total Nitrogen","Nitrogen, total"],phosphorus:["Phosphorus","Total Phosphorus"],sediment:["Suspended sediment concentration"]};
     if(!allowed[m.parameter].includes(s.characteristic)||!["Unfiltered","Total"].includes(s.sample_fraction))continue;
+    if(s.series_context&&((m.parameter==="nitrogen"&&s.series_context.chemical_basis!=="N")||
+      (m.parameter==="phosphorus"&&s.series_context.chemical_basis!=="P")))continue;
     for(const a of s.annual){if(!a.whole_calendar_year||!a.coverage_complete||a.load_kg===null||a.censored_days)continue;
       annual.push({record_id:s.series_key+"|"+a.label,station_id:s.station_id,catchment_id:s.support.catchment_id,
         parameter:m.parameter,species:m.species,value:m.parameter==="sediment"?a.load_kg/1000:a.load_kg,
@@ -223,12 +231,15 @@ function observationExports(result){
   const columns=["record_id","station_id","catchment_id","parameter","value","unit","period_start","period_end","qualifier","method","uncertainty","source_records","measurement_support","species","gauge_id","gauge_relation","relation_method","quantity_basis","coverage_days","expected_days","coverage_complete","coverage_detail","source_quantity"];
   const source_uri=result.contract.source_references[0];
   return {context_csv:csvString(context,columns),annual_csv:csvString(annual,columns),annual_count:annual.length,
-    context_metadata:{title:"Retained concentration observations used by load integration",source_uri,value_basis:"source_context",observation_kind:"receiving_water_measurement",time_support:"original_sample"},
+    context_metadata:{title:mixedProperties?"Retained original measurement context used by load integration":"Retained concentration observations used by load integration",source_uri,value_basis:"source_context",observation_kind:mixedProperties?"source_context":"receiving_water_measurement",time_support:"original_sample"},
     annual_metadata:{title:"Complete explicitly matched integrated annual mass estimates",source_uri,value_basis:"annual_mass_rate",annualization_method:result.method,accepted_qualifiers:[""]}};
 }
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function renderHtml(result){
   const e=escapeHtml,number=value=>value==null?"—":e(value.toPrecision(6));
+  const canonical=result.series.some(s=>s.series_context);
+  const contextLabel=canonical?"original measurement context":"concentration context";
+  const quantityTable=canonical?'<h2>Retained original quantities</h2><div class="scroll"><table><thead><tr><th>Station / characteristic</th><th>Original quantity kind / unit</th><th>Chemical basis / speciation</th><th>Fraction / method</th></tr></thead><tbody>'+result.series.map(s=>{const c=s.series_context||{};return "<tr><td>"+e(s.station_id)+"<br>"+e(s.characteristic)+"</td><td>"+e(c.unit_kind||"concentration")+" / "+e(c.normalized_unit||s.unit||"")+"<br>"+e(c.source_unit_basis||"")+"</td><td>"+e(c.chemical_basis||"unspecified")+" / "+e(c.source_speciation||"")+"</td><td>"+e(s.sample_fraction)+" / "+e(s.method_id)+"</td></tr>";}).join("")+"</tbody></table></div>":"";
   const interval=(point,lower,upper)=>point!=null?number(point):lower!=null?number(lower)+" – "+number(upper)+" (censor bounds)":"—";
   const mass=p=>interval(p?.load_kg,p?.load_lower_kg,p?.load_upper_kg);
   const concentration=p=>interval(p?.flow_weighted_concentration_mg_l,p?.flow_weighted_concentration_lower_mg_l,p?.flow_weighted_concentration_upper_mg_l);
@@ -236,7 +247,7 @@ function renderHtml(result){
     const p=s.periods[0];return "<tr><td>"+e(s.station_id)+"</td><td>"+e(s.characteristic)+" / "+e(s.sample_fraction)+"<br>"+e(s.method_id)+"</td><td>"+e(s.support.gauge_relation||"unmatched")+"</td><td>"+s.source_sample_count+"</td><td>"+(p?p.quantified_days+" / "+p.expected_days:"0 — support unresolved")+"</td><td>"+mass(p)+"</td><td>"+concentration(p)+"</td><td>"+e(s.support.issues.join("; ")||s.status)+"</td></tr>";
   }).join("");
   const periods=result.series.flatMap(s=>[...s.periods,...s.annual].map(p=>"<tr><td>"+e(s.station_id)+"<br>"+e(s.characteristic)+" / "+e(s.sample_fraction)+"<br>"+e(s.method_id)+"</td><td>"+e(p.label||"Selected period")+"<br>"+e(p.period_start)+" to "+e(p.period_end)+" (end exclusive)</td><td>"+p.quantified_days+" / "+p.expected_days+"<br>"+(p.coverage_complete?"Complete selected period":"Incomplete selected period")+"</td><td>"+mass(p)+"</td><td>"+number(p.quantified_flow_volume_m3)+"</td><td>"+concentration(p)+"</td></tr>")).join("");
-  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Observed concentration and discharge integration</title><style>body{font:16px/1.5 system-ui;margin:2rem auto;padding:0 1rem;max-width:1100px;color:#222}h1{line-height:1.15}table{border-collapse:collapse;width:100%}th,td{padding:.65rem;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}.scroll{overflow:auto}th{background:#eee}a{color:#222;text-decoration:underline}.notice{border-left:4px solid #666;padding:1rem;background:#f5f5f5}</style><h1>Observed concentration and discharge integration</h1><p>'+e(result.contract.period.start)+' to '+e(result.contract.period.end)+' (end exclusive)</p><p class="notice">'+e(result.uncertainty)+'</p><p>'+result.counts.source_samples+' original measurements; '+result.counts.source_flows+' flow rows; '+result.counts.support_admitted_series+' series with accepted spatial support; '+result.counts.context_only_series+' retained as concentration context.</p><div class="scroll"><table><thead><tr><th>Station</th><th>Constituent / fraction / method</th><th>Gauge relation</th><th>Measurements</th><th>Quantified days</th><th>Mass or censor bounds over quantified days (kg)</th><th>Matching-volume mean or bounds (mg/L)</th><th>Interpretation</th></tr></thead><tbody>'+rows+'</tbody></table></div><h2>Selected, seasonal and calendar periods</h2><p>Flow-weighted concentration is 1000 × mass (kg) / matching flow volume (m³), using exactly the same quantified days in numerator and denominator. Censored periods retain lower/upper bounds without a point estimate. Zero-volume periods have no defined concentration. Incomplete periods describe only their quantified days; no missing day is extrapolated or scaled to a year.</p><div class="scroll"><table><thead><tr><th>Station / constituent / fraction / method</th><th>Period</th><th>Quantified days</th><th>Mass or bounds (kg)</th><th>Matching quantified volume (m³)</th><th>Flow-weighted mean or bounds (mg/L)</th></tr></thead><tbody>'+periods+'</tbody></table></div><h2>Reopen the complete source and results</h2><ul><li><a href="observed-loads.json">Full result, original rows and daily coverage</a></li><li><a href="daily-loads.csv">Daily estimated loads and missing-day reasons</a></li><li><a href="period-loads.csv">Selected, seasonal and calendar-year mass, volume and flow-weighted concentration</a></li><li><a href="concentration-context.csv">Original concentration context for the workbench</a></li><li><a href="annual-loads.csv">Only admissible complete annual mass rows</a></li></ul><h2>Declared support and assumptions</h2><pre style="white-space:pre-wrap">'+e(JSON.stringify(result.contract,null,2))+'</pre></html>\n';
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Observed concentration and discharge integration</title><style>body{font:16px/1.5 system-ui;margin:2rem auto;padding:0 1rem;max-width:1100px;color:#222}h1{line-height:1.15}table{border-collapse:collapse;width:100%}th,td{padding:.65rem;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}.scroll{overflow:auto}th{background:#eee}a{color:#222;text-decoration:underline}.notice{border-left:4px solid #666;padding:1rem;background:#f5f5f5}</style><h1>Observed concentration and discharge integration</h1><p>'+e(result.contract.period.start)+' to '+e(result.contract.period.end)+' (end exclusive)</p><p class="notice">'+e(result.uncertainty)+'</p><p>'+result.counts.source_samples+' original measurements; '+result.counts.source_flows+' flow rows; '+result.counts.support_admitted_series+' series with accepted spatial support; '+result.counts.context_only_series+' retained as '+e(contextLabel)+'.</p>'+quantityTable+'<div class="scroll"><table><thead><tr><th>Station</th><th>Constituent / fraction / method</th><th>Gauge relation</th><th>Measurements</th><th>Quantified days</th><th>Mass or censor bounds over quantified days (kg)</th><th>Matching-volume mean or bounds (mg/L)</th><th>Interpretation</th></tr></thead><tbody>'+rows+'</tbody></table></div><h2>Selected, seasonal and calendar periods</h2><p>Flow-weighted concentration is 1000 × mass (kg) / matching flow volume (m³), using exactly the same quantified days in numerator and denominator. Censored periods retain lower/upper bounds without a point estimate. Zero-volume periods have no defined concentration. Incomplete periods describe only their quantified days; no missing day is extrapolated or scaled to a year.</p><div class="scroll"><table><thead><tr><th>Station / constituent / fraction / method</th><th>Period</th><th>Quantified days</th><th>Mass or bounds (kg)</th><th>Matching quantified volume (m³)</th><th>Flow-weighted mean or bounds (mg/L)</th></tr></thead><tbody>'+periods+'</tbody></table></div><h2>Reopen the complete source and results</h2><ul><li><a href="observed-loads.json">Full result, original rows and daily coverage</a></li><li><a href="daily-loads.csv">Daily estimated loads and missing-day reasons</a></li><li><a href="period-loads.csv">Selected, seasonal and calendar-year mass, volume and flow-weighted concentration</a></li><li><a href="concentration-context.csv">Original '+e(contextLabel)+' for the workbench</a></li><li><a href="annual-loads.csv">Only admissible complete annual mass rows</a></li></ul><h2>Declared support and assumptions</h2><pre style="white-space:pre-wrap">'+e(JSON.stringify(result.contract,null,2))+'</pre></html>\n';
 }
 module.exports={VERSION,MASS_FACTOR,UNCERTAINTY,csvParse,csvString,integrate,observationExports,renderHtml};
 
