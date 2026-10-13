@@ -314,7 +314,10 @@ def delivery_projection(events):
         elif kind == "DEFERRED":
             if not delivered and not failed:
                 state = kind
-        elif kind in ("UNKNOWN","SENDING","QUEUED","CANCELLED"):
+        elif kind == "CANCELLED":
+            if not delivered and (failed or not accepted):
+                state = kind
+        elif kind in ("UNKNOWN","SENDING","QUEUED"):
             if not accepted and not delivered and not failed:
                 state = kind
         last = event

@@ -174,10 +174,11 @@ def main():
                     if profile.get("automatic_notifications"):
                         try:
                             trigger=(result.get("review_id") if method=="review_revision" else result.get("revision_id")) or __import__("hashlib").sha256(json.dumps(result,sort_keys=True).encode()).hexdigest()
-                            notices=workspace.invoke("outreach.sync_notifications",{"request_id":"native-notices:"+method+":"+trigger,"actor":"original questionnaire response","reason":"Prepare configured notices from the committed response","automatic":True,"expected_revision":workspace.outreach.op_status({})["revision"],"_actor":{"role":"configured_notification_worker","origin_method":method}})
-                            result={**result,"notifications":notices}
+                            notices=workspace.invoke("outreach.sync_notifications",{"request_id":"native-notices:"+method+":"+trigger,"actor":"original questionnaire response","reason":"Prepare configured notices from the committed response","automatic":True,**({"respondent_id":params["respondent_id"]} if method=="submit_revision" else {}),"expected_revision":workspace.outreach.op_status({})["revision"],"_actor":{"role":"configured_notification_worker","origin_method":method}})
+                            visible_notices=notices if record["role"]=="operator" else {"state":"PREPARED","prepared_count":len(notices.get("messages",[])),"review_count":len(notices.get("skipped",[]))}
+                            result={**result,"notifications":visible_notices}
                         except Exception as notice_error:
-                            result={**result,"notifications":{"state":"REVIEW","code":getattr(notice_error,"code","REQUEST"),"message":str(notice_error),"continuation":"Review the configured response notice in Companies and communications."}}
+                            result={**result,"notifications":{"state":"REVIEW","code":getattr(notice_error,"code","REQUEST"),"message":str(notice_error) if record["role"]=="operator" else "Staff will review the original notification settings.","continuation":"Review the configured response notice in Companies and communications."}}
                 if method == "import_workbook": record["workbooks"].add(result["sha256"])
                 if method == "calculate_workbook" and result.get("calculated_sha256"): record["workbooks"].add(result["calculated_sha256"])
                 if method == "get_respondent" and record["role"] == "respondent":

@@ -233,7 +233,8 @@ def main():
         own=client.op("get_assignment",{"id":by_company["A"]["id"]})["assignment"]
         respondent=Client(opening["url"]);respondent.request("/api/session",{"role":"respondent","respondent_id":own["respondent_id"],"access_code":own["access_code"]})
         response=respondent.invoke("submit_revision",{"respondent_id":own["respondent_id"],"expected_version":0,"answers":{"company_name":own["company"]["name"],"reported_value":"700.00"},"public_confirmed":True})
-        assert response["validation"]["valid"] and len(response["notifications"]["messages"])==2
+        assert response["validation"]["valid"] and response["notifications"]["prepared_count"]==2
+        assert set(response["notifications"])=={"state","prepared_count","review_count"}
         suppressed=client.op("followups",{"at":stamp()})
         assert all(not x["eligible"] for x in suppressed["items"] if x["assignment_id"]==own["id"])
         before=len(relay.messages)
@@ -324,6 +325,14 @@ def main():
         return report
     except Exception as error:
         report.update({"status":"FAILED","finished_at":stamp(),"error":{"type":type(error).__name__,"message":str(error),"traceback":traceback.format_exc()}})
+        try:
+            checkpoint_path=root/"ATSSC_Interrupted_Respondent_Project.zip"
+            selected_workspace=workspace.directory if "workspace" in locals() else (Path(args.workspace) if args.workspace else root/"workspace")
+            if (selected_workspace/"questionnaires.sqlite3").is_file() and not checkpoint_path.exists():
+                retained=Workspace(selected_workspace).outreach.op_export_project({"path":str(checkpoint_path)})
+                report["retained_case_checkpoint"]=retained
+        except Exception as checkpoint_error:
+            report["checkpoint_error"]={"type":type(checkpoint_error).__name__,"message":str(checkpoint_error)}
         (root/"NATIVE_RESULT.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
         raise
     finally:
