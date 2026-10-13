@@ -28,7 +28,7 @@ from typing import Any
 
 SCHEMA = "upstate.water-quality-context/v1"
 CATALOG_SCHEMA = "upstate.water-quality-catalog/v1"
-METHOD_VERSION = "water-quality-context-native-identity-20261013"
+METHOD_VERSION = "water-quality-context-native-identity-causes-20261013"
 FOCUS = {
     "030601010703": {"name": "Upper Six and Twenty Creek", "utility": "ARJWS"},
     "030601010704": {"name": "Lower Six and Twenty Creek", "utility": "ARJWS"},
@@ -74,10 +74,25 @@ CAUSES = {
     "BIO": ("biological", "Biological assessment"),
     "BIOLOGICAL": ("biological", "Biological assessment"),
     "PH": ("ph", "pH"),
-    "HG": ("mercury", "Mercury"),
+    "HG": ("mercury", "Mercury in water column"),
     "MERCURY": ("mercury", "Mercury"),
     "PCBS": ("pcbs", "PCBs"),
+    "LEAD": ("lead", "Lead"),
+    "PB": ("lead", "Lead"),
+    "PCB": ("pcbs", "Polychlorinated biphenyls in fish tissue"),
+    "HGF": ("mercury", "Mercury in fish tissue"),
+    "NH3": ("ammonia_nitrogen", "Ammonia nitrogen"),
+    "CD": ("cadmium", "Cadmium"),
+    "CR": ("chromium", "Chromium"),
+    "CU": ("copper", "Copper"),
+    "NI": ("nickel", "Nickel"),
+    "ZN": ("zinc", "Zinc"),
 }
+SCDES_CAUSE_CODES = {
+    "NH3", "CD", "CHLA", "CR", "CU", "DO", "ENTERO", "ECOLI", "FC", "PH",
+    "PB", "BIO", "HG", "HGF", "NI", "PCB", "TN", "TP", "TURB", "TURBIDITY", "ZN",
+}
+SCDES_CAUSE_GUIDE = "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf"
 SOURCE_INDEX = "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls"
 STANDARDS_INDEX = "https://des.sc.gov/programs/bureau-water/water-quality-standards"
 TERMINALS = {"", "0", "000000000000", "CLOSED BASIN", "CLOSED", "OCEAN", "CANADA", "MEXICO"}
@@ -403,7 +418,34 @@ def _source_meta(source: dict, path: str | Path) -> dict:
         "publication_status": source.get("publication_status", "unspecified"),
         "assessment_period": source.get("assessment_period"),
         "status_date": source.get("status_date"),
+        "cause_encoding": source.get("cause_encoding", (
+            "scdes_303d_codes" if urllib.parse.urlparse(source["uri"]).hostname in
+            {"des.sc.gov", "www.des.sc.gov"} and
+            urllib.parse.urlparse(source["uri"]).path.endswith("/303dList2024.xlsx")
+            else "single")),
     }
+
+
+def _assessment_causes(value: str, source: dict) -> list[dict]:
+    """Expand the publisher's documented cause codes while retaining the whole cell."""
+    if source.get("cause_encoding") != "scdes_303d_codes":
+        return [cause_info(value)]
+    definitions = source.get("annotation_definitions", {})
+    markers = sorted({marker for marker in definitions if marker in value})
+    clean = value
+    for marker in markers:
+        clean = clean.replace(marker, "")
+    # The native 2024 workbook contains comma-separated codes plus the original
+    # punctuation variants "TN. TP, ECOLI" and "HGF PCB".
+    codes = [code for code in re.split(r"[\s,;.]+", clean.strip().upper()) if code]
+    unknown = sorted(set(codes).difference(SCDES_CAUSE_CODES))
+    if not codes or unknown:
+        raise ValueError(f"Unmapped SCDES cause code(s) {unknown} in original cell {value!r}")
+    return [{
+        **cause_info(code), "cause_code": code, "cause_source_cell": value,
+        "cause_annotations": [{"marker": marker, "text": definitions[marker]} for marker in markers],
+        "cause_code_guide_uri": SCDES_CAUSE_GUIDE, "cause_code_guide_pages": [8, 9],
+    } for code in dict.fromkeys(codes)]
 
 
 def normalize_assessments(rows: list[dict], bindings: dict, source: dict) -> list[dict]:
@@ -425,25 +467,31 @@ def normalize_assessments(rows: list[dict], bindings: dict, source: dict) -> lis
         if not site or not cause:
             raise ValueError(f"Incomplete assessment identity at row {index + 1}")
         huc = huc12(huc)
-        cause_data = cause_info(cause)
         support_raw = get("use_support")
         kind = source.get("evidence_kind", "303d_listing")
         normalized_support = use_support(support_raw)
         if kind == "303d_listing" and not support_raw:
             normalized_support = "not_supported"
-        identity = (source["source_id"], site, get("use"), cause, huc, kind)
-        if identity in identities:
-            continue
-        identities.add(identity)
-        row_id = digest(json.dumps(identity, ensure_ascii=False).encode())[:24]
-        results.append({
-            "id": row_id, **source, "evidence_kind": kind, "site": site, "huc12": huc,
-            "description": get("description"), "county": get("county"), "use": get("use"),
-            **cause_data, "use_support": normalized_support, "use_support_raw": support_raw,
-            "tmdl_relation": get("tmdl_relation"), "tmdl_report": get("tmdl_report"),
-            "approval_date": get("approval_date"), "source_row": index + 1,
-            "raw": raw,
-        })
+        for cause_data in _assessment_causes(cause, source):
+            identity_cause = cause_data.get("cause_code", cause_data["cause_raw"])
+            identity = (source["source_id"], site, get("use"), identity_cause, huc, kind)
+            if identity in identities:
+                continue
+            identities.add(identity)
+            row_id = digest(json.dumps(identity, ensure_ascii=False).encode())[:24]
+            result = {
+                "id": row_id, **source, "evidence_kind": kind, "site": site, "huc12": huc,
+                "description": get("description"), "county": get("county"), "use": get("use"),
+                **cause_data, "use_support": normalized_support, "use_support_raw": support_raw,
+                "tmdl_relation": get("tmdl_relation"), "tmdl_report": get("tmdl_report"),
+                "approval_date": get("approval_date"), "source_row": index + 1,
+                "raw": raw,
+            }
+            if source.get("header_row"):
+                result["source_table_row"] = index + int(source["header_row"]) + 1
+            if get("source_page"):
+                result["source_page"] = get("source_page")
+            results.append(result)
     return results
 
 
@@ -452,16 +500,16 @@ def parse_tmdl_pdf(path: str | Path, source: dict) -> dict:
     import fitz
     meta = _source_meta(source, path)
     meta["evidence_kind"] = "tmdl_attainment"
-    basin = r"BROAD|CATAWBA|EDISTO|PEE\s+DEE|SALUDA|SALKEHATCHIE|SAVANNAH|SANTEE"
+    basin = r"BROAD|CATAWBA|EDISTO|PEE\s*DEE|SALUDA|SALKEHATCHIE|SAVANNAH|SANTEE"
     start_pattern = re.compile(rf"\b({basin})\s+(\d{{12}})\s+", re.I)
     tail_pattern = re.compile(
-        r"(?P<body>.*?)\s+(?P<support>Fully\s+Supported|Not\s+Supported|Not\s+Assessed)"
-        r"\s+(?P<relation>InTMDL|WnTMDL)\s+(?P<report>\S+)"
+        r"(?P<body>.*?)\s*(?P<support>Fully\s+Supported|Not\s+Supported|Not\s+Assessed)"
+        r"\s+(?P<relation>In\s*TMDL|Wn\s*TMDL)\s+(?P<report>.+?)"
         r"\s+(?P<approval>\d{1,2}/\d{1,2}/\d{4})", re.I
     )
     body_pattern = re.compile(
         r"(?P<description>.+?)\s+(?P<site>[A-Z0-9][A-Z0-9._-]*)"
-        r"\s+(?P<county>[A-Z]+)\s+(?P<use>[A-Z]{2,6})\s+(?P<cause>\S+)$", re.I
+        r"\s+(?P<county>[A-Z]+)\s+(?P<use>[A-Z]{2,12})\s+(?P<cause>\S+)$", re.I
     )
     records, unparsed, status_dates = [], [], set()
     with fitz.open(path) as document:
@@ -493,7 +541,7 @@ def parse_tmdl_pdf(path: str | Path, source: dict) -> dict:
                         "SITE": body.group("site"), "COUNTY": body.group("county"),
                         "USE": body.group("use"), "CAUSE": body.group("cause"),
                         "USE_SUPPORT": re.sub(r"\s+", " ", match.group("support")),
-                        "TMDL": match.group("relation"), "REPORT": match.group("report"),
+                        "TMDL": re.sub(r"\s+", "", match.group("relation")), "REPORT": match.group("report"),
                         "APPROVAL_DATE": match.group("approval"),
                     }
                     binding = {"huc12": "HUC12", "site": "SITE", "cause": "CAUSE", "use": "USE",
@@ -527,9 +575,32 @@ def parse_tmdl_pdf(path: str | Path, source: dict) -> dict:
 def normalize_table(path: str | Path, source: dict, bindings: dict, **kwargs) -> dict:
     meta = _source_meta(source, path)
     meta["evidence_kind"] = source.get("evidence_kind", "303d_listing")
-    records = normalize_assessments(read_table(path, **kwargs), bindings, meta)
-    return {"schema": "upstate.water-quality-assessments/v1", "source": meta,
-            "records": records, "unparsed_rows": [], "row_count": len(records), "complete": True}
+    meta["header_row"] = kwargs.get("header_row", 1)
+    if kwargs.get("sheet"):
+        meta["sheet"] = kwargs["sheet"]
+    rows = read_table(path, **kwargs)
+    notes = []
+    for index, row in enumerate(rows):
+        if not any(text(row.get(bindings.get(key, ""))) for key in ("site", "huc12", "cause")):
+            if any(text(value) for value in row.values()):
+                notes.append({"source_table_row": index + int(meta["header_row"]) + 1, "raw": row})
+    if meta["cause_encoding"] == "scdes_303d_codes":
+        definitions = {}
+        for note in notes:
+            content = " ".join(text(value) for value in note["raw"].values() if text(value))
+            match = re.match(r"^(†|‡|\*+)\s*(.+)$", content)
+            if match:
+                definitions[match.group(1)] = match.group(2)
+        meta["annotation_definitions"] = definitions
+        meta["cause_code_guide_uri"] = SCDES_CAUSE_GUIDE
+        meta["cause_code_guide_pages"] = [8, 9]
+    records = normalize_assessments(rows, bindings, meta)
+    return {
+        "schema": "upstate.water-quality-assessments/v1", "source": meta,
+        "records": records, "unparsed_rows": [], "row_count": len(records), "complete": True,
+        "source_table_row_count": len(rows), "source_assessment_row_count": len(rows) - len(notes),
+        "source_notes": notes,
+    }
 
 
 def _geometry_rows(path: str | Path, *, layer=None, target_crs="EPSG:5070"):

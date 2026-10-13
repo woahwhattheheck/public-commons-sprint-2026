@@ -200,7 +200,7 @@ export function attachWaterSourceReview(host) {
   let nativeCatalogue=null,nativeFilter=nativeFilterDefault(),nativeSerial=0,nativeLoading=false;
   let nativeController=null,nativeError='';
   let filter=canonicalFilter(),selectedRecord='',registryChoice='',crosswalkChoice='';
-  let sourceFingerprint='',pendingOpen=null,loadSerial=0,detailSerial=0;
+  let sourceFingerprint='',pendingOpen=null,loadSerial=0,detailSerial=0,openSerial=0;
   let selectionTarget={extension_id:'water-designations',method:'openSelection'};
   let loadController=null,detailController=null,typingTimer=null,working=false;
   const node=selector=>frame?.querySelector(selector);
@@ -609,10 +609,12 @@ export function attachWaterSourceReview(host) {
       const result=await api(endpoint('/api/water-source-review/review',query()),{signal:loadController.signal});
       if(serial!==loadSerial||workspace!==requested||!frame)return;
       snapshot=result;
-      if(pendingOpen?.record_id){
-        const item=result.records.find(row=>row.id===pendingOpen.record_id &&
-          (!pendingOpen.edition_id||row.edition.id===pendingOpen.edition_id));
-        if(item){filter=canonicalFilter();selectedRecord=recordKey(item);}
+      if(pendingOpen){
+        if(pendingOpen.record_id){
+          const item=result.records.find(row=>row.id===pendingOpen.record_id &&
+            (!pendingOpen.edition_id||row.edition.id===pendingOpen.edition_id));
+          if(item){filter=canonicalFilter();selectedRecord=recordKey(item);}
+        }
         pendingOpen=null;
       }
       draw();status(result.counts.legal_rows+' complete legal rows loaded with their original descriptions and source identities.');
@@ -718,8 +720,8 @@ export function attachWaterSourceReview(host) {
       'water-native-geography':'geography','water-native-relation':'relation','water-native-huc':'huc12',
       'water-native-page-size':'pageSize'};
     if(nativeFields[name]){nativeFilter[nativeFields[name]]=field.value;nativeFilter.page=0;drawNativeBrowser();return;}
-    if(name==='water-registry'){registryChoice=field.value;selectedRecord='';filter.page=0;remember();loadReview();return;}
-    if(name==='water-crosswalk'){crosswalkChoice=field.value;remember();loadReview();return;}
+    if(name==='water-registry'){openSerial++;pendingOpen=null;registryChoice=field.value;selectedRecord='';filter.page=0;remember();loadReview();return;}
+    if(name==='water-crosswalk'){openSerial++;pendingOpen=null;crosswalkChoice=field.value;remember();loadReview();return;}
     const fields={'water-query':'query','water-class':'class_code','water-county':'county','water-edition':'edition',
       'water-relation':'relation','water-huc':'huc12','water-sort':'sort','water-page-size':'pageSize','water-priority':'priority'};
     if(fields[name]){filter[fields[name]]=name==='water-priority'?field.checked:field.value;filter.page=0;drawRecord();drawTable();}
@@ -730,6 +732,7 @@ export function attachWaterSourceReview(host) {
     const changedWorkspace=workspace!==next;
     detach();if(changedWorkspace){catalogue=null;snapshot=null;sourceFingerprint='';}
     root=container;workspace=next;restore();
+    if(pendingOpen?.workspace_key && pendingOpen.workspace_key!==workspace){pendingOpen=null;openSerial++;}
     if(pendingOpen)applyOpenChoice(pendingOpen);
     frame=document.createElement('div');frame.className='water-source-review';frame.innerHTML=controls();root.replaceChildren(frame);
     frame.addEventListener('click',event=>{
@@ -773,10 +776,38 @@ export function attachWaterSourceReview(host) {
       throw Error('Choose the original imported registry collection, source and legal record.');
     if(selection.workspace_key&&selection.workspace_key!==currentWorkspace())
       throw Error('Open the workspace containing the selected legal source.');
-    pendingOpen={...selection};applyOpenChoice(selection);
+    const requested=currentWorkspace(),intent=++openSerial;
+    pendingOpen={...selection,workspace_key:requested};applyOpenChoice(pendingOpen);
     if(typeof host.navigate==='function')await host.navigate('water-source-review');
-    if(frame)await loadReview();
+    if(intent!==openSerial||currentWorkspace()!==requested)return;
+    if(frame&&workspace===requested)await loadReview();
     else if(typeof toast==='function')toast('Open Water source review to inspect the selected legal reach.');
+  }
+  async function openSource(selection){
+    const collection=selection?.collection_id||selection?.source_collection_id;
+    const source=selection?.source_id;
+    if(typeof collection!=='string'||!collection||typeof source!=='string'||!source)
+      throw Error('Choose the imported crosswalk collection and source.');
+    const requested=currentWorkspace();
+    if(!requested||selection.workspace_key&&selection.workspace_key!==requested)
+      throw Error('Open the workspace containing the imported crosswalk.');
+    const intent=++openSerial;
+    pendingOpen={workspace_key:requested,registry_collection:collection,registry_source:source,
+      crosswalk_collection:collection,crosswalk_source:source};
+    selectedRecord='';nativeFilter=nativeFilterDefault();applyOpenChoice(pendingOpen);
+    if(typeof host.navigate==='function')await host.navigate('water-source-review');
+    if(intent!==openSerial||currentWorkspace()!==requested)return;
+    if(!frame||workspace!==requested){
+      if(typeof toast==='function')toast('Open Water source review to inspect the imported crosswalk.');
+      return {workspace_key:requested,collection_id:collection,source_id:source};
+    }
+    await loadCatalog();
+    if(intent!==openSerial||currentWorkspace()!==requested||workspace!==requested||!frame)return;
+    const selected=snapshot?.crosswalk_source;
+    if(selected?.collection_id!==collection||selected?.source_id!==source)
+      throw Error('The selected crosswalk is not available in the current imported-source catalogue.');
+    if(selection.load_native)await loadNativeFeatures();
+    return {workspace_key:requested,collection_id:collection,source_id:source};
   }
   function setSelectionTarget(target){
     if(!target||!/^[a-z][a-z0-9-]*$/.test(target.extension_id||'')||!/^[A-Za-z_]\w*$/.test(target.method||''))
@@ -795,5 +826,5 @@ export function attachWaterSourceReview(host) {
     const context=getSelectionContext();
     return context?designationSelection(context):null;
   }
-  return {mount,update,detach,openRecord,setSelectionTarget,getSelectionContext,getDesignationSelection};
+  return {mount,update,detach,openRecord,openSource,setSelectionTarget,getSelectionContext,getDesignationSelection};
 }

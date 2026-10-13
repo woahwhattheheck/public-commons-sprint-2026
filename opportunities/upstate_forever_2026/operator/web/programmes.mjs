@@ -157,7 +157,7 @@ export function attachProgrammes(context) {
     const continuations = Object.values(value.pair_completions || {});
     return '<section class="programme-output"><header class="section-header"><div><h3>Paired scenario maps</h3>' +
       '<p>Compare each land-cover alternative with its baseline under the same original parameter profiles.</p></div>' +
-      '<a href="/web/paired_ensemble.html">Open all paired results</a></header>' +
+      actionButton('paired-results', 'Open all paired results') + '</header>' +
       (candidates.length ? table(['Alternative', 'Native models', 'Matched profiles', ''], candidates.map(row =>
         '<tr><td>' + escapeHTML(row.scenario_title || named('scenarios', row.scenario_id)) +
         '</td><td>' + escapeHTML(modelsLabel(row.models)) + '</td><td>' + escapeHTML(row.member_count ?? row.pairs?.length ?? 0) +
@@ -784,6 +784,7 @@ export function attachProgrammes(context) {
     if (action === 'import') return importForm();
     if (action === 'experiment') return fromExperiment();
     if (action === 'clone') return createForm(record);
+    if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
     if (action === 'pair-completion') return preparePairCompletion(value);
     if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
