@@ -111,8 +111,8 @@ def install(application, source_root, *, check=False):
     instruction_row = inventory["instruction"]
     if len(instruction) != instruction_row["bytes"] or sha(instruction) != instruction_row["sha256"]:
         raise ValueError("Retain the complete current producing-worker instruction.")
-    if b"2026-10-13.1" not in instruction or b"14:00 UTC" not in instruction:
-        raise ValueError("Retain the owner's current rendered-product instruction and sprint cutoff.")
+    if instruction_row.get("path") != "AGENTS.md" or not prepared.get("CURRENT_OWNER_DIRECTION.md"):
+        raise ValueError("Retain the declared complete owner instruction and current direction.")
     for relative in inventory["requires"]:
         body(target, relative)
     server = ast.parse(body(target, "operator/server.py"))
