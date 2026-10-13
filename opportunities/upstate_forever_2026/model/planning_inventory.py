@@ -16,7 +16,7 @@ import time
 
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
-from .model_selection import common_comparison_outputs, run_models
+from .model_selection import MODEL_OUTPUTS, common_comparison_outputs, run_models
 from .rasters import (MASS_UNITS, native_vector_path, polygon_union,
                       vector_environment, vector_geometry)
 
@@ -108,11 +108,56 @@ def _source_selection(selection):
     return value
 
 
+def _native_cohort(runs, outputs):
+    """Bind execution versions of the completed native models being compared."""
+    from .scenario_analysis import _native_version
+    models = tuple(model for model in run_models(runs[0])
+                   if any(name in outputs for name in MODEL_OUTPUTS[model]))
+    versions = {}
+    for run in runs:
+        recorded = _native_version(run)
+        selected = {}
+        for model in models:
+            stage = run.get("stages", {}).get(model, {})
+            executed = _native_version({"selection": run["selection"],
+                                        "runtime": stage.get("runtime")})
+            # A resumed run can retain an older completed stage while its
+            # run.runtime describes only the newly executed stage.
+            value = ({**executed, "basis": "observed_stage_runtime"}
+                     if executed["observed"] else dict(recorded))
+            selected[model] = {**value, "stage_observed": executed["observed"]}
+        versions[run["id"]] = {"run": recorded, "models": selected}
+    cohort = {}
+    for model in models:
+        baseline = versions[runs[0]["id"]]["models"][model]["comparison_version"]
+        if not baseline or any(not item["models"][model]["comparison_version"]
+                               for item in versions.values()):
+            raise ValueError("Each planning run needs a retained InVEST version for " + model.upper())
+        if any(item["models"][model]["comparison_version"] != baseline
+               for item in versions.values()):
+            raise ValueError("Planning alternatives must use the baseline's executed InVEST version for "
+                             + model.upper() + "; retain stage/run runtime or labeled legacy request")
+        cohort[model] = {
+            "comparison_version": baseline,
+            "run_runtime_fallback_run_ids": [
+                run["id"] for run in runs
+                if versions[run["id"]]["models"][model]["basis"] == "observed_runtime"],
+            "requested_fallback_run_ids": [
+                run["id"] for run in runs
+                if versions[run["id"]]["models"][model]["basis"] == "requested_legacy"],
+        }
+    return versions, {
+        "policy": "observed_stage_runtime_else_observed_run_runtime_else_labeled_requested_legacy",
+        "common_models": list(models), "models": cohort,
+    }
+
+
 def _inputs(workspace, selection):
     runs = [workspace.inspect_run(key) for key in
             [selection["baseline_run_id"], *selection["scenario_run_ids"]]]
     outputs = common_comparison_outputs(runs)
     baseline = runs[0]
+    native_versions, version_cohort = _native_cohort(runs, outputs)
     grid_id = baseline["selection"]["grid_id"]
     profile_id = baseline["selection"]["profile_id"]
     for run in runs:
@@ -146,6 +191,7 @@ def _inputs(workspace, selection):
     identity = {
         "method": METHOD, "selection": selection, "grid_id": grid_id,
         "profile_id": profile_id, "source": entry,
+        "native_versions": native_versions,
         "reporting_mask": grid["files"]["reporting_mask"],
         "reporting_area": grid["files"]["reporting_area"],
         "runs": [{"id": run["id"], "selection": run["selection"],
@@ -154,6 +200,7 @@ def _inputs(workspace, selection):
     }
     return {
         "runs": runs, "outputs": outputs, "grid": grid, "grid_id": grid_id,
+        "native_versions": native_versions, "native_version": version_cohort,
         "profile_id": profile_id, "source_path": source_path, "entry": entry,
         "artifact_paths": artifact_paths, "reporting_mask": reporting_mask,
         "reporting_area": reporting_area, "identity": identity,
@@ -190,17 +237,45 @@ def _commit_csv(pending, destination):
         os.replace(pending, destination)
 
 
+def _promote_legacy_inventory(workspace, inputs, directory):
+    """Bind versions to an exact completed inventory without repeating cell sums."""
+    legacy_identity = {name: value for name, value in inputs["identity"].items()
+                       if name != "native_versions"}
+    legacy_key = digest(legacy_identity)
+    legacy_directory = workspace.root / "planning-inventory-data" / legacy_key
+    pointer = legacy_directory / "record.json"
+    if not pointer.is_file():
+        return None
+    previous = inspect(workspace, read_json(pointer)["id"])
+    if previous["selection_id"] != legacy_key:
+        raise ValueError("Original planning inventory pointer selects another input identity")
+    original = read_json(verify_file(workspace.root, previous["files"]["inventory"]))
+    if original["native_inputs"] != legacy_identity:
+        raise ValueError("Original planning inventory inputs differ from this version binding")
+    origin = {
+        "method": "original-inventory-native-version-binding/1",
+        "inventory_id": previous["id"], "selection_id": previous["selection_id"],
+        "files": previous["files"],
+    }
+    inventory = {
+        **original, "selection_id": inputs["selection_id"],
+        "native_inputs": inputs["identity"],
+        "native_versions": inputs["native_versions"], "native_version": inputs["native_version"],
+        "derived_from": origin,
+    }
+    destination = directory / "inventory.json"
+    atomic_json(destination, inventory, immutable=True)
+    return workspace._save(KIND, {
+        **previous, "selection_id": inputs["selection_id"],
+        "native_versions": inputs["native_versions"], "native_version": inputs["native_version"],
+        "derived_from": origin,
+        "files": {**previous["files"],
+                  "inventory": describe_file(workspace.root, destination)},
+    })
+
+
 def build(workspace, selection, *, raster_cache_bytes=None):
     """Summarize original polygon features on a shared native valid-cell support."""
-    import fiona
-    import numpy as np
-    import rasterio
-    from pyproj import CRS, Transformer
-    from rasterio.features import geometry_mask
-    from rasterio.windows import transform as window_transform
-    from shapely.geometry import mapping, shape
-    from shapely.ops import transform
-
     from .raster_block_cache import DEFAULT_CACHE_BYTES, NativeBlockCache
     requested = dict(selection) if isinstance(selection, dict) else selection
     supplied = requested.pop("raster_cache_bytes", None) if isinstance(requested, dict) else None
@@ -221,6 +296,29 @@ def build(workspace, selection, *, raster_cache_bytes=None):
             if record["selection_id"] != inputs["selection_id"]:
                 raise ValueError("Planning inventory input identity changed")
             return record
+        promotion_started = time.monotonic()
+        promoted = _promote_legacy_inventory(workspace, inputs, directory)
+        if promoted is not None:
+            atomic_json(directory / "read-processing.json", {
+                "schema": "upstate.planning-raster-reads/v1",
+                "inventory_id": promoted["id"], "selection_id": inputs["selection_id"],
+                "csv_sha256": promoted["files"]["csv"]["sha256"],
+                "mode": "retained_inventory_version_binding",
+                "reused_from_inventory_id": promoted["derived_from"]["inventory_id"],
+                "elapsed_seconds": time.monotonic() - promotion_started,
+                "reads": read_cache.snapshot(),
+            })
+            atomic_json(completed, {"id": promoted["id"]}, immutable=True)
+            return promoted
+        import fiona
+        import numpy as np
+        import rasterio
+        from pyproj import CRS, Transformer
+        from rasterio.features import geometry_mask
+        from rasterio.windows import transform as window_transform
+        from shapely.geometry import mapping, shape
+        from shapely.ops import transform
+
         runs, outputs = inputs["runs"], inputs["outputs"]
         baseline = runs[0]
         counters = {"original_features": 0, "selected_features": 0,
@@ -419,6 +517,8 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                 "run_selections": {run["id"]: run["selection"] for run in runs},
                 "run_models": {run["id"]: list(run_models(run)) for run in runs},
                 "native_inputs": inputs["identity"], "coverage": coverage,
+                "native_versions": inputs["native_versions"],
+                "native_version": inputs["native_version"],
                 "overlap_handling": OVERLAP, "context": CONTEXT,
                 "computation_crs": inputs["grid"]["grid"]["crs"],
                 "area_method": "Original polygons projected to the retained metre CRS; geometric hectares.",
@@ -435,6 +535,8 @@ def build(workspace, selection, *, raster_cache_bytes=None):
                 "available_metrics": list(outputs), "coverage": coverage,
                 "features": counters["retained_features"],
                 "scenario_direction": inventory["scenario_direction"],
+                "native_versions": inputs["native_versions"],
+                "native_version": inputs["native_version"],
                 "overlap_handling": OVERLAP,
                 "files": {"csv": csv_description,
                           "inventory": describe_file(workspace.root, inventory_path)},
@@ -451,6 +553,28 @@ def build(workspace, selection, *, raster_cache_bytes=None):
         finally:
             if pending is not None:
                 pending.unlink(missing_ok=True)
+
+
+def _verify_native_binding(record, inventory, inputs):
+    """Reopen the exact saved identity while checking its current version cohort."""
+    retained = inventory["native_inputs"]
+    current = inputs["identity"]
+    bound = "native_versions" in retained
+    fields = ("native_versions", "native_version")
+    if bound:
+        for name in fields:
+            if (name not in record or name not in inventory
+                    or record[name] != inputs[name] or inventory[name] != inputs[name]):
+                raise ValueError("Planning inventory native-version provenance changed: " + name)
+    else:
+        # Original inventories predate version binding. Keep their exact body,
+        # selection ID and result files; _inputs still validates this cohort.
+        if any(name in record or name in inventory for name in fields):
+            raise ValueError("Planning inventory has incomplete native-version binding")
+        current = {name: value for name, value in current.items()
+                   if name != "native_versions"}
+    if current != retained or digest(current) != record["selection_id"]:
+        raise ValueError("Original native run or polygon source identity changed")
 
 
 def inspect(workspace, inventory_id):
@@ -474,8 +598,7 @@ def inspect(workspace, inventory_id):
     if selection != record["selection"]:
         raise ValueError("Planning selection was not normalized")
     inputs = _inputs(workspace, selection)
-    if inputs["identity"] != inventory["native_inputs"] or inputs["selection_id"] != record["selection_id"]:
-        raise ValueError("Original native run or polygon source identity changed")
+    _verify_native_binding(record, inventory, inputs)
     return record
 
 

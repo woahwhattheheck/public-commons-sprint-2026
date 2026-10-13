@@ -15,6 +15,8 @@ CODE_FILES = (
     "measurement_workspace/published_studies.py",
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
+    "measurement_workspace/utility_microbiology.py",
+    "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
     "measurement_workspace/STREAM_OBSERVATIONS.md",
     "source_tools/build_eighteenmile_stream_study.mjs",
     "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -52,7 +54,7 @@ def atomic_copy(source, target):
 def portable_source(source):
     """Extend the original archive inventory while preserving its other code."""
     additions = {
-        "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations"),
+        "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations", "source", "source_tools"),
         "APPLICATION_FILES": (
             "PUBLISHED_STUDIES.md", "published_studies_family.json", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
@@ -60,6 +62,7 @@ def portable_source(source):
             "eighteenmile_lake_observation_report.sources.json",
             "eighteenmile_lake_paired_analysis.sources.json",
             "eighteenmile_lake_microcystin_reconciliation.sources.json",
+            "eighteenmile_stream_nutrient_analysis.sources.json",
         ),
     }
     lines = source.splitlines(keepends=True)
@@ -152,6 +155,35 @@ def main():
                 parser.error("The original stream study source bytes changed: " + relative)
             data_files.append(str(path.relative_to(source)))
         data_files.append(str((stream_root / "study-files.json").relative_to(source)))
+    stream_manifest = source / "eighteenmile_stream_nutrient_analysis.sources.json"
+    if stream_manifest.is_file():
+        native = json.loads(stream_manifest.read_text(encoding="utf-8-sig"))
+        if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
+            parser.error("The stream analysis source manifest is incompatible.")
+        data_files.append(stream_manifest.name)
+        prefixes = (
+            "observations/eighteenmile_stream_nutrients_2020_2025/analysis/",
+            "source/eighteenmile-stream-nutrients-20261013/original/",
+        )
+        for entry in native["entries"]:
+            for item in [entry, *entry.get("companions", [])]:
+                relative = item["path"]
+                path = (source / relative).resolve(strict=True)
+                if (
+                    Path(relative).is_absolute() or "\\" in relative
+                    or ".." in Path(relative).parts or str(Path(relative)) != relative
+                    or not any(relative.startswith(prefix) for prefix in prefixes)
+                    or not path.is_relative_to(source)
+                ):
+                    parser.error("A stream analysis source points outside its declared original families.")
+                if not path.is_file() or path.stat().st_size != item.get("bytes") or digest(path) != item.get("sha256"):
+                    parser.error("The original stream analysis bytes changed: " + relative)
+                data_files.append(relative)
+    from measurement_workspace import utility_microbiology as microbial
+    microbial_root = source / microbial.SOURCE_DIRECTORY
+    if microbial_root.is_dir():
+        originals = microbial.source_files(source)
+        data_files.extend(str(Path(microbial.SOURCE_DIRECTORY) / name) for name in originals)
     data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
     for relative in expected:
@@ -200,7 +232,7 @@ def main():
         "extension": "published-studies", "view": "published-studies",
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
-        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []),
+        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in expected],
     }, indent=2))
 

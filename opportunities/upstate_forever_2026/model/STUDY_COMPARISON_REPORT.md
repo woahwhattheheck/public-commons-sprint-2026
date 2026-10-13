@@ -97,3 +97,14 @@ Unrelated grids, including Gura, receive no regional context association when
 their source HUC membership is absent or differs. Multiple matching saved
 editions remain separate. The original result archive remains available through
 the existing regional receiving workflow and Workspace delivery.
+
+
+## Explore native comparisons visually
+
+The existing profile, alternative, pollutant and text filters now update both the comparison table and its comparison plots. Each marker is the retained reduction for one source profile and land-cover alternative against that profile's own baseline. Positive values mean lower modeled export.
+
+The default plot uses annual export reduction in the model's retained units. The percentage option uses the negative of the table's recorded alternative-minus-baseline percentage, so its direction remains consistent with absolute reduction. A zero baseline has no defined percentage; those rows remain available in the comparison table and are explicitly counted as omitted from percentage plots.
+
+Separate pollutants, units, support hashes, cell counts, reporting counts and paired areas generate separate plots. Each has its own numeric axis, a zero reference, full source-profile legend, paired support identity and exact marker values. These are comparisons of the selected source choices; the view adds no statistical confidence interval or probability weighting.
+
+Download any plot as a standalone SVG containing its alternative labels, source-profile legend, units and support identity. Each marker retains its full numerical values and profile, scenario, baseline-run and alternative-run identities in its accessible description. The original full CSV and JSON downloads remain in the report. The portable HTML needs no chart service or network request. The underlying shortlist and comparison methods are unchanged.

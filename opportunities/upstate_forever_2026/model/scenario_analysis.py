@@ -18,6 +18,7 @@ from time import monotonic
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      finite, held, now, read_json, verify_file)
 from . import rasters
+from .native_versions import POLICY as NATIVE_VERSION_POLICY, comparison_versions, models_for_outputs
 
 SCHEMA = "upstate.scenario-analysis/v1"
 ALGORITHM = "fixed-reference-common-support-v1"
@@ -491,13 +492,10 @@ def analyze(workspace, selection):
     if any(run["selection"]["grid_id"] != baseline["selection"]["grid_id"] for run in runs):
         raise ValueError("Scenario analysis requires one retained grid and reporting mask")
     native_versions = {run["id"]: _native_version(run) for run in runs}
-    baseline_version = native_versions[baseline["id"]]["comparison_version"]
-    if not baseline_version or any(not value["comparison_version"] for value in native_versions.values()):
-        raise ValueError("Each native run needs an observed or retained requested InVEST version")
-    if any(value["comparison_version"] != baseline_version for value in native_versions.values()):
-        raise ValueError("Separate observed model-version experiments from this scenario analysis; "
-                         "requested versions are used only for legacy records without execution metadata")
     pollutants, scopes = _comparison_scope(runs)
+    native_models = comparison_versions(runs, models_for_outputs(pollutants))
+    distinct_versions = set(native_models["versions"].values())
+    baseline_version = next(iter(distinct_versions)) if len(distinct_versions) == 1 else None
     algorithm = ALGORITHM if pollutants == POLLUTANTS else SELECTED_MODEL_ALGORITHM
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
     weight_sets = _weight_sets(selection, pollutants=pollutants)
@@ -519,9 +517,17 @@ def analyze(workspace, selection):
                             "comparison_kind": "baseline" if index == 0 else _kind(baseline, run),
                             "selection": run["selection"], "model_scope": scopes[run["id"]],
                             "native_version": native_versions[run["id"]],
+                            "model_versions": native_models["runs"][run["id"]],
                             "parameter_changes": [] if index == 0 else _profile_changes(workspace, baseline, run)})
         binding.append({"run_id": run["id"], "selection": run["selection"], "artifacts": selected,
                         "native_version": native_versions[run["id"]]})
+    # Preserve ordinary retained-analysis identities. A stage-aware digest is
+    # needed only when the authoritative vector differs from the prior scalar
+    # execution identity; ordinary same-version runs keep their original key.
+    if any(value["comparison_version"] != native_versions[run["id"]]["comparison_version"]
+           for run in runs for value in native_models["runs"][run["id"]].values()):
+        for item in binding:
+            item["model_versions"] = native_models["runs"][item["run_id"]]
     basis = {"algorithm": algorithm, "selection": selection, "inputs": binding,
              "regions": [{key: value for key, value in r.items() if key != "geometry"} for r in regions],
              "reporting_mask": grid["files"]["reporting_mask"]}
@@ -544,10 +550,13 @@ def analyze(workspace, selection):
                   "input_binding": binding, "progress": None,
                   "comparison_pollutants": list(pollutants),
                   "native_version": {"comparison_version": baseline_version,
-                                     "policy": "observed_runtime_else_labeled_requested_legacy",
+                                     "policy": NATIVE_VERSION_POLICY,
+                                     "comparison_versions": native_models["versions"],
+                                     "comparison_models": native_models["models"],
                                      "requested_fallback_run_ids": [
                                          run["id"] for run in runs
-                                         if native_versions[run["id"]]["basis"] == "requested_legacy"]},
+                                         if any(value["basis"] == "requested_legacy"
+                                                for value in native_models["runs"][run["id"]].values())]},
                   "model_scope": {"comparison_pollutants": list(pollutants),
                                   "full_model_outputs": pollutants == POLLUTANTS,
                                   "runs": [{"run_id": run["id"], **scopes[run["id"]]} for run in runs]}}

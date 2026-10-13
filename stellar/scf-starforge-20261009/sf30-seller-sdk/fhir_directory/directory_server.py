@@ -13,6 +13,7 @@ from directory_receiving import MAX_PACKET
 from directory_operating_plans import MAX_REQUEST as OPERATING_PLAN_REQUEST
 from directory_operating_returns import MAX_REQUEST as OPERATING_RETURN_REQUEST
 from directory_corrections_schema import MAX_INPUT as CORRECTION_REQUEST, KINDS as CORRECTION_KINDS
+from directory_correction_worksheets_schema import MAX_INPUT as WORKSHEET_REQUEST, KINDS as WORKSHEET_KINDS
 from referral_server import Handler as BaseHandler
 import directory_schema as schema
 
@@ -166,6 +167,13 @@ class Handler(BaseHandler):
             collections={"assessments":"conformanceAssessments","reviews":"conformanceReviews","comparisons":"conformanceComparisons"}
             if t[1]in collections:
                 self._query(target,());return self._native_download(ws.directory_conformance_file(collections[t[1]],t[2],t[4]))
+        if len(t)==3 and t[0]=="correctionWorksheets" and t[2]=="document":
+            self._query(target,());return self._json(ws.directory_correction_worksheet_document(t[1]))
+        if len(t)==3 and t[0]in WORKSHEET_KINDS and t[2]=="rows":
+            q,offset,limit=self._page_args(target,("rowKey","state"))
+            return self._json(ws.directory_correction_worksheet_rows(t[0],t[1],offset,limit,row_key=q.get("rowKey"),state=q.get("state")))
+        if len(t)==4 and t[0]in WORKSHEET_KINDS and t[2]=="files":
+            self._query(target,());return self._native_download(ws.directory_correction_worksheet_file(t[0],t[1],t[3]))
         if len(t)==3 and t[0]in CORRECTION_KINDS and t[2]=="rows":
             _,offset,limit=self._page_args(target)
             return self._json(ws.directory_correction_rows(t[0],t[1],offset,limit))
@@ -188,6 +196,12 @@ class Handler(BaseHandler):
         target=self._gate();p=self._parts(target.path);ws=self.server.workspace
         if self.command=="PUT":
             self._query(target,())
+            if len(p)==6 and p[:4]==["api","directory","correction-worksheets","imports"]and p[5]=="content":
+                with ws.mutex,ws.scratch()as tmp:
+                    path=Path(tmp)/"complete-returned-directory-worksheet"
+                    with path.open("xb")as out:
+                        path.chmod(0o600);shutil.copyfileobj(self._body(WORKSHEET_REQUEST),out,65536)
+                    return self._json(ws.import_directory_correction_worksheet_return(p[4],path),201)
             if len(p)==5 and p[:3]==["api","directory","imports"]and p[4]=="content":
                 with ws.mutex,ws.scratch()as tmp:
                     path=Path(tmp)/"complete-directory-original"
@@ -201,7 +215,10 @@ class Handler(BaseHandler):
         routes.update({("connections",):ws.directory_connection,("requests",):ws.directory_request,
             ("editions",):ws.directory_edition,("comparisons",):ws.directory_compare,("imports",):ws.save_directory_import})
         if tuple(t)in routes:
-            if t and t[0]=="corrections":
+            if t and t[0]=="correction-worksheets":
+                value=source.json_value(self._body(WORKSHEET_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete worksheet input object")
+            elif t and t[0]=="corrections":
                 value=source.json_value(self._body(CORRECTION_REQUEST).read())
                 if not isinstance(value,dict):raise InputError("Expected one complete original correction JSON object")
             elif t and t[0]=="operating-returns":

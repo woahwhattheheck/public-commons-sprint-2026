@@ -124,6 +124,35 @@ def _same_file(left, right):
                     for key in ("path", "bytes", "sha256")))
 
 
+
+def _validate_execution_snapshot(execution, selected):
+    """Validate retained resolver output without changing its observed/legacy basis."""
+    from .native_versions import POLICY
+    if (not isinstance(execution, dict) or execution.get("policy") != POLICY
+            or execution.get("unit_contract_version") != SUPPORTED_INVEST_VERSION
+            or execution.get("supported") is not True
+            or set(execution.get("model_versions", {})) != set(selected)):
+        raise ValueError("Retain the exact selected models and supported native unit provenance")
+    for name in selected:
+        row = execution["model_versions"][name]
+        if row.get("model") != name or row.get("comparison_version") != SUPPORTED_INVEST_VERSION:
+            raise ValueError("The model execution version differs from its declared rate-unit adapter")
+        basis = row.get("basis")
+        if basis == "completed_stage_runtime":
+            valid = row.get("observed_stage_version") == row["comparison_version"] and bool(row.get("stage_completed_at"))
+        elif basis == "observed_run_fallback":
+            valid = (row.get("observed_stage_version") is None
+                     and row.get("observed_run_version") == row["comparison_version"])
+        elif basis == "requested_legacy":
+            valid = (row.get("observed_stage_version") is None
+                     and row.get("observed_run_version") is None
+                     and row.get("requested_version") == row["comparison_version"])
+        else:
+            valid = False
+        if not valid:
+            raise ValueError("Preserve the actual completed-stage, run fallback or labeled legacy version basis")
+    return execution
+
 def _native_bindings(workspace, study):
     result = {}
     original = study["selection"]["bindings"]["runs"]
@@ -134,10 +163,10 @@ def _native_bindings(workspace, study):
     if INVEST_VERSION != SUPPORTED_INVEST_VERSION:
         raise ValueError("This conservation consumer requires the original InVEST 3.20.0 unit contract")
     baseline_id = study["selection"]["spec"]["baseline_run_id"]
+    executions = conservation._bound_native_execution(workspace, study)
     for run_id, bound in original.items():
         current = workspace.inspect_run(run_id)
-        if (current["state"] != "complete" or current["selection"] != bound["selection"]
-                or bound["selection"].get("invest_version") != SUPPORTED_INVEST_VERSION):
+        if current["state"] != "complete" or current["selection"] != bound["selection"]:
             raise ValueError("The original completed native run/version differs from the saved study")
         selected = conservation._selected_models(bound["selection"])
         expected_outputs = set(conservation._selected_outputs(bound["selection"]))
@@ -155,6 +184,7 @@ def _native_bindings(workspace, study):
                 raise ValueError("The native output registry differs from the bound original run")
             outputs[pollutant] = {
                 **_copy(item),
+                "execution": _copy(executions[run_id]["model_versions"][item["stage"]]),
                 "rate": _descriptor(prefix, item["rate"]),
                 "stream": _descriptor(prefix, item["stream"]),
                 "arguments": _descriptor(prefix, item["arguments"]),
@@ -169,6 +199,7 @@ def _native_bindings(workspace, study):
             "role": "baseline" if run_id == baseline_id else "alternative",
             "selection": _copy(bound["selection"]),
             "runtime": _copy(bound.get("runtime")),
+            "execution": _copy(executions[run_id]),
             "completed_at": bound.get("completed_at"),
             "outputs": outputs,
             "selected_models": selected,
@@ -372,6 +403,9 @@ def bind_plan(workspace, plan_id, *, include_geometry=True):
             "mode": study["mode"],
             "metric_state": study["metric_state"],
             "invest_version": SUPPORTED_INVEST_VERSION if native else None,
+            "unit_contract_version": SUPPORTED_INVEST_VERSION if native else None,
+            "execution_policy": next(iter(native.values()))["execution"]["policy"] if native else None,
+            "execution_version_basis": "Each selected model retains completed-stage provenance; observed-run and requested-legacy fallbacks remain explicitly labeled",
             "annual_units": _copy(ANNUAL_UNITS),
             "native_grid": _copy(study["selection"]["bindings"]["grid"]) if native else None,
             "native_rate_units": {
@@ -547,9 +581,28 @@ def validate_binding(value):
     if set(value["native_runs"]) != set(expected_runs):
         raise ValueError("The native case selection differs from the saved study")
     for key, run in value["native_runs"].items():
-        if (run["selection"] != expected_runs[key]["selection"]
-                or run["selection"].get("invest_version") != SUPPORTED_INVEST_VERSION):
-            raise ValueError("The consumer requires the exact original 3.20.0 native run selection")
+        if run["selection"] != expected_runs[key]["selection"]:
+            raise ValueError("The consumer requires the exact original native run selection")
+        execution = run.get("execution")
+        if execution is not None:
+            _validate_execution_snapshot(execution, conservation._selected_models(run["selection"]))
+            requested = run["selection"].get("invest_version")
+            requested = requested.strip() if isinstance(requested, str) and requested.strip() else None
+            if (execution.get("run_version", {}).get("requested") != requested
+                    or any(row.get("requested_version") != requested
+                           for row in execution["model_versions"].values())):
+                raise ValueError("Keep the requested version distinct and equal to the original run selection")
+            retained_execution = expected_runs[key].get("execution")
+            if retained_execution is not None and retained_execution != execution:
+                raise ValueError("The consumer execution provenance differs from the saved study")
+            for pollutant, output in run["outputs"].items():
+                model = conservation.POLLUTANTS[pollutant][0]
+                if output.get("execution") != execution["model_versions"][model]:
+                    raise ValueError("Keep each original output linked to its completed model execution")
+        elif expected_runs[key].get("execution") is not None:
+            raise ValueError("Preserve the saved study's completed model execution provenance")
+        elif run["selection"].get("invest_version") != SUPPORTED_INVEST_VERSION:
+            raise ValueError("A legacy binding without stage provenance requires its original 3.20.0 requested unit contract")
         if (set(run["outputs"]) != expected_outputs[key]
                 or set(expected_runs[key]["outputs"]) != expected_outputs[key]):
             raise ValueError("The selected native output inventory differs from the original completed run")

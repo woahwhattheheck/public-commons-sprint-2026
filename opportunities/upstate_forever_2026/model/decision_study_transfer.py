@@ -24,6 +24,7 @@ KIND = "robust-decisions"
 MEMBER = "robust_decisions/robust_decisions.sqlite3"
 SCHEMA = "upstate.selected-decision-history/v1"
 CONTRACT = "ES-EXP-2319/landcover-metrics"
+DIAGNOSTIC_CONTRACT = "ES26/diagnostic-common-support/v1"
 
 
 def study_id(value):
@@ -192,14 +193,19 @@ def dependencies(record, project_id, *, external=False):
     for revision in record["revisions"]:
         value = revision["input"]
         source = value.get("source") or {}
-        if source.get("pair_contract") != CONTRACT:
+        contract = source.get("pair_contract")
+        if contract not in {CONTRACT, DIAGNOSTIC_CONTRACT}:
             continue
         source_project = source.get("workspace_id")
         revision_number = revision["revision"]
         if (source_project != project_id) != external:
             continue
         reason = "Original ecological inputs for decision revision " + str(revision["revision"])
-        add("experiments", source.get("experiment_id"), reason)
+        if contract == CONTRACT or source.get("experiment_id") is not None:
+            add("experiments", source.get("experiment_id"), reason)
+        if contract == DIAGNOSTIC_CONTRACT:
+            binding = _diagnostic_binding(source)
+            add("experiment-diagnostics", binding["diagnostic_id"], reason)
         add("grids", source.get("grid_id"), reason)
         for candidate in value.get("candidates", []):
             binding = candidate.get("source") or {}
@@ -225,6 +231,71 @@ def dependencies(record, project_id, *, external=False):
     return sorted(found.values(), key=lambda row: (row["kind"], row["id"],
                                                    str(row.get("source_workspace_id", "")),
                                                    row.get("revision", 0)))
+
+
+
+def _diagnostic_binding(source):
+    binding = source.get("diagnostic_binding")
+    if (not isinstance(binding, dict)
+            or binding.get("schema") != "upstate.decision-diagnostic-binding/v1"
+            or binding.get("project_id") != source.get("workspace_id")):
+        raise ValueError("The decision needs its original diagnostic report binding.")
+    identifier(binding.get("diagnostic_id"))
+    identifier(binding.get("report_sha256"))
+    if (source.get("diagnostic_id") != binding["diagnostic_id"]
+            or source.get("diagnostic_report_sha256") != binding["report_sha256"]):
+        raise ValueError("The decision source has conflicting diagnostic revision identities.")
+    prefix = ("robust_decisions/diagnostic-revisions/" + binding["diagnostic_id"]
+              + "/" + binding["report_sha256"] + "/")
+    for field in ("report", "manifest"):
+        descriptor = binding.get(field)
+        if (not isinstance(descriptor, dict)
+                or descriptor.get("path") != prefix + field + ".json"
+                or type(descriptor.get("bytes")) is not int or descriptor["bytes"] < 0):
+            raise ValueError("The decision report revision lost its original retained file.")
+        identifier(descriptor.get("sha256"))
+    if binding["report"]["sha256"] != binding["report_sha256"]:
+        raise ValueError("The decision report differs from its pinned original revision.")
+    return binding
+
+
+def diagnostic_members(workspace, record):
+    """Include an original pinned diagnostic even without an Investigation session."""
+    root = Path(workspace.root).resolve()
+    members = {}
+    for revision in record["revisions"]:
+        source = revision["input"].get("source") or {}
+        if (source.get("pair_contract") != DIAGNOSTIC_CONTRACT
+                or source.get("workspace_id") != workspace.project["id"]):
+            continue
+        binding = _diagnostic_binding(source)
+        manifest_descriptor = binding["manifest"]
+        for descriptor in (binding["report"], manifest_descriptor):
+            relative = descriptor["path"]
+            path = root
+            for part in portable.member_name(relative).parts:
+                path = path / part
+                if path.is_symlink():
+                    raise ValueError("A decision report revision changed its original path.")
+            if not path.is_file() or path.stat().st_size != descriptor["bytes"]:
+                raise ValueError("A selected decision needs its original diagnostic revision: " + relative)
+            previous = members.get(relative)
+            if previous is not None and previous != descriptor:
+                raise ValueError("Selected decisions disagree about a diagnostic revision.")
+            members[relative] = descriptor
+        manifest_path = root / manifest_descriptor["path"]
+        raw = manifest_path.read_bytes()
+        if (len(raw) != manifest_descriptor["bytes"]
+                or hashlib.sha256(raw).hexdigest() != manifest_descriptor["sha256"]):
+            raise ValueError("The selected decision revision manifest changed.")
+        manifest = json.loads(raw)
+        if (manifest.get("schema") != "upstate.decision-diagnostic-revision/v1"
+                or manifest.get("project_id") != workspace.project["id"]
+                or manifest.get("diagnostic_id") != binding["diagnostic_id"]
+                or manifest.get("report_sha256") != binding["report_sha256"]
+                or manifest.get("report") != binding["report"]):
+            raise ValueError("The decision revision manifest differs from its retained binding.")
+    return members
 
 
 def operation_members(workspace, ids):

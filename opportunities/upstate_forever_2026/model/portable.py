@@ -12,6 +12,7 @@ import zipfile
 from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
                      now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
+from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -353,6 +354,9 @@ def _register_received_delivery(manifest, destination, working_archive=None):
                 raise ValueError("Received working archive conflicts with retained work")
         else:
             os.link(source, target)
+    if working_archive is not None:
+        from .received_delivery_navigation import build as build_received_navigation
+        record = build_received_navigation(directory, record, working_archive)
     atomic_json(state_path, record)
     return record
 
@@ -372,10 +376,13 @@ def received_delivery(manifest, destination, record=None):
         result.update(workspace_directory=str(directory),
                       record=str(directory / "delivery-state.json"),
                       state=record["state"])
-        working = record.get("files", {}).get("working_archive")
-        if working is not None:
-            result["files"]["working_archive"] = {
-                **working, "path": str(directory / working["path"])}
+        for role in ("working_archive", "received_delivery_inventory", "map_atlas_received_browser"):
+            retained = record.get("files", {}).get(role)
+            if retained is not None:
+                result["files"][role] = {
+                    **retained, "path": str(directory / retained["path"])}
+        if record.get("received_navigation"):
+            result["navigation"] = record["received_navigation"]
     return {"delivery": result}
 
 
@@ -519,6 +526,10 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):
                 stack.enter_context(held(path, blocking=False))
+            # Prepared captures may not yet have a lock file. Lock every retained
+            # operation directory before inventory, in the donor helper's order.
+            for path in capture_lock_paths(root):
+                stack.enter_context(held(path, blocking=False))
             if not include_deliveries:
                 staging = stack.enter_context(tempfile.TemporaryDirectory(
                     prefix=".archive-review-deliveries-", dir=destination.parent))
@@ -573,11 +584,14 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 if (without_database_files(current_application, databases, "application") !=
                         without_database_files(application, databases, "application")):
                     raise ValueError("Application changed while its archive was captured")
+                source_acquisitions = verify_acquisitions(
+                    root, records, source_ids={row["id"] for row in workspace._list("sources")})
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
                             "database_snapshots": databases,
                             "receiving": "python application/model/cli.py restore ARCHIVE NEW_DIRECTORY",
-                            "source_views": "Recreated from the original content-addressed objects on demand"}
+                            "source_views": "Recreated from the original content-addressed objects on demand",
+                            "source_acquisitions": source_acquisitions}
                 if delivery:
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
@@ -599,7 +613,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             result = {"schema": FORMAT, "project_id": workspace.project["id"],
                       "path": str(destination), "bytes": archive_bytes,
                       "sha256": archive_sha256, "members": len(records),
-                      "selection": selection, "database_snapshots": databases}
+                      "selection": selection, "database_snapshots": databases,
+                      "source_acquisitions": source_acquisitions}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -834,6 +849,15 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                     if (retained is None or retained["sha256"] != artifact["sha256"]
                             or ("bytes" in artifact and retained["bytes"] != artifact["bytes"])):
                         raise ValueError("Receiving changed a completed native result")
+        # Original capture bodies are already byte-verified during extraction.
+        # Reattach their operation lineage and imported editions without running
+        # GIS derivation or rewriting an immutable request from its original host.
+        source_acquisitions = verify_acquisitions(
+            restored.root, verified_members,
+            source_ids={row["id"] for row in restored._list("sources")})
+        retained_acquisitions = manifest.get("source_acquisitions")
+        if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
+            raise ValueError("Receiving changed the original source acquisition lineage")
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
         archive_sha256 = _archive_digest(archive_source, before)
@@ -848,6 +872,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                   "archive_sha256": archive_sha256, "members": len(manifest["members"]),
                   "selection": manifest["selection"], "identity": "MATCH",
                   "database_snapshots": manifest.get("database_snapshots", {}),
+                  "source_acquisitions": source_acquisitions,
                   **received_delivery(manifest, destination, record=received_record)}
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():

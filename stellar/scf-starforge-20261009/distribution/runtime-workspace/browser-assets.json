@@ -31,6 +31,13 @@
       ]
     ],
     [
+      "/workbook-results.mjs",
+      [
+        "workbook-results.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/application-library.mjs",
       [
         "application-library.mjs",
@@ -140,6 +147,13 @@
       [
         "product-plan-briefing.css",
         "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/workspace-receiving.mjs",
+      [
+        "workspace-receiving.mjs",
+        "text/javascript; charset=utf-8"
       ]
     ]
   ]

@@ -39,6 +39,15 @@ def main(argv=None):
             q.add_argument("--budgets", type=float, nargs="+", required=True)
     q = sub.add_parser("report"); q.add_argument("study"); q.add_argument("result"); q.add_argument("--format", choices=["html", "csv"], default="html"); q.add_argument("--output", required=True)
     q = sub.add_parser("from-native"); q.add_argument("summary"); q.add_argument("configuration"); q.add_argument("--output")
+    for name in ("diagnostic-preview", "prepare-diagnostic"):
+        q = sub.add_parser(name)
+        q.add_argument("--workspace", required=True)
+        q.add_argument("--diagnostic-id", required=True)
+        q.add_argument("--output")
+        if name == "prepare-diagnostic":
+            q.add_argument("--report-sha256", required=True)
+            q.add_argument("--configuration", required=True)
+            q.add_argument("--operation-id")
     q = sub.add_parser("serve"); q.add_argument("--workspace", required=True); q.add_argument("--port", type=int, default=8772)
     for name in ("create", "receive", "list", "show", "export", "run"):
         q = sub.add_parser(name); q.add_argument("--workspace", required=True); q.add_argument("--output")
@@ -63,7 +72,19 @@ def main(argv=None):
             value = (html_report if args.format == "html" else csv_report)(read(args.study), read(args.result))
             Path(args.output).write_text(value, encoding="utf-8")
             return 0
-        if args.command == "from-native":
+        if args.command in ("diagnostic-preview", "prepare-diagnostic"):
+            from model.workspace import Workspace
+            from model.common import held
+            from .diagnostics import preview
+            original = Workspace(args.workspace)
+            with held(original.root / ".workspace.lock"):
+                if args.command == "diagnostic-preview":
+                    value = preview(original, args.diagnostic_id)
+                else:
+                    value = DecisionWorkspace(original).import_diagnostic(
+                        args.diagnostic_id, args.report_sha256, read(args.configuration),
+                        operation_id=args.operation_id)
+        elif args.command == "from-native":
             value = from_experiment(read(args.summary), read(args.configuration)).model_dump()
         elif args.command in ("validate", "solve", "frontier"):
             study = Study.model_validate(read(args.study))

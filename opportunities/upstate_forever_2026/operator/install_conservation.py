@@ -16,6 +16,10 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "integration/conservation_native_report_composition.json",
+    "integration/conservation_native_versions_composition.json",
+    "model/CONSERVATION_NATIVE_VERSIONS.md",
+    "model/native_versions.py",
     "integration/conservation_catalog_browser_composition.json",
     "model/CONSERVATION.md",
     "model/CONSERVATION_CONSUMERS.md",
@@ -60,6 +64,7 @@ OWNED = frozenset({
     "operator/web/conservation_optimization_bridge.mjs",
     "operator/web/keowee-method-view.mjs",
     "operator/web/retained_desks.mjs",
+    "source/capture_original_overlays.py",
     "source/conservation-documentation-integration-20261013.json",
     "source/conservation-reporting-joins-20261013.json",
     "source/keowee-native-binding-20261013.json",
@@ -89,9 +94,12 @@ OWNED = frozenset({
     "source_tools/PARCEL_CRITERIA_GEOMETRY.md",
     "source_tools/PARCEL_CRITERIA_INTERVALS.md",
     "source_tools/SOIL_FLOODPLAIN_SOURCES.md",
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
     "source_tools/keowee_interval_receiving.mjs",
     "source_tools/parcel_criteria.py",
     "source_tools/soil_floodplain_sources.py",
+    "source_tools/source_response_reuse.py",
+    "source_tools/soil_sources.py",
 })
 SCHEMA = "upstate.conservation-addon/v1"
 KNOWN_PRIOR = {
@@ -101,7 +109,8 @@ KNOWN_PRIOR = {
         "099cdbb19f03560e6cf8214605a3d2212afdc5221e8f192eab46f74ed54065ca",
         "8755fb5f3b9e7870868db8f3c5345030b117259340918e14250c85ea5d4c67f3",
         "771681f14e61426ce74b10844f203627eaf8c1a435f674fed42bb87ad08470d0",
-        "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39"
+        "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39",
+        "b1a6595b575beac4b1f7656544e37af721df198c8499742e323e15eb7f2ebd27"
     ],
     "model/conservation_cli.py": [
         "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed"
@@ -127,7 +136,8 @@ KNOWN_PRIOR = {
         "8849903b808a82b5d96d2bf2a047dba47602d3bfe098c088378384237d258891",
         "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301",
         "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda",
-        "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e"
+        "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e",
+        "86a82e53e7b8e0890ecc26c5777c8d81b800f092b826bbe8af5fcb3430a1c6a9"
     ],
     "operator/web/conservation.mjs": [
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
@@ -138,7 +148,8 @@ KNOWN_PRIOR = {
         "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710",
         "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e",
         "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65",
-        "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f"
+        "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
+        "60da58ce834260465f74dd03f6af420ecfabd8e4ab244e9150abdd506d3177b9"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
@@ -173,7 +184,10 @@ KNOWN_PRIOR = {
         "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb",
         "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
         "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
-        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195"
+        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
+        "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c",
+        "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d",
+        "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -286,7 +300,8 @@ KNOWN_PRIOR = {
     ],
     "source_tools/soil_floodplain_sources.py": [
         "0b9a0792323aaeeaa6e8897c80bc3940d2010d1fef5304d3faf371d6ada5012f",
-        "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b"
+        "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b",
+        "ed8d25b2d1126c8e321b298b21c0bb6fb75eac31eb4481e3e90e14413219dc02"
     ],
     "source/soil-floodplain-source-profile-20261013.json": [
         "7c342a0de9dd1bcfae835dd89de38a26e41609cc8aa01608db0fe5e9c8c23a4b"
@@ -308,7 +323,8 @@ KNOWN_PRIOR = {
     "model/conservation_reporting.py": [
         "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9",
         "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f",
-        "65a6bfd15909352a8b1bfd2767e4512554c7633a20e3234c5b5a6b230da3b9c0"
+        "65a6bfd15909352a8b1bfd2767e4512554c7633a20e3234c5b5a6b230da3b9c0",
+        "7fc2db9e618858c7a272e04eec6404b0e8fb48f7c0cafd8ca4a3d3a505301950"
     ],
     "model/CONSERVATION_REPORTS.md": [
         "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6",
@@ -336,7 +352,8 @@ KNOWN_PRIOR = {
         "37fabd65df3e0f19f486055cfb1ed435bd7919fb63de3389784fa88ebcfb064f"
     ],
     "source_tools/soil_sources.py": [
-        "082a1ed13145e0532fba7350534e71a22d1efbf68ed30c100b274baa94de8b2a"
+        "082a1ed13145e0532fba7350534e71a22d1efbf68ed30c100b274baa94de8b2a",
+        "9fac4ad782b733fcca8a4e013b27437e2df9cf360313f97336e3568932558d48"
     ],
     "model/conservation_catalog.py": [
         "91700433cc6e0cca672894bacc215c32e71ea83de4a3ab06305601aabbe20c4f"
@@ -426,6 +443,18 @@ KNOWN_PRIOR = {
     ],
     "operator/web/keowee-method-view.mjs": [
         "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698"
+    ],
+    "source/capture_original_overlays.py": [
+        "c6a055ef211c2e5b03f8f2607fed153d61d5e0ce5ca2689f6de6cfb34351159a"
+    ],
+    "source_tools/source_response_reuse.py": [
+        "29311cededb9f006ee713e91036cd6c99b27ffbecec3e1f21202107d6967444f"
+    ],
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md": [
+        "8384e6d464f8bb253df82d5abce78294785579f0855e111bd3b4b22b29257416"
+    ],
+    "model/CONSERVATION_NATIVE_VERSIONS.md": [
+        "712dda5ac675e597394d4e9d7b1976b1e2c7ab885e0fa83d1c375a5b79d7c81d"
     ]
 }
 
@@ -862,6 +891,7 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
+        "model/native_versions.py",
         "integration/conservation_catalog_browser_composition.json",
         "model/conservation.py",
         "model/conservation_bindings.py",
@@ -892,6 +922,7 @@ def read_packet(path):
         "operator/web/conservation_optimization_bridge.mjs",
         "operator/web/keowee-method-view.mjs",
         "operator/web/retained_desks.mjs",
+        "source/capture_original_overlays.py",
         "source/conservation-documentation-integration-20261013.json",
         "source/conservation-reporting-joins-20261013.json",
         "source/keowee-native-binding-20261013.json",
@@ -919,7 +950,10 @@ def read_packet(path):
         "source/soil-floodplain-source-profile-20261013.json",
         "source_tools/keowee_interval_receiving.mjs",
         "source_tools/parcel_criteria.py",
+        "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
         "source_tools/soil_floodplain_sources.py",
+        "source_tools/source_response_reuse.py",
+        "source_tools/soil_sources.py",
     }
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
@@ -930,6 +964,7 @@ def verify_application_dependencies(application, incoming):
     """Resolve source dependencies against the actual receiving application."""
     required = (
         "model/common.py", "model/workspace.py", "model/rasters.py",
+        "model/model_selection.py",
         "source/capture_original_overlays.py", "source/capture_upstream_network.py",
         "source_tools/soil_sources.py", "operator/extension_registry.py",
     )
@@ -1003,9 +1038,15 @@ def install(application, source):
             if path.is_symlink():
                 raise ValueError("Shared operator source is a symlink: " + name)
             current = path.read_bytes()
-            incoming = patch(current.decode("utf-8"), registered=registered).encode("utf-8")
+            # Shared compatibility joins must compose the incoming owned source,
+            # including the current acquisition client's recovery behavior.
+            candidate = updates.get(name, current)
+            incoming = patch(candidate.decode("utf-8"), registered=registered).encode("utf-8")
             if incoming != current:
                 updates[name], original[name] = incoming, current
+            elif name in updates:
+                del updates[name]
+                del original[name]
         for name, content in updates.items():
             if name.endswith(".py"):
                 compile(content.decode("utf-8"), str(application / name), "exec")

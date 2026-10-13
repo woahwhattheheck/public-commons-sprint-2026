@@ -337,6 +337,22 @@ Original installation state remains inside each actual runtime directory.
 The server binds loopback, requires the private URL capability for API access,
 and checks the exact origin for writes. It retains the existing operator
 workspace pattern: private real directories, fixed local assets, request field
-allowlists and explicit original helper calls. Keep the workspace and its
-runtime directories with the operator's normal host backup; use the original
-runtime installer and deployment recovery procedures for their contents.
+allowlists and explicit original helper calls. Use **Workspace backup** for the complete included workspace and retained
+history. Preserve its declared external runtime and data directories through
+their existing native backup and recovery procedures.
+
+## Complete workspace backup and receiving
+
+**Workspace backup** reviews the complete included workspace and its external
+bindings, creates a sealed archive, resumes archive uploads and restores the
+original workspace location. Retained receiving operations preserve the
+original identities and history. Review the restored external bindings before
+opening the original workspace through its normal runtime and Applications
+controls.
+
+See [Complete workspace backup and receiving](WORKSPACE_BACKUP.md) for the
+browser, headless commands, independent receiving view and model/API contract.
+
+## Operation status and retained output
+
+The Operations and Managed releases views expose **Refresh operation status** for each original request. If a native process check is unavailable, that row carries its error while installed runtimes and the rest of the workspace remain accessible. The displayed uncertainty preserves the original phase and source identity. Read [operation observation and recovery](MANAGED_OPERATIONS.md#read-operation-status-when-a-native-probe-is-unavailable) for the nullable activity fields, direct API and CLI reads, retained log states and original recovery controls.

@@ -4,6 +4,7 @@ from __future__ import annotations
 from .common import (INVEST_VERSION, atomic_json, describe_file, digest,
                      identifier, read_json)
 from .model_selection import run_scope
+from .native_versions import model_versions
 from .reuse import copy_verified
 
 SCHEMA = "upstate.report-release/v1"
@@ -62,10 +63,15 @@ def _cohort(workspace, report_id, *, packet=None):
                            if name not in scope["completed_models"]]
                 issue("native_models",
                       "Complete " + (", ".join(missing) or "the selected native stages")
-                      + " for " + case["title"] + " before building the seven-map release.", run_id)
-            if run.get("runtime", {}).get("version") != INVEST_VERSION:
+                      + " for " + case["title"] + " before building the selected map release.", run_id)
+            versions = model_versions(run, ("ndr", "sdr"))
+            case["model_versions"] = versions
+            unsupported = [model.upper() for model, record in versions.items()
+                           if record["comparison_version"] != INVEST_VERSION]
+            if unsupported:
                 issue("native_version",
-                      "Use the original InVEST " + INVEST_VERSION + " outputs for " + case["title"] + ".", run_id)
+                      "Use the original InVEST " + INVEST_VERSION + " " + "/".join(unsupported)
+                      + " outputs for " + case["title"] + ".", run_id)
             if run["selection"]["grid_id"] != grid_id:
                 issue("grid", "Use the reference grid for every map-release alternative.", run_id)
             if run["selection"]["profile_id"] != profile_id:
@@ -106,6 +112,10 @@ def _cohort(workspace, report_id, *, packet=None):
         "scenario_run_ids": list(ids[1:]),
         "title": report["title"],
     }
+    context = scenario_decisions.delivery_context(selected)
+    if context:
+        binding["delivery_context"] = context
+        selection.update(context)
     return packet, binding, selection, cases, problems
 
 

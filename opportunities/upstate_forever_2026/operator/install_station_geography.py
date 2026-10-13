@@ -6,7 +6,7 @@ import datetime as dt
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 import tempfile
@@ -32,10 +32,71 @@ FILES = (
     "operator/install_station_geography.py",
     "operator/STATION_GEOGRAPHY.md",
     "operator/fixtures/station_geography_actual87_ids.json",
+    "model/utility_microbial_study.py",
+    "model/UTILITY_MICROBIAL_STUDY.md",
+    "operator/STATION_MICROBIAL_STUDY.md",
+    "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+    "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+    "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+    "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+    "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+    "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+    "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+    "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+    "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+    "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+    "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+    "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+    "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+    "source/ecoli_utility_context/20261013/station-membership.csv",
+    "source/ecoli_utility_context/20261013/selected-stations.geojson",
+    "source/ecoli_utility_context/20261013/station-year-method-summary.csv",
+    "source/ecoli_utility_context/20261013/summary.json",
+    "source/ecoli_utility_context/20261013/source-inputs.json",
+    "source/ecoli_utility_context/20261013/README.md",
+    "source/ecoli_utility_context/20261013/index.html",
+    "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+    "source/ecoli_utility_context/20261013/source-manifest.json",
 )
 
 def sha(body):
     return hashlib.sha256(body).hexdigest()
+
+def source_members(pending, manifest_name):
+    """Verify every selected original source and companion before changing the app."""
+    manifest = json.loads(pending[manifest_name])
+    if manifest.get("schema") != "upstate.sources/v1" or not isinstance(manifest.get("entries"), list):
+        raise ValueError("Retain the original source manifest: " + manifest_name)
+    parent = PurePosixPath(manifest_name).parent
+    checked, source_ids = [], set()
+    for entry in manifest["entries"]:
+        if not isinstance(entry, dict):
+            raise ValueError("Each original source entry must be an object")
+        companions = entry.get("companions", [])
+        if not isinstance(companions, list):
+            raise ValueError("Original source companions must be a list")
+        source_id = entry.get("id")
+        if not isinstance(source_id, str) or not source_id or source_id in source_ids:
+            raise ValueError("Original source IDs must be unique and nonempty: " + manifest_name)
+        source_ids.add(source_id)
+        for member in [entry, *companions]:
+            if not isinstance(member, dict):
+                raise ValueError("Each original source companion must be an object")
+            name = member.get("path")
+            if not isinstance(name, str) or not name or "\\" in name or "\0" in name:
+                raise ValueError("Original source members need portable relative paths")
+            path = PurePosixPath(name)
+            if path.is_absolute() or ".." in path.parts or path.as_posix() != name:
+                raise ValueError("Original source member escapes its manifest: " + name)
+            target = (parent / path).as_posix()
+            if target not in pending:
+                raise ValueError("Complete station source family omits original member: " + target)
+            expected = member.get("sha256")
+            if expected is not None and sha(pending[target]) != expected:
+                raise ValueError("Original source bytes differ: " + target)
+            checked.append({"source_id": source_id, "path": target,
+                            "bytes": len(pending[target]), "sha256": sha(pending[target])})
+    return checked
 
 def install(application, source_root, *, dry_run=False):
     application, source_root = Path(application).resolve(strict=True), Path(source_root).resolve(strict=True)
@@ -54,6 +115,10 @@ def install(application, source_root, *, dry_run=False):
                 raise ValueError("The station geography descriptor schema differs")
         pending[name] = body
         previous[name] = (application / name).read_bytes() if (application / name).exists() else None
+    original_sources = {name: source_members(pending, name) for name in (
+        "source/station-assessment-context/sources.json",
+        "source/ecoli_utility_context/20261013/source-manifest.json",
+    )}
     changed = [name for name in FILES if previous[name] != pending[name]]
     server = (application / "operator/server.py").read_text(encoding="utf-8")
     browser = (application / "operator/web/app.mjs").read_text(encoding="utf-8")
@@ -62,6 +127,7 @@ def install(application, source_root, *, dry_run=False):
         raise ValueError("Retain the existing authored install_extensions.py to join its original operator host")
     receipt = {"schema": "upstate.station-geography-install/v1", "application": str(application),
         "dry_run": dry_run, "changed": changed, "existing_host_install_needed": host_needed,
+        "original_sources": original_sources,
         "files": [{"path": name, "bytes": len(pending[name]), "sha256": sha(pending[name]),
                   "previous_sha256": sha(previous[name]) if previous[name] is not None else None} for name in FILES]}
     if dry_run:

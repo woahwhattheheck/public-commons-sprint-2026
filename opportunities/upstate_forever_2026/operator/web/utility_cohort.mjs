@@ -1,4 +1,5 @@
 /* Utility source-area comparison desk, using the maintained operator host. */
+import {nativeModelsForOutputs, nativeCommonVersionIssues, nativeModelVersionLabel} from './native_versions.mjs';
 const POLLUTANTS = ['nitrogen_export', 'phosphorus_export', 'sediment_export'];
 const NAMES = {nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'};
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -22,6 +23,25 @@ const referenceOnly = value => value?.report_kind
   ? value.report_kind==='reference_totals' : value?.run_ids?.length===1;
 const kindTitle = value => referenceOnly(value)?'Reference totals':'Scenario comparisons';
 const coveragePercent = value => value===null||value===undefined?'\u2014':percent(100*value);
+
+export function utilityCommonOutputs(runs) {
+  return runs?.length && runs.every(Boolean)
+    ? POLLUTANTS.filter(name=>runs.every(run=>(run.comparison_pollutants||[]).includes(name))) : [];
+}
+export function utilityVersionIssues(runs, outputs=utilityCommonOutputs(runs)) {
+  const models=nativeModelsForOutputs(outputs);
+  const issues=nativeCommonVersionIssues(runs,models);
+  if(!models.length)return issues;
+  for(const run of runs||[]){
+    if(!run)continue;
+    for(const output of outputs){
+      const eligibility=run.version_eligibility?.[output];
+      if(eligibility?.eligible!==true)
+        issues.push(eligibility?.reason||(run.title||run.id)+': refresh the original model execution for '+NAMES[output]+'.');
+    }
+  }
+  return [...new Set(issues)];
+}
 
 export function attachUtilityCohorts(context) {
   let root=null, workspace=null, state=null, controller=null, epoch=0, rowsEpoch=0;
@@ -53,11 +73,12 @@ export function attachUtilityCohorts(context) {
   function request(path, values={}) {
     return context.api(context.endpoint('/api/utility-cohorts/'+path,{workspace,...values}));
   }
-  function commonOutputs() {
+  function selectedRuns() {
     const baseline=run($('[name="baseline"]')?.value);
-    if(!baseline)return [];
-    const selected=[baseline,...$$('[name="alternative"]:checked').map(input=>run(input.value)).filter(Boolean)];
-    return POLLUTANTS.filter(name=>selected.every(item=>item.comparison_pollutants.includes(name)));
+    return baseline?[baseline,...$$('[name="alternative"]:checked').map(input=>run(input.value))]:[];
+  }
+  function commonOutputs() {
+    return utilityCommonOutputs(selectedRuns());
   }
   function readDraft() {
     if(!$('[data-builder]'))return draft;
@@ -81,6 +102,8 @@ export function attachUtilityCohorts(context) {
     if(!baseline?.eligible)throw new Error('Select a completed native baseline.');
     const pollutants=commonOutputs();
     if(!pollutants.length)throw new Error('The selected runs must share at least one completed native pollutant.');
+    const versionIssues=utilityVersionIssues(selectedRuns(),pollutants);
+    if(versionIssues.length)throw new Error(versionIssues.join(' '));
     const weights=Object.fromEntries(POLLUTANTS.map(name=>[name,pollutants.includes(name)?Number(currentDraft.weights[name]):0]));
     if(Object.values(weights).some(value=>!Number.isFinite(value)||value<0)||Object.values(weights).reduce((a,b)=>a+b,0)<=0)
       throw new Error('Use nonnegative planning weights with a positive total.');
@@ -112,7 +135,7 @@ export function attachUtilityCohorts(context) {
       '<label class="uc-wide">Reference native run<select name="baseline" required><option value="">Loading completed runs...</option></select><small>Select the regional study whose original reporting area overlaps these protection polygons.</small></label></div>'+
       '<fieldset><legend>Alternative native runs, optional</legend><label class="uc-check"><input type="checkbox" name="parameters">Include runs with a different parameter profile</label>'+
       '<p class="uc-note">The reference run produces source-area totals and priorities immediately. Select alternatives to compare their changes on that same grid. Parameter changes remain identified.</p><div data-alternatives class="uc-alternatives"></div></fieldset>'+
-      '<fieldset><legend>Planning weights</legend><p data-pollutants class="uc-note">Choose the reference run and any alternatives to resolve the available native outputs.</p><div class="uc-grid uc-three">'+
+      '<fieldset><legend>Planning weights</legend><p data-pollutants class="uc-note">Choose the reference run and any alternatives to resolve the available native outputs.</p><p data-native-versions class="uc-note" aria-live="polite"></p><div class="uc-grid uc-three">'+
       POLLUTANTS.map(name=>'<label>'+NAMES[name]+'<input type="number" name="weight-'+name+'" min="0" step="any" value="1"></label>').join('')+
       '</div><label class="uc-check"><input type="checkbox" name="weight-grid"><span data-grid-label>Compare all 15 planning ratios</span></label>'+
       '<p class="uc-note" data-grid-note>The optional grid spans the available pollutants in quarter-step ratios. The selected weights remain the primary result.</p></fieldset>'+
@@ -135,7 +158,8 @@ export function attachUtilityCohorts(context) {
       catalog.sources.length===1?sourceKey(catalog.sources[0]):'';
     const baselineOptions=catalog.runs.filter(item=>item.eligible);
     $('[name="baseline"]').innerHTML='<option value="">Select the completed baseline</option>'+baselineOptions.map(item=>
-      option(item.id,item.title+' / '+item.profile_title+' / '+item.comparison_pollutants.map(name=>NAMES[name]).join(', ')+' / '+short(item.id))).join('');
+      option(item.id,item.title+' / '+item.profile_title+' / '+item.comparison_pollutants.map(name=>NAMES[name]).join(', ')+' / '+
+        nativeModelVersionLabel(item,nativeModelsForOutputs(item.comparison_pollutants))+' / '+short(item.id))).join('');
     const preferred=baselineOptions.find(item=>item.id===saved.baseline)||
       baselineOptions.find(item=>item.scenario_kind==='baseline');
     $('[name="baseline"]').value=preferred?.id||'';
@@ -161,13 +185,13 @@ export function attachUtilityCohorts(context) {
     const includeParameters=$('[name="parameters"]').checked;
     const candidates=catalog.runs.filter(item=>item.eligible&&item.id!==baseline?.id&&
       item.selection.grid_id===baseline?.selection.grid_id&&
-      item.selection.invest_version===baseline?.selection.invest_version&&
       (includeParameters||item.selection.profile_id===baseline?.selection.profile_id));
     $('[data-alternatives]').innerHTML=candidates.length?candidates.map(item=>{
       const common=item.comparison_pollutants.filter(name=>baseline.comparison_pollutants.includes(name));
       return '<label class="uc-run-choice"><input type="checkbox" name="alternative" value="'+esc(item.id)+'" '+
         (chosen.has(item.id)&&common.length?'checked ':'')+(!common.length?'disabled ':'')+'><span><strong>'+esc(item.title)+'</strong>'+
         '<small>'+esc(item.profile_title)+' / '+esc(item.comparison_pollutants.map(name=>NAMES[name]).join(', '))+' / '+esc(short(item.id))+
+        ' / '+esc(nativeModelVersionLabel(item,nativeModelsForOutputs(item.comparison_pollutants)))+
         (item.selection.profile_id!==baseline.selection.profile_id?' / parameter profile differs':'')+
         (!common.length?' / no shared native output':'')+'</small></span></label>';
     }).join(''):'<p class="uc-note">'+(baseline?'The selected reference can be calculated now. Completed alternatives on this grid will appear here.':'Select a completed reference run.')+'</p>';
@@ -178,7 +202,11 @@ export function attachUtilityCohorts(context) {
       ' / original polygons OBJECTID 11, 12, 131 and 132';
   }
   function updatePlanning(){
-    const shared=commonOutputs(),n=shared.length;
+    const shared=commonOutputs(),n=shared.length,selected=selectedRuns();
+    const versionIssues=n?utilityVersionIssues(selected,shared):[];
+    $('[data-native-versions]').textContent=versionIssues.length?versionIssues.join(' '):
+      n?'Compared native models: '+selected.map(item=>(item.title||short(item.id))+': '+
+        nativeModelVersionLabel(item,nativeModelsForOutputs(shared))).join(' / '):'';
     $('[data-pollutants]').textContent=n?'Shared completed outputs: '+shared.map(name=>NAMES[name]).join(', ')+
       '. Weights apply only to these physical outputs.':'Select runs with a shared completed native output.';
     POLLUTANTS.forEach(name=>{
@@ -197,7 +225,7 @@ export function attachUtilityCohorts(context) {
     $('[data-caps]').hidden=!caps;$('[data-percentile]').hidden=caps;
     const alternativeCount=$$('[name="alternative"]:checked').length;
     $('[data-build]').textContent=alternativeCount?'Build scenario comparison':'Build reference totals';
-    $('[data-build]').disabled=submitting||!catalog.sources.length||!n;
+    $('[data-build]').disabled=submitting||!catalog.sources.length||!n||!!versionIssues.length;
   }
   function progress(value) {
     if(!value)return '';
@@ -270,7 +298,8 @@ export function attachUtilityCohorts(context) {
       const value=await context.api('/api/utility-cohorts/preview',{method:'POST',body:{workspace,selection}});
       if(!current(token))return;
       $('[data-preview]').innerHTML='<h4>Selected original source areas</h4>'+sourceAreas(value.zone_bindings)+
-        '<p class="uc-note">'+esc(kindTitle(value))+' / '+value.run_ids.length+' actual runs / '+value.weight_grid.weight_set_count+' declared weight sets / grid '+esc(short(value.grid_id))+'</p>';
+        '<p class="uc-note">'+esc(kindTitle(value))+' / '+value.run_ids.length+' actual runs / '+value.weight_grid.weight_set_count+' declared weight sets / grid '+esc(short(value.grid_id))+'</p>'+
+        nativeExecution(value.native_execution,value.runs);
     }catch(reason){if(current(token)){$('[data-preview]').hidden=true;error(reason.message||String(reason));}}
     finally{if(current(token))previewing=false;}
   }
@@ -316,6 +345,14 @@ export function attachUtilityCohorts(context) {
       items.map(item=>'<li><span>'+esc(item.filename)+'<small>'+size(item.bytes)+'</small></span><a href="'+esc(item.url)+
         '?download=1" download>Download</a></li>').join('')+'</ul></details>').join('');
   }
+  function nativeExecution(execution,runs){
+    if(!execution?.models?.length||!execution.runs)return '';
+    return '<details class="uc-source-detail"><summary>Retained native model execution</summary>'+
+      '<div class="uc-table-wrap"><table><thead><tr><th>Selected run</th><th>Completed model versions</th></tr></thead><tbody>'+
+      runs.map(item=>'<tr><td>'+esc(item.title||short(item.id))+'<small>'+esc(item.id)+'</small></td><td>'+
+        esc(nativeModelVersionLabel({model_versions:execution.runs[item.id]||{}},execution.models))+'</td></tr>').join('')+
+      '</tbody></table></div></details>';
+  }
   function resultContent(){
     const value=packet.cohort,complete=value.state==='complete';
     if(!complete)return '<p class="uc-note">The source selection and latest phase are retained. Open the corresponding operation to resume an interrupted calculation.</p>';
@@ -324,6 +361,7 @@ export function attachUtilityCohorts(context) {
       '<p>'+esc(value.source.title)+' / '+esc(value.source.vintage||'')+'</p>'+sourceAreas(value.zone_bindings)+
       '<div data-normalization>'+normalization(value.normalization)+'</div>'+
       '<p class="uc-note">The publisher\'s upstream protection polygons keep their original 200-foot and 1,500-foot attributes. These are separate ranking groups. Each area is intersected with the selected reporting geometry.</p></details>'+
+      nativeExecution(value.native_execution,packet.runs)+
       '<div class="uc-result-filters"><label>Source area<select name="filter-region">'+option('','All source areas')+
       packet.filters.regions.map(item=>option(item.id,item.title)).join('')+'</select></label>'+
       '<label>Native run<select name="filter-run">'+option('','All selected runs')+runOptions+'</select></label>'+
@@ -489,7 +527,9 @@ export function attachUtilityCohorts(context) {
   }
   function signalFor(nextState){
     return JSON.stringify((nextState.data?.runs||[]).map(item=>[item.id,item.state,
-      Object.keys(item.artifacts||{}).sort(),item.stages?.ndr?.completed_at,item.stages?.sdr?.completed_at]));
+      Object.keys(item.artifacts||{}).sort(),item.selection?.invest_version,item.runtime?.version,
+      ['ndr','sdr'].map(model=>{const stage=item.stages?.[model]||item.stage_summary?.[model]||{};
+        return [stage.completed_at,stage.runtime?.version,stage.reused_from];})]));
   }
   function update(nextState){
     if(!root||nextState.workspace_key!==workspace)return;

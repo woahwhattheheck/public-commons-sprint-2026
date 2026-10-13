@@ -1,0 +1,182 @@
+{
+  "schema": "upstate.microbial-temporal-sources/v1",
+  "operation": "ECO-MICROBIAL-TEMPORAL-FLOW-20261013-ASTRA",
+  "captured_on": "2026-10-13",
+  "inputs": [
+    {
+      "role": "results",
+      "path": "../../ecoli_utility_context/20261013/results-with-provenance.csv",
+      "repository_path": "opportunities/upstate_forever_2026/source/ecoli_utility_context/20261013/results-with-provenance.csv",
+      "source_commit": "817335bc6d2a9130e203a48e63ecab91e0094003",
+      "git_blob": "0333099ba74752683c8f661ada5f80a13ccd44a9",
+      "bytes": 368696,
+      "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"
+    },
+    {
+      "role": "stations",
+      "path": "../../ecoli_utility_context/20261013/station-membership.csv",
+      "repository_path": "opportunities/upstate_forever_2026/source/ecoli_utility_context/20261013/station-membership.csv",
+      "source_commit": "817335bc6d2a9130e203a48e63ecab91e0094003",
+      "git_blob": "9e0d58bcbd49bb82dfc22b598f66a9ead79d388d",
+      "bytes": 6909,
+      "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92"
+    },
+    {
+      "role": "flow",
+      "path": "../../../observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "repository_path": "opportunities/upstate_forever_2026/observations/observed_hydrology_20261013/original/daily/usgs_02177000_2022_2023.json",
+      "source_commit": "904ac1340507365a897ca846e7cfab3577898507",
+      "git_blob": "23b1ae0f10433753a6c70f6805391d6617057c0d",
+      "bytes": 55405,
+      "sha256": "4c6f2676d75443e9d9e9d4cb528c6b23aa3e3ca1c583dd07da253421f3fd94ec",
+      "url": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02177000&startDT=2022-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    }
+  ],
+  "original_microbiology_sources": [
+    {
+      "path": "raw/stations-original.csv",
+      "bytes": 21317,
+      "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b",
+      "url": "https://www.waterqualitydata.us/data/Station/search?huc=03060101%3B03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/stations-original.geojson",
+      "bytes": 46598,
+      "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9",
+      "url": "https://www.waterqualitydata.us/data/Station/search?huc=03060101%3B03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=geojson",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/arjws-wbd-original.json",
+      "bytes": 183656,
+      "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20IN%20('030601010701'%2C'030601010702'%2C'030601010703'%2C'030601010704')&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype&returnGeometry=true&outSR=4326&orderByFields=huc12&resultRecordCount=100",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-wbd-display.json",
+      "bytes": 59535,
+      "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4/query?f=json&where=huc8%3D%2703060102%27&outFields=objectid%2Chuc8%2Cname%2Careasqkm%2Careaacres%2Cstates&returnGeometry=true&outSR=4326&maxAllowableOffset=0.0001",
+      "role": "Publisher-generalized display geometry"
+    },
+    {
+      "path": "raw/arjws-results-2021-2025-original.csv",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef",
+      "url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-25084%3B21SC60WQ_WQX-RS-24163%3B21SC60WQ_WQX-SV-111%3B21SC60WQ_WQX-SV-735%3B21SC60WQ_WQX-SV-833&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2021-original.csv",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2021&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2022-original.csv",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2022&startDateHi=12-31-2022&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2023-original.csv",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2024-original.csv",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2024&startDateHi=12-31-2024&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2025-original.csv",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2025&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7",
+      "url": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/utility-focus-profile.json",
+      "role": "Previously published source-linked utility selection"
+    },
+    {
+      "path": "raw/utility-memberships.csv",
+      "bytes": 8731,
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945",
+      "url": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/utility-memberships.csv",
+      "role": "Previously published source-linked utility selection"
+    }
+  ],
+  "source_selection": {
+    "characteristic_name": "Escherichia coli",
+    "activity_start_inclusive": "2021-01-01",
+    "activity_end_inclusive": "2025-12-31",
+    "station_discovery_huc8": [
+      "03060101",
+      "03060102"
+    ],
+    "arjws": "Original WGS84 station coordinates inside one of the four original WBD HUC12 polygons selected by retained ToHUC topology",
+    "prwd": "Original publisher HUC8 equals 03060102, the complete original 32-HUC Tugaloo upstream selection"
+  },
+  "outputs": {
+    "station-summary.csv": {
+      "bytes": 13740,
+      "sha256": "306f93bda04c2d8727f6c0fef782deff5f599a3818beb30c09e1f3aaed9c94ba"
+    },
+    "station-year-summary.csv": {
+      "bytes": 30692,
+      "sha256": "5ddba3ebf23067820609734731f817b4513ba3a5381e175cd3b5340579d43f21"
+    },
+    "station-season-summary.csv": {
+      "bytes": 48144,
+      "sha256": "9ce54e608a226b26200092b15225bb63d033a3982a03ee897060d88f349fce08"
+    },
+    "station-month-summary.csv": {
+      "bytes": 122016,
+      "sha256": "2d3090b1f3e63f42abb2e2950cd71c839ce5fb039667a2e0555ace8cc5f23390"
+    },
+    "record-intervals.csv": {
+      "bytes": 227126,
+      "sha256": "4ad3864e802385c038f4c9005ed72c79f93de6b930a5b66b061ac325143ddfa0"
+    },
+    "field-replicates.csv": {
+      "bytes": 708,
+      "sha256": "9e922602ca20ddaeac8d4858c65404ba7bded9b71b8c43b1f09645562803b004"
+    },
+    "comment-sensitivity.csv": {
+      "bytes": 13752,
+      "sha256": "74d9853ac07b5339a3cdbe2577948cc9393537bb7da0519980610744c5d8ce15"
+    },
+    "flagged-source-comments.csv": {
+      "bytes": 28893,
+      "sha256": "a62b00d921d09b939a4ad67b746ba2b4afc392a1aa076477b450783d2e4eb384"
+    },
+    "annual-sampling-coverage.csv": {
+      "bytes": 206,
+      "sha256": "8e2d8aa914bb20a28e2403af83ce31c0e7eaea8c3eabd8e48f46ce33b0560d63"
+    },
+    "flow-daily-2022.csv": {
+      "bytes": 21567,
+      "sha256": "8fbd91d565fe517080ff8edd45cd309bfdaa31fbd1a745bf001bac48f12d14ad"
+    },
+    "flow-sample-join.csv": {
+      "bytes": 7536,
+      "sha256": "d71fee49d8363898397f7039d6ee1beb0100f4fea9373d4f7cb682e96f88e44b"
+    },
+    "analysis-summary.json": {
+      "bytes": 8450,
+      "sha256": "e492f216935e85cef11ba789cca65f39aaa330f7c8e2b40d6c6825588b1591fd"
+    }
+  }
+}

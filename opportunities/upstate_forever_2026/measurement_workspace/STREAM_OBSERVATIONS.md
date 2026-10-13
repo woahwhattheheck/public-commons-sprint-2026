@@ -21,7 +21,7 @@ python measurement_workspace/published_studies.py --application "$APPLICATION" -
 python measurement_workspace/published_studies.py --application "$APPLICATION" --workspace "$WORKSPACE" export scdes-eighteenmile-streams-2020-2025 --destination "$WORKSPACE/stream-reports/eighteenmile-stream-study.zip"
 ```
 
-The selected report carries the exact original observation record selectors and source inventory. Its concentration-support CSV preserves the same fraction, analytical method, result type, basis and unit series dimensions used by the displayed calculations. The complete-study ZIP preserves the original inputs and can be reimported with the same version identity. Builtin intake includes the exact original study-files.json body alongside its declared members, matching direct directory intake. The optional installed lake-context flag belongs to the original lake study; this stream builtin uses its own complete inventory automatically.
+The selected report carries the exact original observation record selectors and source inventory. The complete-study ZIP preserves the original inputs and can be reimported with the same version identity. The optional installed lake-context flag belongs to the original lake study; this stream builtin uses its own complete inventory automatically.
 
 ## Source contract and actual counts
 
@@ -54,3 +54,92 @@ The original lake builtin and its chlorophyll/microcystin cohort handling remain
 ## Receiving check
 
 Use the existing native observation workspace. Import the builtin, confirm 589 original rows / 153 activities, select SV-233 / Phosphorus / 2023, open several original rows including a censored one, export the selected report and complete study, then reopen the complete-study archive. Confirm the source hashes and version identity. The source builder and browser JavaScript have been exercised here; the original Python Workspace intake and archive round trip belong to this existing native receiving operation.
+
+## Integrated nutrient and gauge-flow study
+
+The stream builtin also retains the installed application-root
+`eighteenmile_stream_nutrient_analysis.sources.json` when present. Its six native
+entries expose the complete original report, activity/flow table, station
+contrasts, agency-calculated nitrogen reconciliation, cohort summaries and
+daily gauge flow. The report includes 589 original nutrient results, 153
+activities on 106 dates, 2,192 daily gauge values, 41 reconstructed nitrogen
+intervals, 116 station contrasts and 58 nitrogen-component comparisons.
+
+The selected desk tables remain original stream observations. The linked
+scientific report retains its own full 2020–2025 scope; station/year/month
+filters in the desk do not change that retained report. Its comparisons use
+original activity dates, analytical compatibility and censor intervals as
+explained in the report. Agency-calculated nitrogen remains a distinct
+publisher result, alongside the separately reconstructed compatible
+TKN-plus-NOx intervals.
+
+### Import and reopen
+
+The builtin queue action remains:
+
+```json
+{"action":"published-study.import","payload":{"builtin_id":"scdes-eighteenmile-streams-2020-2025"}}
+```
+
+The existing host supplies workspace and operation ID. For a materialized
+cohort edition, the same composition is available explicitly:
+
+```sh
+python ACTUAL_APP/measurement_workspace/published_studies.py --application ACTUAL_APP --workspace ACTUAL_WORKSPACE import ACTUAL_APP/observations/eighteenmile_stream_nutrients_2020_2025 --with-installed-context
+```
+
+Use **Open nutrient and gauge-flow study, 2020–2025** in the retained study.
+Its original SVG map and all relative table links resolve through the
+existing retained-file transport. **Export selected report** includes the
+scientific report's complete original dependency tree in the downloaded ZIP.
+**Export complete study** retains the original cohort, the analysis and all
+native source identities; importing that ZIP recreates the same source
+edition.
+
+The analysis is retained beneath
+`application-context/stream-nutrients/`, with its original application-root
+manifest and original `observations/...` and `source/...` layout intact.
+That namespace distinguishes the source cohort's own original filenames from
+the analysis's unchanged PR3064 original filenames. Identical bodies retain
+their separate declared paths. All six native entry IDs, member hashes and
+original manifest bytes remain unchanged. The study's generated registration
+adds the original native manifest as a companion so source views and report
+ZIPs retain a complete rebuildable application tree.
+
+After unzipping the selected report, the original Node command can rebuild
+the scientific analysis from its retained originals:
+
+```sh
+node original-sources/application-context/stream-nutrients/observations/eighteenmile_stream_nutrients_2020_2025/analysis/build_study.mjs --output NEW_DIRECTORY
+```
+
+The original analysis output labels source rows as one-based data rows
+excluding the CSV header. The desk displays physical original CSV row numbers
+(including the header); raw row detail retains the original zero-based source
+record index. These conventions are explicit so the same original result can
+be followed between the source viewer and the scientific tables.
+
+### Installed source integrity
+
+The installer walks the exact analysis manifest, checks every original body
+against its required byte count and SHA256, and copies the complete 31-file
+family at its original application paths. The native project archive includes
+`source/`, `source_tools/` and the stream analysis root manifest as well as
+the existing study and consumer modules. Existing different original source
+bodies are rejected before replacement.
+
+The original whole-basin GeoJSON has no embedded legacy CRS member. Its
+byte-identical source body is already declared EPSG:4326 in the stream
+cohort's native vector manifest; the study registration preserves that
+explicit declaration when registering the analysis companion. It does not
+alter the original geometry bytes.
+
+Directory intake uses the same exact study-files.json inventory as the builtin; installed analysis files are then composed through their native manifest. This prevents an installed analysis directory from being imported a second time without its source companions. The original inventory itself is retained in complete study exports.
+
+Daily gauge flow is shared basin context. Whole-catchment membership does not establish that every sampling station is upstream of the gauge; the original report states that distinction and preserves its original station geometry.
+
+## Selected source and support exports
+
+Selected original-observation exports retain every source column in a separate CSV for each original response. The accompanying index binds every selected row to its original response hash, physical CSV row, activity identifier and source record ID. The complete agency responses remain unchanged in the complete study export.
+
+The concentration-support CSV preserves each series key, sample fraction, method authority and identifier, result value type, original weight/time/temperature/particle-size basis, and support-unit spelling alongside its station, project, activity type and interval statistics. These fields keep different analytical series distinct outside the application.

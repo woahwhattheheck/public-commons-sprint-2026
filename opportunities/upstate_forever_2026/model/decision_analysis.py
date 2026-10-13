@@ -34,6 +34,66 @@ class DecisionError(ValueError):
     """An exact original input or economic selection needs correction."""
 
 
+
+def _native_helpers():
+    # Keep explicit physical-packet analysis usable without loading GIS/native
+    # dependencies. Original workspace/report intake uses this sibling helper.
+    if __package__:
+        from .native_versions import comparison_versions, model_versions, models_for_outputs
+    else:
+        import sys
+        root = str(Path(__file__).resolve().parent.parent)
+        added = root not in sys.path
+        if added:
+            sys.path.insert(0, root)
+        try:
+            from model.native_versions import comparison_versions, model_versions, models_for_outputs
+        finally:
+            if added:
+                sys.path.remove(root)
+    return comparison_versions, model_versions, models_for_outputs
+
+
+def _native_cohort(runs, metrics):
+    compare, _, models = _native_helpers()
+    try:
+        return compare(runs, models(metrics))
+    except ValueError as error:
+        raise DecisionError(str(error)) from error
+
+
+def _packet_version_vector(item, metrics):
+    """Read immutable packet provenance, leaving legacy packets unchanged."""
+    versions = item.get("model_versions")
+    if versions is None:
+        return None
+    if not isinstance(versions, dict):
+        raise DecisionError("Native model versions must retain their original per-model records")
+    selected = (("ndr",) if any(name in metrics for name in ("nitrogen_export", "phosphorus_export")) else ()) + (
+                ("sdr",) if "sediment_export" in metrics else ())
+    return {name: _text((versions.get(name) or {}).get("comparison_version"),
+                        "Retained " + name.upper() + " execution version") for name in selected}
+
+
+def _packet_pair_versions(base, alternative, metrics):
+    before, after = _packet_version_vector(base, metrics), _packet_version_vector(alternative, metrics)
+    if before is not None or after is not None:
+        if before is None or after is None or before != after:
+            raise DecisionError("Each physical alternative needs its baseline's executed versions for the selected native models")
+
+
+def _version_available_alternatives(base, alternatives, metrics, comparison_id):
+    cohort = _native_cohort([base], metrics)
+    kept, unavailable = [], []
+    for item in alternatives:
+        try:
+            _native_cohort([base, item["run"]], metrics)
+            kept.append(item)
+        except DecisionError as error:
+            unavailable.append({"comparison_id": comparison_id, "run_id": item["run"]["id"],
+                                "reason": str(error), "error_type": type(error).__name__})
+    return kept, unavailable, cohort["runs"][base["id"]]
+
 def _metric_names(outputs):
     """Return the declared modeled pollutant axes in their canonical order."""
     if not isinstance(outputs, dict):
@@ -313,9 +373,8 @@ def _original_group(reader, key):
             run = reader.run(item["run_id"])
             selection = run["selection"]
             if (selection["grid_id"] != base["selection"]["grid_id"] or
-                    selection["profile_id"] != base["selection"]["profile_id"] or
-                    selection.get("invest_version") != base["selection"].get("invest_version")):
-                raise DecisionError("Alternative requires its baseline on the same grid, profile and model version")
+                    selection["profile_id"] != base["selection"]["profile_id"]):
+                raise DecisionError("Alternative requires its baseline on the same grid and parameter profile")
             scenario = reader.scenario(selection["scenario_id"])
             if scenario.get("kind") != "landcover":
                 raise DecisionError("Alternative is not an original land-cover scenario")
@@ -496,6 +555,9 @@ def workspace_packet(workspace, selection, *, summary_only=False):
     groups, unavailable = [], []
     for original, base, scenario, alternatives, missing in resolved:
         unavailable.extend(missing)
+        alternatives, missing, baseline_versions = _version_available_alternatives(
+            base, alternatives, metrics, original["id"])
+        unavailable.extend(missing)
         alternatives, missing = _available_alternatives(reader, original, base, alternatives,
                                                         summary_only=summary_only, metrics=metrics)
         unavailable.extend(missing)
@@ -505,11 +567,14 @@ def workspace_packet(workspace, selection, *, summary_only=False):
             "baseline": {"run_id": base["id"], "scenario_id": scenario["id"],
                 "scenario_key": _scenario_key(scenario), "title": scenario["title"],
                 "profile_id": base["selection"]["profile_id"], "grid_id": base["selection"]["grid_id"],
-                "invest_version": base["selection"].get("invest_version"), "outputs": base_outputs},
+                "invest_version": base["selection"].get("invest_version"),
+                "model_versions": baseline_versions, "outputs": base_outputs},
             "alternatives": [{"run_id": item["run"]["id"], "scenario_id": item["scenario"]["id"],
                 "scenario_key": item["scenario_key"], "label": item["scenario"]["title"],
                 "kind": item["scenario"]["kind"], "profile_id": item["run"]["selection"]["profile_id"],
                 "outputs": outputs[item["run"]["id"]],
+                "invest_version": item["run"]["selection"].get("invest_version"),
+                "model_versions": _native_cohort([item["run"]], metrics)["runs"][item["run"]["id"]],
                 "source_edits": item["run"].get("stages", {}).get("landcover", {}).get("edits"),
                 "scenario_definition": item["scenario"]}
                 for item in alternatives]})
@@ -689,13 +754,21 @@ def _source_run(detail, report):
     scenario = detail["scenario"]
     if scenario.get("id") != selection["scenario_id"] or scenario.get("kind") != detail["scenario_kind"]:
         raise DecisionError("Native report scenario definition differs from its run selection")
-    version = selection.get("invest_version") or detail.get("runtime", {}).get("version")
-    version = _text(version, "Original InVEST model version")
-    if detail.get("runtime", {}).get("version", version) != version:
-        raise DecisionError("Native report runtime differs from its selected model version")
+    metrics = tuple(name + "_export" for name in _source_metrics(report))
+    if detail.get("model_versions") is not None:
+        selected_versions = _packet_version_vector(detail, metrics)
+        versions = {name: detail["model_versions"][name] for name in selected_versions}
+    else:
+        # Older original reports retained only the last observed run runtime.
+        # Label that fallback; never infer missing completed-stage provenance.
+        versions = _native_cohort([detail], metrics)["runs"][key]
+    version = selection.get("invest_version")
+    # Requested identity and the original observed/stage provenance remain
+    # separate. A newer observed execution does not rewrite its declaration.
     return {"run_id": key, "scenario_id": selection["scenario_id"],
             "scenario_key": _scenario_key(scenario), "profile_id": selection["profile_id"],
             "grid_id": selection["grid_id"], "invest_version": version,
+            "model_versions": versions,
             "kind": scenario["kind"], "comparison_kind": detail.get("comparison_kind"),
             "label": detail.get("scenario_title") or scenario.get("title") or key,
             "scenario_definition": scenario, "source_edits": detail.get("landcover_edits", [])}
@@ -713,9 +786,10 @@ def inspect_scenario_report(path):
             item = _source_run(details[key], report)
             if (item["kind"] != "landcover" or item["comparison_kind"] != "landcover_under_common_profile"
                     or any(item[field] != base[field]
-                           for field in ("profile_id", "grid_id", "invest_version"))):
+                           for field in ("profile_id", "grid_id"))):
                 raise DecisionError("Use the land-cover alternative with its own matching baseline profile")
-            alternatives.append({k: item[k] for k in ("run_id", "scenario_id", "scenario_key", "label", "profile_id")})
+            _packet_pair_versions(base, item, tuple(name + "_export" for name in _source_metrics(report)))
+            alternatives.append({k: item[k] for k in ("run_id", "scenario_id", "scenario_key", "label", "profile_id", "model_versions")})
         except (DecisionError, KeyError, TypeError, ValueError) as error:
             unavailable.append({"run_id": key, "reason": str(error), "error_type": type(error).__name__})
     zones = []
@@ -789,8 +863,9 @@ def scenario_report_packet(path, zone_id):
             item = _source_run(details[key], report)
             if (item["kind"] != "landcover" or item["comparison_kind"] != "landcover_under_common_profile"
                     or any(item[field] != base[field]
-                           for field in ("profile_id", "grid_id", "invest_version"))):
+                           for field in ("profile_id", "grid_id"))):
                 raise DecisionError("Use the land-cover alternative with its own matching baseline profile")
+            _packet_pair_versions(base, item, tuple(name + "_export" for name in _source_metrics(report)))
             if item["scenario_key"] in seen:
                 raise DecisionError("The native report repeats one physical scenario definition")
             outputs = {}
@@ -844,7 +919,7 @@ def scenario_report_packet(path, zone_id):
             unavailable.append({"comparison_id": comparison_id, "run_id": key,
                                 "reason": str(error), "error_type": type(error).__name__})
     group = {"id": comparison_id, "baseline": {k: base[k] for k in
-             ("run_id", "scenario_id", "scenario_key", "profile_id", "grid_id", "invest_version")},
+             ("run_id", "scenario_id", "scenario_key", "profile_id", "grid_id", "invest_version", "model_versions")},
              "alternatives": alternatives}
     group["baseline"].update(title=base["label"], outputs=baseline_outputs)
     zone_metadata = {key: value for key, value in zone.items() if key not in ("pollutants", "scenario_tradeoffs")}
@@ -885,8 +960,14 @@ def _validate_packet(packet, selection):
             raise DecisionError("Sensitivity members must retain the same modeled pollutant axes")
         for field in ("run_id", "scenario_id", "scenario_key", "profile_id", "grid_id"):
             _identifier(base[field])
-        if any(base.get(field) != root.get(field) for field in ("scenario_key", "grid_id", "invest_version")):
-            raise DecisionError("Sensitivity members need the same baseline definition, grid and model version")
+        if any(base.get(field) != root.get(field) for field in ("scenario_key", "grid_id")):
+            raise DecisionError("Sensitivity members need the same baseline definition and grid")
+        root_versions, base_versions = _packet_version_vector(root, metrics), _packet_version_vector(base, metrics)
+        if root_versions is not None or base_versions is not None:
+            if root_versions is None or base_versions is None or root_versions != base_versions:
+                raise DecisionError("Sensitivity members need the same executed versions for each selected native model")
+        elif base.get("invest_version") != root.get("invest_version"):
+            raise DecisionError("Legacy sensitivity members need the same retained declared model version")
         for metric in metrics:
             _number(base["outputs"][metric].get("total"), "Baseline " + metric, minimum=0)
             if base["outputs"][metric].get("units") != UNITS[metric]:
@@ -902,6 +983,7 @@ def _validate_packet(packet, selection):
             seen.add(item["scenario_key"])
             if item["profile_id"] != base["profile_id"] or item.get("kind") != "landcover":
                 raise DecisionError("Each physical alternative needs its matching baseline parameter profile")
+            _packet_pair_versions(base, item, metrics)
             for metric in metrics:
                 data = item["outputs"][metric]
                 if data.get("units") != UNITS[metric]:
@@ -1170,6 +1252,7 @@ def analyze_packet(packet, selection):
             {"comparison_id": group["id"], "baseline_run_id": group["baseline"]["run_id"],
              "profile_id": group["baseline"]["profile_id"], "grid_id": group["baseline"]["grid_id"],
              "invest_version": group["baseline"].get("invest_version"),
+             "model_versions": group["baseline"].get("model_versions"),
              "alternatives": group["alternatives"]} for group in groups[1:]],
         "frontier": frontier, "sources": packet["sources"],
         "selection": selection, "unavailable_alternatives": packet.get("unavailable_alternatives", []),

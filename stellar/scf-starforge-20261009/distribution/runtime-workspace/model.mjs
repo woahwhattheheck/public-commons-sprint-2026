@@ -11,7 +11,10 @@ import { prepareRuntimeInstall, installRuntime, inspectRuntimeInstall, upgradeRu
 import { runtimeCatalog, resolveRuntimeProfile } from '../runtime-profile.mjs';
 import { plain, now, digest, json, canonical, fail, need, recordId, operationId, absolute,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
-  operationLease, operationRunning, tailFile, runtimeWorkspaceError } from './storage.mjs';
+  operationLease, operationRunning, tailFile, runtimeWorkspaceError, withWorkspaceWrite,
+  workspaceLeaseDescriptor, workspaceReceivingState } from './storage.mjs';
+import { createOperationReader, summarizeOperationObservations } from './operation-observations.mjs';
+import { createWorkspaceBackupAPI } from './workspace-backup.mjs';
 
 import { managedOperationFields, initializeManagedWorkspace, managedState, openManagedHome, reviewManagedAdoption,
   managedConfig, normalizeManagedOperation, executeManagedOperation, managedCommandAlive,
@@ -54,16 +57,25 @@ const asError = error => runtimeWorkspaceError(error);
 
 async function context(directory) {
   const root = await privateDirectory(absolute(directory));
-  const config = await readJSON(join(root, 'workspace.json'));
+  const receiving = await workspaceReceivingState(root);
+  const config = await readJSON(join(root, 'workspace.json'), receiving?.phase === 'RESTORING');
+  if (!config) {
+    // The receiving marker is the actual identity while the original config is
+    // still being streamed. This observer context is never written as config.
+    return { root, receiving, config: { schema: WORKSPACE_SCHEMA,
+      workspaceId: receiving.workspaceId, directory: root, runtimeHome: null } };
+  }
   need(config.schema === WORKSPACE_SCHEMA && config.directory === root && typeof config.runtimeHome === 'string',
     'RUNTIME_WORKSPACE_CONFIG_INVALID');
-  await privateDirectory(config.runtimeHome);
-  for (const name of ['archives', 'entries', 'operations', 'observations', 'sources', 'incoming'])
-    await privateDirectory(join(root, name));
-  return { root, config };
+  if (!receiving || receiving.phase === 'BINDINGS_REVIEWED') await privateDirectory(config.runtimeHome);
+  if (receiving?.phase !== 'RESTORING')
+    for (const name of ['archives', 'entries', 'operations', 'observations', 'sources', 'incoming'])
+      await privateDirectory(join(root, name));
+  return { root, config, receiving };
 }
 export async function createRuntimeWorkspace({ directory, runtimeHome } = {}) {
   const root = await makePrivate(absolute(directory));
+  return withWorkspaceWrite(root, async () => {
   const home = runtimeHome === undefined ? join(root, 'runtimes') : absolute(runtimeHome);
   try { await makePrivate(home); } catch (error) { if (error.code !== 'EEXIST') throw error; await privateDirectory(home); }
   for (const name of ['archives', 'entries', 'operations', 'observations', 'sources', 'incoming'])
@@ -71,6 +83,7 @@ export async function createRuntimeWorkspace({ directory, runtimeHome } = {}) {
   const config = { schema: WORKSPACE_SCHEMA, workspaceId: randomUUID(), createdAt: now(), directory: root, runtimeHome: home };
   await saveJSON(join(root, 'workspace.json'), config);
   return config;
+  });
 }
 async function records(root, type) {
   const names = (await readdir(join(root, type))).filter(name => /^[a-f0-9]{24}\.json$/.test(name)).sort();
@@ -131,12 +144,29 @@ async function retainedView(value) {
       archiveSha256: plan?.archiveSha256 ?? preparation?.archiveSha256 ?? null };
   } catch (error) { return { ...value, phase: 'UNAVAILABLE', error: asError(error) }; }
 }
-async function jobView(root, id) {
+async function jobView(root, id, observe = null) {
   const directory = jobPath(root, id), request = await readJSON(join(directory, 'request.json'), true);
-  if (!request) return { id, operation: 'prepare request', phase: 'INITIALIZING', displayPhase: 'INITIALIZING', workerActive: false };
-  const state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
-  const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
-  const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
+  if (!request) return { id, operation: 'prepare request', phase: 'INITIALIZING', displayPhase: 'INITIALIZING',
+    workerActive: false, commandActive: false, ...(observe ? {
+      observation: { status: 'CURRENT', source: 'RETAINED', checkedAt: now() } } : {}) };
+  let state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
+  let activity;
+  if (observe) {
+    activity = await observe(state, join(directory, 'worker.lock'));
+    // A probe may finish after the original worker wrote its terminal result.
+    // Reopen that same state before presenting a running/interrupted observation.
+    if (state.phase === 'RUNNING') {
+      const current = await readJSON(join(directory, 'state.json'), true);
+      if (current && json(current) !== json(state)) {
+        state = current; activity = await observe(state, join(directory, 'worker.lock'));
+      }
+    }
+  } else {
+    const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
+    activity = { workerActive: active, commandActive: state.phase === 'RUNNING' &&
+      Boolean(state.commandProcess) && (await managedCommandAlive(state) || active) };
+  }
+  const { workerActive: active, commandActive } = activity;
   const outcome = request.operation === 'managed-run' ?
     managedResult(state, await readJSON(join(directory, 'command-result.json'), true)) : {};
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
@@ -151,15 +181,18 @@ async function jobView(root, id) {
     contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
     containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
     deploymentReviewId: request.deploymentReviewId ?? null,
-    ...state, ...outcome, workerActive: active,
-    displayPhase: state.phase === 'RUNNING' && !active && !commandActive ? 'INTERRUPTED' : state.phase };
+    ...state, ...outcome, ...activity,
+    displayPhase: state.phase === 'RUNNING' && active !== true && commandActive !== true
+      ? activity.observation?.status === 'UNAVAILABLE' ? 'OBSERVATION_UNAVAILABLE' : 'INTERRUPTED'
+      : state.phase };
 }
 async function spawnWorker(root, id) {
   const log = await open(join(jobPath(root, id), 'worker.log'),
     constants.O_APPEND | constants.O_CREAT | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
   try {
     const child = spawn(process.execPath, [WORKER, '--workspace', root, '--operation', id],
-      { detached: true, cwd: root, shell: false, stdio: ['ignore', log.fd, log.fd] });
+      { detached: true, cwd: root, shell: false,
+        stdio: ['ignore', log.fd, log.fd, workspaceLeaseDescriptor(root)] });
     await new Promise((done, reject) => { child.once('spawn', done); child.once('error', reject); });
     child.unref();
   } finally { await log.close(); }
@@ -193,12 +226,29 @@ const fields = {
 
 export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} } = {}) {
   const setupPolicy = Object.freeze({ ...openApiSetupPolicy });
-  const { root, config } = await context(directory);
-  await initializeManagedWorkspace(root);
-  await initializeApplications(root);
-  await initializeTransferWorkspace(root);
-  await initializePythonWorkspace(root);
-  await initializeSourceBuildWorkspace(root);
+  const opened = await context(directory), { root, receiving } = opened;
+  let config = opened.config;
+  const workspaceIdentity = config.workspaceId;
+  let initialized = false;
+  async function initialize() {
+    if (initialized) return;
+    await initializeManagedWorkspace(root);
+    await initializeApplications(root);
+    await initializeTransferWorkspace(root);
+    await initializePythonWorkspace(root);
+    await initializeSourceBuildWorkspace(root);
+    initialized = true;
+  }
+  // Opening is read-only. The first lifecycle mutation initializes optional
+  // feature directories under the shared workspace lease.
+  const operationReader = createOperationReader({
+    readJob: (id, observe) => jobView(root, id, observe),
+    workerAlive, managedCommandAlive, operationRunning, projectError: asError,
+  });
+  async function observedOperations(ids = null) {
+    const selected = ids ?? (await readdir(join(root, 'operations'))).filter(name => /^[a-f0-9-]{36}$/.test(name));
+    return new Map((await operationReader.read(selected)).map(job => [job.id, job]));
+  }
   async function inspectPlanHandoff(plan, runtimeId) {
     const id = recordId(runtimeId), build = selectedProductPlanBuild(plan);
     need(build?.archive?.sha256,
@@ -221,6 +271,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   }
   const model = {
     directory: root,
+    ...createWorkspaceBackupAPI(root),
     async sourcePlansState(input) { return sourceProductPlansState(root, input); },
     async sourcePlanRead(input) { return readSourceProductPlan(root, input); },
     async sourcePlanRuntimes(input) {
@@ -262,7 +313,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     },
     async pythonState(input) {
       const selected = await entry(root, recordId(input.runtimeId));
-      return pythonWorkspaceState(root, { ...input, runtimeDirectory: selected.directory });
+      return pythonWorkspaceState(root, { ...input, runtimeDirectory: selected.directory }, await observedOperations());
     },
     async pythonReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
@@ -310,12 +361,17 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     async state({ runtimeId = null } = {}) {
       const [saved, archives, names] = await Promise.all([records(root, 'entries'), records(root, 'archives'), readdir(join(root, 'operations'))]);
       const entries = await Promise.all(saved.map(retainedView));
-      const jobs = await Promise.all(names.filter(name => /^[a-f0-9-]{36}$/.test(name)).map(id => jobView(root, id)));
+      const jobs = await operationReader.read(names.filter(name => /^[a-f0-9-]{36}$/.test(name)));
       jobs.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
       const selected = runtimeId ? entries.find(item => item.id === recordId(runtimeId)) ?? null : entries[0] ?? null;
       const observation = selected ? await readJSON(recordPath(root, 'observations', selected.id), true) : null;
       return { workspaceId: config.workspaceId, directory: root, runtimeHome: config.runtimeHome, archives,
-        runtimes: entries.map(({ profile, preparation, ...value }) => value), selected, observation, operations: jobs };
+        runtimes: entries.map(({ profile, preparation, ...value }) => value), selected, observation, operations: jobs,
+        operationObservation: summarizeOperationObservations(jobs) };
+    },
+    async operationStatus({ operationId: id }) {
+      await privateDirectory(jobPath(root, id));
+      return (await operationReader.read([id]))[0];
     },
     async attach({ directory: target, label }) {
       const checked = await inspectRuntimeInstall({ directory: absolute(target), load: false });
@@ -461,7 +517,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       const plan = await readJSON(join(selected.directory, 'runtime-install.json'));
       const command = await runtimeCommand({ directory: selected.directory, args: ['source'] });
       const activePython = await readJSON(join(selected.directory, 'python-runtime', 'active.json'), true);
-      const python = activePython ? await pythonWorkspaceState(root, { runtimeId, runtimeDirectory: selected.directory }) : null;
+      const python = activePython ? await pythonWorkspaceState(root, { runtimeId, runtimeDirectory: selected.directory }, await observedOperations()) : null;
       return { schema: 'stellar-forge.runtime-deployment-handoff.v1', createdAt: now(),
         installationId: observed.installationId, directory: observed.directory, sourceCommit: observed.sourceCommit,
         packageVersion: observed.packageVersion, profileId: observed.profileId, lockSha256: observed.lockSha256,
@@ -480,14 +536,23 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
           runtimeDirectory: observed.directory, preserveAbsoluteDirectory: true } };
     },
     async logs({ runtimeId, operationId: operation } = {}) {
-      if (operation) return { name: 'worker.log', ...await tailFile(join(jobPath(root, operation), 'worker.log')) };
+      if (operation) {
+        const directory = jobPath(root, operation);
+        await privateDirectory(directory);
+        try { return { name: 'worker.log', available: true, ...await tailFile(join(directory, 'worker.log')) }; }
+        catch (error) {
+          return { name: 'worker.log', available: false,
+            state: error.code === 'ENOENT' ? 'NOT_CREATED' : 'UNAVAILABLE',
+            text: '', totalBytes: 0, offset: 0, error: asError(error) };
+        }
+      }
       const selected = await entry(root, runtimeId), state = await readJSON(join(selected.directory, 'install-state.json'));
       need(typeof state.logFile === 'string' && /^install-\d+(?:-[a-f0-9-]{36})?\.log$/.test(state.logFile),
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
-    async applicationsState(options) { return applicationsState(root, options); },
-    async applicationsHistory(options) { return applicationsHistory(root, options); },
+    async applicationsState(options) { return applicationsState(root, options, await observedOperations()); },
+    async applicationsHistory(options) { return applicationsHistory(root, options, await observedOperations()); },
     async applicationsOpenApiSetup(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return openApiConnectionSetupAction(root, { ...input, runtimeDirectory: selected.directory }, { policy: setupPolicy });
@@ -535,10 +600,10 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       if (current.phase === 'QUEUED') return model.resumeQueued(input.operationId);
       return model.recoverManagedOperation(input.operationId);
     },
-    async applicationsOutput(input) { return applicationOutput(root, input); },
+    async applicationsOutput(input) { return applicationOutput(root, input, await observedOperations([operationId(input.operationId)])); },
     async applicationsWorkbookResult(input) { return workbookApplicationResult(root, input); },
     async applicationsWorkbookDownload(input) { return workbookApplicationDownload(root, input); },
-    async applicationsTerminal(input) { return readApplicationTerminal(root, input); },
+    async applicationsTerminal(input) { return readApplicationTerminal(root, input, await observedOperations([operationId(input.operationId)])); },
     async applicationsInput(input) { return sendApplicationTerminal(root, input); },
     async managedState(options) { return managedState(root, options); },
     async openManagedHome(options) { return openManagedHome(root, options); },
@@ -554,11 +619,27 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     },
     async close() {},
   };
+  // Keep retained inspection available during receiving. All existing lifecycle
+  // methods, including reviews that persist records, share the backup gate.
+  const readMethods = new Set(["sourcePlansState","sourcePlanRead","sourcePlanRuntimes","sourcePlanHandoff","sourcePlanBriefing","sourcePlanReceiving","sourceBuildsState","sourceBuildsReadReview","pythonState","pythonDownload","transfersState","transfersDownload","imagesState","imagesDownload","state","operationStatus","catalog","review","compare","handoff","logs","applicationsState","applicationsHistory","applicationsOutput","applicationsTerminal","managedState","close"]);
+  for (const [name, method] of Object.entries(model)) {
+    if (typeof method !== 'function' || readMethods.has(name) || name.startsWith('workspaceBackup')) continue;
+    model[name] = (...args) => withWorkspaceWrite(root, async () => {
+      const current = await context(root);
+      need(current.config.workspaceId === workspaceIdentity, 'RUNTIME_WORKSPACE_IDENTITY_CHANGED',
+        'Reopen the workspace at its current original identity.', 409);
+      config = current.config;
+      await privateDirectory(config.runtimeHome);
+      await initialize();
+      return method.apply(model, args);
+    });
+  }
   return model;
 }
 
 /** A detached operator worker keeps the original install alive across browser/server restarts. */
 export async function executeRuntimeWorkspaceOperation({ directory, operation: id }) {
+  return withWorkspaceWrite(absolute(directory), async () => {
   const { root } = await context(directory), operationDirectory = jobPath(root, id);
   await privateDirectory(operationDirectory);
   const lease = await operationLease(join(operationDirectory, 'worker.lock'));
@@ -646,4 +727,5 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
       return state;
     }
   } finally { await lease.close(); }
+  });
 }

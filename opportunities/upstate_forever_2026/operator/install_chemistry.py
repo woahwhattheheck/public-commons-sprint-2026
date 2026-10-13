@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Compose the original reach-chemistry component through the native registry."""
+from __future__ import annotations
+
+import argparse
+import ast
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import tempfile
+
+FILES = [
+    "model/chemistry.py",
+    "model/chemistry_cli.py",
+    "model/chemistry_receiving.py",
+    "model/reach_chemistry/__init__.py",
+    "model/reach_chemistry/__main__.py",
+    "model/reach_chemistry/cli.py",
+    "model/reach_chemistry/inference.py",
+    "model/reach_chemistry/io.py",
+    "model/reach_chemistry/model.py",
+    "model/reach_chemistry/service.py",
+    "model/reach_chemistry/solver.py",
+    "operator/chemistry.py",
+    "operator/extensions/chemistry.json",
+    "operator/web/chemistry.mjs",
+    "operator/web/chemistry-native.mjs",
+    "operator/web/chemistry.css",
+    "operator/CHEMISTRY_OPERATOR.md",
+    "CHEMISTRY.md",
+    "requirements-chemistry.txt",
+    "install_chemistry.py",
+    "operator/install_chemistry.py",
+    "integration/reach_chemistry/install_chemistry_legacy.py"
+]
+ORIGINAL_SHA256 = {
+    "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
+    "model/chemistry_cli.py": "4cf3e90a83474842cc4da0773c8d7c22fe1ecca2dc189da7347e52d4cc173cf2",
+    "model/reach_chemistry/__init__.py": "a1c644213e39975b64f2e40485cb64ef14bd1b841d49714a33ce3af3767005c9",
+    "model/reach_chemistry/__main__.py": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
+    "model/reach_chemistry/cli.py": "eb528efb01e30ed01fd166f6b6c271adc9dd5b573efced3f7aaa402f0b00d08c",
+    "model/reach_chemistry/inference.py": "d44b9649541a8841466482810796e20497c8f7ed91ac3686b3be1eb75f668e69",
+    "model/reach_chemistry/io.py": "110bbd797349ffaa46b841e9f36ab87dc984642b2e69469ffc62449c41647cb0",
+    "model/reach_chemistry/model.py": "d8266d41953cc5a0c9469422c4b6baab083b1dae0abfbbf2b6b67bad32a4e14c",
+    "model/reach_chemistry/service.py": "b3980996de0de86680fa8477367868feb7f7bf8641f044bf671fa371a780c58e",
+    "model/reach_chemistry/solver.py": "0523bdf585a92cd727b8c6db3089b35224bdb8adc39b45411526c5874ca5eb37",
+    "operator/chemistry.py": "26021a183b9e4543cd9a5feb11b776d34264ac5508c0239277fd1317f0e0b932",
+    "operator/web/chemistry.mjs": "5332b46bcb08fb5328104fe3182826f584c250979dc59c2d6a07eb1687804588",
+    "operator/web/chemistry.css": "4276c4dca88f4987abc2062cf60ec00121ef97d18d7f9a2a4e247dcc2211aff7",
+    "CHEMISTRY.md": "81ec1c41e221af64148661e0be0f69eb39526920376ba6d010da1b8e2b50f82f",
+    "requirements-chemistry.txt": "794e78e97975a317667c64e1975884140754ff26feb267649b3d4e0249549522",
+    "install_chemistry.py": "0229658125241edcc07b54bcd3a199c2e1f8ad06a85806044e404706052495ba"
+}
+
+
+def install(application, source_root=None, dry_run=False):
+    target = Path(application).resolve(strict=True)
+    source = Path(source_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
+    if not (target / "model/workspace.py").is_file() or not (target / "operator/extension_registry.py").is_file():
+        raise ValueError("Select the maintained scientific application with its original extension registry")
+    lock = target / ".locks/extension-install.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with lock.open("a+") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        pending, preimages = {}, {}
+        for name in FILES:
+            path = source / name
+            if not path.is_file():
+                raise ValueError("Complete reach-chemistry source is missing: " + name)
+            body = path.read_bytes()
+            if name.endswith(".py"):
+                ast.parse(body, filename=name)
+            if name.endswith(".json"):
+                json.loads(body)
+            destination = target / name
+            current = destination.read_bytes() if destination.is_file() else None
+            if (current is not None and current != body
+                    and hashlib.sha256(current).hexdigest() != ORIGINAL_SHA256.get(name)):
+                raise ValueError("Reconcile the independently changed chemistry file: " + name)
+            pending[name], preimages[name] = body, current
+        descriptor = json.loads(pending["operator/extensions/chemistry.json"])
+        if (descriptor.get("schema") != "upstate.operator-extension/v1"
+                or descriptor.get("id") != "chemistry"
+                or descriptor["backend"]["factory"]["name"] != "ChemistryOperations"):
+            raise ValueError("Select the original native chemistry registration")
+        changed = [name for name in FILES if pending[name] != preimages[name]]
+        if not dry_run:
+            with tempfile.TemporaryDirectory(prefix=".chemistry-install-", dir=target.parent) as temporary:
+                stage = Path(temporary)
+                for name in changed:
+                    path = stage / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(pending[name])
+                for name in changed:
+                    destination = target / name
+                    actual = destination.read_bytes() if destination.is_file() else None
+                    if actual != preimages[name]:
+                        raise RuntimeError("Concurrent application change: " + name)
+                committed = []
+                try:
+                    for name in changed:
+                        destination = target / name
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        os.replace(stage / name, destination)
+                        committed.append(name)
+                except BaseException:
+                    for name in reversed(committed):
+                        destination = target / name
+                        previous = preimages[name]
+                        if previous is None:
+                            destination.unlink(missing_ok=True)
+                        else:
+                            with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as saved:
+                                rollback = Path(saved.name)
+                                saved.write(previous)
+                                saved.flush()
+                                os.fsync(saved.fileno())
+                            os.replace(rollback, destination)
+                    raise
+        return {"schema": "upstate.chemistry-native-install/v1", "application": str(target),
+                "dry_run": dry_run, "changed": changed, "files": len(FILES), "view": "chemistry"}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", required=True)
+    parser.add_argument("--source-root")
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+    print(json.dumps(install(args.application, args.source_root, args.dry_run), indent=2))
+
+
+if __name__ == "__main__":
+    main()

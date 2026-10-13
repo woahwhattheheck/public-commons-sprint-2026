@@ -1,7 +1,8 @@
 // MIT. Private retained records for the original runtime operator workspace.
 import { constants } from 'node:fs';
-import { open, mkdir, lstat, realpath, rename, readFile, link, unlink } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { open, mkdir, readdir, lstat, realpath, rename, readFile, link, unlink } from 'node:fs/promises';
+import { dirname, resolve, join, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 
@@ -36,11 +37,26 @@ export async function privateDirectory(value) {
   'RUNTIME_WORKSPACE_PRIVATE_DIRECTORY_REQUIRED', 'Use a private real directory owned by the current operator');
   return path;
 }
+export async function optionalPrivateEntries(path) {
+  try {
+    await privateDirectory(path);
+    return await readdir(path);
+  } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+}
 export async function makePrivate(value) {
   const path = absolute(value);
   need(await realpath(dirname(path)) === dirname(path), 'RUNTIME_WORKSPACE_REAL_PARENT_REQUIRED');
-  await mkdir(path, { mode: 0o700 });
-  return privateDirectory(path);
+  // Preserve exclusive-create semantics without acquiring a lease for the
+  // common ensure-existing-directory read path.
+  try {
+    await lstat(path);
+    throw Object.assign(new Error('Directory already exists: ' + path),
+      { code: 'EEXIST', syscall: 'mkdir', path });
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return withRecordWrite(path, async () => {
+    await mkdir(path, { mode: 0o700 });
+    return privateDirectory(path);
+  });
 }
 export async function regular(path, maximum = 4 * 1024 * 1024) {
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -58,17 +74,31 @@ export async function readJSON(path, optional = false) {
   catch (error) { if (optional && error.code === 'ENOENT') return null; throw error; }
 }
 export async function saveJSON(path, value, replace = false) {
+  return withRecordWrite(path, () => saveJSONUnlocked(path, value, replace));
+}
+async function saveJSONUnlocked(path, value, replace) {
   const temporary = path + '.pending-' + randomUUID();
-  const handle = await open(temporary, 'wx', 0o600);
-  try { await handle.writeFile(json(value)); await handle.sync(); }
-  finally { await handle.close(); }
-  if (replace) await rename(temporary, path);
-  else {
-    try { await link(temporary, path); }
-    finally { await unlink(temporary); }
+  let handle = null, created = false;
+  try {
+    handle = await open(temporary, 'wx', 0o600); created = true;
+    await handle.writeFile(json(value)); await handle.sync();
+    await handle.close(); handle = null;
+    if (replace) await rename(temporary, path);
+    else await link(temporary, path);
+  } finally {
+    try { if (handle) await handle.close(); }
+    finally {
+      if (created) {
+        try {
+          try { await unlink(temporary); }
+          catch (error) { if (error.code !== 'ENOENT') throw error; }
+        } finally {
+          const parent = await open(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY);
+          try { await parent.sync(); } finally { await parent.close(); }
+        }
+      }
+    }
   }
-  const parent = await open(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY);
-  try { await parent.sync(); } finally { await parent.close(); }
 }
 export async function processIdentity(pid = process.pid) {
   try {
@@ -111,7 +141,7 @@ export async function workerAlive(state) {
   return Number.isInteger(state?.pid) && typeof state?.processStart === 'string' &&
     await processIdentity(state.pid) === state.processStart;
 }
-async function runFlock(fileDescriptor) {
+async function runFlock(fileDescriptor, shared = false) {
   const started = Date.now();
   return new Promise(resolve => {
     let child, error = null, stderr = Buffer.alloc(0), stderrTruncated = false;
@@ -127,7 +157,7 @@ async function runFlock(fileDescriptor) {
         stderr: stderr.toString('utf8'), stderrTruncated, elapsedMs: Date.now() - started });
     };
     try {
-      child = spawn('flock', ['--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
+      child = spawn('flock', [shared ? '--shared' : '--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
         { stdio: ['ignore', 'ignore', 'pipe', fileDescriptor] });
     } catch (failure) {
       error = failure; finish(null, null); return;
@@ -155,7 +185,7 @@ async function runFlock(fileDescriptor) {
 /** Preserve only the original bounded flock receipt in public/private error projections. */
 export function runtimeWorkspaceError(error, fallbackCode = 'RUNTIME_WORKSPACE_ERROR', messageLimit = 2000) {
   const result = { code: error.code ?? fallbackCode, message: String(error.message ?? error).slice(0, messageLimit) };
-  if (!['RUNTIME_WORKSPACE_OPERATION_RUNNING', 'RUNTIME_WORKSPACE_FLOCK_UNAVAILABLE'].includes(result.code)) return result;
+  if (!['RUNTIME_WORKSPACE_OPERATION_RUNNING', 'RUNTIME_WORKSPACE_FLOCK_UNAVAILABLE', 'RUNTIME_WORKSPACE_BACKUP_BUSY'].includes(result.code)) return result;
   try {
     const attempts = error.flock?.attempts;
     const nullableText = (value, maximum) => value === null || typeof value === 'string' && value.length <= maximum;
@@ -181,18 +211,30 @@ export function runtimeWorkspaceError(error, fallbackCode = 'RUNTIME_WORKSPACE_E
 }
 
 export async function operationLease(path) {
-  const handle = await open(path, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
+  // Even a status probe may create its empty worker inode. Join the workspace
+  // gate for that acquisition; its existing operation lease remains authoritative.
+  try { return await fileLease(path, { create: false }); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return withRecordWrite(path, () => fileLease(path), { allowReceiving: true });
+}
+async function fileLease(path, { shared = false, workspace = false, create = true } = {}) {
+  const handle = await open(path, constants.O_RDWR | constants.O_NOFOLLOW |
+    (create ? constants.O_CREAT : 0), 0o600);
   try {
-    const info = await handle.stat();
-    need(info.isFile() && info.nlink === 1 && !(info.mode & 0o077), 'RUNTIME_WORKSPACE_LEASE_INVALID');
+    const info = await handle.stat(), named = await lstat(path);
+    need(info.isFile() && info.nlink === 1 && !(info.mode & 0o077) &&
+      info.dev === named.dev && info.ino === named.ino &&
+      (process.getuid === undefined || info.uid === process.getuid()), 'RUNTIME_WORKSPACE_LEASE_INVALID');
     const attempts = [];
     for (let attempt = 0; attempt < 2; attempt++) {
-      const result = await runFlock(handle.fd);
+      const result = await runFlock(handle.fd, shared);
       attempts.push(result);
       if (!result.error && result.status === 0) return handle;
       if (result.status === 75) {
-        throw Object.assign(new Error('RUNTIME_WORKSPACE_OPERATION_RUNNING'), {
-          code: 'RUNTIME_WORKSPACE_OPERATION_RUNNING', status: 400, flock: { attempts },
+        throw Object.assign(new Error(workspace ?
+          'A workspace write or backup is active; reopen its retained operation before retrying.' : 'RUNTIME_WORKSPACE_OPERATION_RUNNING'), {
+          code: workspace ? 'RUNTIME_WORKSPACE_BACKUP_BUSY' : 'RUNTIME_WORKSPACE_OPERATION_RUNNING',
+          status: workspace ? 409 : 400, flock: { attempts },
         });
       }
       const transient = result.timedOut || ['EAGAIN', 'EINTR', 'ENOMEM'].includes(result.error?.code);
@@ -222,4 +264,103 @@ export async function tailFile(path, maximum = 65536) {
     const read = await handle.read(bytes, 0, bytes.length, start);
     return { text: bytes.subarray(0, read.bytesRead).toString('utf8'), totalBytes: info.size, offset: start };
   } finally { await handle.close(); }
+}
+
+
+// Each original writer holds a shared flock for its complete mutation. A cold
+// snapshot or receiving transaction takes the same inode exclusively. Nested
+// model calls reuse that open-file description; siblings keep separate leases.
+const workspaceLeases = new AsyncLocalStorage();
+const RECEIVING_SCHEMA = 'stellar-forge.runtime-workspace-receiving.v1';
+const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+const HASH = /^[a-f0-9]{64}$/;
+export async function workspaceReceivingState(directory) {
+  const root = absolute(directory);
+  const marker = await readJSON(join(root, '.workspace-backup-receiving.json'), true);
+  if (!marker) return null;
+  const config = await readJSON(join(root, 'workspace.json'), true);
+  need(plain(marker) && marker.schema === RECEIVING_SCHEMA && marker.directory === root &&
+    UUID.test(marker.workspaceId ?? '') && UUID.test(marker.receivingId ?? '') &&
+    marker.operationId === marker.receivingId &&
+    HASH.test(marker.archiveId ?? '') && marker.archiveId === marker.archiveSha256 &&
+    HASH.test(marker.manifestSha256 ?? '') && marker.launchesStarted === 0 &&
+    (marker.phase !== 'BINDINGS_REVIEWED' || plain(marker.bindingReview) &&
+      UUID.test(marker.bindingReview.reviewId ?? '') && HASH.test(marker.bindingReview.reviewSha256 ?? '')) &&
+    ['RESTORING', 'BINDINGS_REVIEW_REQUIRED', 'BINDINGS_REVIEWED'].includes(marker.phase) &&
+    (config ? config.schema === 'stellar-forge.runtime-workspace.v1' &&
+      config.workspaceId === marker.workspaceId && config.directory === root : marker.phase === 'RESTORING'),
+  'RUNTIME_WORKSPACE_RECEIVING_INVALID', 'The retained receiving identity does not match this workspace.', 409);
+  absolute(marker.storageDirectory);
+  return marker;
+}
+async function requireWorkspaceWritable(root) {
+  const marker = await workspaceReceivingState(root);
+  need(!marker || marker.phase === 'BINDINGS_REVIEWED', 'RUNTIME_WORKSPACE_BINDINGS_REVIEW_REQUIRED',
+    'Finish the retained workspace restore and review its original runtime and application bindings before starting work.', 409);
+}
+export function workspaceLeaseDescriptor(directory) {
+  const root = absolute(directory), current = workspaceLeases.getStore()?.get(root);
+  need(current?.active === true, 'RUNTIME_WORKSPACE_WRITE_LEASE_REQUIRED');
+  return current.handle.fd;
+}
+async function withWorkspaceLease(directory, callback, { exclusive = false, allowReceiving = false } = {}) {
+  const root = await privateDirectory(absolute(directory));
+  const inherited = workspaceLeases.getStore(), current = inherited?.get(root);
+  if (current?.active) {
+    need(!exclusive || current.exclusive, 'RUNTIME_WORKSPACE_LEASE_UPGRADE_INVALID',
+      'Start workspace backup outside an existing workspace write.', 409);
+    if (!allowReceiving && !current.exclusive) await requireWorkspaceWritable(root);
+    return callback();
+  }
+  const handle = await fileLease(join(root, '.workspace-backup.lock'),
+    { shared: !exclusive, workspace: true });
+  const held = { handle, exclusive, active: true }, scope = new Map(inherited ?? []);
+  scope.set(root, held);
+  try {
+    return await workspaceLeases.run(scope, async () => {
+      if (!allowReceiving) await requireWorkspaceWritable(root);
+      return callback();
+    });
+  } finally {
+    held.active = false;
+    await handle.close();
+  }
+}
+async function withWorkspaceHierarchy(directory, callback, options) {
+  const root = absolute(directory);
+  const roots = [...new Set([...await recordWorkspaceRoots(join(root, 'workspace.json')), root])]
+    .sort((left, right) => left.length - right.length || left.localeCompare(right));
+  const enter = index => index === roots.length ? callback() :
+    withWorkspaceLease(roots[index], () => enter(index + 1), options);
+  return enter(0);
+}
+export function withWorkspaceWrite(directory, callback, options = {}) {
+  return withWorkspaceHierarchy(directory, callback, { allowReceiving: options.allowReceiving === true });
+}
+export function withWorkspaceBackup(directory, callback) {
+  return withWorkspaceHierarchy(directory, callback, { exclusive: true, allowReceiving: true });
+}
+async function recordWorkspaceRoots(path) {
+  const absolutePath = resolve(path), roots = new Set();
+  // Include containing workspaces as well as a nested workspace. The same
+  // deterministic outer-first order is used by every direct record writer.
+  for (const [root, lease] of workspaceLeases.getStore() ?? []) {
+    if (lease.active && absolutePath.startsWith(root + sep)) roots.add(root);
+  }
+  let directory = dirname(absolutePath);
+  while (true) {
+    const config = await readJSON(join(directory, 'workspace.json'), true);
+    if (config?.schema === 'stellar-forge.runtime-workspace.v1' && config.directory === directory ||
+      await workspaceReceivingState(directory)) roots.add(directory);
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  return [...roots].sort((left, right) => left.length - right.length || left.localeCompare(right));
+}
+async function withRecordWrite(path, callback, options = {}) {
+  const roots = await recordWorkspaceRoots(path);
+  const enter = index => index === roots.length ? callback() :
+    withWorkspaceWrite(roots[index], () => enter(index + 1), options);
+  return enter(0);
 }

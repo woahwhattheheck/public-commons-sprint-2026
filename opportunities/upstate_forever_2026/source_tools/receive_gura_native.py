@@ -157,6 +157,66 @@ def find_archive(root, name):
     return choices[0]
 
 
+def restored_original(receiving, model, record):
+    """Resolve an archived original edition from its exact retained inventory."""
+    from model.common import verify_file
+    spec = ARCHIVES[model]
+    if not isinstance(record, dict) or record.get("model") != model:
+        raise ValueError("Supply --inputs for the original " + model.upper() + " intake")
+    if any(record.get("archive", {}).get(key) != value for key, value in spec.items()):
+        raise ValueError("The retained " + model.upper() + " source has another release identity")
+    prefix = PurePosixPath("original") / model
+    root = (receiving / prefix).resolve(strict=True)
+    if not root.is_relative_to(receiving.resolve()):
+        raise ValueError("The original source directory escapes its received Workspace")
+    inventory = {}
+    entries = record.get("source_files")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("The original source inventory is missing")
+    for descriptor in entries:
+        name = descriptor.get("path")
+        member = PurePosixPath(name) if isinstance(name, str) else None
+        if (member is None or member.is_absolute() or member.as_posix() != name
+                or "\\" in name or "\0" in name or ".." in member.parts
+                or member.parts[:2] != prefix.parts or len(member.parts) < 3
+                or name in inventory):
+            raise ValueError("The original source inventory has an invalid or repeated member")
+        retained = verify_file(receiving, descriptor)
+        if not retained.is_relative_to(root):
+            raise ValueError("The original source member escapes its retained model directory")
+        inventory[name] = retained
+    argument_name = (prefix / spec["arguments"]).as_posix()
+    if argument_name not in inventory:
+        raise ValueError("The retained original argument document is missing")
+    argument_path = inventory[argument_name]
+    source = json.loads(argument_path.read_text(encoding="utf-8-sig"))
+    if (source.get("model_name") != "natcap.invest." + model + "." + model
+            or source.get("invest_version") != record.get("embedded_version")
+            or source.get("args") != record.get("original_arguments")):
+        raise ValueError("The retained original argument document changed")
+    arguments = source["args"]
+    if any(arguments.get(key) != value for key, value in EXPECTED[model].items()):
+        raise ValueError("The retained original model settings differ from the release")
+    absolute = dict(arguments)
+    for key, token in arguments.items():
+        if key.endswith("_path") and token:
+            path = (argument_path.parent / token).resolve(strict=True)
+            if not path.is_relative_to(root):
+                raise ValueError("The original model argument escapes its retained source")
+            name = path.relative_to(receiving.resolve()).as_posix()
+            if name not in inventory or inventory[name] != path:
+                raise ValueError("The original model input is absent from its verified inventory: " + key)
+            absolute[key] = str(path)
+    # Keep the producing machine's original locations as source provenance.
+    provenance = record.get("original_locations") or {
+        key: record[key] for key in ("argument_path", "absolute_arguments", "readme_paths")
+        if key in record}
+    return {**record, "argument_path": str(argument_path),
+            "absolute_arguments": absolute, "original_locations": provenance,
+            "readme_paths": [str(path) for name, path in sorted(inventory.items())
+                             if "README" in Path(name).name.upper()]}
+
+
 def unpack_original(inputs, receiving, model):
     spec = ARCHIVES[model]
     archive = find_archive(inputs, spec["name"])
@@ -368,7 +428,20 @@ def joined_table(receiving, originals, active):
         "lucodes": sorted(common), "source_coverage": "Workspace verifies every actual land-cover class",
         "output": artifact(path, receiving),
     }
-    atomic(path.with_suffix(".provenance.json"), derivation)
+    provenance_path = path.with_suffix(".provenance.json")
+    if provenance_path.exists():
+        retained = json.loads(provenance_path.read_text(encoding="utf-8"))
+        # Source paths describe the original producing location. A received
+        # Workspace keeps that provenance and compares the actual source bytes.
+        def scientific_identity(value):
+            return {**value, "input_tables": {
+                model: {key: item for key, item in table.items() if key != "path"}
+                for model, table in value["input_tables"].items()}}
+        if scientific_identity(retained) != scientific_identity(derivation):
+            raise ValueError("Retained biophysical provenance differs from the original source join")
+        derivation = retained
+    else:
+        atomic(provenance_path, derivation)
     return path, derivation
 
 
@@ -517,15 +590,55 @@ def retained_native_export(receiving, record, model, pollutant):
     return verify_file(receiving, descriptor), descriptor
 
 
-def native_reference(receiving, original, module, metadata, progress, checkpoint):
-    model = original["model"]
-    cohort = native_cohort(metadata, model)
-    identity = hashlib.sha256(canonical({
-        "archive_sha256": original["archive"]["sha256"], "runtime": cohort,
+def original_native_identity(original, metadata):
+    return hashlib.sha256(canonical({
+        "archive_sha256": original["archive"]["sha256"],
+        "runtime": native_cohort(metadata, original["model"]),
         "original_arguments": original["original_arguments"],
         "configuration": {"n_workers": -1,
                           "flow_dir_algorithm": str(original["original_arguments"]["flow_dir_algorithm"]).lower()},
     })).hexdigest()
+
+
+def completed_native_reference(receiving, original, progress):
+    """Verify an existing result without importing or executing the native engine."""
+    from model.common import INVEST_SOURCE, verify_file
+    model = original["model"]
+    record = progress.get("native_original", {}).get(model, {})
+    if record.get("state") != "complete":
+        return None
+    metadata = record.get("runtime", {})
+    names = ("ndr", "sdr") if model == "ndr" else ("sdr",)
+    if (metadata.get("version") != RELEASE or any(
+            metadata.get("modules", {}).get(name, {}).get("git_blob") != INVEST_SOURCE[name + "_blob"]
+            for name in names)):
+        raise ValueError("The completed original result has another native source edition")
+    key = original_native_identity(original, metadata)
+    if record.get("selection_id") != key:
+        return None
+    prefix = PurePosixPath("native-original") / model / key
+    seen = set()
+    for descriptor in record.get("outputs", []):
+        name = descriptor.get("path")
+        path = PurePosixPath(name) if isinstance(name, str) else None
+        if (path is None or path.is_absolute() or path.as_posix() != name
+                or "\\" in name or "\0" in name or ".." in path.parts
+                or path.parts[:3] != prefix.parts or len(path.parts) < 4
+                or name in seen):
+            raise ValueError("The completed native output inventory changed")
+        seen.add(name)
+        verify_file(receiving, descriptor)
+    for pollutant, _, _ in OUTPUTS[model]:
+        retained_native_export(receiving, record, model, pollutant)
+    emit("native-original-reused", model=model, path=str(receiving / prefix),
+         runtime=record["runtime"], execution="verified retained completed result")
+    return record
+
+
+def native_reference(receiving, original, module, metadata, progress, checkpoint):
+    model = original["model"]
+    cohort = native_cohort(metadata, model)
+    identity = original_native_identity(original, metadata)
     root = receiving / "native-original" / model / identity
     root.mkdir(parents=True, exist_ok=True)
     args = dict(original["absolute_arguments"])
@@ -664,6 +777,8 @@ def workspace_baseline(workspace, receiving, originals, active, progress, checkp
         original = originals[model]["original_arguments"]
         parameters = {key: original[key] for key in ARGUMENT_KEYS[model]}
         parameters["flow_dir_algorithm"] = str(parameters["flow_dir_algorithm"]).lower()
+        if model == "ndr" and original.get("runoff_proxy_av"):
+            parameters["runoff_proxy_av"] = original["runoff_proxy_av"]
         profile_value[model] = parameters
     profile = workspace.save_profile(profile_value)
     scenario_value = {
@@ -723,79 +838,245 @@ def workspace_baseline(workspace, receiving, originals, active, progress, checkp
     return run
 
 
+def comparison_setup(workspace, receiving, run, progress, model):
+    """Describe the scientific settings actually executed by the compared stages."""
+    from model.common import verify_file
+    stage = run.get("stages", {}).get(model, {})
+    descriptor = stage.get("arguments")
+    executed = json.loads(verify_file(workspace.root / "runs" / run["id"], descriptor).read_text(
+        encoding="utf-8")) if descriptor else None
+    original = progress["native_original"][model].get("arguments", {})
+    fields = list(ARGUMENT_KEYS[model])
+    fields += ["calc_n", "calc_p", "runoff_proxy_av"] if model == "ndr" else ["drainage_path"]
+
+    def parameter(name, value):
+        if name == "flow_dir_algorithm":
+            return str(value).lower() if value is not None else None
+        if name == "runoff_proxy_av" and not value:
+            return None
+        if name == "drainage_path":
+            return value or None
+        if name in ("calc_n", "calc_p"):
+            return value
+        if value is None:
+            return None
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("A retained native comparison parameter is nonfinite: " + name)
+        return number
+
+    values = {
+        name: {"reference": parameter(name, original.get(name)),
+               "workspace": parameter(name, executed.get(name)) if executed is not None else None}
+        for name in fields}
+    matching = executed is not None and all(row["reference"] == row["workspace"]
+                                             for row in values.values())
+    grid = workspace.get_grid(run["selection"]["grid_id"])
+    scenario = workspace._get("scenarios", run["selection"]["scenario_id"])
+    baseline = progress.get("workspace_baseline") or {}
+    original_selection = all(baseline.get(name) == run["selection"].get(name)
+                             for name in ("grid_id", "profile_id", "scenario_id"))
+    original_selection = original_selection and baseline.get("run_id") == run["id"]
+    required = set(INPUTS[model])
+    source_cells = baseline.get("prepared_source_cells", {})
+    source_check = original_selection and required <= set(source_cells)
+    same_reporting_domain = grid["spec"]["model_domain"] == grid["spec"]["reporting_area"]
+    zero_buffer = float(grid["spec"]["upstream_buffer_m"]) == 0
+    baseline_landcover = scenario.get("kind") == "baseline" and not scenario.get("patches")
+    return {
+        "profile_id": run["selection"]["profile_id"], "grid_id": grid["id"],
+        "scenario_id": scenario["id"], "parameter_values": values,
+        "parameters_match": matching, "workspace_stage_arguments": descriptor,
+        "original_workspace_selection_matches": original_selection,
+        "prepared_source_cells_recorded": source_check,
+        "prepared_source_cells": {key: source_cells[key] for key in sorted(required & set(source_cells))},
+        "model_domain": grid["spec"]["model_domain"],
+        "reporting_area": grid["spec"]["reporting_area"],
+        "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
+        "same_reporting_and_routing_selection": same_reporting_domain,
+        "original_zero_buffer": zero_buffer,
+        "original_landcover_baseline": baseline_landcover,
+        "original_setup_matches": all((matching, source_check, same_reporting_domain,
+                                       zero_buffer, baseline_landcover)),
+    }
+
+
 def comparison_summary(workspace, receiving, run, progress):
-    """Measure native-reference agreement on the actual common retained cells."""
+    """Compare complete native support, with mass encoding separated from model differences."""
     import numpy as np
     import rasterio
     from rasterio.windows import Window
+    from model.common import verify_file
+    from model.raster_stats import raster_windows
+    from model.rasters import MASS_UNITS, RATE_UNITS
+
     result = {}
     run_root = workspace.root / "runs" / run["id"]
     for model, original in progress.get("native_original", {}).items():
         if original.get("state") != "complete":
             continue
+        setup = comparison_setup(workspace, receiving, run, progress, model)
         for pollutant, native in original["exports"].items():
-            item = run.get("artifacts", {}).get(pollutant + "_export")
+            key = pollutant + "_export"
+            item = run.get("artifacts", {}).get(key)
             if item is None:
                 continue
             source, source_descriptor = retained_native_export(receiving, original, model, pollutant)
-            output = run_root / item["path"]
+            output = verify_file(run_root, item)
+            units = dict((name, units) for name, _, units in OUTPUTS[model])[pollutant]
+            if native.get("annual_mass_units") != units or item.get("units") != MASS_UNITS[key]:
+                raise ValueError("Native comparison requires the recorded annual mass units")
             with rasterio.open(source) as a, rasterio.open(output) as b:
-                if a.crs != b.crs:
-                    raise ValueError("Native/workspace export coordinate systems differ")
                 ta, tb = a.transform, b.transform
-                if (ta.b or ta.d or tb.b or tb.d
+                if (a.count != 1 or b.count != 1 or not a.crs or a.crs != b.crs
+                        or not a.crs.is_projected
+                        or str(a.crs.linear_units).lower() not in ("metre", "meter", "metres", "meters")
+                        or not all(math.isfinite(x) for x in list(ta)[:6] + list(tb)[:6])
+                        or ta.b or ta.d or tb.b or tb.d or ta.a <= 0 or tb.a <= 0
+                        or ta.e >= 0 or tb.e >= 0
                         or not math.isclose(ta.a, tb.a, rel_tol=0, abs_tol=1e-8)
                         or not math.isclose(ta.e, tb.e, rel_tol=0, abs_tol=1e-8)):
-                    raise ValueError("Native/workspace export cell sizes differ")
-                dx = (tb.c - ta.c) / ta.a
-                dy = (tb.f - ta.f) / ta.e
+                    raise ValueError("Native/workspace exports require the same finite projected metre lattice")
+                if b.dtypes[0] not in ("float32", "float64"):
+                    raise ValueError("Workspace annual mass must retain its floating-point encoding")
+                if (b.tags().get("units") != MASS_UNITS[key]
+                        or b.tags().get("native_units") != RATE_UNITS[key]):
+                    raise ValueError("Workspace raster unit tags differ from its annual mass conversion")
+                dx, dy = (tb.c - ta.c) / ta.a, (tb.f - ta.f) / ta.e
                 if (not math.isclose(dx, round(dx), rel_tol=0, abs_tol=1e-7)
-                        or not math.isclose(dy, round(dy), rel_tol=0, abs_tol=1e-7)):
-                    raise ValueError("Native/workspace export cell centers shifted")
+                        or not math.isclose(dy, round(dy), rel_tol=0, abs_tol=1e-7)
+                        or abs((tb.a - ta.a) / ta.a) * max(a.width, b.width) > 1e-7
+                        or abs((tb.e - ta.e) / ta.e) * max(a.height, b.height) > 1e-7):
+                    raise ValueError("Native/workspace export cell centers differ across their extents")
+                dx, dy = int(round(dx)), int(round(dy))
                 factor = abs(ta.a * ta.e - ta.b * ta.d) / 10000
-                count = native_only = workspace_only = 0
+                if (not math.isfinite(factor) or factor <= 0
+                        or not math.isclose(float(item["pixel_area_ha"]), factor,
+                                            rel_tol=0, abs_tol=1e-12)):
+                    raise ValueError("Workspace mass conversion uses another native cell area")
+
+                # Inspect the entire original raster, including cells outside
+                # the Workspace extent that a paired-window scan cannot see.
+                native_valid_count = outside_count = 0
+                native_full_mass = outside_mass = 0.0
+                for window in raster_windows(a):
+                    data = a.read(1, window=window, masked=True)
+                    mass = data.data.astype("float64") * factor
+                    valid = ~np.ma.getmaskarray(data) & np.isfinite(mass)
+                    rows = np.arange(int(window.row_off), int(window.row_off + window.height))
+                    cols = np.arange(int(window.col_off), int(window.col_off + window.width))
+                    inside = ((rows >= dy) & (rows < dy + b.height))[:, None] & (
+                              (cols >= dx) & (cols < dx + b.width))[None, :]
+                    outside = valid & ~inside
+                    native_valid_count += int(valid.sum())
+                    outside_count += int(outside.sum())
+                    native_full_mass += float(mass[valid].sum(dtype="float64"))
+                    outside_mass += float(mass[outside].sum(dtype="float64"))
+
+                count = native_only = workspace_only = encoded_different = 0
                 total_abs = squared = max_abs = reference_total = workspace_total = 0.0
-                for _, window in b.block_windows(1):
-                    x = a.read(1, window=Window(window.col_off + round(dx),
-                               window.row_off + round(dy), window.width, window.height),
-                               boundless=True, masked=True)
+                encoded_total = encoded_abs = encoded_squared = encoded_max = rounding_max = 0.0
+                native_only_mass = workspace_only_mass = 0.0
+                support = hashlib.sha256(canonical({
+                    "schema": "upstate.gura-common-support/v1", "crs": b.crs.to_wkt(),
+                    "transform": list(tb)[:6], "width": b.width, "height": b.height,
+                    "windows": 512, "mask_encoding": "numpy.packbits C-order, big bit order",
+                }))
+                for window in raster_windows(b):
+                    x = a.read(1, window=Window(window.col_off + dx, window.row_off + dy,
+                               window.width, window.height), boundless=True, masked=True)
                     y = b.read(1, window=window, masked=True)
-                    xv = x.data.astype("float64") * factor
-                    yv = y.data.astype("float64")
+                    xv, yv = x.data.astype("float64") * factor, y.data.astype("float64")
                     valid_x = ~np.ma.getmaskarray(x) & np.isfinite(xv)
                     valid_y = ~np.ma.getmaskarray(y) & np.isfinite(yv)
                     common = valid_x & valid_y
-                    native_only += int((valid_x & ~valid_y).sum())
-                    workspace_only += int((valid_y & ~valid_x).sum())
-                    delta = yv[common] - xv[common]
+                    only_x, only_y = valid_x & ~valid_y, valid_y & ~valid_x
+                    native_only += int(only_x.sum())
+                    workspace_only += int(only_y.sum())
+                    native_only_mass += float(xv[only_x].sum(dtype="float64"))
+                    workspace_only_mass += float(yv[only_y].sum(dtype="float64"))
+                    support.update(canonical([int(window.col_off), int(window.row_off),
+                                              int(window.width), int(window.height)]))
+                    support.update(np.packbits(common, bitorder="big").tobytes())
+                    reference, actual = xv[common], yv[common]
+                    encoded = reference.astype(b.dtypes[0]).astype("float64")
+                    if np.any(~np.isfinite(encoded)):
+                        raise ValueError("Original annual mass exceeds the Workspace encoding range")
+                    delta, encoded_delta = actual - reference, actual - encoded
                     count += int(common.sum())
                     if delta.size:
                         total_abs += float(np.abs(delta).sum(dtype="float64"))
                         squared += float(np.square(delta).sum(dtype="float64"))
                         max_abs = max(max_abs, float(np.max(np.abs(delta))))
-                    reference_total += float(xv[common].sum(dtype="float64"))
-                    workspace_total += float(yv[common].sum(dtype="float64"))
+                        encoded_abs += float(np.abs(encoded_delta).sum(dtype="float64"))
+                        encoded_squared += float(np.square(encoded_delta).sum(dtype="float64"))
+                        encoded_max = max(encoded_max, float(np.max(np.abs(encoded_delta))))
+                        rounding_max = max(rounding_max, float(np.max(np.abs(encoded - reference))))
+                        encoded_different += int(np.count_nonzero(encoded_delta))
+                    reference_total += float(reference.sum(dtype="float64"))
+                    workspace_total += float(actual.sum(dtype="float64"))
+                    encoded_total += float(encoded.sum(dtype="float64"))
+                if native_valid_count != count + native_only + outside_count:
+                    raise ValueError("Native comparison support did not partition its original raster")
                 stage_runtime = run.get("stages", {}).get(model, {}).get("runtime", run.get("runtime"))
                 reference_cohort = native_cohort(original["runtime"], model)
                 application_cohort = native_cohort(stage_runtime, model) if stage_runtime else None
+                same_runtime = reference_cohort == application_cohort
+                same_support = bool(count) and not (native_only or workspace_only or outside_count)
+                same_values = bool(count) and encoded_different == 0
+                reasons = []
+                if not count:
+                    reasons.append("no common valid cells")
+                if not same_support:
+                    reasons.append("different complete valid-cell support")
+                if not same_runtime:
+                    reasons.append("different native runtime cohorts")
+                if not setup["original_setup_matches"]:
+                    reasons.append("different or unavailable original scientific setup")
+                if count and not same_values:
+                    reasons.append("cell values differ after the retained mass encoding")
                 result[pollutant] = {
-                    "units": native["annual_mass_units"], "common_cells": count,
+                    "units": units, "common_cells": count,
                     "native_reference_selection_id": original["selection_id"],
                     "native_reference_artifact": source_descriptor,
                     "native_reference_artifact_root": "gura-receiving",
-                    "workspace_run_id": run["id"],
-                    "runtime_cohort_matches": reference_cohort == application_cohort,
+                    "workspace_run_id": run["id"], "workspace_artifact": item,
+                    "runtime_cohort_matches": same_runtime,
                     "native_reference_runtime": reference_cohort,
                     "workspace_stage_runtime": application_cohort,
+                    "scientific_setup": setup,
                     "native_only_cells_within_workspace_extent": native_only,
+                    "native_only_cells_outside_workspace_extent": outside_count,
                     "workspace_only_cells": workspace_only,
+                    "native_valid_cells_full_extent": native_valid_count,
+                    "workspace_valid_cells_full_extent": count + workspace_only,
+                    "same_complete_valid_support": same_support,
+                    "common_support_sha256": support.hexdigest(),
+                    "native_mass_full_extent": native_full_mass,
+                    "workspace_mass_full_extent": workspace_total + workspace_only_mass,
+                    "native_mass_outside_workspace_extent": outside_mass,
+                    "native_only_mass_within_workspace_extent": native_only_mass,
+                    "workspace_only_mass": workspace_only_mass,
                     "native_mass_common_cells": reference_total,
                     "workspace_mass_common_cells": workspace_total,
                     "workspace_minus_native_mass_common_cells": workspace_total - reference_total,
                     "maximum_absolute_cell_difference": max_abs if count else None,
                     "mean_absolute_cell_difference": total_abs / count if count else None,
                     "root_mean_square_cell_difference": math.sqrt(squared / count) if count else None,
+                    "workspace_mass_encoding": b.dtypes[0],
+                    "pixel_area_ha": factor,
+                    "native_mass_after_workspace_encoding_common_cells": encoded_total,
+                    "workspace_minus_encoded_native_mass_common_cells": workspace_total - encoded_total,
+                    "different_cells_after_mass_encoding": encoded_different,
+                    "maximum_absolute_difference_after_mass_encoding": encoded_max if count else None,
+                    "mean_absolute_difference_after_mass_encoding": encoded_abs / count if count else None,
+                    "root_mean_square_difference_after_mass_encoding":
+                        math.sqrt(encoded_squared / count) if count else None,
+                    "maximum_reference_mass_encoding_roundoff": rounding_max if count else None,
+                    "agreement": "equal after retained mass encoding" if not reasons else "differences recorded",
+                    "agreement_reasons": reasons,
                     "comparison": "original per-hectare exports converted once versus retained per-cell annual mass",
+                    "encoding_comparison": "The reference annual mass is additionally encoded with the actual Workspace dtype; exact cell differences then separate model changes from that known storage rounding.",
                 }
     return result
 
@@ -804,8 +1085,8 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--application", type=Path, required=True)
     p.add_argument("--workspace", type=Path, required=True)
-    p.add_argument("--inputs", type=Path, required=True,
-                   help="Directory containing the official NDR.zip and/or SDR.zip")
+    p.add_argument("--inputs", type=Path,
+                   help="Official NDR.zip/SDR.zip directory for first intake; omit to reopen verified retained originals")
     p.add_argument("--models", nargs="+", choices=("ndr", "sdr"), default=["ndr", "sdr"])
     p.add_argument("--mode", choices=("native", "workspace", "both"), default="both")
     p.add_argument("--archive", type=Path,
@@ -825,7 +1106,6 @@ def main(argv=None):
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("GDAL_CACHEMAX", "64")
     from model.common import held
-    from model.native import runtime
     from model.workspace import Workspace
     root = args.workspace.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -846,30 +1126,43 @@ def main(argv=None):
                                                           encoding="utf-8"),
                                       logging.StreamHandler(sys.stderr)])
         try:
-            modules, metadata = runtime(active)
-            if metadata["version"] != RELEASE:
-                raise ValueError("The supplied native runtime must be InVEST 3.20.0")
-            state["runtime"] = metadata
             state["python"] = {"executable": sys.executable, "version": sys.version}
             state["request"] = {"mode": args.mode, "models": list(active),
-                                "application": str(application), "inputs": str(args.inputs.resolve())}
+                                "application": str(application),
+                                "inputs": str(args.inputs.resolve()) if args.inputs else None}
             state.pop("error", None)
             checkpoint()
-            emit("native-runtime-ready", python=sys.executable, runtime=metadata)
-            originals = {m: unpack_original(args.inputs, receiving, m) for m in active}
-            for model, original in originals.items():
-                for _, (key, _) in INPUTS[model].items():
-                    raster_identity(original["absolute_arguments"][key])
+            originals = {
+                model: (unpack_original(args.inputs, receiving, model) if args.inputs is not None
+                        else restored_original(receiving, model,
+                                               state.get("original_sources", {}).get(model)))
+                for model in active}
             state["original_sources"] = {**state.get("original_sources", {}), **originals}
             checkpoint()
             workspace = Workspace(root, create=True, title="Gura, Kenya — original InVEST 3.20.0 study")
             state["workspace_id"] = workspace.project["id"]
             checkpoint()
             if args.mode in ("native", "both"):
-                for model in active:
-                    native_reference(receiving, originals[model], modules[model], metadata, state, checkpoint)
+                pending = [model for model in active
+                           if completed_native_reference(receiving, originals[model], state) is None]
+                if pending:
+                    for model in pending:
+                        for _, (key, _) in INPUTS[model].items():
+                            raster_identity(originals[model]["absolute_arguments"][key])
+                    from model.native import runtime
+                    modules, metadata = runtime(pending)
+                    if metadata["version"] != RELEASE:
+                        raise ValueError("The supplied native runtime must be InVEST 3.20.0")
+                    state["runtime"] = metadata
+                    checkpoint()
+                    emit("native-runtime-ready", python=sys.executable, runtime=metadata)
+                    for model in pending:
+                        native_reference(receiving, originals[model], modules[model], metadata, state, checkpoint)
             run = None
             if args.mode in ("workspace", "both"):
+                for model in active:
+                    for _, (key, _) in INPUTS[model].items():
+                        raster_identity(originals[model]["absolute_arguments"][key])
                 run = workspace_baseline(workspace, receiving, originals, active, state, checkpoint)
                 comparisons = comparison_summary(workspace, receiving, run, state)
                 if comparisons:

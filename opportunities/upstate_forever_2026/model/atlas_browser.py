@@ -159,7 +159,7 @@ def _sheet(row, atlas, included):
             _details("Original PDF file", row["file"]) + "</article>")
 
 
-def _members(manifest):
+def _members(manifest, browser_path=BROWSER_PATH):
     members = {}
     def add(path, role):
         path = _path(path)
@@ -172,11 +172,11 @@ def _members(manifest):
     add(manifest["report_pdf"], "Scientific report")
     for path in manifest.get("project_assets", []):
         add(path, "Project asset")
-    members.pop(BROWSER_PATH, None)
+    members.pop(browser_path, None)
     return members
 
 
-def render(state, manifest):
+def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="delivery.json"):
     """Render only paths selected for the original packager, without network IO."""
     atlas = state.get("atlas")
     if not isinstance(atlas, dict) or atlas.get("schema") != "upstate.map-atlas/v1":
@@ -184,7 +184,10 @@ def render(state, manifest):
     pages = atlas["pages"]
     if not pages or len(pages) != atlas["map_count"]:
         raise ValueError("Atlas browser needs the complete ordered sheet index")
-    members = _members(manifest)
+    browser_path, manifest_path = _path(browser_path), _path(manifest_path)
+    if len(PurePosixPath(browser_path).parts) != 2:
+        raise ValueError("Atlas browser must remain one directory below its delivery root")
+    members = _members(manifest, browser_path)
     for path in (atlas["file"]["path"], "maps/atlas-index.json", "maps/atlas-index.csv",
                  "maps/source-context.json"):
         if path not in members:
@@ -231,7 +234,8 @@ def render(state, manifest):
             '</p><div class="actions">' + _link(atlas["file"]["path"], "Open complete atlas") +
             _link(atlas["file"]["path"], "Download atlas PDF", download=True) +
             _link(manifest["report_pdf"], "Open scientific report") +
-            _link("delivery.json", "Download delivery manifest", download=True) +
+            _link(manifest_path, "Download delivery inventory" if manifest_path != "delivery.json"
+                  else "Download delivery manifest", download=True) +
             '</div></header><main><section aria-labelledby="edition"><h2 id="edition">This atlas edition</h2>'
             '<div class="grid">' + _field("Delivery ID", state["id"]) +
             _field("Baseline run", atlas["baseline_run_id"]) + _field("Original grid", atlas["grid_id"]) +
@@ -269,12 +273,17 @@ def render(state, manifest):
 
 
 def write(directory, state, manifest):
-    """Add the offline browser to the same captured artifact list and file state."""
+    """Add a stable offline browser to the captured artifact list and file state."""
     directory = Path(directory)
     target = directory / BROWSER_PATH
-    atomic_bytes(target, render(state, manifest).encode("utf-8"))
-    state["files"][BROWSER_KEY] = describe_file(directory, target, title="Offline map atlas browser")
     assets = manifest.setdefault("project_assets", [])
     if BROWSER_PATH not in assets:
         assets.append(BROWSER_PATH)
+    # Include this page in the index on the first render, but never its own
+    # previous checksum: self-reference would alter every resumed capture.
+    rendered_state = {**state, "files": {
+        name: item for name, item in state.get("files", {}).items()
+        if name != BROWSER_KEY and item.get("path") != BROWSER_PATH}}
+    atomic_bytes(target, render(rendered_state, manifest).encode("utf-8"))
+    state["files"][BROWSER_KEY] = describe_file(directory, target, title="Offline map atlas browser")
     return state["files"][BROWSER_KEY]

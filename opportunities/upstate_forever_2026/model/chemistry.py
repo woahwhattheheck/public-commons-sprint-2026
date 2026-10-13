@@ -39,7 +39,13 @@ class Chemistry:
             key = (collection, source)
             if key in seen: continue
             seen.add(key)
-            path, entry = self.ws.source_file(collection, source)
+            retained = self.ws._get('sources', identifier(collection))
+            entry = next((item for item in retained['entries'] if item['id'] == source), None)
+            if entry is None:
+                raise ModelError('Choose a source retained in the selected original edition')
+            records = [retained['original_manifest'], entry['body'], *entry.get('companions', [])]
+            for record in records:
+                verify_file(self.ws.root, {**record, 'path':record['object']})
             refs.append({'source_collection_id':collection,'source_id':source,
                          'sha256':entry['body']['sha256'], 'bytes':entry['body']['bytes'],
                          'title':entry['title'],'uri':entry['uri'],'vintage':entry['vintage']})

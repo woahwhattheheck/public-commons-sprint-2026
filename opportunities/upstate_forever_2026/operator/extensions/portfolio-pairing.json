@@ -1,0 +1,48 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "portfolio-pairing",
+  "title": "Portfolio native continuation",
+  "version": "1",
+  "assets": [
+    "portfolio_pairing.mjs",
+    "native_versions.mjs"
+  ],
+  "backend": {
+    "module": "portfolio_pairing",
+    "actions": [
+      "portfolio.baseline.complete"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/portfolios/pairing",
+        "operation": "pairing",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    }
+  }
+}

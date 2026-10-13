@@ -198,6 +198,7 @@ def attach_state(state, delivery_directory, product):
         "artifact_root": directory.relative_to(delivery_directory).as_posix(),
         "normalization": inventory["normalization"], "families": inventory["families"],
         "measurement": inventory["measurement"],
+        "report_sections": report_section(product),
     }
     for name, item in inventory["files"].items():
         state["files"]["receiving_water_" + name] = describe_file(

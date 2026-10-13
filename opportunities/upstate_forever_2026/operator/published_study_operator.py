@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from model.common import describe_file
 from measurement_workspace.source_observations import builtin_companion
+from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
@@ -21,7 +22,7 @@ BUILTIN_DIRECTORIES = {
 # Interactive original reports use an opaque origin and cannot call the operator.
 REPORT_POLICY = ("sandbox allow-scripts allow-downloads allow-modals allow-popups "
                  "allow-popups-to-escape-sandbox; default-src 'none'; "
-                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
+                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
                  "connect-src 'none'; object-src 'none'; base-uri 'none'; "
                  "form-action 'none'; frame-ancestors 'self'")
 
@@ -43,6 +44,8 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == microbial.BUILTIN_ID:
+            return microbial.builtin_companion(self.builtin.parent.parent)
         if builtin_id != BUILTIN_ID:
             directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
             if directory is None:
@@ -263,6 +266,9 @@ class PublishedStudyProvider:
                             "publication": metadata.get("publication"),
                             "counts": metadata.get("content_counts", {}),
                         })
+                microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
+                if microbial_source:
+                    builtin.append(microbial_source)
                 return {
                     **store.list_studies(),
                     "builtin_studies": builtin,
@@ -293,8 +299,12 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
-                    if directory is None or not (self.builtin.parent / directory / "study.json").is_file():
+                    if builtin_id == microbial.BUILTIN_ID:
+                        available = microbial.catalog_entry(self.builtin.parent.parent) is not None
+                    else:
+                        directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
+                        available = directory is not None and (self.builtin.parent / directory / "study.json").is_file()
+                    if not available:
                         self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
                     source, evidence = self._builtin_source(builtin_id)
                 elif isinstance(payload.get("source_json"), str):
@@ -312,13 +322,14 @@ class PublishedStudyProvider:
                 include_context = payload.get("include_installed_context", False)
                 if not isinstance(include_context, bool):
                     self._fail("STUDY_REQUEST", "Choose whether to include the installed study context.")
-                context_manifests = []
-                if include_context and builtin_id is None:
-                    application = self.builtin.parent.parent
-                    context_manifests = [application / name for name in INSTALLED_CONTEXT_PATHS if (application / name).is_file()]
+                context_application = (
+                    self.builtin.parent.parent
+                    if include_context or builtin_id == "scdes-eighteenmile-streams-2020-2025"
+                    else None
+                )
                 result = store.import_source(
                     source, evidence=evidence, operation_id=task["operation_id"],
-                    context_manifests=context_manifests,
+                    context_application=context_application,
                 )
                 record = result["record"]
                 manifest_path = Path(record["source_manifest"]["path"])

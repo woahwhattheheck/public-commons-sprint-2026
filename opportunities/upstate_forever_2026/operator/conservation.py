@@ -99,8 +99,9 @@ class Conservation:
                     for row in existing.get("profiles", []) if isinstance(row, dict)
                 ],
                 "runs": [
-                    {key: run[key] for key in ("id", "title", "state", "selection", "model")
-                     if key in run}
+                    {**{key: run[key] for key in ("id", "title", "state", "selection", "model")
+                        if key in run},
+                     "execution": model._native_execution(run, require_supported=False)}
                     for run in existing.get("runs", []) if isinstance(run, dict)
                 ],
             }
@@ -125,8 +126,10 @@ class Conservation:
         value = self._mapping(task.get("payload"))
         if action == "conservation.sources.capture":
             from source_tools import soil_floodplain_sources
-            selected = (self._identifier(value, "operation_id") if value.get("operation_id")
-                        else self._mapping(value.get("spec", value), "Original source acquisition"))
+            if value.get("operation_id"):
+                return soil_floodplain_sources.continue_capture(
+                    ws, self._identifier(value, "operation_id"), retry_failed=True)
+            selected = self._mapping(value.get("spec", value), "Original source acquisition")
             return soil_floodplain_sources.capture(ws, selected, retry_failed=True)
         if action == "conservation.criteria.prepare":
             from source_tools import parcel_criteria

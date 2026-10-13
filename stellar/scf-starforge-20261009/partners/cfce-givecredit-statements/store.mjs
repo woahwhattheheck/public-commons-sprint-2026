@@ -1,8 +1,11 @@
 // MIT. Native private files and the original Merchant kernel lease retain complete editable work.
 import {randomUUID,createHash} from 'node:crypto';
 import {resolve,join} from 'node:path';
-import {privateDirectory,makePrivate,regular,saveJSON,operationLease} from '../../distribution/runtime-workspace/storage.mjs';
+import {privateDirectory,makePrivate,regular,operationLease} from '../../distribution/runtime-workspace/storage.mjs';
 import {need,copy,validateSourceEdition} from './source.mjs';
+import {writeJSONFile} from './native-json.mjs';
+import {CaptureCheckpointStore} from './checkpoint.mjs';
+const saveJSON=(path,value,replace=false)=>writeJSONFile(path,value,{replace});
 import {newWorkspace,validateWorkspace,mutate,canonical,workspaceOverview,receiveHandover,exportHandover} from './engine.mjs';
 export const MAX_INPUT_BYTES=128*1024*1024;
 export const MAX_WORKSPACE_BYTES=512*1024*1024;
@@ -22,7 +25,7 @@ export async function inspectBinding(directory){
   validateWorkspace(state);return {directory,workspaceId:state.workspaceId};
 }
 export class GiveCreditWorkspace{
-  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.queue=Promise.resolve();this.closed=false;}
+  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.queue=Promise.resolve();this.closed=false;this.captureStores=new Map();}
   static async create(directory,{name='GiveCredit statements',handover}={}){
     directory=resolve(directory);
     try{await makePrivate(directory);}catch(error){if(error.code!=='EEXIST')throw error;await privateDirectory(directory);}
@@ -53,11 +56,17 @@ export class GiveCreditWorkspace{
   async apply(action,value,options={}){return this.serial(()=>this.applyUnlocked(action,value,options));}
   async import(source,label,options={}){return this.apply('import',{source:sealSource(source),label},options);}
   async handover(){return this.serial(()=>exportHandover(this.state));}
-  async saveCapture(kind,checkpoint){need(['registry','ledger'].includes(kind),'CAPTURE_KIND','Choose registry or ledger capture.');await saveJSON(join(this.directory,kind+'-capture.json'),checkpoint,true);}
-  async captureCheckpoint(kind){
+  captureStore(kind){
     need(['registry','ledger'].includes(kind),'CAPTURE_KIND','Choose registry or ledger capture.');
-    try{return await readJSONFile(join(this.directory,kind+'-capture.json'),MAX_WORKSPACE_BYTES);}
-    catch(error){if(error.code==='ENOENT')return undefined;throw error;}
+    if(!this.captureStores.has(kind))this.captureStores.set(kind,CaptureCheckpointStore.open(join(this.directory,kind+'-capture-store'),
+      {legacyPath:join(this.directory,kind+'-capture.json'),expectedKind:kind}));
+    return this.captureStores.get(kind);
   }
-  async close(){if(this.closed)return;await this.queue;this.closed=true;await this.lease.close();}
+  async saveCapture(kind,checkpoint,options={}){return (await this.captureStore(kind)).save(checkpoint,options);}
+  async captureCheckpoint(kind){return (await this.captureStore(kind)).load();}
+  async captureStatus(kind){return (await this.captureStore(kind)).status();}
+  async exportCapture(kind,path){return (await this.captureStore(kind)).export(path);}
+  async importCapture(kind,path){return (await this.captureStore(kind)).importLegacy(path);}
+  async releaseCapture(kind){(await this.captureStore(kind)).releaseMemory();}
+  async close(){if(this.closed)return;this.closed=true;try{await this.queue;const results=await Promise.allSettled([...this.captureStores.values()].map(async pending=>{const capture=await pending;await capture.queue;capture.releaseMemory();}));const failure=results.find(result=>result.status==='rejected');if(failure)throw failure.reason;}finally{await this.lease.close();}}
 }

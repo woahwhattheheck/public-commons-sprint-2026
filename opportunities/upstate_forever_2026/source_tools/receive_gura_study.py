@@ -143,6 +143,23 @@ def main(argv=None):
                                                   - grid["grid"]["transform"][1] * grid["grid"]["transform"][3]) / 10000,
                        upstream_buffer_m=grid["spec"]["upstream_buffer_m"])
 
+            study_context = {
+                "delivery_mode": "native_study",
+                "native_study": {
+                    "title": "Gura watershed, Kenya — original InVEST 3.20.0 sample study",
+                    "purpose": (
+                        "Interpret original annual nitrogen, phosphorus and sediment exports, "
+                        "then compare the explicitly selected restoration alternatives on the "
+                        "retained Gura study grid and watershed domain."
+                    ),
+                    "reference": (
+                        "Official InVEST 3.20.0 NDR and SDR sample archives; original release "
+                        "parameter files, raster inputs, watersheds and biophysical tables "
+                        "are retained in the scientific workspace."
+                    ),
+                },
+            }
+
             source_report_id = args.source_report_id
             economic = {}
             if args.economic_edition_id:
@@ -163,24 +180,12 @@ def main(argv=None):
                     "title": args.title.strip(),
                     "run_ids": [baseline_id, *alternative_ids],
                     "zones": [],
+                    **study_context,
                 })
                 source_report_id = report["id"]
             selection = {
                 "title": args.title.strip(),
-                "delivery_mode": "native_study",
-                "native_study": {
-                    "title": "Gura watershed, Kenya — original InVEST 3.20.0 sample study",
-                    "purpose": (
-                        "Interpret original annual nitrogen, phosphorus and sediment exports, "
-                        "then compare the explicitly selected restoration alternatives on the "
-                        "retained Gura study grid and watershed domain."
-                    ),
-                    "reference": (
-                        "Official InVEST 3.20.0 NDR and SDR sample archives; original release "
-                        "parameter files, raster inputs, watersheds and biophysical tables "
-                        "are retained in the scientific workspace."
-                    ),
-                },
+                **study_context,
                 "baseline_run_id": baseline_id, "scenario_run_ids": alternative_ids,
                 "source_report_id": identifier(source_report_id),
                 "source_roles": {}, "overlays": {},

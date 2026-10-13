@@ -178,8 +178,8 @@ export function createPublishedStudiesDesk(host) {
   function reportLinks(value) {
     const reports = arr(value?.retained_reports);
     if (!reports.length) return "";
-    return '<section class="ps-methods"><h3>Original sampling report</h3><p>Open the retained report to inspect its full observation cohorts, figures, original records and source files. Report filters are independent of the table selection below.</p><ul class="ps-source-list">' +
-      reports.map(report => "<li>" + link(report.url, "Open " + report.path.split("/").pop()) +
+    return '<section class="ps-methods"><h3>Original studies and scientific analyses</h3><p>Open each retained report to inspect its stated observation cohort, sampling dates, figures and source files. Full-study analyses keep their original scope when the tables below are filtered.</p><ul class="ps-source-list">' +
+      reports.map(report => "<li>" + link(report.url, report.path.endsWith("/nutrient-flow-study.html") ? "Open nutrient and gauge-flow study, 2020–2025" : "Open " + report.path.split("/").pop()) +
         " · " + link(report.download?.url + "?download=1", "Download original HTML") +
         '<span class="ps-help">' + Number(report.bytes).toLocaleString() + " bytes</span></li>").join("") +
       "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
@@ -192,7 +192,7 @@ export function createPublishedStudiesDesk(host) {
       let result = link(source?.download?.url, "Retained CSV · row " + row.source_csv_row);
       if (row.original_source_path) {
         const raw = arr(complete?.source_artifacts).find(item => item.path === row.original_source_path);
-        result += "<br>" + link(raw?.download?.url, "Original response · record " + row.original_source_record_index);
+        result += "<br>" + link(raw?.download?.url, "Original response · CSV row " + (Number(row.original_source_record_index) + 2));
       }
       return result;
     }
@@ -305,7 +305,7 @@ export function createPublishedStudiesDesk(host) {
       }
     } else if (tab === "wqp") {
       const dated = context.dated_context || {};
-      output = '<section class="ps-methods"><h2>Original WQP source context</h2><p>' + esc(complete.study.observation_calendar_filters === true ? 'Browse original stream result records by station, characteristic and sampling calendar. Fractions, methods, calculated result labels, detection limits and all original source cells are preserved. Complete unfiltered agency responses remain in the study export.' : 'Browse the complete acquired source year with original projects, fractions, depths, units, limits and activity identifiers. The report comparison uses its separately identified chlorophyll cohort. Station and parameter filters select these source rows.') + '</p></section>';
+      output = '<section class="ps-methods"><h2>Original WQP source context</h2><p>' + esc(complete.study.observation_calendar_filters === true ? 'Browse original agency result records by station, characteristic and sampling calendar. Fractions, methods, calculated result labels, detection limits and all original source cells are preserved. Complete unfiltered agency responses remain in the study export.' : 'Browse the complete acquired source year with original projects, fractions, depths, units, limits and activity identifiers. The report comparison uses its separately identified chlorophyll cohort. Station and parameter filters select these source rows.') + '</p></section>';
       output += table("Source coverage", arr(dated.coverage), [
         ["site_id","Station"],["project_id","Project"],["characteristic","Original characteristic"],
         ["sample_fraction","Fraction"],["reported_unit","Unit"],["record_count","Rows"],
