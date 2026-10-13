@@ -9,7 +9,7 @@
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
   "source_files": 43,
   "installed_files": 38,
-  "source_bytes": 895314,
+  "source_bytes": 906402,
   "parts": [
     {
       "path": "source-01.json",
@@ -20,10 +20,10 @@
     },
     {
       "path": "source-02.json",
-      "bytes": 305313,
-      "sha256": "7acd4a25d4833f2abbb7f1249b9a8f2122e062104725580acb60f6714974c4a7",
+      "bytes": 320410,
+      "sha256": "aa5930b542ef09da2ae0e4e691220b5b59c92bf9e5eeeed06ef39f3ae45f0128",
       "members": 15,
-      "source_bytes": 226496
+      "source_bytes": 237584
     },
     {
       "path": "source-03.json",
@@ -311,17 +311,19 @@
     },
     {
       "path": "source/chemistry-report-receiving/README.md",
-      "bytes": 16996,
-      "sha256": "324a4c950f819c566e7ba98199af78d2fffb2f41feb8ea68ffaa406925bb9583",
+      "bytes": 23122,
+      "sha256": "33496c38d1dd84068b9a760ba9d5246ed2829aecd4bae0557bcc469f5d53bb20",
       "role": "receiving_driver",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "original_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
+      "source_git_blob": "3dee1130faee866a4d62d915ac5ad0b2c8bfba13"
     },
     {
       "path": "source/chemistry-report-receiving/browser.mjs",
-      "bytes": 30695,
-      "sha256": "5935cfc1ca3c2f6c78d2cb13becc63429e8b07c9b6f33f384f799eb7a7549901",
+      "bytes": 35657,
+      "sha256": "0f424261fc0e6978572577b1e9ef726a4284ed587723198ff91bf98b445a8f20",
       "role": "receiving_driver",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "original_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
+      "source_git_blob": "33e98794fa5ee5de58e1f32f19a3a9ef5d77a8e5"
     },
     {
       "path": "source/chemistry-report-receiving/chemistry-source-bank.json",
