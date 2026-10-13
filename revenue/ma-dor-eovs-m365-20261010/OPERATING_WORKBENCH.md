@@ -20,7 +20,7 @@ Each register retains exact textual identity components and explicitly selected 
 
 Expand the Registers working-file panel to download or restore unsubmitted forms and pending original operations. [REGISTER_RECEIVING.md](REGISTER_RECEIVING.md) covers complete CSV/NDJSON exports, readable reports, editable producer/customer returns and the authored seven-register programme.
 
-The header also links to the maintained [financial reporting](FINANCIAL_REPORTING.md) and [property continuity](PROPERTY_CONTINUITY.md) applications. All workflows preserve their original editions in the same SQLite workspace.
+The header also links to the maintained [financial reporting](FINANCIAL_REPORTING.md) and [property continuity](PROPERTY_CONTINUITY.md) applications. The header also opens [CRF reporting and workbook return](CRF_REPORTING.md): six reviewed source families, interim/cumulative annual editions, complete differences, retained finding decisions, actual workbook bindings and complete portable receiving. All workflows preserve their original editions in the same SQLite workspace.
 
 ## Open an operating workspace
 
@@ -145,7 +145,7 @@ The ZIP contains:
 - complete per-reconciliation CSV and NDJSON finding tables, plus machine-readable catalogues;
 - reports/case-review.html, all five case descriptor inventories and complete selected descriptor/row exports for each case edition.
 
-Current deliveries bind all 21 application files under commons.case-migration-application/v1. Complete old 16-file deliveries and preparations already frozen to that roster retain their original application identity. See the portable contract in [CASE_MIGRATION.md](CASE_MIGRATION.md).
+Current deliveries bind all 56 application files under commons.migration-workbench-application/v5. Complete earlier 16-, 21-, 24-, 31-, 39- and 48-file deliveries and preparations already frozen to their respective rosters retain their original application identity. See the portable contract in [CASE_MIGRATION.md](CASE_MIGRATION.md).
 
 The readable report is an offline document and can be printed from a browser. It contains no external scripts, fonts or tracking. The full original decision history remains in SQLite even where a readable recent-history projection is shorter.
 
@@ -213,3 +213,24 @@ https://www.mass.gov/info-details/vendor-digital-accessibility-testing-obligatio
 Native integration should exercise one complete operating journey: actual source intake, mapping review, first-round findings, correction, successor reconciliation, complete publication, separate receiving, later editable change and repeat receiving with that edit preserved. A local product reference journey identifies its data as local_reference; a public source document is public_reference. Neither is presented as a customer migration result.
 
 MIGRATION_CORE.md documents the exact original API, source profiles, normalization and operation semantics. This guide describes how an operator uses the complete workbench.
+
+
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.

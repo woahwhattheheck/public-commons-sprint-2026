@@ -27,10 +27,11 @@ Keep the whole received application, workspace and retained object tree. The ori
 | Review grant-specific source families and independent migration returns | [Grant migration](GRANT_MIGRATION.md) |
 | Build selected financial reports, reconcile exact original totals and record reviews/releases | [Financial reporting](FINANCIAL_REPORTING.md) |
 | Review property, lease and temporal continuity with its original programme | [Property continuity](PROPERTY_CONTINUITY.md) |
+| Review CRF source families, reporting periods, findings and the actual official workbook, then receive the editable reporting workspace | [CRF reporting](CRF_REPORTING.md) |
 | Exact original operation envelope, parsers, pagination, source profiles and snapshot contracts | [Core API](MIGRATION_CORE.md) |
 | Run the complete supplied-case programme, preserve interrupted requests and verify customer/return continuation | [Case receiving](CASE_RECEIVING.md) |
 
-In the browser, retain complete original files in Sources. Then use the existing Rounds, Mappings & evidence, Reconciliation and Corrections views for file evidence, or open Cases & cutover for its six source-to-decision views. Handover & history prepares the entire editable project. Cases and Registers each retain their own complete browser working file, including unsubmitted drafts and original pending requests. The header links open the financial and property workflows in the same project.
+In the browser, retain complete original files in Sources. Then use the existing Rounds, Mappings & evidence, Reconciliation and Corrections views for file evidence, or open Cases & cutover for its six source-to-decision views. Handover & history prepares the entire editable project. Cases and Registers each retain their own complete browser working file, including unsubmitted drafts and original pending requests. The header links open the financial, property and CRF reporting workflows in the same project.
 
 ## Native entry points
 
@@ -44,9 +45,9 @@ The complete CLI also retains source import, original request inspection/resume,
 
 ## Complete handover and source selection
 
-New deliveries contain all 48 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v4. Complete historical 16-, 21-, 24-, 31- and 39-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
+New deliveries contain all 56 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v5. Complete historical 16-, 21-, 24-, 31-, 39- and 48-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
 
-Read reports/review.html, reports/case-review.html and reports/register-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
+Read reports/review.html, reports/case-review.html, reports/register-review.html and reports/crf-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
 
 ## Evidence and execution scope
 
@@ -102,3 +103,8 @@ The repeatable route is: (a) public buyer+live identifier+closing gate, (b) firs
 The DOR COMMBUYS public original page is available; the EOVS official attachment and bid-rights could not be independently accessed here. All claimed detailed security and timing clauses from mirrors require re-checking against the original vendor-accessible DOCX. Source pages are date-sensitive and the status may change.
 
 </details>
+
+
+## Outgoing product inspection
+
+The complete owner-directed rendered-product instruction is retained in [OPERATING_WORKBENCH.md](OPERATING_WORKBENCH.md#standing-lab-rule-inspect-the-rendered-product-before-presenting-it). Read and apply it before presenting the exact outgoing application or its attachments; open the actual product, operate its controls, view its rendered results and reopen its downloads. Include the instruction in delegated operating assignments.
