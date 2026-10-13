@@ -39,6 +39,7 @@ ANALYST_ROOT_FILES = (
     "evidence_cli.py", "evidence-native-receiving.py", "EVIDENCE_RECEIVING.md", "PARCEL_EVIDENCE.md", "AGENTS.md",
     "evidence-native-bootstrap.py", "EVIDENCE_BOOTSTRAP_INPUTS.example.json", "EVIDENCE_BOOTSTRAP.md",
     "evidence-foreground-receiving.mjs", "EVIDENCE_FOREGROUND.md",
+    "address-review-receiving.py", "ADDRESS_REVIEW.md",
     "evidence-browser-receiving.mjs", "evidence-example/bloomington/parcel.json",
     "evidence-example/bloomington/parcel-metadata.json", "evidence-example/bloomington/flood-source-contract.json",
     "evidence-example/bloomington/README.md", "evidence-example/bloomington/flood-source-contract-superseded.json",
@@ -51,7 +52,7 @@ def analyst_source_paths(plugin_root):
     root = plugin_root if (plugin_root / "analyst" / "server.py").is_file() else plugin_root.parent
     paths = {"starforge_stac/analyst_state.py": plugin_root / "analyst_state.py"}
     paths.update({"starforge_stac/" + name: plugin_root / name for name in
-                  ("parcel_evidence.py", "parcel_evidence_operator.py", "parcel_evidence_native.py", "parcel_evidence_reports.py")})
+                  ("parcel_evidence.py", "parcel_evidence_operator.py", "parcel_evidence_native.py", "parcel_evidence_reports.py", "address_review.py")})
     paths.update({"analyst/" + name: root / "analyst" / name for name in ANALYST_MODULES})
     paths.update({name: root / name for name in ANALYST_ROOT_FILES})
     # The native evidence bootstrap reuses the maintained vector producer.
