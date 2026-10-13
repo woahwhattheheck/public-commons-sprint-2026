@@ -10,7 +10,7 @@ import { durableDirectory, exactFile, optionalJson } from "../gdelt/source.mjs";
 import { canonical, sha256 } from "./util.mjs";
 import { readAuditWorkspaceConfiguration, auditHostError } from "./merchant-client.mjs";
 
-function need(value, message) { if (!value) throw auditHostError(message, 409, "HAYSTACK_SETUP_CONFLICT"); }
+function need(value, message) { if (!value) throw auditHostError(message, 409, "AUDIT_SETUP_CONFLICT"); }
 export async function initializeAuditMerchantWorkspace({ directory, connection, name = "Starforge Audit workspaces", releaseStore } = {}) {
   need(typeof directory === "string" && directory && typeof connection === "string" && connection,
     "Supply a new native merchant directory and original private workspace connection configuration.");
