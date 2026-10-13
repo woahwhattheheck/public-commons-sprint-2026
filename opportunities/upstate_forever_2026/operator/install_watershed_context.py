@@ -40,6 +40,8 @@ FILES = (
     "model/utility_watershed_context.py",
     "model/utility_observed_context.py",
     "model/watershed_observation_context.py",
+    "model/watershed_map_context.py",
+    "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
     "source/receptor-topology/20261013/utility-focus-profile.json",
     "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
@@ -48,6 +50,7 @@ FILES = (
     "source_tools/watershed_source_validation.py",
     "operator/watershed_context.py",
     "operator/web/watershed_context.mjs",
+    "operator/web/water_context_map.mjs",
     "operator/web/watershed_context.css",
     "operator/extensions/watershed-context.json",
     "operator/install_watershed_context.py",
@@ -56,6 +59,7 @@ FILES = (
 OPTIONAL = (
     "integration/run_watershed_context_operator.py",
     "integration/component_fragments/watershed-observation-exports.json",
+    "integration/component_fragments/watershed-geographic-selection.json",
     "integration/WATERSHED_CONTEXT_RECEIVING.md",
     "source_tools/receive_watershed_edition.py",
     "source_tools/utility_observed_context.mjs",
@@ -85,6 +89,7 @@ SOURCE_MANIFESTS = (
     "source/water_context/20261013/complete-native-sources.json",
     "utility_observed_context.sources.json",
     "landcover_observation_profiles.sources.json",
+    "observations/watershed_profile_overlay_20261013/model-sources.json",
 )
 
 

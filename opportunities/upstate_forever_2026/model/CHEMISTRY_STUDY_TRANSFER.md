@@ -2,7 +2,7 @@
 
 The selected **Study** transfer now retains the Chemistry history behind an ordered saved Scientific Report. Open the original scientific edition, choose its existing **Transfer editable study** action, review the dependency preview, export, and receive through the original project-transfer controls.
 
-A report made from several sources keeps their original order and each producer's existing dependencies. This Chemistry resolver activates only for a source declared by `native-chemistry-scientific-source-v1`. Original modeled results, fitted coefficients, sampling designs and prior draws remain unchanged.
+A report made from several sources keeps their original order and each producer's existing dependencies. This Chemistry resolver recognizes both `native-chemistry-scientific-source-v1` and `native-chemistry-scientific-source-v2`. Original modeled results, fitted coefficients, sampling designs and prior draws remain unchanged.
 
 ## What travels
 
@@ -20,6 +20,8 @@ The preview shows distinct Chemistry case, run, report and source-edition record
 The separate editable Chemistry ZIP keeps its established project/run format. Selected Study transfer preserves the larger saved-report history described here. Whole-workspace backup continues to retain all workspace collections.
 
 ## Original source identity and foreign reports
+
+Each original source keeps its saved producer edition. The source metadata, typed recipe, captured native identity and immutable source selection must agree on that edition. Version 2 supports the current compound/interval report source; version 1 keeps its original selection, source bytes and lineage receipt. Upgrading the resolver does not regenerate a report, change a saved source identity or relabel a version 1 source as version 2. An unrecognized Chemistry producer edition gives an explicit receiving error instead of silently omitting its editable history.
 
 The resolver verifies the source's complete companion roster against the typed recipe, then reads the captured report, run, case, project, request and result directly from retained content-addressed objects. It checks the original immutable case hash, exact project fingerprint, native run selection, report record hash, source stamp and report artifact manifest.
 
@@ -55,6 +57,8 @@ integration/component_fragments/chemistry_study_transfer.json
 ```
 
 It reads the actual installed `model/study_transfer.py` and `model/scientific_report_study_transfer.py`, composes the Chemistry family declarations and callbacks, parses the full Python postimages, and verifies the current preimages before replacing any file. Existing Monitoring, calibration, receiving-water, native-process, Community, Conservation, Gauge, ensemble, land-cover and other producer joins remain in those same files. Repeating the installer verifies and reuses the existing Chemistry joins.
+
+The same matching installer also accepts `--source-bank CURRENT_CHEMISTRY_SOURCE_BANK.json`. Supplied members retain their complete byte/mode checks, omitted required members come from the actual installed application under its original lock, and current shared Study source remains the receiving preimage. Keep the current helper, installer and `COMPOUND_SOURCE.json` together; their exact source identities are recorded by the complete source packet.
 
 The component fragment adds the same original helper to both Chemistry and Study-transfer source inventories. It adds no reverse component dependency or alternate shared dispatcher.
 
@@ -102,3 +106,9 @@ Reopen the same scientific edition, original Chemistry report and native run in 
 The helper imports only `model.common` and the Python standard library. Reading a completed Study does not import the Chemistry solver, run a model or render a new report.
 
 `source_tools.chemistry_study_composition.compose(sources)` returns complete postimages for the two currently installed shared modules. It uses their actual syntax tree to locate declarations and function boundaries, preserves peer callbacks, and rejects partial or ambiguous prior Chemistry joins. The shared transfer owner may apply the same declared callbacks directly; the installer recognizes the exact maintained composition emitted by this helper.
+
+## Inspect the complete received product
+
+Run the maintained `source/chemistry-report-receiving/browser.mjs` course against the original completed Chemistry results. Its current sources use edition v2, so the selected Study must retain the original Chemistry case, run, scientific report and source record in addition to the report's captured companions. On the received Workspace, open the exact original saved report, typed source and native result, then reopen the ordered Scientific Report. Existing v1 report sources must follow the same receiving route with their original IDs and receipt values.
+
+The producing peer opens and LOOKS at the actual populated desktop and 390-pixel views, operates the important source/report/download controls, opens the downloaded PDF and HTML, extracts the complete archive and reopens the working project. Retain the actual images and visible findings through the existing native operation. Fix clipped or unreadable output in the original component; source and transaction review are separate from inspecting the real rendered product.

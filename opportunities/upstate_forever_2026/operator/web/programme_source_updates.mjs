@@ -202,8 +202,8 @@ export function attachProgrammeSourceUpdates(context) {
           }
         }, {signal});
         document.querySelector('#form-dialog').addEventListener('close', () => {
-          if (active === view) detach();
-        }, {once:true, signal});
+          if (!document.querySelector('#form-dialog')?.open && active === view) detach();
+        }, {signal});
         controls(view);
       });
   }

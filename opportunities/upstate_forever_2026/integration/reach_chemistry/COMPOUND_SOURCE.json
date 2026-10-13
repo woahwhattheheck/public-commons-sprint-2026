@@ -23,13 +23,13 @@
   "files": [
     {
       "path": "model/chemistry_study_transfer.py",
-      "bytes": 23808,
-      "sha256": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c"
+      "bytes": 24377,
+      "sha256": "2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca"
     },
     {
       "path": "model/CHEMISTRY_STUDY_TRANSFER.md",
-      "bytes": 7956,
-      "sha256": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923"
+      "bytes": 10077,
+      "sha256": "8bc2ff5f3ba72f1e25ee2f94f2b9f7c10d5898da4c57d60312f7f380eabd0a61"
     },
     {
       "path": "source_tools/chemistry_study_composition.py",
@@ -178,8 +178,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 23553,
-      "sha256": "9f9fbee45a3879a75376e2b1f0b0d628adf944724c4b9346b513d2c118126e9e"
+      "bytes": 24097,
+      "sha256": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -226,7 +226,11 @@
     "model": "Original native saved-case/run, scientific report/source and whole Workspace receiving APIs",
     "source_bank": "python operator/install_chemistry.py --application APPLICATION --source-bank SOURCE_BANK.json",
     "source_bank_rule": "Use the exact matching installer retained in the verified packet; omitted required source stays bound to the actual installed application under the original lock.",
-    "prepared_source_selection": "Open this report only uses replace-v1; Add to current report preserves the original append behavior."
+    "prepared_source_selection": "Open this report only uses replace-v1; Add to current report preserves the original append behavior.",
+    "selected_study_editions": [
+      "native-chemistry-scientific-source-v1",
+      "native-chemistry-scientific-source-v2"
+    ]
   },
   "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard."
 }

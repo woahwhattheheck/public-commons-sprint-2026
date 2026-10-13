@@ -7,8 +7,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import stat
+import subprocess
 import sys
 import tempfile
+import zipfile
 
 
 def main():
@@ -33,6 +36,8 @@ def main():
     from model import monitoring_report_source as report_sources
     from model import scientific_report_editions as editions
     from model import portable
+    if args.transfer and not callable(getattr(portable, "resume_restore", None)):
+        raise ValueError("Install the current maintained portable.resume_restore before starting this complete receiving course.")
     workspace = Workspace(root, create=False)
     selection_path = args.selection.expanduser().resolve(strict=True)
     selection_body = selection_path.read_bytes()
@@ -111,6 +116,145 @@ def main():
                    and row["source_id"] == source["source"]["source_id"] for row in edition["sources"]):
             raise ValueError("Scientific report edition lost its original comparison source.")
         return comparison, source, edition, directory
+
+
+    def archive_snapshot(path, required):
+        """Bind a full completed backup to one opened, verified archive edition."""
+        with path.open("rb") as stream:
+            before = portable._archive_identity(stream)
+            with zipfile.ZipFile(stream) as archive:
+                captured = portable._inspect_archive(archive, verify=True)
+            checksum = portable._archive_digest(stream, before)
+            current = path.lstat()
+            if (not stat.S_ISREG(current.st_mode)
+                    or (current.st_dev, current.st_ino, current.st_size,
+                        current.st_mtime_ns, current.st_ctime_ns) != before):
+                raise ValueError("The complete archive pathname changed during verification.")
+        if captured["project"] != workspace.project:
+            raise ValueError("The retained archive belongs to another project.")
+        wanted_selection = {"include_intermediates": True, "include_deliveries": True}
+        if captured.get("selection") != wanted_selection:
+            raise ValueError("Retain this course's original complete Workspace archive selection.")
+        for name in required:
+            wanted = describe_file(root, root / name)
+            original = captured["members"].get("workspace/" + name, {})
+            if any(original.get(key) != wanted[key] for key in ("bytes", "sha256")):
+                raise ValueError("The original complete archive lacks this exact scientific course.")
+        result = {"path": str(path), "bytes": before[2], "sha256": checksum,
+                  "members": len(captured["members"]), "project_id": workspace.project["id"],
+                  "selection": captured["selection"]}
+        previous = state["steps"].get("workspace_backup")
+        if previous:
+            for key in ("path", "bytes", "sha256", "project_id"):
+                if previous.get(key) != result[key]:
+                    raise ValueError("The completed backup differs from its original saved identity.")
+            if "selection" in previous and previous["selection"] != result["selection"]:
+                raise ValueError("The completed backup changed its original source selection.")
+        return result
+
+    def cold_receive(receiving, comparison, source, edition, archive_path):
+        """Read the actual received app in a fresh interpreter and reopen its route."""
+        application = Path(receiving["application"]).resolve(strict=True)
+        received_workspace = Path(receiving["workspace"]).resolve(strict=True)
+        with archive_path.open("rb") as stream:
+            before = portable._archive_identity(stream)
+            with zipfile.ZipFile(stream) as archive:
+                captured = portable._inspect_archive(archive, verify=False)
+            if portable._archive_digest(stream, before) != receiving["archive_sha256"]:
+                raise ValueError("Cold receiving source archive changed.")
+        source_members = {name[len("application/"):]: item
+                          for name, item in captured["members"].items()
+                          if name.startswith("application/")}
+        request = {
+            "application": str(application), "workspace": str(received_workspace),
+            "operator_state": str(output / "received-operator-state"),
+            "output": str(output / "cold-receiving.json"),
+            "project_id": workspace.project["id"],
+            "comparison_id": comparison["id"], "source_id": source["id"],
+            "edition_id": edition["id"],
+            "record_digests": [digest(comparison), digest(source), digest(edition)],
+            "source_members": {name: source_members[name] for name in (
+                "model/common.py", "model/workspace.py", "model/monitoring_frontier_comparison.py",
+                "model/monitoring_report_source.py", "model/scientific_report_editions.py",
+                "operator/server.py", "operator/source_report_editions.py")},
+        }
+        child = r'''
+import json
+from pathlib import Path
+import sys
+request = json.loads(sys.argv[1])
+application = Path(request["application"]).resolve(strict=True)
+sys.path[:0] = [str(application), str(application / "operator")]
+from model import common, workspace as workspace_module
+from model import monitoring_frontier_comparison as comparisons
+from model import monitoring_report_source as report_sources
+from model import scientific_report_editions as editions
+import server
+import source_report_editions as report_provider
+modules = [common, workspace_module, comparisons, report_sources, editions, server, report_provider]
+loaded = {}
+for module in modules:
+    path = Path(module.__file__).resolve(strict=True)
+    if not path.is_relative_to(application):
+        raise ValueError("Cold receiving imported a producer outside the received application: " + module.__name__)
+    relative = path.relative_to(application).as_posix()
+    expected = request["source_members"][relative]
+    actual = {"bytes": path.stat().st_size, "sha256": common.file_digest(path)}
+    if any(actual[name] != expected[name] for name in ("bytes", "sha256")):
+        raise ValueError("Cold receiving producer differs from the archived application: " + relative)
+    loaded[module.__name__] = {"path": str(path), "relative_path": relative, **actual}
+workspace = workspace_module.Workspace(Path(request["workspace"]), create=False)
+if workspace.project["id"] != request["project_id"]:
+    raise ValueError("Cold receiving opened another original project.")
+comparison = comparisons.inspect(workspace, request["comparison_id"])
+source = report_sources.inspect(workspace, request["source_id"], verify=True)
+edition, directory, operation = editions.inspect(workspace, request["edition_id"])
+if [common.digest(comparison), common.digest(source), common.digest(edition)] != request["record_digests"]:
+    raise ValueError("Cold receiving changed an original comparison, source or edition.")
+if source["selection"].get("comparison_id") != comparison["id"]:
+    raise ValueError("Cold scientific source identifies another comparison.")
+if not any(row["source_collection_id"] == source["source"]["source_collection_id"]
+           and row["source_id"] == source["source"]["source_id"] for row in edition["sources"]):
+    raise ValueError("Cold scientific edition lost the original comparison source.")
+operator = server.Operator(workspace.root, Path(request["operator_state"]), create=False)
+try:
+    actions = ["monitoring.comparison.prepare", "monitoring.comparison.export",
+               "source-reports.render", "source-reports.export"]
+    for action in actions:
+        if not operator.extensions.handles_action(action):
+            raise ValueError("Received application lacks the original action: " + action)
+    route = "/api/source-reports/scientific-edition"
+    if not operator.extensions.has_route("GET", route):
+        raise ValueError("Received application lacks the scientific edition route.")
+    response = operator.extensions.read("GET", route, operator.primary,
+                                        {"id": edition["id"]})
+    if not isinstance(response, dict) or response.get("edition") != edition:
+        raise ValueError("The received scientific edition route did not return its original record.")
+finally:
+    operator.close()
+result = {"schema": "upstate.monitoring-cold-receiving/v1", "state": "complete",
+          "project_id": workspace.project["id"], "workspace": str(workspace.root),
+          "application": str(application), "loaded_modules": loaded,
+          "comparison_id": comparison["id"], "source_id": source["id"],
+          "edition_id": edition["id"], "record_digests": request["record_digests"],
+          "accepted_actions": actions, "opened_route": route,
+          "scientific_files": editions.files(edition, directory)}
+common.atomic_json(Path(request["output"]), result)
+print(json.dumps(result, sort_keys=True))
+'''
+        with (output / "cold-receiving.stdout.log").open("w", encoding="utf-8") as stdout, (
+                output / "cold-receiving.stderr.log").open("w", encoding="utf-8") as stderr:
+            process = subprocess.run([sys.executable, "-I", "-B", "-c", child,
+                                      json.dumps(request, sort_keys=True)],
+                                     cwd=application, stdout=stdout, stderr=stderr, check=False)
+        if process.returncode:
+            raise RuntimeError("The received application's original course failed with exit "
+                               + str(process.returncode) + "; see cold-receiving.stderr.log.")
+        result = read_json(output / "cold-receiving.json")
+        if (result.get("state") != "complete" or result.get("record_digests") != request["record_digests"]
+                or result.get("application") != str(application)):
+            raise ValueError("Cold receiving did not retain this exact original source selection.")
+        return result
 
     with held(output / ".receiving.lock", blocking=False):
         request_path = output / "request.json"
@@ -210,37 +354,21 @@ def main():
                 if previous_intent is None:
                     record("workspace_backup_intent", backup_intent)
                 if archive.exists():
-                    captured = portable.inspect_archive(archive, verify=True)
-                    if captured["project"] != workspace.project:
-                        raise ValueError("The retained archive belongs to another project.")
-                    for name in required:
-                        wanted = describe_file(root, root / name)
-                        original = captured["members"].get("workspace/" + name, {})
-                        if any(original.get(key) != wanted[key] for key in ("bytes", "sha256")):
-                            raise ValueError("The original complete archive lacks this exact scientific course.")
-                    backup = {"path": str(archive), "bytes": archive.stat().st_size,
-                              "sha256": file_digest(archive), "members": len(captured["members"]),
-                              "project_id": workspace.project["id"]}
+                    backup = archive_snapshot(archive, required)
                 else:
+                    if state["steps"].get("workspace_backup"):
+                        raise ValueError("Restore the original completed backup file before replaying its receiving course.")
                     backup = portable.backup(workspace, archive)
                 record("workspace_backup", backup)
                 flush("independent-workspace-receiving")
                 destination = output / "received"
                 if destination.exists():
-                    resume_restore = getattr(portable, "resume_restore", None)
-                    if callable(resume_restore):
-                        receiving = resume_restore(archive, destination,
-                                                   expected_archive_sha256=backup["sha256"])
-                    else:
-                        captured = portable.inspect_archive(archive, verify=False)
-                        for name, item in captured["members"].items():
-                            verify_file(destination, {**item, "path": name})
-                        receiving = {"workspace": str(destination / "workspace"),
-                                     "application": str(destination / "application"),
-                                     "directory": str(destination), "archive_sha256": backup["sha256"],
-                                     "identity": "MATCH", "reopened_existing_receiving": True}
+                    receiving = portable.resume_restore(
+                        archive, destination, expected_archive_sha256=backup["sha256"])
                 else:
                     receiving = portable.restore(archive, destination)
+                if receiving["archive_sha256"] != backup["sha256"]:
+                    raise ValueError("Receiving used another original complete archive.")
                 reopened = Workspace(receiving["workspace"], create=False)
                 if reopened.project != workspace.project:
                     raise ValueError("Whole receiving changed the original project.")
@@ -248,11 +376,14 @@ def main():
                 if list(copies[:3]) != [comparison, source, edition]:
                     raise ValueError("Whole receiving changed an original comparison, source or report edition.")
                 record("workspace_receiving", receiving)
+                flush("received-application-reopen")
+                record("cold_receiving", cold_receive(receiving, comparison, source, edition, archive))
             result = {"schema": state["schema"], "state": "complete",
                       "project_id": workspace.project["id"], "comparison_id": comparison["id"],
                       "comparison_report_id": source["id"], "scientific_report_edition_id": edition["id"],
                       "comparison_packet": packet, "scientific_report_files": copied,
-                      "source": source["source"], "receiving": receiving}
+                      "source": source["source"], "receiving": receiving,
+                      "cold_receiving": state["steps"].get("cold_receiving") if args.transfer else None}
             atomic_json(output / "result.json", result)
             state["state"] = "complete"
             state["result"] = result

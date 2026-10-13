@@ -116,3 +116,18 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Opening the installed explorer
+
+The Regional watersheds link serves the exact installed source edition through
+the registered `watershed-explorer` file family. The normal authenticated
+operator file transport checks its full byte count and SHA-256 before sending it.
+Its content policy permits only the SHA-256 of the installed inline executable
+script, keeps an opaque sandbox origin, and permits the source view's local
+downloads, print request and explicit external source links. The source view
+makes no network requests. If the application source changes, reopen the desk
+to obtain that edition's link.
+
+Discussion text remains in the current explorer view and its downloaded review.
+Import that JSON in Regional watersheds to retain it with the original source
+files and the complete report packet.
