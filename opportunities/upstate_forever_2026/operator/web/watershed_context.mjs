@@ -683,5 +683,10 @@ export function createWatershedContextDesk(host) {
     remember();
     render();
   }
-  return {mount, update, detach, refresh, openWatershed};
+  async function openSelection(exportId) {
+    if (!root) throw new Error('Open Regional watersheds before selecting its retained export.');
+    await loadExport(exportId);
+    if (root) root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest'});
+  }
+  return {mount, update, detach, refresh, openWatershed, openSelection};
 }
