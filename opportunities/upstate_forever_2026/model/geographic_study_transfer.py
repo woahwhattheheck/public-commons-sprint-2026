@@ -889,6 +889,160 @@ def include_source(closure, collection_id, entry):
     return True
 
 
+def _native_preparation_matches(value, selected, project_id, grid_id, profile_id):
+    if not isinstance(value, dict) or value.get("project_id") != project_id:
+        return False
+    alternatives = value.get("alternative_run_ids")
+    if not isinstance(alternatives, list) or len(alternatives) != 2:
+        return False
+    ids = [value.get("baseline_run_id"), *alternatives]
+    if any(not isinstance(key, str) for key in ids) or len(set(ids)) != 3 or set(ids) != selected:
+        return False
+    if value.get("grid_id") != grid_id or value.get("profile_id") != profile_id:
+        raise ValueError("The matching Geographic preparation changed its native grid or profile")
+    return True
+
+
+def _native_saved_contexts(closure, prepared, captured=None):
+    """Follow completed original contexts, never create a report or preparation."""
+    from .common import read_json
+    kinds = ("geographic-receiving-contexts", "geographic-scenario-contexts")
+    candidates = []
+    if captured is None:
+        for kind in kinds:
+            directory = closure.root / kind
+            if directory.is_symlink():
+                raise ValueError("Geographic contexts must retain their original directories")
+            for path in sorted(directory.glob("*/context.json")):
+                if path.is_symlink() or path.parent.is_symlink():
+                    continue
+                try:
+                    value = read_json(path)
+                except (OSError, ValueError, TypeError):
+                    continue
+                if (isinstance(value, dict) and value.get("state") == "complete"
+                        and value.get("project_id") == prepared["project_id"]
+                        and value.get("prepared_id") == prepared["id"]):
+                    candidates.append({"kind": kind, "id": identifier(path.parent.name)})
+    else:
+        if not isinstance(captured, list):
+            raise ValueError("The native Study lost its captured Geographic context list")
+        candidates = captured
+    result, seen = [], set()
+    for item in candidates:
+        kind, key = item.get("kind"), identifier(item.get("id"))
+        if kind not in kinds or (kind, key) in seen:
+            raise ValueError("The native Study repeats or changes a Geographic context")
+        seen.add((kind, key))
+        relative = kind + "/" + key + "/context.json"
+        value = closure.read(relative)
+        if (value.get("state") != "complete" or value.get("id") != key
+                or value.get("project_id") != prepared["project_id"]
+                or value.get("prepared_id") != prepared["id"]):
+            raise ValueError("The native Study names another saved Geographic context")
+        if kind == "geographic-receiving-contexts":
+            allocation = value.get("allocation") or {}
+            _receiving_context(closure, key, prepared, allocation.get("id"))
+            if allocation:
+                choice = allocation.get("source")
+                if not isinstance(choice, dict):
+                    raise ValueError("The original Geographic allocation lost its source")
+                _, entry = _collection(closure, choice)
+                if not entry.get("uri", "").startswith(ALLOCATION):
+                    raise ValueError("The saved allocation source has another original producer")
+                include_source(closure, choice["source_collection_id"], entry)
+        else:
+            choice = value.get("source")
+            if not isinstance(choice, dict):
+                raise ValueError("The original Geographic interpretation lost its source")
+            _, entry = _collection(closure, choice)
+            if not entry.get("uri", "").startswith(INTERPRETATION):
+                raise ValueError("The saved interpretation source has another original producer")
+            include_source(closure, choice["source_collection_id"], entry)
+        descriptor = closure.files[relative]
+        row = {"kind": kind, "id": key, "bytes": descriptor["bytes"],
+               "sha256": descriptor["sha256"]}
+        if captured is not None and row != item:
+            raise ValueError("The captured Geographic context changed its original bytes")
+        result.append(row)
+    return sorted(result, key=lambda row: (row["kind"], row["id"]))
+
+
+def related_native_cohort(closure):
+    """Admit one exact Geographic case behind three explicit native run roots."""
+    from .common import read_json
+    if getattr(closure, "_geographic_native_resolved", False):
+        return
+    closure._geographic_native_resolved = True
+    captured = closure.geographic_native_selection
+    if captured == []:
+        return
+    if captured is not None and (not isinstance(captured, list) or len(captured) != 1):
+        raise ValueError("Retain the native Study's one captured Geographic preparation")
+    selected = {item["id"] for item in closure.selection["roots"] if item["kind"] == "runs"}
+    if len(selected) != 3:
+        if captured:
+            raise ValueError("The Geographic native Study changed its three explicit run roots")
+        return
+    records = {key: closure.read("runs/" + key + "/run.json") for key in sorted(selected)}
+    selections = [value.get("selection", {}) for value in records.values()]
+    grids = {item.get("grid_id") for item in selections}
+    profiles = {item.get("profile_id") for item in selections}
+    if len(grids) != 1 or len(profiles) != 1:
+        if captured:
+            raise ValueError("The Geographic native Study changed its original grid or profile")
+        return
+    grid_id, profile_id = identifier(next(iter(grids))), identifier(next(iter(profiles)))
+    for key, record in records.items():
+        if record.get("id") != key or digest(record.get("selection")) != key:
+            raise ValueError("The selected native run changed its original identity")
+    directory = closure.root / "geographic-headwaters"
+    if directory.is_symlink():
+        raise ValueError("Geographic preparations must retain their original directory")
+    matches = []
+    if captured is not None:
+        key = identifier(captured[0].get("prepared_id"))
+        value = closure.read("geographic-headwaters/" + key + "/prepared.json")
+        if not _native_preparation_matches(value, selected, closure.workspace.project["id"],
+                                           grid_id, profile_id):
+            raise ValueError("The native Study lost its captured original Geographic cohort")
+        matches.append(value)
+    else:
+        for path in sorted(directory.glob("*/prepared.json")):
+            if path.is_symlink() or path.parent.is_symlink():
+                continue
+            try:
+                value = read_json(path)
+            except (OSError, ValueError, TypeError):
+                continue
+            if _native_preparation_matches(value, selected, closure.workspace.project["id"],
+                                           grid_id, profile_id):
+                if value.get("id") != path.parent.name:
+                    raise ValueError("The matching Geographic preparation changed its directory identity")
+                matches.append(value)
+        if len(matches) > 1:
+            raise ValueError("More than one original Geographic preparation matches this exact native cohort; select its original scientific report source instead")
+        if not matches:
+            return
+    prepared = _prepared(closure, matches[0])
+    prefix = "geographic-headwaters/" + prepared["id"] + "/"
+    files = {}
+    for name in ("prepared.json", "inputs/input-receipt.json"):
+        item = closure.files[prefix + name]
+        files[name] = {"bytes": item["bytes"], "sha256": item["sha256"]}
+    expected = captured[0] if captured is not None else None
+    contexts = _native_saved_contexts(closure, prepared,
+                                      None if expected is None else expected.get("contexts"))
+    pin = {"prepared_id": prepared["id"], "project_id": prepared["project_id"],
+           "grid_id": grid_id, "profile_id": profile_id,
+           "baseline_run_id": prepared["baseline_run_id"],
+           "alternative_run_ids": list(prepared["alternative_run_ids"]),
+           "files": files, "contexts": contexts}
+    if expected is not None and pin != expected:
+        raise ValueError("The native Study changed its captured Geographic preparation or input receipt")
+    closure.geographic_native_records = [pin]
+
+
 def lock_paths(closure):
     paths = set()
     for relative in closure.files:

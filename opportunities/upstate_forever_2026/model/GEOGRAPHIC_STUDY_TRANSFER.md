@@ -55,6 +55,60 @@ reference-basis and completed-case checkpoint semantics remain authoritative.
 This selected-study path is an additional bounded selection from the same
 Workspace, not a replacement for the existing receiving course.
 
+## Transfer the exact native reference trio
+
+A selected Study whose explicit roots are exactly the original baseline,
+restoration and matched-control **run IDs** can retain the existing Geographic
+case without first creating a separate scientific report edition. Keep
+`include_related_results: true`. The exporter admits only one saved preparation
+in the same project whose original baseline plus two alternative IDs equal that
+three-run set, with the same original grid, profile and per-run scenario
+selections. It preserves the preparation's baseline/restoration/control order.
+Titles, run prefixes and prose provenance are never matching criteria.
+
+For example, replace every placeholder with the actual full retained ID:
+
+```json
+{
+  "schema": "upstate.study-selection/v1",
+  "title": "Original regional reference study and editable Geographic case",
+  "roots": [
+    {"kind": "runs", "id": "ACTUAL_BASELINE_RUN_ID"},
+    {"kind": "runs", "id": "ACTUAL_RESTORATION_RUN_ID"},
+    {"kind": "runs", "id": "ACTUAL_MATCHED_CONTROL_RUN_ID"}
+  ],
+  "include_related_results": true
+}
+```
+
+Use the existing preview/export/inspect commands below and a **new archive
+destination**. Reusing an existing completed destination intentionally returns
+that sealed archive; it does not broaden its recorded scope.
+
+Preview exposes `geographic_native_studies` only when the exact original
+preparation exists. Its capture pins both prepared.json and the original input
+receipt by bytes and SHA, plus the exact completed Receiving/allocation and
+interpretation context records already present. The original resolver retains
+the matched-control inputs, editable footprints, native grids/profiles/scenarios,
+full saved ensemble design and pending progress, and any matching saved
+Programme. It does not synthesize an absent context, comparison, Programme or
+result. Existing completed context sources follow their original complete
+recipes and companion files.
+
+If two original preparation editions share the exact cohort, the exporter
+requires an explicit original scientific report source rather than choosing
+one arbitrarily. If no preparation matches, the ordinary native Study retains
+its existing scope; preview's empty Geographic list makes that absence visible.
+Disabling related results preserves the ordinary narrow selection.
+
+Receiving uses the captured preparation and context IDs and verifies their
+immutable descriptors; it never discovers another case by scanning the
+recipient's later preparations. Old receipts without this optional field keep
+their original native scope. The previously sealed native reference Study
+remains valid and unchanged. A complete successor from the original Workspace
+can add the saved editable Geographic continuation while preserving all
+completed scientific output bytes and the honest pending sensitivity status.
+
 ## Select the actual saved report
 
 Use the original Study transfer desk and select the completed scientific report
