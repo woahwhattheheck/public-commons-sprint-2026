@@ -81,7 +81,7 @@ function buildStudy(originals, hash, byteLength) {
     basin_source_id:specs[3].id,basin_sha256:specs[3].sha256,
     whole_basin_membership:polygonStatus([Number(s.LongitudeMeasure),Number(s.LatitudeMeasure)],basin.features[0].geometry.coordinates),
     gauge_upstream_applicability:"not_determined_by_unsplit_basin",
-    predicate:"Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; boundary tolerance 1e-12 coordinate units."
+    predicate:"Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
   }));
   const dates=rows.map(r=>r.ActivityStartDate).sort();
   const stationRows=stations.map(s=>({
@@ -128,7 +128,7 @@ function buildStudy(originals, hash, byteLength) {
     "README.md":"# Eighteenmile stream nutrient observations\n\nThis source cohort retains 589 original WQP result rows from four state stream stations, 2020–2025. Import the installed builtin scdes-eighteenmile-streams-2020-2025 through Published studies, select station/characteristic/year/month, and export the selected report or complete source study.\n\nThe original CSVs are unchanged. Published seasonal tables are empty because the agency query contains individual results, not a published seasonal-summary table. The source index defines nonoverlapping date intervals and exact hashes. A point-in-polygon result applies to the retained unsplit whole basin only. See source_notes.json and basin-membership.json.\n"
   };
   const entries=specs.map(s=>({id:s.id,title:s.path,uri:s.source_url,vintage:"2020–2025 / 2026-10-13 source edition",kind:s.kind,path:s.path,bytes:s.bytes,sha256:s.sha256,...(s.kind==="vector"?{source_crs:"EPSG:4326"}:{}),metadata:{original_agency_body:true,...(s.record_count!=null?{record_count:s.record_count}:{})}}));
-  entries.push({id:"eighteenmile-four-stream-stations-derived",title:"Original four stream station coordinates",kind:"vector",path:"stations.geojson",source_crs:"EPSG:4326",uri:specs[2].source_url,bytes:byteLength(files["stations.geojson"]),sha256:hash(files["stations.geojson"]),metadata:{derived_from_source_id:specs[2].id}});
+  entries.push({id:"eighteenmile-four-stream-stations-derived",title:"Original four stream station coordinates",vintage:"2020–2025 / 2026-10-13 source edition",kind:"vector",path:"stations.geojson",source_crs:"EPSG:4326",uri:specs[2].source_url,bytes:byteLength(files["stations.geojson"]),sha256:hash(files["stations.geojson"]),metadata:{derived_from_source_id:specs[2].id}});
   files["model-sources.json"]=json({schema:"upstate.sources/v1",title:study.title,entries});
   files["study-files.json"]=json({schema:"upstate.study-file-inventory/v1",files:Object.entries(files).sort(([a],[b])=>a.localeCompare(b)).map(([path,content])=>({path,bytes:byteLength(content),sha256:hash(content)}))});
   return files;

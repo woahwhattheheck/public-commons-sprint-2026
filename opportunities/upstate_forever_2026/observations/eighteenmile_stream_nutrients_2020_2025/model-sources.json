@@ -74,6 +74,7 @@
     {
       "id": "eighteenmile-four-stream-stations-derived",
       "title": "Original four stream station coordinates",
+      "vintage": "2020–2025 / 2026-10-13 source edition",
       "kind": "vector",
       "path": "stations.geojson",
       "source_crs": "EPSG:4326",

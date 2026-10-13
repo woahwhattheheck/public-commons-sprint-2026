@@ -25,7 +25,7 @@
       "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
       "whole_basin_membership": "inside",
       "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
-      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; boundary tolerance 1e-12 coordinate units."
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
     },
     {
       "site_id": "SV-245",
@@ -46,7 +46,7 @@
       "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
       "whole_basin_membership": "inside",
       "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
-      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; boundary tolerance 1e-12 coordinate units."
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
     },
     {
       "site_id": "SV-375",
@@ -67,7 +67,7 @@
       "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
       "whole_basin_membership": "inside",
       "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
-      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; boundary tolerance 1e-12 coordinate units."
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
     },
     {
       "site_id": "SV-376",
@@ -88,7 +88,7 @@
       "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
       "whole_basin_membership": "inside",
       "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
-      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; boundary tolerance 1e-12 coordinate units."
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
     }
   ]
 }
