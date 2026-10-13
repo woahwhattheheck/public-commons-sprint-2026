@@ -38,8 +38,28 @@ async function sendFile(response,file,contentType,{signal,download}={}){
   for await(const chunk of file.chunks({signal})){signal?.throwIfAborted();if(!response.write(chunk))await once(response,'drain',{signal});}
   response.end();
 }
-export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWorkspaceId=null,expectedAuthoringPort,title='Map release operations'}={}){
+// Ending an HTTP connection releases only its response wait. The merchant keeps
+// the original accepted operation in its own alias queue and retained journal.
+function merchantResponse(work,signal){
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const finish=(fn,value)=>{if(settled)return;settled=true;signal.removeEventListener('abort',abort);fn(value);};
+    const abort=()=>finish(reject,signal.reason??new Error('PMTILES_AUTHORING_STOPPED'));
+    Promise.resolve(work).then(value=>finish(resolve,value),error=>finish(reject,error));
+    signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
+  });
+}
+export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWorkspaceId=null,expectedAuthoringPort,title='Map release operations',merchant=null}={}){
   runtime=typeof runtime==='string'?runtime:clone(runtime);
+  const bridge=merchant===null?null:{workspace:merchant.workspace,workspaceId:merchant.workspaceId,
+    tools:Array.isArray(merchant.tools)?[...merchant.tools]:null,invoke:merchant.invoke};
+  if(bridge){
+    identifier(bridge.workspace);identifier(bridge.workspaceId);
+    need(bridge.workspaceId===expectedWorkspaceId&&typeof bridge.invoke==='function'&&Array.isArray(bridge.tools)&&
+      bridge.tools.length<=64&&new Set(bridge.tools).size===bridge.tools.length&&bridge.tools.every(name=>
+        typeof name==='string'&&/^merchant_pmtiles_(output_[a-z_]+|purchase_[a-z_]+|package|package_info)$/.test(name)),
+      'PMTILES_MERCHANT_BRIDGE_INVALID');
+  }
   need(Number.isInteger(port)&&port>=0&&port<=65535,'PMTILES_PORT_INVALID');
   need(expectedAuthoringPort===undefined||expectedAuthoringPort===null||(Number.isInteger(expectedAuthoringPort)&&expectedAuthoringPort>=1&&expectedAuthoringPort<=65535),'PMTILES_EXPECTED_AUTHORING_PORT_INVALID');
   const workspace=await openPMTilesWorkspace({directory,expectedWorkspaceId,title});
@@ -81,6 +101,8 @@ export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWo
     const assetDefinitions={
       '/':{source:new URL('./web/index.html',import.meta.url),type:MIME.html},
       '/app.js':{source:new URL('./web/app.js',import.meta.url),type:MIME.js},
+      '/commerce.mjs':{source:new URL('./web/commerce.mjs',import.meta.url),type:MIME.js},
+      '/commerce.css':{source:new URL('./web/commerce.css',import.meta.url),type:MIME.css},
       '/app.css':{source:new URL('./web/app.css',import.meta.url),type:MIME.css},
       '/runtime/preview.js':{source:controller.runtime.previewScript.path,type:MIME.js,descriptor:controller.runtime.previewScript},
       '/runtime/preview.css':{source:controller.runtime.previewCss.path,type:MIME.css,descriptor:controller.runtime.previewCss},
@@ -112,6 +134,22 @@ export async function servePMTilesWorkspace({directory,runtime,port=0,expectedWo
         }
         need(secretEqual(request.headers.authorization,'Bearer '+token),'PMTILES_AUTH_REQUIRED');
         if(request.method==='GET'&&(path==='/api/bootstrap'||path==='/api/state')){sendJson(response,200,controller.state());return;}
+        if(request.method==='GET'&&path==='/api/merchant'){
+          sendJson(response,200,{schema:'starforge.pmtiles-browser-merchant.v1',configured:!!bridge,
+            workspaceId:workspace.state().id,...(bridge?{workspace:bridge.workspace,tools:[...bridge.tools]}:{})});return;
+        }
+        if(request.method==='POST'&&path==='/api/merchant'){
+          need(bridge,'PMTILES_MERCHANT_NOT_CONFIGURED');
+          const input=await jsonBody(request,2*1024*1024);
+          need(Object.keys(input).every(key=>['workspaceId','tool','args'].includes(key))&&
+            input.workspaceId===workspace.state().id&&input.workspaceId===bridge.workspaceId&&
+            bridge.tools.includes(input.tool)&&plain(input.args)&&
+            (!Object.hasOwn(input.args,'workspace')||input.args.workspace===bridge.workspace),
+            'PMTILES_MERCHANT_REQUEST_INVALID');
+          shutdown.signal.throwIfAborted();
+          const work=bridge.invoke(input.tool,clone(input.args));
+          sendJson(response,200,await merchantResponse(work,shutdown.signal));return;
+        }
         if(request.method==='GET'&&path==='/api/resources'){
           sendJson(response,200,workspace.listResources({offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??100),kind:url.searchParams.get('kind')}));return;
         }

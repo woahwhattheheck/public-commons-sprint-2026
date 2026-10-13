@@ -570,3 +570,12 @@ purchase accounting is available through three paginated MCP/CLI actions,
 including retained-command recovery. Select the original operator workspace
 before the receiving input is frozen; the complete map and package retain
 separate exact download budgets and original financial receipts.
+
+## Operate paid delivery in the authoring browser
+
+The selected merchant also includes the complete [paid-map browser operator](../../sf30-seller-sdk/pmtiles/commerce/BROWSER.md).
+Open the configured PMTiles workspace through merchant MCP and use its private
+console URL. The panel retains priced-offer drafts, original seller control,
+SF88 customer receiving and native accounting recovery. Its additional source is
+included by the existing PMTiles product inventory and commerce contribution;
+the original standalone map package keeps its declared SCF source closure.
