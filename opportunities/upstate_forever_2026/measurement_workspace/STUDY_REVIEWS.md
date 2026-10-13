@@ -83,3 +83,26 @@ The save request is ordinary JSON. Set the exact IDs returned by the native cata
 ```
 
 For the existing native receiving operation, use an already imported original study, save an actual station/parameter/date selection, export it, receive the complete ZIP in the original receiving workspace, and reopen the same review ID. Compare its source binding and canonical selection, verify original selected CSV rows and report links, then include it in the existing project archive/restore course. This is a continuation of the maintained Published Studies operation; no model execution or source recapture is required.
+
+
+## Continue a completed SV-833 receiving operation
+
+The maintained SV-833 receiver can add the complete saved-review course to an already completed native intake. Use its original Workspace and receiving directory, containing the original `operation.json`, with the current complete application:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_sv833_study.py" \
+  --application "$APPLICATION" \
+  --workspace "$WORKSPACE" \
+  --output "$RECEIVING" \
+  --saved-review
+```
+
+This option reads the exact `study_id`, `version_id`, source collection and station/parameter/calendar selection from the completed operation. It enters before the installed built-in companion is regenerated, so a later installed hydrology/source edition does not replace the original review cohort. The original study and project archives are checked against their retained byte counts and SHA256 values. Ordinary intake without this option keeps its existing behavior.
+
+The continuation saves and opens a named review, exports the complete review ZIP, and receives it in the same Workspace. It compares the actual current-study file before and after receiving; an already selected newer edition remains selected. A fresh review archive and restored project are named with the exact review ID. The existing original study ZIP, original scientific Workspace ZIP, and original restored project retain their paths and identities.
+
+Its phases and results live under `continuations.saved_review` in the same operation JSON. A repeated invocation reopens the retained review and verifies previously accepted artifacts. It uses the selected-edition snapshot inside its own archive when checking a restored project, so a later legitimate change to the live Workspace does not invalidate that earlier archive. The restored source collection, original result identifiers, canonical saved selection and original native source-file bytes remain the receiving criteria.
+
+After native completion, open the same Workspace in its existing operator session and choose Published studies. Select the exact saved study/version, then use an actually available station, parameter and calendar selection. Save review; reopen its returned ID; edit notes and save a linked revision; use Save as new review for an independent record. Export its complete ZIP and import it through the actual allowed source root containing that returned archive. The original task UI retains accepted task/result identities. Navigate away and back to check the retained working draft; use another Workspace only when that actual Workspace exists.
+
+The native receiver reports its actual review ID, source binding, selected edition before/after receive, new archive identity and restored project path. Browser receiving adds the actual operator origin and interaction result to that same operation record.
