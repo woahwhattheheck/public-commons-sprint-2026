@@ -177,6 +177,11 @@
               },
               "additionalProperties": true
             }
+          },
+          "layer_metadata_companion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact source_path of an original JSON metadata companion retained with this source; its body and original manifest are verified."
           }
         },
         "allOf": [
