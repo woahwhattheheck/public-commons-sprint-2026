@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import shutil
 import sys
 from pathlib import Path
@@ -47,6 +48,31 @@ def verified_source(entry, base):
             raise ValueError(f"Original companion changed: {item['path']}")
         companions.append({**item, **actual})
     return path, {**entry, **observed, "companions": companions}
+
+
+def original_id_text(value):
+    """Canonical join text for exact original text or safe integral numeric IDs."""
+    if isinstance(value, str):
+        if value.strip():
+            return value.strip()
+        raise ValueError("empty_original_reach_id")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("missing_original_reach_id")
+    if not math.isfinite(value) or int(value) != value or abs(value) > 9007199254740991:
+        raise ValueError("nonintegral_or_unsafe_original_reach_id")
+    return str(int(value))
+
+
+def label_values(value):
+    """Flatten source arrays for display without changing their retained originals."""
+    if isinstance(value, (list, tuple)):
+        return [label for item in value for label in label_values(item)]
+    return [] if value is None or str(value) == "" else [str(value)]
+
+
+def row_labels(rows, field):
+    return "; ".join(dict.fromkeys(label for row in rows
+                                  for label in label_values(row.get(field))))
 
 
 def join_geography(bank, configuration, configuration_directory, output):
@@ -106,7 +132,7 @@ def join_geography(bank, configuration, configuration_directory, output):
     old_tree_index = {id(geometry): index for index, geometry in enumerate(polygons)}
     records_by_reach = {}
     for row in records:
-        records_by_reach.setdefault(str(row[unit_id_field]).strip(), []).append(row)
+        records_by_reach.setdefault(original_id_text(row[unit_id_field]), []).append(row)
     relations, features, source_inventory, unmatched_geometry = [], [], [], []
     to_wgs84 = Transformer.from_crs(target_crs, "EPSG:4326", always_xy=True).transform
     encountered = set()
@@ -123,11 +149,12 @@ def join_geography(bank, configuration, configuration_directory, output):
             props = native["properties"]
             geometry = transform(project, native["geometry"])
             value = props.get(id_field)
-            if isinstance(value, bool) or not isinstance(value, (str, int)) or not str(value).strip():
+            try:
+                reach_id = original_id_text(value)
+            except ValueError as error:
                 unmatched_geometry.append({"source_id":entry["id"], "native_driver_fid":native["id"],
-                                           "reason":"missing_original_reach_id", "properties":props})
+                                           "reason":str(error), "properties":props})
                 continue
-            reach_id = str(value).strip()
             feature_id = props.get(feature_field) if feature_field else native["id"]
             if feature_id is None or str(feature_id) == "":
                 raise ValueError("Selected original feature ID field is null")
@@ -190,10 +217,10 @@ def join_geography(bank, configuration, configuration_directory, output):
                         "jurisdiction":jurisdiction, "assessment_cycle":cycle,
                         "publication_status":status, "approval_date":approval_date,
                         "assessment_unit_id":reach_id, unit_id_field:reach_id, "native_assessment_unit_value":value, "native_feature_id":str(feature_id),
-                        "reach_name":"; ".join(dict.fromkeys(str(r.get(fields["name"], "")) for r in source_rows)),
-                        "overall_assessment":"; ".join(dict.fromkeys(str(r.get(fields["assessment"], "")) for r in source_rows)),
+                        "reach_name":row_labels(source_rows, fields["name"]),
+                        "overall_assessment":row_labels(source_rows, fields["assessment"]),
                         "categories":", ".join(categories),
-                        "cause": "; ".join(dict.fromkeys(str(r.get(fields["cause"], "")) for r in source_rows if r.get(fields["cause"]))),
+                        "cause": row_labels(source_rows, fields["cause"]),
                         "on_303d_list":True if any(r.get(fields["listed"]) is True for r in source_rows) else
                             None if any(r.get(fields["listed"]) is None for r in source_rows) else False,
                         "assessment_record_ids":json.dumps([r["id"] for r in source_rows if "id" in r]),
