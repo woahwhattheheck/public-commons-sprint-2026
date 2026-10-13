@@ -284,3 +284,17 @@ also needs task history and unfinished original inputs. Its
 workspace and task references with the receiving operation. The journey importer
 checks the restored scientific project and selected records, clears the imported
 runtime request state, and retains the selected tour and notes in that project.
+
+## Save the operating view with the project
+
+The Reopen step includes **Save view and notes**. This saves the selected scientific records, current journey step, native model selection and operating notes in the original workspace. The saved view is available after reopening the operator in a new browser and after restoring a complete workspace archive. The project identity remains the same; the restored workspace has its own receiver key.
+
+Use **Save view and notes** after choosing the analysis and recording decisions. The view displays when it was saved and the original project identity. A save retains the server revision observed by that browser. If another browser has saved a newer view, refresh before saving again; notes from the other saved revision remain available in the notes history.
+
+**Create complete native backup** captures the current journey selection and notes as part of the existing backup request. The server saves that view and creates the workspace archive while holding the same session lock, so another view save cannot intervene between those operations. The archive carries the original scientific workspace, source, records, outputs, application and saved operator view. Restore the archive through the existing operator controls, open the restored workspace, and return to the guided journey to continue the retained analysis.
+
+The separate **Download journey selections** file remains useful for moving a view between browsers that already have the same original project. Its import checks every selected record and the native model selection against that project. Existing browsers retain their own unfinished local request recovery; a received saved view supplies the starting selection for a browser without a matching local view.
+
+### Source integration
+
+The registered host uses its existing journey controller for backup capture. The joined browser also supports the original direct host, including its delivery form, navigation and stylesheet attachment. Native saved views use the existing authenticated operator API and source-preserving workspace backup. The component manifest records the current browser and this guide; all unrelated host modules and extension owners remain part of the installed application.

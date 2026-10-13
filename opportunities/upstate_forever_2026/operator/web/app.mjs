@@ -900,9 +900,10 @@ async function deliveryForm(id,initialSelection){
  });
 }
 function backupForm(){
+ const savedJourney=operatingJourney?.capture?.()||null,journeyRevision=state.data.operator_session?.revision||null;
  openForm('Back up the original scientific workspace','Create an exact native archive containing the original project, source objects, selections, outputs and application. The same archive opens as a new receiving workspace.',
- '<div class="stack"><label class="check"><input type="checkbox" name="include_intermediates" checked><span>Include retained native model intermediates for continuation</span></label><p class="note">The completed archive is streamed as an authenticated file download. Original run and source identities are preserved.</p></div>',
- 'Create complete backup',()=>submitAction('workspace.backup',{include_intermediates:form.elements.namedItem('include_intermediates').checked}));
+ '<div class="stack"><label class="check"><input type="checkbox" name="include_intermediates" checked><span>Include retained native model intermediates for continuation</span></label><p class="note">The completed archive includes the selected analysis and operating notes. Open its restored workspace to continue from the same view. Original run and source identities are preserved.</p></div>',
+ 'Create complete backup',()=>submitAction('workspace.backup',{include_intermediates:form.elements.namedItem('include_intermediates').checked,journey:savedJourney,journey_revision:journeyRevision}));
 }
 function restoreForm(){
  openForm('Restore an original workspace archive','Choose the exact native scientific-workspace ZIP. The original receiver verifies every member and creates a new directory with the same project identity.',
