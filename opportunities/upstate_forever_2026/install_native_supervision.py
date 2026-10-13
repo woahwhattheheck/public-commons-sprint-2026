@@ -55,6 +55,9 @@ PREVIOUS["operator/web/jobs.mjs"].append("623428c34687a8a6ae3585ba3edcb39ca2f2f1
 PREVIOUS["install_native_supervision.py"].append("f7f8eeb14775db385193054cc40de8288e4133fa8bcd451fc1a6f70f9db33ce8")
 PREVIOUS["operator/NATIVE_JOBS.md"].append("76ee80b7b1944ba2d46d5b285d295d0b91e66ec9f5bb1a03d0d94114b6d8bf51")
 
+# D406 revision2 is an accepted predecessor of route-registry integration.
+PREVIOUS["install_native_supervision.py"].append("81f28bb3ac6c0cd8d0328432a6e68e63c48cf90741501fedffcf8ca708d84e75")
+
 # First complete current-main bank, retained for a safe repeated upgrade.
 PREVIOUS["install_native_supervision.py"].append("ed7828c98bf5a77565dbef47cbf0a2dddd9b71dc77997630b84a1bf60c8ba18d")
 PREVIOUS["operator/NATIVE_JOBS.md"].append("ca2629a57c11c600bd19697d68d82eaafe1795640d1d08a45c9bdcf21a6ffd2c")
@@ -142,7 +145,32 @@ def programme_patch(text):
     return text
 
 
+def builtin_route_patch(text):
+    """Register the native route in the existing extension collision check."""
+    keywords = [node for node in ast.walk(ast.parse(text))
+                if isinstance(node, ast.keyword) and node.arg == "builtin_routes"]
+    if len(keywords) != 1:
+        raise ValueError("The current extension registry needs its native route join")
+    node = keywords[0].value
+    routes = ast.literal_eval(node)
+    if not isinstance(routes, (tuple, list)):
+        raise ValueError("The original built-in routes must remain a literal sequence")
+    route = ("GET", "/api/native-job")
+    count = routes.count(route)
+    if count == 1:
+        return text
+    if count:
+        raise ValueError("The native built-in route is registered more than once")
+    updated = [*routes, route]
+    replacement = repr(tuple(updated) if isinstance(routes, tuple) else updated)
+    segment = ast.get_source_segment(text, node)
+    if not segment:
+        raise ValueError("The original built-in route registry has no source span")
+    return replace_one(text, segment, replacement, "native built-in route registration")
+
+
 def server_patch(text, *, retention=False):
+    text = builtin_route_patch(text)
     if "# " + MARKER in text:
         required = ("self.native_jobs = NativeJobs(self)",
                     '"/api/native-job"', "jobs.mjs", "NativeJobCancelled")

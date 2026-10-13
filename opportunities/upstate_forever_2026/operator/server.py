@@ -169,7 +169,7 @@ class Operator:
                                     "title": value.get("title", p.name), "entries": len(value.get("entries", []))}
         self.extensions = ExtensionRegistry(self, Fault,
             builtin_actions=ACTIONS, builtin_kinds=KINDS,
-            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
+            builtin_routes=(('GET', '/api/extensions'), ('GET', '/api/state'), ('GET', '/api/item'), ('GET', '/api/source-info'), ('GET', '/api/task'), ('GET', '/api/native-job'), ('GET', '/api/run-log'), ('GET', '/api/runtime'), ('POST', '/api/upload'), ('POST', '/api/session'), ('POST', '/api/operator-session'), ('POST', '/api/source-preview'), ('POST', '/api/actions'), ('POST', '/api/task/resume'), ('POST', '/api/task/cancel')),
             source_roots=source_roots).load()
         for path in (self.root / "tasks").glob("*.json"):
             task = read_json(path)
