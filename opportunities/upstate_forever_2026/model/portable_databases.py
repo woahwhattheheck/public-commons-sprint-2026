@@ -15,7 +15,10 @@ import time
 
 # This is the product's original project-local ProjectStore path. Unknown
 # SQLite files may be scientific source editions and must retain exact bytes.
-MUTABLE_DATABASE_MEMBERS = {"workspace/intelligence/investigations.sqlite3"}
+MUTABLE_DATABASE_MEMBERS = {
+    "workspace/intelligence/investigations.sqlite3",
+    "workspace/robust_decisions/robust_decisions.sqlite3",
+}
 SIDECARS = ("-wal", "-shm", "-journal")
 
 
