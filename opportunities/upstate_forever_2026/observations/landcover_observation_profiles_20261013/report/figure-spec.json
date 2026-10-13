@@ -10,7 +10,7 @@
         {
           "title": "A. Whole-domain between-group balances",
           "x": {
-            "label": "Area entering (+), leaving (−), or net change (ha)",
+            "label": "Area entering (+), leaving (−), or net change",
             "unit": "ha",
             "domain": [
               -40000,
@@ -41,7 +41,7 @@
           },
           "y": {
             "label": "Class group",
-            "unit": "category",
+            "unit": "",
             "domain": [
               -0.5,
               7.5
@@ -235,7 +235,7 @@
         {
           "title": "B. Forest-class gross loss and gain by HUC12",
           "x": {
-            "label": "Gross forest-class loss (ha)",
+            "label": "Gross forest-class loss",
             "unit": "ha",
             "domain": [
               -16.5,
@@ -269,7 +269,7 @@
             ]
           },
           "y": {
-            "label": "Gross forest-class gain (ha)",
+            "label": "Gross forest-class gain",
             "unit": "ha",
             "domain": [
               -16.5,
