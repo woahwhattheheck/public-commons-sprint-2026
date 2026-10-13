@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {clean, number, day, InputError, parseCSV, safeJSON} from './parse.mjs';
+import {WQP_CHARACTERISTIC_EDITION,CHARACTERISTIC_MAPPING,CHARACTERISTIC_FIELDS,characteristicUnit,interpretCharacteristic,compatibleCharacteristicLimit} from './characteristics.mjs';
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export const stable = value => JSON.stringify(value, (key, val) => val && !Array.isArray(val) && typeof val==='object' ? Object.fromEntries(Object.keys(val).sort().map(k=>[k,val[k]])) : val);
 
@@ -93,17 +94,21 @@ export const FIELDS = {
 export function fieldReader(headers, overrides={}) {
   if(!overrides || typeof overrides!=='object' || Array.isArray(overrides)) throw new InputError('Column mapping must be an object');
   if(Object.hasOwn(overrides,DETECTION_MAPPING)&&overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION)throw new InputError('Unsupported WQP detection interpretation edition');
+  const characteristics=Object.hasOwn(overrides,CHARACTERISTIC_MAPPING);
+  if(characteristics&&(overrides[CHARACTERISTIC_MAPPING]!==WQP_CHARACTERISTIC_EDITION||overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION))throw new InputError('Choose the supported WQP characteristic and detection interpretation editions together');
+  const fields=characteristics?{...FIELDS,...CHARACTERISTIC_FIELDS}:FIELDS;
   for (const [key,name] of Object.entries(overrides)) {
-    if(key===DETECTION_MAPPING)continue;
+    if(key===DETECTION_MAPPING||key===CHARACTERISTIC_MAPPING)continue;
     if(typeof name!=='string') throw new InputError('Mapped column names must be strings; use an empty string to disable a field');
-    if(!Object.hasOwn(FIELDS,key)) throw new InputError('Unknown mapping field: '+key);
+    if(!Object.hasOwn(fields,key)) throw new InputError('Unknown mapping field: '+key);
     if(name && !headers.includes(name)) throw new InputError('Mapped column is absent: '+name);
   }
-  const mapping = Object.fromEntries(Object.entries(FIELDS).map(([key, aliases])=>[key,Object.hasOwn(overrides,key) ? overrides[key] : aliases.find(x=>headers.includes(x)) || '']));
+  const mapping = Object.fromEntries(Object.entries(fields).map(([key, aliases])=>[key,Object.hasOwn(overrides,key) ? overrides[key] : aliases.find(x=>headers.includes(x)) || '']));
   if(Object.hasOwn(overrides,DETECTION_MAPPING))mapping[DETECTION_MAPPING]=WQP_DETECTION_EDITION;
+  if(characteristics)mapping[CHARACTERISTIC_MAPPING]=WQP_CHARACTERISTIC_EDITION;
   // The directive travels inside the resolved mapping and thus the import ID.
   // Unpinned historical imports keep their exact original normalization.
-  return {mapping, get:(row,key)=>key===DETECTION_MAPPING?(mapping[DETECTION_MAPPING]||''):clean(row[mapping[key]])};
+  return {mapping, get:(row,key)=>[DETECTION_MAPPING,CHARACTERISTIC_MAPPING].includes(key)?(mapping[key]||''):clean(row[mapping[key]])};
 }
 function unitSpec(raw) {
   const u=clean(raw).toLowerCase().replaceAll('μ','u').replaceAll('µ','u').replaceAll('³','3').replace(/\s+/g,' ');
@@ -173,14 +178,19 @@ export function normaliseWQP(raw, get) {
   const versioned=get(raw,DETECTION_MAPPING)===WQP_DETECTION_EDITION;
   const sourceLimits=limits(raw,versioned), declaredUnit=get(raw,'unit');
   const inferredUnit=!declaredUnit && sourceLimits.length===1 ? sourceLimits[0].unit : '';
-  const spec=unitSpec(declaredUnit||inferredUnit), [parameter,basis]=constituent(characteristic,get(raw,'pcode'),get(raw,'fraction'),spec);
+  const extended=get(raw,CHARACTERISTIC_MAPPING)===WQP_CHARACTERISTIC_EDITION;
+  const ordinarySpec=unitSpec(declaredUnit||inferredUnit);
+  const spec=extended?characteristicUnit(declaredUnit||inferredUnit,characteristic,ordinarySpec):ordinarySpec;
+  const characteristicContext=extended?Object.fromEntries(Object.keys(CHARACTERISTIC_FIELDS).map(key=>[key,get(raw,key)])):null;
+  const classified=extended?interpretCharacteristic({characteristic,fraction:get(raw,'fraction'),spec,pcode:get(raw,'pcode'),method:get(raw,'method'),...characteristicContext}):null;
+  const [parameter,basis]=classified?[classified.parameter,classified.basis]:constituent(characteristic,get(raw,'pcode'),get(raw,'fraction'),spec);
   const rawValue=get(raw,'value'), detection=get(raw,'detection'), qualifier=get(raw,'qualifier');
   const match=/^([<>]=?|≤|≥)\s*(.+)$/.exec(rawValue);
   let censor=match?(match[1].startsWith('<')||match[1]==='≤'?'left':'right'):'none';
   if(/not detected|non.?detect|below quant|detected not quant|less than/i.test(detection)||/(^|[;, ])U($|[;, ])/.test(qualifier))censor='left';
   if(/above quant|greater than|exceeds quant/i.test(detection))censor='right';
   const numeric=number(match?match[2]:rawValue), reported=numeric===null?null:numeric*spec.factor+spec.offset;
-  const detectionLimits=sourceLimits.map(d=>{const u=unitSpec(d.unit);const compatible=u.kind===spec.kind&&u.basis===spec.basis&&(!versioned||u.kind!=='unknown'||label(d.unit)===label(declaredUnit||inferredUnit));return {...d,normalizedValue:compatible?d.value*u.factor+u.offset:null,normalizedUnit:u.unit};});
+  const detectionLimits=sourceLimits.map(d=>{const original=unitSpec(d.unit),u=extended?characteristicUnit(d.unit,characteristic,original):original;const compatible=extended?compatibleCharacteristicLimit(u,spec,classified,d.unit,declaredUnit||inferredUnit):u.kind===spec.kind&&u.basis===spec.basis&&(!versioned||u.kind!=='unknown'||label(d.unit)===label(declaredUnit||inferredUnit));return {...d,normalizedValue:compatible?d.value*u.factor+u.offset:null,normalizedUnit:u.unit};});
   const knownLimits=detectionLimits.filter(d=>d.normalizedValue!==null);
   // Do not choose among multiple laboratory detection/quantitation thresholds implicitly.
   let limit=reported!==null?reported:knownLimits.length===1?knownLimits[0].normalizedValue:null;
@@ -188,6 +198,7 @@ export function normaliseWQP(raw, get) {
   if(interpretation){censor=interpretation.censor;limit=interpretation.limit;}
   const value=censor==='none'?reported:null, lower=censor==='right'?limit:value, upper=censor==='left'?limit:value;
   const issues=interpretation?[...interpretation.issues]:[];
+  if(classified)issues.push(...classified.issues);
   if(sourceLimits.some(d=>d.value<0))issues.push('negative-detection-limit');
   if(inferredUnit)issues.push('unit-from-single-detection-limit');
   const lat=number(get(raw,'latitude')),lon=number(get(raw,'longitude'));
@@ -210,6 +221,7 @@ export function normaliseWQP(raw, get) {
   const logicalKey=resultId ? stable(['wqp',org,stationId,resultId]) : stable(['wqp',org,stationId,activityId,when,characteristic,get(raw,'fraction'),get(raw,'method'),get(raw,'unit')]);
   return {sourceKind:'wqp',stationId,organization:org,activityId,sourceResultId:resultId,logicalKey:hash(logicalKey),
     ...(interpretation?{detectionInterpretation:interpretation.interpretation}:{}),
+    ...(classified?{characteristicInterpretation:classified.metadata,...characteristicContext}:{}),
     ...when,parameter,characteristic,pcode:get(raw,'pcode'),basis,fraction:get(raw,'fraction'),unit:spec.unit,
     value,lower,upper,censor,reportedValue:rawValue,reportedUnit:get(raw,'unit'),detection,detectionLimits,qualifier,status,medium,activityType,valueType,
     method:get(raw,'method'),laboratory:get(raw,'laboratory'),comment:get(raw,'comment'),issues,
