@@ -17,7 +17,7 @@ from .common import INVEST_VERSION
 from .model_selection import MODEL_LABELS, run_scope
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-3"
+REPORT_EDITION = "2026-10-13-client-report-4"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -756,16 +756,33 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
                  grid, profile, records, observation_results, comparison=None,
                  scenario_summary=None, additional_sections=()):
     """Drop-in report hook for the existing delivery.py report branch."""
+    from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
+
     report = compose_report(workspace=workspace, selection=selection, state=state,
                             baseline=baseline, alternatives=alternatives, grid=grid,
                             profile=profile, source_records=records,
                             observation_results=observation_results, comparison=comparison,
                             scenario_summary=scenario_summary)
-    section_ids = {section["id"] for section in report["sections"]}
+    run_names = {run["id"]: _run_name(workspace, run)[0]
+                 for run in [baseline] + list(alternatives)}
+    water_report = build_sections(
+        directory, state, baseline_run_id=baseline["id"],
+        alternative_run_ids=[run["id"] for run in alternatives],
+        run_names=run_names, number=_fmt, text=_text,
+    )
+    appended = []
     for index, (title, paragraphs) in enumerate(additional_sections, 1):
-        key = "receiving-water-" + str(index)
+        if water_report is not None and title == LEGACY_SECTION_TITLE:
+            continue
+        appended.append(_section("receiving-water-" + str(index), title, paragraphs))
+    if water_report is not None:
+        appended.extend(water_report["sections"])
+        report["quantity_provenance"]["receiving_waters"] = water_report["provenance"]
+    section_ids = {section["id"] for section in report["sections"]}
+    for section in appended:
+        key = section["id"]
         while key in section_ids:
             key += "-additional"
-        report["sections"].append(_section(key, title, paragraphs))
+        report["sections"].append(dict(section, id=key))
         section_ids.add(key)
     return write_report(directory, report)
