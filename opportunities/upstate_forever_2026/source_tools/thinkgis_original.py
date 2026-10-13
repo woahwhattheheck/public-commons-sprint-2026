@@ -234,8 +234,40 @@ def _feature_url(index, fid):
     return index["origin"] + "/tgis/getftr.aspx?" + urlencode({"D": index["dsid"], "F": fid, "Z": 1})
 
 
+def _save_capture(root, status, complete, ids):
+    status["features"] = [complete[key] for key in ids if key in complete]
+    status.update(updated_at=now(), complete_features=len(complete),
+                  selected_features=len(ids),
+                  state="complete" if len(complete) == len(ids) else "incomplete")
+    atomic_json(root / "capture.json", status)
+
+
+def _reject_overlay(root, status, fid, uri, body, error, record, receipt_path=None):
+    """Preserve unusable original bytes and provenance before freeing a retry path."""
+    rejected_root = root / "rejected" / fid
+    body_sha = hashlib.sha256(body).hexdigest()
+    body_path = rejected_root / (body_sha + ".xml")
+    atomic_bytes(body_path, body, immutable=True)
+    receipt = None
+    if receipt_path is not None and receipt_path.exists():
+        original_receipt = receipt_path.read_bytes()
+        receipt_copy = rejected_root / (hashlib.sha256(original_receipt).hexdigest() + ".receipt.json")
+        atomic_bytes(receipt_copy, original_receipt, immutable=True)
+        receipt = describe_file(root, receipt_copy)
+    rejection = {"fid": fid, "source_url": uri, "observed_at": now(),
+                 "error": {"type": type(error).__name__, "message": str(error)},
+                 "body": describe_file(root, body_path), "original_record": record,
+                 "original_receipt": receipt}
+    attempt_path = rejected_root / (digest(rejection) + ".attempt.json")
+    atomic_json(attempt_path, rejection, immutable=True)
+    status.setdefault("rejected_attempts", []).append({
+        "fid": fid, "body": rejection["body"],
+        "original_receipt": receipt, "attempt": describe_file(root, attempt_path)})
+    return rejection["error"]
+
+
 def capture_features(index_directory, output, feature_ids, *, retry_failed=False, interval=1.0, timeout=60.0):
-    """Continue the same explicit FID selection; completed original bodies are reused."""
+    """Continue explicit FIDs, admitting only original responses with usable paths."""
     _, index, records, _ = _prepared_index(index_directory)
     ids = [str(_integer(fid, "Selected FID")) for fid in feature_ids]
     if not ids or len(set(ids)) != len(ids) or set(ids) - set(records):
@@ -255,8 +287,46 @@ def capture_features(index_directory, output, feature_ids, *, retry_failed=False
         complete = {r["fid"]: r for r in status["features"]}
         if len(complete) != len(status["features"]) or set(complete) - set(ids):
             raise ValueError("Capture repeats or introduces an unselected FID")
-        for record in complete.values():
-            verify_file(root, record)
+        # Reconcile bodies left by an interrupted receive and older receipts which
+        # admitted an empty overlay. Preserve rejected originals before removing
+        # their successful-path names; only --retry-failed starts another request.
+        for fid in ids:
+            uri = _feature_url(index, fid)
+            path = root / "original" / (fid + ".xml")
+            receipt_path = root / "receipts" / (fid + ".json")
+            record = complete.get(fid)
+            if receipt_path.exists():
+                receipt = read_json(receipt_path)
+                if record is not None and receipt != record:
+                    raise ValueError("Completed feature differs from its retained receipt")
+                record = receipt
+            if record is not None:
+                if (record.get("fid") != fid or record.get("source_url") != uri
+                        or record.get("path") != "original/" + fid + ".xml"):
+                    raise ValueError("Retained feature receipt belongs to another native request")
+                body = verify_file(root, record).read_bytes()
+            elif path.exists():
+                body = path.read_bytes()
+                record = {"fid": fid, "source_url": uri, "received_at": None,
+                          "headers": {}, "recovered_original_body": True,
+                          **describe_file(root, path)}
+            else:
+                continue
+            try:
+                decode_overlay(body)
+            except (ValueError, ET.ParseError) as exc:
+                error = _reject_overlay(root, status, fid, uri, body, exc, record, receipt_path)
+                complete.pop(fid, None)
+                status["failures"][fid] = {**error, "source_url": uri, "observed_at": now()}
+                _save_capture(root, status, complete, ids)
+                # These exact bytes and the original receipt are already banked.
+                receipt_path.unlink(missing_ok=True)
+                path.unlink(missing_ok=True)
+            else:
+                atomic_json(receipt_path, record, immutable=True)
+                complete[fid] = record
+                status["failures"].pop(fid, None)
+        _save_capture(root, status, complete, ids)
         last_request = 0.0
         for fid in ids:
             if fid in complete or fid in status["failures"] and not retry_failed:
@@ -267,54 +337,41 @@ def capture_features(index_directory, output, feature_ids, *, retry_failed=False
             try:
                 path = root / "original" / (fid + ".xml")
                 receipt_path = root / "receipts" / (fid + ".json")
-                if receipt_path.exists():
-                    record = read_json(receipt_path)
-                    if record.get("fid") != fid or record.get("source_url") != uri:
-                        raise ValueError("Retained feature receipt belongs to another native request")
-                    _xml(verify_file(root, record).read_bytes())
-                elif path.exists():
-                    # A previous receive may have published its body before its receipt.
-                    # Keep that first original response; do not fetch a second edition.
-                    _xml(path.read_bytes())
-                    record = {"fid": fid, "source_url": uri, "received_at": None,
-                              "headers": {}, "recovered_original_body": True,
-                              **describe_file(root, path)}
-                    atomic_json(receipt_path, record, immutable=True)
-                else:
-                    last_request = time.monotonic()
-                    request = Request(uri, headers={"User-Agent": "UpperSavannah-OriginalSource/1.0",
-                                                   "Accept-Encoding": "identity"})
-                    with urlopen(request, timeout=timeout) as response:
-                        if response.status != 200 or response.geturl() != uri:
-                            raise ValueError("Original feature response changed status or redirected")
-                        body = response.read(MAX_RESPONSE + 1)
-                        headers = {key: response.headers.get(key) for key in
-                                   ("Content-Type", "ETag", "Last-Modified", "Content-Length")}
-                    if len(body) > MAX_RESPONSE:
-                        raise ValueError("Original feature response exceeds 16 MiB")
-                    _xml(body)
-                    atomic_bytes(path, body, immutable=True)
-                    record = {"fid": fid, "source_url": uri, "received_at": received_at,
-                              "headers": headers, **describe_file(root, path)}
-                    atomic_json(receipt_path, record, immutable=True)
+                last_request = time.monotonic()
+                request = Request(uri, headers={"User-Agent": "UpperSavannah-OriginalSource/1.0",
+                                               "Accept-Encoding": "identity"})
+                with urlopen(request, timeout=timeout) as response:
+                    if response.status != 200 or response.geturl() != uri:
+                        raise ValueError("Original feature response changed status or redirected")
+                    body = response.read(MAX_RESPONSE + 1)
+                    headers = {key: response.headers.get(key) for key in
+                               ("Content-Type", "ETag", "Last-Modified", "Content-Length")}
+                if len(body) > MAX_RESPONSE:
+                    raise ValueError("Original feature response exceeds 16 MiB")
+                record = {"fid": fid, "source_url": uri, "received_at": received_at,
+                          "headers": headers, "path": "original/" + fid + ".xml",
+                          "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
+                try:
+                    decode_overlay(body)
+                except (ValueError, ET.ParseError) as exc:
+                    _reject_overlay(root, status, fid, uri, body, exc, record)
+                    raise
+                atomic_bytes(path, body, immutable=True)
+                atomic_json(receipt_path, record, immutable=True)
                 complete[fid] = record
                 status["failures"].pop(fid, None)
             except Exception as exc:
-                error = {"type": type(exc).__name__, "message": str(exc), "source_url": uri, "observed_at": now()}
+                error = {"type": type(exc).__name__, "message": str(exc),
+                         "source_url": uri, "observed_at": now()}
                 if isinstance(exc, HTTPError):
                     error["http_status"] = exc.code
                     error["retry_after"] = exc.headers.get("Retry-After")
                 status["failures"][fid] = error
-            status["features"] = [complete[key] for key in ids if key in complete]
-            status.update(updated_at=now(), complete_features=len(complete),
-                          selected_features=len(ids), state="complete" if len(complete) == len(ids) else "incomplete")
-            atomic_json(root / "capture.json", status)
+            _save_capture(root, status, complete, ids)
             print(json.dumps({"stage": "original-thinkgis-feature", "fid": fid,
                               "state": status["state"], "complete": len(complete), "selected": len(ids)}), flush=True)
             if status["failures"].get(fid, {}).get("http_status") in (429, 503):
                 break
-        if not (root / "capture.json").exists():
-            atomic_json(root / "capture.json", status)
         return status
 
 
@@ -438,6 +495,18 @@ def prepare_geometry(index_directory, capture_directory, output, *,
         for i, item in enumerate(index["original_pages"]):
             companions.append(_bank(root, verify_file(index_root, item),
                 "original/index-pages/" + str(i).zfill(4) + ".txt", item["sha256"]))
+        retained_rejected = set()
+        for rejected in capture.get("rejected_attempts", []):
+            if rejected.get("fid") not in selected:
+                raise ValueError("Rejected response belongs to an unselected native FID")
+            for kind in ("body", "original_receipt", "attempt"):
+                item = rejected.get(kind)
+                if item is not None:
+                    source = verify_file(capture_root, item)
+                    relative = "original/rejected/" + rejected["fid"] + "/" + kind + "-" + source.name
+                    if relative not in retained_rejected:
+                        companions.append(_bank(root, source, relative, item["sha256"]))
+                        retained_rejected.add(relative)
         if ring_assignments:
             companions.append(_bank(root, Path(ring_assignments), "original/ring-assignments.json"))
         boundaries, parcels, geometry_records, coverage = [], [], [], []
@@ -633,6 +702,85 @@ def join_screen(index_directory, screen_path, output, *, county,
             "title": entry["title"], "entries": [entry], "scope": summary}, immutable=True)
         return {"manifest": str(root / "sources.json"), "source_id": entry["id"], **summary}
 
+
+def receive_index(transfer_path, output, *, timeout=60.0):
+    """Materialize the existing original file bank from private temporary download URLs."""
+    transfer = read_json(transfer_path)
+    if transfer.get("schema") != "upstate.thinkgis-original-index-transfer/v1":
+        raise ValueError("Select the private original-index transfer descriptor")
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("Use a positive transfer timeout")
+    manifest = transfer["manifest"]
+    content = manifest["content"].encode("utf-8")
+    if len(content) != manifest["bytes"] or hashlib.sha256(content).hexdigest() != manifest["sha256"]:
+        raise ValueError("Transferred original manifest bytes differ")
+    original = json.loads(content)
+    if original.get("schema") != INDEX_SCHEMA:
+        raise ValueError("Transfer does not carry the original ThinkGIS index manifest")
+    pages = original["source"]["original_capture_pages"]
+    expected = {_source_name(page): page for page in pages}
+    files = transfer.get("files")
+    if len(expected) != len(pages) or not isinstance(files, list):
+        raise ValueError("Original response filenames must be unique")
+    descriptors = {item["filename"]: item for item in files}
+    if len(descriptors) != len(files) or set(descriptors) != set(expected):
+        raise ValueError("The private transfer must cover exactly the original response pages")
+    root = Path(output).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with held(root / "receive.lock", blocking=False):
+        manifest_path = root / "mccormick-original-index-manifest.json"
+        atomic_bytes(manifest_path, content, immutable=True)
+        results = []
+        for filename, page in expected.items():
+            member = Path(filename)
+            if member.name != filename or filename in ("", ".", "..") or "\\" in filename:
+                raise ValueError("Original response filename must be a simple local name")
+            item = descriptors[filename]
+            if item.get("sha256") != page["sha256"] or item.get("bytes") != page["bytes"]:
+                raise ValueError("Download descriptor differs from the original source hash")
+            if type(item["bytes"]) is not int or not 0 < item["bytes"] <= MAX_RESPONSE:
+                raise ValueError("Original index page size is outside the supported response range")
+            path = root / "original" / filename
+            record = {"path": path.relative_to(root).as_posix(), "bytes": page["bytes"], "sha256": page["sha256"]}
+            if path.exists():
+                verify_file(root, record)
+                reused = True
+            else:
+                url = item["url"]
+                parsed = urlsplit(url)
+                if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+                    raise ValueError("Use the original provider's HTTPS file download URL")
+                try:
+                    with urlopen(Request(url, headers={"Accept-Encoding": "identity"}), timeout=timeout) as response:
+                        if response.status != 200:
+                            raise ValueError("Original file download did not return 200")
+                        body = response.read(page["bytes"] + 1)
+                except HTTPError as exc:
+                    # A signed file URL is a temporary capability, never a log field.
+                    raise ValueError("Original file download returned HTTP " + str(exc.code)
+                                     + "; renew this file's existing transfer descriptor") from None
+                except OSError as exc:
+                    raise ValueError("Original file transfer failed: " + type(exc).__name__) from None
+                if len(body) != page["bytes"] or hashlib.sha256(body).hexdigest() != page["sha256"]:
+                    raise ValueError("Downloaded original response differs: " + filename)
+                atomic_bytes(path, body, immutable=True)
+                reused = False
+            results.append({**record, "reused": reused})
+            # The receipt deliberately excludes temporary authenticated download URLs.
+            atomic_json(root / "received-index.json", {
+                "schema": "upstate.thinkgis-original-index-receiving/v1",
+                "manifest_sha256": manifest["sha256"], "files": results,
+                "received_pages": len(results), "expected_pages": len(pages),
+                "state": "complete" if len(results) == len(pages) else "receiving"})
+            print(json.dumps({"stage": "original-index-receiving", "filename": filename,
+                              "complete_pages": len(results), "selected_pages": len(pages),
+                              "received_bytes": sum(row["bytes"] for row in results)}), flush=True)
+        # Validate actual retained rows, original IDs and the complete ordinal sequence.
+        _, decoded = read_index(manifest_path, root / "original")
+        return {"manifest": str(manifest_path), "original_root": str(root / "original"),
+                "received_pages": len(results), "records": len(decoded["records"]),
+                "state": "complete", "receipt": str(root / "received-index.json")}
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -662,8 +810,14 @@ def main(argv=None):
     joining.add_argument("--county", required=True)
     joining.add_argument("--reference-field", default="T_Map_Number")
     joining.add_argument("--county-field", default="County")
+    receive = sub.add_parser("receive-index", help="Materialize the retained original index bank")
+    receive.add_argument("--transfer", required=True)
+    receive.add_argument("--output", required=True)
+    receive.add_argument("--timeout", type=float, default=60.0)
     args = parser.parse_args(argv)
-    if args.command == "index":
+    if args.command == "receive-index":
+        result = receive_index(args.transfer, args.output, timeout=args.timeout)
+    elif args.command == "index":
         result = prepare_index(args.manifest, args.original_root, args.output, vintage=args.vintage)
     elif args.command == "capture":
         ids = (Path(args.fids[1:]).read_text(encoding="utf-8").splitlines()
