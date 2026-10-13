@@ -1,0 +1,681 @@
+{
+  "counts": {
+    "classes": 26,
+    "classesWithRdfClass": 26,
+    "properties": 270,
+    "propertiesWithIri": 231,
+    "propertiesWithoutIri": 39,
+    "distinctTerms": 119,
+    "termsWithIriConflict": 4,
+    "termsWithShapeConflict": 10
+  },
+  "unboundProperties": [
+    {
+      "class": "Agent",
+      "property": "category",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "concept"
+    },
+    {
+      "class": "Catalog",
+      "property": "datasetSeries",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "datasetseries"
+    },
+    {
+      "class": "Catalog",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    },
+    {
+      "class": "Concept",
+      "property": "altLabel",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Concept",
+      "property": "definition",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Concept",
+      "property": "inScheme",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [],
+      "ref": "conceptscheme"
+    },
+    {
+      "class": "Concept",
+      "property": "notation",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Concept",
+      "property": "prefLabel",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "DataService",
+      "property": "inventoried",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "DataService",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    },
+    {
+      "class": "Dataset",
+      "property": "created",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Dataset",
+      "property": "first",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "hasCurrentVersion",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "hasPart",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "inventoried",
+      "requirementLevel": "Recommended",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Dataset",
+      "property": "previousVersion",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "replaces",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "rightsHolder",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "organization"
+    },
+    {
+      "class": "Dataset",
+      "property": "supportedSchema",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [],
+      "ref": "dataset"
+    },
+    {
+      "class": "Dataset",
+      "property": "wasAttributedTo",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "agent"
+    },
+    {
+      "class": "Dataset",
+      "property": "wasUsedBy",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "activity"
+    },
+    {
+      "class": "Distribution",
+      "property": "availability",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [],
+      "ref": "concept"
+    },
+    {
+      "class": "Distribution",
+      "property": "inventoried",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Distribution",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    },
+    {
+      "class": "Document",
+      "property": "accessURL",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Document",
+      "property": "category",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "concept"
+    },
+    {
+      "class": "Document",
+      "property": "corporateCreator",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "organization"
+    },
+    {
+      "class": "Document",
+      "property": "downloadURL",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Document",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    },
+    {
+      "class": "Identifier",
+      "property": "creator",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [],
+      "ref": "organization"
+    },
+    {
+      "class": "Identifier",
+      "property": "issued",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Identifier",
+      "property": "notation",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Identifier",
+      "property": "schemaAgency",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Identifier",
+      "property": "version",
+      "requirementLevel": null,
+      "range": null,
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Location",
+      "property": "altLabel",
+      "requirementLevel": "Optional",
+      "range": "rdfs:Literal",
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Location",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    },
+    {
+      "class": "Location",
+      "property": "prefLabel",
+      "requirementLevel": "Recommended",
+      "range": "rdfs:Literal",
+      "jsonTypes": [
+        "string"
+      ],
+      "ref": null
+    },
+    {
+      "class": "Standard",
+      "property": "category",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "concept"
+    },
+    {
+      "class": "Standard",
+      "property": "otherIdentifier",
+      "requirementLevel": "Optional",
+      "range": null,
+      "jsonTypes": [
+        "array"
+      ],
+      "ref": "identifier"
+    }
+  ],
+  "iriConflicts": [
+    {
+      "term": "conformsTo",
+      "dominant": {
+        "iri": "dcterms:conformsTo",
+        "classes": [
+          "Catalog",
+          "CatalogRecord",
+          "DataService",
+          "Dataset",
+          "Distribution"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Document",
+          "iri": "dcterms:identifier"
+        }
+      ]
+    },
+    {
+      "term": "mediaType",
+      "dominant": {
+        "iri": "dcat:mediaType",
+        "classes": [
+          "Distribution"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Document",
+          "iri": "dcterms:mediaType"
+        }
+      ]
+    },
+    {
+      "term": "publisher",
+      "dominant": {
+        "iri": "dcterms:publisher",
+        "classes": [
+          "Catalog",
+          "DataService",
+          "Dataset",
+          "DatasetSeries"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Document",
+          "iri": "dc:publisher"
+        }
+      ]
+    },
+    {
+      "term": "title",
+      "dominant": {
+        "iri": "dcterms:title",
+        "classes": [
+          "Catalog",
+          "CatalogRecord",
+          "ConceptScheme",
+          "DataService",
+          "Dataset",
+          "DatasetSeries",
+          "Distribution",
+          "Document",
+          "Standard"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Kind",
+          "iri": "vcard:title"
+        }
+      ]
+    }
+  ],
+  "shapeConflicts": [
+    {
+      "term": "created",
+      "iri": "dcterms:created",
+      "dominant": {
+        "coercion": null,
+        "container": null,
+        "classes": [
+          "ConceptScheme",
+          "DataService"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Standard",
+          "coercion": "xsd:date",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "creator",
+      "iri": "dcterms:creator",
+      "dominant": {
+        "coercion": "@id",
+        "container": "@set",
+        "classes": [
+          "Catalog",
+          "DataService",
+          "Document"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Dataset",
+          "coercion": "@id",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "description",
+      "iri": "dcterms:description",
+      "dominant": {
+        "coercion": null,
+        "container": null,
+        "classes": [
+          "Catalog",
+          "ConceptScheme",
+          "DataService",
+          "Dataset",
+          "DatasetSeries",
+          "Distribution",
+          "Document",
+          "Standard"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "CatalogRecord",
+          "coercion": null,
+          "container": "@set"
+        }
+      ]
+    },
+    {
+      "term": "identifier",
+      "iri": "dcterms:identifier",
+      "dominant": {
+        "coercion": null,
+        "container": null,
+        "classes": [
+          "Catalog",
+          "DataService",
+          "Dataset",
+          "Distribution",
+          "Document",
+          "Location"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Standard",
+          "coercion": "xsd:string",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "issued",
+      "iri": "dcterms:issued",
+      "dominant": {
+        "coercion": null,
+        "container": null,
+        "classes": [
+          "Catalog",
+          "ConceptScheme",
+          "Dataset",
+          "DatasetSeries",
+          "Distribution",
+          "Document",
+          "Standard"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "CatalogRecord",
+          "coercion": null,
+          "container": "@set"
+        }
+      ]
+    },
+    {
+      "term": "language",
+      "iri": "dcterms:language",
+      "dominant": {
+        "coercion": "@id",
+        "container": "@set",
+        "classes": [
+          "Catalog",
+          "CatalogRecord",
+          "DataService",
+          "Dataset"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Distribution",
+          "coercion": null,
+          "container": "@set"
+        }
+      ]
+    },
+    {
+      "term": "modified",
+      "iri": "dcterms:modified",
+      "dominant": {
+        "coercion": null,
+        "container": null,
+        "classes": [
+          "Catalog",
+          "CatalogRecord",
+          "ConceptScheme",
+          "DataService",
+          "Dataset",
+          "DatasetSeries",
+          "Distribution"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Standard",
+          "coercion": "xsd:date",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "relation",
+      "iri": "dcterms:relation",
+      "dominant": {
+        "coercion": "@id",
+        "container": "@set",
+        "classes": [
+          "Dataset"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Relationship",
+          "coercion": "@id",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "source",
+      "iri": "dcterms:source",
+      "dominant": {
+        "coercion": "@id",
+        "container": "@set",
+        "classes": [
+          "Dataset"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "CatalogRecord",
+          "coercion": "@id",
+          "container": null
+        }
+      ]
+    },
+    {
+      "term": "version",
+      "iri": "dcat:version",
+      "dominant": {
+        "coercion": "xsd:string",
+        "container": null,
+        "classes": [
+          "ConceptScheme"
+        ]
+      },
+      "overrides": [
+        {
+          "class": "Dataset",
+          "coercion": null,
+          "container": null
+        }
+      ]
+    }
+  ],
+  "unresolvablePrefixes": [],
+  "classesWithoutDefaultType": []
+}

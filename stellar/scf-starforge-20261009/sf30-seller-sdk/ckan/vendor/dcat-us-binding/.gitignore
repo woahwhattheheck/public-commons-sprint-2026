@@ -1,0 +1,9 @@
+upstream/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Blank node labels are not stable between rdflib runs, so the expanded
+# corpus is a build product rather than a committed artefact.
+build/corpus.expanded.ttl

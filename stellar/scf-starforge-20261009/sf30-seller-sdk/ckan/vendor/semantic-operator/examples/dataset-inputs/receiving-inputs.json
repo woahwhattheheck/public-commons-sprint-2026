@@ -1,0 +1,162 @@
+{
+  "schema": "commons-semantic-dataset-receiving-inputs/1",
+  "files": [
+    {
+      "id": "baseline",
+      "path": "baseline.trig",
+      "bytes": 1293,
+      "sha256": "4902fdd321fe8dcefa83cbb20c48265146e553b34bd27c5ac0b1b6bb08ace7a1",
+      "format": "trig",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "corrected",
+      "path": "corrected.trig",
+      "bytes": 1450,
+      "sha256": "215c6d835636997eaba1715150ddbc334ed6925f587e96b2a69dfff05a1f4e8b",
+      "format": "trig",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "shapes",
+      "path": "shapes.ttl",
+      "bytes": 595,
+      "sha256": "36e9c3bd6ae647a3191d15093613f258b0e40551c928224c62c6b478d3c72c17",
+      "format": "turtle",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "mapped-rows",
+      "path": "mapped-rows.csv",
+      "bytes": 44,
+      "sha256": "30eee97dc4120b4a0d37d971bde049916cbac42f1afcc30cb182f8d7e066fa47",
+      "format": "csv",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "document-a",
+      "path": "document-a.nt",
+      "bytes": 157,
+      "sha256": "716bb1f851d1a09063f4df8a611ee110a042740fbd1886c2adc038d6ee8b0360",
+      "format": "nt",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "document-b",
+      "path": "document-b.nt",
+      "bytes": 158,
+      "sha256": "6469ca97ba486a4b7db274b20b966f05769c7bb5a2b71c620adca4626e14a638",
+      "format": "nt",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "local-dataset",
+      "path": "local-dataset.jsonld",
+      "bytes": 585,
+      "sha256": "250695b60d0faa3eafe13a01562abb4ec482e899e64adec86ec48519700240f7",
+      "format": "json-ld",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "symmetric-empty",
+      "path": "symmetric-empty.trig",
+      "bytes": 94,
+      "sha256": "18e7eee9ca6d32ee994c15cda6b8bf6f5a71dea1cd7eed3299f231f61b8ad937",
+      "format": "trig",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "symmetric-empty-relabelled",
+      "path": "symmetric-empty-relabelled.trig",
+      "bytes": 95,
+      "sha256": "25d0dacc6568f6a0e7c654de3f6c08cfdd0e513dd93e337186b7d075d6616ea8",
+      "format": "trig",
+      "source_class": "authored development derivation"
+    },
+    {
+      "id": "w3c-conformance-standards",
+      "path": "../../reference/w3c/examples/conformance-standards.trig",
+      "bytes": 7853,
+      "sha256": "3b3e4c0a851d8d9811f5948110fb8d79dc2521bff4434b8aae6d2ca0627fe033",
+      "git_blob": "dcac9db94bd3d95dd0b0f20f85d8f5c239dc4321",
+      "format": "trig",
+      "source_class": "unchanged previously retained W3C reference"
+    }
+  ],
+  "baseline": "baseline",
+  "corrected": "corrected",
+  "shapes": "shapes",
+  "query": "PREFIX : <https://dcat.example.org/>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nSELECT ?measurement ?value ?computed ?g\nWHERE {\n  GRAPH :testResult {\n    :Dataset dqv:hasQualityMeasurement ?measurement .\n    ?measurement dqv:value ?value .\n  }\n  GRAPH ?g { ?measurement dqv:computedOn ?computed . }\n}\nORDER BY ?g\n",
+  "query_scope": {
+    "default_graph": "default",
+    "named_graphs": "all"
+  },
+  "validation_scopes": {
+    "per_graph": {
+      "mode": "per_graph",
+      "graphs": [
+        {
+          "type": "uri",
+          "value": "https://dcat.example.org/testResult"
+        }
+      ]
+    },
+    "union": {
+      "mode": "union",
+      "graphs": [
+        {
+          "type": "uri",
+          "value": "https://dcat.example.org/testResult"
+        },
+        {
+          "type": "uri",
+          "value": "https://dcat.example.org/qualityDetails"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "per_graph_conforms": false,
+    "union_conforms": true,
+    "corrected_per_graph_conforms": true,
+    "baseline_quads": 17,
+    "corrected_quads": 17,
+    "baseline_graphs": 6,
+    "corrected_graphs": 6,
+    "empty_graphs": 2,
+    "cross_graph_query_rows": 1,
+    "baseline_query_graph": "https://dcat.example.org/qualityDetails",
+    "corrected_query_graph": "https://dcat.example.org/testResult",
+    "baseline_decimal_lexeme": "050.0",
+    "corrected_decimal_lexeme": "075.0",
+    "ground_membership_changes": 1,
+    "removed_empty_graph": "https://dcat.example.org/empty",
+    "added_empty_graph": "https://dcat.example.org/emptyReviewed",
+    "unchanged_w3c_named_graph_quads": 2
+  },
+  "provenance": {
+    "reference": "w3c-conformance-standards",
+    "statement": "The W3C file is unchanged. The other files are explicitly authored development inputs using its example vocabulary. They are not an SAIC ontology, tenant export, operational observation, or client acceptance."
+  },
+  "mapping": {
+    "mapping_id": "authored-map",
+    "revision": 1,
+    "input_key": "mapped-rows",
+    "subject_template": "https://dcat.example.org/{id}",
+    "classes": [
+      "http://www.w3.org/ns/dcat#Dataset"
+    ],
+    "null_values": [],
+    "fields": [
+      {
+        "column": "label",
+        "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+        "kind": "literal"
+      }
+    ],
+    "destination_graph": {
+      "type": "uri",
+      "value": "https://dcat.example.org/mapped"
+    }
+  }
+}

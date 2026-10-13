@@ -12,6 +12,9 @@ import { applicationInputEditionCommands, applicationInputEditionHelp, runApplic
 import { writeApplicationOutputDownload } from './application-output.mjs';
 import { readJSON } from './storage.mjs';
 import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
+import { inspectApplicationSetup, exportApplicationSetup, prepareApplicationSetup,
+  applicationSetupStatus, saveApplicationSetup } from './application-setup-operations.mjs';
+import { dcatReceivingCommands, dcatReceivingHelp, runDcatReceivingCommand } from './application-dcat-receiving-cli.mjs';
 
 import { inspectProductPlanBundle, readProductPlanDocument } from './source-product-plans.mjs';
 import { saveTextExport } from '../discovery/write-json.mjs';
@@ -62,6 +65,11 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace managed-recover --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-stop --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-config --workspace DIRECTORY --home-id ID [--path RELATIVE_FILE]
+  runtime-workspace application-setup-inspect --document COMPLETE_JSON
+  runtime-workspace application-setup-export --workspace DIRECTORY --application-id ID --output PRIVATE_JSON [--name NAME]
+  runtime-workspace application-setup-prepare --workspace DIRECTORY --operation PRIVATE_DIRECTORY [--document COMPLETE_JSON --mode new|reopen] [--kind TYPE] [--bindings PRIVATE_JSON] [--request-id UUID]
+  runtime-workspace application-setup-status --operation PRIVATE_DIRECTORY
+  runtime-workspace application-setup-save --workspace DIRECTORY --operation PRIVATE_DIRECTORY
   runtime-workspace applications --workspace DIRECTORY [--history-limit 1]
   runtime-workspace application-history --workspace DIRECTORY --application-id ID [--limit 30] [--cursor CURSOR]
   runtime-workspace application-review --workspace DIRECTORY --request PRIVATE_JSON
@@ -84,6 +92,7 @@ ${runtimeProcedureHelp}
 ${applicationInputHelp}
 ${applicationInputSetHelp}
 ${applicationInputEditionHelp}
+${dcatReceivingHelp}
 
 The private browser receives an original archive or reuses an existing runtime,
 reviews exact dependency profiles, prepares and resumes original installations,
@@ -93,6 +102,12 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  'application-setup-inspect': ['--document'],
+  'application-setup-export': ['--workspace', '--application-id', '--output', '--name'],
+  'application-setup-prepare': ['--workspace', '--operation', '--document', '--mode', '--kind', '--bindings', '--request-id'],
+  'application-setup-status': ['--operation'],
+  'application-setup-save': ['--workspace', '--operation'],
+  ...dcatReceivingCommands,
   ...workspaceBackupCommands,
   ...runtimeProcedureCommands,
   ...applicationInputCommands,
@@ -158,6 +173,14 @@ export async function main(argv = process.argv.slice(2)) {
     if (!options['--document']) fail('PRODUCT_PLAN_DOCUMENT_REQUIRED');
     process.stdout.write(json(inspectProductPlanBundle(await readProductPlanDocument(resolve(options['--document']))))); return;
   }
+  if (command === 'application-setup-inspect') {
+    if (!options['--document']) fail('APPLICATION_SETUP_DOCUMENT_REQUIRED');
+    process.stdout.write(json(await inspectApplicationSetup({ document: options['--document'] }))); return;
+  }
+  if (command === 'application-setup-status') {
+    if (!options['--operation']) fail('APPLICATION_SETUP_OPERATION_REQUIRED');
+    process.stdout.write(json(await applicationSetupStatus({ operation: options['--operation'] }))); return;
+  }
   if (!options['--workspace']) fail('RUNTIME_WORKSPACE_DIRECTORY_REQUIRED');
   const directory = resolve(options['--workspace']);
   if (command === 'init') {
@@ -181,7 +204,19 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (Object.hasOwn(workspaceBackupCommands, command)) result = await runWorkspaceBackupCommand(model, command, options);
+  if (command === 'application-setup-export') {
+    if (!options['--application-id'] || !options['--output']) fail('APPLICATION_SETUP_EXPORT_SELECTION_REQUIRED');
+    result = await exportApplicationSetup(model, { applicationId: options['--application-id'], output: options['--output'], name: options['--name'] ?? '' });
+  } else if (command === 'application-setup-prepare') {
+    if (!options['--operation']) fail('APPLICATION_SETUP_OPERATION_REQUIRED');
+    result = await prepareApplicationSetup(model, { operation: options['--operation'],
+      document: options['--document'] ?? null, mode: options['--mode'] ?? null, kind: options['--kind'] ?? null,
+      bindings: options['--bindings'] ?? null, requestId: options['--request-id'] ?? null });
+  } else if (command === 'application-setup-save') {
+    if (!options['--operation']) fail('APPLICATION_SETUP_OPERATION_REQUIRED');
+    result = await saveApplicationSetup(model, { operation: options['--operation'] });
+  } else if (Object.hasOwn(dcatReceivingCommands, command)) result = await runDcatReceivingCommand(model, command, options);
+  else if (Object.hasOwn(workspaceBackupCommands, command)) result = await runWorkspaceBackupCommand(model, command, options);
   else if (Object.hasOwn(runtimeProcedureCommands, command)) result = await runRuntimeProcedureCommand(model, command, options);
   else if (Object.hasOwn(applicationInputEditionCommands, command)) result = await runApplicationInputEditionCommand(model, command, options);
   else if (Object.hasOwn(applicationInputSetCommands, command)) result = await runApplicationInputSetCommand(model, command, options);

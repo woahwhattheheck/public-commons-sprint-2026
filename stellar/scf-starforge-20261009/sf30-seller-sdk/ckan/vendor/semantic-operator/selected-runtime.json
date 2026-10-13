@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.dcat-semantic-runtime.v1",
+  "repository": "woahwhattheheck/commons",
+  "commit": "db959ff77f113d3344a155835693c7021fc5823d",
+  "upstream_root": "revenue/semantic_interoperability_operator",
+  "original_manifest_sha256": "2fff66af17de2e0c5f4c35ba0e765a3bf0ea44f8347b78f72e14c54d973286b0",
+  "entrypoint": "semantic_operator.worker",
+  "files": [
+    {
+      "path": "semantic_operator/__init__.py",
+      "bytes": 64,
+      "git_blob": "7d24d6cb3e73e84cfce011130e9d215aa731d4e1",
+      "sha256": "8296a521b8c33f086c992c9188d4fc3aa6e521312a42208b80fa4df8c267e52a",
+      "mode": "100644"
+    },
+    {
+      "path": "semantic_operator/worker.py",
+      "bytes": 11990,
+      "git_blob": "4a2255fc6364667e9fb69ce3a40a4f2d13f8e9d9",
+      "sha256": "c6e6168a183f5c0f40489454ef6fc142521ae71182ea7c70e9a2d97ea9ae40e9",
+      "mode": "100644"
+    },
+    {
+      "path": "semantic_operator/rdf_engine.py",
+      "bytes": 62831,
+      "git_blob": "f0bc6bc45ccfdb02f4736715869e3d13d35dd3cd",
+      "sha256": "2352dbbf58e79f7aa98791a3abe3ec35df3fabdba95a1c66efaf836b25135d5f",
+      "mode": "100644"
+    },
+    {
+      "path": "semantic_operator/dataset_engine.py",
+      "bytes": 60633,
+      "git_blob": "1e679d4208c18f8be86341119d056a9fbe30af17",
+      "sha256": "5d039e3e59dd6be9974fe321f3e22c02583d35d00d4f48e14dcd8e689a9c900d",
+      "mode": "100644"
+    },
+    {
+      "path": "semantic_operator/security.py",
+      "bytes": 11250,
+      "git_blob": "f844ecd5d4c5c504ce49bb129e4508a2e7aa804c",
+      "sha256": "0d7ae6ed1c7476179f5fb8f790ca29d8a75664a5ea4204e01fe87d286220513f",
+      "mode": "100644"
+    },
+    {
+      "path": "semantic_operator/store.py",
+      "bytes": 12441,
+      "git_blob": "247d0f3cb1c1cf753d53aac4fea131cfd0e88fe7",
+      "sha256": "5a0ff1dc574b0a7ecb70701e8486b19ec2e62ac20435e50972b26c5d21587a54",
+      "mode": "100644"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 63,
+      "git_blob": "e6e4737ffde5fd72b2b938033014e5efa01ffb1a",
+      "sha256": "a5797066cb2e4a2bcd97b231423dfd041e9057220e41140c398771d6a3a9d3da",
+      "mode": "100644"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11358,
+      "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "mode": "100644"
+    },
+    {
+      "path": "NOTICE",
+      "bytes": 750,
+      "git_blob": "938276dd5924a40bf64c75ab91cd2e5d9c687693",
+      "sha256": "00bde0ac8314b36b05fbce8ff9e0fde89c581d6e2583e2a6022dc1a987315a6b",
+      "mode": "100644"
+    },
+    {
+      "path": "NATIVE_CONTRACT.json",
+      "bytes": 4647,
+      "git_blob": "984f4b8f8dfb905f43f9e55d8183cfaef71f0be8",
+      "sha256": "c0bffd9e56d83996f06d4b9a4b78e52ab54f5bcf20ff17ede22045b912a6d07c",
+      "mode": "100644"
+    }
+  ]
+}

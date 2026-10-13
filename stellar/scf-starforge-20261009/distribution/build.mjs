@@ -21,7 +21,11 @@ const supported = /\.(?:mjs|js|cjs|ts|mts|py|pyi|rb|rbs|erb|php|go|rs|java|dmn|d
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
-function isRuntimeFile(path, explicitRuntime = false) {
+function isRuntimeFile(path, explicitRuntime = false, explicitSource = false) {
+  // A complete supportFiles member is an exact original Git source selection,
+  // including upstream hidden files and fixture data. It does not expand siblings.
+  // The caller still applies recipe/excludeFiles, regular-blob and byte guards.
+  if (explicitSource) return true;
   const parts = path.split('/');
   // Retained source data can have an original fixtures path. Only explicitly
   // declared data and native XML/DMN/CMMN models get this exception; executable fixtures stay excluded.
@@ -198,6 +202,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
     ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
+  const explicitSources = new Set(spec.supportFiles);
   const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths,
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
     ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
@@ -211,11 +216,11 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     originalInputs.has(path);
   // A selected archive carries only its original declarations, even when its
   // complete distribution component contains other product contribution files.
-  // Explicit support files retain their original format and can override a
-  // test-like filename. Automatic component expansion keeps its format filter;
-  // directory, explicit exclusion and regular-file checks still apply.
+  // Exact support files retain original hidden/test/fixture paths and formats.
+  // Automatic component expansion keeps its format and directory filters;
+  // explicit exclusion and regular-file checks apply to both paths.
   const selected = tree.filter(item => selectionIncludes(item.path) &&
-    isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
+    isRuntimeFile(item.path, explicitRuntime.has(item.path), explicitSources.has(item.path)) && !excluded.has(item.path) &&
     (spec.components.some(root => item.path.startsWith(root + '/')) || explicitRuntime.has(item.path)));
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
@@ -251,7 +256,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const enqueue = (target, importer, discovered) => {
     if (names.has(target)) return;
     const item = byPath.get(target);
-    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target) || declaredRuntime.has(target))) {
+    if (!item || excluded.has(target) || !selectionIncludes(target) || !isRuntimeFile(target, explicitRuntime.has(target) || declaredRuntime.has(target), explicitSources.has(target))) {
       missingModules.push(importer + ' -> ' + target);
       return;
     }
