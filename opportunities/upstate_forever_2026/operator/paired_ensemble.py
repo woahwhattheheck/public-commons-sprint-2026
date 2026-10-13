@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import urllib.parse
 from model.paired_ensemble.ensemble_workspace import EnsembleWorkspace
+from model.paired_ensemble.designs import catalog_run
 from model.paired_ensemble.ensemble_store import digest, fingerprint, identifier, read, verify
 from model.paired_ensemble.ensemble_portable import export_project, receive_project
 
@@ -69,7 +70,11 @@ def install(server):
 
     def state(self, workspace):
         result = original_state(self, workspace)
-        result['data']['paired_ensemble_products'] = service(self, workspace).list()
+        app = service(self, workspace)
+        result['data']['paired_ensemble_products'] = app.list()
+        result['data']['runs'] = [
+            {**row, **catalog_run(app.workspace.inspect_run(identifier(row['id'])))}
+            for row in result['data'].get('runs', [])]
         return result
 
     def item(self, workspace, kind, key):

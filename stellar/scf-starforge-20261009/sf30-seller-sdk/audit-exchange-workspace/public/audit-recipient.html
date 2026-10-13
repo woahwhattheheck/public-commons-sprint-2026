@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit recipient review</title><link rel="stylesheet" href="audit-recipient.css"></head>
+<body><header><p class="eyebrow">Audit Exchange · recipient workspace</p><h1>Review the original audit</h1>
+<p>Write source-bound review proposals, keep every authored edition, and return the complete original package for deliberate native acceptance.</p>
+<div id="source-identity" class="identity"></div></header>
+<main><div id="message" role="status">Opening the complete original source…</div><p id="storage" class="muted"></p>
+<nav aria-label="Recipient sections"><button data-tab="reviews">Write reviews</button><button data-tab="source">Inspect source</button><button data-tab="history">Authored editions</button><button data-tab="return">Save and return</button></nav>
+<section id="reviews" class="view"><h2>Review proposals</h2><div class="toolbar"><button id="new-review">New review</button><label>Copy an existing native review<select id="original-review"><option value="">Choose an original review…</option></select></label><button id="copy-review">Copy into manuscript</button></div>
+<div class="columns"><aside><div id="review-list"></div></aside><form id="review-form" onsubmit="return false">
+<p id="review-mode" class="muted"></p>
+<div class="grid"><label>Original source<select id="source-id"></select></label><label>Exact source revision<select id="revision-id"></select></label></div>
+<label>Entity (leave blank for the whole source)<input id="entity-key" list="entity-options"><datalist id="entity-options"></datalist></label>
+<label>Review title<input id="title" maxlength="500" required></label>
+<div class="grid"><label>Status<select id="status"><option value="open">Open</option><option value="investigating">Investigating</option><option value="resolved">Resolved</option><option value="accepted">Accepted evidence</option></select></label><label>Reviewer<input id="actor" maxlength="240" required></label><label>Assignee<input id="assignee" maxlength="500"></label><label>Due date<input id="due-date" maxlength="100" placeholder="Original date or agreed wording"></label></div>
+<label>Complete review note<textarea id="note" rows="8" maxlength="32000"></textarea></label>
+<h3>Evidence links</h3><div id="evidence"></div><button id="add-evidence">Add evidence link</button>
+<p class="muted">Statuses remain proposed recipient review fields until the author previews and accepts this return through the original native workspace.</p><button id="remove-review" class="secondary">Remove from working edition</button>
+</form></div><button id="save-edition" class="primary">Save complete authored edition</button><p id="draft-state"></p></section>
+<section id="source" class="view" hidden><h2>Original source and exact revision</h2><div class="grid"><label>Source<select id="inspect-source"></select></label><label>Revision<select id="inspect-revision"></select></label></div><div id="source-summary"></div><label>Find an original field<input id="field-find" type="search"></label><div id="source-fields" class="table-wrap"></div><div class="toolbar"><button id="fields-previous">Previous fields</button><span id="field-count"></span><button id="fields-next">Next fields</button></div><details><summary>Complete original XML text</summary><pre id="original-xml"></pre></details><details><summary>Recorded validation</summary><pre id="validation"></pre></details></section>
+<section id="history" class="view" hidden><h2>All authored editions</h2><p>Copying an older edition restores its complete fields into working review. Saved editions remain unchanged.</p><div id="edition-history"></div><details><summary>Original native review history</summary><pre id="original-history"></pre></details></section>
+<section id="return" class="view" hidden><h2>Save, reopen, and return</h2><p>Download the working copy to keep unfinished fields. The manuscript contains all saved authored editions. Keep the supplied original archive unchanged.</p>
+<div class="toolbar"><button id="download-working">Download complete working copy</button><label>Open working copy<input id="working-file" type="file" accept=".json,application/json"></label><button id="reopen">Reopen saved browser copy</button></div>
+<div class="toolbar"><button id="download-manuscript">Download saved manuscript</button><button id="print">Print proposed reviews</button></div>
+<label>Unchanged original-review.zip<input id="original-file" type="file" accept=".zip,application/zip"></label><p id="original-file-state">No original archive selected.</p>
+<button id="download-return" class="primary">Download complete return ZIP</button><p id="return-result"></p><details><summary>Native acceptance</summary><p>The author first runs <code>audit_recipient_review.py preview</code> against the existing original workspace. The complete preview identifies every review and source revision. <code>apply</code> saves through original <code>review.save</code> requests and retains their outcomes. A changed workspace or review is shown as a conflict; this offline page never writes to a live workspace.</p></details></section>
+<section id="print-review" class="print-only"></section></main>
+<!--AUDIT_RECIPIENT_INPUT-->
+<script src="local-file-hash.js"></script><script src="audit-recipient.js"></script></body></html>

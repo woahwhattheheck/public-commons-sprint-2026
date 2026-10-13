@@ -24,7 +24,7 @@ message, loss, optimizer cost and evaluation count. It keeps the original fit an
 held-out roles, coefficients and bounds, exact-valued RMSE/bias summaries, full
 observation table, original source references and local identifiability result.
 Equal-axis plots compare the actual exact-valued reference and prediction pairs
-separately by species. Filled circles identify fit records and open squares
+separately by the original observation operator. Filled circles identify fit records and open squares
 identify held-out records. Below-limit records remain in the full table rather
 than appearing as exact concentrations.
 
@@ -49,7 +49,7 @@ from that request. Correlation is declared in the latent Gaussian space; the
 transformed physical parameters may have a different Pearson correlation.
 
 For chemical monitoring design, the report names the exact selected candidates,
-their days/species/error scales, prediction and incremental information gain.
+their days, observation operators, error scales, prediction and incremental information gain.
 Prior and resulting linearized precision matrices keep the original parameter
 order, with units equal to inverse products of the corresponding parameter units.
 These are proposed measurement locations/times under the saved local design.
@@ -135,3 +135,51 @@ The maintained registry installer includes the renderer, retained-report model,
 provider/browser/descriptor and verification hook. Its owned component fragment
 extends only the existing `chemistry` family, so current full application
 receiving includes all new runtime leaves and this guide.
+
+## Composite observations in the same scientific report
+
+The native compound observation operator can retain a composite measurement in place
+of a single species. For example, a declared total-nitrogen reference may carry
+`measurement: "total_nitrogen"`, `basis: "N"`, and the original positive weights
+for `ammonium_n` and `nitrate_n` in its `components` list. Such a row omits
+`species`. The report displays the complete original components and weights,
+conserved basis, measurement label, fit or holdout role, source reference,
+reported or censored value, modeled prediction and error scale.
+
+An observation operator combines the concentrations of the declared modeled
+species. It does not create an additional chemical state, alter the reaction
+network or establish that those components cover an independently defined
+analytical total. The original measurement method and component declaration
+determine that meaning. A total-phosphorus label alone cannot establish coverage
+of unmodeled organic or particulate fractions.
+
+The figure grouping key retains both the original measurement label and the
+complete conserved-basis/component-weight map. Reordering the same components
+does not create a different panel, while changing a component or weight does.
+Two operators on the same elemental basis remain distinct. The calibration
+scatter has equal numeric axis ranges within each operator; filled fit circles
+and open held-out squares retain their original roles. Censored observations
+remain in the original observation table.
+
+The parameter-prior table and scientific-source figures use the original
+per-target joint-draw summaries. They never sum separately computed species
+quantiles to approximate a composite interval. Sensitivity and monitoring
+tables retain the same declared operator alongside the original calculated
+derivatives, errors and information gain.
+
+Single-species 0.1 saved results retain their original interpretation. The
+legacy species field controls those original rows even when an old request
+carried unused extra metadata. This presentation is
+`reach-chemistry-scientific-report/3`; preparing it creates a new immutable report
+selection. Earlier saved reports and their exact original artifacts remain
+readable. The original numerical calculation is not repeated to render this
+edition.
+
+## Explicit observation intervals
+
+Native 0.3.0 also retains original lower and upper concentration limits with explicit
+open or closed endpoints. These rows keep their weighted observation operator and
+source reference. Interval support and standardized distance remain separate from
+point RMSE; the scientific report shows original limits, endpoint membership and
+retained predictions. See [OBSERVATIONS.md](reach_chemistry/OBSERVATIONS.md) and
+[the operator guide](../operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md).

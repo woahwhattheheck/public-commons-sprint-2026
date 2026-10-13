@@ -15,6 +15,7 @@ import queue
 import secrets
 import shutil
 import subprocess
+import sys
 import threading
 from typing import Any, Callable
 from urllib.parse import urlsplit
@@ -69,6 +70,7 @@ class Measurements:
                 self._log.close()
             self._log = (self.directory / "measurement-process.log").open("ab", buffering=0)
             env = {**os.environ, "MEASUREMENTS_INTERNAL_TOKEN": self._token}
+            env['MEASUREMENTS_PYTHON'] = sys.executable
             command = [self.node, str(Path(__file__).parent / "engine" / "cli.mjs"),
                        "serve", "--workspace", str(self.directory), "--host", "127.0.0.1", "--port", "0"]
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -114,7 +116,7 @@ class Measurements:
     @staticmethod
     def handles(path: str) -> bool:
         p = urlsplit(path).path
-        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements", "/measurements/", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs"}
+        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements", "/measurements/", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs", "/measurements/large_files.mjs"}
 
     def try_handle(self, handler) -> bool:
         """Return False without touching unrelated native routes or response writers."""

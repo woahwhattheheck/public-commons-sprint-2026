@@ -12,6 +12,87 @@ Retained candidate sources and source-link snapshots/bindings are immutable unde
 
 The native module does not run the prioritization model. Candidate source snapshots and modeled_benefits are retained as supplied. Costs come from the operator's actual budget, commitment or expenditure records. Field observations come from actual visits and source results. The blank method catalog contains planning templates; it supplies neither measured results nor invented cost rates.
 
+## Sampling and analytical support in the retained report
+
+The ordinary `ImplementationStore.report(plan_id, output, as_of=..., revision=...)`
+now presents the saved observation cohort before the complete row register.
+Each displayed cohort retains its exact site, parameter, unit, basis, fraction,
+native method/context/name, original CSV project/activity/media and method
+context, and original CSV/mapping identity. Original CSV metadata is labelled
+separately; it does not replace a mapped native definition.
+
+For each cohort the report shows numeric, censored, text and missing row counts;
+distinct native activities, visits and sample IDs; first/last original collection
+timestamps; undated rows; original qualifiers, QA labels and limits. Timestamps
+are ordered as their declared timezone-aware instants and displayed unchanged.
+The report's operational `as_of` date is separate from sampling support. Different
+analytes can share a visit, so counts across cohorts are not additive. The support
+section does not substitute values for censored observations or infer continuous
+coverage, concentration means, annual loads or threshold findings.
+
+The source-edition table exposes the retained CSV SHA256, source link, mapping
+SHA256, original import operations and referenced original record counts.
+Each readable result includes its native activity/visit, collection timestamp,
+full method definition and original CSV record/line range. The existing
+`observations.csv` now gives method context/name and source selectors their own
+columns; the full `lab_source` object and any other original fields remain in
+`extra_json` and unchanged `plan.json`. Site HTML and `sites.csv` expose the
+original declared coordinate reference system alongside coordinates. Each populated
+table has a labelled, keyboard-focusable scrolling region, readable column widths
+and a sticky header. Its screen viewport is bounded to 36rem so a long result
+register stays usable on a narrow screen; every original row remains in the table.
+Empty registers show a short message. Print output removes the viewport bound,
+uses the page width and repeats the table header.
+
+This uses the existing eleven-member report, existing saved-plan revision and
+normal report manifest/export/reopen route. It adds no installation dependency.
+Historical retained reports keep their original bytes; create a fresh report
+output for the same selected revision to receive this presentation. Keep the
+old report and its source identity available when comparing editions.
+
+### Continue the completed Eighteenmile field course
+
+The actual source receiving project is
+`dc92b8b9-6eda-4362-b12d-3cf2ef6c9007`. Its original laboratory plan
+`eighteenmile-2023-original-lake-samples` revision 2 has 88 result rows:
+45 chlorophyll and 43 microcystins/nodularin. The complete original source has
+82 numeric and six below-reporting-limit rows, 88 distinct ActivityIdentifiers
+and 48 station/date/time collection events. Method 520011's two original
+censored results use the 0.1 ug/L reporting limit; method 520019's four censored
+results use 0.016 ug/L. Keep the methods and original limits separate.
+The independent station/event plan remains revision 3 with no laboratory
+observations. Its declared NAD83 coordinates and original fixed EST timestamps
+stay unchanged.
+
+Continue C5AE's existing completed field/laboratory course with its own retained
+application and Workspace. Refresh only the selected report edition into a new
+output, retain it through the ordinary report operation, and use the maintained
+`source_tools/deliver_field_sources.py` with `--laboratory-report REPORT_ID` when
+multiple laboratory editions exist. Supply `--station-visit-report REPORT_ID` to
+select a refreshed station/visit report for the exact original plan digest; when
+omitted, the original onboarding report remains selected. Both selections are
+verified through the native report manifest before copying and are bound into
+`delivery.json`. The original onboarding result, evidence packages and native
+plans stay unchanged. A new selection requires a fresh handover output directory.
+
+`START_HERE.html` links directly to `Eighteenmile_Complete_Workspace.zip` and both
+selected report folders. The complete archive carries the saved plans, original
+attachments, historical report editions and newly selected reports together.
+Restore it through the maintained native receiver, then open the exact retained
+report editions from the received working project. Preserve the original completed
+HW13 package while producing this combined scientific and readable presentation.
+
+The producing peer must open and LOOK at the exact refreshed populated HTML,
+both original and native CSV downloads, report/source attachments and received
+working project. Operate table scrolling and downloads at desktop and 390px;
+view the full method names, timestamps, units/limits and declared CRS; reopen
+the selected saved report and exact exported sources. Inspect actual outgoing
+attachments in their normal viewer and fix concrete readability or control
+issues in the maintained source. A source review, DOM check, screenshot capture
+without viewing, or another peer's approval does not replace that product use.
+This remains the same original native receiving course and the standing
+application AGENTS inspection requirement.
+
 ## Files and public API
 
 The public module is model.implementation. It exposes:
@@ -124,6 +205,87 @@ Retain actual source or custody files:
 
 The attachment is copied while hashing its actual bytes. The source link records the original filename, SHA-256, size and workspace-relative reference. The returned file_ref is an existing path. Use the retained reference in evidence_refs, custody_ref or the appropriate metadata field. Candidate source and modeled_benefits snapshots are entered from their existing source record, not reconstructed by a new model run.
 
+
+## Complete evidence ZIP handover
+
+Use the evidence commands when the recipient needs the complete plan and its original photos, custody documents, laboratory files or other retained attachments together. The ZIP contains unchanged `plan.json`, a manifest and every `source_links` entry whose kind is `local_file`. The original source IDs, reference strings, filenames, byte sizes and SHA-256 digests stay with the plan.
+
+Run these commands from the application's normal Python context. They use the existing implementation store and the standard-library module `model.implementation_evidence`; the scientific model engines, operator server and laboratory workflow modules are not needed for this handover.
+
+### Export the current or a retained revision
+
+To retain a complete ZIP in the native plan bank and print its actual file reference:
+
+    python -m model.implementation_cli --workspace /path/to/workspace \
+      evidence-export upper-savannah
+
+To also write a verified copy at a chosen destination:
+
+    python -m model.implementation_cli --workspace /path/to/workspace \
+      evidence-export upper-savannah --out /path/to/delivery/upper-savannah-evidence.zip
+
+Add `--revision REVISION` to export that exact retained document and its original local-file sources. Omitting it selects the current committed revision. Export does not create a plan revision.
+
+The JSON result is the native export receipt plus `file_ref` and `native_file_ref`. It contains the plan ID, revision, document digest, evidence-source count, actual ZIP byte size and SHA-256 digest. `file_ref` identifies the chosen output copy when `--out` is supplied; `native_file_ref` always identifies the retained native ZIP. The copy is streamed in 1 MiB chunks, checked against the original receipt, flushed, then published atomically. An interrupted copy leaves no partial destination file.
+
+Output is create-only by default. Use `--overwrite` together with `--out` to replace a chosen existing delivery file. The managed implementation bank is protected from copied-output replacement. Choosing the already-retained ZIP itself returns its existing reference without rewriting it. When an output destination already exists and overwrite is omitted, the command returns the normal operation error; its complete native export remains retained.
+
+### Inspect a received ZIP before choosing a workspace
+
+    python -m model.implementation_cli evidence-inspect \
+      /path/to/delivery/upper-savannah-evidence.zip
+
+This command reads and validates the whole archive without constructing a store or creating workspace directories. Its JSON result includes `valid`, the actual `file_ref`, `archive_bytes`, `archive_sha256`, plan ID, revision, title, source count and original manifest. Manifest file rows retain the original source ID and reference, archive member path, filename, media type, size and SHA-256 digest.
+
+Add `--include-plan` to include the complete unchanged plan under `document` in the result. Unknown plan and record fields remain intact.
+
+Inspection checks the stored ZIP structure, member names and types, manifest, plan validation, all declared lengths and digests, complete original-file coverage and unchanged archive bytes during validation. It rejects extra or duplicate members, path escape, symlinks, encrypted or compressed members, CRC failures and content mismatches. The evidence format uses ordinary stored ZIP members so the native and offline browser applications read the same originals.
+
+### Import into an existing or new workspace
+
+For a destination where this original plan ID does not yet exist:
+
+    python -m model.implementation_cli --workspace /path/to/destination-workspace \
+      evidence-import /path/to/delivery/upper-savannah-evidence.zip \
+      --plan-id upper-savannah
+
+Omit `--expected-revision` when importing a new plan, including a plan whose retained incoming revision is greater than one. The incoming original plan ID and positive revision are preserved. An incoming revision zero becomes the first local revision.
+
+For an existing plan, read its current state and optionally add the explicit current-revision check:
+
+    python -m model.implementation_cli --workspace /path/to/workspace show upper-savannah
+    python -m model.implementation_cli --workspace /path/to/workspace \
+      evidence-import /path/to/delivery/upper-savannah-evidence.zip \
+      --plan-id upper-savannah --expected-revision CURRENT_REVISION
+
+`--plan-id` is an optional identity check against the archive's original ID; it never renames the plan. `--expected-revision` adds the store's existing revision check and never forces an overwrite. The incoming document itself still carries its original base revision.
+
+The helper validates all original bytes before retaining the archive and publishing attachments under their original references. It then calls the normal durable plan import. The JSON receipt contains the existing import `status`, returned `plan`, `source_document_digest`, `source_revision` and `applied_revision`, plus `evidence` with the actual retained archive reference, byte size, SHA-256 digest and source count. An exact current plan returns `unchanged`; a previously applied input returns `duplicate`. Use the returned plan revision for subsequent edits.
+
+A stale changed document follows the same conflict-preservation rules as JSON import: exit 3 includes the current revision and preserved `conflict_ref`, with the incoming complete ZIP and original files retained for reconciliation. Invalid archives and ordinary filesystem errors return exit 2 through the normal JSON error channel. `--actor` remains the existing global option and can identify the operator in revision history.
+
+### Original aliases, capacity and storage
+
+A source ID is the original identity supplied by its producing workflow. Existing IDs such as laboratory CSV and audit aliases are preserved. Several source IDs may reference the same original bytes; each alias remains in the manifest while matching archive members are stored once. New files captured by the implementation attachment workflow may use a derived `file_` ID; importing or hydrating an existing source does not generate a replacement ID.
+
+The current format permits 128 local-file source records, 64 MiB per original file, 128 MiB of unique original archive members, 16 MiB of plan JSON and 1 MiB of manifest JSON. Shared aliases use the existing deduplicated member accounting. The CLI delegates these limits and all source validation to the evidence module.
+
+Native exports and receipts live under:
+
+    WORKSPACE/implementation/plans/PLAN_ID/exports/
+
+Imported original ZIPs live under:
+
+    WORKSPACE/implementation/plans/PLAN_ID/evidence-imports/
+
+The original attachment bank remains:
+
+    WORKSPACE/implementation/plans/PLAN_ID/attachments/
+
+Import publication and complete export/receipt publication share the plan lock used by portable workspace capture. Native ZIPs, receipts and original attachments travel with the ordinary complete workspace transfer. The evidence ZIP is the smaller plan-specific handover for the field or another implementation workspace.
+
+Public Python entry points are `export_package(store, plan_id, *, revision=None)`, `read_package(source)`, `import_package(store, source, *, expected_revision=None, actor="", expected_plan_id=None)` and `exported_package(store, plan)` from `model.implementation_evidence`. The CLI uses these same operations.
+
 ## Calendar and scheduling semantics
 
 For each task, start is the first project workday on or after the greatest of project start_date, task start_not_before and each predecessor's finish_exclusive.
@@ -177,4 +339,4 @@ The package contains report.html, plan.json, summary.json, tasks.csv, budget.csv
 
 The schedule displays unknown estimates, cancelled dependencies and overdue work. Budget, commitment and actual totals are separate USD amounts. Visits show completion and original evidence references. Observation tables retain results, qualifiers, limits and units. Recorded field forms display each original field key, label and answer, with reported numeric value and unit where entered. The complete original template, response and additional activity metadata remain available with the report and in the CSV extra_json column. CSV text that would begin a spreadsheet formula receives a protective apostrophe; plan.json retains the exact original text. No table aggregates nutrient observations into a cross-pollutant number or merges field observations with modeled benefits.
 
-Single table CSV and standalone HTML commands are also available. Exported JSON is the complete exchange document; CSV and HTML are operator views. Source attachments stay in the retained workspace and retain their actual references in the plan. Archive the plan directory with a report when the recipient also needs the original attachment bytes.
+Single table CSV and standalone HTML commands are also available. Exported JSON is the complete plan document; CSV and HTML are operator views. Use evidence-export for a plan-specific handover that also carries every retained original attachment. The complete workspace transfer carries the saved plan history and retained report editions together.

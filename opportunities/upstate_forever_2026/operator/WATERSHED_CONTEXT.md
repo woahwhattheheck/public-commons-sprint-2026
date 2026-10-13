@@ -508,3 +508,291 @@ utility receiver writes the same complete packet for each utility selection.
 ## Present the original selection and continue the review
 
 Each new saved selection export includes a source-context report/model and an offline briefing/page index, alongside its original watershed brief and complete observation files. Open source-context-report-briefing.html from the extracted utility-watershed-packet.zip to choose an agenda, inspect exact source tables and export actual meeting notes. The Implementation desk's saved-report chooser can receive that same source export and notes as editable, source-linked follow-up. The original scientific interpretation, units, methods, HUC membership and source jurisdiction remain in every report. [Utility source briefing](../docs/UTILITY_SOURCE_BRIEFING.md) gives the complete route through native report, Transfer and independent reopening.
+
+
+## Observed land cover and original station context in saved selections
+
+The existing Regional watersheds export can include the retained 2023 and 2025
+annual land-cover classification comparison beside South Carolina's 2026 draft
+assessment context and original dated station/gauge point membership. The choice
+uses the installed, verified `landcover_observation_profiles.sources.json`
+edition. Its complete source files and original companions travel with the saved
+selection.
+
+1. Open the current saved regional report. The **Observed land cover and station
+   context** section identifies the source years, assessment edition, geographic
+   support and exact selected source manifest.
+2. Leave **Include the retained observed evidence in the next selection export**
+   checked, or clear it for a planning-only export. The choice applies to matching
+   watersheds, one watershed, the four RFP anchors, network selections and utility
+   contributing watersheds through their existing export buttons.
+3. Export the desired membership. The ordinary task history records the
+   operation. When that task completes, the desk opens its new saved selection.
+   A pending export remains associated with its original project during a browser
+   session reload.
+4. Review **Saved observed evidence**. Selected watersheds and their distinct
+   contributing-watershed union have separate summaries and group balances.
+   Areas are hectares under the original native-cell centre support. Gross
+   gains/losses represent crossings between the original land-cover groups; net
+   change is the difference between their two annual areas.
+5. Open the existing HTML brief or download the complete saved source files and
+   packet. Reopen the same saved selection after changing a filter, refreshing,
+   or restoring the project. Its evidence comes from that saved export and
+   retains its original source identity.
+
+The live source choice is optional. An application without this source can still
+export its original planning selection. A requested source that changes between
+display and export requires a refresh before another evidence export. Reopening
+a saved selection does not substitute the newly installed source for its saved
+bytes.
+
+### Original quantities and geographic scope
+
+Assessment stations and observed-flow gauges are counts of original local point
+identities in the selected HUC12 polygons. They are not counts of all upstream
+monitoring and do not define a sampled drainage area. Retained NLDI basins,
+native network membership and the source's original coordinates supply their
+own geographic context. Original coordinate alternatives remain distinct source
+rows while identity counts follow the source's stated deduplication rule.
+
+South Carolina draft assessment cause codes retain that edition and jurisdiction.
+An unrepresented cause or station does not establish attainment or absence of
+monitoring. Developed land-cover classes include vegetated open space; their
+change is not an impervious-surface calculation or a measured pollutant-load
+change. Classification years, the draft assessment edition and the point-query
+date are separate source periods.
+
+### Existing API contract
+
+`GET /api/watershed-context/report` supplies `_evidence_profiles`, either
+`null` or a validated `upstate.watershed-observation-choice/v1` object.
+The current browser sends the following additional fields on the existing
+`watershed.context.export` action:
+
+```json
+{
+  "include_evidence": true,
+  "evidence_profile_sha256": "the exact displayed 64-character manifest SHA-256"
+}
+```
+
+The original `report_id`, `huc12s` and optional `utility_key` remain
+unchanged. A false or omitted flag keeps the original planning-only behavior.
+The completed export record exposes `landcover_observation_context`; its
+`source`, `selected` and optional `contributing_union` fields drive the
+saved display. The complete selected profiles, location rows and source bindings
+remain in `selected-watersheds.json` and the original file inventory. The
+existing download tickets and project archive carry those same members.
+
+## Inspect the rendered outgoing watershed product
+
+Bryce's standing instruction applies to every local or cloud producer and
+receiving peer: before describing a client-facing desk, demo, report or export as
+ready, open the exact outgoing version, look at its actual rendered screen or
+screenshots, and operate the important controls. Source review, HTTP responses,
+DOM counts and automated checks do not establish its visual usability. Carry
+this instruction into delegated receiving work and the current owner-controlled
+guides and instruction files those peers actually read.
+
+Use the populated original project for the final Regional watersheds inspection.
+At the intended screenshare width and a narrow/mobile width, view the source
+choice, watershed table, filters, detail, utility selection, task progress and
+saved export. Inspect the optional-source-empty and actual loading/error displays
+when those states occur in the receiving course. Exercise the evidence checkbox,
+selection/export controls, download links and reopening of the saved selection.
+The selected and contributing-union summaries must remain clearly distinguished;
+group labels, hectares, source periods and saved source identity must be readable.
+
+Open the outgoing HTML brief and the HTML briefing extracted from the downloaded
+packet. View any supplied PDF at normal reading scale. Inspect the actual restored
+project and its saved downloads as well as the producing project. Fix clipping,
+overflow, unreadable tables, broken links, cramped controls or confusing labels
+in the maintained implementation before presenting the product.
+
+Keep the industrial software design: clear hierarchy, readable tables, consistent
+type and spacing, restrained controls and responsive layouts. Record the actual
+version, original project/export identity, viewed widths and material repairs in
+the existing receiving handoff. Keep this inspection within the real product
+course; create no separate validation application or broad test suite.
+
+Instruction source: [Bryce's rendered-product direction, relayed to the Ecosystem
+owners](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449).
+
+## Install the observed-evidence continuation in an existing application
+
+Run the prepared continuation's own installer against the retained application:
+
+```sh
+python -B PREPARED_SOURCE/operator/install_watershed_context.py --application ACTUAL_APP --source-root PREPARED_SOURCE
+```
+
+The prepared source supplies changed files; unchanged required files come from the actual installed application. Every selected Python/JSON file is parsed before replacement, and the original transaction retains its backup and rollback behavior. Preserve any newer maintained source when composing this continuation.
+
+The observed-evidence fragment declares the root `landcover_observation_profiles.sources.json`. Include that exact manifest and every primary/companion it names: four profile outputs plus ten distinct original input/replay members. The source edition contains fourteen physical members in total, plus its root manifest. The installer resolves those members from the prepared source or installed application and verifies their original byte counts and hashes before writing. A scientific-report-only source package does not necessarily contain this root profile manifest.
+
+The consumer fragment follows that direct source manifest. It does not require installation of the raster/WBD producer components to consume the already-completed profile edition. Full current application exports retain their original producer components through their own declarations.
+
+After installation, reopen the original operator with the current application, confirm Regional Watersheds extension version 1.7.0, and follow the populated visual/interactive inspection above. At a narrow viewport, operate the ordinary-sized evidence checkbox and expand both source-identity details; the complete source identifiers must wrap within the desk. Then run the same existing-workspace receiving course with `--include-observed-evidence`.
+
+## Original watershed map and portable geographic selections
+
+The Regional Watersheds desk uses the maintained Water Context map renderer with
+the original 217 profile polygons. All 273,049 original vertices remain in
+EPSG:3857. The map offers the seven source themes and every other numeric profile
+field, for 29 choices, with the source's own units and interpretation. Grayscale
+ranges stay fixed to the full source edition as the selection changes.
+
+Table filters initially select their matching watersheds. Clicking a polygon
+starts a picked selection and opens its original attributes; subsequent clicks
+add or remove polygons. **Use matching table watersheds** restores the table
+scope. **Fit selected and upstream** frames the selected polygons and their
+distinct contributing union. Selected boundaries are solid, additional upstream
+contributors are dashed, and the other original model watersheds remain visible.
+The union comes from the saved report's retained original network or its exactly
+bound completed connectivity edition.
+
+The map inclusion checkbox controls whether the current export retains its
+geography. **Export map selection** uses the same export operation as the other
+Regional Watersheds selections. The output includes complete selected polygons,
+the unique contributing polygons, the full original map, its original Esri
+geometry, profile CSV, field meanings and executable rebuild sources. The saved
+map context binds the actual map manifest, polygon and profile identities.
+Map-only exports retain the profile attributes embedded in the original map;
+the observed-evidence checkbox separately adds its full annual/station context.
+
+Reopening a saved export uses that export's retained map source even if the
+currently installed map edition has changed. Editing and re-exporting its picked
+scope uses the same retained edition. With both evidence and map included, the
+operator requires the same original profile and domain identities.
+
+### Source installation and transfer
+
+The existing installer includes the map helper and shared browser renderer. It
+reads the complete original
+`observations/watershed_profile_overlay_20261013/model-sources.json` edition
+through the same source-manifest resolver. Selected application assemblies
+declare this source through
+`integration/component_fragments/watershed-geographic-selection.json`.
+
+Exports retain the original directory structure beneath
+`watershed-map-sources/observations/`. The sibling
+`landcover_observation_profiles_20261013/profiles_core.mjs` parser is bound to
+the original overlay recipe so its existing rebuild command works after transfer:
+
+```sh
+node RETAINED_EXPORT/watershed-map-sources/observations/watershed_profile_overlay_20261013/rebuild.mjs \
+  --source-dir RETAINED_EXPORT/watershed-map-sources/observations/watershed_profile_overlay_20261013 \
+  --output NEW_OWNED_OUTPUT/watershed-profiles.geojson
+```
+
+The existing native receiving driver accepts `--include-original-map` alongside
+`--workspace` and `--include-observed-evidence`. It downloads the original map
+through the application's normal file ticket, exports the selected and unique
+contributing polygons, compares every complete feature against the original,
+transfers the same Workspace, and reopens the saved map from its retained source.
+
+### Inspect the actual populated map
+
+Open the original 217-watershed report in the running application. Inspect normal
+and narrow widths, the actual numeric selector, its values and units, and the
+visible selected/upstream legend. Change among a percentage, a signed net-change
+field and a local station-count field. Confirm that real zero and negative values
+remain distinguishable and that the scale remains stable when changing scope.
+Operate pan, zoom, fit, polygon click and keyboard selection; refresh the report
+and confirm that a picked selection survives an ordinary task refresh.
+
+Use the two ARJWS anchor HUCs `030601010703` and `030601010704` for a concrete
+scope inspection: two selected polygons and four distinct contributing polygons.
+The PRWD anchors `030601020502` and `030601020507` give two selected and 32
+distinct contributing polygons. Open the saved export and its original geometry
+downloads, then reopen the transferred Workspace and operate that same map.
+Inspect the exact outgoing brief HTML/PDF and source downloads before delivery.
+
+## Receive the complete original map into an existing project
+
+The source continuation includes the geographic desk, the earlier observed
+evidence, the source-explorer review intake and all small original overlay
+companions. Keep these bodies together in a fresh prepared source directory.
+The complete original application and its Workspace remain the receiving
+target.
+
+Prepare the map from the original data already retained on the receiving host:
+
+```sh
+python -B PREPARED_SOURCE/source_tools/prepare_watershed_map_context.py \
+  --application ACTUAL_APPLICATION \
+  --source-root PREPARED_SOURCE \
+  --search-root ACTUAL_ORIGINAL_WORKSPACE \
+  --install
+```
+
+Use actual local paths. `--original-domain ACTUAL_FILE` selects a known
+unchanged original JSON or gzip directly; `--search-root` may repeat for
+other deliberately supplied retained roots. The helper reads original
+Workspace source records and immutable objects, including objects without
+filename extensions, before considering named JSON/gzip source files.
+It accepts only the complete 11,220,042-byte original domain whose SHA-256
+is `2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af`.
+
+The helper reuses the exact existing map or invokes the unchanged maintained
+Node overlay builder. It preserves all 273,049 original vertices, all 217
+HUC12s, the profile CSV, canonical directory relationships and the original
+profile parser. The result must equal the retained 9,713,953-byte GeoJSON
+with SHA-256
+`4050c8d1ee36d8608437f496995f46fb5ee94dd6f4d3ea5368cc2c57fdb04b42`.
+The complete ten-body source closure is checked before the existing regional
+installer runs. Different files in the prepared source directory are
+preserved and reported for explicit composition.
+
+Continue the same original-project course with the installed driver:
+
+```sh
+python -B ACTUAL_APPLICATION/integration/run_watershed_context_operator.py \
+  --application ACTUAL_APPLICATION \
+  --workspace ACTUAL_ORIGINAL_WORKSPACE \
+  --source-dir ACTUAL_ORIGINAL_WATER_CONTEXT_DIRECTORY \
+  --source-manifest ACTUAL_ORIGINAL_WATER_CONTEXT_MANIFEST \
+  --include-observed-evidence --include-original-map \
+  --output NEW_OWNED_OUTPUT_DIRECTORY
+```
+
+Changing a report or saved map source clears the previous geographic view
+while its replacement loads. Fit and geographic export become available
+after the complete workspace/report/export/source identity is loaded.
+An archive upload, export or navigation that began in another workspace
+keeps its original project identity through asynchronous completion.
+
+Open and LOOK at the populated operator at the presentation width and at a
+narrow width. Operate the ARJWS two-anchor/four-union and PRWD
+two-anchor/32-union selections, numeric themes, pan/zoom/fit, keyboard
+selection, refresh, downloads and saved export reopening. Open the actual
+outgoing GeoJSON, HTML brief, CSV/JSON and complete restored project.
+Repair any observed layout or operating defect in this same course before
+presenting the finished product. The owner cutoff remains 14:00 UTC on
+October 13, 2026.
+
+### Current owner direction for the Upper Savannah demonstration
+
+Bryce's October 13 update is retained in the existing
+[project coordination message](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359).
+Center the partner demonstration on the Upper Savannah RFP and a production
+workshare for Tim's existing scientific practice. Keep the original geographic
+shapes, 30 m regional grid, upstream model domain, South Carolina reporting
+mask and utility focus distinct. The original model operation owns the actual
+baseline, restoration and matched-control runs with realistic, explicitly
+simulated inputs. Preserve its completed cases and source selections.
+
+Connect this original geographic and observed-source review to that working
+case: choose inputs and assumptions, run the native models, inspect the
+differences, revise the choices and reopen the transferred project. Native
+annual nitrogen/phosphorus mass is reported in kg/year and sediment mass in
+tonnes/year reaching the modeled stream. Retain the original constituent,
+period and spatial-support definitions alongside observations. Show actual
+outputs and elapsed history. Tim's team retains scientific direction,
+method choices, interpretation and client review.
+
+Continue accepted calculations and complementary source/product work.
+Use the existing writers and receiving operations; the project cutoff
+remains 14:00 UTC on October 13. Open, LOOK at and operate the final
+populated product and every outgoing attachment, fixing observed defects
+in the maintained implementation.

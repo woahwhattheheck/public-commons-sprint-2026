@@ -21,8 +21,8 @@ const outcome = records => {
   return records.find(x=>!predecessors.has(x.id)) ?? null;
 };
 
-export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm}){
-  let mounted=null,query='',filter='all',activePacket=null,activeTab='files',generation=0;
+export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm,openStudyTransfer,openSavedScientificReport}){
+  let mounted=null,query='',filter='all',activePacket=null,activeTab='files',generation=0,transferRequest=null;
   const current = () => getState()?.workspace_key;
   const rows = () => getState()?.data.customer_reviews ?? [];
   const responses = id => (getState()?.data.customer_review_responses ?? []).filter(x=>x.review_id===id);
@@ -80,7 +80,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       (!query||[row.title,row.purpose,row.id,latest?.response.reviewer.name].join(' ').toLowerCase().includes(query.toLowerCase()))
     ).sort((a,b)=>String(b.row.created_at).localeCompare(String(a.row.created_at))||b.row.id.localeCompare(a.row.id));
     if(mounted)$('#review-result-count',mounted)?.replaceChildren(document.createTextNode(list.length+' retained review'+(list.length===1?'':'s')));
-    return list.map(({row,latest})=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong><small>'+esc(row.purpose)+'</small><small>'+esc(date(row.created_at))+' · <span class="mono">'+esc(short(row.id))+'</span></small></td><td>'+badge(latest?.response.disposition??'in-review')+(latest?'<small>'+esc(latest.response.reviewer.name)+' · '+esc(date(latest.imported_at))+'</small>':'<small>Awaiting a retained response</small>')+'</td><td>'+row.artifacts.length+' files<br>'+row.requirements.length+' requirements</td><td>'+responses(row.id).length+'</td><td class="actions-cell">'+button('open','Open',row.id)+button('new','New selection',row.id)+'</td></tr>');
+    return list.map(({row,latest})=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong><small>'+esc(row.purpose)+'</small><small>'+esc(date(row.created_at))+' · <span class="mono">'+esc(short(row.id))+'</span></small></td><td>'+badge(latest?.response.disposition??'in-review')+(latest?'<small>'+esc(latest.response.reviewer.name)+' · '+esc(date(latest.imported_at))+'</small>':'<small>Awaiting a retained response</small>')+'</td><td>'+row.artifacts.length+' files<br>'+row.requirements.length+' requirements</td><td>'+responses(row.id).length+'</td><td class="actions-cell">'+button('open','Open',row.id)+button('new','New selection',row.id)+(typeof openStudyTransfer==='function'?button('study-transfer','Transfer editable review',row.id):'')+'</td></tr>');
   }
   function render(){
     const all=rows(),latest=all.map(x=>outcome(responses(x.id)));
@@ -100,7 +100,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     $('#review-search',root)?.addEventListener('input',event=>{query=event.target.value;const body=$('#review-inventory-body',root);if(body)body.innerHTML=inventoryRows().join('');});
     $('#review-filter',root)?.addEventListener('change',event=>{filter=event.target.value;const body=$('#review-inventory-body',root);if(body)body.innerHTML=inventoryRows().join('');});
   }
-  function detach(){mounted=null;generation++;}
+  function detach(){mounted=null;generation++;transferRequest=null;}
   function choices(name,title,list,chosen){
     return '<fieldset class="review-choices"><legend>'+esc(title)+'</legend>'+(list.length?list.map(row=>'<label class="check"><input type="checkbox" name="'+name+'" value="'+esc(row.id)+'"'+(chosen.includes(row.id)?' checked':'')+'><span><strong>'+esc(row.title)+'</strong><small>'+esc(date(row.created_at))+' · '+esc(short(row.id))+(name==='source_collection_ids'?' · '+row.entries+' original entries':'')+'</small></span></label>').join(''):'<p class="note">No '+esc(title.toLowerCase())+' are retained in this workspace.</p>')+'</fieldset>';
   }
@@ -242,10 +242,86 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     return ['accepted','changes-requested','question','not-applicable','unreviewed'].map(key=>({key,count:items.filter(x=>x.decision===key).length}));
   }
   function currentResponse(packet){return packet.responses.at(-1)?.response??null;}
+  function retainedScientificReports(packet){
+    const project=packet.review?.project?.id,found=new Map();
+    for(const selection of packet.review?.selections??[]){
+      if(selection.kind!=='sources')continue;
+      for(const entry of selection.source?.entries??[]){
+        const metadata=entry.metadata??{},identity=metadata.scientific_report_identity;
+        if(entry.role!=='SCIENTIFIC_REPORT_REVIEW'||
+            metadata.report_schema!=='upstate.scientific-report-edition/v1'||
+            identity?.schema!=='upstate.scientific-report-review/v1'||
+            identity.project_id!==project||project!==getState()?.project?.id||
+            !/^[0-9a-f]{64}$/.test(identity.scientific_report_edition_id??'')||
+            metadata.scientific_report_edition_id!==identity.scientific_report_edition_id)continue;
+        found.set(identity.scientific_report_edition_id,{
+          id:identity.scientific_report_edition_id,title:entry.title||'Original scientific report'
+        });
+      }
+    }
+    return [...found.values()];
+  }
+  function originalScientificReports(packet){
+    if(typeof openSavedScientificReport!=='function')return '';
+    const reports=retainedScientificReports(packet);
+    if(!reports.length)return '';
+    return '<section class="review-intro"><h3>Original scientific reports</h3>'+
+      '<p>Open the exact saved edition and its original PDF, source order and report files.</p>'+
+      reports.map(row=>'<div class="page-actions"><span>'+esc(row.title)+'</span>'+
+        button('open-scientific-report','Open original report',packet.review.id,
+          'data-edition-id="'+esc(row.id)+'"')+'</div>').join('')+'</section>';
+  }
+  async function openOriginalScientificReport(node){
+    const packet=activePacket,ws=current(),serial=generation;
+    if(!packet||packet.review.id!==node.dataset.id||
+        !retainedScientificReports(packet).some(row=>row.id===node.dataset.editionId))
+      throw Error('Reopen the original customer review before opening its scientific report.');
+    if(typeof openSavedScientificReport!=='function')
+      throw Error('The original saved-report view is unavailable in this application.');
+    try{return await openSavedScientificReport({workspace_key:ws,id:node.dataset.editionId});}
+    catch(error){
+      if(current()!==ws||generation!==serial||activePacket!==packet||!mounted)return null;
+      throw error;
+    }
+  }
+  async function openForStudy(selection){
+    const ws=current(),id=selection?.id,tab=selection?.tab??'files';
+    if(selection?.workspace_key!==ws||!/^[0-9a-f]{64}$/.test(id??''))
+      throw Error('Open the retained customer review in its original workspace.');
+    if(!['files','requirements','corrections','history','handbacks','exports','received'].includes(tab))
+      throw Error('Choose an original customer review section.');
+    if(typeof selection.isCurrent==='function'&&!selection.isCurrent())return null;
+    const serial=++generation,container=mounted;
+    const valid=()=>!!mounted&&mounted===container&&current()===ws&&generation===serial&&
+      (typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!valid())return null;
+    let packet;
+    try{
+      packet=await read('review',{review_id:id});
+      if(!valid())return null;
+      if(packet.review?.id!==id||packet.review?.project?.id!==getState()?.project?.id)
+        throw Error('The retained review reply identifies another original review or project.');
+      if(tab==='handbacks'&&!Array.isArray(packet._handbacks)){
+        const value=await read('handbacks',{review_id:id});
+        if(!valid())return null;
+        packet._handbacks=value.handbacks;
+      }
+      if(tab==='received'){
+        const value=await read('packets',{review_id:id});
+        if(!valid())return null;
+        packet._receipts=value.receipts;
+      }
+    }catch(error){if(!valid())return null;throw error;}
+    if(!valid())return null;
+    drawPacket(packet,tab);
+    return {workspace_key:ws,id,tab,view:'customer-reviews'};
+  }
+
   function reviewToolbar(packet){
     const id=packet.review.id;
     return '<div class="page-actions">'+button('export','Export current review',id,'',true)+button('import','Receive response',id)+
-      button('template','Response template',id)+button('new','New selection',id)+button('packet-receive','Receive review package',id)+button('worklist','Current requests',id)+'</div>';
+      button('template','Response template',id)+button('new','New selection',id)+button('packet-receive','Receive review package',id)+button('worklist','Current requests',id)+
+      (typeof openStudyTransfer==='function'?button('study-transfer','Transfer editable review',id):'')+'</div>';
   }
   function summary(packet){
     const response=currentResponse(packet),review=packet.review;
@@ -837,7 +913,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     activePacket=packet;activeTab=tab;
     const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks'],['received','Received packages']];
     const body=tab==='received'?receivedPackagesBody(packet._receipts??[],packet.review.id):tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
-    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+
+    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+originalScientificReports(packet)+
       '<nav class="review-tabs" aria-label="Review sections">'+tabs.map(([key,title])=>button('tab',title,packet.review.id,'data-tab="'+key+'" aria-pressed="'+(tab===key)+'"')).join('')+'</nav><section>'+body+'</section>'+
       '<details class="technical"><summary>Complete review document</summary>'+fileList([packet._packet_download])+'<dl class="definition"><dt>Review</dt><dd class="mono">'+esc(packet.review.id)+'</dd><dt>Project</dt><dd class="mono">'+esc(packet.review.project.id)+'</dd></dl></details></div>',{kind:'customer-review',id:packet.review.id});
     if(tab==='received')mountReceivedSearch(packet._receipts??[]);
@@ -848,6 +924,29 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(tab==='received'){const result=await read('packets',{review_id:id});packet._receipts=result.receipts;}
     if(serial!==generation)return;
     drawPacket(packet,tab);
+  }
+  async function transferReview(id,node){
+    if(typeof openStudyTransfer!=='function')throw Error('The original editable Study transfer is unavailable in this application.');
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose the original saved customer review.');
+    if(transferRequest)return;
+    const request={workspace:current(),serial:++generation};transferRequest=request;
+    if(node)node.disabled=true;
+    try{
+      const packet=await read('review',{review_id:id});
+      if(transferRequest!==request||current()!==request.workspace||generation!==request.serial)return;
+      if(packet.review?.id!==id||packet.review?.project?.id!==getState()?.project?.id)
+        throw Error('The original review no longer matches this workspace.');
+      const response=outcome(packet.responses??[]);
+      await openStudyTransfer({workspace_key:request.workspace,roots:[{
+        kind:'reviews',id,title:packet.review.title,
+        state:response?.response?.disposition??'in-review'
+      }]});
+    }finally{
+      if(transferRequest===request){
+        transferRequest=null;
+        if(node?.isConnected)node.disabled=false;
+      }
+    }
   }
   async function exportReview(id){
     const opening=reviewFormRequest(),workspace=opening.workspace,packet=await read('review',{review_id:id});
@@ -964,6 +1063,8 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   }
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
+    if(action==='study-transfer')return transferReview(id,node);
+    if(action==='open-scientific-report')return openOriginalScientificReport(node);
     if(action==='worklist'||action.startsWith('worklist-'))return worklistAction(action,id);
     if(action==='packet-receive')return receivePackage(id||'');
     if(action==='packets')return openReceivedPackages(id||'');
@@ -993,5 +1094,5 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='compare')return compareForm();
     if(action==='template')return template(id);
   }
-  return {render,mount,detach,dispatch,taskActions,openReview,mapActions,prepareScientificReportReview};
+  return {render,mount,detach,dispatch,taskActions,openReview,openForStudy,mapActions,prepareScientificReportReview};
 }

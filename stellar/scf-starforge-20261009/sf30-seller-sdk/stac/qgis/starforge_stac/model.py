@@ -567,6 +567,8 @@ class QgisWorkspace:
     def _validate_state(state):
         from .parcels.state import validate_parcels
         validate_parcels(state)
+        from .parcel_evidence import validate_evidence
+        validate_evidence(state)
         require(state.get("schema") == WORKSPACE_SCHEMA and isinstance(state.get("sources"), list) and
                 isinstance(state.get("layers"), list) and isinstance(state.get("projects"), list) and
                 isinstance(state.get("reviews"), list), "WORKSPACE_SCHEMA", "The complete project state is invalid.")
@@ -869,6 +871,10 @@ class QgisWorkspace:
         from .parcels.state import parcel_file_refs
         for record in parcel_file_refs(snapshot):
             add(record)
+        from .parcel_evidence import evidence_file_refs, validate_evidence_files
+        validate_evidence_files(self.root, snapshot)
+        for record in evidence_file_refs(snapshot):
+            add(record)
         return [records[name] for name in sorted(records)]
 
     def export_package(self, destination, *, expected_revision=None, progress=None):
@@ -1148,6 +1154,10 @@ def _receive_opened_package(archive, destination, measured, assert_archive, *, p
     from .parcels.state import validate_parcels, parcel_file_refs
     validate_parcels(snapshot["state"], records=records)
     referenced.extend(parcel_file_refs(snapshot))
+    from .parcel_evidence import validate_evidence, validate_evidence_files, evidence_file_refs
+    validate_evidence(snapshot["state"], records=records)
+    validate_evidence_files(target, snapshot)
+    referenced.extend(evidence_file_refs(snapshot))
     for raw in referenced:
         record = descriptor(raw)
         require(record["path"] in records and all(records[record["path"]][k] == record[k] for k in ("bytes", "sha256")),

@@ -2,13 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "measured-observations",
   "title": "Measured observations",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 45,
   "assets": [
     "measured_observations.mjs",
     "measured_observations.css",
     "measured_observations_extension.mjs",
-    "measured_collections.mjs"
+    "measured_collections.mjs",
+    "measured_chemistry.mjs",
+    "measured_large_files.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
@@ -45,6 +47,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/measurements/chemistry",
+        "operation": "chemistry",
+        "handler": "read",
+        "args": [
+          "workspace",
+          "operation",
+          "payload"
+        ]
       }
     ]
   },
@@ -53,7 +68,10 @@
     "factory": "createMeasuredObservations",
     "requires": [
       "api",
-      "getWorkspace"
+      "getWorkspace",
+      "openDesk",
+      "getState",
+      "showTask"
     ],
     "styles": [
       "/web/measured_observations.css"

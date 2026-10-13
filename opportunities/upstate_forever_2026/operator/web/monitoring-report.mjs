@@ -14,7 +14,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   section.className='monitoring-scientific-report';
   section.innerHTML=`
     <h4>Use this Monitoring work in the scientific report</h4>
-    <p class="small">Retain an exact saved design, campaign revision or budget comparison with its original scientific sources. Add that retained source to the existing scientific report.</p>
+    <p class="small">Retain an exact saved design, campaign revision or budget comparison with its original scientific sources. Open this report only uses its complete saved source selection. Add to current report keeps the current sources and appends the saved selection once.</p>
     <div class="row"><label>Report scope<select data-report-scope><option value="programme">Current saved plan or campaign</option><option value="comparison">Saved budget comparison</option></select></label>
     <label data-report-comparison-field hidden>Saved budget comparison<select data-report-comparison><option value="">Choose a saved comparison</option></select></label></div>
     <button type="button" data-report-comparisons-refresh hidden>Refresh saved comparisons</button>
@@ -24,7 +24,8 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     <div class="row"><button type="button" data-report-prepare>Prepare scientific report source</button>
     <button type="button" data-report-task hidden>Open saved operation</button>
     <button type="button" data-report-retry hidden>Resume original request</button>
-    <button type="button" data-report-open hidden>Open scientific report</button>
+    <button type="button" data-report-open hidden>Open this report only</button>
+    <button type="button" data-report-add hidden>Add to current report</button>
     <button type="button" data-report-open-delivery hidden>Open model delivery</button></div>
     <p data-report-status class="small" role="status" aria-live="polite"></p>\n    <p data-report-prepared class="small"></p>
     <div class="row"><label>Saved monitoring report sources<select data-report-saved><option value="">Choose a retained report source</option></select></label>
@@ -87,6 +88,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     find('task').hidden=!operation?.task_id;
     find('retry').hidden=!operation||!!operation.task_id||submitting;
     find('open').hidden=!prepared?.source||!prepared?.delivery_selection;
+    find('add').hidden=find('open').hidden;
     find('open-delivery').hidden=!prepared?.source||!prepared?.delivery_selection||typeof openDelivery!=='function';
     const retained=prepared?.selection||{};
     find('prepared').textContent=prepared?.source
@@ -125,7 +127,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(identity!==lastTaskState){
         prepared=clone(task.result);
         operation.handled_complete_id=task.id;
-        status('Scientific report source retained. Open the scientific report to review its ordered sources and prepare PDF, HTML and data.');
+        status('Scientific report source retained. Open this report only or add its saved sources to the current report, then review the ordered sources and prepare PDF, HTML and data.');
         showFiles(task._downloads);
         void refreshSources(false);
       }
@@ -238,16 +240,17 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(!current()||version!==generation||sequence!==requestSequence||id!==selectedSaved||delivery!==chosenDelivery)return;
       if(value.id!==id)throw Error('The saved report source identity changed.');
       prepared=value;persist();showFiles(value._downloads);
-      status('Original report source reopened. Open the scientific report to review its ordered sources.');
+      status('Original report source reopened. Open this report only or add its saved sources to the current report.');
     }catch(error){if(current()&&version===generation)fail(error);}
     finally{reading=false;if(current())renderSelection();}
   }
-  async function open(){
+  async function open(selectionMode){
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose whether to open this report only or add it to the current report.');
     if(!current()||!prepared?.source||!prepared?.delivery_selection)return;
     if(typeof openScientificReport!=='function')throw Error('Open the current application to prepare its saved scientific reports.');
     const sources=prepared.delivery_selection.observed_context_sources;
     if(!Array.isArray(sources)||!sources.length)throw Error('Reopen the retained source to recover its ordered report selection.');
-    await openScientificReport({workspace_key:workspaceKey,sources:clone(sources),title:prepared.title});
+    await openScientificReport({workspace_key:workspaceKey,sources:clone(sources),title:prepared.title,selection_mode:selectionMode});
   }
   async function openModelDelivery(){
     if(!current()||!prepared?.source||!prepared?.delivery_selection)return;
@@ -265,7 +268,8 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   find('prepare').onclick=()=>prepare().catch(fail);
   find('retry').onclick=()=>submitOriginal().catch(fail);
   find('task').onclick=()=>operation?.task_id&&showTask?.(operation.task_id);
-  find('open').onclick=()=>open().catch(fail);
+  find('open').onclick=()=>open('replace').catch(fail);
+  find('add').onclick=()=>open('append').catch(fail);
   find('open-delivery').onclick=()=>openModelDelivery().catch(fail);
   find('refresh').onclick=()=>refreshSources();
   find('reopen').onclick=()=>reopen();

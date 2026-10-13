@@ -223,11 +223,11 @@ export function createMerchantWorkflows({store,definitions,getHost,startCall,wai
       for(const step of input.steps??[]){const draft=store.draft(step.draftId,step.draftRevision);await requireTool(context,draft.tool,JSON.parse(draft.argumentsJson));}
       const value=records.save(input);return{...value,definition:definitionView(value.definition)};
     },
-    async start(input,context){
+    async start(input,context,{beforeReserve}={}){
       need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
       const definition=records.definition(input.workflowId,input.workflowRevision);await authorizeDefinition(definition,context);
       need(!closing,'CONSOLE_CLOSING','The original operator interface is closing.');
-      const reserved=records.reserve(input,getHost());
+      const reserved=store.transaction(()=>{beforeReserve?.();return records.reserve(input,getHost());});
       // A repeated start only reopens its original run; continuing is a distinct visible action.
       if(!reserved.reused)launch(reserved.run.id,context);
       return{run:runView(records.run(reserved.run.id),true),reused:reserved.reused};

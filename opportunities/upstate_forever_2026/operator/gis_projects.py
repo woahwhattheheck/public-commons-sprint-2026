@@ -6,7 +6,7 @@ import zipfile
 from model import gis_project as gis
 from model import gis_workspace
 
-ACTIONS = frozenset({'gis.project.export', 'gis.project.receive', 'gis.project.adopt-sources'})
+ACTIONS = frozenset({'gis.project.export', 'gis.project.receive', 'gis.project.adopt-sources', 'gis.project.review'})
 # Received HTML has an opaque sandbox origin: it cannot read the operator session.
 VIEW_POLICY = ("sandbox allow-scripts allow-downloads; default-src 'none'; "
                "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
@@ -39,6 +39,19 @@ class GISProjects:
         return ws, parent, record
 
     def member(self, workspace, kind, key, name):
+        if kind == 'review':
+            from model import gis_edition_review
+            gis.member(name)
+            review_id, separator, member = name.partition('/')
+            if not separator:
+                raise ValueError('Choose an original GIS review member')
+            ws = self.operator.ws(workspace)
+            folder, record = gis_edition_review.read(ws, identity(key), identity(review_id), verify_files=False)
+            expected = record['files'].get(member)
+            if expected is None:
+                raise ValueError('Choose a declared original GIS review file')
+            path = gis.checked(folder, expected)
+            return self.operator._ticket(workspace, path, expected, member), VIEW_POLICY
         ws, parent, record = self._record(workspace, kind, key)
         root = parent / 'project'
         gis.member(name)
@@ -71,8 +84,33 @@ class GISProjects:
                 'qgis_url': prefix + 'project.qgz?download=1', 'archive_download': ticket,
                 'layers': record['result']['layers'], 'bytes': record['result']['bytes']}
 
+    def describe_review(self, workspace, receipt_id, review_id):
+        from model import gis_edition_review
+        folder, record = gis_edition_review.read(self.operator.ws(workspace), receipt_id, review_id, verify_files=False)
+        prefix = '/api/file/gis-project/' + '/'.join(urllib.parse.quote(str(part), safe='')
+                   for part in (workspace, 'review', receipt_id, review_id)) + '/'
+        downloads = [{**item, 'label': label, 'url': prefix + name} for name, label in
+                     [('REVIEW.html', 'Open received-edition review'), ('review.zip', 'Complete change report ZIP'),
+                      ('review.json', 'Complete review JSON'), ('layers.csv', 'Layer change summary')]
+                     if (item := record['files'].get(name)) is not None]
+        layers = []
+        for row in record['layers']:
+            detail = row['comparison']
+            headers = detail.get('headers', {})
+            old, new = headers.get('exported', {}), headers.get('received', {})
+            layers.append({key: row.get(key) for key in
+                           ('layer_id', 'title', 'kind', 'units', 'working_files_changed')} |
+                          {'counts': detail.get('counts', {}), 'scope': detail.get('scope', detail.get('method')),
+                           'comparison': detail.get('comparison'), 'difference': detail.get('difference'),
+                           'reason': detail.get('reason') or detail.get('physical_comparison'),
+                           'metadata_changed': row.get('metadata_changed', [])})
+        return {'id': record['id'], 'state': record['state'], 'title': record['title'],
+                'created_at': record.get('created_at'),
+                'selection': record['selection'], 'layers': layers, 'downloads': downloads}
+
     def catalogue(self, workspace):
         ws = self.operator.ws(workspace)
+        from model import gis_edition_review
         result = gis_workspace.catalogue(ws)
         result['exports'] = [self.describe(workspace, 'export', r['id']) for r in result['exports']]
         result['received'] = [self.describe(workspace, 'received', gis.load(p)['id'])
@@ -81,6 +119,12 @@ class GISProjects:
         for record in result['received']:
             project = gis.load(ws.root / 'gis-received' / record['id'] / 'project' / 'project.json')
             record.update(gis_workspace.adoption_choices(project))
+            record['review_exports'] = [{'id': row['id'], 'title': row['title'],
+                'edition_id': row['result']['edition_id'], 'fingerprint': row['result']['fingerprint']}
+                for row in result['exports'] if row['result']['selection_id'] == project['selection_id']]
+            record['reviews'] = [self.describe_review(workspace, record['id'], path.parent.name)
+                for path in sorted((ws.root/'gis-received'/record['id']/'reviews').glob('*/review-state.json'))
+                if gis.load(path).get('state') == 'complete']
         result['grids'] = [{k: row.get(k) for k in ('id', 'state', 'spec', 'grid')}
                            for row in (gis.load(p) for p in sorted((ws.root / 'grids').glob('*/grid.json')))]
         result['comparisons'] = [{k: row.get(k) for k in ('id', 'baseline_run_id', 'direction')}
@@ -89,10 +133,13 @@ class GISProjects:
         for row in result['runs']:
             scenario = ws._get('scenarios', row['selection']['scenario_id'])
             row['title'] = scenario['title']
-        return {**result, 'workspace_key': workspace}
+        return {**result, 'workspace_key': workspace, 'review_version': gis_edition_review.VERSION}
 
     def invoke(self, task):
         ws = self.operator.ws(task['workspace'])
+        if task['action'] == 'gis.project.review':
+            from model import gis_edition_review
+            return gis_edition_review.review(ws, task['payload'])
         if task['action'] == 'gis.project.export':
             return gis_workspace.export(ws, task['payload'])
         if task['action'] == 'gis.project.adopt-sources':
@@ -103,6 +150,9 @@ class GISProjects:
         return gis_workspace.receive(ws, upload['path'], source_upload_id=upload['id'])
 
     def decorate_task(self, task):
+        if task['action'] == 'gis.project.review' and task['state'] == 'complete':
+            result = self.describe_review(task['workspace'], task['result']['selection']['receipt_id'], task['result']['id'])
+            return {**task, 'result': result, '_downloads': result['downloads']}
         if task['action'] == 'gis.project.adopt-sources' and task['state'] == 'complete':
             collection_id = task['result']['source_collection_id']
             record = self.operator.item(task['workspace'], 'sources', collection_id)
@@ -161,7 +211,14 @@ def verify_workspace(workspace):
         adoption = gis.load(path)
         workspace._get('sources', adoption['source_collection_id'])
         gis.checked(workspace.root, adoption['manifest'])
-    return {'schema': 'upstate.gis-workspace-readback/v1', 'projects': rows}
+    from model import gis_edition_review
+    reviews = []
+    for path in sorted(workspace.root.glob('gis-received/*/reviews/*/review-state.json')):
+        state = gis.load(path)
+        if state.get('state') == 'complete':
+            _, value = gis_edition_review.read(workspace, path.parents[2].name, path.parent.name)
+            reviews.append(value['id'])
+    return {'schema': 'upstate.gis-workspace-readback/v1', 'projects': rows, 'reviews': reviews}
 
 
 def member(operator, workspace_key, kind, project_id, member_path):

@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "field-lab-analytical-support",
+  "source_reference": "Ecosystem Sciences original case 1791724121.853269; ECO-CLOUD-2566 analytical companion, retained FIELD12 plan revision 2 and original result/activity/station sources.",
+  "components": {
+    "field-lab-analytical-support": {
+      "title": "Source-bound laboratory analytics, original reporting limits, method groups, events and reopenable offline selections",
+      "paths": [
+        "source_tools/field_lab_support/support.py",
+        "source_tools/field_lab_support/build_support.py",
+        "source_tools/field_lab_support/view.html",
+        "source_tools/field_lab_support/README.md"
+      ],
+      "requires": [],
+      "source_manifests": []
+    }
+  },
+  "required_components": ["field-lab-analytical-support"]
+}

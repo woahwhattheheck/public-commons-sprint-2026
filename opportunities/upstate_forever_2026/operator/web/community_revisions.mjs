@@ -38,8 +38,9 @@ export function communityRevisionSummary(value){
   '<details><summary>Original source and metadata changes</summary>'+table(['Field','Earlier value','Later value'],fieldRows(value.source_changes))+'</details>';
 }
 
-export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan,studyTransferButton}){
+export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan,studyTransferButton,beginOpening=()=>null,isOpeningCurrent=()=>true}){
   let generation=0;
+  function invalidate(){generation++;}
   const workspace=()=>getState()?.workspace_key||'';
   const data=()=>getState()?.data||{};
   const url=(path,value={})=>endpoint(path,value);
@@ -58,9 +59,11 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
         '<p class="note">Receive a completed revision ZIP, or compare two saved plan editions to create a handover.</p>')+'</section>';
   }
   async function open(id,{received=false}={}){
-    const w=workspace(),g=++generation;
-    const result=await api(url('/api/community-revisions/'+(received?'received':'inspect'),{id}));
-    if(workspace()!==w||g!==generation)return;
+    const ticket=beginOpening(),w=workspace(),g=++generation;
+    let result;
+    try{result=await api(url('/api/community-revisions/'+(received?'received':'inspect'),{id}));}
+    catch(error){if(isOpeningCurrent(ticket)&&workspace()===w&&g===generation)throw error;return;}
+    if(!isOpeningCurrent(ticket)||workspace()!==w||g!==generation)return;
     if(result.workspace_key!==w||result.id!==id)throw Error('Open this saved comparison in its original project.');
     const comparison=result.comparison,nativePlans=new Set(list(data().community_plans).map(row=>row.id));
     const originalPlanButton=(plan,label)=>!received||nativePlans.has(plan.id)?button('plan',label,plan.id):'';
@@ -75,10 +78,12 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
       {kind:received?'community_received_revisions':'community_plan_comparisons',id});
   }
   async function create(afterId){
-    const w=workspace(),g=++generation;
+    const ticket=beginOpening(),w=workspace(),g=++generation;
     if(!w)throw Error('Select the original Community workspace.');
-    const fresh=await api('/api/state?workspace='+encodeURIComponent(w));
-    if(workspace()!==w||g!==generation)return;
+    let fresh;
+    try{fresh=await api('/api/state?workspace='+encodeURIComponent(w));}
+    catch(error){if(isOpeningCurrent(ticket)&&workspace()===w&&g===generation)throw error;return;}
+    if(!isOpeningCurrent(ticket)||workspace()!==w||g!==generation)return;
     if(fresh.workspace_key!==w||fresh.data?.project?.id!==data().project?.id)
       throw Error('The original Community project changed while opening revisions.');
     const plans=list(fresh.data?.community_plans),reports=list(fresh.data?.community_reports);
@@ -179,6 +184,7 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
       });
   }
   async function receive(){
+    beginOpening();
     const w=workspace(),g=++generation;
     if(!w)throw Error('Select the project that will retain this Community handover.');
     let currentForm=null,currentDialog=null,currentArchive=null,reviewed=null,sequence=0;
@@ -258,5 +264,5 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
     if(action==='community-revision-plan')return openPlan(node.dataset.id);
     throw Error('Choose an available Community revision action.');
   }
-  return {planButton,renderList,open,create,receive,dispatch,taskActions};
+  return {planButton,renderList,open,create,receive,dispatch,taskActions,invalidate};
 }

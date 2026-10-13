@@ -175,10 +175,26 @@
       "title": "assessment context",
       "paths": [
         "model/assessment_report_context.py",
-        "operator/extensions/assessment-context.json"
+        "operator/extensions/assessment-context.json",
+        "source/water-quality-assessments/20261013/ASSESSMENT_PORTFOLIO.md",
+        "source/water-quality-assessments/20261013/assessment-portfolio-matches.csv",
+        "source/water-quality-assessments/20261013/assessment-portfolio-records.csv",
+        "source/water-quality-assessments/20261013/assessment-portfolio.json",
+        "source/water-quality-assessments/20261013/assessment-portfolio.recipe.json",
+        "source/water-quality-assessments/20261013/assessment-portfolio.sources.json",
+        "source/water-quality-assessments/20261013/assessment_portfolio.mjs",
+        "source/water-quality-assessments/20261013/inputs/303d-2024-pdf-table-normalized.json",
+        "source/water-quality-assessments/20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+        "source/water-quality-assessments/20261013/inputs/domain-huc12s.json",
+        "source/water-quality-assessments/20261013/inputs/tmdl-attainment-native-20260728.json",
+        "source/water-quality-assessments/20261013/source-selection-boundary.json",
+        "source/water-quality-assessments/20261013/sources.json"
       ],
       "requires": [
         "core"
+      ],
+      "source_manifests": [
+        "source/water-quality-assessments/20261013/assessment-portfolio.sources.json"
       ]
     },
     "calibration": {
@@ -773,7 +789,17 @@
         "model/gis_workspace.py",
         "model/GIS_PROJECTS.md",
         "operator/web/gis-projects.mjs",
-        "operator/web/delivery_inspection.mjs"
+        "operator/web/delivery_inspection.mjs",
+        "model/gis_edition_review.py",
+        "operator/gis_projects.py",
+        "model/gis_project_cli.py",
+        "install_gis_projects.py",
+        "model/gis_vector_review.py",
+        "operator/gis_vector_reviews.py",
+        "operator/extensions/gis-vector-reviews.json",
+        "AGENTS.md",
+        "model/gis_review_raster.py",
+        "model/gis_review_raster_view.html"
       ],
       "requires": [
         "core",
@@ -1382,6 +1408,7 @@
         "source/ecoli_temporal_analysis/20261013/station-summary.csv",
         "source/ecoli_temporal_analysis/20261013/station-year-summary.csv",
         "source/ecoli_utility_context/20261013/README.md",
+        "source/ecoli_utility_context/20261013/SEASONAL_COMPARISON.md",
         "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
         "source/ecoli_utility_context/20261013/index.html",
         "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
@@ -1397,6 +1424,11 @@
         "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
         "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
         "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.csv",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.json",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.recipe.json",
+        "source/ecoli_utility_context/20261013/seasonal-comparison.sources.json",
+        "source/ecoli_utility_context/20261013/seasonal_comparison.mjs",
         "source/ecoli_utility_context/20261013/selected-stations.geojson",
         "source/ecoli_utility_context/20261013/source-inputs.json",
         "source/ecoli_utility_context/20261013/source-manifest.json",

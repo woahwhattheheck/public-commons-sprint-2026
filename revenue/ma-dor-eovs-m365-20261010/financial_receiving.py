@@ -145,7 +145,9 @@ def run(plan_path, workspace_path, output, *, create=False, resume=False):
     first_received = receive_delivery(first_path, output / "receiver-one")
     with MigrationWorkspace(first_received["workspace"]) as receiver:
         require(receiver.project["id"] == original_workspace_id, "FINANCE_RECEIVING_ID", "Receiver changed original workspace identity.")
-        finance.verify(receiver)
+        # Resume the original admitted recipient steps before verifying their
+        # terminal bindings: interruption may leave a committed entity with its
+        # own operation still RUNNING. The portable receiver verified the archive.
         # Original record aliases are immutable IDs and remain present in the same snapshot.
         run_steps(receiver, plan, plan["receiving_steps"], files, records, "receiving", resume=resume)
         second_verification = finance.verify(receiver)

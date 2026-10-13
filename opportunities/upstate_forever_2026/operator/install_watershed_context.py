@@ -14,9 +14,16 @@ from datetime import datetime, timezone
 FILES = (
     "model/watershed_context.py",
     "model/watershed_brief.py",
+    "model/watershed_source_review.py",
+    "source_tools/watershed_source_review.mjs",
+    "docs/WATERSHED_SOURCE_REVIEW.md",
+    "source/utility-source-context/20261013/source-explorer.html",
     "model/watershed_briefing.py",
     "model/utility_monitoring.py",
     "model/utility_monitoring_report.py",
+    "model/utility_monitoring_comparison.py",
+    "model/monitoring_frontier_comparison.py",
+    "docs/UTILITY_MONITORING_COMPARISONS.md",
     "model/monitoring_workspace.py",
     "model/monitoring_packet.py",
     "model/monitoring_comparison_report.py",
@@ -32,6 +39,9 @@ FILES = (
     "docs/UTILITY_SOURCE_BRIEFING.md",
     "model/utility_watershed_context.py",
     "model/utility_observed_context.py",
+    "model/watershed_observation_context.py",
+    "model/watershed_map_context.py",
+    "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
     "source/receptor-topology/20261013/utility-focus-profile.json",
     "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
@@ -40,13 +50,17 @@ FILES = (
     "source_tools/watershed_source_validation.py",
     "operator/watershed_context.py",
     "operator/web/watershed_context.mjs",
+    "operator/web/water_context_map.mjs",
     "operator/web/watershed_context.css",
     "operator/extensions/watershed-context.json",
     "operator/install_watershed_context.py",
     "operator/WATERSHED_CONTEXT.md",
 )
 OPTIONAL = (
+    "source_tools/prepare_watershed_map_context.py",
     "integration/run_watershed_context_operator.py",
+    "integration/component_fragments/watershed-observation-exports.json",
+    "integration/component_fragments/watershed-geographic-selection.json",
     "integration/WATERSHED_CONTEXT_RECEIVING.md",
     "source_tools/receive_watershed_edition.py",
     "source_tools/utility_observed_context.mjs",
@@ -75,6 +89,8 @@ SOURCE_MANIFESTS = (
     "source/water_context/20261013/complete-sources.json",
     "source/water_context/20261013/complete-native-sources.json",
     "utility_observed_context.sources.json",
+    "landcover_observation_profiles.sources.json",
+    "observations/watershed_profile_overlay_20261013/model-sources.json",
 )
 
 
@@ -158,9 +174,21 @@ def install(application, source_root, *, dry_run=False):
     source_bodies = source_manifest_files(source_root, application)
     names = dict.fromkeys(FILES + tuple(
         name for name in OPTIONAL if (source_root / name).is_file()) + tuple(source_bodies))
+    if ("integration/component_fragments/watershed-observation-exports.json" in names
+            and "landcover_observation_profiles.sources.json" not in source_bodies):
+        raise ValueError("The observed-evidence component needs its complete "
+                         "landcover_observation_profiles.sources.json edition")
     for name in names:
-        source = source_root / name
-        body = source_bodies[name] if name in source_bodies else source.read_bytes()
+        if name in source_bodies:
+            body = source_bodies[name]
+        else:
+            source, member_root = source_root / name, source_root
+            if not source.exists() and not source.is_symlink():
+                source, member_root = application / name, application
+            resolved = source.resolve(strict=True)
+            if not resolved.is_relative_to(member_root) or not resolved.is_file():
+                raise ValueError("Installation member leaves its prepared application: " + name)
+            body = resolved.read_bytes()
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"), filename=name)
         if name.endswith(".json"):

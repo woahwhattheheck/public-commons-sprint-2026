@@ -2,10 +2,11 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation-qc",
   "title": "Sample quality control",
-  "version": "2",
+  "version": "3",
   "order": 72,
   "assets": [
-    "implementation_qc.mjs"
+    "implementation_qc.mjs",
+    "implementation_qc_comparison.mjs"
   ],
   "backend": {
     "module": "implementation_qc",
@@ -22,7 +23,10 @@
       "implementation.qc.export",
       "implementation.qc.actions.save",
       "implementation.qc.actions.source",
-      "implementation.qc.actions.export"
+      "implementation.qc.actions.export",
+      "implementation.qc.comparison.save",
+      "implementation.qc.comparison.source",
+      "implementation.qc.comparison.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -207,6 +211,84 @@
         "path": "/api/implementation-qc/actions-validate",
         "operation": "actions-validate",
         "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/comparisons",
+        "operation": "comparisons",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-qc/comparison-inspect",
+        "operation": "comparison-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/comparison-preview",
+        "operation": "comparison-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/comparison-save",
+        "operation": "comparison-save",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/comparison-source",
+        "operation": "comparison-source",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-qc/comparison-export",
+        "operation": "comparison-export",
+        "handler": "queue",
         "args": [
           "workspace_key",
           "operation",

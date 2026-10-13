@@ -166,40 +166,20 @@ source references in model/RECEPTORS.md.
 
 ## Installing the desk
 
-Receive the eight full product-relative files into the cumulative application:
+Receive the current complete application with the `receptors` component and its
+maintained scientific-source and Study-transfer fragments. The component's
+24-file core inventory is complemented by those fragments; the current complete
+Source-water source bank also includes its map/source producer, six-root typed
+transfer helper and full/selected receiving driver. Install the complete supplied
+tree so every original dependency and existing shared operator remains present.
 
-    model/receptor_experiments.py
-    model/receptor_experiment_cli.py
-    model/RECEPTOR_EXPERIMENTS.md
-    operator/receptor_operator.py
-    operator/extensions/receptors.json
-    operator/web/receptors.mjs
-    operator/web/receptors.css
-    operator/RECEPTORS_OPERATOR.md
-
-The public repository prefix is opportunities/upstate_forever_2026/. Preserve
-the current cumulative application while receiving these additive files.
-
-The native receptor core consists of receptor_network.py, receptors.py and
-receptor_cli.py plus the utility profile. Core revision 3 is retained in
-F0C8PMN99LJ. The source-only module receptor_network_cli.py and the direct replay
-update are retained in F0C8N07B8BG; use the latest complete successor supplied by
-that module's owner. Experiment mode uses the maintained model.experiments
-edition that preserves selected-model identities.
-
-The shared ECSA extension package supplies extension_registry.py,
-web/extension_host.mjs and install_extensions.py. Its existing installer joins
-the current server.py and app.mjs:
-
-    /opt/pyvenv/bin/python install_extensions.py \
-      --application /absolute/current/application \
-      --source-root /absolute/received/extension-package
-
-Use the receiving host's actual interpreter and directories. The receptor
-manifest and all eight desk files must already be copied into the cumulative
-application. Restart the existing operator after current queued work drains.
-The registry discovers operator/extensions/receptors.json; the browser host
-adds its navigation entry and scoped neutral stylesheet.
+Use the same application's `install_extensions.py` only when its extension host
+needs installation. Preserve the existing server, browser, native producers and
+other desks; the registry discovers `operator/extensions/receptors.json`.
+The authoritative current source pointer is
+https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9JPP97Q8 .
+The complete receiving driver and actual path requirements are documented in
+`source_tools/RECEIVE_RECEPTOR_REPORT.md`.
 
 Extension ID: receptors. Browser view ID: source-water.
 GET /api/extensions shows the installed manifest and any exact import issue.
@@ -434,7 +414,7 @@ The saved source-water programme links directly to **Run programmes**, including
 
 ## Saved geography in scientific reports
 
-Saved original networks and prepared source areas now offer **Prepare scientific report source**. The queued action retains the complete original network, polygon subsets, membership tables and source records as one typed scientific report choice. Open its saved result, then continue to the existing scientific report composer with that exact source. The standalone report includes the original geographic SVG; the typed recipe contributes source tables and links to the shared publisher. Original publisher AreaSqKm sums show their completeness and use distinct HUC12 units for union totals. Complete native/receiving instructions are in `model/RECEPTOR_REPORT_SOURCE.md`.
+Saved original networks and prepared source areas now offer **Prepare scientific report source**. The queued action retains the complete original network, polygon subsets, membership tables and source records as one typed scientific report choice. Open its saved result, then choose **Open this report only** to replace the scientific composer's selected sources and title with this exact retained source. Choose **Add to current report** to preserve its current source order and title and append the source once; an empty title uses this report's title. The handoff waits for the original source collection and rechecks the selected result, mounted desk, Workspace and latest requested action before opening. An earlier host without the composer callback keeps **Open retained scientific source**. The standalone report includes the original geographic SVG; the typed recipe contributes source tables and links to the shared publisher. Original publisher AreaSqKm sums show their completeness and use distinct HUC12 units for union totals. Complete native/receiving instructions are in `model/RECEPTOR_REPORT_SOURCE.md`.
 
 
 ## Original projected maps in scientific source reports
@@ -465,3 +445,39 @@ the shared typed map figures with the original source tables.
 See `model/RECEPTOR_REPORT_SOURCE.md` for the native command, complete
 dependencies, immutable mapped-edition identity and the ordinary queued
 render/export/restore course.
+
+## Inspect the actual outgoing report journey
+
+Follow application `AGENTS.md`, owner version `2026-10-13.1`. Before presenting
+the installed product or export as ready, open and LOOK at its exact outgoing
+render at desktop/screenshare and 390px widths. Operate the populated report card,
+loading/error states, source choice, source order, title, downloads and reopening.
+Start with another report draft: **Open this report only** must show only the chosen
+source and its title; **Add to current report** must preserve the current ordered
+sources and title without duplicate entries. Inspect the retained-source fallback
+on an earlier host when applicable. View the actual screenshots as well as taking
+them, and repair cramped, clipped, overflowing or unreadable controls. Continue
+this through the existing equipped receiving operation; controller/source checks
+are complementary and do not replace looking at the rendered product.
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->

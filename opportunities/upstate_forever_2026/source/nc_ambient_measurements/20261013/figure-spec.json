@@ -1,0 +1,2919 @@
+{
+  "schema": "upstate.scientific-figure-spec/v1",
+  "edition": "nc-ambient-20261013",
+  "figures": [
+    {
+      "id": "horsepasture-temperature",
+      "title": "Horsepasture temperature: original observations and sampling coverage",
+      "caption": "Original station 21NC03WQ-H6000000, 106 water-temperature records. Markers distinguish reported analytical methods; open markers carry an original coded qualification. The dashed 20°C reference is the trout-temperature criterion in NC's 2022 assessment methodology. The vertical lines bound 2016–2020. Dates retain the published calendar date; original times and timezone labels remain in thermal-screen.csv. The monthly panel shows observations by calendar month for each five-year window. The earlier window has no July readings; summer accounts for 7 of 31 records versus 12 of 26 later. Counts are descriptive and do not establish a temporal trend.",
+      "panels": [
+        {
+          "title": "Original temperature observations",
+          "x": {
+            "label": "Original sampling date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              13879,
+              20454
+            ],
+            "ticks": [
+              {
+                "value": 13879,
+                "label": "2008"
+              },
+              {
+                "value": 14975,
+                "label": "2011"
+              },
+              {
+                "value": 16071,
+                "label": "2014"
+              },
+              {
+                "value": 16801,
+                "label": "2016"
+              },
+              {
+                "value": 17532,
+                "label": "2018"
+              },
+              {
+                "value": 18628,
+                "label": "2021"
+              },
+              {
+                "value": 19358,
+                "label": "2023"
+              },
+              {
+                "value": 20089,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "Water temperature",
+            "unit": "°C",
+            "domain": [
+              0,
+              28
+            ],
+            "ticks": [
+              {
+                "value": 0
+              },
+              {
+                "value": 5
+              },
+              {
+                "value": 10
+              },
+              {
+                "value": 15
+              },
+              {
+                "value": 20
+              },
+              {
+                "value": 25
+              }
+            ]
+          },
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 20,
+              "label": "20°C trout-temperature screen"
+            },
+            {
+              "axis": "x",
+              "value": 16801
+            },
+            {
+              "axis": "x",
+              "value": 18628
+            }
+          ],
+          "series": [
+            {
+              "label": "WSSSOP method",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 13906,
+                  "y": 3.9,
+                  "result_id": "STORET-92454466",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 185
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 13929,
+                  "y": 7.1,
+                  "result_id": "STORET-92464660",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 78
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 13969,
+                  "y": 10.5,
+                  "result_id": "STORET-92471577",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 53
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 13993,
+                  "y": 14.7,
+                  "result_id": "STORET-92478530",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 155
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14027,
+                  "y": 18.8,
+                  "result_id": "STORET-92488831",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 115
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14054,
+                  "y": 22.2,
+                  "result_id": "STORET-92496561",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 99
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14081,
+                  "y": 24.7,
+                  "result_id": "STORET-92504330",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 100
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14116,
+                  "y": 20.7,
+                  "result_id": "STORET-92512063",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 41
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14138,
+                  "y": 19.4,
+                  "result_id": "STORET-92521979",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 58
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14165,
+                  "y": 16.5,
+                  "result_id": "STORET-92529837",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 145
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14207,
+                  "y": 4,
+                  "result_id": "STORET-92537538",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 88
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14221,
+                  "y": 2.5,
+                  "result_id": "STORET-92544973",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 119
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14266,
+                  "y": 3.3,
+                  "result_id": "STORET-92861476",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 202
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14287,
+                  "y": 7.1,
+                  "result_id": "STORET-92869171",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 235
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14322,
+                  "y": 10.3,
+                  "result_id": "STORET-92876852",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 303
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14357,
+                  "y": 15.4,
+                  "result_id": "STORET-92884499",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 280
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14391,
+                  "y": 17.1,
+                  "result_id": "STORET-92897182",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 299
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14420,
+                  "y": 21.1,
+                  "result_id": "STORET-92904770",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 286
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14455,
+                  "y": 20.4,
+                  "result_id": "STORET-92912565",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 264
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14482,
+                  "y": 20.5,
+                  "result_id": "STORET-92919931",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 306
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14515,
+                  "y": 18,
+                  "result_id": "STORET-92936147",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 328
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14546,
+                  "y": 13.3,
+                  "result_id": "STORET-92943260",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 250
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14572,
+                  "y": 10,
+                  "result_id": "STORET-92950508",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 365
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14593,
+                  "y": 8.7,
+                  "result_id": "STORET-92957879",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 343
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14629,
+                  "y": 6.2,
+                  "result_id": "STORET-99039641",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 127
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14658,
+                  "y": 4,
+                  "result_id": "STORET-99046134",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 96
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14684,
+                  "y": 9,
+                  "result_id": "STORET-99053357",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 106
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14720,
+                  "y": 14.2,
+                  "result_id": "STORET-99060482",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 148
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14936,
+                  "y": 10.9,
+                  "result_id": "STORET-99160115",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 37
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16014,
+                  "y": 9.1,
+                  "result_id": "STORET-525248864",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 430
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16043,
+                  "y": 7.7,
+                  "result_id": "STORET-525255325",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 375
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16084,
+                  "y": 6.4,
+                  "result_id": "STORET-525316971",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 81
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16120,
+                  "y": 7.9,
+                  "result_id": "STORET-525330180",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 115
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16160,
+                  "y": 10.3,
+                  "result_id": "STORET-525354015",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 141
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16181,
+                  "y": 15.2,
+                  "result_id": "STORET-525371449",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 113
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16240,
+                  "y": 19.6,
+                  "result_id": "STORET-525454285",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 155
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16286,
+                  "y": 20.7,
+                  "result_id": "STORET-525483935",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 26
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16318,
+                  "y": 22,
+                  "result_id": "STORET-525804702",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 67
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16336,
+                  "y": 17.1,
+                  "result_id": "STORET-525813467",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 61
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16370,
+                  "y": 13.1,
+                  "result_id": "STORET-525828362",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 59
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16412,
+                  "y": 6.5,
+                  "result_id": "STORET-525860863",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 42
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16461,
+                  "y": 5.7,
+                  "result_id": "STORET-601448635",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 246
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16498,
+                  "y": 10.6,
+                  "result_id": "STORET-601457142",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 170
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16518,
+                  "y": 13.8,
+                  "result_id": "STORET-601461494",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 220
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16637,
+                  "y": 24.9,
+                  "result_id": "STORET-601526452",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 168
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16671,
+                  "y": 23.5,
+                  "result_id": "STORET-601537028",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 237
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16699,
+                  "y": 18.9,
+                  "result_id": "STORET-601544928",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 230
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16741,
+                  "y": 12.8,
+                  "result_id": "STORET-601561552",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 224
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16772,
+                  "y": 9.6,
+                  "result_id": "STORET-601572877",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 193
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16819,
+                  "y": 3.7,
+                  "result_id": "STORET-601584046",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 76
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16910,
+                  "y": 16.5,
+                  "result_id": "STORET-601612967",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 84
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16944,
+                  "y": 18.2,
+                  "result_id": "STORET-601625394",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 40
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16974,
+                  "y": 24.1,
+                  "result_id": "STORET-601635738",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 13
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17039,
+                  "y": 21.8,
+                  "result_id": "STORET-699361998",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 55
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17039,
+                  "y": 21.8,
+                  "result_id": "STORET-699362005",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 56
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17080,
+                  "y": 16.8,
+                  "result_id": "STORET-699373928",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 24
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17142,
+                  "y": 7.6,
+                  "result_id": "STORET-699397184",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 14
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17178,
+                  "y": 7,
+                  "result_id": "STORET-778127196",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 174
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17238,
+                  "y": 7.2,
+                  "result_id": "STORET-778148610",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 135
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17443,
+                  "y": 16.5,
+                  "result_id": "STORET-778294715",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 121
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17498,
+                  "y": 6.1,
+                  "result_id": "STORET-778310626",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 115
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17514,
+                  "y": 3.9,
+                  "result_id": "STORET-778317412",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 143
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17569,
+                  "y": 6.1,
+                  "result_id": "STORET-778328294",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 199
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17602,
+                  "y": 8.7,
+                  "result_id": "STORET-778338368",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 265
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17658,
+                  "y": 17.3,
+                  "result_id": "STORET-778353412",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 193
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17689,
+                  "y": 19.4,
+                  "result_id": "STORET-778362017",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 257
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17766,
+                  "y": 20.8,
+                  "result_id": "STORET-778383549",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 183
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17801,
+                  "y": 19.3,
+                  "result_id": "STORET-778391422",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 268
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17826,
+                  "y": 11.6,
+                  "result_id": "STORET-778404664",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 197
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17869,
+                  "y": 8.1,
+                  "result_id": "STORET-778421145",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 243
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17899,
+                  "y": 10.1,
+                  "result_id": "STORET-871470963",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 322
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17927,
+                  "y": 4.3,
+                  "result_id": "STORET-871477868",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 329
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17954,
+                  "y": 10.2,
+                  "result_id": "STORET-871485714",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 353
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17987,
+                  "y": 11.6,
+                  "result_id": "STORET-877726409",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 315
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18058,
+                  "y": 20.7,
+                  "result_id": "STORET-877746845",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 321
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18123,
+                  "y": 24.6,
+                  "result_id": "STORET-907460988",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 339
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18172,
+                  "y": 22.4,
+                  "result_id": "STORET-923422997",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 275
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18241,
+                  "y": 7,
+                  "result_id": "STORET-923449229",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 294
+                  },
+                  "filled": true
+                }
+              ]
+            },
+            {
+              "label": "USEPA 170.1 method",
+              "geometry": "scatter",
+              "marker": "square",
+              "points": [
+                {
+                  "x": 18284,
+                  "y": 6.6,
+                  "result_id": "STORET-1047958144",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 381
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18319,
+                  "y": 8.7,
+                  "result_id": "STORET-1047958143",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 391
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18806,
+                  "y": 22.8,
+                  "result_id": "STORET-992412891",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 14
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18863,
+                  "y": 21.9,
+                  "result_id": "STORET-992412892",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 20
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19163,
+                  "y": 17,
+                  "result_id": "STORET-993109106",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 34
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19191,
+                  "y": 20.9,
+                  "result_id": "STORET-993117712",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 51
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19232,
+                  "y": 24.1,
+                  "result_id": "STORET-993117714",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 33
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19254,
+                  "y": 16.5,
+                  "result_id": "STORET-993117713",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 60
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19283,
+                  "y": 10.6,
+                  "result_id": "STORET-993124726",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 62
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19381,
+                  "y": 6.7,
+                  "result_id": "STORET-1051970678",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 130
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19403,
+                  "y": 7.9,
+                  "result_id": "STORET-1051970679",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 143
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19564,
+                  "y": 23.4,
+                  "result_id": "STORET-1051994669",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 88
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19598,
+                  "y": 20.4,
+                  "result_id": "STORET-1051994670",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 81
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19661,
+                  "y": 14.1,
+                  "result_id": "STORET-1052007232",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 150
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19710,
+                  "y": 3,
+                  "result_id": "STORET-1052007233",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 83
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19774,
+                  "y": 7,
+                  "result_id": "STORET-1067921592",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 159
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19851,
+                  "y": 19.9,
+                  "result_id": "STORET-1067927726",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 197
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19899,
+                  "y": 19.7,
+                  "result_id": "STORET-1067932518",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 166
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19928,
+                  "y": 20.8,
+                  "result_id": "STORET-1067934664",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 173
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20209,
+                  "y": 8.1,
+                  "result_id": "STORET-1108323080",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 237
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20222,
+                  "y": 7.7,
+                  "result_id": "STORET-1108324800",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 209
+                  },
+                  "filled": false
+                },
+                {
+                  "x": 20250,
+                  "y": 16.4,
+                  "result_id": "STORET-1108327228",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 221
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20283,
+                  "y": 19.2,
+                  "result_id": "STORET-1108681183",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 242
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20320,
+                  "y": 20.9,
+                  "result_id": "STORET-1108684689",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 248
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20334,
+                  "y": 17.6,
+                  "result_id": "STORET-1108685897",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 269
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20375,
+                  "y": 14.7,
+                  "result_id": "STORET-1123401261",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 286
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20404,
+                  "y": 7.2,
+                  "result_id": "STORET-1123403603",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 316
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 20425,
+                  "y": 5.6,
+                  "result_id": "STORET-1123405633",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 317
+                  },
+                  "filled": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Calendar-month sampling support",
+          "x": {
+            "label": "Sampling month",
+            "unit": "",
+            "domain": [
+              0.5,
+              12.5
+            ],
+            "ticks": [
+              {
+                "value": 1,
+                "label": "Jan"
+              },
+              {
+                "value": 2,
+                "label": "Feb"
+              },
+              {
+                "value": 3,
+                "label": "Mar"
+              },
+              {
+                "value": 4,
+                "label": "Apr"
+              },
+              {
+                "value": 5,
+                "label": "May"
+              },
+              {
+                "value": 6,
+                "label": "Jun"
+              },
+              {
+                "value": 7,
+                "label": "Jul"
+              },
+              {
+                "value": 8,
+                "label": "Aug"
+              },
+              {
+                "value": 9,
+                "label": "Sep"
+              },
+              {
+                "value": 10,
+                "label": "Oct"
+              },
+              {
+                "value": 11,
+                "label": "Nov"
+              },
+              {
+                "value": 12,
+                "label": "Dec"
+              }
+            ]
+          },
+          "y": {
+            "label": "Original observations",
+            "unit": "count",
+            "domain": [
+              0,
+              6
+            ],
+            "ticks": [
+              {
+                "value": 0
+              },
+              {
+                "value": 1
+              },
+              {
+                "value": 2
+              },
+              {
+                "value": 3
+              },
+              {
+                "value": 4
+              },
+              {
+                "value": 5
+              },
+              {
+                "value": 6
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "2016–2020",
+              "geometry": "scatter",
+              "marker": "circle-open",
+              "points": [
+                {
+                  "x": 0.9,
+                  "y": 5
+                },
+                {
+                  "x": 1.9,
+                  "y": 3
+                },
+                {
+                  "x": 2.9,
+                  "y": 2
+                },
+                {
+                  "x": 3.9,
+                  "y": 2
+                },
+                {
+                  "x": 4.9,
+                  "y": 2
+                },
+                {
+                  "x": 5.9,
+                  "y": 3
+                },
+                {
+                  "x": 6.9,
+                  "y": 0
+                },
+                {
+                  "x": 7.9,
+                  "y": 4
+                },
+                {
+                  "x": 8.9,
+                  "y": 1
+                },
+                {
+                  "x": 9.9,
+                  "y": 4
+                },
+                {
+                  "x": 10.9,
+                  "y": 1
+                },
+                {
+                  "x": 11.9,
+                  "y": 4
+                }
+              ]
+            },
+            {
+              "label": "2021–2025",
+              "geometry": "scatter",
+              "marker": "square",
+              "points": [
+                {
+                  "x": 1.1,
+                  "y": 1
+                },
+                {
+                  "x": 2.1,
+                  "y": 2
+                },
+                {
+                  "x": 3.1,
+                  "y": 0
+                },
+                {
+                  "x": 4.1,
+                  "y": 0
+                },
+                {
+                  "x": 5.1,
+                  "y": 3
+                },
+                {
+                  "x": 6.1,
+                  "y": 4
+                },
+                {
+                  "x": 7.1,
+                  "y": 4
+                },
+                {
+                  "x": 8.1,
+                  "y": 4
+                },
+                {
+                  "x": 9.1,
+                  "y": 2
+                },
+                {
+                  "x": 10.1,
+                  "y": 3
+                },
+                {
+                  "x": 11.1,
+                  "y": 1
+                },
+                {
+                  "x": 12.1,
+                  "y": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "horsepasture-phosphorus",
+      "title": "Horsepasture total phosphorus: results and original reporting limits",
+      "caption": "Original total-phosphorus records, USEPA 365.1, reported as P. Filled circles are uncensored results; open circles retain coded qualifications. Open triangles locate each original practical quantitation limit for a non-detected result; their vertical position is the reporting limit, not an estimated concentration. Original media-subdivision labels change from blank to Surface Water in 2013 and remain separate in comparison-groups.csv. All 144 records, methods, comments and 88 non-detections remain traceable to original result and limit files.",
+      "panels": [
+        {
+          "title": "Total phosphorus and reporting limits",
+          "x": {
+            "label": "Original sampling date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              13879,
+              20454
+            ],
+            "ticks": [
+              {
+                "value": 13879,
+                "label": "2008"
+              },
+              {
+                "value": 14975,
+                "label": "2011"
+              },
+              {
+                "value": 16071,
+                "label": "2014"
+              },
+              {
+                "value": 16801,
+                "label": "2016"
+              },
+              {
+                "value": 17532,
+                "label": "2018"
+              },
+              {
+                "value": 18628,
+                "label": "2021"
+              },
+              {
+                "value": 19358,
+                "label": "2023"
+              },
+              {
+                "value": 20089,
+                "label": "2025"
+              }
+            ]
+          },
+          "y": {
+            "label": "Total phosphorus as P",
+            "unit": "mg/L",
+            "domain": [
+              0,
+              0.23
+            ],
+            "ticks": [
+              {
+                "value": 0,
+                "label": "0.00"
+              },
+              {
+                "value": 0.05,
+                "label": "0.05"
+              },
+              {
+                "value": 0.1,
+                "label": "0.10"
+              },
+              {
+                "value": 0.15,
+                "label": "0.15"
+              },
+              {
+                "value": 0.2,
+                "label": "0.20"
+              }
+            ]
+          },
+          "series": [
+            {
+              "label": "Uncensored result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 14054,
+                  "y": 0.02,
+                  "result_id": "STORET-92496564",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 4
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14081,
+                  "y": 0.02,
+                  "result_id": "STORET-92504336",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 95
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14116,
+                  "y": 0.04,
+                  "result_id": "STORET-92512065",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 181
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14138,
+                  "y": 0.02,
+                  "result_id": "STORET-92521982",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 16
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14165,
+                  "y": 0.03,
+                  "result_id": "STORET-92529839",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 151
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14207,
+                  "y": 0.02,
+                  "result_id": "STORET-92537544",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 114
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14221,
+                  "y": 0.08,
+                  "result_id": "STORET-92544975",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 166
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14266,
+                  "y": 0.03,
+                  "result_id": "STORET-92861483",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 326
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14287,
+                  "y": 0.02,
+                  "result_id": "STORET-92869173",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 254
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14322,
+                  "y": 0.02,
+                  "result_id": "STORET-92876855",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 196
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14391,
+                  "y": 0.02,
+                  "result_id": "STORET-92897185",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 263
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14420,
+                  "y": 0.02,
+                  "result_id": "STORET-92904773",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 270
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14455,
+                  "y": 0.02,
+                  "result_id": "STORET-92912568",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 374
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14482,
+                  "y": 0.02,
+                  "result_id": "STORET-92919936",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 291
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14515,
+                  "y": 0.02,
+                  "result_id": "STORET-92936156",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+                    "row": 274
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14629,
+                  "y": 0.02,
+                  "result_id": "STORET-99039648",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 105
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14753,
+                  "y": 0.02,
+                  "result_id": "STORET-99070750",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 65
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14770,
+                  "y": 0.02,
+                  "result_id": "STORET-99078217",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 56
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14811,
+                  "y": 0.02,
+                  "result_id": "STORET-99085202",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 102
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14846,
+                  "y": 0.02,
+                  "result_id": "STORET-99104211",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 129
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 14910,
+                  "y": 0.02,
+                  "result_id": "STORET-99130692",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+                    "row": 138
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15148,
+                  "y": 0.03,
+                  "result_id": "STORET-183622556",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 35
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15174,
+                  "y": 0.02,
+                  "result_id": "STORET-183622563",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 5
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15218,
+                  "y": 0.03,
+                  "result_id": "STORET-183622569",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 144
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15239,
+                  "y": 0.02,
+                  "result_id": "STORET-183648071",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 94
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15484,
+                  "y": 0.02,
+                  "result_id": "STORET-234120293",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 249
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15552,
+                  "y": 0.02,
+                  "result_id": "STORET-234120337",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 282
+                  },
+                  "filled": false
+                },
+                {
+                  "x": 15587,
+                  "y": 0.02,
+                  "result_id": "STORET-234120358",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 206
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15615,
+                  "y": 0.04,
+                  "result_id": "STORET-234247148",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 234
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15671,
+                  "y": 0.02,
+                  "result_id": "STORET-234226144",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 165
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15812,
+                  "y": 0.02,
+                  "result_id": "STORET-280343671",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 341
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15936,
+                  "y": 0.02,
+                  "result_id": "STORET-288857453",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 431
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 15986,
+                  "y": 0.04,
+                  "result_id": "STORET-525242598",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 402
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16014,
+                  "y": 0.02,
+                  "result_id": "STORET-525248648",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+                    "row": 410
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16240,
+                  "y": 0.02,
+                  "result_id": "STORET-525453739",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 150
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16286,
+                  "y": 0.02,
+                  "result_id": "STORET-525483714",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 11
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16336,
+                  "y": 0.02,
+                  "result_id": "STORET-525813502",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 153
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16610,
+                  "y": 0.02,
+                  "result_id": "STORET-601492844",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 192
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16637,
+                  "y": 0.02,
+                  "result_id": "STORET-601526454",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 240
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16671,
+                  "y": 0.02,
+                  "result_id": "STORET-601537027",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 160
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16699,
+                  "y": 0.04,
+                  "result_id": "STORET-601544930",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 221
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16741,
+                  "y": 0.04,
+                  "result_id": "STORET-601561553",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+                    "row": 231
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16819,
+                  "y": 0.04,
+                  "result_id": "STORET-601584044",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 58
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 16882,
+                  "y": 0.03,
+                  "result_id": "STORET-601601801",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 59
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17142,
+                  "y": 0.04,
+                  "result_id": "STORET-699397173",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 26
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17336,
+                  "y": 0.02,
+                  "result_id": "STORET-778261914",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 117
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17569,
+                  "y": 0.04,
+                  "result_id": "STORET-778328297",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 235
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 17801,
+                  "y": 0.03,
+                  "result_id": "STORET-778391419",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 231
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18058,
+                  "y": 0.02,
+                  "result_id": "STORET-877746840",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 284
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18123,
+                  "y": 0.02,
+                  "result_id": "STORET-907460994",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 312
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18173,
+                  "y": 0.02,
+                  "result_id": "STORET-923423275",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                    "row": 366
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 18806,
+                  "y": 0.02,
+                  "result_id": "STORET-992412888",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 24
+                  },
+                  "filled": false
+                },
+                {
+                  "x": 18863,
+                  "y": 0.02,
+                  "result_id": "STORET-992412887",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 17
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19232,
+                  "y": 0.16,
+                  "result_id": "STORET-993117707",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 64
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19598,
+                  "y": 0.21,
+                  "result_id": "STORET-1051994665",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 131
+                  },
+                  "filled": true
+                },
+                {
+                  "x": 19928,
+                  "y": 0.04,
+                  "result_id": "STORET-1067934476",
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+                    "row": 167
+                  },
+                  "filled": true
+                }
+              ]
+            },
+            {
+              "label": "Non-detection reporting limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 13906,
+                  "y": 0.02,
+                  "result_id": "STORET-92454490",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 225
+                  }
+                },
+                {
+                  "x": 13929,
+                  "y": 0.02,
+                  "result_id": "STORET-92464665",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 93
+                  }
+                },
+                {
+                  "x": 13969,
+                  "y": 0.02,
+                  "result_id": "STORET-92471580",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 363
+                  }
+                },
+                {
+                  "x": 13993,
+                  "y": 0.02,
+                  "result_id": "STORET-92478538",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 332
+                  }
+                },
+                {
+                  "x": 14027,
+                  "y": 0.02,
+                  "result_id": "STORET-92488837",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 405
+                  }
+                },
+                {
+                  "x": 14357,
+                  "y": 0.02,
+                  "result_id": "STORET-92884500",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 169
+                  }
+                },
+                {
+                  "x": 14546,
+                  "y": 0.02,
+                  "result_id": "STORET-92943267",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 199
+                  }
+                },
+                {
+                  "x": 14572,
+                  "y": 0.02,
+                  "result_id": "STORET-92950511",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 322
+                  }
+                },
+                {
+                  "x": 14593,
+                  "y": 0.02,
+                  "result_id": "STORET-92957884",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 76
+                  }
+                },
+                {
+                  "x": 14658,
+                  "y": 0.02,
+                  "result_id": "STORET-99046139",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 175
+                  }
+                },
+                {
+                  "x": 14684,
+                  "y": 0.02,
+                  "result_id": "STORET-99053366",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 159
+                  }
+                },
+                {
+                  "x": 14720,
+                  "y": 0.02,
+                  "result_id": "STORET-99060490",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 323
+                  }
+                },
+                {
+                  "x": 14875,
+                  "y": 0.02,
+                  "result_id": "STORET-99124765",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 278
+                  }
+                },
+                {
+                  "x": 14936,
+                  "y": 0.02,
+                  "result_id": "STORET-99160124",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 53
+                  }
+                },
+                {
+                  "x": 14951,
+                  "y": 0.02,
+                  "result_id": "STORET-99165679",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 97
+                  }
+                },
+                {
+                  "x": 15008,
+                  "y": 0.02,
+                  "result_id": "STORET-112045766",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 71
+                  }
+                },
+                {
+                  "x": 15029,
+                  "y": 0.02,
+                  "result_id": "STORET-112053972",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 36
+                  }
+                },
+                {
+                  "x": 15047,
+                  "y": 0.02,
+                  "result_id": "STORET-112049024",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 369
+                  }
+                },
+                {
+                  "x": 15098,
+                  "y": 0.02,
+                  "result_id": "STORET-183618765",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 142
+                  }
+                },
+                {
+                  "x": 15120,
+                  "y": 0.02,
+                  "result_id": "STORET-183622547",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 312
+                  }
+                },
+                {
+                  "x": 15267,
+                  "y": 0.02,
+                  "result_id": "STORET-183648077",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 350
+                  }
+                },
+                {
+                  "x": 15309,
+                  "y": 0.02,
+                  "result_id": "STORET-183648083",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 148
+                  }
+                },
+                {
+                  "x": 15320,
+                  "y": 0.02,
+                  "result_id": "STORET-183648087",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 223
+                  }
+                },
+                {
+                  "x": 15398,
+                  "y": 0.02,
+                  "result_id": "STORET-192840456",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 268
+                  }
+                },
+                {
+                  "x": 15419,
+                  "y": 0.02,
+                  "result_id": "STORET-192840460",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 213
+                  }
+                },
+                {
+                  "x": 15454,
+                  "y": 0.02,
+                  "result_id": "STORET-192840468",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 370
+                  }
+                },
+                {
+                  "x": 15511,
+                  "y": 0.02,
+                  "result_id": "STORET-234120319",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 204
+                  }
+                },
+                {
+                  "x": 15644,
+                  "y": 0.02,
+                  "result_id": "STORET-234226110",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 237
+                  }
+                },
+                {
+                  "x": 15685,
+                  "y": 0.02,
+                  "result_id": "STORET-234226178",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 400
+                  }
+                },
+                {
+                  "x": 15727,
+                  "y": 0.02,
+                  "result_id": "STORET-280337913",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 316
+                  }
+                },
+                {
+                  "x": 15749,
+                  "y": 0.02,
+                  "result_id": "STORET-280339443",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 45
+                  }
+                },
+                {
+                  "x": 15784,
+                  "y": 0.02,
+                  "result_id": "STORET-280341788",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 107
+                  }
+                },
+                {
+                  "x": 15839,
+                  "y": 0.02,
+                  "result_id": "STORET-288850915",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 406
+                  }
+                },
+                {
+                  "x": 15868,
+                  "y": 0.02,
+                  "result_id": "STORET-288852713",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 340
+                  }
+                },
+                {
+                  "x": 15895,
+                  "y": 0.02,
+                  "result_id": "STORET-288854515",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 257
+                  }
+                },
+                {
+                  "x": 15964,
+                  "y": 0.02,
+                  "result_id": "STORET-525238799",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 238
+                  }
+                },
+                {
+                  "x": 16043,
+                  "y": 0.02,
+                  "result_id": "STORET-525255191",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 243
+                  }
+                },
+                {
+                  "x": 16084,
+                  "y": 0.02,
+                  "result_id": "STORET-525316883",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 185
+                  }
+                },
+                {
+                  "x": 16160,
+                  "y": 0.02,
+                  "result_id": "STORET-525353727",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 416
+                  }
+                },
+                {
+                  "x": 16181,
+                  "y": 0.02,
+                  "result_id": "STORET-525371416",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 95
+                  }
+                },
+                {
+                  "x": 16318,
+                  "y": 0.02,
+                  "result_id": "STORET-525804738",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 205
+                  }
+                },
+                {
+                  "x": 16370,
+                  "y": 0.02,
+                  "result_id": "STORET-525828516",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 281
+                  }
+                },
+                {
+                  "x": 16412,
+                  "y": 0.02,
+                  "result_id": "STORET-525861381",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 157
+                  }
+                },
+                {
+                  "x": 16498,
+                  "y": 0.02,
+                  "result_id": "STORET-601457140",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 167
+                  }
+                },
+                {
+                  "x": 16518,
+                  "y": 0.02,
+                  "result_id": "STORET-601461497",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 376
+                  }
+                },
+                {
+                  "x": 16562,
+                  "y": 0.02,
+                  "result_id": "STORET-601471554",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 314
+                  }
+                },
+                {
+                  "x": 16772,
+                  "y": 0.02,
+                  "result_id": "STORET-601572880",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 299
+                  }
+                },
+                {
+                  "x": 16910,
+                  "y": 0.02,
+                  "result_id": "STORET-601612969",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 387
+                  }
+                },
+                {
+                  "x": 16944,
+                  "y": 0.02,
+                  "result_id": "STORET-601625392",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 139
+                  }
+                },
+                {
+                  "x": 17039,
+                  "y": 0.02,
+                  "result_id": "STORET-699362007",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 38
+                  }
+                },
+                {
+                  "x": 17080,
+                  "y": 0.02,
+                  "result_id": "STORET-699373926",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 32
+                  }
+                },
+                {
+                  "x": 17178,
+                  "y": 0.02,
+                  "result_id": "STORET-778127198",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 231
+                  }
+                },
+                {
+                  "x": 17238,
+                  "y": 0.02,
+                  "result_id": "STORET-778148608",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 292
+                  }
+                },
+                {
+                  "x": 17302,
+                  "y": 0.02,
+                  "result_id": "STORET-778253108",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 426
+                  }
+                },
+                {
+                  "x": 17443,
+                  "y": 0.02,
+                  "result_id": "STORET-778294716",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 98
+                  }
+                },
+                {
+                  "x": 17498,
+                  "y": 0.02,
+                  "result_id": "STORET-778310631",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 346
+                  }
+                },
+                {
+                  "x": 17514,
+                  "y": 0.02,
+                  "result_id": "STORET-778317415",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 272
+                  }
+                },
+                {
+                  "x": 17602,
+                  "y": 0.02,
+                  "result_id": "STORET-778338363",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 347
+                  }
+                },
+                {
+                  "x": 17689,
+                  "y": 0.02,
+                  "result_id": "STORET-778362012",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 109
+                  }
+                },
+                {
+                  "x": 17766,
+                  "y": 0.02,
+                  "result_id": "STORET-778383542",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 25
+                  }
+                },
+                {
+                  "x": 17826,
+                  "y": 0.02,
+                  "result_id": "STORET-778404663",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 96
+                  }
+                },
+                {
+                  "x": 17869,
+                  "y": 0.02,
+                  "result_id": "STORET-778421150",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 420
+                  }
+                },
+                {
+                  "x": 17899,
+                  "y": 0.02,
+                  "result_id": "STORET-871470961",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 305
+                  }
+                },
+                {
+                  "x": 17927,
+                  "y": 0.02,
+                  "result_id": "STORET-871477875",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 388
+                  }
+                },
+                {
+                  "x": 17954,
+                  "y": 0.02,
+                  "result_id": "STORET-871485704",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 264
+                  }
+                },
+                {
+                  "x": 17987,
+                  "y": 0.02,
+                  "result_id": "STORET-877726406",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 164
+                  }
+                },
+                {
+                  "x": 18241,
+                  "y": 0.02,
+                  "result_id": "STORET-923449214",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 110
+                  }
+                },
+                {
+                  "x": 18284,
+                  "y": 0.02,
+                  "result_id": "STORET-1047958139",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 146
+                  }
+                },
+                {
+                  "x": 18319,
+                  "y": 0.02,
+                  "result_id": "STORET-1047958140",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 251
+                  }
+                },
+                {
+                  "x": 19191,
+                  "y": 0.02,
+                  "result_id": "STORET-993117706",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 168
+                  }
+                },
+                {
+                  "x": 19254,
+                  "y": 0.02,
+                  "result_id": "STORET-993117708",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 82
+                  }
+                },
+                {
+                  "x": 19381,
+                  "y": 0.03,
+                  "result_id": "STORET-1051970675",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 351
+                  }
+                },
+                {
+                  "x": 19403,
+                  "y": 0.03,
+                  "result_id": "STORET-1051970674",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 20
+                  }
+                },
+                {
+                  "x": 19564,
+                  "y": 0.03,
+                  "result_id": "STORET-1051994666",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 398
+                  }
+                },
+                {
+                  "x": 19661,
+                  "y": 0.03,
+                  "result_id": "STORET-1052007229",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 79
+                  }
+                },
+                {
+                  "x": 19710,
+                  "y": 0.03,
+                  "result_id": "STORET-1052007228",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 300
+                  }
+                },
+                {
+                  "x": 19774,
+                  "y": 0.03,
+                  "result_id": "STORET-1067921586",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 116
+                  }
+                },
+                {
+                  "x": 19851,
+                  "y": 0.03,
+                  "result_id": "STORET-1067927640",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 27
+                  }
+                },
+                {
+                  "x": 19899,
+                  "y": 0.03,
+                  "result_id": "STORET-1067932438",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 191
+                  }
+                },
+                {
+                  "x": 20209,
+                  "y": 0.05,
+                  "result_id": "STORET-1108323078",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 207
+                  }
+                },
+                {
+                  "x": 20222,
+                  "y": 0.05,
+                  "result_id": "STORET-1108324798",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 147
+                  }
+                },
+                {
+                  "x": 20250,
+                  "y": 0.05,
+                  "result_id": "STORET-1108327226",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 40
+                  }
+                },
+                {
+                  "x": 20283,
+                  "y": 0.05,
+                  "result_id": "STORET-1108681181",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 284
+                  }
+                },
+                {
+                  "x": 20320,
+                  "y": 0.05,
+                  "result_id": "STORET-1108684687",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 321
+                  }
+                },
+                {
+                  "x": 20334,
+                  "y": 0.05,
+                  "result_id": "STORET-1108685895",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 302
+                  }
+                },
+                {
+                  "x": 20375,
+                  "y": 0.05,
+                  "result_id": "STORET-1123401259",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 105
+                  }
+                },
+                {
+                  "x": 20404,
+                  "y": 0.05,
+                  "result_id": "STORET-1123403601",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 163
+                  }
+                },
+                {
+                  "x": 20425,
+                  "y": 0.05,
+                  "result_id": "STORET-1123405631",
+                  "censored": true,
+                  "original_source": {
+                    "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+                    "row": 84
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

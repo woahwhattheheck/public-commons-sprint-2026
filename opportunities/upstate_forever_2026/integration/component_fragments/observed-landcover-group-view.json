@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "observed-landcover-group-view",
+  "source_reference": {
+    "workflow": "Original native selected-watershed comparison, complete group reading and explicit report authoring"
+  },
+  "extend_components": {
+    "observed-watershed-change": {
+      "paths": [
+        "operator/web/observed_landcover_groups.mjs"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "operator/web/observed_landcover_groups.mjs"
+      ]
+    }
+  }
+}

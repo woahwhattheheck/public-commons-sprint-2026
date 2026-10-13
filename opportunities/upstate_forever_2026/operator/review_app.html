@@ -78,6 +78,7 @@ const now=()=>new Date().toISOString();
 const uid=()=>globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function"?globalThis.crypto.randomUUID():"r-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12);
 let packet,review,draft,artifactMap,requirementMap,fileMap,storageKey,storageRevision=null,saveTimer=null,localConflict=null;
 let selectedFile=null,selectedHistory=null,currentTab="overview",formCounter=0,dirty=false,importedRecords=[];
+let responseImportSerial=0;
 const tabIdentity=uid();
 
 function assert(condition,message){if(!condition)throw new Error(message)}
@@ -238,17 +239,47 @@ function continueResponse(item){
  catch(error){notice(error.message,{error:true})}
 }
 async function importResponseFile(file){
+ const serial=++responseImportSerial,input=$("response-file");
  if(!file)return;
+ const capturedReview=review,capturedPacket=packet,capturedDraft=JSON.stringify(draft);
+ const current=()=>serial===responseImportSerial&&review===capturedReview&&packet===capturedPacket&&
+  $("response-file")===input&&input.files[0]===file;
+ const cancel=()=>{
+  if(!current())return;
+  responseImportSerial++;input.value="";
+  notice("Response import cancelled. Your current draft is unchanged.");
+ };
+ notice("Reading the selected response file…",{actions:[{label:"Cancel import",action:cancel}]});
  try{
   assert(file.size<=16*1024*1024,"Choose a review-response JSON file smaller than 16 MiB.");
-  const record=JSON.parse(await file.text()),body=responseBody(record);
-  validateResponse(body,review,packet.latest_response_id,{strictParent:false});
-  if(body.previous_response_id!==packet.latest_response_id){
-   const item={id:"imported-"+uid(),record,body:copy(body),imported:true};importedRecords.unshift(item);selectedHistory=item.id;renderHistory();tab("history");
-   notice("This response used a different recorded revision. It is available as a reference in Responses. Review it there before choosing it as the starting point for a new response.");
-  }else{replaceDraft(completeResponse(body,review,packet.latest_response_id),"Imported the local response as your current draft, with its original previous-response identifier preserved.");tab("overview")}
- }catch(error){notice("Response import: "+error.message,{error:true})}
- finally{$("response-file").value=""}
+  const contents=await file.text();
+  if(!current())return;
+  const record=JSON.parse(contents),body=responseBody(record);
+  validateResponse(body,capturedReview,capturedPacket.latest_response_id,{strictParent:false});
+  const saved=readLocal();
+  const otherWindow=Boolean(saved&&saved.revision!==storageRevision&&saved.tab!==tabIdentity);
+  const draftChanged=JSON.stringify(draft)!==capturedDraft||Boolean(localConflict)||otherWindow;
+  const differentParent=body.previous_response_id!==packet.latest_response_id;
+  if(differentParent||draftChanged){
+   const item={id:"imported-"+uid(),record,body:copy(body),imported:true};
+   importedRecords.unshift(item);selectedHistory=item.id;renderHistory();
+   if(draftChanged){
+    notice("Your draft changed while the file was being read, or another saved draft needs attention. The imported response is available in Responses; your current draft is preserved.",{
+     actions:[{label:"Inspect imported response",action:()=>{selectedHistory=item.id;tab("history")}}]
+    });
+   }else{
+    tab("history");
+    notice("This response used a different recorded revision. It is available as a reference in Responses. Review it there before choosing it as the starting point for a new response.");
+   }
+  }else{
+   replaceDraft(completeResponse(body,capturedReview,capturedPacket.latest_response_id),"Imported the local response as your current draft, with its original previous-response identifier preserved.");
+   tab("overview");
+  }
+ }catch(error){
+  if(current())notice("Response import: "+error.message,{error:true});
+ }finally{
+  if(current())input.value="";
+ }
 }
 function initialiseDraft(){
  const base=latestBody();try{draft=completeResponse(base,review,packet.latest_response_id,{continueRecord:true})}catch{draft=blankResponse(review,packet.latest_response_id)}
@@ -476,6 +507,7 @@ function start(){
   for(const id of ["file-search","filter-group","filter-kind","filter-decision"])$(id).addEventListener(id==="file-search"?"input":"change",()=>renderFileList({selectVisible:true}));
   $("export-response").addEventListener("click",exportResponse);$("import-response").addEventListener("click",()=>$("response-file").click());
   $("response-file").addEventListener("change",event=>importResponseFile(event.target.files[0]));
+  window.addEventListener("pagehide",()=>{responseImportSerial++});
   $("print-review").addEventListener("click",()=>{renderPrint();window.print()});window.addEventListener("beforeprint",renderPrint);
   $("reset-draft").addEventListener("click",startBlank);
   $("continue-latest").addEventListener("click",()=>{const item=allRecords().find(x=>x.id===packet.latest_response_id);if(item)continueResponse(item)});

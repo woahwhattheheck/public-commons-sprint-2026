@@ -22,20 +22,24 @@ ACTIONS = frozenset((
     "source.inspect", "source.import", "source.select", "layers.save",
     "edition.review", "map.inspect", "map.save", "map.reopen",
     "map.render", "map.features", "project.export", "project.receive",
-    "field.command", "postgis.select", "postgis.check", "postgis.layers", "parcel.command",
+    "field.command", "postgis.select", "postgis.check", "postgis.layers", "parcel.command", "parcel.capture", "evidence.command", "evidence.spatial",
 ))
 MUTATIONS = frozenset(("source.import", "source.select", "layers.save",
-                       "edition.review", "map.save", "field.command", "postgis.check", "postgis.layers", "parcel.command"))
+                       "edition.review", "map.save", "field.command", "postgis.check", "postgis.layers", "parcel.command", "evidence.command", "evidence.spatial"))
 
 
 ANALYST_MODULES = (
-    "__init__.py", "actions.py", "worker.py", "uploads.py", "binding.py", "server.py",
-    "public/index.html", "public/app.js", "public/parcels.js", "public/style.css",
+    "__init__.py", "actions.py", "worker.py", "uploads.py", "binding.py", "server.py", "EVIDENCE_BROWSER.md",
+    "public/index.html", "public/app.js", "public/parcels.js", "public/evidence.js", "public/evidence-store.js", "public/evidence.css", "public/style.css",
 )
 ANALYST_ROOT_FILES = (
     "analyst.mjs", "application.mjs", "application-provider.mjs",
     "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
     "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py", "parcel-operation-restore.py",
+    "evidence_cli.py", "evidence-native-receiving.py", "EVIDENCE_RECEIVING.md", "PARCEL_EVIDENCE.md", "AGENTS.md",
+    "evidence-browser-receiving.mjs", "evidence-example/bloomington/parcel.json",
+    "evidence-example/bloomington/parcel-metadata.json", "evidence-example/bloomington/flood-source-contract.json",
+    "evidence-example/bloomington/README.md", "evidence-example/bloomington/flood-source-contract-superseded.json",
 )
 
 
@@ -44,8 +48,21 @@ def analyst_source_paths(plugin_root):
     plugin_root = Path(plugin_root).resolve(strict=True)
     root = plugin_root if (plugin_root / "analyst" / "server.py").is_file() else plugin_root.parent
     paths = {"starforge_stac/analyst_state.py": plugin_root / "analyst_state.py"}
+    paths.update({"starforge_stac/" + name: plugin_root / name for name in
+                  ("parcel_evidence.py", "parcel_evidence_operator.py", "parcel_evidence_native.py", "parcel_evidence_reports.py")})
     paths.update({"analyst/" + name: root / "analyst" / name for name in ANALYST_MODULES})
     paths.update({name: root / name for name in ANALYST_ROOT_FILES})
+    # The native evidence bootstrap reuses the maintained vector producer.
+    # Repository source keeps it beside qgis; received/plugin source keeps it
+    # in this ordinary software closure without an independent maintained copy.
+    vector_names = ("__init__.py", "common.py", "capture.py", "driver.py",
+                    "materialize.py", "comparison.py", "archive.py", "engine.py")
+    vector_root = next((candidate for candidate in (root / "vector", root.parent / "vector")
+                        if all((candidate / name).is_file() and not (candidate / name).is_symlink()
+                               for name in vector_names)), None)
+    require(vector_root is not None, "EVIDENCE_VECTOR_SOURCE_MISSING",
+            "Keep the complete maintained native vector producer with the receiving application.")
+    paths.update({"vector/" + name: vector_root / name for name in vector_names})
     from .parcels.state import MODULES as PARCEL_MODULES
     paths.update({"starforge_stac/parcels/" + name: plugin_root / "parcels" / name for name in PARCEL_MODULES})
     for name, path in paths.items():

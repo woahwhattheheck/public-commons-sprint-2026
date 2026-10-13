@@ -1,0 +1,205 @@
+# Install and operate the saved Monitoring comparison and scientific report
+
+This directory carries the complete maintained Monitoring component, its original installers and declared base dependency bodies. It upgrades an existing registered Upper Savannah application while keeping its Workspace, native source collections, model runs, campaign history and other installed desks.
+
+The canonical source remains under `opportunities/upstate_forever_2026/`. Every source-bank member has its complete original body, byte count and SHA256. `manifest.json` identifies the pinned source and the exact parts. The maintained Monitoring installer performs the source changes with its existing preimage guard, shared installation lock and rollback copies.
+
+## Existing application and scientific project
+
+Use the receiving host's existing application and scientific Python environment. The base must already contain:
+
+- The original shared extension registry, operator task queue, file transport and complete Workspace backup/restore. A transfer also requires the installed `model.portable.resume_restore` API (the maintained receiving-completion implementation). The receiver checks for this capability before preparing any comparison or report. Preserve the current portable module; this frozen Monitoring component does not replace it.
+- The existing Scientific reports composer and source-edition provider: `sourceReports.openForSources`, `source-reports.render`, `source-reports.export`, and the scientific catalog/preview/edition routes.
+- The declared Implementation and Study transfer dependencies listed in the manifest. Their complete pinned bodies are carried for source custody; the Monitoring installer preserves these shared installed dependencies.
+- The original GIS/optimization/report libraries used by the application, including Fiona, Shapely, pyproj, SciPy and ReportLab.
+
+The two scientific figure renderers and the maintained observed-report renderer are installed through the same guarded file inventory. Exact original predecessors are admitted: all three historical vector-renderer editions, the original map renderer, its role-label successor, and the current edition. The installed map renderer supplies `ROLE_LABELS_VERSION = 1`. The observed-report renderer retains the current source-code binding and independent-capture inventory repair, with all four original historical bodies admitted by the same predecessor guard. Unknown newer source remains protected by the original installer; send its exact differing path/body to the current source owner for composition.
+
+The saved scientific course below names the actual retained project `b9d5d257-c6bb-4f07-b975-8e8c63705db3`: its 217-catchment network, original 87-station source family, completed six-site campaign, and completed three-budget frontier. The supplied selection files name those exact records. They are suitable for an independently received copy of that project; its operator workspace key is determined by its actual receiving path.
+
+The original 45,027,826-byte frontier archive has SHA256 `be799c9f0db7cd8d15c1aa912ea21207b537e212a63f796307611da8ac0a2ece`. The newer 221,545,725-byte regional archive already requested by SOL61 has SHA256 `2083e1f82456848bbc5350a286fd7c808810fb2c30400c9967093fd30ffc4641` and preserves later source work. Continue the actual copy already received on that host. The source bank does not replace its scientific project or source data.
+
+## Stage and install the complete source
+
+Place this whole bank directory on the existing host. Choose an application directory containing `model/workspace.py` and a new stage outside it. Keep the host's existing scientific Python executable.
+
+```sh
+APP=/actual/complete-installed-application
+BANK=/actual/eco13-monitoring-comparison-report-upgrade-20261013
+STAGE=/actual/monitoring-comparison-source
+python -B "$BANK/stage.py" --application "$APP" --source-root "$STAGE"
+python -B "$STAGE/integrations/monitoring/install_monitoring.py" "$APP" --source-root "$STAGE" --check
+python -B "$STAGE/integrations/monitoring/install_monitoring.py" "$APP" --source-root "$STAGE"
+python - "$APP" "$STAGE" <<'PY'
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+application, stage = (Path(value).resolve(strict=True) for value in sys.argv[1:])
+target = application / "AGENTS.md"
+if target.is_symlink():
+    raise ValueError("Retain the application's instructions as an ordinary file")
+current = target.read_text(encoding="utf-8") if target.exists() else ""
+instruction = (stage / "AGENTS.md").read_text(encoding="utf-8")
+if instruction not in current:
+    merged = current.rstrip() + ("\n\n" if current.strip() else "") + instruction
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=application,
+                                     prefix=".instructions-", delete=False) as stream:
+        pending = Path(stream.name)
+        stream.write(merged)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(pending, target)
+if instruction not in target.read_text(encoding="utf-8"):
+    raise ValueError("The installed application did not retain its current instructions")
+print("Current owner instruction retained:", target)
+PY
+```
+
+`stage.py` first verifies all three original bootstrap modules from the same source commit: `source_tools.application_assembly`, its matching `source_tools.application_components` reader and that reader's `source_tools.component_fragments` dependency. It loads the verified fragment helper, component reader and assembler in that order within a private package namespace, then delegates decoding, safe source paths, byte/hash validation and immutable file publication to the original assembler. The base application does not need to supply a matching staging API. The six original source parts and all 97 original member bodies remain unchanged. Repeating the same complete bank reuses identical staged files.
+
+The bank also retains the current owner instruction, `AGENTS.md` version `2026-10-13.1`; staging verifies its manifest identity and places it at `STAGE/AGENTS.md`. Before the installation boundary, keep that instruction in the active application and receiving handoff. For an application with the same instruction, retain its bytes. For an older or missing instruction, adopt the current owner-controlled instruction alongside this upgrade. Preserve a newer owner instruction if one is already installed, and leave historical or vendored policy copies unchanged. The Monitoring installer does not overwrite these instruction files.
+
+The installer reads the maintained inventory beside its own script. Its `--check` output names every intended path and identity before the normal installation command. The installed inventory now includes the original installers and their five maintained source-custody documents, so a later upgrade sees the current predecessor history. Scientific report maps and the existing composer are integrated with the saved comparison feature.
+
+Restart the original operator after installation so its imported provider modules and browser assets use this source edition. Preserve its original operator-state directory and registered Workspace. Use its usual supervisor or original command:
+
+```sh
+python -B operator/server.py --workspace WORKSPACE --operator-state PRIVATE_OPERATOR_STATE --port 0
+```
+
+The startup receipt supplies the private operator URL and actual workspace key. Keep the full URL, including its token fragment, in a private local file for the maintained browser drivers.
+
+## Complete the native comparison and report
+
+This course consumes completed saved plans. Its budget comparison does not execute an optimizer or create another campaign.
+
+Complete the whole native course with one command after the original installation:
+
+```sh
+python BANK/receive_native.py --application APP --workspace WORKSPACE \
+  --selection BANK/native-comparison-selection.json --output OUTPUT/native-report \
+  --report-title "Regional monitoring budget choices — scientific report" --transfer
+```
+
+The command reopens the completed frontier and source-bound comparison; retains its
+complete packet; prepares the original scientific source; renders the original
+HTML/PDF edition; exports its complete ZIP through the maintained operator provider;
+and copies every original report output into `OUTPUT/native-report/scientific-report/`.
+With `--transfer`, it also performs the original complete Workspace backup and
+independent restore, then reopens the exact comparison, report source and edition.
+An existing archive must retain the same project, complete intermediate/delivery
+selection, original record bytes and saved archive identity. The receiver verifies
+the opened archive and its pathname before reusing it. A previously completed
+receiving directory reopens through the maintained `portable.resume_restore`
+completion record, preserving subsequent recipient work while checking the three
+selected immutable records.
+
+The received application is then opened in a fresh isolated Python process with
+its own application and operator import paths. The process verifies the actual
+loaded producer files against the archived application members, reopens the
+original comparison, report source and edition, and operates the installed
+scientific-edition read route. An older retained archive is checked against its
+own saved application, rather than the newer initiating application. The existing
+queue actions must also be registered. `cold-receiving.json` and its stdout/stderr
+logs retain these actual receiving results; `result.json` gives the actual IDs,
+file paths, byte counts and SHA256 values.
+
+The request, selected original source bytes and installed producer identities are
+recorded before native actions. Repeating the exact same invocation reopens its
+same records and files from the atomic journal. A changed selection, report title,
+contact or installed producer uses a new output directory. Optional `--contact
+CONTACT.json` supplies the existing scientific composer's contact object. Omitting
+`--transfer` completes all reports without another full archive; use the existing
+host's archive boundary when that broader receiving operation is already running.
+
+The equivalent original commands remain available individually. From `APP`, use
+the native selection and a receiving-output directory outside the Workspace:
+
+```sh
+python -m model.monitoring_frontier_comparison --workspace WORKSPACE prepare \
+  --selection BANK/native-comparison-selection.json --output OUTPUT/comparison.json
+python -m model.monitoring_frontier_comparison --workspace WORKSPACE export \
+  --id SAVED_COMPARISON_ID --output OUTPUT/comparison-files
+python model/monitoring_report_cli.py --workspace WORKSPACE \
+  --output OUTPUT/comparison-report-source.json prepare \
+  --comparison-id SAVED_COMPARISON_ID \
+  --title "Regional monitoring budget choices — scientific report"
+```
+
+Read `SAVED_COMPARISON_ID` directly from `OUTPUT/comparison.json.id`. The report-source command retains every original comparison plan, exact source packet, selected observed context, vector map and budget/coverage figure. Its output identifies the new document in the same native source collection system.
+
+The existing native scientific edition API can complete HTML/PDF and all report files on the native/API host independently of browser availability. Run the following with the actual Workspace and the preceding output:
+
+```sh
+python - WORKSPACE OUTPUT/comparison-report-source.json OUTPUT/scientific-edition.json <<'PY'
+import sys
+from pathlib import Path
+from model.common import atomic_json, read_json
+from model.workspace import Workspace
+from model import monitoring_report_source, scientific_report_editions
+ws = Workspace(Path(sys.argv[1]))
+source = read_json(Path(sys.argv[2]))
+report = monitoring_report_source.inspect(ws, source["id"], verify=True)
+payload = {"sources": [report["source"]], "title": report["title"], "contact": {}}
+preview = scientific_report_editions.preview(ws, payload)
+result = scientific_report_editions.render(ws, {**payload, "preview_id": preview["id"]})
+edition, directory, operation = scientific_report_editions.inspect(
+    ws, result["scientific_report_edition_id"])
+atomic_json(Path(sys.argv[3]), {
+    "project_id": ws.project["id"], "comparison_report_id": report["id"],
+    "scientific_report_edition_id": edition["id"], "directory": str(directory),
+    "edition": edition, "files": scientific_report_editions.files(edition, directory),
+})
+print(edition["id"])
+PY
+```
+
+These are the original producer and renderer APIs, with their original source verification, immutable output and locks. Their returned directory contains the completed report and all original report files. The browser course below reopens and downloads the native report edition and its complete ZIP through the original queue.
+
+If the receiving project has the original 589-result Eighteenmile context, choose its existing per-plan context records in the comparison selection before preparing the comparison. The retained 87-station network maps `21SC60WQ_WQX-SV-233` to `SV-233` and `21SC60WQ_WQX-SV-376` to `SV-376`; the other two cohort stations are outside that station family. The supplied comparison selection intentionally has an empty context list and operates the original saved planning designs immediately. Adding original observed contexts is a new explicit selection, retaining their exact plan/source identities.
+
+## Operate the complete browser course
+
+Use the browser-authorized host's actual original server and installed Chromium. Run the maintained driver from its staged location; make the host's existing Playwright package available through its normal Node module environment.
+
+```sh
+node STAGE/source/run_monitoring_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE --workspace ACTUAL_WORKSPACE_KEY \
+  --restored-selection BANK/monitoring-selection.json \
+  --comparison-selection BANK/browser-comparison-selection.json \
+  --comparison-report-title "Regional monitoring budget choices — scientific report" \
+  --browser-executable ACTUAL_CHROMIUM --browser-renderer-limit 2 \
+  --output OUTPUT/browser-course --video
+```
+
+This opens the original network, campaign and calendar; reopens the saved budget frontier; prepares its exact comparison and report source; enters the existing ordered scientific composer; renders or reopens the completed edition; downloads every original source/report member and the complete report ZIP; and reopens the same records in a fresh browser and independently received complete Workspace. The comparison maps use original geometry transformed to EPSG:5070 with all polygon vertices and holes retained.
+
+The driver preserves the existing composer draft, source order and contact fields. If the operator already had other selected report sources, they remain part of that explicitly observed draft. The complete native preview and source identities enter the durable browser request.
+
+For an interrupted invocation, use the same selection files, title, output directory and workspace key with `--resume`. Its private request state retains each original action body before dispatch and resumes the same accepted task or lost-response operation. Changing a selected source, report title or scientific intent calls for a new output directory. The actual running receiver invocation keeps its existing intent.
+
+The complete original Chemistry browser and both maintained progression files are also in this bank. The progression supports `--monitoring-comparison-selection`, `--monitoring-comparison-report-title` and optional `--monitoring-comparison-report-delivery`. Use that continuation when the host already owns the full regional course; the direct Monitoring command above is the course for this already received campaign and report.
+
+## Source and interpretation
+
+The original planning scenario uses USD 4,800 / 9,000 / 13,200 budgets, programme overhead 600, setup 250 and 150 per visit across three rounds. Those explicit engineering planning assumptions produced the retained six-, twelve- and eighteen-site choices. They remain separate from station observations and do not assert agency prices or available field crews. The report preserves cost in integer cents and the original source-weighted coverage units.
+
+Scientific raw data are already retained in the Workspace and remain editable through complete Workspace transfer. Broader observed-context inventories also reference their original microbial and nutrient source families; this scoped code upgrade retains those inventories without reimporting unrelated datasets. The source-bank manifest distinguishes installed component files, preserved base dependencies and receiving-driver source.
+
+The current complete native-report release contains 97 source members and 1,866,478 source bytes, including 66 installed component paths, 25 preserved base-dependency bodies and six receiving-driver paths. Its current shared renderer was read from `fa7a77aecef81f13765a0c1024aef68dd323cb15`; the frozen original release remains available at `39a1b704557493ed5b4dc495a7e5fa47362d18df`. The receiving command requires the maintained `portable.resume_restore` capability for full transfer and checks it before any course effects. This preserves legitimate recipient edits through the original completed-receiving record.
+
+## Rendered-product inspection before presentation
+
+The owner instruction in repository `AGENTS.md` version `2026-10-13.1` applies to the producing receiving worker. Open and render the exact outgoing operator and scientific reports, view their actual screens or real screenshots, and operate their important controls before describing them as client-ready. Inspect the populated scientific Workspace at the intended desktop/screenshare and narrow widths, relevant empty/loading/error states, downloads/exports and reopening. View the generated PDF, HTML and source pages themselves; repair unreadable, clipped, overflowing or broken output in the same operation. Source checks and screenshot capture alone do not establish rendered readiness.
+
+Keep the plain industrial presentation: readable tables, restrained controls, clear hierarchy, consistent spacing and useful labels. Preserve the existing native science and the current receiving owners. Carry this instruction into the receiver's application-level instructions and current handoff guides. Return the actual populated-workspace screenshots and report files so the original producing team can also inspect them. This continues the existing Ecosystem sprint; its cutoff remains **October 13, 2026, 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville).
+
+The later regional calendar cohort contains 36 stations and 729 routine activities. Its three saved USD 4,800 objective alternatives and exported 18-visit campaign are a distinct source selection from the original 87-station, three-budget frontier used by the supplied files. Append its retained scientific source explicitly when composing a broader ordered report; keep the actual cohort, planning assumptions, selected plans and source identities visible.
+
+### Complete attachment and media inspection
+
+The complete current `AGENTS.md` includes the owner’s clarification: all attachments count. Open and view the actual downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps and images in their normal recipient-facing viewer. Open the working project and inspect the actual deliverables inside its archive; an archive manifest or successful extraction is not the delivered experience. Play and watch/listen to any outgoing video or audio. Source text, schemas, metadata, links, tests and screenshots collected without viewing them cannot substitute for this actual use. Keep inspection focused on the outgoing version, fix material defects and continue implementation; create no review gate, broad suite or verification product.
+
+If this course produces narrated video, use available high-quality generative voice/TTS with natural professional delivery. Play the final exported attachment and check clarity, pronunciation, pacing, timing and audio alignment. Preserve attribution, licensing and existing authorization; this instruction does not authorize a paid purchase or cloning a real person’s voice. Carry the full current instruction into every delegated assignment and the active receiving application/guide, preserving other policy and the existing owner cutoff.

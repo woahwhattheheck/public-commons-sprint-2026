@@ -57,6 +57,9 @@ def _bundle(path, selection, *, target=None):
         contexts = {identity: json.loads(archive.read(
             "contexts/" + identity + "/observed-context/context.json"))
             for identity in record["selection"]["context_ids"]}
+        from . import utility_monitoring_comparison
+        utility_context = utility_monitoring_comparison.read_bundle(
+            archive, manifest, record, network, plans)
         if target is not None:
             target.mkdir(parents=True, exist_ok=True)
             for name in sorted(names):
@@ -85,7 +88,8 @@ def _bundle(path, selection, *, target=None):
                 finally:
                     pending.unlink(missing_ok=True)
     return {"comparison": record, "frontier": frontier, "network": network,
-            "plans": plans, "contexts": contexts, "manifest": manifest}
+            "plans": plans, "contexts": contexts, "manifest": manifest,
+            "utility_context": utility_context}
 
 
 def verify(workspace, directory, selection):
@@ -212,6 +216,8 @@ def _sections(context, bridges):
                 ["Method", json.dumps(bridge["method"], ensure_ascii=False, sort_keys=True)],
                 ["Original support", json.dumps(bridge["summary"], ensure_ascii=False, sort_keys=True)]]),
             _links([("Complete original receiving-water inputs", bridge["path"]])]]))
+    from . import utility_monitoring_comparison
+    sections.extend(utility_monitoring_comparison.scientific_sections(context.get("utility_context")))
     return sections
 
 
@@ -279,6 +285,8 @@ def _figures(directory, context):
     margin = max(xmax - xmin, ymax - ymin, 1.0) * .08
     bounds = [xmin - margin, ymin - margin, xmax + margin, ymax + margin]
     figures = []
+    covered_label = ("Total covered target overlap (ha)" if context.get("utility_context")
+                     else "Total covered planning weight")
     currencies = {row["currency"] for row in record["rows"]}
     if len(currencies) != 1:
         raise ValueError("A budget figure requires the original common planning currency")
@@ -311,7 +319,7 @@ def _figures(directory, context):
                            "source": describe_file(directory, directory / "native-comparison/comparison.json")},
         "panels": [{"title": "Original feasible budget choices",
                     "x": {"label": "Planning budget (" + currency + ")", "domain": [0, xmax_plot], "ticks": ticks(xmax_plot)},
-                    "y": {"label": "Total covered planning weight", "domain": [0, ymax_plot], "ticks": ticks(ymax_plot)},
+                    "y": {"label": covered_label, "domain": [0, ymax_plot], "ticks": ticks(ymax_plot)},
                     "series": series}],
     })
     for index, plan in enumerate(feasible, 1):
@@ -401,7 +409,10 @@ def capture(workspace, directory, selection, intent, report):
                "catchments": len(context["network"]["nodes"]),
                "stations": len(context["network"]["stations"]),
                "figure_count": len(figures["figures"]),
+               **({"utility_presentation_id": context["utility_context"]["record"]["id"]}
+                  if context.get("utility_context") else {}),
                "receiving_water_bridge_ids": [bridge["id"] for bridge in bridges]}
+    from . import utility_monitoring_comparison
     return {
         "title": selection.get("title") or record["title"], "summary": summary, "records": records,
         "edition": EDITION, "report_context_kind": "monitoring-budget-comparison",
@@ -409,5 +420,6 @@ def capture(workspace, directory, selection, intent, report):
         "source_links": ["native-monitoring-comparison.zip", "native-comparison/manifest.json",
                          "native-comparison/comparison.json", "native-comparison/comparison.csv",
                          "native-comparison/native/frontier.json", "native-comparison/native/network.json",
-                         "comparison-records.json", "bridge-selection.json"] + maps,
+                         "comparison-records.json", "bridge-selection.json"] + maps
+                        + utility_monitoring_comparison.source_links(context.get("utility_context")),
     }

@@ -6,7 +6,8 @@
     "receiving-waters": {
       "paths": [
         "integration/component_fragments/receiving-water-study-navigation.json",
-        "operator/RECEIVING_WATER_STUDY_TRANSFER.md"
+        "operator/RECEIVING_WATER_STUDY_TRANSFER.md",
+        "operator/web/receiving_water_editing.mjs"
       ],
       "requires": [
         "study-transfer"

@@ -335,6 +335,30 @@ def host_capabilities(registration):
     return result
 
 
+def action_confirmation(source):
+    """Retain the original legacy or admitted-task confirmation lifecycle."""
+    confirmations = (
+        "toast(actionLabels[action]+' retained.');",
+        "toast((actionLabels[action] || action)+' retained.');",
+        "toast((actionLabels[action]||action)+' retained.');",
+    )
+    count = sum(source.count(value) for value in confirmations)
+    declarations = ("function retainedTaskNotice(ticket){",
+                    "async function presentAcceptedTask(ticket,result){",
+                    "async function submitAction(action,payload){")
+    if any(declaration in source for declaration in declarations[:2]):
+        required = (*declarations,
+                    "(actionLabels[ticket.action]||ticket.action)+' retained in '+ticket.workspaceTitle",
+                    "renderTasks();toast(retainedTaskNotice(ticket));",
+                    "return presentAcceptedTask(ticket,result);")
+        if count or any(source.count(value) != 1 for value in required):
+            raise ValueError("Compose the original admitted-task confirmation lifecycle")
+        return source
+    if count != 1:
+        raise ValueError("registered action confirmation: expected one current compatible anchor; found " + str(count))
+    return source.replace(confirmations[0], confirmations[1], 1) if confirmations[0] in source else source
+
+
 def patch_app(source):
     source = add(source, "import {attachCustomerReviews} from './reviews.mjs';\n",
                  "import {createExtensionHost} from './extension_host.mjs';\n",
@@ -411,19 +435,7 @@ def patch_app(source):
             "openForm(row?'Revise complete map delivery':'Build complete seven-map delivery'",
             "openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery'",
             "new preselected delivery title")
-    # Both retained host editions already implement this same action-label
-    # fallback. Preserve their bytes rather than require one whitespace style.
-    confirmations = (
-        "toast(actionLabels[action]+' retained.');",
-        "toast((actionLabels[action] || action)+' retained.');",
-        "toast((actionLabels[action]||action)+' retained.');",
-    )
-    count = sum(source.count(value) for value in confirmations)
-    if count != 1:
-        raise ValueError("registered action confirmation: expected one current compatible anchor; found " + str(count))
-    if confirmations[0] in source:
-        source = source.replace(confirmations[0], confirmations[1], 1)
-    return source
+    return action_confirmation(source)
 
 
 def run(application, source_root, *, dry_run=False):

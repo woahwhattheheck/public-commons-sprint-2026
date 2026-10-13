@@ -1,4 +1,5 @@
 import {attachNativeCaseConsole} from './parameter_case_console.mjs';
+import {attachProgrammeSourceUpdates} from './programme_source_updates.mjs';
 /* Retained native execution control, shared by programme and experiment callers. */
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const short = value => value ? String(value).slice(0, 12) : '—';
@@ -14,12 +15,77 @@ const methodLink = '<a href="https://storage.googleapis.com/releases.naturalcapi
 export function attachProgrammes(context) {
   const {api, endpoint, getState, openForm, submitAction, detail, fileList, showTask, toast, openItem} = context;
   const caseConsole = attachNativeCaseConsole({...context, executeAction: sendAction}, 'programme');
+  const sourceUpdates = attachProgrammeSourceUpdates({...context, openProgramme: open, beginFormOpening});
   let host = null, controller = null, selected = null, currentWorkspace = null;
   let catalogue = null, record = null, loading = false, generation = 0;
   let subset = new Set(), latestError = '', activeRequest = false;
+  let pageOffset = 0, pageFilter = 'all', pageQuery = '', pageQueryDraft = '', pageRequest = null;
+  let pairedResult = null, pairedObservation = null;
   const selectionByWorkspace = new Map();
 
   function workspaceKey() { return getState()?.workspace_key; }
+  let formOpening = 0, liveForm = null;
+  function beginFormOpening() {
+    liveForm?.release();
+    const sequence = ++formOpening, workspace = workspaceKey(), route = location.hash;
+    const body = document.querySelector('#form-body'), anchor = body?.firstChild;
+    const dialog = document.querySelector('#form-dialog'), wasOpen = dialog?.open;
+    const detailBody = document.querySelector('#detail-body'), detailAnchor = detailBody?.firstChild;
+    const detailDialog = document.querySelector('#detail-dialog'), detailWasOpen = detailDialog?.open;
+    let session = null;
+    const sameOwner = () => sequence === formOpening && workspace === workspaceKey();
+    const opening = {
+      workspace,
+      pending: () => sameOwner() && route === location.hash && body === document.querySelector('#form-body') &&
+        body?.firstChild === anchor && dialog?.open === wasOpen &&
+        detailBody?.firstChild === detailAnchor && detailDialog?.open === detailWasOpen,
+      active: () => {
+        const current = sameOwner() && session && !session.released && session.dialog.open &&
+          session.root.isConnected && session.form.contains(session.root) &&
+          document.querySelector('#operation-form') === session.form &&
+          document.querySelector('#form-body') === session.body;
+        if (!current) session?.release();
+        return Boolean(current);
+      },
+      listen: (node, name, callback) => {
+        node.addEventListener(name, event => {
+          if (opening.active()) return callback(event);
+        }, {signal: session.controller.signal});
+      },
+      resolve: async request => {
+        try { return await request(); }
+        catch (error) { if (opening.pending()) throw error; return null; }
+      },
+      submit: (action, payload) => {
+        if (!opening.active()) throw new Error('Reopen this programme form in its original workspace.');
+        return submitAction(action, payload);
+      },
+      show: (title, description, html, label, onSubmit, setup) => {
+        if (!opening.pending()) return;
+        openForm(title, description, html, label, async () => {
+          if (!opening.active()) throw new Error('Reopen this programme form in its original workspace.');
+          return onSubmit();
+        }, () => {
+          const form = document.querySelector('#operation-form');
+          const body = document.querySelector('#form-body');
+          const dialog = document.querySelector('#form-dialog');
+          session = {form, body, dialog, root: body.firstElementChild,
+            controller: new AbortController(), released: false,
+            release() {
+              if (this.released) return;
+              this.released = true; this.controller.abort();
+              if (liveForm === this) liveForm = null;
+            }};
+          liveForm = session;
+          dialog.addEventListener('close', () => { if (!dialog.open) session.release(); },
+            {signal: session.controller.signal});
+          setup?.();
+        });
+      },
+    };
+    return opening;
+  }
+
   function rememberedSelection(key) {
     if (selectionByWorkspace.has(key)) return selectionByWorkspace.get(key);
     let value = null;
@@ -173,9 +239,9 @@ export function attachProgrammes(context) {
       (value.pair_completion?.parent_programme_id ? '<div class="programme-controls">' + actionButton('open', 'Open original programme', value.pair_completion.parent_programme_id) + '</div>' : '') + '</section>';
   }
   async function preparePairCompletion(programmeId) {
-    const requestedWorkspace = workspaceKey();
-    const preview = await api(query('pair-completion-preview', {programme_id: programmeId}));
-    if (requestedWorkspace !== workspaceKey()) return;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
+    const preview = await opening.resolve(() => api(query('pair-completion-preview', {programme_id: programmeId})));
+    if (!opening.pending()) return;
     if (!preview.has_alternatives) throw new Error('Select an alternative land-cover case before preparing matching calculations.');
     if (!preview.needed) {
       toast('The completed matching pairs are ready. Choose Build paired maps.');
@@ -191,7 +257,7 @@ export function attachProgrammes(context) {
         '</td><td>' + escapeHTML(row.action === 'prepare' ? 'Prepare selected native models' : 'Continue original calculation') +
         '</td><td class="mono">' + asArray(row.run_ids).map(id => escapeHTML(id)).join('<br>') + '</td></tr>';
     });
-    openForm('Prepare matching scenario calculations',
+    opening.show('Prepare matching scenario calculations',
       'Retain the original programme and create its complete same-profile comparison programme.',
       '<div class="programme-form programme-pair-completion"><p><strong>' + escapeHTML(preview.run_count - additions.length) +
       ' original named cases retained · ' + additions.length + ' cases added</strong></p>' +
@@ -201,20 +267,20 @@ export function attachProgrammes(context) {
       '<p class="note">The saved programme keeps every original case and completed model source. Its completed pairs open in the same paired-map workflow.</p>' +
       '<details><summary>Prepared programme selections</summary><pre class="json-view">' + escapeHTML(JSON.stringify(preview.selection, null, 2)) + '</pre></details></div>',
       'Save matching programme', async () => {
-        if (requestedWorkspace !== workspaceKey() || !wrapper?.isConnected || document.querySelector('#operation-form') !== form) {
+        if (!opening.active() || requestedWorkspace !== workspaceKey() || !wrapper?.isConnected || document.querySelector('#operation-form') !== form) {
           throw new Error('Reopen these matching calculations in their original workspace.');
         }
-        return submitAction('compute.programme.pair-completion', {programme_id: programmeId,
+        return opening.submit('compute.programme.pair-completion', {programme_id: programmeId,
           expected_preview_id: preview.preview_id, run: form.elements.namedItem('programme_pair_run').checked});
       }, () => {
         form = document.querySelector('#operation-form'); wrapper = form.querySelector('.programme-pair-completion');
       });
   }
   async function buildProgrammeEnsemble(candidateId) {
-    const requestedWorkspace = workspaceKey(), programmeId = record?.id;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace, programmeId = record?.id;
     if (!programmeId) throw new Error('Open the saved programme containing these completed cases.');
-    const current = await api(query('detail', {programme_id: programmeId}));
-    if (requestedWorkspace !== workspaceKey()) return;
+    const current = await opening.resolve(() => api(query('detail', {programme_id: programmeId})));
+    if (!opening.pending()) return;
     const candidate = asArray(current.ensemble_candidates).find(row => row.id === candidateId);
     if (!candidate) throw new Error('The completed pair selection changed. Refresh this programme and choose its current paired maps.');
     const initial = candidate.selection;
@@ -238,7 +304,7 @@ export function attachProgrammes(context) {
       const target = wrapper.querySelector('[data-programme-ensemble-preview]');
       target.textContent = 'Checking the original paired run files and reporting inputs…';
       const result = await api('/api/paired-ensemble/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection}});
-      if (requestedWorkspace !== workspaceKey() || requestedRevision !== revision || !wrapper?.isConnected ||
+      if (!opening.active() || requestedWorkspace !== workspaceKey() || requestedRevision !== revision || !wrapper?.isConnected ||
           document.querySelector('#operation-form') !== form || signature !== canonical(readSelection())) {
         throw new Error('The ensemble selection changed. Review the current selection.');
       }
@@ -249,7 +315,7 @@ export function attachProgrammes(context) {
       return result;
     };
     const pairs = asArray(initial.pairs);
-    openForm('Build paired scenario maps', 'Use the completed programme’s original same-profile baseline and alternative runs.',
+    opening.show('Build paired scenario maps', 'Use the completed programme’s original same-profile baseline and alternative runs.',
       '<div class="programme-form programme-ensemble-form"><div class="form-grid"><label>Product title<input name="programme_ensemble_title" required value="' +
       escapeHTML(initial.title) + '"></label><label>Member percentiles<input name="programme_ensemble_quantiles" required value="' +
       escapeHTML(asArray(initial.quantiles || [.1, .5, .9]).map(value => value * 100).join(', ')) + '"></label></div>' +
@@ -266,29 +332,55 @@ export function attachProgrammes(context) {
       'Build paired maps', async () => {
         const selection = readSelection();
         if (previewSignature !== canonical(selection)) await preview(selection);
-        if (requestedWorkspace !== workspaceKey() || !wrapper?.isConnected) throw new Error('Reopen this selection in its original workspace.');
-        return submitAction('paired_ensemble.build', selection);
+        if (!opening.active() || requestedWorkspace !== workspaceKey() || !wrapper?.isConnected) throw new Error('Reopen this selection in its original workspace.');
+        return opening.submit('paired_ensemble.build', selection);
       }, () => {
         form = document.querySelector('#operation-form'); wrapper = form.querySelector('.programme-ensemble-form');
-        wrapper.addEventListener('input', () => {
+        opening.listen(wrapper, 'input', () => {
           revision++; previewSignature = null;
           wrapper.querySelector('[data-programme-ensemble-preview]').textContent = 'Review the current quantities and percentile selection.';
         });
-        wrapper.querySelector('[data-programme-ensemble-preview-button]').addEventListener('click', async event => {
+        opening.listen(wrapper.querySelector('[data-programme-ensemble-preview-button]'), 'click', async event => {
           const button = event.currentTarget; if (button.disabled) return;
           button.disabled = true;
           try { await preview(readSelection()); }
-          catch (error) { if (wrapper?.isConnected) wrapper.querySelector('[data-programme-ensemble-preview]').textContent = error.message || String(error); }
+          catch (error) { if (opening.active() && wrapper?.isConnected) wrapper.querySelector('[data-programme-ensemble-preview]').textContent = error.message || String(error); }
           finally { button.disabled = false; }
         });
       });
   }
 
+  function pageControls() {
+    const page = record?.page || {offset: 0, total: 0, limit: 100};
+    return '<div class="programme-controls"><label>Cases<select data-programme-filter>' +
+      [['all','All cases'],['unfinished','Unfinished cases'],['failed','Failed cases'],['complete','Completed cases']]
+        .map(([value,label]) => '<option value="' + value + '"' + (pageFilter === value ? ' selected' : '') +
+          '>' + label + '</option>').join('') + '</select></label>' +
+      '<label>Find case<input data-programme-query value="' + escapeHTML(pageQueryDraft) +
+      '" placeholder="Case key, title or native ID"></label>' +
+      actionButton('page-search','Find') + actionButton('page-previous','Previous cases','',page.offset === 0 ? 'disabled' : '') +
+      actionButton('page-next','Next cases','',page.offset + asArray(record.runs).length >= page.total ? 'disabled' : '') +
+      '<span role="status">' + (page.total ? (page.offset + 1) + '–' + (page.offset + asArray(record.runs).length) : '0') +
+      ' of ' + printable(page.total) + ' matching cases · <span data-programme-selection-count>' + subset.size + '</span> selected across pages</span></div>';
+  }
+  async function movePage(offset = 0) {
+    generation++; pageRequest?.abort(); pageRequest = null; loading = false;
+    pageOffset = Math.max(0, offset);
+    return refreshRecord(false);
+  }
+  async function originalSelection() {
+    const key = record?.id, owner = workspaceKey();
+    if (!key) throw new Error('Open the original saved programme.');
+    const value = await api(query('selection', {programme_id: key}));
+    if (owner !== workspaceKey() || record?.id !== key || value.programme_id !== key)
+      throw new Error('The original programme changed while reading its selections.');
+    return value.selection;
+  }
   function programmeHTML() {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
     const counts = record.counts || {}, rows = asArray(record.runs), task = activeTask(record.id);
-    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.active || row.state === 'running');
+    const nativeActive = Boolean(task) || Boolean(record.active) || Boolean(record.native_active) || rows.some(row => row.active || row.state === 'running');
     const complete = Number(counts.complete || 0), total = Number(counts.total ?? rows.length);
     const canPause = nativeActive && !record.pause_requested;
     const runRows = rows.map(row => {
@@ -329,15 +421,18 @@ export function attachProgrammes(context) {
       actionButton('report', 'Build result catalogue', record.id, nativeActive ? 'disabled' : '') +
       actionButton('study-export', 'Export native study', record.id, nativeActive ? 'disabled' : '') +
       actionButton('selection', 'Download selections', record.id) + actionButton('clone', 'Copy selections', record.id) +
+      actionButton('source-update', 'Update sources', record.id) +
       (task ? actionButton('task', 'Inspect active operation', task.id) : '') + '</div>' +
       '<p class="note">Resume reuses the original run identities and completed native stages. Selecting cases limits this request; the saved programme retains every case.</p>' +
-      table(['Select', 'Case', 'Profile / land cover', 'Native state', 'Target run', ''], runRows) +
-      '<div class="programme-controls">' + actionButton('select-pending', 'Select unfinished') + actionButton('clear-selection', 'Clear selection') + '</div>' +
+      pageControls() + table(['Select', 'Case', 'Profile / land cover', 'Native state', 'Target run', ''], runRows) +
+      '<div class="programme-controls">' + actionButton('select-pending', 'Select all unfinished cases') + actionButton('clear-selection', 'Clear selection') + '</div>' +
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      interactionProgrammeHTML(record) + studyDeliveriesHTML(record) + ensembleCandidatesHTML(record) +
-      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
+      interactionProgrammeHTML(record) + studyDeliveriesHTML(record) + (pairedResult ? ensembleCandidatesHTML({...record, ...pairedResult}) :
+        '<section class="programme-output"><h3>Paired scenario maps</h3><p>Prepare pairs from every original case in this programme.</p>' +
+        actionButton('load-pairs', 'Review all paired scenarios') + '</section>') +
+      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Programme selection and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
   function draw() {
@@ -357,26 +452,30 @@ export function attachProgrammes(context) {
       node.open = expanded.has(node.dataset.programmeDetails);
     }
   }
-  async function refreshRecord() {
+  async function refreshRecord(refreshCatalog = true) {
     if (!host || loading) return;
     loading = true;
     const requestedWorkspace = workspaceKey(), currentGeneration = ++generation;
+    pageRequest = new AbortController();
+    const signal = pageRequest.signal;
     try {
-      const nextCatalogue = await api(query('catalog'));
+      const nextCatalogue = refreshCatalog || !catalogue ? await api(query('catalog'), {signal}) : catalogue;
       if (!host || currentGeneration !== generation || requestedWorkspace !== workspaceKey()) return;
       catalogue = nextCatalogue;
       if (selected && !asArray(catalogue.programmes).some(row => row.id === selected)) {
         selected = null; rememberSelection(requestedWorkspace, null); record = null; subset.clear();
       }
       if (selected) {
-        const nextRecord = await api(query('detail', {programme_id: selected}));
+        const nextRecord = await api(query('page', {programme_id: selected, offset: pageOffset,
+          limit: 100, case_filter: pageFilter, query: pageQuery}), {signal});
         if (!host || currentGeneration !== generation || requestedWorkspace !== workspaceKey()) return;
-        record = nextRecord;
+        record = nextRecord; pageOffset = nextRecord.page.offset;
+        if (pairedObservation !== record.observation_id) { pairedResult = null; pairedObservation = null; }
       }
       draw();
     } catch (error) {
-      if (host && requestedWorkspace === workspaceKey()) showError(error);
-    } finally { if (currentGeneration === generation) loading = false; }
+      if (host && currentGeneration === generation && requestedWorkspace === workspaceKey() && error.name !== 'AbortError') showError(error);
+    } finally { if (currentGeneration === generation) { loading = false; pageRequest = null; } }
   }
   function mount(element, state = getState()) {
     const key = state?.workspace_key;
@@ -385,6 +484,7 @@ export function attachProgrammes(context) {
       detach();
       host = element; currentWorkspace = key; selected = rememberedSelection(key);
       catalogue = null; record = null; latestError = ''; subset.clear();
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
       controller = new AbortController();
       host.addEventListener('click', event => {
         const button = event.target.closest('[data-programme-action]');
@@ -392,22 +492,35 @@ export function attachProgrammes(context) {
         event.preventDefault();
         dispatchLocal(button.dataset.programmeAction, button.dataset.value, button).catch(showError);
       }, {signal: controller.signal});
+      host.addEventListener('input', event => {
+        if (event.target.matches('[data-programme-query]')) pageQueryDraft = event.target.value;
+      }, {signal: controller.signal});
       host.addEventListener('change', event => {
+        if (event.target.matches('[data-programme-filter]')) {
+          pageFilter = event.target.value; movePage(0).catch(showError); return;
+        }
         const key = event.target.dataset.programmeRun;
         if (!key) return;
         if (event.target.checked) subset.add(key); else subset.delete(key);
+        const count = host.querySelector('[data-programme-selection-count]');
+        if (count) count.textContent = String(subset.size);
       }, {signal: controller.signal});
     }
     draw();
     refreshRecord();
   }
   function detach() {
+    sourceUpdates.detach();
     generation++;
     controller?.abort(); controller = null;
+    pageRequest?.abort(); pageRequest = null;
     host = null; loading = false;
   }
   async function select(id) {
-    if (selected !== id) { generation++; loading = false; subset.clear(); record = null; }
+    if (selected !== id) {
+      generation++; pageRequest?.abort(); loading = false; subset.clear(); record = null;
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
+    }
     selected = id; rememberSelection(workspaceKey(), id);
     await refreshRecord();
   }
@@ -530,10 +643,10 @@ export function attachProgrammes(context) {
         '</td><td class="mono">' + escapeHTML(sources(row) || 'Selected native run and compatible cached stages') + '</td></tr>')) +
       '<p class="note">Completed source selection retains the original model stages. The native assembler matches their actual inputs to the selected target before preparing reporting outputs.</p>';
   }
-  async function createForm(copy) {
-    const requestedWorkspace = workspaceKey();
-    const available = await api(query('catalog', {include_sources: '1'}));
-    if (requestedWorkspace !== workspaceKey()) return;
+  async function createForm(copy, opening = beginFormOpening()) {
+    const requestedWorkspace = opening.workspace;
+    const available = await opening.resolve(() => api(query('catalog', {include_sources: '1'})));
+    if (!opening.pending()) return;
     const grids = asArray(available.grids).filter(row => row.state === 'complete');
     const profiles = asArray(available.profiles), scenarios = asArray(available.scenarios);
     if (!grids.length || !profiles.length || !scenarios.length) {
@@ -631,7 +744,7 @@ export function attachProgrammes(context) {
     const datalists = ['ndr', 'sdr'].map(model => '<datalist id="programme-completed-' + model + '">' +
       [...completed[model].values()].map(row => '<option value="' + escapeHTML(row.run_id) + '" label="' +
         escapeHTML(sourceLabel(row)) + '"></option>').join('') + '</datalist>').join('');
-    openForm(isCopy ? 'Copy saved programme selections' : 'Create a run programme',
+    opening.show(isCopy ? 'Copy saved programme selections' : 'Create a run programme',
       'Group prepared cases, select their native models and continue useful completed calculations.',
       '<div class="programme-form">' + datalists + '<div class="form-grid"><label>Programme title<input name="programme_title" value="' +
       escapeHTML(isCopy ? initial.title + ' — copy' : initial.title) +
@@ -651,24 +764,24 @@ export function attachProgrammes(context) {
       'Save programme', async () => {
         const selection = readSelection(), current = revision;
         const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection}});
-        if (requestedWorkspace !== workspaceKey() || current !== revision || document.querySelector('#operation-form') !== form || !formRoot?.isConnected ||
+        if (!opening.active() || requestedWorkspace !== workspaceKey() || current !== revision || document.querySelector('#operation-form') !== form || !formRoot?.isConnected ||
             canonical(selection) !== canonical(readSelection())) throw new Error('Programme selections changed. Save the current selections again.');
-        return submitAction('compute.programme.save', {selection: preview.selection});
+        return opening.submit('compute.programme.save', {selection: preview.selection});
       }, () => {
         form = document.querySelector('#operation-form');
         const wrapper = form.querySelector('.programme-form'); formRoot = wrapper;
         syncForm();
-        wrapper.addEventListener('input', event => {
+        opening.listen(wrapper, 'input', event => {
           invalidate();
           const row = event.target.closest('[data-programme-form-row]');
           if (event.target.name === 'programme_grid' || event.target.dataset.field === 'key') syncForm(); else if (row) syncRow(row);
         });
-        wrapper.addEventListener('change', event => {
+        opening.listen(wrapper, 'change', event => {
           invalidate();
           const row = event.target.closest('[data-programme-form-row]');
           if (event.target.name === 'programme_grid' || event.target.dataset.field === 'key') syncForm(); else if (row) syncRow(row);
         });
-        wrapper.addEventListener('click', async event => {
+        opening.listen(wrapper, 'click', async event => {
           const button = event.target.closest('[data-programme-form-action]'); if (!button || button.disabled) return;
           const action = button.dataset.programmeFormAction, preview = form.querySelector('[data-programme-preview]');
           let requestRevision = revision;
@@ -689,12 +802,12 @@ export function attachProgrammes(context) {
               const selection = readSelection(); requestRevision = revision;
               button.disabled = true; preview.textContent = 'Checking the retained selections and original completed stages…';
               const result = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection}});
-              if (requestRevision !== revision || requestedWorkspace !== workspaceKey() || !formRoot?.isConnected || !form.contains(preview) ||
+              if (!opening.active() || requestRevision !== revision || requestedWorkspace !== workspaceKey() || !formRoot?.isConnected || !form.contains(preview) ||
                   document.querySelector('#operation-form') !== form) return;
               preview.innerHTML = previewHTML(result);
             }
           } catch (error) {
-            if (requestRevision === revision && formRoot?.isConnected && document.querySelector('#operation-form') === form) preview.textContent = error.message || String(error);
+            if (opening.active() && requestRevision === revision && formRoot?.isConnected && document.querySelector('#operation-form') === form) preview.textContent = error.message || String(error);
           } finally { button.disabled = false; }
         });
       });
@@ -756,9 +869,9 @@ export function attachProgrammes(context) {
   }
 
   async function fromInteraction(planId) {
-    const requestedWorkspace = workspaceKey();
-    const available = await api(query('catalog'));
-    if (workspaceKey() !== requestedWorkspace) return;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
+    const available = await opening.resolve(() => api(query('catalog')));
+    if (!opening.pending()) return;
     const plans = asArray(available.interaction_plans).filter(row => row.state !== 'unavailable');
     if (!plans.length) {
       detail('Prepare a conservation study', '<p>Save a combination study in this workspace to retain its ordered actions, scientific inputs and complete coalition design. The programme will continue those same native cases.</p>',
@@ -767,7 +880,7 @@ export function attachProgrammes(context) {
     }
     if (planId && !plans.some(row => row.id === planId)) throw new Error('The selected conservation study is absent from this workspace.');
     let form, root, requestGeneration = 0, reviewed = null;
-    const current = () => requestedWorkspace === workspaceKey() && root?.isConnected &&
+    const current = () => opening.active() && requestedWorkspace === workspaceKey() && root?.isConnected &&
       document.querySelector('#operation-form') === form;
     const chosen = () => form.elements.namedItem('programme_interaction').value;
     const preview = async () => {
@@ -786,7 +899,7 @@ export function attachProgrammes(context) {
         throw error;
       }
     };
-    openForm('Use conservation study', 'Create a native run programme from the complete saved combination design.',
+    opening.show('Use conservation study', 'Create a native run programme from the complete saved combination design.',
       '<div class="programme-form" data-interaction-programme-form><label>Saved study<select name="programme_interaction" required>' +
       plans.map(row => option(row, planId || plans[0].id)).join('') + '</select></label>' +
       '<div data-interaction-programme-preview role="status" aria-live="polite"></div></div>',
@@ -795,18 +908,18 @@ export function attachProgrammes(context) {
         const key = chosen();
         if (reviewed !== key) await preview();
         if (!current() || key !== chosen() || reviewed !== key) throw new Error('The selected study changed. Review the current study again.');
-        return submitAction('compute.programme.interaction', {plan_id: key});
+        return opening.submit('compute.programme.interaction', {plan_id: key});
       }, () => {
         form = document.querySelector('#operation-form'); root = form.querySelector('[data-interaction-programme-form]');
-        form.elements.namedItem('programme_interaction').addEventListener('change', () => { preview().catch(() => {}); });
+        opening.listen(form.elements.namedItem('programme_interaction'), 'change', () => { preview().catch(() => {}); });
         preview().catch(() => {});
       });
   }
 
   async function attachInteraction(programmeId) {
-    const requestedWorkspace = workspaceKey();
-    const available = await api(query('catalog'));
-    if (workspaceKey() !== requestedWorkspace) return;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
+    const available = await opening.resolve(() => api(query('catalog')));
+    if (!opening.pending()) return;
     const results = asArray(available.interaction_results).filter(row => row.state === 'complete');
     if (!results.length) {
       detail('Complete a combination study', '<p>Run the saved study and build its attribution result. Its original native results, common-area summary, contributions and files can then be attached to this programme.</p>',
@@ -814,7 +927,7 @@ export function attachProgrammes(context) {
       return;
     }
     let form, root;
-    const current = () => requestedWorkspace === workspaceKey() && root?.isConnected &&
+    const current = () => opening.active() && requestedWorkspace === workspaceKey() && root?.isConnected &&
       document.querySelector('#operation-form') === form;
     const selection = () => results.find(row => row.id === form.elements.namedItem('programme_interaction_result').value);
     const show = () => {
@@ -823,7 +936,7 @@ export function attachProgrammes(context) {
         escapeHTML(row?.plan_id || '—') + '</span></p><p>Result <span class="mono">' + escapeHTML(row?.id || '—') +
         '</span></p><p class="note">Attachment verifies the original baseline identity, retained coalition selections and every result artifact. It retains prior editions of the link and rebuilds the programme catalogue.</p>';
     };
-    openForm('Attach completed conservation attribution', 'Select a retained result with the programme’s original native baseline.',
+    opening.show('Attach completed conservation attribution', 'Select a retained result with the programme’s original native baseline.',
       '<div class="programme-form" data-interaction-result-form><label>Completed study result<select name="programme_interaction_result" required>' +
       results.map(row => option({...row, title: (row.title || 'Study') + ' · ' + short(row.id)}, results[0].id)).join('') +
       '</select></label><div data-interaction-result-summary role="status"></div></div>',
@@ -831,10 +944,10 @@ export function attachProgrammes(context) {
         if (!current()) throw new Error('Reopen attribution in its original workspace.');
         const row = selection();
         if (!row) throw new Error('Choose a completed conservation study result.');
-        return submitAction('compute.programme.attach-interaction', {programme_id: programmeId, result_id: row.id});
+        return opening.submit('compute.programme.attach-interaction', {programme_id: programmeId, result_id: row.id});
       }, () => {
         form = document.querySelector('#operation-form'); root = form.querySelector('[data-interaction-result-form]');
-        form.elements.namedItem('programme_interaction_result').addEventListener('change', show); show();
+        opening.listen(form.elements.namedItem('programme_interaction_result'), 'change', show); show();
       });
   }
 
@@ -863,9 +976,9 @@ export function attachProgrammes(context) {
   }
 
   async function fromExperiment(experimentId) {
-    const requestedWorkspace = workspaceKey();
-    const available = await api(query('catalog'));
-    if (workspaceKey() !== requestedWorkspace) return;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
+    const available = await opening.resolve(() => api(query('catalog')));
+    if (!opening.pending()) return;
     const experiments = asArray(available.experiments).filter(row => row.state !== 'unavailable');
     if (!experiments.length) {
       detail('Prepare an experiment', '<p>Save an experiment in this workspace to create its complete native run programme. The saved design retains the profiles, cases and comparison pairs that the programme will execute.</p>', {kind: 'programme-experiment'});
@@ -874,13 +987,14 @@ export function attachProgrammes(context) {
     if (experimentId && !experiments.some(row => row.id === experimentId)) throw new Error('The saved experiment is absent from this workspace.');
     let form, requestGeneration = 0;
     const preview = async () => {
+      if (!opening.active()) return;
       const request = ++requestGeneration, key = form.elements.namedItem('programme_experiment').value;
       const target = form.querySelector('[data-experiment-programme-preview]');
       target.textContent = 'Opening the prepared cases…';
       try {
         const result = await api('/api/programmes/experiment-preview', {method: 'POST',
-          body: {workspace: workspaceKey(), experiment_id: key, offset: 0, limit: 100}});
-        if (request !== requestGeneration || requestedWorkspace !== workspaceKey() || !form.isConnected) return;
+          body: {workspace: requestedWorkspace, experiment_id: key, offset: 0, limit: 100}});
+        if (!opening.active() || request !== requestGeneration || requestedWorkspace !== workspaceKey() || !form.isConnected) return;
         target.innerHTML = '<p><strong>' + escapeHTML(result.counts.cases) + ' prepared cases</strong> across ' +
           escapeHTML(result.counts.profiles) + ' profiles. Saving materializes the exact profiles and native run selections.</p>' +
           table(['Prepared case', 'Kind', 'Profile', 'Land-cover case'], asArray(result.cases).map(row =>
@@ -888,24 +1002,24 @@ export function attachProgrammes(context) {
             escapeHTML(short(row.profile_id)) + '</td><td class="mono">' + escapeHTML(short(row.scenario_id)) + '</td></tr>')) +
           (result.next_offset !== null ? '<p>The first ' + result.cases.length + ' cases are shown. All ' + result.counts.cases + ' saved cases are included in the programme.</p>' : '') +
           '<p class="note">The programme compares against the original reference. Each case also retains the experiment’s paired baseline for the scientific comparison workflow.</p>';
-      } catch (error) { if (request === requestGeneration) target.textContent = error.message || String(error); }
+      } catch (error) { if (opening.active() && request === requestGeneration) target.textContent = error.message || String(error); }
     };
-    openForm('Create programme from a saved experiment',
+    opening.show('Create programme from a saved experiment',
       'Continue the existing experiment design through the shared native operator.',
       '<div class="programme-form"><label>Saved experiment<select name="programme_experiment" required>' +
       experiments.map(row => option(row, experimentId || experiments[0].id)).join('') +
       '</select></label><div data-experiment-programme-preview role="status"></div></div>',
       'Save complete programme',
-      async () => submitAction('compute.programme.experiment', {experiment_id: form.elements.namedItem('programme_experiment').value}),
-      () => { form = document.querySelector('#operation-form'); form.elements.namedItem('programme_experiment').addEventListener('change', preview); preview(); });
+      async () => opening.submit('compute.programme.experiment', {experiment_id: form.elements.namedItem('programme_experiment').value}),
+      () => { form = document.querySelector('#operation-form'); opening.listen(form.elements.namedItem('programme_experiment'), 'change', preview); preview(); });
   }
 
   function importForm() {
-    const requestedWorkspace = workspaceKey();
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
     let form, input, selection = null, requestGeneration = 0, pending = false;
-    const isCurrent = (request, file) => request === requestGeneration &&
+    const isCurrent = (request, file) => opening.active() && request === requestGeneration &&
       workspaceKey() === requestedWorkspace && input?.isConnected && input.files[0] === file;
-    openForm('Import expanded programme selections',
+    opening.show('Import expanded programme selections',
       'Use a saved programme JSON or the expanded case list from the experiment planner. The programme refers to inputs already retained in this workspace.',
       '<div class="programme-form"><label>Programme JSON file<input type="file" name="programme_file" accept=".json,application/json" required></label>' +
       '<div data-programme-import-summary role="status">Choose the complete selection file.</div></div>',
@@ -915,11 +1029,11 @@ export function attachProgrammes(context) {
         if (!isCurrent(request, file)) throw new Error('Reopen the programme import in the intended workspace.');
         const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection: selected}});
         if (!isCurrent(request, file)) throw new Error('The selected programme file changed. Review its current preview and save again.');
-        return submitAction('compute.programme.save', {selection: preview.selection});
+        return opening.submit('compute.programme.save', {selection: preview.selection});
       }, () => {
         form = document.querySelector('#operation-form');
         input = form.elements.namedItem('programme_file');
-        input.addEventListener('change', async event => {
+        opening.listen(input, 'change', async event => {
           const request = ++requestGeneration, file = event.target.files[0];
           const summary = form.querySelector('[data-programme-import-summary]');
           selection = null; pending = Boolean(file);
@@ -959,9 +1073,9 @@ export function attachProgrammes(context) {
   }
 
   async function studyExportForm(programmeId) {
-    const requestedWorkspace = workspaceKey();
-    const current = await api(query('detail', {programme_id: programmeId}));
-    if (requestedWorkspace !== workspaceKey()) return;
+    const opening = beginFormOpening(), requestedWorkspace = opening.workspace;
+    const current = await opening.resolve(() => api(query('detail', {programme_id: programmeId})));
+    if (!opening.pending()) return;
     const rows = asArray(current.runs);
     const complete = row => row.state === 'complete' && nativeModels(row.native_selection?.models || row.models).length === 2;
     const baselines = rows.filter(row => complete(row) && row.scenario_kind === 'baseline');
@@ -981,7 +1095,7 @@ export function attachProgrammes(context) {
     }
     let form, formRoot, revision = 0, previewSerial = 0;
     const field = name => form.elements.namedItem(name);
-    const isCurrent = version => requestedWorkspace === workspaceKey() && version === revision &&
+    const isCurrent = version => opening.active() && requestedWorkspace === workspaceKey() && version === revision &&
       formRoot?.isConnected && document.querySelector('#operation-form') === form;
     const readSelection = () => {
       const future = [...formRoot.querySelectorAll('[name="study_future"]:checked')].map(node => node.value);
@@ -1031,7 +1145,7 @@ export function attachProgrammes(context) {
         throw error;
       }
     };
-    openForm('Export native study',
+    opening.show('Export native study',
       'Build maps, the scientific report and the original study source package from completed model cases.',
       '<div class="programme-form" data-study-form><div class="form-grid">' +
       '<label>Study title<input name="study_title" required value="' + escapeHTML(current.title) + '"></label>' +
@@ -1054,21 +1168,21 @@ export function attachProgrammes(context) {
         if (!result || !isCurrent(version) || canonical(selection) !== canonical(readSelection()))
           throw new Error('The study selection changed; review it and export again.');
         if (!result.ready) throw new Error('Complete the selected baseline and alternatives before export.');
-        return submitAction('compute.programme.delivery', {programme_id: programmeId, selection});
+        return opening.submit('compute.programme.delivery', {programme_id: programmeId, selection});
       }, () => {
         form = document.querySelector('#operation-form');
         formRoot = form.querySelector('[data-study-form]');
         futureChoices();
-        formRoot.addEventListener('input', invalidate);
-        formRoot.addEventListener('change', event => {
+        opening.listen(formRoot, 'input', invalidate);
+        opening.listen(formRoot, 'change', event => {
           if (event.target.name === 'study_baseline') futureChoices();
           invalidate();
         });
-        formRoot.querySelector('[data-study-review]').addEventListener('click', async event => {
+        opening.listen(formRoot.querySelector('[data-study-review]'), 'click', async event => {
           const button = event.currentTarget;
           button.disabled = true;
           try { await review(); } catch (error) {
-            if (formRoot?.isConnected && document.querySelector('#operation-form') === form &&
+            if (opening.active() && formRoot?.isConnected && document.querySelector('#operation-form') === form &&
                 requestedWorkspace === workspaceKey())
               formRoot.querySelector('[data-study-preview]').textContent = error.message || String(error);
           }
@@ -1088,11 +1202,33 @@ export function attachProgrammes(context) {
     if (action === 'interaction') return fromInteraction();
     if (action === 'attach-interaction') return attachInteraction(value);
     if (action === 'sync-interaction') return sendAction('compute.programme.sync-interaction', {programme_id: value});
-    if (action === 'clone') return createForm(record);
+    if (action === 'clone') {
+      const opening = beginFormOpening(), original = record;
+      const selection = await opening.resolve(originalSelection);
+      if (opening.pending()) return createForm({...original, selection}, opening);
+      return;
+    }
+    if (action === 'source-update') return sourceUpdates.open(record);
     if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
     if (action === 'pair-completion') return preparePairCompletion(value);
-    if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
+    if (action === 'page-previous') return movePage(pageOffset - 100);
+    if (action === 'page-next') return movePage(pageOffset + 100);
+    if (action === 'page-search') {
+      pageQuery = host.querySelector('[data-programme-query]').value.trim(); pageQueryDraft = pageQuery; return movePage(0);
+    }
+    if (action === 'load-pairs') {
+      const key = record?.id, owner = workspaceKey(), observation = record?.observation_id;
+      const value = await api(query('paired', {programme_id: key}));
+      if (owner !== workspaceKey() || record?.id !== key || record.observation_id !== observation) return;
+      pairedResult = value; pairedObservation = observation; draw(); return;
+    }
+    if (action === 'select-pending') {
+      const key = record?.id, owner = workspaceKey();
+      const value = await api(query('keys', {programme_id: key, case_filter: 'unfinished'}));
+      if (owner !== workspaceKey() || record?.id !== key || value.programme_id !== key) return;
+      subset = new Set(value.keys); draw(); return;
+    }
     if (action === 'clear-selection') { subset.clear(); draw(); return; }
     if (action === 'case-console') {
       if (!record?.id) throw new Error('Open the original saved programme before its native case.');
@@ -1101,7 +1237,7 @@ export function attachProgrammes(context) {
     if (action === 'native') return openItem('runs', value);
     if (action === 'log') return showLog(value);
     if (action === 'task') return showTask(value);
-    if (action === 'selection') return downloadJSON(record.selection, 'programme-' + short(record.id) + '.json');
+    if (action === 'selection') return downloadJSON(await originalSelection(), 'programme-' + short(record.id) + '.json');
     if (action === 'open-report') return showReport(value);
     if (action === 'study-export') return studyExportForm(value);
     if (action === 'delivery') return openItem('deliveries', value);
@@ -1117,7 +1253,10 @@ export function attachProgrammes(context) {
     }
   }
   async function open(id) {
-    if (id) { selected = id; rememberSelection(workspaceKey(), id); record = null; subset.clear(); }
+    if (id) {
+      selected = id; rememberSelection(workspaceKey(), id); record = null; subset.clear();
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
+    }
     context.closeDetail?.();
     await context.navigate?.('programmes');
     if (host) await refreshRecord();
@@ -1131,7 +1270,7 @@ export function attachProgrammes(context) {
     if (button.dataset.action === 'programme-interaction') return fromInteraction(button.dataset.id);
   }
   function taskActions(task) {
-    const row = task.programme || (['compute.programme.save', 'compute.programme.experiment', 'compute.programme.interaction'].includes(task.action) ? task.result : null);
+    const row = task.programme || (['compute.programme.save', 'compute.programme.experiment', 'compute.programme.interaction', 'compute.programme.source-update'].includes(task.action) ? task.result : null);
     const id = row?.id || task.payload?.programme_id;
     if (!task.action?.startsWith('compute.programme.') || !id) return '';
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
@@ -1145,6 +1284,7 @@ export function attachProgrammes(context) {
         escapeHTML(task.programme_report_error||task.experiment.report_error)+'</p>':'')+'</div>';
   }
   function completionMessage(task) {
+    if (task.action === 'compute.programme.source-update') return 'Source successor saved. Open its Programme to continue the selected native cases and export the new study.';
     if (task.action === 'compute.programme.delivery' && task.result?.delivery_id) return 'Maps, scientific report and original study source package are ready.';
     if (task.action !== 'compute.programme.run' && task.action !== 'compute.programme.pair-completion') return '';
     if (task.action === 'compute.programme.pair-completion' && !task.payload?.run) return 'Matching calculation programme saved.';

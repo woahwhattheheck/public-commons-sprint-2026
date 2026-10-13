@@ -76,7 +76,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       (product.error?'<p role="alert" class="np-error">'+esc(product.error.message)+'</p>':'')+executionMarkup()+
       (product.state!=='complete'||!product.rendered?'<p>'+button('resume-report','Preview and continue original report','',busy)+'</p>':'')+'</section>'+
       (product.source_choice?'<section class="np-section"><h2>Continue with this scientific source</h2>'+metadata({'Source collection':product.source_choice.source_collection_id,'Source':product.source_choice.source_id})+
-      '<div class="np-actions">'+(typeof openScientificReport==='function'?button('scientific-report','Open scientific report','',busy):'')+button('source','Open original source collection')+'</div><p>This recipe is available in the existing ordered scientific-report picker. To revise an existing delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
+      '<div class="np-actions">'+(typeof openScientificReport==='function'?button('scientific-report','Open this report only','data-selection-mode="replace"',busy)+button('scientific-report','Add to current report','data-selection-mode="append"',busy):'')+button('source','Open original source collection')+'</div><p>Open this report only starts the composer with this source and report title. Add to current report preserves the current ordered sources and title, adding this source once.</p><p>To revise an existing mapped delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
       '<label>Saved delivery<select data-np-field="deliveryId">'+options(deliveries.map(row=>[row.id,row.selection?.title||row.title||short(row.id)]),draft.deliveryId,'Choose a retained delivery')+'</select></label>'+button('delivery','Open delivery with this report','',busy||!draft.deliveryId)+'</section>':'')+
       downloadsMarkup()+(product.tables?.length?tableMarkup():'');
   }
@@ -169,7 +169,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
     if(action==='saved'){await openSaved(id);return;}
     if(action==='up'||action==='down'){
       const index=draft.alternatives.indexOf(id),next=index+(action==='up'?-1:1);
-      if(index>=0&&next>=0&&next<draft.alternatives.length){[draft.alternatives[index],draft.alternatives[next]]=[draft.alternatives[next],draft.alternatives[index]];changed();render();}return;
+      if(index>=0&&next>=0&&next<draft.alternatives.length){invalidateNavigation();[draft.alternatives[index],draft.alternatives[next]]=[draft.alternatives[next],draft.alternatives[index]];changed();render();}return;
     }
     await guarded(async m=>{
       if(action==='refresh'){await loadCatalogue(m);if(valid(m)&&draft.screen==='report'&&draft.resultId)await loadReport(draft.resultId,m);}
@@ -181,11 +181,13 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       else if(action==='previous'||action==='next'){draft.offset=action==='previous'?Math.max(0,draft.offset-100):rows.next_offset;await loadTable(m);}
       else if(action==='scientific-report'){
         if(typeof openScientificReport!=='function')throw Error('Receive the maintained scientific-report composer in this application.');
+        const selectionMode=buttonNode.dataset.selectionMode;
+        if(!['replace','append'].includes(selectionMode))throw Error('Choose whether to open this report only or add it to the current report.');
         const report=copy(product),choice=copy(report.source_choice);
         if(!valid(m)||!(await waitForSource(choice,m)))return;
         if(!valid(m))return;
         closeDetail();
-        await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title});
+        await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title,selection_mode:selectionMode});
       }
       else if(action==='delivery'){
         const report=copy(product),delivery=draft.deliveryId;
@@ -227,22 +229,73 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       await guarded(async m=>{if(await loadCatalogue(m)){if((draft.screen==='report'&&draft.resultId===reportId)||(draft.pending?.autoOpen&&task.action==='native.process.build')){draft.pending.autoOpen=false;await loadReport(reportId,m);}}});
     }else if(task&&!busy)render();
   }
+  function requestedRuns(value){
+    if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose an original native run selection.');
+    if(value.workspace_key!==workspace||value.workspace_key!==current())throw Error('Open the original run selection in its intended Workspace.');
+    const ids=value.run_ids;
+    if(!Array.isArray(ids)||!ids.length||ids.some(id=>typeof id!=='string'||!/^[0-9a-f]{64}$/.test(id))||new Set(ids).size!==ids.length)
+      throw Error('Choose each original native run once, with the baseline first.');
+    let models=null;
+    if(value.models!==undefined){
+      if(!Array.isArray(value.models)||!value.models.length||value.models.some(model=>!['ndr','sdr'].includes(model))||new Set(value.models).size!==value.models.length)
+        throw Error('Choose each completed process model once: NDR, SDR, or both.');
+      models=['ndr','sdr'].filter(model=>value.models.includes(model));
+    }
+    if(value.title!==undefined&&(typeof value.title!=='string'||!value.title.trim()))throw Error('Give this original process report a title.');
+    return {workspace_key:value.workspace_key,run_ids:[...ids],models,title:value.title?.trim()||'Original native watershed processes'};
+  }
+  function catalogueSelection(value){
+    const original=value.run_ids.map(id=>{
+      const found=run(id);
+      if(!found)throw Error('Original run '+short(id)+' has no retained completed native process stage. Keep the full selection and refresh its run.');
+      return found;
+    });
+    const grid=original[0].selection?.grid_id;
+    if(!grid||original.some(row=>row.selection?.grid_id!==grid))throw Error('Choose original runs on the same native grid.');
+    const common=['ndr','sdr'].filter(model=>original.every(row=>row.completed_models?.includes(model)&&row.watershed_outputs?.[model]));
+    const models=value.models||common;
+    if(!models.length||models.some(model=>!common.includes(model)))throw Error('Every selected original run must retain each requested completed model and its watershed output.');
+    return {title:value.title,run_ids:[...value.run_ids],models:[...models],include_figures:false};
+  }
   async function drainOpen(){
     if(busy||!pendingOpen)return;
     const opening=pendingOpen;pendingOpen=null;
     if(!root||workspace!==opening.workspace||current()!==opening.workspace||epoch!==opening.epoch){opening.resolve(false);return;}
-    await guarded(async m=>{if(draft.pending)draft.pending.autoOpen=false;draft.filters=defaults().filters;draft.offset=0;await loadReport(opening.id,m);});
-    opening.resolve(Boolean(root&&workspace===opening.workspace&&product?.id===opening.id&&draft.screen==='report'));
+    let applied=false;
+    await guarded(async m=>{
+      if(opening.kind==='selection'){
+        if(!(await loadCatalogue(m)))return;
+        const selected=catalogueSelection(opening.selection);
+        if(!valid(m))return;
+        const retained=draft.pending?{...draft.pending,autoOpen:false}:null;
+        draft={...defaults(),pending:retained};
+        product=null;rows=null;pollSignature='';
+        useSelection(selected,false);
+        applied=true;
+      }else{
+        if(draft.pending)draft.pending.autoOpen=false;
+        draft.filters=defaults().filters;draft.offset=0;
+        applied=Boolean(await loadReport(opening.id,m));
+      }
+    });
+    opening.resolve(Boolean(applied&&root&&workspace===opening.workspace&&current()===opening.workspace&&epoch===opening.epoch&&intent===opening.intent));
   }
   async function openSaved(id){
     if(!root||current()!==workspace)throw Error('Open this report in the selected Workspace.');
     invalidateNavigation();
-    return new Promise(resolve=>{pendingOpen={id,workspace,epoch,resolve};void drainOpen();});
+    return new Promise(resolve=>{pendingOpen={kind:'report',id,workspace,epoch,intent,resolve};void drainOpen();});
+  }
+  async function createForRuns(value){
+    if(!root||current()!==workspace)throw Error('Open the process desk before selecting original runs.');
+    const selection=requestedRuns(value);
+    invalidateNavigation();
+    return new Promise(resolve=>{pendingOpen={kind:'selection',selection,workspace,epoch,intent,resolve};void drainOpen();});
   }
   async function createForRun(value){
     const id=typeof value==='string'?value:value?.run_id;
-    if(!root||current()!==workspace)throw Error('Open the process desk before selecting a run.');
-    await guarded(async m=>{if(!(await loadCatalogue(m)))return;if(!run(id))throw Error('That run has no retained completed native process stage.');draft={...defaults(),baseline:id,title:'Original native watershed processes'};draft.models=commonModels();proposed=null;});
+    return createForRuns({workspace_key:typeof value==='object'&&value?.workspace_key!==undefined?value.workspace_key:current(),
+      run_ids:[id],...(value&&typeof value==='object'&&value.models!==undefined?{models:value.models}:{}),
+      ...(value&&typeof value==='object'&&value.title!==undefined?{title:value.title}:{})});
   }
   function taskActions(task){
     if(task.workspace!==current()||!['native.process.build','native.process.package'].includes(task.action))return '';
@@ -254,5 +307,5 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
     if(node.dataset.workspace!==current())throw Error('Open the original task Workspace before its report.');
     closeDetail();await openDesk('native-process-reports','openSaved',node.dataset.id);return true;
   }
-  return {mount,update,detach,openSaved,createForRun,taskActions,dispatch};
+  return {mount,update,detach,openSaved,createForRun,createForRuns,taskActions,dispatch};
 }

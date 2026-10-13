@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "received-landcover-copy",
+  "source_reference": {
+    "workflow": "Original foreign received comparison → verified original input admission → new local editable comparison",
+    "issue": "https://github.com/woahwhattheheck/public-commons-sprint-2026/issues/3949"
+  },
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/observed_landcover_local_copy.py",
+        "operator/observed_landcover_local_copy.py",
+        "operator/extensions/received-landcover-copy.json",
+        "model/observed_landcover_receiving.py",
+        "model/observed_landcover_study_transfer.py",
+        "operator/web/observed_landcover_received.mjs",
+        "operator/web/observed_landcover_received.css",
+        "operator/RECEIVED_LANDCOVER_COPY.md",
+        "integration/component_fragments/received-landcover-copy.json"
+      ]
+    },
+    "observed-watershed-change": {
+      "paths": [
+        "model/observed_landcover_local_copy.py",
+        "operator/observed_landcover_local_copy.py",
+        "operator/extensions/received-landcover-copy.json",
+        "model/observed_landcover_receiving.py",
+        "model/observed_landcover_study_transfer.py",
+        "operator/web/observed_landcover_received.mjs",
+        "operator/web/observed_landcover_received.css",
+        "operator/RECEIVED_LANDCOVER_COPY.md",
+        "integration/component_fragments/received-landcover-copy.json"
+      ]
+    }
+  }
+}

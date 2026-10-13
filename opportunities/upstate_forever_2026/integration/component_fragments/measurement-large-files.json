@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-large-files",
+  "source_reference": "Complete original Measurements large-file workflow 1.2.0, composed with recovered native collection family PR3713.",
+  "components": {
+    "measurement-large-files": {
+      "title": "Large-file measured originals and complete independently editable handovers",
+      "paths": [
+        "MEASUREMENT_LARGE_FILES.md",
+        "MEASUREMENT_LARGE_FILES_SOURCE.json",
+        "install_measurement_large_files.py",
+        "measurement_workspace/engine/large_archive.py",
+        "measurement_workspace/engine/large_cli.mjs",
+        "measurement_workspace/engine/large_delivery.mjs",
+        "measurement_workspace/engine/large_http.mjs",
+        "measurement_workspace/engine/large_intake.mjs",
+        "measurement_workspace/engine/large_io.mjs",
+        "measurement_workspace/engine/large_sources.mjs",
+        "measurement_workspace/engine/stream_csv.mjs",
+        "measurement_workspace/large_context.py",
+        "measurement_workspace/large_file_patches.json",
+        "measurement_workspace/web/large_files.mjs",
+        "operator/web/measured_large_files.mjs"
+      ],
+      "requires": [
+        "measurement-collections"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-large-files"
+  ]
+}

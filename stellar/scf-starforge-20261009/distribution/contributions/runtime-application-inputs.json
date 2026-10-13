@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "runtime-application-inputs",
-  "description": "Original device and CLI files for Applications, resumable source retention, separate working selections and complete workspace receiving.",
+  "description": "Complete original file and companion inputs, retained edited source editions, parent-and-current portable handoff, separate working trees and original workspace receiving.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/runtime-workspace"
   ],
@@ -9,6 +9,14 @@
     "./runtime-workspace/inputs": {
       "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-inputs.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-inputs.mjs"
+    },
+    "./runtime-workspace/input-sets": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-sets.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-sets.mjs"
+    },
+    "./runtime-workspace/input-set-editions": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-editions.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-editions.mjs"
     }
   },
   "supportFiles": [
@@ -21,6 +29,21 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collection-composer/input-library.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collection-composer/input-format.mjs",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collection-composer/plan.mjs"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collection-composer/plan.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-sets.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-sets-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-sets.d.mts",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-input-sets.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-input-set-format.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_INPUT_SETS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/receiving/APPLICATION_INPUT_SETS_RECEIVE.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-input-sets.css",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-sources.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-editions.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-editions-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-editions.d.mts",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-input-set-editions.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_INPUT_EDITIONS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/receiving/APPLICATION_INPUT_EDITIONS_RECEIVE.mjs"
   ]
 }

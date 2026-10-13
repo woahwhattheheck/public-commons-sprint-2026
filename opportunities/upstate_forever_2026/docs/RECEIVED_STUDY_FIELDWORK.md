@@ -33,3 +33,17 @@ The catalogue pages retained Study records without resolving every report. **Ope
 The implementation adds `model/study_receiving.py`, `operator/study_receiving.py` and `operator/web/received_studies.mjs`, joined into the existing Study transfer provider, descriptor and panel. The current selected Study transfer continues to own capture, receiving and source resolution; the current Implementation extension continues to own plan editing. The component fragment includes the complete new paths for both installed and transferred application source.
 
 The browser keeps only the selected Study ID. On reopen it reads the current native saved receipt again. Workspace changes and late network replies cannot switch the receiving detail or open a plan in another Workspace.
+
+## Reopen an original laboratory request and its results
+
+A locally retained laboratory source adds **Open laboratory request and results** under its Implementation source. The view labels the original request revision and the results/report revision separately. It exposes the original request package, submission CSV, return template and original scientific-source files using verified native file tickets.
+
+Choose the link to open the existing Implementation desk at the exact results revision. Its laboratory panel selects the original request and the completed report-source receipt. The existing scientific and client report actions reopen the complete saved source selection in its original order, including independent sources selected alongside the laboratory report. The inherited field material remains inside the same laboratory recipe, without duplicate sections.
+
+This link appears only when that native lineage was captured in the selected Study. Older scientific-only archives and sources from another project retain their original report files; receiving does not invent a local dispatch or substitute a matching plan name. **Open latest editable plan** remains an explicit separate action.
+
+Use the current full installed application or cumulative source family; the maintained standalone Implementation installer includes the new read route and laboratory controller. The generated offline plan workbench preserves its existing native-only explanation.
+
+## Check the actual delivered workflow
+
+Use the original receiving operation and real populated Study. Open the outgoing product at desktop screenshare size and 390 px, inspect the actual screens and screenshots, and operate source-revision opening, original laboratory request/results, each attachment/download, scientific/client handoffs, export and fresh-browser/Workspace reopen. Open and use all attachments. Confirm readable industrial tables, labels and controls, correct original source order, and distinct request/result revisions. Resolve observed defects before client-ready delivery; source-level checks alone do not establish native/browser completion.

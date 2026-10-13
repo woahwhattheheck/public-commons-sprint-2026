@@ -1,0 +1,27 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "programme-native-reuse",
+  "components": {
+    "programme-native-reuse": {
+      "title": "Original completed native stage reuse for Programme successors",
+      "paths": [
+        "model/programme_reuse.py",
+        "model/PROGRAMME_NATIVE_REUSE.md",
+        "operator/programme_native_reuse_patch.json",
+        "operator/install_programme_reuse.py",
+        "integration/component_fragments/programme-native-reuse.json"
+      ],
+      "requires": [
+        "programme-source-updates",
+        "programme-activity"
+      ],
+      "source_reference": {
+        "version": "1.0.0",
+        "purpose": "Retain completed original candidates and let the existing model-specific native matcher decide stage reuse"
+      }
+    }
+  },
+  "required_components": [
+    "programme-native-reuse"
+  ]
+}

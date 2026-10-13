@@ -82,3 +82,25 @@ Downloads are written to unique owned temporary files and published only after t
 - Attempt-specific CLI/browser/server logs and original UI screenshots.
 
 The initial operator capability remains in a private, mode-0600 control file for the live browser invocation and is removed when the driver closes. Normal public reports contain the workspace and artifact identities. The original source files, coefficients, watershed definitions, model selections and interpretation are preserved inside the delivered scientific workspace.
+
+<!-- TJLABS_RENDERED_PRODUCT_INSPECTION:2026-10-13.1 -->
+## Owner-directed rendered-product inspection
+
+Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
+Scope: owner-controlled work across providers, local and cloud runtimes, and current and future workers. Existing owner controls remain in force.
+
+Before calling a client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing worker must open/run/render the exact outgoing version, LOOK at the rendered screen or its real screenshots, and operate the important user controls. Check the actual screenshare width and narrow/mobile width where relevant, populated/empty/loading/error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Code review, DOM counts, HTTP200, unit checks or another worker's approval do not replace seeing the actual product.
+
+The Ecosystem product requires plain industrial design: readable tables, clear hierarchy, consistent typography/spacing, restrained controls, useful labels and responsive layouts. Keep the real workflows/data/computation. Reviews must lead directly to repairs and must not replace implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a verification product.
+
+Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
+
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. This instruction does not extend or restart the Ecosystem sprint: the existing cutoff is October 13, 2026 at 10:00 a.m. America/Kentucky/Louisville, 14:00 UTC.
+
+Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
+<!-- /TJLABS_RENDERED_PRODUCT_INSPECTION -->
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+Owner clarification version `2026-10-13.2`: before presenting this product or ALL attachments, literally open, observe and normally use the exact outgoing result as its recipient would. Apply the full [rendered product inspection policy](../rendered-product-inspection-policy.md), including downloaded HTML/PDF/reports/slides/spreadsheets/maps/images/audio/video/archive/project contents, actual screenshare and relevant narrow widths, critical controls and states, and final exported media playback. Use available high-quality generative voice/TTS with natural professional delivery for videos and applicable generative media models when helpful. Watch/listen to the final export for clarity, pronunciation, pacing, timing and audio alignment. Fix concrete presentation defects and keep building/shipping; no review theatre, test theatre, parallel review bureaucracy or approval gate. Tests, source, metadata, screenshot folders, checklists and receipts do not substitute for actual observation and normal use. Preserve the existing sprint cutoff and every other owner control.
+<!-- bryce-rendered-product-inspection:end -->

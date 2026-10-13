@@ -41,6 +41,7 @@
     <button type="button" data-section="links">Related workspaces</button>
     <button type="button" data-section="analysis">Native analysis</button>
     <button type="button" data-section="projection">Turnover tables</button>
+    <button type="button" data-section="corrections">Colleague corrections</button>
     <button type="button" data-section="exports">Export and receive</button>
   </nav>
   <main id="main" tabindex="-1">
@@ -200,6 +201,46 @@
       </div><button type="submit" disabled>Preview all turnover tables</button></form>
       <article id="projection-preview" hidden><h3>Complete projection preview</h3><p id="projection-selection"></p><div id="projection-diagnostics"></div><div id="projection-tables"></div></article>
       <form id="projection-save-form" class="card"><label>Projection note<textarea id="projection-note" data-draft rows="3"></textarea></label><button type="submit" data-mutation disabled>Save all eight CSV tables and original XML</button></form><div id="projection-result" class="actions"></div>
+    </section>
+
+
+    <section data-panel="corrections" aria-labelledby="corrections-heading" hidden>
+      <div id="correction-desk">
+        <div class="section-heading"><div><p class="eyebrow">Review a colleague's returned project</p><h2 id="corrections-heading">Colleague corrections</h2></div></div>
+        <p>Send a complete editable project, receive your colleague's changes, and compare them with the original sent version and your current work. Review conflicts and native validation before applying selected sources together.</p>
+        <form id="correction-intake" class="card">
+          <h3>Send or open a complete review</h3>
+          <div class="actions"><button id="correction-help" type="button" data-correction-control data-mutation>Download complete project for a colleague</button><a href="/CORRECTIONS.md" target="_blank" rel="noopener">Correction workflow guide</a></div>
+          <label>Returned workspace or application ZIP<input id="correction-file" type="file" accept=".zip,application/zip" data-correction-control></label>
+          <p id="correction-file-status" role="status">Choose the colleague's complete workspace or application ZIP.</p>
+          <div class="actions"><button id="correction-compare" type="button" disabled>Compare with current original</button><button id="correction-save-draft" type="button" disabled>Download complete review draft</button></div>
+          <details><summary>Open an earlier correction review draft</summary><label>Complete saved review JSON<input id="correction-draft-file" type="file" accept=".json,application/json" data-correction-control></label><p class="muted">The review includes the original returned project and all saved choices. Opening it compares those choices with the current workspace again.</p></details>
+        </form>
+        <p id="correction-archive" class="file-meta"></p>
+        <h3>Original sources in this return</h3>
+        <div id="correction-sources"></div><div id="correction-unmatched"></div>
+        <form id="correction-source-review" class="card" hidden>
+          <h3 id="correction-source-title"></h3><p id="correction-source-binding" class="source-binding"></p>
+          <div id="correction-source-details"></div>
+          <div class="form-grid"><div id="correction-baseline"></div><div id="correction-mode"></div></div>
+          <p id="correction-structural"></p>
+          <div class="actions"><button id="correction-use-compatible" type="button">Use returned values where original is unchanged</button></div>
+          <p class="muted">Conflicting changes need an individual decision. Structural changes require a reviewed choice of the current or complete returned document.</p>
+          <div class="table-controls"><span id="correction-field-range"></span><div class="actions"><button id="correction-previous" type="button">Previous fields</button><button id="correction-next" type="button">Next fields</button></div></div>
+          <div id="correction-fields"></div>
+          <h4>Returned source reviews</h4><p class="muted">Select the colleague's source-bound reviews to retain with this application. Their original text, evidence and history remain in the returned project.</p><div id="correction-reviews"></div>
+          <label>Application note for this source<textarea id="correction-source-note" rows="3" data-correction-control></textarea></label>
+        </form>
+        <form id="correction-application" class="card">
+          <h3>Validate and save the complete selection</h3>
+          <button id="correction-prepare" type="button" disabled>Prepare native validation and full plan</button>
+          <div id="correction-plan"></div>
+          <label class="correction-confirm"><input id="correction-accept-diagnostics" type="checkbox" data-correction-control> I reviewed the selected changes, complete native validation and returned reviews.</label>
+          <button id="correction-apply" type="button" data-mutation disabled>Apply all reviewed sources together</button>
+          <p class="muted">The original saved request handles interrupted responses. Concurrent workspace changes require a fresh comparison.</p>
+        </form>
+        <div id="correction-result"></div>
+      </div>
     </section>
 
     <section data-panel="exports" aria-labelledby="exports-heading" hidden>

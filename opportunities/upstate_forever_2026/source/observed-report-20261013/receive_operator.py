@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -70,7 +71,14 @@ def main():
     parser.add_argument("--browser-node", type=Path,
                         help="Run the adjacent real browser continuation with this Node interpreter.")
     parser.add_argument("--video", action="store_true")
+    parser.add_argument("--assessment-preparation", type=Path,
+                        help="Open the completed original assessment preparation in the same browser course.")
+    parser.add_argument("--_native-worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    require(not args.assessment_preparation or (args.browser_node and not args.course),
+            "The assessment chapter joins one original report browser continuation with --browser-node.")
+    require(not args._native_worker or not args.course,
+            "The native worker continues one original report operation.")
     if args.course:
         spec = importlib.util.spec_from_file_location(
             "upstate_scientific_report_course", Path(__file__).with_name("receive_course.py"))
@@ -81,6 +89,147 @@ def main():
     return receive(args)
 
 
+# Native libraries and executor threads cannot be stopped by Future.cancel().
+# Keep the existing original operation in one owned process so its deadline also
+# bounds shutdown, without changing the shared operator's normal drain behavior.
+WORKER_STOP_GRACE = 5.0
+
+
+def _worker_command(args):
+    command = [sys.executable, str(Path(__file__).resolve()), "--_native-worker",
+               "--workspace", str(args.workspace.resolve()),
+               "--output", str(args.output.resolve()),
+               "--timeout", str(args.timeout),
+               "--upload-limit-gib", str(args.upload_limit_gib)]
+    if args.selection:
+        command += ["--selection", str(args.selection.resolve())]
+    else:
+        for manifest in args.manifest or []:
+            command += ["--manifest", str(manifest.resolve())]
+    for name, option in (("title", "--title"), ("contact_json", "--contact-json"),
+                         ("browser_node", "--browser-node"),
+                         ("assessment_preparation", "--assessment-preparation")):
+        value = getattr(args, name, None)
+        if value is not None:
+            command.append(option + "=" + str(value.resolve() if isinstance(value, Path) else value))
+    for name, option in (("create_workspace", "--create-workspace"),
+                         ("resume", "--resume"), ("selected_study", "--selected-study"),
+                         ("video", "--video")):
+        if getattr(args, name, False):
+            command.append(option)
+    return command
+
+
+def _worker_progress(path, process_id):
+    try:
+        value = read_json(path)
+    except (OSError, ValueError):
+        return None
+    return value if isinstance(value, dict) and value.get("process_id") == process_id else None
+
+
+def _stop_worker(process):
+    """Stop only this receiver's process/session, including its own descendants."""
+    def signal_worker(force):
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL if force else signal.SIGTERM)
+            elif force:
+                process.kill()
+            else:
+                process.terminate()
+        except ProcessLookupError:
+            pass
+    signal_worker(False)
+    try:
+        process.wait(timeout=WORKER_STOP_GRACE)
+    except subprocess.TimeoutExpired:
+        signal_worker(True)
+        try:
+            process.wait(timeout=WORKER_STOP_GRACE)
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError("The owned report process did not stop: " + str(process.pid)) from error
+    # A native child may outlive the worker or ignore SIGTERM. Its process group
+    # was created exclusively for this operation; finish stopping that group.
+    if os.name == "posix":
+        signal_worker(True)
+
+
+def _record_worker_interruption(output, process_id, message):
+    # The child has exited and released its original operation lock. Do not
+    # overwrite a successor that another caller has already resumed.
+    if not output.is_dir():
+        return
+    try:
+        with held(output / ".scientific-report-receiving.lock", blocking=False):
+            path = output / "receiving-progress.json"
+            progress = _worker_progress(path, process_id)
+            if progress is None:
+                return
+            if progress.get("phase") == "failed":
+                return  # Preserve the child's exact native exception.
+            previous = progress.get("phase")
+            progress.update(phase="interrupted", interrupted_phase=previous,
+                            error={"type": "TimeoutError", "message": message})
+            atomic_json(path, progress)
+    except BlockingIOError:
+        return
+
+
+def supervised_receive(args):
+    """Run the same retained native receiver with a bounded per-phase lifetime."""
+    process = None
+    previous_termination = None
+    def terminated(number, frame):
+        raise SystemExit(128 + number)
+    output = args.output.resolve()
+    path = output / "receiving-progress.json"
+    phase, began, failed_since = None, time.monotonic(), None
+    failure = None
+    try:
+        if threading.current_thread() is threading.main_thread():
+            previous_termination = signal.signal(signal.SIGTERM, terminated)
+        process = subprocess.Popen(_worker_command(args), start_new_session=os.name == "posix")
+        began = time.monotonic()
+        while process.poll() is None:
+            current = _worker_progress(path, process.pid)
+            now = time.monotonic()
+            current_phase = ((current.get("phase"), current.get("task_id"))
+                             if current is not None else None)
+            if current_phase is not None and current_phase != phase:
+                phase, began = current_phase, now
+            if current is not None and current.get("phase") == "failed":
+                if failed_since is None:
+                    failed_since, failure = now, current.get("error")
+                if now - failed_since >= WORKER_STOP_GRACE:
+                    _stop_worker(process)
+                    raise RuntimeError("The original report failed and its owned native shutdown "
+                                       "did not finish: " + json.dumps(failure, allow_nan=False))
+            elif now - began >= args.timeout:
+                # Recheck the phase at the deadline before stopping a worker that
+                # may just have completed the operation and advanced its receipt.
+                latest = _worker_progress(path, process.pid)
+                latest_phase = ((latest.get("phase"), latest.get("task_id"))
+                                if latest is not None else None)
+                if latest_phase != current_phase:
+                    continue
+                message = ("Resume the original retained report after its " +
+                           (str(phase[0]) if phase else "startup") + " phase exceeded " +
+                           str(args.timeout) + " seconds; owned process " + str(process.pid))
+                _stop_worker(process)
+                _record_worker_interruption(output, process.pid, message)
+                raise TimeoutError(message)
+            time.sleep(0.1)
+        return process.returncode
+    except BaseException:
+        if process is not None and process.poll() is None:
+            _stop_worker(process)
+        raise
+    finally:
+        if previous_termination is not None:
+            signal.signal(signal.SIGTERM, previous_termination)
+
+
 def receive(args):
     """Continue one original operation, including its retained output/task IDs."""
     require(args.timeout > 0 and 1 <= args.upload_limit_gib <= 64,
@@ -89,6 +238,8 @@ def receive(args):
     require(not out.is_relative_to(workspace) and not workspace.is_relative_to(out)
             and not out.is_relative_to(APP) and not APP.is_relative_to(out),
             "Keep the original application, Workspace and receiving output in separate trees.")
+    if not getattr(args, "_native_worker", False):
+        return supervised_receive(args)
     if out.exists():
         require(args.resume and out.is_dir(), "Use --resume for the retained receiving output.")
     else:
@@ -361,7 +512,7 @@ def operate(args, workspace, out):
                                 "edition_id": edition_id, "sources": choices},
         }
         atomic_json(out / "scientific-report-receiving.json", outcome)
-        checkpoint("complete", receipt=str(out / "scientific-report-receiving.json"),
+        checkpoint("closing", receipt=str(out / "scientific-report-receiving.json"),
                    edition_id=edition_id, restored_workspace_key=restored_key)
     except BaseException as error:
         checkpoint("failed", error={"type": type(error).__name__, "message": str(error)})
@@ -369,7 +520,14 @@ def operate(args, workspace, out):
     finally:
         operator.close()
     if args.browser_node:
-        browser(args, module, workspace, out)
+        checkpoint("browser", receipt=str(out / "scientific-report-receiving.json"))
+        try:
+            browser(args, module, workspace, out)
+        except BaseException as error:
+            checkpoint("failed", error={"type": type(error).__name__, "message": str(error)})
+            raise
+    checkpoint("complete", receipt=str(out / "scientific-report-receiving.json"),
+               edition_id=edition_id, restored_workspace_key=restored_key)
     return 0
 
 
@@ -389,6 +547,8 @@ def browser(args, module, workspace, out):
                    "--url-file", str(private_url),
                    "--receiving-receipt", str(out / "scientific-report-receiving.json"),
                    "--output", str(out / "browser")]
+        if getattr(args, "assessment_preparation", None):
+            command += ["--assessment-preparation", str(args.assessment_preparation.resolve(strict=True))]
         if args.video:
             command.append("--video")
         subprocess.run(command, check=True, timeout=args.timeout)

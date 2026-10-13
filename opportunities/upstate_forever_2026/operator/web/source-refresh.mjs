@@ -3,7 +3,7 @@ function attachSourceRefresh(root, host = null) {
 const document = root.ownerDocument || globalThis.document;
 const standalone = !host;
 const life = new AbortController();
-let disposed = false, pendingState = null;
+let disposed = false, queuedLoad = null, loadPromise = null, workspaceEpoch = 0;
 const nlcdClasses = new Map([[11,"Open water"],[12,"Perennial ice and snow"],[21,"Developed, open space"],[22,"Developed, low intensity"],[23,"Developed, medium intensity"],[24,"Developed, high intensity"],[31,"Barren land"],[41,"Deciduous forest"],[42,"Evergreen forest"],[43,"Mixed forest"],[52,"Shrub and scrub"],[71,"Grassland and herbaceous"],[81,"Pasture and hay"],[82,"Cultivated crops"],[90,"Woody wetlands"],[95,"Emergent herbaceous wetlands"]]);
 const $ = selector => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,15 +20,16 @@ if (standalone && fragment.get('token')) {
 let workspace = host?.getWorkspace() || (standalone ? opening.get('workspace') || sessionStorage.getItem(workspaceKey) || '' : '');
 let uiKey = 'upstate-source-refresh-selection:' + workspace;
 let retained = {}, original = {}, previewResult = null, previewSelection = null, selectedPlan = null;
-let busy = false, loading = false, timer = null, fingerprints = {}, oldStates = new Map();
+let busy = false, timer = null, fingerprints = {}, oldStates = new Map();
 let previewEpoch = 0, planRequest = 0, selectedPlanStamp = null;
-let preferences = {}, requests = {};
+let preferences = {}, requests = {}, reportDraftPlan = null;
 const requestKey = () => 'upstate-source-refresh-requests:' + workspace;
-const requestLabels = {'source.refresh.plan':'Save update plan','source.refresh.apply':'Continue saved update','source.refresh.landcover':'Create change layers','workspace.backup':'Export complete study'};
+const requestLabels = {'source.refresh.plan':'Save update plan','source.refresh.apply':'Continue saved update','source.refresh.landcover':'Create change layers','source.refresh.report_source':'Prepare scientific report source','workspace.backup':'Export complete study'};
 const canonical = value => JSON.stringify(value, function(key, item) { return item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(name => [name,item[name]])) : item; });
 const classes = ['from-year','to-year','from-classes','to-classes','zone-field'];
 function readPreferences() {
-  preferences = {};
+  preferences = {}; reportDraftPlan = null;
+  for (const name of ['title','rationale','notes']) $('#report-source-' + name).value = '';
   uiKey = 'upstate-source-refresh-selection:' + workspace;
   try { preferences = JSON.parse(sessionStorage.getItem(uiKey) || '{}'); } catch {}
   requests = {};
@@ -72,6 +73,10 @@ function savePreferences() {
   if ($('#mapping').querySelector('[data-source-id]')) {
     preferences.sourceMaps ||= {}; preferences.sourceMaps[mappingKey] = {};
     $('#mapping').querySelectorAll('[data-source-id]').forEach(node => { preferences.sourceMaps[mappingKey][node.dataset.sourceId] = node.value; });
+  }
+  if (reportDraftPlan) {
+    preferences.reportDrafts ||= {};
+    preferences.reportDrafts[reportDraftPlan] = Object.fromEntries(['title','rationale','notes'].map(name => [name,$('#report-source-' + name).value]));
   }
   sessionStorage.setItem(uiKey, JSON.stringify(preferences));
 }
@@ -157,11 +162,15 @@ function executionBody(current) {
   if (!current || typeof current !== 'object') return '';
   const runs = Object.values(current.run_results || {});
   const comparisons = Object.values(current.comparison_results || {});
-  let html = '';
+  let html = current.completion_note ? '<p class="notice">' + esc(current.completion_note) + '</p>' : '';
   if (runs.length) html += '<h3>Refreshed native cases</h3>' + table(['Earlier run','Refreshed run','Execution','Outputs'], runs.map(row =>
     '<tr><td class="mono" title="' + esc(row.from_run_id) + '">' + esc(short(row.from_run_id)) +
     '</td><td class="mono" title="' + esc(row.to_run_id) + '">' + esc(short(row.to_run_id)) +
-    '</td><td>' + tag(row.execution || row.state) + '</td><td>' +
+    '</td><td>' + tag(({already_complete:'Previously completed',reused:'Verified native reuse',mixed:'Reuse and native execution'})[row.execution] || row.execution || row.state) +
+    (row.model_results ? '<ul>' + Object.entries(row.model_results).map(([model,value]) =>
+      '<li>' + esc(model.toUpperCase()) + ': ' + esc(value.mode === 'reused' ? 'reused native stage' : 'native stage') +
+      (value.source_run_id ? ' from <span class="mono" title="' + esc(value.source_run_id) + '">' +
+        esc(short(value.source_run_id)) + '</span>' : '') + '</li>').join('') + '</ul>' : '') + '</td><td>' +
     (row.state === 'complete' ? '<button type="button" data-open-files="' + esc(row.to_run_id) +
       '" data-item-kind="runs">Open run outputs</button>' : esc(row.state || 'prepared')) + '</td></tr>'));
   if (comparisons.length) html += '<h3>Source-edition comparisons</h3>' + table(['Earlier run','Refreshed run','Comparison','Outputs'], comparisons.map(row =>
@@ -195,9 +204,10 @@ async function runAction(action, payload) {
   let request = requests[key];
   const existing = request?.task_id && (original.tasks || []).find(row => row.id === request.task_id);
   if (existing) request.state = existing.state;
-  // A new plan captures the current dependency snapshot; a new complete archive
-  // includes later work. An unacknowledged or active click keeps its first intent.
-  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan'].includes(action);
+  // A completed apply may have prepared targets under an earlier source edition;
+  // a new explicit click reopens the same plan with a new queue operation. An
+  // unacknowledged or active click retains its original request identity.
+  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan','source.refresh.apply','source.refresh.report_source'].includes(action);
   if (!request || freshCompleted) {
     request = {operation_id:'source-refresh-' + crypto.randomUUID(),workspace,action,payload:value,created_at:new Date().toISOString()};
     requests[key] = request;
@@ -220,6 +230,9 @@ function updateButtons() {
   for (const id of ['prepare-plan','run-plan','download-report','export-study']) $('#' + id).disabled = busy || !$('#plans').value;
   $('#download-plan').disabled = busy || !selectedPlan || selectedPlan.id !== $('#plans').value;
   $('#calculate-change').disabled = busy || !$('#from-raster').value || !$('#to-raster').value;
+  $('#prepare-report-source').disabled = busy || !selectedPlan || selectedPlan.id !== $('#plans').value || selectedPlan.state?.state !== 'complete';
+  $('#receiving-source-impact').hidden = typeof host?.openExtension !== 'function';
+  $('#receiving-source-impact').disabled = busy || !$('#plans').value;
 }
 async function choosePlan({force=false} = {}) {
   const id = $('#plans').value, selectedWorkspace = workspace;
@@ -229,14 +242,29 @@ async function choosePlan({force=false} = {}) {
   const ticket = ++planRequest, previousId = selectedPlan?.id;
   selectedPlan = null; updateButtons();
   if (!id) {
-    selectedPlanStamp = null;
+    selectedPlanStamp = null; reportDraftPlan = null;
+    for (const name of ['title','rationale','notes']) $('#report-source-' + name).value = '';
+    renderReportSources();
     $('#plan-detail').innerHTML = '<p class="empty">Choose a saved update plan.</p>';
     return;
   }
   if (previousId !== id) $('#plan-detail').innerHTML = '<p class="empty">Opening the selected update…</p>';
-  const response = await api(endpoint('/api/source-refresh/plan', {id}));
+  let response;
+  try { response = await api(endpoint('/api/source-refresh/plan', {id})); }
+  catch (e) {
+    if (disposed || ticket !== planRequest || workspace !== selectedWorkspace || $('#plans').value !== id) return;
+    throw e;
+  }
   if (disposed || ticket !== planRequest || workspace !== selectedWorkspace || $('#plans').value !== id) return;
   selectedPlan = response; selectedPlanStamp = stamp;
+  if (reportDraftPlan !== id) {
+    reportDraftPlan = id;
+    const draft = preferences.reportDrafts?.[id] || {};
+    $('#report-source-title').value = draft.title || response.title || response.selection?.title || 'Source update report';
+    $('#report-source-rationale').value = draft.rationale || '';
+    $('#report-source-notes').value = draft.notes || '';
+  }
+  renderReportSources();
   const plan = selectedPlan.plan || selectedPlan;
   const current = selectedPlan.state || selectedPlan.execution || plan.execution || {};
   const preview = plan.preview || plan.assessment || plan.snapshot || plan;
@@ -246,6 +274,20 @@ async function choosePlan({force=false} = {}) {
     (current.phase ? '<p>Current phase: ' + esc(current.phase) + '</p>' : '') +
     assessmentBody(preview) + executionBody(current) + details(current, 'Retained progress and replacement identities');
   updateButtons();
+}
+function renderReportSources() {
+  const planId = $('#plans').value;
+  const rows = (retained.report_sources || []).filter(row => row.plan_id === planId);
+  const canOpen = typeof host?.openScientificReport === 'function';
+  $('#report-sources').innerHTML = rows.length ? rows.map(row => '<article class="task"><h3>' +
+    esc(row.title) + '</h3><p>' + esc(row.created_at) + ' · saved source <span class="mono">' + esc(short(row.id)) +
+    '</span></p><div class="actions"><button type="button" data-report-source="' + esc(row.id) +
+    '" data-selection-mode="replace"' + (canOpen ? '' : ' disabled') + '>Open this report source</button>' +
+    '<button type="button" data-report-source="' + esc(row.id) + '" data-selection-mode="append"' +
+    (canOpen ? '' : ' disabled') + '>Add to current report</button>' +
+    '<button type="button" data-report-source-download="' + esc(row.id) + '">Download source identity</button></div></article>').join('') +
+    (canOpen ? '' : '<p class="muted">This source is available in Scientific Reports in the full operator workspace.</p>') :
+    '<p class="empty">Complete the selected update, then retain its scientific rationale and actual results here.</p>';
 }
 function comparisonCoverage(item) {
   const coverage = item.spatial_support?.native_coverage;
@@ -274,7 +316,7 @@ function isRefreshTask(task) {
 }
 function renderTasks() {
   const tasks = (original.tasks || []).filter(isRefreshTask);
-  const labels = {'source.refresh.plan':'Save source-update plan','source.refresh.apply':'Continue source update','source.refresh.landcover':'Measure land-cover change','source-refresh.apply':'Continue source update','workspace.backup':'Export complete study'};
+  const labels = {'source.refresh.plan':'Save source-update plan','source.refresh.apply':'Continue source update','source.refresh.landcover':'Measure land-cover change','source.refresh.report_source':'Prepare scientific report source','source-refresh.apply':'Continue source update','workspace.backup':'Export complete study'};
   const pendingRequests = unresolvedRequests();
   const recovery = pendingRequests.length ? '<div class="request-recovery"><h3>Continue a submitted selection</h3><p>These submitted selections retain their original request identities. Continue a selection to obtain its original task.</p>' + pendingRequests.map(row => '<button type="button" data-retry-request="' + esc(row.operation_id) + '">' + esc(requestLabels[row.action] || row.action) + '</button>').join(' ') + '</div>' : '';
   $('#tasks').innerHTML = recovery + (tasks.length ? tasks.map(task => '<article class="task"><div class="task-head"><strong>' +
@@ -300,21 +342,24 @@ function renderTasks() {
   }
   if (changed) persistRequests();
 }
-async function load({force=false, suppliedState=null} = {}) {
+async function refreshOnce({force=false, suppliedState=null} = {}) {
   if (disposed) return;
-  if (loading) { if (suppliedState) pendingState = suppliedState; return; }
-  loading = true;
+  const requestEpoch = workspaceEpoch, requestedWorkspace = workspace;
   try {
     const next = host ? (suppliedState || host.getState()) : await api(workspace ? endpoint('/api/state') : '/api/state');
-    if (disposed || !next?.workspace_key) return;
-    if (host && next.workspace_key !== workspace) return;
-    original = next;
-    if (workspace !== original.workspace_key) { workspace = original.workspace_key; readPreferences(); }
+    if (disposed || requestEpoch !== workspaceEpoch || !next?.workspace_key) return;
+    if (host && (next.workspace_key !== workspace || host.getWorkspace() !== workspace)) return;
+    if (requestedWorkspace && next.workspace_key !== requestedWorkspace) {
+      throw new Error('The operator returned another workspace. Reopen the selected study.');
+    }
+    const updates = next.data?.source_updates;
+    const received = updates ? {project:next.data.project,sources:next.data.sources,...updates} :
+      await api(endpoint('/api/source-refresh', {workspace:next.workspace_key}));
+    if (disposed || requestEpoch !== workspaceEpoch || workspace !== requestedWorkspace ||
+        (host && host.getWorkspace() !== next.workspace_key)) return;
+    original = next; retained = received;
+    if (workspace !== next.workspace_key) { workspace = next.workspace_key; readPreferences(); }
     if (standalone) sessionStorage.setItem(workspaceKey, workspace);
-    const updates = original.data?.source_updates;
-    retained = updates ? {project:original.data.project,sources:original.data.sources,...updates} :
-      await api(endpoint('/api/source-refresh'));
-    if (disposed) return;
     options($('#workspace'), (original.workspaces || []).filter(row => row.available !== false), workspace, 'Choose a workspace');
     const sourceFingerprint = JSON.stringify((retained.sources || []).map(x => x.id));
     if (force || fingerprints.sources !== sourceFingerprint) {
@@ -338,20 +383,40 @@ async function load({force=false, suppliedState=null} = {}) {
       options($('#plans'), plans, chosen, 'Choose a saved update');
       fingerprints.plans = planFingerprint;
     }
-    renderChanges(); renderTasks();
+    renderChanges(); renderTasks(); renderReportSources();
     if ($('#plans').value) await choosePlan({force});
     updateButtons();
-  } catch (e) { if (force || !retained.project) error(e); }
-  finally {
-    loading = false; clearTimeout(timer);
-    const active = (original.tasks || []).some(x => isRefreshTask(x) && ['queued','running'].includes(x.state));
-    if (!disposed && standalone && !document.hidden) timer = setTimeout(() => load(), active ? 2500 : 15000);
-    if (!disposed && pendingState) {
-      const next = pendingState; pendingState = null;
-      queueMicrotask(() => load({suppliedState:next}));
-    }
+  } catch (e) {
+    if (!disposed && requestEpoch === workspaceEpoch && (force || !retained.project)) error(e);
   }
 }
+
+function load({force=false, suppliedState=null} = {}) {
+  if (disposed) return Promise.resolve();
+  const incoming = {force, suppliedState};
+  if (loadPromise) {
+    queuedLoad = {force:force || Boolean(queuedLoad?.force),
+                  suppliedState:suppliedState || queuedLoad?.suppliedState || null};
+    return loadPromise;
+  }
+  loadPromise = (async () => {
+    let next = incoming;
+    while (next && !disposed) {
+      queuedLoad = null;
+      if (next.suppliedState?.workspace_key !== workspace) next.suppliedState = null;
+      await refreshOnce(next);
+      next = queuedLoad;
+    }
+  })().finally(() => {
+    const pending = queuedLoad;
+    loadPromise = null; queuedLoad = null; clearTimeout(timer);
+    if (!disposed && pending) return load(pending);
+    const active = (original.tasks || []).some(x => isRefreshTask(x) && ['queued','running'].includes(x.state));
+    if (!disposed && standalone && !document.hidden) timer = setTimeout(() => load(), active ? 2500 : 15000);
+  });
+  return loadPromise;
+}
+
 function parseClasses(id) {
   const value = $('#' + id).value.trim();
   if (!value) return null;
@@ -417,6 +482,21 @@ $('#download-report').addEventListener('click', () => guarded(async () => {
   download(report[format], 'Upper_Savannah_Source_Update_' + short(id) + '.' + format,
     format === 'html' ? 'text/html;charset=utf-8' : 'text/csv;charset=utf-8');
 }));
+$('#prepare-report-source').addEventListener('click', () => guarded(async () => {
+  const id = $('#plans').value;
+  if (!id || selectedPlan?.id !== id) throw new Error('Open the completed update first.');
+  const title = $('#report-source-title').value.trim(), rationale = $('#report-source-rationale').value.trim();
+  const note = $('#report-source-notes').value.trim();
+  if (!title || !rationale) throw new Error('Enter the report title and scientific reason for the update.');
+  savePreferences();
+  await runAction('source.refresh.report_source', {plan_id:id,title,rationale,notes:note ? [note] : []});
+}));
+for (const name of ['title','rationale','notes']) $('#report-source-' + name).addEventListener('input', savePreferences);
+$('#receiving-source-impact').addEventListener('click', () => guarded(async () => {
+  const id = $('#plans').value;
+  if (!id || typeof host?.openExtension !== 'function') return;
+  await host.openExtension('receiving-source-impact','openForRefresh',{workspace_key:workspace,refresh_plan_id:id});
+}));
 $('#export-study').addEventListener('click', () => guarded(async () => {
   const id = $('#plans').value;
   if (!id) throw new Error('Choose a saved update.');
@@ -437,16 +517,33 @@ $('#reload').addEventListener('click', () => guarded(async () => { if (host) awa
 $('#workspace').addEventListener('change', () => guarded(async () => {
   if (!standalone) return;
   savePreferences();
+  workspaceEpoch += 1;
   workspace = $('#workspace').value; fingerprints = {}; previewResult = previewSelection = selectedPlan = null;
+  retained = {}; original = {...original,workspace_key:workspace,tasks:[],data:{}};
   previewEpoch += 1; planRequest += 1; selectedPlanStamp = null;
   oldStates = new Map(); readPreferences();
   sessionStorage.setItem(workspaceKey,workspace);
-  $('#from-edition').value = $('#to-edition').value = $('#plans').value = '';
-  $('#from-raster').value = $('#to-raster').value = $('#zones').value = '';
-  $('#preview-result').innerHTML = ''; $('#plan-detail').innerHTML = '';
+  for (const id of ['from-edition','to-edition','plans','from-raster','to-raster','zones']) {
+    options($('#' + id), [], '', 'Opening selected workspace…');
+  }
+  for (const id of ['mapping','preview-result','plan-detail','change-results','tasks','report-sources']) $('#' + id).replaceChildren();
+  error(null); notice('');
   await load({force:true});
 }));
 root.addEventListener('click', event => {
+  const openReport = event.target.closest('[data-report-source]');
+  if (openReport) guarded(async () => {
+    const row = (retained.report_sources || []).find(item => item.id === openReport.dataset.reportSource && item.plan_id === $('#plans').value);
+    if (!row || typeof host?.openScientificReport !== 'function') throw new Error('Reopen the saved report source in the full operator.');
+    const chosenWorkspace = workspace, mode = openReport.dataset.selectionMode;
+    if (!['replace','append'].includes(mode)) return;
+    await host.openScientificReport({workspace_key:chosenWorkspace,sources:[row.source],title:row.title,selection_mode:mode});
+  });
+  const sourceDownload = event.target.closest('[data-report-source-download]');
+  if (sourceDownload) {
+    const row = (retained.report_sources || []).find(item => item.id === sourceDownload.dataset.reportSourceDownload && item.plan_id === $('#plans').value);
+    if (row) download(row, 'Source_Update_Report_' + short(row.id) + '.json');
+  }
   const retry = event.target.closest('[data-retry-request]');
   if (retry) guarded(async () => {
     const request = Object.values(requests).find(row => row.operation_id === retry.dataset.retryRequest);
@@ -502,7 +599,7 @@ return {
     if (disposed) return;
     savePreferences(); disposed = true; previewEpoch += 1; planRequest += 1;
     clearTimeout(timer); life.abort();
-    pendingState = null;
+    queuedLoad = null; workspaceEpoch += 1;
   }
 };
 }

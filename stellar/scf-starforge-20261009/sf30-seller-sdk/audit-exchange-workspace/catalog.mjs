@@ -188,7 +188,7 @@ export const tools = [
   {
     "action": "export.get",
     "name": "audit_export_get",
-    "description": "Read complete retained export metadata and its original download identity.",
+    "description": "Read complete retained metadata and its original download identity.",
     "mutation": false,
     "inputSchema": {
       "type": "object",
@@ -1159,6 +1159,354 @@ export const tools = [
       "destructiveHint": false,
       "openWorldHint": false
     }
+  },
+  {
+    "action": "return.preview",
+    "name": "audit_return_preview",
+    "description": "Read the complete colleague return, bind original source ancestry and compare baseline, current and returned native fields and reviews.",
+    "mutation": false,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "contentBase64": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "returnedSourceId": {
+                "type": "string"
+              },
+              "baselineRevisionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "returnedSourceId",
+              "baselineRevisionId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "contentBase64",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "action": "return.plan",
+    "name": "audit_return_plan",
+    "description": "Prepare the explicitly selected native corrections and returned reviews, retaining complete validation and an exact application plan.",
+    "mutation": false,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "contentBase64": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "expectedPreviewSha256": {
+          "type": "string"
+        },
+        "selections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "returnedSourceId": {
+                "type": "string"
+              },
+              "baselineRevisionId": {
+                "type": "string"
+              },
+              "expectedCurrentRevisionId": {
+                "type": "string"
+              },
+              "expectedCurrentSha256": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "fields",
+                  "current",
+                  "returned-document"
+                ]
+              },
+              "decisions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fieldId": {
+                      "type": "string"
+                    },
+                    "choice": {
+                      "type": "string",
+                      "enum": [
+                        "current",
+                        "returned",
+                        "custom"
+                      ]
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fieldId",
+                    "choice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reviewIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "returnedSourceId",
+              "baselineRevisionId",
+              "expectedCurrentRevisionId",
+              "expectedCurrentSha256",
+              "mode",
+              "decisions",
+              "reviewIds",
+              "note"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "returnedSourceId": {
+                "type": "string"
+              },
+              "baselineRevisionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "returnedSourceId",
+              "baselineRevisionId"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "contentBase64",
+        "name",
+        "expectedPreviewSha256",
+        "selections"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "action": "return.apply",
+    "name": "audit_return_apply",
+    "description": "Apply the reviewed complete correction plan in the original workspace transaction, retaining the whole returned project, native revision history and selected reviews.",
+    "mutation": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "contentBase64": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "expectedPreviewSha256": {
+          "type": "string"
+        },
+        "selections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "returnedSourceId": {
+                "type": "string"
+              },
+              "baselineRevisionId": {
+                "type": "string"
+              },
+              "expectedCurrentRevisionId": {
+                "type": "string"
+              },
+              "expectedCurrentSha256": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "fields",
+                  "current",
+                  "returned-document"
+                ]
+              },
+              "decisions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "fieldId": {
+                      "type": "string"
+                    },
+                    "choice": {
+                      "type": "string",
+                      "enum": [
+                        "current",
+                        "returned",
+                        "custom"
+                      ]
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fieldId",
+                    "choice"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reviewIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "returnedSourceId",
+              "baselineRevisionId",
+              "expectedCurrentRevisionId",
+              "expectedCurrentSha256",
+              "mode",
+              "decisions",
+              "reviewIds",
+              "note"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "expectedPlanSha256": {
+          "type": "string"
+        },
+        "acceptDiagnostics": {
+          "type": "boolean"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "returnedSourceId": {
+                "type": "string"
+              },
+              "baselineRevisionId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "returnedSourceId",
+              "baselineRevisionId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "editionName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "contentBase64",
+        "name",
+        "expectedPreviewSha256",
+        "selections",
+        "expectedPlanSha256",
+        "acceptDiagnostics",
+        "actor",
+        "requestId",
+        "expectedVersion"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
   }
 ];
 
@@ -1171,6 +1519,7 @@ export function validateValue(value,schema,where="arguments") {
     for(const [k,v] of Object.entries(value))if(schema.properties?.[k])validateValue(v,schema.properties[k],where+"."+k);
   }
   if(schema.type==="array"){need(Array.isArray(value),where+" must be a complete list.");value.forEach((v,k)=>validateValue(v,schema.items??{},where+"["+k+"]"));}
+  if(schema.type==="boolean")need(typeof value==="boolean",where+" must be a boolean.");
   if(schema.type==="string")need(typeof value==="string",where+" must be a string.");
   if(schema.type==="integer")need(Number.isSafeInteger(value)&&value>=(schema.minimum??Number.MIN_SAFE_INTEGER)&&value<=(schema.maximum??Number.MAX_SAFE_INTEGER),where+" requires a supported integer.");
   if(schema.enum)need(schema.enum.includes(value),where+" requires a supported choice.");

@@ -30,7 +30,7 @@ class AssessmentContext:
     def read(self,workspace_key,operation,payload=None):
         value=payload or {};ws=self.operator.ws(workspace_key)
         if operation=="catalog":
-            return model.catalog(ws)
+            return {**model.catalog(ws), "report_version": report.VERSION}
         if operation=="options":
             return model.options(ws,identifier(value.get("geography_id")))
         if operation in ("edition","parcels"):
@@ -47,6 +47,10 @@ class AssessmentContext:
         action=task.get("action");value=task.get("payload") or {}
         ws=self.operator.ws(task["workspace"])
         if action=="assessment.context.report":
+            if "report_version" in value and value["report_version"] != report.VERSION:
+                raise self.Fault("ASSESSMENT_REPORT_VERSION",
+                    "Reload Assessment context before preparing the current report. "
+                    "Earlier completed reports remain available in their original tasks.", 409)
             return report.prepare(ws,identifier(value.get("context_id")),
                 parcel_id=value.get("parcel_id") or None, delivery_id=value.get("delivery_id") or None)
         if action=="assessment.context.build":

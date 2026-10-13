@@ -29,6 +29,8 @@ def main(argv=None):
     wr.add_argument("workspace");wr.add_argument("archive")
     wa=sub.add_parser("workspace-adopt-sources",help="Append selected received working layers as an original source edition")
     wa.add_argument("workspace");wa.add_argument("selection")
+    gr=sub.add_parser("workspace-review",help="Compare a received GIS edition with its retained original export")
+    gr.add_argument("workspace");gr.add_argument("selection")
     args=parser.parse_args(argv)
     def progress(value):
         print(json.dumps(value,ensure_ascii=False,allow_nan=False),file=sys.stderr,flush=True)
@@ -49,7 +51,10 @@ def main(argv=None):
             from model.workspace import Workspace
             from model.gis_workspace import export,catalogue,receive,adopt_sources
             ws=Workspace(args.workspace)
-            if args.command=="workspace-export":result=export(ws,gis.load(Path(args.selection)),progress=progress)
+            if args.command=="workspace-review":
+                from model.gis_edition_review import review
+                result=review(ws,gis.load(Path(args.selection)),progress=progress)
+            elif args.command=="workspace-export":result=export(ws,gis.load(Path(args.selection)),progress=progress)
             elif args.command=="workspace-receive":result=receive(ws,args.archive)
             elif args.command=="workspace-adopt-sources":result=adopt_sources(ws,gis.load(Path(args.selection)))
             else:result=catalogue(ws)

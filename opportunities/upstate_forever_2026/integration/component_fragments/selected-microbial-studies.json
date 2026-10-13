@@ -1,0 +1,27 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "selected-microbial-studies",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/eco/selected-microbial-studies-15227-20261013",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json",
+        "examples/selected-microbial-activities-20261013/receive.py",
+        "measurement_workspace/microbial_selection.py",
+        "measurement_workspace/source_observations.py",
+        "operator/SELECTED_MICROBIAL_STUDY.md",
+        "operator/extensions/published-studies.json",
+        "operator/published_study_operator.py",
+        "operator/web/published_microbial_selection.mjs",
+        "operator/web/published_review_reports.mjs",
+        "operator/web/published_studies.mjs"
+      ]
+    },
+    "assessment-source-delivery": {
+      "requires": [
+        "published-studies"
+      ]
+    }
+  },
+  "required_components": []
+}

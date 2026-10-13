@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v17-readable-source-links-reference-basis-v1"
+REPORT_VERSION = "upstate.scientific-report/v18-original-source-admission"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -462,6 +462,32 @@ def _observation_context(result):
             caption="Counts describe the imported source edition before catchment matching. "
                     "Only the separately listed admitted catchment comparisons enter fit metrics.",
         ))
+    admission = result.get("source_admission")
+    if isinstance(admission, dict):
+        used = sum(bool(row.get("included_in_metrics")) for row in result.get("comparisons", []))
+        admission_table = _table(
+            ["Source admission at this comparison", "Original rows"],
+            [["Retained source edition", _count(admission.get("source_row_count"))],
+             ["Admitted by the original import", _count(admission.get("original_admitted_count"))],
+             ["Eligible under this comparison's source rules", _count(admission.get("eligible_count"))],
+             ["Retained as source context", _count(admission.get("excluded_count"))],
+             ["Entered fit metrics after native catchment matching", _count(used)]],
+            widths=[4.8, 1.0],
+            caption="Admission is captured with this comparison. The original import stays unchanged; "
+                    "native model availability, catchment matching and complete raster support "
+                    "can further reduce the metric rows.",
+        )
+        admission_table["retained_source_admission"] = admission
+        blocks.append(admission_table)
+        reasons = admission.get("exclusion_reasons", [])
+        if reasons:
+            blocks.append(_table(
+                ["Current source exclusion", "Affected original rows"],
+                [[row["reason"], _count(row["count"])] for row in reasons],
+                widths=[4.8, 1.0],
+                caption="One original row can have several reasons. These counts are not additive; "
+                        "the report data retains each reason's original observation record IDs.",
+            ))
     if result.get("measurement_support_basis"):
         blocks.append(str(result["measurement_support_basis"]))
     context = result.get("context_rows", [])

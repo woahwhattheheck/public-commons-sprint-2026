@@ -31,7 +31,7 @@ ACTIONS = frozenset({
     "implementation.lab.dispatch", "implementation.lab.dispatch-report",
     "implementation.reconciliation.apply", "implementation.site-visit.import",
 })
-READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview", "site-visit-inspect", "site-visit-preview"})
+READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "dispatch-report-detail", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview", "site-visit-inspect", "site-visit-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -254,6 +254,14 @@ class ImplementationOperator:
             return self.selections(workspace)
         if operation == "dispatch-report-preview":
             return self._dispatch_report(workspace, payload, preview=True)
+        if operation == "dispatch-report-detail":
+            from model.implementation_dispatch_report import get_dispatch_report
+            result = get_dispatch_report(self.operator.ws(workspace), payload.get("operation_id"))
+            if self._id(payload.get("plan_id")) != result["plan"]["id"]:
+                raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "Choose the original laboratory report plan.")
+            result = dict(result, plan_id=result["plan"]["id"], revision=result["plan"]["revision"],
+                          document_digest=result["plan"]["document_digest"])
+            return self._dispatch_report_downloads(workspace, result)
         if operation in ("dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile"):
             return self._dispatch(workspace, payload, operation=operation)
         if operation in ("lab-inspect", "lab-preview"):
@@ -742,14 +750,21 @@ class ImplementationOperator:
             raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
                              "The requested field revision differs from the retained document.", 409)
         ws = self.operator.ws(workspace)
+        selection = value.get("existing_report_selection")
+        if selection is not None and not isinstance(selection, dict):
+            raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
+                             "Choose the complete original report selection object.")
         if preview:
-            result = preview_observation_context(ws, document)
+            result = preview_observation_context(
+                ws, document, existing_report_selection=selection)
         else:
             operation_id = value.get("observation_operation_id")
             if not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
                 raise self.Fault("IMPLEMENTATION_OBSERVATION_BINDING",
                                  "Review the original field source selection before registering it.")
-            result = import_observation_context(ws, document, expected_operation_id=operation_id)
+            result = import_observation_context(
+                ws, document, existing_report_selection=selection,
+                expected_operation_id=operation_id)
         if not isinstance(result, dict):
             raise self.Fault("IMPLEMENTATION_OBSERVATION_RESULT",
                              "The observation adapter returned an invalid result.")
