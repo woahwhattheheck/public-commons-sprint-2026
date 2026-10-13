@@ -129,6 +129,16 @@ def run_request(request_path):
         if checked != ensemble_context:
             raise ValueError("The native worker differs from its original saved ensemble case")
 
+    structural_context = request.get("structural_context")
+    if structural_context:
+        from .structural_studies import StructuralStudies
+        if request.get("task_action") != "structural-study.run":
+            raise ValueError("The original structural worker request has another action")
+        checked = StructuralStudies(workspace).native_case_context(
+            identifier(structural_context["study_id"]), run_id)
+        if digest(checked) != digest(structural_context):
+            raise ValueError("The native worker differs from its original structural case")
+
     stopped = threading.Event()
     identity = process_identity()
     if not identity or identity["process_group"] != os.getpid():
