@@ -104,8 +104,50 @@ Use the complete integration/measurements/INSTALLATION.json and original operato
 
 ## Delivery edition 2: complete project and companion identity
 
-New publications use deliveryEdition 2. The preview binds the complete native project and native display/domain context, plus each matching original collection and all of its files. The browser shows the whole included project counts and full companion inventory before publication, including imports and saved results outside the selected returned rows. Only the original portable export's freshly generated createdAt value is excluded from the project digest; original sources, event timestamps, reviews, saved results and intake history remain bound.
+Historical deliveryEdition 2 publications remain supported. The preview binds the complete native project and native display/domain context, plus each matching original collection and all of its files. The browser shows the whole included project counts and full companion inventory before publication, including imports and saved results outside the selected returned rows. Only the original portable export's freshly generated createdAt value is excluded from the project digest; original sources, event timestamps, reviews, saved results and intake history remain bound.
 
 Each collection's original definition, original source bytes, interpreted mapping and import ID must agree with the included native project. A matching collection retains every file, including unselected imports and companions, in the unchanged original order. Changing that inventory requires a fresh preview even when the scientific revision is unchanged.
 
-Cold receiving accepts the original edition 1 and current edition 2. Edition 1 uses the original report and generated-file renderer exactly; edition 2 adds explicit Prepared by TokenJunkieLabs attribution to the report and working instructions. Receiving an already retained return compares the entire incoming manifest and all original member bytes with that exact edition. A conflicting payload cannot silently reuse its identity. Retrying the same original publication continues to resolve the retained edition before inspecting the current workspace revision.
+Cold receiving preserves original editions 1 and 2. Edition 1 uses the original report and generated-file renderer exactly; edition 2 adds explicit Prepared by TokenJunkieLabs attribution to the report and working instructions. Receiving an already retained return compares the entire incoming manifest and all original member bytes with that exact edition. A conflicting payload cannot silently reuse its identity. Retrying the same original publication continues to resolve the retained edition before inspecting the current workspace revision.
+
+## Delivery edition 3: reviewed copies of the original workbook
+
+Operation: ECO-ORIGINAL-WORKBOOK-RESULTS-20261013.
+
+A source imported through the retained workbook/worksheet bridge carries its exact binary, selected sheet/header/formula reading choices, source collection identity and complete physical row map. Selecting that native source in Source returns now also previews an original-workbook return. It follows each actual preparation receipt to its exact saved preparation, source and original binary. Multiple selected sheets or retained preparations from the same original workbook share one reviewed copy, with a distinct source-bound review sheet for each selection.
+
+The original workbook is included byte for byte under workbooks/<original SHA>/originals/. The reviewed XLSX or XLSM contains every original worksheet and adds plainly named TJLabs Review sheets. Original worksheet, formula, style, media, external-link and macro parts retain identical uncompressed bytes. Only the workbook catalog, its relationship catalog and content-type catalog change to register the added sheets. The ZIP container is rebuilt; the unchanged original file remains independently downloadable.
+
+Added review cells are literal text. They keep complete original field labels and projected values, original workbook/sheet/physical row, native source line, preparation edition, current Measurements revision and the existing current review/result columns. Preamble, header, blank and excluded rows have explicit positions and reasons; their actual original cells remain on the original sheet. Selected saved results retain their own original revisions. Full source-lineage.json and package-parts.json record the exact binding and before/after part identities.
+
+The selected original scientific Python runs the standard-library package helper. The installed Measurements operator already supplies MEASUREMENTS_PYTHON=sys.executable. For standalone Node CLI use the same scientific Python on PATH or set MEASUREMENTS_PYTHON explicitly. This adds no workbook library, formula evaluator, macro execution, external-link access or scientific calculation.
+
+Signed or structure-protected workbooks retain their exact original and complete separate row review, with a visible explanation instead of a changed protected/signed file. Unsupported binary/templates, unsafe or incomplete packages and Excel row/column/cell capacity limits likewise retain the original and complete existing CSV/JSON return. A missing selected interpreter or failed helper process stops publication while the original request remains available. No value is silently shortened. Original package expansion and complete reviewed workbook are bounded at 512 MiB.
+
+Preview binds every reviewed-copy byte identity. Publication recomputes the same complete snapshot and compares that preview; a changed original or source binding requires another preview. Cold receive reconstructs the original-workbook members from the included native project and checks every outgoing byte through the original immutable receiving operation. Historical edition 1 and 2 rendering/replay is unchanged.
+
+## Downloading workbook members through the installed app
+
+The saved edition exposes Download original workbook, Download editable reviewed workbook, Download complete worksheet lineage and Download original part comparison. These controls use GET /handbacks/:id/member?name=MEMBER, an exact Base64/bytes/SHA-256/type envelope from the original verified member reader. The existing installed extension is a JSON/UTF-8 transport, so binary workbooks never pass through text decoding. The browser validates the complete decoded member against its saved manifest before download.
+
+The original raw /files route and complete bundle route remain available. Existing browser limits still apply: a member/bundle above 256 MiB uses the original native file/CLI route, and a return ZIP above 90 MiB uses the original source-handback-receive CLI. Keep the entire source return rather than removing members.
+
+## Operate the same actual workbook case
+
+Use the original accepted workbook intake case and its actual preparation/native source IDs. The existing Eighteenmile 533-row CSV case remains its own operation; it is not evidence of a supplied workbook. Do not manufacture a new customer workbook, formula or measurement.
+
+Write a selection file containing expectedRevision, complete sourceIds, chosen existing exportIds, title and note. Run the delivered course against the original Measurements database:
+
+~~~sh
+node measurement_workspace/engine/source_workbook_course.mjs --workspace ORIGINAL_MEASUREMENTS_DIRECTORY --output SAME_RETURN_DIRECTORY --selection ORIGINAL_SELECTION_JSON
+~~~
+
+The same operation directory retains its original selection, preview and exact publication request before writing. Repeating it reconciles that same immutable request. The course exports every member, receives the full ZIP in its private recipient workspace, closes/reopens that receiver and compares every original/reviewed file. It verifies that neither the original scientific project nor the recipient scientific project is changed by return publication/receiving.
+
+A live receiving.lock protects the original invocation. Reconcile its actual process before removing a stale lease. Completed/reused outputs must match exact retained bytes; an existing conflicting output is never replaced.
+
+In the original browser, operate Source returns at actual screenshare and 390 px width. Inspect the complete selected workbook identity and added-sheet/row map, publish, reopen its exact saved edition, download both workbook files and the full ZIP, then receive/reopen that edition through the same application. Exercise a lost publication response using its retained exact request. Include original excluded/blank rows and surplus fields when present in the real case. Open the original and reviewed XLSX/XLSM in the recipient's spreadsheet viewer, LOOK at original and added sheets, and save/reopen an explicitly separate editable copy. Preserve the native source return as issued; any recipient-edited workbook is a separate file.
+
+Record actual screenshots viewed, file identities, rows/sheets and controls operated with the existing original receiving result. The course's visualInspection starts as awaiting_producer_review and names its actual output artifacts. Complete that observation in the producing lifetime, preserve the full operating case and use the original approved delivery route. Read and carry AGENTS.md and CURRENT_OWNER_DIRECTION.md version 2026-10-13.4.
+
+The additive source_workbook_browser.mjs exports operateOriginalWorkbookReturn({page,selection,edition,output}). The caller supplies its already open original browser and the complete saved native edition. It preserves/downloads the current operator form, selects the exact original IDs in order, inspects the new workbook preview, repeats the same native publication request, verifies each workbook download, captures 1440 px and 390 px views, then restores the original operator form through the existing working-file receiver. It launches no browser or scientific job. The original producer reviews its returned actual screenshots and opens the workbook attachments normally.
