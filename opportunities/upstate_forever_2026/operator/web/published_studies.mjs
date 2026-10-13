@@ -78,7 +78,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-wide">Source file or study directory<input name="relative_path" placeholder="studies/eighteenmile-2023.json" required></label>' +
       '<label>Original report file<input name="report_path" placeholder="Optional PDF in the same folder"></label>' +
       '<label>Table 7 image<input name="image_path" placeholder="Optional PNG in the same folder"></label></div>' +
-      '<p class="ps-help">Accepts the study companion JSON, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
+      '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
@@ -209,6 +209,8 @@ export function createPublishedStudiesDesk(host) {
       output = '<section class="ps-methods"><h2>Original activities and published summaries</h2><p>' +
         esc(observed.temporal_support || "Import the current installed study to retain its original activity sources.") +
         '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
+      const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
+      if (illustrated) output += '<p>' + link(illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
