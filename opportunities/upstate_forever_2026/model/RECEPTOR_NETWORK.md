@@ -6,9 +6,10 @@ model/common.py, and model/receptor_network.py. It reads the original domain
 ZIP directly, or its original GZIP/Esri JSON member. A GIS installation and
 prepared raster grid are unnecessary for this source step.
 
-Operators receive an offline searchable report, original links and editable
+Operators receive an offline geographic explorer, original links and editable
 membership CSVs, the saved receptor definitions, and the complete original
-domain body with geometry. The same definitions feed the existing GIS,
+domain body with geometry. Its grayscale vector map links original watershed
+polygons to the same area selection and HUC12/name search as the membership table. The same definitions feed the existing GIS,
 receiving-water and native physical-output workflows.
 
 ## Run with the retained Upper Savannah domain
@@ -17,7 +18,7 @@ From the cumulative application directory:
 
 ~~~sh
 python -B -m model.receptor_network_cli \
-  --source /dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz \
+  --source /dev/shm/upstate-405f-20261012/inputs/dbc61-upstate-model-domain-20261012.zip \
   --profile source/receptor-profiles/utility-focus-20261012.json \
   --output /mnt/data/upstate-receptor-network-receiving \
   --expected-decoded-sha256 2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af
@@ -38,15 +39,20 @@ their actual source identities when supplying --expected-decoded-sha256.
 
 CLI output supplies the actual inventory ID, directory, source-unit count,
 distinct contributing-unit count, complete area HUC lists, shared memberships,
-file descriptors and whether an existing result was reused. Open the returned
-directory's index.html. Filter by receiving area and search a HUC12 or original
-watershed name. The report also prints with a neutral, compact layout.
+file descriptors, the retained source binding and whether an existing result
+was reused. Open the returned directory's index.html. Filter by receiving
+area and search a HUC12 or original watershed name. Select a polygon to inspect
+its HUC12 membership rows; keyboard users can focus a polygon and press Enter
+or Space. Drag the map to pan and use the buttons or mouse wheel to zoom.
+Reset view returns to the full original domain. The report also prints with
+a neutral, compact layout.
 
 ## Retained outputs
 
 | File | Purpose |
 | --- | --- |
-| index.html | Searchable offline upstream inventory and source relationships |
+| index.html | Offline geographic explorer, linked searchable upstream inventory and source relationships |
+| watersheds.svg | Editable grayscale vector overview of the original source polygons, contributing units and selected anchors |
 | memberships.csv | Each area's contributing HUC12s, original names, selected anchor, next original link, and number of links to the anchor |
 | areas.csv | Area names, roles, anchors and complete contributing HUC12 lists |
 | network.csv | Original source feature identity, HUC12, ToHUC, name and hydrologic-unit type |
@@ -55,7 +61,8 @@ watershed name. The report also prints with a neutral, compact layout.
 | source-domain.esri.json.gz or source-domain.esri.json | Exact retained original body, including source geometry |
 | result.json | Product identity, input/source hashes, source metadata, summary and every file descriptor |
 
-The destination contains one directory per exact source-body/profile identity.
+The destination contains one directory per exact source-body/profile and
+presentation-version identity.
 The complete original body is retained inside that directory. Repeating an
 unchanged selection verifies and reuses its saved files. A failed writing step
 can resume from completed immutable source/profile/network files.
@@ -73,6 +80,34 @@ from model.receptor_network_cli import build
 result = build(source_path, receptor_spec, output_directory,
                expected_decoded_sha256=original_decoded_sha256)
 ~~~
+
+## Geographic view and original coordinates
+
+The overview uses each original Esri polygon ring from the retained source.
+It fits those source coordinates linearly to an 1100 by 620 view and records
+the original extent and spatial-reference metadata in result.json's
+geography field. Holes use the even-odd polygon fill rule. The drawing uses a
+0.2-pixel simplification tolerance at the full-domain view to keep its browser
+interaction responsive. The retained source body contains every original
+coordinate; it supplies subsequent GIS geometry, spatial intersections and
+physical-area calculations.
+
+The view starts with the complete source domain. A medium-gray fill identifies
+the union of selected contributing units; a dark-gray fill identifies original
+anchors. Choosing an area updates those fills and dims the other units. HUC12
+and watershed-name search links the map to the original membership rows.
+
+The standalone watersheds.svg is suitable for an editable illustration or
+a static viewer. The offline index.html adds interaction without remote map
+tiles, browser dependencies or a network connection. A derived print preview
+can remove script and filter controls while retaining the complete default map,
+selected areas, memberships and original source links. A complete exported
+product preserves the interactive index.html and its linked files together.
+
+The result's files.geography descriptor identifies the SVG alongside the
+existing report, source-body, profile, network and CSV descriptors. A source
+with attribute records and no polygon rings still produces the original
+membership product; its result omits the optional geography view.
 
 ## Meaning of the selections
 
@@ -109,6 +144,20 @@ The same utility profile is accepted by:
 The source-only command makes the actual original network product available
 while DEM, land cover, climate inputs and native runs progress. Its saved
 profile remains the exact input for those later stages.
+
+## Operator integration
+
+The source-only operator mode retains the product under WORKSPACE/receptor-networks.
+Its source picker binds source_collection_id and network_source_id into the
+saved receptor specification. Later model comparisons can reuse those same
+definitions. To find the corresponding native grid, compare
+source_binding.body_sha256 with the grid's retained model-domain source body.
+That comparison also links a domain supplied in a ZIP to the same original
+GZIP body already imported in the native workspace.
+
+The initial source-product directory remains immutable. A presentation update
+uses a new version in the product identity, while preserving the original
+source-body SHA and exact receptor specification.
 
 ## Original source references
 
