@@ -1,0 +1,39 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ES-20261012-ASTRA-S1-WQP-11CC-SOURCE-TOOLS",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source_commit": "3e582e337359ab6811d7aa0507fa2a7d2910e119",
+  "file_count": 29,
+  "source_bytes": 1145406,
+  "preserve": "Additive original29 source_tools/geographic Python modules complete recursive imports for the existing660 runtime and22 successors. Decode separately, then compose alongside the original application. Original dc92 Workspace and completed outputs stay unchanged. These original sources preserve Source preparation, Regional soil, Receiving waters, Water quality, Watershed context and original Esri geometry imports at the shared source pin.",
+  "banks": [
+    {
+      "name": "source-tools",
+      "original_git_blob": "ac740f87dc7f5948fee9c50e32ddf7c99ad9a47f",
+      "original_bytes": 1533717,
+      "original_sha256": "b9ca30d954a286c67272d79f03150706448eb16e9e4c9629008c1954159796bc",
+      "gzip_bytes": 531474,
+      "gzip_sha256": "5c1c637f61654b8333f87f49ec5410a10109fd073727061fbd73662efc980b26",
+      "parts": [
+        {
+          "git_blob": "c659330e354898eea8c8e8b4e7e8239853be46f5",
+          "json_bytes": 533546,
+          "json_sha256": "9084173ffaca69df20cf4b178398b0fd2d18bd0f9cfc2ee46844342ec34a0ab3",
+          "index": 0,
+          "offset": 0,
+          "bytes": 400000,
+          "sha256": "842d8a14003ce539121894b0db1241de4460b2951fd593ff1b5ca0b684b3fb0f"
+        },
+        {
+          "git_blob": "71fe3cf9dad2c365e04127cb0ecf6e713d97da13",
+          "json_bytes": 175515,
+          "json_sha256": "22783db170b1eba4fbc64b7196a3da59655cbf46abd950b58ced9364ae11f759",
+          "index": 1,
+          "offset": 400000,
+          "bytes": 131474,
+          "sha256": "84ae152e2df3654328e0e7ba380e46210fefcbe2ebb32f3ac8e5abe3e8ecfcf0"
+        }
+      ]
+    }
+  ]
+}
