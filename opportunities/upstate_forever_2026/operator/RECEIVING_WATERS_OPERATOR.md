@@ -2,6 +2,42 @@
 
 This module connects agency water designations, utility receiving areas, native model results, and the existing seven-map delivery. Its browser controls use the original authenticated operator, task queue, workspace registry, and file downloads.
 
+## Source-origin exports, upstream support and scenario placement
+
+Receiving quantities describe **modeled source-pixel export reaching streams**. NDR assigns each land-source pixel its load multiplied by its modeled downstream delivery ratio. Watershed sums add those source contributions. SDR assigns exported sediment to its eroding source pixel. A mask sum therefore groups contributions by their origin. It does not calculate material crossing that mask boundary, routed load arriving at an intake, concentration, reservoir throughput or treatment removal.
+
+Primary methods: [InVEST 3.20 NDR nutrient-export equations](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html#nutrient-export) and [InVEST 3.20 SDR sediment-export equations](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html#sediment-export). Original completed-stage records remain the authority for the actually executed software and parameters.
+
+| Selected support | Question answered |
+| --- | --- |
+| Reporting | How much modeled export originates in source pixels selected by the receiving-area mask and original reporting support? |
+| Model domain | How much modeled export originates in source pixels selected by the receiving-area mask and retained native domain, including applicable upstream context? |
+| Scenario placement | Where was land cover eligible to change, and which cells actually changed in the retained scenario footprint? |
+| HUC association or utility union | Which original HUCs belong to the retained upstream planning relationship? |
+| Published protection area | Which polygon did the publisher designate, with its original meaning? |
+
+A downstream restoration can change the delivery ratio of an upstream NDR source pixel. If that pixel lies outside the reporting mask, its response can appear in the model-domain view and be absent from the reporting total. Read both scopes with their own original valid cells; do not subtract them as if support and Float32 encoding were identical.
+
+In the current four-anchor geographic edition, the 703/704/502/507 placement polygons retain their exact original selection. Upper Three And Twenty is upstream source context for ARJWS; this relationship alone does not mean it was restored in that scenario. Saved preparation and actual scenario footprints determine treatment placement. Later selections keep their own masks.
+
+Nitrogen and phosphorus remain **kg/year**; sediment remains **metric tonnes/year**. Whole polygon area, selected raster area, valid native support and changed land-cover area are distinct. Net change remains alternative minus baseline on original paired valid cells. Positive increased and avoided export can coexist. Separate restoration and control pairs need not share support and do not automatically form a matched three-run effect.
+
+Individual receptors, protection zones and upstream associations may overlap. Do not add their totals. An original family or utility mask union counts each selected source pixel once. Nested accounting now labels the **whole source area**, **upstream source-area union** and **remaining source-area partition**; original machine keys and disjoint arithmetic are unchanged. Above-reservoir source export is not modeled reservoir inflow.
+
+### Original quantities with usable download definitions
+
+The ordinary Receiving and scope-comparison views display this physical interpretation beside the retained results. Scope-comparison CSVs append quantity_basis, source_support_meaning and boundary_meaning; original source/run/value/support columns remain intact.
+
+A new scientific report source uses presentation edition receiving-water-report-source/5-source-origin and adds:
+
+- water-quantities-with-context.csv: every original row and original field string, with three source-origin/scope columns appended.
+- water-quantity-interpretation.json: exact original plan/analysis identities, original CSV descriptor, column definitions, selected support, method references and the annotated-file descriptor.
+
+Both enter the existing source manifest, scientific report links and full archive. The unchanged native/analysis/water-quantities.csv remains the numerical authority. The report builder reads completed results without model dispatch or changes to fitted quantities, source IDs or saved analysis identities. Existing report editions reopen their retained bytes; new source editions record their changed presentation.
+
+At the SAME producing/receiving boundary, open the populated Receiving analysis, scope controls, downloaded original/annotated CSV and JSON definitions, resulting HTML at desktop and 390 px, all relevant PDF pages, maps and actual extracted archive contents. Open the restored working project and use its saved controls. Look at the rendered pixels; source review, HTTP/DOM checks and unviewed screenshots do not replace this. Repair concrete defects without a new model, controller or inspection bureaucracy. Preserve full CURRENT_OWNER_DIRECTION.md2026-10-13.3, the standing all-attachments rule already below, original native ownership and14UTC cutoff.
+
+
 ## Install into the cumulative application
 
 Receive these additive components beneath opportunities/upstate_forever_2026:
