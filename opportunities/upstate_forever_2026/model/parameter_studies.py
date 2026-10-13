@@ -158,7 +158,7 @@ def _selection(workspace, value):
     if not isinstance(value, dict):
         raise ValueError("Supply a parameter experiment selection object")
     allowed = {"schema", "title", "purpose", "baseline_run_id", "design",
-               "axes", "reporting_areas", "difference_maps"}
+               "axes", "reporting_areas", "difference_maps", "calibration_origin"}
     if set(value) - allowed:
         raise ValueError("Unknown experiment fields: " + ", ".join(sorted(set(value) - allowed)))
     if value.get("schema", SELECTION_SCHEMA) != SELECTION_SCHEMA:
@@ -243,6 +243,10 @@ def _selection(workspace, value):
                  "purpose": purpose.strip(), "baseline_run_id": run["id"],
                  "design": design, "axes": axes, "reporting_areas": areas,
                  "difference_maps": maps}
+    if "calibration_origin" in value:
+        from .parameter_calibration import validate_continuation
+        selection["calibration_origin"] = validate_continuation(
+            workspace, value["calibration_origin"], run["id"])
     return selection, run, profile
 
 
@@ -456,6 +460,10 @@ def _bind_state(workspace, key, spec, state):
             "id", "label", "overrides", "axis_values", "run_id", "profile_id", "run_selection")} for case in state["cases"]]
         if actual_cases != retained:
             raise ValueError("The retained study changed its original adopted native roster")
+    if "calibration_origin" in state["selection"]:
+        from .parameter_calibration import validate_continuation
+        validate_continuation(workspace, state["selection"]["calibration_origin"],
+                              state["selection"]["baseline_run_id"])
     active = selected(state["baseline_selection"])
     state["models"] = list(active)
     state["pollutants"] = list(required_outputs(active))

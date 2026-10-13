@@ -8,7 +8,7 @@ from model import parameter_calibration
 from model.common import identifier
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize", "parameter-study.source.prepare", "parameter-study.ensemble.continue"}
-READS = {"catalog", "results", "calibration", "execution", "view", "source-catalog", "scientific-source", "ensemble-studies"}
+READS = {"catalog", "results", "calibration", "calibration-origin", "execution", "view", "source-catalog", "scientific-source", "ensemble-studies"}
 
 
 class ParameterStudyAPI:
@@ -107,6 +107,9 @@ class ParameterStudyAPI:
                             "history_offset", "limit") if payload.get(name) not in (None, "")})
         if operation == "catalog":
             return experiments.catalog(workspace, identifier(payload.get("baseline_run_id")))
+        if operation == "calibration-origin":
+            return {"workspace_key": workspace_id, **parameter_calibration.continuation(
+                workspace, identifier(payload.get("id")))}
         if operation == "calibration":
             run_ids = payload.get("candidate_run_ids")
             if isinstance(run_ids, str):
