@@ -203,5 +203,7 @@ Open and inspect the new screenshots alongside the existing recording and final
 report files. Operate the actual received desks, inspect every outgoing attachment
 and ZIP, and fix visible or functional defects in this same receiving operation.
 Current product direction remains `CURRENT_OWNER_DIRECTION.md` version
-`2026-10-13.3`; the editable original-source handover supports the real Upper
-Savannah production workflow.
+`2026-10-13.4`. Bryce renewed this existing unfinished work at 14:46 UTC on
+October 13, superseding the earlier cutoff. Preserve completed outputs, active
+processes and original implementation ownership while continuing the editable
+original-source handover for the real Upper Savannah production workflow.
