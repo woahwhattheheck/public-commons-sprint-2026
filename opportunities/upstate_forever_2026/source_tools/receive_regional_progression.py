@@ -50,7 +50,7 @@ class Progression:
         self.regional_args = regional_args
         existing = item(self.path)
         documents = {}
-        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving"):
+        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving", "monitoring_restored_selection"):
             path = getattr(args, key)
             if path:
                 resolved = str(path.resolve(strict=True))
@@ -280,22 +280,40 @@ class Progression:
                     and journal.get("opening") == opening,
                     "The completed saved-view browser belongs to another retained opening")
         elif script == "source/run_monitoring_browser.mjs":
-            opening_path, receiving_path = Path(choices["--opening"]), Path(choices["--receiving"])
-            opening, receiving = read_json(opening_path), read_json(receiving_path)
-            expected_selection = {field: receiving[field] for field in
-                                  ("network_id", "plan_id", "campaign_id")}
-            require(journal.get("schema") == "upstate.monitoring-browser/v1"
-                    and journal.get("workspace_key") == workspace
-                    and journal.get("selection", {}).get("workspace_key") == workspace
-                    and journal.get("selection", {}).get("project_id") == self.operator.ws(workspace).project["id"]
-                    and all(journal["selection"].get(field) == value
-                            for field, value in expected_selection.items())
-                    and journal.get("input", {}).get("opening_sha256") ==
-                        describe_file(opening_path.parent, opening_path)["sha256"]
-                    and journal.get("input", {}).get("receiving_sha256") ==
-                        describe_file(receiving_path.parent, receiving_path)["sha256"]
-                    and opening.get("selection") == receiving.get("selection"),
-                    "The completed Monitoring browser belongs to another original campaign or source selection")
+            if "--restored-selection" in choices:
+                selected_path = Path(choices["--restored-selection"])
+                selected = read_json(selected_path)
+                expected_selection = {"workspace_key": workspace,
+                    **{field: selected[field] for field in
+                       ("project_id", "network_id", "plan_id", "campaign_id")},
+                    "context_id": selected.get("context_id")}
+                require(selected["project_id"] == self.operator.ws(workspace).project["id"]
+                        and journal.get("schema") == "upstate.monitoring-browser/v1"
+                        and journal.get("workspace_key") == workspace
+                        and journal.get("selection") == expected_selection
+                        and journal.get("input") == {
+                            "mode": "restored-native",
+                            "restored_selection_sha256":
+                                describe_file(selected_path.parent, selected_path)["sha256"],
+                            **expected_selection},
+                        "The completed Monitoring browser belongs to another received campaign or source selection")
+            else:
+                opening_path, receiving_path = Path(choices["--opening"]), Path(choices["--receiving"])
+                opening, receiving = read_json(opening_path), read_json(receiving_path)
+                expected_selection = {field: receiving[field] for field in
+                                      ("network_id", "plan_id", "campaign_id")}
+                require(journal.get("schema") == "upstate.monitoring-browser/v1"
+                        and journal.get("workspace_key") == workspace
+                        and journal.get("selection", {}).get("workspace_key") == workspace
+                        and journal.get("selection", {}).get("project_id") == self.operator.ws(workspace).project["id"]
+                        and all(journal["selection"].get(field) == value
+                                for field, value in expected_selection.items())
+                        and journal.get("input", {}).get("opening_sha256") ==
+                            describe_file(opening_path.parent, opening_path)["sha256"]
+                        and journal.get("input", {}).get("receiving_sha256") ==
+                            describe_file(receiving_path.parent, receiving_path)["sha256"]
+                        and opening.get("selection") == receiving.get("selection"),
+                        "The completed Monitoring browser belongs to another original campaign or source selection")
         elif script == "source/run_chemistry_browser.mjs":
             if not bound:
                 return False
@@ -619,8 +637,76 @@ class Progression:
                     "plan_id": plan["id"], "campaign_id": outcome["campaign_id"]}
         return None
 
+    def restored_monitoring(self):
+        """Open an existing campaign in the actual received native Workspace."""
+        from model.monitoring_workspace import MonitoringWorkspace
+        selected_path = self.frozen_input(
+            self.request["documents"]["monitoring_restored_selection"],
+            "monitoring-restored-selection.json")
+        choice = read_json(selected_path)
+        require(isinstance(choice, dict) and
+                choice.get("schema") == "upstate.monitoring-browser-selection/v1",
+                "Choose an explicit native restored Monitoring selection")
+        for field in ("project_id", "network_id", "plan_id", "campaign_id"):
+            require(isinstance(choice.get(field), str) and choice[field].strip(),
+                    "The restored Monitoring selection must name its original " + field)
+        require(choice.get("context_id") is None or
+                isinstance(choice["context_id"], str) and choice["context_id"].strip(),
+                "Choose a retained observation context ID or omit context_id")
+        workspace = self.operator.ws(self.key)
+        require(choice["project_id"] == workspace.project["id"],
+                "The restored Monitoring selection belongs to another scientific project")
+        native = MonitoringWorkspace(workspace)
+        network = native.get("networks", choice["network_id"])
+        plan = native.get("plans", choice["plan_id"])
+        campaign = native.campaign(choice["campaign_id"])
+        require(network["id"] == choice["network_id"] and
+                plan["id"] == choice["plan_id"] and plan["network_id"] == network["id"] and
+                campaign["revision"]["campaign_id"] == choice["campaign_id"] and
+                campaign["revision"]["network_id"] == network["id"] and
+                campaign["revision"]["plan_id"] == plan["id"] and
+                campaign["plan"] == plan and plan.get("status") in {"optimal", "feasible"} and
+                isinstance(campaign.get("calendar"), list),
+                "Open the actual feasible Monitoring design and its retained campaign")
+        require(network.get("source_bindings", {}).get("domain"),
+                "The retained Monitoring network must keep its original domain source binding")
+        native.verify_sources(network)
+        selection = {"workspace_key": self.key,
+                     **{field: choice[field] for field in
+                        ("project_id", "network_id", "plan_id", "campaign_id")},
+                     "context_id": choice.get("context_id")}
+        snapshot = {"network_sha256": digest(network), "plan_sha256": digest(plan),
+                    "campaign_sha256": digest(campaign),
+                    "calendar_sha256": digest(campaign["calendar"]),
+                    "source_bindings_sha256": digest(network["source_bindings"]),
+                    "campaign_revision_id": campaign["revision"]["id"]}
+        adoption = {"schema": "upstate.monitoring-restored-adoption/v1",
+                    "selection": selection,
+                    "input": describe_file(self.output, selected_path),
+                    "source_bindings": network["source_bindings"], "snapshot": snapshot}
+        report = self.output / "monitoring" / "restored-selection.json"
+        retained = item(report)
+        require(retained is None or retained == adoption,
+                "This receiving operation retains another Monitoring campaign revision; continue that exact selection or use a new output")
+        atomic_json(report, adoption, immutable=True)
+        outcome = {"kind": "retained_campaign", "campaign_created": False,
+                   "network_id": network["id"], "plan_id": plan["id"],
+                   "campaign_id": choice["campaign_id"],
+                   "campaign_revision_id": campaign["revision"]["id"]}
+        record = {"adopted_restored_campaign": True,
+                  "journal": describe_file(self.output, report),
+                  "snapshot": snapshot, "outcome": outcome}
+        previous = self.state["steps"].get("monitoring")
+        require(previous is None or previous == record,
+                "The retained Monitoring adoption changed after its original continuation")
+        if previous is None:
+            self.record("monitoring", record)
+        return outcome
+
     def monitoring(self):
         self.current_step = "monitoring"
+        if self.args.monitoring_restored_selection:
+            return self.restored_monitoring()
         if not self.args.monitoring_selection:
             return
         report = self.output / "monitoring" / "receiving.json"
@@ -663,6 +749,15 @@ class Progression:
         return outcome
 
     def monitoring_browser(self, outcome):
+        if self.args.monitoring_restored_selection:
+            require(outcome and outcome.get("kind") == "retained_campaign",
+                    "Reopen the original native Monitoring campaign before its browser continuation")
+            selected = self.frozen_input(
+                self.request["documents"]["monitoring_restored_selection"],
+                "monitoring-restored-selection.json")
+            self.browser("monitoring-browser", "source/run_monitoring_browser.mjs",
+                         ["--restored-selection", str(selected)])
+            return
         if not self.args.monitoring_opening:
             return
         if outcome and outcome.get("kind") == "design_diagnostic":
@@ -832,6 +927,8 @@ def main(argv=None):
     parser.add_argument("--monitoring-selection", type=Path, help="Original monitoring receiver network/cost/calendar selection JSON")
     parser.add_argument("--monitoring-opening", type=Path, help="Prepared regional Monitoring opening; operate its actual saved campaign in the native browser")
     parser.add_argument("--monitoring-receiving", type=Path, help="Adopt this completed original Monitoring receiver and its saved campaign")
+    parser.add_argument("--monitoring-restored-selection", type=Path,
+                        help="Open exact native project/network/plan/campaign IDs from an already received full Workspace")
     parser.add_argument("--prepare-only", action="store_true", help="Prepare source dependencies without executing native models")
     parser.add_argument("--node", default="node")
     parser.add_argument("--port", type=int, default=0)
@@ -847,6 +944,9 @@ def main(argv=None):
     args = parser.parse_args(known)
     require(not (args.browser_channel and args.browser_executable),
             "Choose either --browser-channel or --browser-executable before starting native work")
+    require(not args.monitoring_restored_selection or
+            not (args.monitoring_selection or args.monitoring_opening or args.monitoring_receiving),
+            "Choose restored Monitoring native IDs or original preparation/receiving journals")
     require(not (args.monitoring_opening or args.monitoring_receiving) or args.monitoring_selection,
             "--monitoring-opening/--monitoring-receiving require the exact --monitoring-selection")
     require(bool(args.opening) != bool(regional_args),
