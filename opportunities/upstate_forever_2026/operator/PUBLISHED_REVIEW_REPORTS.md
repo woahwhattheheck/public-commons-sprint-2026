@@ -5,7 +5,7 @@
 1. Open **Published studies**, choose an original study edition, and select its stations, parameters, strata, year and months. The source tables retain their original sampling calendars and applicable filters.
 2. Enter a review title and notes, then choose **Save review**. You can also open an existing named review or use **Station geography → Open matching observations** to select its exact original station identifiers first.
 3. In the saved review's **Scientific report** section, choose **Prepare saved review source**. The queued operation binds that immutable review, its original study source and the maintained selected interpretation.
-4. Choose the resulting prepared source edition and **Open scientific composer**. The existing Sources composer receives its exact source collection and source identifier. Add other original reports in the desired order and use the ordinary render, save and download controls.
+4. Choose the resulting prepared source edition. **Open this report only** starts the composer with this source and its saved title, replacing the prior composer selection. **Add to current report** preserves the current sources and title, then appends this exact original source if it is not already selected. Review the ordered source list before using the ordinary render, save and download controls.
 5. Use the saved scientific edition's existing **Study transfer** when sending the original editable study and report together. The ordinary complete Workspace archive remains available for the whole project.
 
 Save changes before preparing or opening a source. Preparing a source does not silently save a new review. Earlier prepared editions stay available in the picker, with their original review and source binding. Refresh reads those retained sources, including a preparation completed while this desk was closed.
@@ -22,7 +22,7 @@ The prepared source records both the saved coverage/sampling snapshot and its ma
 
 Preparation uses the existing Published studies queue. An accepted operation remains in Tasks after navigation. Reopen the same saved review and refresh prepared sources to continue it.
 
-A newer review edit, a different saved review, a Workspace change, or navigation supersedes an in-flight source opening. The scientific composer receives the exact original source only after its retained edition has been verified and the original Workspace remains selected.
+A newer review edit, a different saved review, a Workspace change, or navigation supersedes an in-flight source opening. The scientific composer receives the exact original source only after its retained edition has been verified and the original Workspace remains selected. Both report actions capture their selection mode before that read. Replacing a selection is also guarded by the maintained composer's current draft revision, so a later draft edit is preserved.
 
 The existing source-only review export remains useful independently: **Export saved review ZIP → Import a complete review ZIP** preserves its original study edition, filters, table, title and notes.
 
@@ -93,6 +93,12 @@ For the current regional course, use the original project `b9d5d257-c6bb-4f07-b9
 
 ## Complete application
 
-Receive the source producer, its typed Study-transfer adapter and the current Published studies provider, two client modules, descriptor, access-route policy, installer and source family together. The normal component resolver checks their complete dependency closure. The optional host callback is supplied by the maintained scientific composer; an older host can retain the prepared source through its Sources desk until that callback is installed.
+Receive the source producer, its typed Study-transfer adapter and the current Published studies provider, two client modules, descriptor, access-route policy, installer and source family together. The normal component resolver checks their complete dependency closure. The host callback is supplied by the maintained scientific composer. The two explicit source-choice actions require its `selection_mode: "replace" | "append"` contract in `operator/web/source_report_editions.mjs` (original contract Git blob `050977b078474788935cf5a25584a6bb0b867386`) and the normal forwarding `app.mjs` / `source_reports.mjs`. Receive that maintained composer with the application. An older host can retain the prepared source through its Sources desk until its current callback contract is installed.
 
 The standalone installer validates its shared transfer composition before copying source. It adds the saved-review resolver beside the installed native-process resolver, preserves all other current report handlers, and backs up any changed shared source. Receiving the same edition again reuses the existing registration. An older application must first receive the maintained native scientific composer and its transfer dispatcher.
+
+## Receiving the report-selection choices
+
+In the exact installed application, open a prepared saved-review source with an existing composer selection. Operate **Open this report only** and confirm that only that source and its saved title remain. Return to the review, choose **Add to current report**, and confirm the pre-existing ordered sources and title remain, with the selected source added once. Repeat an append to inspect deduplication. Change the Workspace or selected review while source readiness is pending and confirm the later context stays open. Continue the ordinary report render, complete downloads, full archive and selected Study reopening in the same receiving course.
+
+Under the current owner instruction, the producing worker must open and look at the exact populated desktop/screenshare and 390 px rendering and operate these controls before presenting the outgoing product. Inspect empty/loading/error states and the visible source order, title, exports and reopening. Fix clipped controls or unreadable content in the same maintained source; saved screenshots alone do not replace viewing them. Keep the October 13, 2026 14:00 UTC sprint cutoff.
