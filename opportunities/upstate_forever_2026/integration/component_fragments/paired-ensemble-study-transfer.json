@@ -1,0 +1,50 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "paired-ensemble-study-transfer",
+  "extend_components": {
+    "paired-ensemble": {
+      "paths": [
+        "model/paired_ensemble_study_transfer.py",
+        "model/paired_ensemble_study_cli.py",
+        "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/paired_ensemble_study_transfer.py",
+        "model/paired_ensemble_study_cli.py",
+        "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md",
+        "model/paired_ensemble/__init__.py",
+        "model/paired_ensemble/ensemble_store.py",
+        "model/paired_ensemble/ensemble_workspace.py",
+        "model/paired_ensemble/ensemble_rasters.py",
+        "model/paired_ensemble/ensemble_report.py",
+        "model/paired_ensemble/ensemble_portable.py",
+        "model/paired_ensemble/ensemble_cli.py",
+        "model/paired_ensemble/designs.py",
+        "model/paired_ensemble/ensemble_report_source.py",
+        "model/paired_ensemble/ensemble_report_cli.py",
+        "model/paired_ensemble/REPORT_SOURCE.md",
+        "operator/paired_ensemble_service.py",
+        "operator/paired_ensemble_report_native.py",
+        "operator/extensions/paired-ensemble.json",
+        "operator/extensions/paired-ensemble-report.json",
+        "operator/web/paired_ensemble_desk.mjs",
+        "operator/web/paired_ensemble_desk.css",
+        "operator/web/paired_ensemble_report_desk.mjs",
+        "operator/web/paired_ensemble.html",
+        "operator/web/paired_ensemble.mjs",
+        "operator/web/paired_ensemble.css",
+        "operator/web/paired_ensemble_host.mjs",
+        "operator/web/paired_ensemble_host.css",
+        "model/study_transfer.py",
+        "model/scientific_report_study_transfer.py",
+        "operator/web/extensions/study_transfer.mjs"
+      ]
+    }
+  },
+  "required_components": []
+}
