@@ -267,6 +267,9 @@ def run(args):
     args.output.mkdir(parents=True, exist_ok=True)
     if args.cold_reopen:
         return cold_reopen(args)
+    if args.selected_study:
+        from source_tools.receive_observed_landcover_study import run_selected_study
+        return run_selected_study(args)
     configuration = {
         "operation_id": args.operation_id, "application": str(APPLICATION.resolve()),
         "workspace": str(args.workspace.resolve()), "state_directory": str(args.state_directory.resolve()),
@@ -439,6 +442,8 @@ def main(argv=None):
     parser.add_argument("--resume-failed", action="store_true", help="Resume the saved course after repairing its failed phase")
     parser.add_argument("--reviewed-source-revision",
                         help="Reviewed repaired implementation revision; keeps original selection, task and product history")
+    parser.add_argument("--selected-study", action="store_true",
+                        help="Continue the completed original selection/report through editable selected-Study receiving")
     parser.add_argument("--cold-reopen", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--selection-id", help=argparse.SUPPRESS)
     parser.add_argument("--report-id", help=argparse.SUPPRESS)
