@@ -370,6 +370,28 @@ def seed_metadata(responses, source):
             exact_write(staged / "wire.bin", wire)
         os.rename(staged, responses.root / "metadata")
 
+def native_geometry_parameters(metadata, source_sr):
+    """Request stored coordinates when the service's map CRS is different."""
+    published_sr = metadata.get("spatialReference") or metadata.get("extent", {}).get("spatialReference")
+    def declaration(value):
+        if not value:
+            return None
+        vertical = (value.get("latestVcsWkid") or value.get("vcsWkid")
+                    or value.get("latestVCSWkid"))
+        if value.get("wkt"):
+            return ("wkt", value["wkt"], vertical)
+        code = value.get("latestWkid") or value.get("wkid")
+        if code is None:
+            return None
+        code = int(code)
+        return ("wkid", 3857 if code in (102100, 102113) else code, vertical)
+    source_declaration = declaration(source_sr)
+    if source_declaration is not None and source_declaration == declaration(published_sr):
+        return {}
+    # ArcGIS defaults to the map CRS; preserve the full original native declaration.
+    return {"outSR": json.dumps(source_sr, sort_keys=True, separators=(",", ":"))}
+
+
 def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root=None):
     folder = root / identity
     folder.mkdir(parents=True, exist_ok=True)
@@ -382,6 +404,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
     source_sr = metadata.get("sourceSpatialReference") or metadata.get("extent", {}).get("spatialReference")
     if not source_sr:
         raise ValueError("Original service does not declare its source CRS")
+    geometry_parameters = native_geometry_parameters(metadata, source_sr)
     selections, selected = [], set()
     for mask in masks[spec["scope"]]:
         geometry = {**mask["geometry"], "spatialReference": mask["spatial_reference"]}
@@ -410,9 +433,12 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
     def acquire(batch):
         nonlocal observed_flags
         label = "features-" + digest(encode(batch))[:20]
+        if geometry_parameters:
+            # Keep earlier default-CRS responses under their original request identities.
+            label += "-native-" + digest(encode(geometry_parameters))[:12]
         value, receipt = responses.query(label, spec["url"], {"objectIds": ",".join(map(str, batch)),
             "outFields": "*", "returnGeometry": "true", "returnTrueCurves": "true",
-            "returnZ": "true", "returnM": "true"})
+            "returnZ": "true", "returnM": "true", **geometry_parameters})
         if value.get("exceededTransferLimit"):
             if len(batch) == 1:
                 raise ValueError("Original provider truncates one exact feature")
@@ -426,7 +452,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
         observed_flags = flags
         page_sr = value.get("spatialReference") or source_sr
         if not equivalent_sr(page_sr, source_sr):
-            # Both exact SR declarations are retained, and the model file uses actual page SR.
+            # The requested native declaration and returned page CRS must agree before publication.
             raise ValueError("Original page and layer source coordinate declarations differ; inspect before combining")
         page = responses.path(label) / "body.json.gz"
         pages.append(str(page))
@@ -437,7 +463,8 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
             linear_label = label + "-provider-linear"
             result, linear_receipt = responses.query(linear_label, spec["url"], {
                 "objectIds": ",".join(map(str, curve_ids)), "outFields": "*",
-                "returnGeometry": "true", "returnTrueCurves": "false", "returnZ": "true", "returnM": "true"})
+                "returnGeometry": "true", "returnTrueCurves": "false", "returnZ": "true", "returnM": "true",
+                **geometry_parameters})
             if result.get("exceededTransferLimit"):
                 raise ValueError("Exact provider-linear curve response truncated")
             if not equivalent_sr(result.get("spatialReference") or source_sr, page_sr):

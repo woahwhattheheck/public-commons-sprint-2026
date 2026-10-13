@@ -24,8 +24,8 @@ The standard delivery manifest lists these files with the other project assets. 
 
 - The scenario-reports extension exposes GET /api/scenario-reports/release?report_id=ID through the existing authenticated operator. Its response contains ready, selection, cases, issues, releases and source_report.
 - The existing report response includes the same release context.
-- The browser bridge invokes openExtension('map-atlas', 'create', {selection}) and openExtension('map-atlas', 'open', releaseId).
-- The report controller exposes open(reportId) for the reverse link and retains the request through navigation into a previously unmounted desk.
+- The browser bridge invokes openExtension('map-atlas', 'create', {workspace_key, selection}) and openExtension('map-atlas', 'open', releaseId, {workspace_key}).
+- The report controller exposes open(reportId, {workspace_key}) for the reverse link and retains the request through navigation into a previously unmounted desk. Navigation failures clear that request, and changing projects cancels it before the other workspace loads.
 - model.report_release.bind_report(workspace, selection) checks the saved cohort before release identity is computed. The returned report_sha256 is retained as selection.source_report_sha256.
 - model.report_release.retain_report(workspace, directory, state, binding) carries original products into the normal delivery file catalogue. Its source_report_ entries are included in the manifest project_assets.
 

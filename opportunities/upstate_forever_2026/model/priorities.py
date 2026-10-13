@@ -40,6 +40,7 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
     from shapely.geometry import mapping, MultiPolygon
     from shapely.ops import unary_union
     from .common import verify_file
+    from .parcel_aggregate import aggregate_layers
     source, entry = workspace.source_file(selection["source_collection_id"], selection["source_id"])
     crs = CRS.from_user_input(grid["grid"]["crs"])
     rows, _ = rasters.vector_geometry(source, layer=selection.get("layer") or entry.get("layer"),
@@ -47,7 +48,7 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
     boundary_path = verify_file(workspace.root / "grids" / grid["id"], grid["files"]["reporting_area"])
     boundary_rows, _ = rasters.vector_geometry(boundary_path, target_crs=crs)
     reporting = rasters.polygon_union(boundary_rows)
-    id_field = selection.get("id_field")
+    id_field = selection.get("id_field") or entry.get("id_field")
     selected_rows, identities = [], set()
     for row in rows:
         if row["geometry"].geom_type not in ("Polygon", "MultiPolygon"):
@@ -60,7 +61,10 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
         if feature_id in identities:
             raise ValueError("Parcel feature identities must be unique; select the native feature ID when parcel numbers repeat")
         identities.add(feature_id)
-        selected_rows.append((feature_id, row))
+        clipped = row["geometry"].intersection(reporting)
+        if clipped.is_empty or clipped.area <= 0:
+            continue
+        selected_rows.append((feature_id, row, clipped))
     if not selected_rows:
         raise ValueError("The selected parcel source has no polygons in the reporting area")
     protected_geometry = unary_union([r["geometry"] for r in protected["features"]])
@@ -72,47 +76,98 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     gpkg, csv_path = directory / "parcel-priorities.gpkg", directory / "parcel-priorities.csv"
+    scenario_csv_path = directory / "parcel-scenarios.csv"
     gpkg.unlink(missing_ok=True)
     schema = {"geometry": "MultiPolygon", "properties": {
         "feature_id": "str", "original_attributes": "str", "area_ha": "float",
         "reporting_area_ha": "float", "protected_fraction": "float", "source_water": "int",
         "high_quality_context": "int", "nitrogen_kg_year": "float", "phosphorus_kg_year": "float",
         "sediment_t_year": "float", "priority_mean": "float", "valid_pixels": "int",
-        "coverage_fraction": "float", "scenario_changes": "str",
+        "coverage_fraction": "float", "scenario_changes": "str", "selected_pixels": "int",
+        "nitrogen_valid_pixels": "int", "nitrogen_coverage_fraction": "float", "nitrogen_valid_area_ha": "float",
+        "phosphorus_valid_pixels": "int", "phosphorus_coverage_fraction": "float", "phosphorus_valid_area_ha": "float",
+        "sediment_valid_pixels": "int", "sediment_coverage_fraction": "float", "sediment_valid_area_ha": "float",
+        "scenario_coverage": "str",
     }}
+    quantity_units = {"nitrogen_export": "kg/year", "phosphorus_export": "kg/year", "sediment_export": "t/year"}
     outputs, no_pixels = [], 0
     coverage_parts, coverage_batch = [], []
     compare_root = workspace.root / "comparisons" / comparison["id"]
     with ExitStack() as stack:
         originals = {key: stack.enter_context(rasterio.open(path)) for key, path in mass_paths.items()}
         priority = stack.enter_context(rasterio.open(priority_path))
-        scenarios = {}
+        transform = priority.transform
+        pixel_area_ha = abs(transform.a * transform.e - transform.b * transform.d) / 10000
+        scenarios, alternatives = {}, {}
         for alternative in comparison["alternatives"]:
-            scenarios[alternative["run_id"]] = {
+            run_id = alternative["run_id"]
+            scenarios[run_id] = {
                 key: stack.enter_context(rasterio.open(verify_file(compare_root, artifact)))
                 for key, artifact in alternative["artifacts"].items()}
+            retained_run = workspace.inspect_run(run_id)
+            run_root = workspace.root / "runs" / run_id
+            alternatives[run_id] = {
+                key: stack.enter_context(rasterio.open(verify_file(run_root, retained_run["artifacts"][key])))
+                for key in scenarios[run_id]}
+        layer_sources = {**originals, "priority": priority}
+        for run_id, layer_set in scenarios.items():
+            layer_sources.update({"scenario/" + run_id + "/" + key: src for key, src in layer_set.items()})
+            layer_sources.update({"alternative/" + run_id + "/" + key: src for key, src in alternatives[run_id].items()})
+        aggregates, processing = aggregate_layers(layer_sources, [clipped for _, _, clipped in selected_rows])
         stack.enter_context(rasters.vector_environment())
         writer = stack.enter_context(fiona.open(gpkg, "w", driver="GPKG", layer="parcel_priorities",
                                                  crs_wkt=crs.to_wkt(), schema=schema))
         csv_file = stack.enter_context(csv_path.open("w", encoding="utf-8", newline=""))
         csv_writer = csv.DictWriter(csv_file, fieldnames=list(schema["properties"]))
         csv_writer.writeheader()
-        for feature_id, row in selected_rows:
+        scenario_file = stack.enter_context(scenario_csv_path.open("w", encoding="utf-8", newline=""))
+        scenario_writer = csv.DictWriter(scenario_file, fieldnames=[
+            "feature_id", "scenario_run_id", "pollutant", "baseline_total", "scenario_total", "change", "units",
+            "polygon_area_ha", "selected_pixels", "valid_pixels", "coverage_fraction",
+            "baseline_valid_pixels", "scenario_valid_pixels", "paired_valid_pixels",
+            "baseline_valid_area_ha", "scenario_valid_area_ha", "paired_valid_area_ha",
+            "baseline_only_area_ha", "scenario_only_area_ha", "paired_fraction_of_union_valid_area"])
+        scenario_writer.writeheader()
+        for index, (feature_id, row, clipped) in enumerate(selected_rows):
             original_geometry = row["geometry"]
-            clipped = original_geometry.intersection(reporting)
-            if clipped.is_empty or clipped.area <= 0:
-                continue
             coverage_batch.append(clipped)
             if len(coverage_batch) >= 512:
                 coverage_parts.append(unary_union(coverage_batch))
                 coverage_batch.clear()
-            # Each original parcel is evaluated independently, so overlapping native
-            # records remain visible rather than silently replacing one another.
-            quantities = {key: _sum(src, clipped) for key, src in originals.items()}
-            score = _sum(priority, clipped)
+            # Every native parcel has its own statistics, including overlaps.
+            quantities = {key: aggregates[key][index] for key in originals}
+            score = aggregates["priority"][index]
             no_pixels += int(score["valid_cells"] == 0)
-            changes = {run_id: {key: _sum(src, clipped)["sum"] for key, src in layer_set.items()}
-                       for run_id, layer_set in scenarios.items()}
+            changes, scenario_coverage = {}, {}
+            for run_id, layer_set in scenarios.items():
+                changes[run_id], scenario_coverage[run_id] = {}, {}
+                for key in layer_set:
+                    value = aggregates["scenario/" + run_id + "/" + key][index]
+                    baseline_value = quantities[key]
+                    alternative_value = aggregates["alternative/" + run_id + "/" + key][index]
+                    changes[run_id][key] = value["sum"]
+                    baseline_valid = baseline_value["valid_cells"]
+                    scenario_valid = alternative_value["valid_cells"]
+                    paired_valid = value["valid_cells"]
+                    if paired_valid > min(baseline_valid, scenario_valid):
+                        raise ValueError("Scenario difference coverage exceeds its retained baseline or alternative")
+                    union_valid = baseline_valid + scenario_valid - paired_valid
+                    support = {"selected_pixels": value["selected_cells"],
+                               "valid_pixels": paired_valid, "coverage_fraction": value["coverage_fraction"],
+                               "baseline_valid_pixels": baseline_valid, "scenario_valid_pixels": scenario_valid,
+                               "paired_valid_pixels": paired_valid,
+                               "baseline_valid_area_ha": baseline_valid * pixel_area_ha,
+                               "scenario_valid_area_ha": scenario_valid * pixel_area_ha,
+                               "paired_valid_area_ha": paired_valid * pixel_area_ha,
+                               "baseline_only_area_ha": (baseline_valid - paired_valid) * pixel_area_ha,
+                               "scenario_only_area_ha": (scenario_valid - paired_valid) * pixel_area_ha,
+                               "paired_fraction_of_union_valid_area": paired_valid / union_valid if union_valid else None}
+                    scenario_coverage[run_id][key] = support
+                    scenario_writer.writerow({
+                        "feature_id": feature_id, "scenario_run_id": run_id, "pollutant": key,
+                        "baseline_total": baseline_value["sum"], "scenario_total": alternative_value["sum"],
+                        "change": value["sum"], "units": quantity_units[key],
+                        "polygon_area_ha": clipped.area / 10000, **support})
             protected_area = clipped.intersection(protected_geometry).area if clipped.intersects(protected_geometry) else 0.0
             properties = {
                 "feature_id": feature_id, "original_attributes": json.dumps(row["properties"], ensure_ascii=False, sort_keys=True),
@@ -124,9 +179,16 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
                 "phosphorus_kg_year": quantities["phosphorus_export"]["sum"],
                 "sediment_t_year": quantities["sediment_export"]["sum"],
                 "priority_mean": score["mean"], "valid_pixels": score["valid_cells"],
-                "coverage_fraction": score["valid_cells"] / score["selected_cells"] if score["selected_cells"] else 0.0,
+                "coverage_fraction": score["coverage_fraction"],
+                "selected_pixels": score["selected_cells"],
                 "scenario_changes": json.dumps(changes, sort_keys=True),
+                "scenario_coverage": json.dumps(scenario_coverage, sort_keys=True),
             }
+            for pollutant in ("nitrogen", "phosphorus", "sediment"):
+                value = quantities[pollutant + "_export"]
+                properties[pollutant + "_valid_pixels"] = value["valid_cells"]
+                properties[pollutant + "_coverage_fraction"] = value["coverage_fraction"]
+                properties[pollutant + "_valid_area_ha"] = value["valid_cells"] * pixel_area_ha
             geometry = original_geometry if original_geometry.geom_type == "MultiPolygon" else MultiPolygon([original_geometry])
             writer.write({"geometry": mapping(geometry), "properties": properties})
             csv_writer.writerow(properties)
@@ -147,11 +209,22 @@ def parcel_inventory(workspace, selection, grid, mass_paths, priority_path, comp
                 "uri": entry["uri"], "vintage": entry["vintage"], "sha256": entry["body"]["sha256"],
                 "selection": selection, "scope": entry.get("scope")},
             "features": len(outputs), "features_without_valid_pixels": no_pixels,
-            "parcel_coverage": coverage,
+            "parcel_coverage": coverage, "processing": processing,
             "selection": "Original feature identity; per-parcel reporting-area intersection; pixel-centre aggregation",
             "high_quality_buffer_m": buffer_m,
             "overlap_handling": "Native overlapping parcels are retained independently; parcel sums are not a basin mass balance",
             "scenario_direction": "alternative minus baseline", "units": rasters.MASS_UNITS,
-            "files": {"geopackage": describe_file(directory, gpkg), "csv": describe_file(directory, csv_path)},
+            "quantity_units": quantity_units, "pixel_area_ha": pixel_area_ha,
+            "comparison": {"id": comparison["id"], "baseline_run_id": comparison["baseline_run_id"],
+                           "scenario_run_ids": [alternative["run_id"] for alternative in comparison["alternatives"]]},
+            "coverage_fields": {
+                "selected_pixels": "Raster cell centres selected by the parcel's reporting-area intersection",
+                "valid_pixels": "Finite unmasked priority cells; legacy priority coverage fields are retained",
+                "pollutant_coverage": "Each pollutant's own finite unmasked cells divided by selected_pixels",
+                "scenario_coverage": "Each native difference layer's finite paired cells, with the original baseline and alternative support",
+                "scenario_totals": "Baseline and alternative totals use their own valid support; change is summed on paired difference support",
+            },
+            "files": {"geopackage": describe_file(directory, gpkg), "csv": describe_file(directory, csv_path),
+                      "scenario_csv": describe_file(directory, scenario_csv_path)},
             "top_by_current_priority": sorted((r for r in outputs if r["priority_mean"] is not None),
                                               key=lambda r: (-r["priority_mean"], r["feature_id"]))[:50]}

@@ -107,7 +107,7 @@ function sourceName(collection,id){return state?.data.sources.find(x=>x.id===col
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
 function render(){
   if(!state)return;
-  for(const node of $('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+  for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
   if(view==='experiments'){extensions.detach();programmes.detach();spatialWorkspace.suspend();community.detach();customerReviews.detach();experiments.mount($('#content'),state);return;}
   experiments.detach();
   if(extensions.render(view,$('#content'),state)){community.detach();customerReviews.detach();spatialWorkspace.suspend();if(typeof programmes!=='undefined')programmes.detach();return;}
@@ -121,7 +121,7 @@ function render(){
     html=pageHeader(d.project.title,'Original data, explicit model choices, retained native outputs and a complete receiving package.',button('source-open','Import sources','','primary'));
     html+='<div class="cards">'+[
       ['Source editions',d.sources.length,'Retained original files and provenance.'],
-      ['Model grids',d.grids.filter(x=>x.state==='complete').length,'Aligned to the original 30 m reference grid.'],
+      ['Model grids',d.grids.filter(x=>x.state==='complete').length,'Aligned to each study’s original reference grid.'],
       ['Complete native runs',complete,'Completed outputs for each run’s selected native models.'],
       ['Complete deliveries',d.deliveries.filter(x=>x.state==='complete').length,'Seven map families, physical rasters and working archive.']
     ].map(x=>'<div class="card"><h3>'+x[0]+'</h3><strong class="number">'+number(x[1])+'</strong><p>'+x[2]+'</p></div>').join('')+'</div>';
@@ -142,7 +142,7 @@ function render(){
     html+=d.profiles.length?section('Retained parameter choices','The original table is preserved by source edition and content hash.',table(['Profile','Table codes','Flow routing','Model period',''],d.profiles.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong>'+metaId(row)+'</td><td>'+number(row.table_summary?.rows)+'</td><td>'+nativeModels(row).map(name=>esc(name.toUpperCase())+' '+esc(row[name]?.flow_dir_algorithm?.toUpperCase()||'—')).join(' / ')+'</td><td>'+esc(typeof row.model_period==='object'?JSON.stringify(row.model_period):row.model_period||'Not supplied')+'</td><td class="actions-cell">'+itemButton('profiles',row.id)+button('profile-clone','Revise','data-id="'+row.id+'"','small')+'</td></tr>'))):noRows('Select real biophysical coefficients','Create a profile from an imported parameter table and its published references.','profile-new','New profile');
   }
   if(view==='grids'){
-    html=pageHeader('Model grids','Align the selected models’ original rasters to the exact 30 m grid, preserving the reporting mask and upstream model context. Extend an existing grid when additional model sources arrive.',button('grid-new','Prepare model grid','','primary'));
+    html=pageHeader('Model grids','Align the selected models’ original rasters to the retained native grid, preserving its cell size, reporting mask and upstream model context. Extend an existing grid when additional model sources arrive.',button('grid-new','Prepare model grid','','primary'));
     html+=d.grids.length?section('Original grid preparations','Incomplete preparations retain their completed native files for continuation.',table(['Grid','State','Dimensions','Resolution','Source edition',''],d.grids.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.spec.title||'Model grid')+'</strong><small>'+esc(nativeModelLabel(row.spec))+'</small>'+metaId(row)+'</td><td>'+badge(row.state)+'</td><td>'+number(row.grid?.width)+' × '+number(row.grid?.height)+'</td><td>'+number(row.grid?.resolution_m)+' m</td><td>'+esc(named('sources',row.spec.source_collection_id))+'</td><td class="actions-cell">'+itemButton('grids',row.id)+button('grid-clone',row.state==='complete'?'Extend / revise':'Revise','data-id="'+row.id+'"','small')+'</td></tr>'))):noRows('Prepare the reporting and model grid','Select original rasters, the reporting boundary, the covering hydrologic domain and an explicit positive context buffer.','grid-new','Prepare grid');
   }
   if(view==='scenarios'){
@@ -151,7 +151,7 @@ function render(){
   }
   if(view==='runs'){
     html=pageHeader('Native model runs','Prepare a source-bound selection, then execute its original InVEST models. Completed native stages remain available for continuation and exact reuse.',button('run-compare','Compare completed runs')+button('run-prepare','Prepare native run','','primary'));
-    html+=d.runs.length?section('Retained model runs','Annual export totals use the original reporting mask and physical units.',table(['Selection','State','Nitrogen','Phosphorus','Sediment',''],d.runs.map(row=>'<tr><td class="name-cell"><strong>'+esc(named('scenarios',row.selection.scenario_id))+'</strong><small>'+esc(named('profiles',row.selection.profile_id))+' · '+esc(named('grids',row.selection.grid_id))+' · '+esc(nativeModelLabel(row.selection))+'</small><small class="mono">'+short(row.id)+'</small></td><td>'+badge(row.state)+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','nitrogen_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','phosphorus_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'sdr','sediment_export')+'</td><td class="actions-cell">'+itemButton('runs',row.id)+(row.state==='prepared'||row.state==='failed'?button('run-start',row.state==='prepared'?'Run':'Resume','data-id="'+row.id+'"','small'):'')+'</td></tr>'))):noRows('Prepare the first native model run','Select a complete grid, retained coefficient profile and baseline or alternative scenario.','run-prepare','Prepare native run');
+    html+=d.runs.length?section('Retained model runs','Annual export totals use the original reporting mask and physical units.',table(['Selection','State','Nitrogen','Phosphorus','Sediment',''],d.runs.map(row=>'<tr><td class="name-cell"><strong>'+esc(named('scenarios',row.selection.scenario_id))+'</strong><small>'+esc(named('profiles',row.selection.profile_id))+' · '+esc(named('grids',row.selection.grid_id))+' · '+esc(nativeModelLabel(row.selection))+'</small><small class="mono">'+short(row.id)+'</small></td><td>'+badge(row.state)+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','nitrogen_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','phosphorus_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'sdr','sediment_export')+'</td><td class="actions-cell">'+itemButton('runs',row.id)+(row.state==='prepared'||row.state==='failed'?button('run-start',row.state==='prepared'?'Run':'Resume','data-id="'+row.id+'"','small'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+row.id+'"','small'):'')+'</td></tr>'))):noRows('Prepare the first native model run','Select a complete grid, retained coefficient profile and baseline or alternative scenario.','run-prepare','Prepare native run');
   }
   if(view==='comparisons'){
     html=pageHeader('Run comparisons','Compare completed original runs on the same retained grid. Signed changes are alternative minus baseline.',button('run-compare','Compare runs','','primary'));
@@ -210,7 +210,8 @@ async function openItem(kind,id,focus=true){
     if(row.error)content+='<div class="notice error">'+esc(row.error.message)+'</div>';
     content+=table(['Native stage','Execution source','Started','Completed','Retained outputs'],Object.entries(row.stages||{}).map(([name,stage])=>'<tr><td>'+esc(human(name))+'</td><td>'+(stage.reused_from?'Reused from '+esc(short(stage.reused_from.run_id))+'<br><small>'+esc(when(stage.reused_at))+'</small>':'Calculated in this retained run')+'</td><td>'+esc(when(stage.started_at))+'</td><td>'+esc(when(stage.completed_at))+'</td><td>'+(Object.keys(stage.files||{}).length+(stage.artifact?1:0))+'</td></tr>'));
     content+=table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>'));
-    content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
+    content+=completedModelOrigins(row);
+    content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+id+'"'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
   }else if(kind==='comparisons'){
     content=defs({baseline:runTitle(row.baseline_run_id),direction:row.direction,compared_outputs:row.common_artifacts||Object.keys(row.alternatives?.[0]?.artifacts||{})})+table(['Alternative','Export','Annual change','Valid cells','Profile also changes'],row.alternatives.flatMap(alt=>Object.entries(alt.artifacts).map(([name,item])=>'<tr><td>'+esc(runTitle(alt.run_id))+'</td><td>'+esc(human(name))+'</td><td>'+number(item.sum_change)+' '+esc((item.units||'').replace('/pixel',''))+'</td><td>'+number(item.valid_cells)+'</td><td>'+esc(alt.profile_changed?'Yes':'No')+'</td></tr>')));
   }else if(kind==='observations'){
@@ -431,17 +432,17 @@ function bindNativeModelFields(){
  const control=form.elements.namedItem('models');
  const update=()=>{
   const chosen=control.value.split(',');
-  for(const node of $('[data-native-models]',form)){
+  for(const node of $$('[data-native-models]',form)){
    const active=node.dataset.nativeModels.split(' ').some(name=>chosen.includes(name));
    node.hidden=!active;
-   for(const input of $('input,select,textarea,button',node))input.disabled=!active;
+   for(const input of $$('input,select,textarea,button',node))input.disabled=!active;
   }
  };
  control.addEventListener('change',update);update();
 }
 function fullNativeRun(row){
  return row?.state==='complete'&&nativeModels(row.selection).length===2&&
-  ['ndr','sdr'].every(name=>row.stages?.[name])&&
+  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&
   ['nitrogen_export','phosphorus_export','sediment_export'].every(name=>row.artifacts?.[name]);
 }
 function nativeOutputCell(row,model,artifact){
@@ -483,20 +484,26 @@ async function profileForm(id){
 }
 async function gridForm(id){
  requireSources();const original=id?await api(endpoint('/api/item',{kind:'grids',id})):null,row=original?.spec,collection=collectionDefault(row);
- const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original 30 m land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
- const canReuse=original?.state==='complete';
+ const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
+ const canReuse=original?.state==='complete',originalResolution=original?.grid?.resolution_m??row?.resolution_m??30;
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
  '<div class="form-grid">'+field('Grid title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Source edition',select('collection',sources(),collection))+
  field('Native models',select('models',nativeModelOptions(),nativeModels(row).join(',')),'NDR requires elevation, land cover and precipitation. SDR requires elevation, land cover, rainfall erosivity and soil erodibility.',true)+
- (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original geometry, source selections and context buffer to reuse them. Clear this choice when changing the geometry. New input roles are prepared in the new grid.</small></label>':'')+
+ field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell. Match the original projected land-cover grid; 30 m is the Upper Savannah default.')+
+ (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original cell size, geometry, source selections and context buffer to reuse them. Clear this choice when changing the physical grid. New input roles are prepared in the new grid.</small></label>':'')+
  rasterRoles.map(([key,label,models])=>field(label,select('raster_'+key,sourceRows(collection,'raster'),row?.input_sources?.[key])).replace('<label','<label data-native-models="'+models+'"')).join('')+
  field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0.01" max="999999" step="any"'),'Metres. The model domain must cover the selected reporting area.')+
  vectorSelection('reporting','Reporting boundary',collection,row?.reporting_area)+vectorSelection('domain','Hydrologic model domain',collection,row?.model_domain)+'</div>',
  'Prepare original grid',()=>{
-  const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={};
+  const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={},resolution=num('resolution');
+  if(resolution<=0)throw Error('Enter a positive native cell size in metres that matches the original land-cover grid.');
   for(const [key,,models]of rasterRoles)if(models.split(' ').some(name=>active.includes(name)))input_sources[key]=val('raster_'+key);
   const selection={title:val('title'),source_collection_id:val('collection'),...modelFields,input_sources,reporting_area:readVector('reporting'),model_domain:readVector('domain'),upstream_buffer_m:num('buffer')};
-  if(canReuse&&form.elements.namedItem('reuse_original_grid')?.checked)selection.base_grid_id=original.id;
+  if(row?.resolution_m!==undefined||resolution!==30)selection.resolution_m=resolution;
+  if(canReuse&&form.elements.namedItem('reuse_original_grid')?.checked){
+   if(resolution!==Number(originalResolution))throw Error('A different native cell size needs a new grid preparation. Clear Reuse original grid preparation, then select the matching original land-cover source.');
+   selection.base_grid_id=original.id;
+  }
   return submitAction('grid.prepare',selection);
  },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();});
 }
@@ -550,6 +557,84 @@ function runForm(){
    $('#run-model-readiness').textContent=!grid||!profile?'Choose the grid and profile to see their available models.':available.length?'Ready to calculate '+available.map(x=>x.toUpperCase()).join(' and ')+'.':'These selections have no native model in common. Select a matching profile or extend the prepared grid.';
   };
   form.elements.namedItem('grid').addEventListener('change',update);form.elements.namedItem('profile').addEventListener('change',update);update();
+ });
+}
+function completedModelStage(row,model){
+ const stage=row?.stages?.[model]||row?.stage_summary?.[model];
+ return stage?.completed_at&&(stage.file_count??Object.keys(stage.files||{}).length)>0?stage:null;
+}
+function completedModelSources(target,model){
+ const rows=(state?.data?.runs||[]).filter(row=>nativeModels(row.selection).includes(model)&&
+  !['running','queued'].includes(row.state)&&completedModelStage(row,model));
+ const rank=row=>(row.selection.scenario_id===target.selection.scenario_id?4:0)+
+  (row.selection.grid_id===target.selection.grid_id?2:0)+
+  (row.selection.profile_id===target.selection.profile_id?1:0);
+ return rows.slice().sort((a,b)=>rank(b)-rank(a)||
+  String(completedModelStage(b,model).completed_at).localeCompare(String(completedModelStage(a,model).completed_at))||
+  a.id.localeCompare(b.id));
+}
+function canSelectCompletedModels(row){
+ return ['prepared','failed'].includes(row?.state)&&nativeModels(row.selection).length===2&&
+  ['ndr','sdr'].every(model=>completedModelSources(row,model).length);
+}
+function completedModelOrigins(row){
+ if(!row.assembly?.models)return '';
+ const rows=['ndr','sdr'].filter(model=>row.assembly.models[model]).map(model=>{
+  const entry=row.assembly.models[model],stage=row.stages?.[model]||{};
+  const source=entry.source_run_id||stage.reused_from?.run_id||row.id;
+  const original=(state?.data?.runs||[]).find(value=>value.id===source);
+  const selection=entry.source_selection||original?.selection;
+  return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(runTitle(source))+
+   '<small class="mono">'+esc(short(source))+'</small></td><td>'+
+   esc(selection?named('grids',selection.grid_id):'Retained original stage')+'</td><td>'+
+   esc(selection?named('profiles',selection.profile_id):'Retained original stage')+
+   '</td><td>'+number(entry.input_matches?.length||0)+' matched inputs</td><td>'+
+   (original?itemButton('runs',source):'')+'</td></tr>';
+ });
+ return '<h3>Original completed models</h3><p class="note">This run retains the selected original model results and their matching input records.</p>'+
+  table(['Model','Original run','Grid','Parameters','Inputs',''],rows);
+}
+async function completedModelsForm(id){
+ const selectedWorkspace=workspace;
+ const target=await api(endpoint('/api/item',{kind:'runs',id}));
+ if(workspace!==selectedWorkspace)return;
+ if(!['prepared','failed'].includes(target.state)||nativeModels(target.selection).length!==2)
+  throw Error('Choose a prepared combined NDR and SDR run.');
+ const candidates={ndr:completedModelSources(target,'ndr'),sdr:completedModelSources(target,'sdr')};
+ if(!candidates.ndr.length||!candidates.sdr.length)
+  throw Error('Complete the original NDR and SDR calculations before selecting their retained results.');
+ const options=model=>candidates[model].map(row=>({id:row.id,
+  title:runTitle(row.id)+' · '+named('grids',row.selection.grid_id)+' · '+short(row.id)}));
+ detailDialog.close();
+ openForm('Use completed models','Choose the original completed NDR and SDR calculations for this prepared combined run. The native operation checks their actual inputs, retains both results and completes the combined reporting outputs.',
+ '<div class="form-grid"><div class="full">'+defs({combined_run:short(target.id),
+  grid:named('grids',target.selection.grid_id),profile:named('profiles',target.selection.profile_id),
+  scenario:named('scenarios',target.selection.scenario_id)})+'</div>'+
+ field('Original completed NDR run',select('source_ndr',options('ndr'),candidates.ndr[0].id),
+  'Nitrogen and phosphorus results.',true)+
+ field('Original completed SDR run',select('source_sdr',options('sdr'),candidates.sdr[0].id),
+  'Sediment results. A completed run containing both models can supply both selections.',true)+
+ '<div id="completed-model-selection" class="full"></div>'+
+ '<p class="note full">The original terrain, land cover, scenario changes, biophysical table and model parameters must match this combined run. The retained native operation checks the selected files and reports any input difference in the same task.</p></div>',
+ 'Use results and complete run',()=>{
+  const source_runs={ndr:val('source_ndr'),sdr:val('source_sdr')};
+  if(!['ndr','sdr'].every(model=>candidates[model].some(row=>row.id===source_runs[model])))
+   throw Error('Choose the original completed source run for each model.');
+  return submitAction('run.start',{run_id:target.id,source_runs});
+ },()=>{
+  const update=()=>{
+   const rows=['ndr','sdr'].map(model=>{
+    const row=candidates[model].find(item=>item.id===val('source_'+model));
+    if(!row)return '';
+    return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(named('scenarios',row.selection.scenario_id))+
+     '</td><td>'+esc(named('grids',row.selection.grid_id))+'</td><td>'+
+     esc(named('profiles',row.selection.profile_id))+'</td><td>'+
+     esc(when(completedModelStage(row,model)?.completed_at))+'</td></tr>';
+   });
+   $('#completed-model-selection').innerHTML=table(['Model','Scenario','Grid','Parameters','Completed'],rows);
+  };
+  form.elements.namedItem('source_ndr').addEventListener('change',update);
+  form.elements.namedItem('source_sdr').addEventListener('change',update);update();
  });
 }
 function compareForm(){
@@ -830,6 +915,7 @@ async function dispatch(button){
  if(action==='scenario-new'||action==='scenario-clone')return scenarioForm(id);
  if(action==='run-prepare')return runForm();
  if(action==='run-start')return executeAction('run.start',{run_id:id});
+ if(action==='run-completed-models')return completedModelsForm(id);
  if(action==='run-compare')return compareForm();
  if(action==='run-log'||action==='run-log-more')return showRunLog(id,action==='run-log-more');
  if(action==='observation-new')return observationForm();

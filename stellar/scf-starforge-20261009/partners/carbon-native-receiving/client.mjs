@@ -25,19 +25,65 @@ async function regular(path){
 }
 async function absent(path){try{await lstat(path);throw Object.assign(new Error('Preserve the existing path and select a new receiving operation directory: '+path),{code:'RECEIVING_EXISTS'});}catch(error){if(error.code!=='ENOENT')throw error;}}
 async function writeState(path,value){const temp=path+'.partial-'+randomUUID();const handle=await open(temp,'wx',0o600);try{await handle.writeFile(JSON.stringify(value,null,2)+'\n');await handle.sync();}finally{await handle.close();}await rename(temp,path);}
-async function identity(pid){
-  let bootId=null,startTicks=null;
+async function identity(pid,procPid=pid){
+  let bootId=null,startTicks=null,state=null,observedProcPid=null;
   try{bootId=(await readFile('/proc/sys/kernel/random/boot_id','utf8')).trim();}catch{}
-  try{const stat=await readFile('/proc/'+pid+'/stat','utf8');startTicks=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/)[19]||null;}catch{}
-  return {hostname:hostname(),pid,bootId,startTicks};
+  try{
+    const stat=await readFile('/proc/'+procPid+'/stat','utf8'),fields=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/);
+    const leadingPid=Number(stat.slice(0,stat.indexOf(' ')));
+    if(Number.isSafeInteger(leadingPid)&&leadingPid>0)observedProcPid=leadingPid;
+    startTicks=fields[19]||null;state=fields[0]||null;
+  }catch{}
+  return {hostname:hostname(),pid,procPid:observedProcPid,bootId,startTicks,state};
+}
+async function observeIdentity(old){
+  const procPid=old?.procPid??old?.pid;
+  if(!Number.isSafeInteger(old?.pid)||old.pid<=0||!Number.isSafeInteger(procPid)||procPid<=0
+    ||!old.bootId||!old.startTicks||old.hostname!==hostname())return null;
+  const current=await identity(old.pid,procPid);
+  return current.state!=='Z'&&current.state!=='X'&&current.bootId===old.bootId&&current.startTicks===old.startTicks;
 }
 async function observeProcess(invocation){
   if(!invocation)return null;
   if(invocation.state==='exited'||invocation.state==='spawn-error')return false;
-  const old=invocation.process;
-  if(!old?.pid||!old.bootId||!old.startTicks||old.hostname!==hostname())return null;
-  const current=await identity(old.pid);
-  return current.bootId===old.bootId&&current.startTicks===old.startTicks;
+  return observeIdentity(invocation.process);
+}
+async function canonicalTarget(path){
+  let ancestor=path;const tail=[];
+  for(;;){
+    try{return join(await realpath(ancestor),...tail.reverse());}
+    catch(error){if(error.code!=='ENOENT')throw error;const parent=dirname(ancestor);if(parent===ancestor)throw error;
+      tail.push(relative(parent,ancestor));ancestor=parent;}
+  }
+}
+async function inspectResumeOutput(resumeFrom){
+  const directory=await realpath(pathValue(resumeFrom,'the preserved receiving output directory'));
+  need((await lstat(directory)).isDirectory(),'RESUME_DIRECTORY','Select the preserved output directory containing receiving.json and its complete operated files.');
+  const receivingFile=join(directory,'receiving.json'),body=await regular(receivingFile),snapshot=json(body);
+  need(snapshot.schema==='stellar-forge.carbon-native-receiving.v1'&&snapshot.operation===OPERATION
+    &&typeof snapshot.output==='string'&&isAbsolute(snapshot.output)&&typeof snapshot.sourceRoot==='string'&&isAbsolute(snapshot.sourceRoot)
+    &&Array.isArray(snapshot.stages),'RESUME_IDENTITY','Select the complete original receiving snapshot for this operation.');
+  const originalOutput=resolve(snapshot.output),originalSourceRoot=resolve(snapshot.sourceRoot),observations=[];
+  if(snapshot.process){
+    const running=await observeIdentity(snapshot.process);
+    observations.push({source:receivingFile,process:snapshot.process,running});
+    need(running!==true,'RESUME_RUNNING','The original receiving process is still running. Continue that existing process before reopening its output.');
+  }
+  for(const path of new Set([directory+'.invocation.json',originalOutput+'.invocation.json'])){
+    const read=await readOptional(path);
+    if(!read)continue;
+    if(read.error){observations.push({source:path,running:null,error:read.error});continue;}
+    const invocation=read.value;
+    const matches=invocation?.schema==='stellar-forge.carbon-native-invocation.v1'&&invocation.operation===OPERATION
+      &&typeof invocation.output==='string'&&[directory,originalOutput].includes(resolve(invocation.output))
+      &&typeof invocation.sourceRoot==='string'&&resolve(invocation.sourceRoot)===originalSourceRoot;
+    if(!matches){observations.push({source:path,running:null,selection:'unrelated-invocation'});continue;}
+    const running=await observeIdentity(invocation.process);
+    observations.push({source:path,bytes:read.body.length,sha256:hash(read.body),process:invocation.process||null,recordedState:invocation.state||null,running});
+    need(running!==true,'RESUME_RUNNING','The original receiving process is still running. Continue that existing process before reopening its output.');
+  }
+  return {directory,receivingFile,receiving:{bytes:body.length,sha256:hash(body)},originalOutput,originalSourceRoot,
+    originalStartedAt:snapshot.startedAt||null,originalStatus:snapshot.status||null,observations};
 }
 
 /** Check the selected bootstrap closure and whole original handover before execution. */
@@ -63,17 +109,18 @@ export async function inspectReceivingSource({sourceRoot}={}){
   need(manifest.handover&&handover.length===manifest.handover.bytes&&hash(handover)===manifest.handover.sha256,'HANDOVER_CHANGED','Use the exact complete original customer handover.');
   need(json(handover).schema==='stellar-forge.stellarcarbon-handover.v1','HANDOVER_SCHEMA','Use the complete editable Stellarcarbon handover.');
   return {schema:'stellar-forge.carbon-native-source-inspection.v1',operation:OPERATION,sourceRoot:root,sourceCommit:manifest.sourceCommit,
-    files:seen.size,sourceBytes:bytes,manifest:{path:manifestPath,bytes:manifestBody.length,sha256:hash(manifestBody)},
+    files:seen.size,sourceBytes:bytes,capabilities:manifest.capabilities&&typeof manifest.capabilities==='object'&&!Array.isArray(manifest.capabilities)?manifest.capabilities:{},
+    manifest:{path:manifestPath,bytes:manifestBody.length,sha256:hash(manifestBody)},
     handover:{bytes:handover.length,sha256:hash(handover)}};
 }
 
 export const RUN_FLAGS=Object.freeze({
-  sourceRoot:'source-root',output:'output',chromium:'chromium',sdkModule:'sdk-module',actor:'actor',
+  sourceRoot:'source-root',output:'output',resumeFrom:'resume-from',chromium:'chromium',sdkModule:'sdk-module',actor:'actor',
   ledgerSource:'ledger-source',registrySource:'registry-source',captureOptions:'capture-options',captureCheckpoint:'capture-checkpoint',
   from:'from',before:'before',archivePath:'archive-path',accountingDirectory:'accounting-directory',
   expectedAccountingWorkspaceId:'expected-accounting-workspace-id',expectedAccountingSourcesSha256:'expected-accounting-sources-sha256',accountingConfig:'accounting-config'
 });
-const PATH_OPTIONS=new Set(['sourceRoot','output','chromium','sdkModule','ledgerSource','registrySource','captureOptions','captureCheckpoint','archivePath','accountingDirectory','accountingConfig']);
+const PATH_OPTIONS=new Set(['sourceRoot','output','resumeFrom','chromium','sdkModule','ledgerSource','registrySource','captureOptions','captureCheckpoint','archivePath','accountingDirectory','accountingConfig']);
 export function receivingArguments(options={}){
   for(const name of Object.keys(options))need(Object.hasOwn(RUN_FLAGS,name)||['keepOpen','signal','onEvent','onStdout','onStderr'].includes(name),'UNKNOWN_OPTION','Unknown receiving option: '+name);
   need(present(options.sourceRoot)&&present(options.output),'RECEIVING_SELECTION','Select both the received source root and a new output directory.');
@@ -168,7 +215,7 @@ export async function receivingStatus({output,archivePath,verifyArchive=false}={
     process:{running:processRunning,recordedState:invocation?.state||null,pid:invocation?.process?.pid||null,exitCode:invocation?.exitCode??null,signal:invocation?.signal||null},
     startedAt:snapshot?.startedAt||invocation?.startedAt||null,completedAt:archiveComplete?descriptor.completedAt:null,
     stages:(snapshot?.stages||[]).map(({name,status,startedAt,completedAt,error})=>({name,status,startedAt,completedAt,error})),
-    workspaces:snapshot?.workspaces||{},accounting:snapshot?.accounting||null,
+    workspaces:snapshot?.workspaces||{},accounting:snapshot?.accounting||null,resume:snapshot?.resume||invocation?.resume||null,
     errors:[...(snapshot?.errors||[]),...(post?.error?[{stage:'live-reopen',...post.error}]:[])],
     archive:{path:archive,descriptor:descriptorPath,complete:Boolean(archiveComplete),bytes:descriptor?.bytes??null,sha256:descriptor?.sha256||null,
       verification:actualSha256?'sha256':archiveComplete?'metadata':'pending',actualSha256,members:descriptor?.memberCount??null},
@@ -202,16 +249,28 @@ export class CarbonNativeReceivingClient{
     const source=await inspectReceivingSource(options);
     const selectedOutput=pathValue(options.output,'a new receiving output directory');
     const parent=await realpath(dirname(selectedOutput)),output=join(parent,relative(dirname(selectedOutput),selectedOutput));
-    const archivePath=pathValue(options.archivePath||output+'.tar.gz','a new complete archive path');
+    const archivePath=await canonicalTarget(pathValue(options.archivePath||output+'.tar.gz','a new complete archive path'));
+    const resume=present(options.resumeFrom)?await inspectResumeOutput(options.resumeFrom):null;
+    if(resume){
+      need(source.capabilities.resumeFrom==='preserved-output-v1','RESUME_SOURCE_CAPABILITY','Receive the complete current source packet with preserved-output-v1 recovery before resuming this saved run.');
+      need(!inside(resume.directory,source.sourceRoot)&&!inside(source.sourceRoot,resume.directory),'RESUME_DIRECTORIES','Keep the current source and preserved original output in separate directories.');
+    }
     need(!inside(source.sourceRoot,output)&&!inside(output,source.sourceRoot),'RECEIVING_DIRECTORIES','Keep the original source and operated output in separate directories.');
     need(!inside(source.sourceRoot,archivePath)&&!inside(output,archivePath),'RECEIVING_ARCHIVE','Place the final archive outside the source and operated output.');
     const invocationFile=output+'.invocation.json';
     const reserved=[output,archivePath,archivePath+'.json',invocationFile,output+'.live-reopened.json',output+'.post-archive-error.json'];
     need(new Set(reserved).size===reserved.length,'RECEIVING_ARCHIVE','Select separate archive, descriptor and invocation paths.');
-    for(const path of reserved)await absent(path);
-    const args=receivingArguments({...options,sourceRoot:source.sourceRoot,output,archivePath});
+    for(const path of reserved){
+      if(resume)need(!inside(resume.directory,path)&&!inside(path,resume.directory),'RESUME_DIRECTORIES','Keep every continuation output, archive and sidecar outside the preserved original output.');
+      await absent(path);
+    }
+    if(resume){
+      const current=await inspectResumeOutput(resume.directory);
+      need(current.receiving.sha256===resume.receiving.sha256&&current.receiving.bytes===resume.receiving.bytes,'RESUME_CHANGED','The original receiving snapshot changed during continuation selection.');
+    }
+    const args=receivingArguments({...options,...(resume?{resumeFrom:resume.directory}:{}),sourceRoot:source.sourceRoot,output,archivePath});
     const invocation={schema:'stellar-forge.carbon-native-invocation.v1',operation:OPERATION,startedAt:new Date().toISOString(),state:'starting',
-      sourceRoot:source.sourceRoot,sourceManifest:source.manifest,output,archivePath,nodeExecutable:this.nodeExecutable,
+      sourceRoot:source.sourceRoot,sourceManifest:source.manifest,output,archivePath,nodeExecutable:this.nodeExecutable,resume,
       script:join(source.sourceRoot,'receiving/receive-native.mjs'),args,process:null};
     await writeFile(invocationFile,JSON.stringify(invocation,null,2)+'\n',{flag:'wx',mode:0o600});
     const running=launch(this.nodeExecutable,[invocation.script,...args],options);
