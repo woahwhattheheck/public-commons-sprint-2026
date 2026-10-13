@@ -143,3 +143,6 @@ export * from './commissioning-application.mjs';
 export * from './assembly-workspace.mjs';
 
 export * from './corrections.mjs';
+
+export * from './agent.mjs';
+export * from './agent-client.mjs';
