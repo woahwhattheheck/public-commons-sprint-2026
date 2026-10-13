@@ -155,7 +155,10 @@ def _presentation(workspace, plan, report):
     notes.append(str(candidate_count) + " original candidate runs represent " + str(profile_count) +
                  " distinct parameter profiles. Run variants retain their own modeled outputs and original IDs.")
     notes.extend(selection["notes"])
-    return {"title": report["title"], "candidate_count": candidate_count,
+    if report.get("reference_history"):
+        notes.insert(0, report["reference_history"]["description"])
+    return {**({"reference_history": report["reference_history"]} if report.get("reference_history") else {}),
+            "title": report["title"], "candidate_count": candidate_count,
             "distinct_profile_count": profile_count, "selected_models": selected_models,
             "predicted_parameters": report.get("predicted_parameters", []), "ranking": ranking, "metrics": metrics,
             "native_execution": review_science.native_execution(report, plan),
@@ -216,6 +219,12 @@ def _html_report(view, plan_id, report_id):
                         + key + '.csv">Download all ' + str(len(view[key])) + ' rows as CSV</a></p>'
                         + _html_table(COLUMNS[key], view[key]) + "</section>")
     notes = "<ul>" + "".join("<li>" + html.escape(note) + "</li>" for note in view["notes"]) + "</ul>"
+    history = view.get("reference_history")
+    history_html = ("<section><h2>Follow-up reference evaluation</h2><p>"
+                    + html.escape(history["description"]) + "</p><ul>"
+                    + "".join('<li><a href="reference-history/' + row["calibration_id"]
+                              + '/report.json">' + html.escape(row["title"]) + "</a></li>"
+                              for row in history["history"]) + "</ul></section>") if history else ""
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" '
             'content="width=device-width,initial-scale=1"><title>' + html.escape(view["title"]) + '</title>'
             '<style>body{font:15px system-ui,sans-serif;color:#202020;background:#fff;max-width:1200px;'
@@ -230,7 +239,7 @@ def _html_report(view, plan_id, report_id):
             + html.escape(view["title"]) + '</h1><p>Completed baseline parameter profiles compared with the '
             'original annual loads and retained catchment groups.</p><p><a href="report.json">Complete analysis JSON</a> · '
             '<a href="selection.json">Original calibration selection</a> · <a href="manifest.json">File inventory</a>'
-            '</p></header><nav>' + nav + "</nav>" + "".join(sections)
+            '</p></header>' + history_html + '<nav>' + nav + "</nav>" + "".join(sections)
             + "<section><h2>Interpretation</h2>" + notes + "</section><footer><p class=\"ids\">Selection "
             + html.escape(plan_id) + "<br>Analysis " + html.escape(report_id) + "</p></footer></body></html>")
 
@@ -599,6 +608,15 @@ class CalibrationOperations:
                 atomic_bytes(directory / (key + ".csv"), _csv_bytes(fields, view[key]), immutable=True)
             atomic_bytes(directory / "index.html", _html_report(view, plan_id, report_id).encode("utf-8"), immutable=True)
             names = ["report.json", "selection.json", "index.html"] + [key + ".csv" for key in COLUMNS]
+            for row in report.get("reference_history", {}).get("history", []):
+                prefix = "reference-history/" + identifier(row["calibration_id"]) + "/"
+                for kind, key, name in (("calibrations", row["calibration_id"], "report.json"),
+                                        ("calibration-plans", row["plan_id"], "plan.json"),
+                                        ("experiment-specs", row["parameter_study_id"], "parameter-study.json")):
+                    ws._get(kind, identifier(key))
+                    target = prefix + name
+                    atomic_bytes(directory / target, (ws.root / kind / (key + ".json")).read_bytes(), immutable=True)
+                    names.append(target)
             files = {name: describe_file(directory, directory / name) for name in names}
             manifest = {"schema": "upstate.calibration-export/v1", "workspace_id": ws.project["id"],
                         "report_id": report_id, "plan_id": plan_id, "title": view["title"],

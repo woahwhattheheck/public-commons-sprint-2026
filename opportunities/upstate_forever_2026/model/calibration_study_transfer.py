@@ -122,6 +122,13 @@ def _pointer(closure, prefix, expected):
 
 def _plan(closure, value, reason):
     selection = value["selection"]
+    if selection.get("prior_evaluation") is not None:
+        from .calibration_followup import resolve
+        binding = selection["prior_evaluation"]
+        report, plan, study_spec = resolve(closure.workspace, binding)
+        record(closure, "calibrations", report["id"], "Earlier evaluation in the selected-profile history")
+        record(closure, "calibration-plans", plan["id"], "Original earlier train/holdout design")
+        closure.need("parameter-studies", study_spec["id"], "Original selected-profile study supplying follow-up cases")
     observed = record(closure, "observations", selection["observation_id"], reason)
     _same(value["observations"], {
         "id": observed["id"], "metadata": observed["metadata"], "original": observed["original"],
