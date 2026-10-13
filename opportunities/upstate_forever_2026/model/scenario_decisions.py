@@ -28,10 +28,31 @@ OUTPUTS = {
 }
 
 
+def delivery_context(value):
+    """Validate an explicit report handoff using the native delivery contract."""
+    if "delivery_mode" not in value:
+        if "native_study" in value:
+            raise ValueError("Choose native_study delivery mode for original study metadata")
+        return {}
+    from . import native_study
+
+    original = {"delivery_mode": value["delivery_mode"]}
+    if "native_study" in value:
+        original["native_study"] = value["native_study"]
+    is_study = native_study.prepare(original)
+    if not is_study and "native_study" in original:
+        raise ValueError("Original study metadata belongs to native_study delivery mode")
+    result = {"delivery_mode": original["delivery_mode"]}
+    if is_study:
+        result["native_study"] = original["native_study"]
+    return result
+
+
 def selection(value):
-    allowed = {"schema", "title", "run_ids", "zones", "pollutants"}
+    allowed = {"schema", "title", "run_ids", "zones", "pollutants",
+               "delivery_mode", "native_study"}
     if not isinstance(value, dict) or set(value) - allowed:
-        raise ValueError("Use a scenario decision selection with schema, title, run_ids, zones and optional pollutants")
+        raise ValueError("Use a scenario decision selection with schema, title, run_ids, zones, optional pollutants and optional original delivery context")
     if value.get("schema") != SELECTION_SCHEMA:
         raise ValueError("Select upstate.scenario-decision-selection/v1")
     if not isinstance(value.get("title"), str) or not value["title"].strip():
@@ -64,7 +85,7 @@ def selection(value):
         if "feature_ids" in zone and (not isinstance(zone["feature_ids"], list)
                 or not zone["feature_ids"] or any(not isinstance(k, str) for k in zone["feature_ids"])):
             raise ValueError("feature_ids must retain complete original string identities")
-    return value
+    return {**value, **delivery_context(value)}
 
 
 def available_pollutants(run):
@@ -139,7 +160,8 @@ def catalog(workspace):
 
 
 def select_cohort(workspace, baseline_run_id, *, alternative_run_ids=None,
-                  title=None, pollutants=None, zones=None):
+                  title=None, pollutants=None, zones=None,
+                  delivery_mode=None, native_study=None):
     """Construct a retained selection from actual completed runs, then build it."""
     choices = catalog(workspace)
     eligible = {run["id"]: run for run in choices["runs"] if run["reportable"]}
@@ -169,6 +191,10 @@ def select_cohort(workspace, baseline_run_id, *, alternative_run_ids=None,
     else:
         selected_runs = [baseline] + [eligible[key] for key in alternative_run_ids]
         value["pollutants"] = [p for p in OUTPUTS if all(p in r["pollutants"] for r in selected_runs)]
+    if delivery_mode is not None:
+        value["delivery_mode"] = delivery_mode
+    if native_study is not None:
+        value["native_study"] = native_study
     return selection(value)
 
 
@@ -661,11 +687,21 @@ def main(argv=None):
     parser.add_argument("--reference-only", action="store_true", help="Report the selected baseline alone, even when alternatives have completed")
     parser.add_argument("--pollutant", action="append", choices=list(OUTPUTS), dest="pollutants")
     parser.add_argument("--title")
+    parser.add_argument("--delivery-mode", choices=("regional_rfp", "native_study"),
+                        help="Retain an explicit report-to-atlas delivery context")
+    parser.add_argument("--study-title", help="Original native study title")
+    parser.add_argument("--study-purpose", help="Original native study purpose")
+    parser.add_argument("--study-reference", help="Optional original study reference")
     parser.add_argument("--zones", help="JSON array of retained watershed selections")
     args = parser.parse_args(argv)
     try:
         if args.reference_only and (not args.baseline_run or args.alternative_runs):
             raise ValueError("Use --reference-only with --baseline-run and without --alternative-run")
+        study_fields = {key: value for key, value in (
+            ("title", args.study_title), ("purpose", args.study_purpose),
+            ("reference", args.study_reference)) if value is not None}
+        if (args.delivery_mode is not None or study_fields) and not args.baseline_run:
+            raise ValueError("Use delivery context flags with --baseline-run; --selection retains its own context")
         workspace = Workspace(args.workspace)
         if args.catalog:
             result = catalog(workspace)
@@ -676,7 +712,9 @@ def main(argv=None):
                          select_cohort(workspace, args.baseline_run,
                                        alternative_run_ids=[] if args.reference_only else args.alternative_runs,
                                        title=args.title, pollutants=args.pollutants,
-                                       zones=read_json(args.zones) if args.zones else None))
+                                       zones=read_json(args.zones) if args.zones else None,
+                                       delivery_mode=args.delivery_mode,
+                                       native_study=study_fields or None))
             result = build(workspace, requested,
                            progress=lambda value: print(json.dumps(value, allow_nan=False), file=sys.stderr, flush=True))
         print(json.dumps(result, allow_nan=False, sort_keys=True))
