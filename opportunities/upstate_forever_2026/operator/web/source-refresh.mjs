@@ -3,7 +3,7 @@ function attachSourceRefresh(root, host = null) {
 const document = root.ownerDocument || globalThis.document;
 const standalone = !host;
 const life = new AbortController();
-let disposed = false, pendingState = null;
+let disposed = false, queuedLoad = null, loadPromise = null, workspaceEpoch = 0;
 const nlcdClasses = new Map([[11,"Open water"],[12,"Perennial ice and snow"],[21,"Developed, open space"],[22,"Developed, low intensity"],[23,"Developed, medium intensity"],[24,"Developed, high intensity"],[31,"Barren land"],[41,"Deciduous forest"],[42,"Evergreen forest"],[43,"Mixed forest"],[52,"Shrub and scrub"],[71,"Grassland and herbaceous"],[81,"Pasture and hay"],[82,"Cultivated crops"],[90,"Woody wetlands"],[95,"Emergent herbaceous wetlands"]]);
 const $ = selector => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +20,7 @@ if (standalone && fragment.get('token')) {
 let workspace = host?.getWorkspace() || (standalone ? opening.get('workspace') || sessionStorage.getItem(workspaceKey) || '' : '');
 let uiKey = 'upstate-source-refresh-selection:' + workspace;
 let retained = {}, original = {}, previewResult = null, previewSelection = null, selectedPlan = null;
-let busy = false, loading = false, timer = null, fingerprints = {}, oldStates = new Map();
+let busy = false, timer = null, fingerprints = {}, oldStates = new Map();
 let previewEpoch = 0, planRequest = 0, selectedPlanStamp = null;
 let preferences = {}, requests = {};
 const requestKey = () => 'upstate-source-refresh-requests:' + workspace;
@@ -239,7 +239,12 @@ async function choosePlan({force=false} = {}) {
     return;
   }
   if (previousId !== id) $('#plan-detail').innerHTML = '<p class="empty">Opening the selected update…</p>';
-  const response = await api(endpoint('/api/source-refresh/plan', {id}));
+  let response;
+  try { response = await api(endpoint('/api/source-refresh/plan', {id})); }
+  catch (e) {
+    if (disposed || ticket !== planRequest || workspace !== selectedWorkspace || $('#plans').value !== id) return;
+    throw e;
+  }
   if (disposed || ticket !== planRequest || workspace !== selectedWorkspace || $('#plans').value !== id) return;
   selectedPlan = response; selectedPlanStamp = stamp;
   const plan = selectedPlan.plan || selectedPlan;
@@ -305,21 +310,24 @@ function renderTasks() {
   }
   if (changed) persistRequests();
 }
-async function load({force=false, suppliedState=null} = {}) {
+async function refreshOnce({force=false, suppliedState=null} = {}) {
   if (disposed) return;
-  if (loading) { if (suppliedState) pendingState = suppliedState; return; }
-  loading = true;
+  const requestEpoch = workspaceEpoch, requestedWorkspace = workspace;
   try {
     const next = host ? (suppliedState || host.getState()) : await api(workspace ? endpoint('/api/state') : '/api/state');
-    if (disposed || !next?.workspace_key) return;
-    if (host && next.workspace_key !== workspace) return;
-    original = next;
-    if (workspace !== original.workspace_key) { workspace = original.workspace_key; readPreferences(); }
+    if (disposed || requestEpoch !== workspaceEpoch || !next?.workspace_key) return;
+    if (host && (next.workspace_key !== workspace || host.getWorkspace() !== workspace)) return;
+    if (requestedWorkspace && next.workspace_key !== requestedWorkspace) {
+      throw new Error('The operator returned another workspace. Reopen the selected study.');
+    }
+    const updates = next.data?.source_updates;
+    const received = updates ? {project:next.data.project,sources:next.data.sources,...updates} :
+      await api(endpoint('/api/source-refresh', {workspace:next.workspace_key}));
+    if (disposed || requestEpoch !== workspaceEpoch || workspace !== requestedWorkspace ||
+        (host && host.getWorkspace() !== next.workspace_key)) return;
+    original = next; retained = received;
+    if (workspace !== next.workspace_key) { workspace = next.workspace_key; readPreferences(); }
     if (standalone) sessionStorage.setItem(workspaceKey, workspace);
-    const updates = original.data?.source_updates;
-    retained = updates ? {project:original.data.project,sources:original.data.sources,...updates} :
-      await api(endpoint('/api/source-refresh'));
-    if (disposed) return;
     options($('#workspace'), (original.workspaces || []).filter(row => row.available !== false), workspace, 'Choose a workspace');
     const sourceFingerprint = JSON.stringify((retained.sources || []).map(x => x.id));
     if (force || fingerprints.sources !== sourceFingerprint) {
@@ -346,17 +354,37 @@ async function load({force=false, suppliedState=null} = {}) {
     renderChanges(); renderTasks();
     if ($('#plans').value) await choosePlan({force});
     updateButtons();
-  } catch (e) { if (force || !retained.project) error(e); }
-  finally {
-    loading = false; clearTimeout(timer);
-    const active = (original.tasks || []).some(x => isRefreshTask(x) && ['queued','running'].includes(x.state));
-    if (!disposed && standalone && !document.hidden) timer = setTimeout(() => load(), active ? 2500 : 15000);
-    if (!disposed && pendingState) {
-      const next = pendingState; pendingState = null;
-      queueMicrotask(() => load({suppliedState:next}));
-    }
+  } catch (e) {
+    if (!disposed && requestEpoch === workspaceEpoch && (force || !retained.project)) error(e);
   }
 }
+
+function load({force=false, suppliedState=null} = {}) {
+  if (disposed) return Promise.resolve();
+  const incoming = {force, suppliedState};
+  if (loadPromise) {
+    queuedLoad = {force:force || Boolean(queuedLoad?.force),
+                  suppliedState:suppliedState || queuedLoad?.suppliedState || null};
+    return loadPromise;
+  }
+  loadPromise = (async () => {
+    let next = incoming;
+    while (next && !disposed) {
+      queuedLoad = null;
+      if (next.suppliedState?.workspace_key !== workspace) next.suppliedState = null;
+      await refreshOnce(next);
+      next = queuedLoad;
+    }
+  })().finally(() => {
+    const pending = queuedLoad;
+    loadPromise = null; queuedLoad = null; clearTimeout(timer);
+    if (!disposed && pending) return load(pending);
+    const active = (original.tasks || []).some(x => isRefreshTask(x) && ['queued','running'].includes(x.state));
+    if (!disposed && standalone && !document.hidden) timer = setTimeout(() => load(), active ? 2500 : 15000);
+  });
+  return loadPromise;
+}
+
 function parseClasses(id) {
   const value = $('#' + id).value.trim();
   if (!value) return null;
@@ -442,13 +470,17 @@ $('#reload').addEventListener('click', () => guarded(async () => { if (host) awa
 $('#workspace').addEventListener('change', () => guarded(async () => {
   if (!standalone) return;
   savePreferences();
+  workspaceEpoch += 1;
   workspace = $('#workspace').value; fingerprints = {}; previewResult = previewSelection = selectedPlan = null;
+  retained = {}; original = {...original,workspace_key:workspace,tasks:[],data:{}};
   previewEpoch += 1; planRequest += 1; selectedPlanStamp = null;
   oldStates = new Map(); readPreferences();
   sessionStorage.setItem(workspaceKey,workspace);
-  $('#from-edition').value = $('#to-edition').value = $('#plans').value = '';
-  $('#from-raster').value = $('#to-raster').value = $('#zones').value = '';
-  $('#preview-result').innerHTML = ''; $('#plan-detail').innerHTML = '';
+  for (const id of ['from-edition','to-edition','plans','from-raster','to-raster','zones']) {
+    options($('#' + id), [], '', 'Opening selected workspace…');
+  }
+  for (const id of ['mapping','preview-result','plan-detail','change-results','tasks']) $('#' + id).replaceChildren();
+  error(null); notice('');
   await load({force:true});
 }));
 root.addEventListener('click', event => {
@@ -507,7 +539,7 @@ return {
     if (disposed) return;
     savePreferences(); disposed = true; previewEpoch += 1; planRequest += 1;
     clearTimeout(timer); life.abort();
-    pendingState = null;
+    queuedLoad = null; workspaceEpoch += 1;
   }
 };
 }
