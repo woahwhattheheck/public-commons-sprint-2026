@@ -11,6 +11,9 @@ from migration_store import MigrationError, canonical, identity, text, integer
 SCHEMA = "commons.financial-reporting/v1"
 AMOUNT = re.compile(r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$")
 ROLES = ("actual", "budget", "commitment", "forecast", "opening_balance", "report_output")
+class OriginalNumber(str):
+    """An unchanged JSON numeric token, distinguished from JSON text."""
+
 FIXED = ("account", "posting_date", "document_date")
 MAX_ROWS = 1000000
 MAX_COLUMNS = 1000
@@ -62,8 +65,14 @@ def cell(row, field):
         return row["dimensions"].get(field[10:], {"present": False})
     return row.get(field, {"present": False})
 
+def original_kind(value):
+    if isinstance(value, OriginalNumber): return "number"
+    if value is None: return "null"
+    if isinstance(value, bool): return "boolean"
+    return "string"
+
 def selected_cell(raw, name):
-    return {"present": name in raw, **({"value": raw[name]} if name in raw else {})}
+    return {"present": name in raw, **({"value": raw[name], "kind": original_kind(raw[name])} if name in raw else {})}
 
 def validate_mapping(mapping, columns):
     strict_object(mapping, ("keys", "amount", "currency", "account"),
@@ -145,9 +154,9 @@ def original_rows(raw_bytes, format_name, dialect):
             out.append(dict(zip(columns, values)))
         return columns, out
     try:
-        # Decimal tokens are preserved as exact strings. Unchanged original bytes
-        # retain the distinction between a JSON string and number.
-        rows = json.loads(source, parse_float=str, parse_int=str,
+        # Exact original numeric lexemes retain a distinct type for source keys,
+        # dimension grouping and output comparison; no coercion to JSON text.
+        rows = json.loads(source, parse_float=OriginalNumber, parse_int=OriginalNumber,
                           parse_constant=lambda x: (_ for _ in ()).throw(ValueError(x)),
                           object_pairs_hook=unique_pairs)
     except (ValueError, TypeError) as exc:
@@ -181,7 +190,7 @@ def normalize(raw_rows, mapping):
         except MigrationError:
             issues.append("INVALID_OR_ABSENT_AMOUNT")
         currency = (selected_cell(raw, mapping["currency"]["column"]) if "column" in mapping["currency"]
-                    else {"present": True, "value": mapping["currency"]["constant"]})
+                    else {"present": True, "value": mapping["currency"]["constant"], "kind": "string"})
         if not isinstance(currency.get("value"), str) or not currency["value"].strip():
             issues.append("MISSING_CURRENCY")
         values = {field: selected_cell(raw, mapping[field]) if field in mapping else {"present": False} for field in FIXED}
@@ -190,6 +199,7 @@ def normalize(raw_rows, mapping):
                 try: date_value(values[field].get("value"))
                 except MigrationError: issues.append("INVALID_" + field.upper())
         row = {"ordinal": ordinal, "key": key, "key_sha256": identity(key), "raw": raw,
+               "raw_types": {key: original_kind(value) for key, value in raw.items()},
                "amount": amount, "currency": currency, **values,
                "dimensions": {name: selected_cell(raw, col) for name, col in mapping.get("dimensions", {}).items()},
                "issues": issues}
@@ -329,8 +339,8 @@ def compare_output(definition, run, output_dataset, output_rows):
                   if issue not in ("INVALID_POSTING_DATE", "INVALID_DOCUMENT_DATE")]
         if len(right) > 1: status = "AMBIGUOUS"
         elif issues: status = "UNKNOWN"
-        elif left is None: status = "UNEXPECTED"
-        elif not right: status = "MISSING"
+        elif left is None: status = "UNEXPECTED" if run["calculation"]["complete"] else "UNKNOWN"
+        elif not right: status = "MISSING" if output_dataset["context"]["coverage"] == "complete" else "UNKNOWN"
         else: status = "MATCH" if decimal_value(left["amount"]) == decimal_value(right[0][1]["amount"]["value"]) else "DIFFERENT"
         actual = right[0][1]["amount"].get("value") if len(right) == 1 else None
         delta = None
@@ -344,5 +354,5 @@ def compare_output(definition, run, output_dataset, output_rows):
               for status in ("MATCH", "DIFFERENT", "UNKNOWN", "AMBIGUOUS", "MISSING", "UNEXPECTED")}
     return {"items": items, "counts": counts, "expected_groups": len(expected), "observed_rows": len(output_rows),
             "complete": run["calculation"]["complete"] and output_dataset["context"]["coverage"] == "complete",
-            "all_matched": bool(items) and all(item["status"] == "MATCH" for item in items),
+            "all_matched": run["calculation"]["complete"] and output_dataset["context"]["coverage"] == "complete" and all(item["status"] == "MATCH" for item in items),
             "meaning": "Every report key is compared separately. Equal grand totals never cancel row-level differences."}
