@@ -2,7 +2,7 @@
 import {createMerchantWorkspaceRuntime} from '../../fhir_eltss/connected/runtime.mjs';
 import {gravityReferralNativeRoute,gravityReferralUploadRoute} from '../../fhir_referral/connected/runtime.mjs';
 import {HumanServicesDirectoryConnection} from './connection.mjs';
-import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,
+import {humanServicesDirectoryMerchantTools,directoryBodyRoutes,directoryNativeContract,directorySourceContract,directoryConformanceContract,directoryOperatingPlansContract,
   validateHumanServicesDirectoryArguments,nativeInputActions} from './catalog.mjs';
 import {EXPORT_SCHEMA,RESULT_SCHEMA,MANIFEST_NAME,parseHumanServicesDirectoryExport,checked,SHA} from './contracts.mjs';
 export {humanServicesDirectoryMerchantTools} from './catalog.mjs';
@@ -19,6 +19,9 @@ function filename(member,fallback){
 }
 export function humanServicesDirectoryNativeRoute(action,args){
   if(action==='directory_state')return {method:'GET',target:'/api/state'};
+  if(action==='directory_operating_catalog')return {method:'GET',target:path('operating-plans','catalog')};
+  for(const kind of ['document','draft','input','basis'])if(action==='directory_operating_'+kind)
+    return {method:'GET',target:query(path('operatingPlans',args.recordId,kind),kind==='draft'?{revision:args.revision}:{})};
   const direct={directory_catalogue:'catalogue',directory_guidance:'guidance'};
   if(direct[action])return {method:'GET',target:path(direct[action])};
   const selected=directoryBodyRoutes.find(row=>row.action===action);
@@ -113,6 +116,8 @@ export const MerchantHumanServicesDirectory=createMerchantWorkspaceRuntime({
   schemaMetadata:{
     nativeDirectory:'stellar-forge.human-services-directory.v1',
     directory:directoryNativeContract,source:directorySourceContract,conformance:directoryConformanceContract,
+    operatingPlans:directoryOperatingPlansContract,
+    operatingPlanSemantics:'The unchanged original OperatingPlan owns full revisions, exact-prefix receiving, copy and registration comparison. Prepared records retain the original complete basis and command catalogue; accepting a preview saves its exact reviewed document. Steps record human procedures and do not execute native commands.',
     recovery:'Read the same directory acquisition after an uncertain response. Source import keeps its saved import profile and complete original file. Receiving retains the original directory UUID, source indices, reviewed mappings, service selection and Gravity records.',
     sourceSemantics:'Use the literal source edition and original mapping rows. HSDS3.3.1 input and HSD STU1 mappings from HSDS2.0.1 remain distinct. Service selection retains stated status, schedule, capacity units/times and the operator decision. Native Task and ServiceRequest changes require the exact reviewed resource binding.',
     fileLimits:'Connected complete-file receiving uses the maintained 512MiB limit. The native directory routes support larger selected archives within their declared 2GiB maximum; those files remain available directly from the original operator.'
