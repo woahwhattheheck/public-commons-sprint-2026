@@ -16,6 +16,9 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_report_maps.py",
+    "model/CONSERVATION_REPORT_MAPS.md",
+    "integration/conservation_report_map_composition.json",
     "model/conservation_report_source.py",
     "model/conservation_report_source_cli.py",
     "model/CONSERVATION_REPORT_SOURCE.md",
@@ -204,7 +207,8 @@ KNOWN_PRIOR = {
         "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c",
         "27c1f0189ff1cdefdba33052a18d3e09725fb4dd63fd8fc070fbd145f72b580a",
         "706708c62a9e881f635b898935c3de948bdc4ab92552ea0d07d5a44014b13536",
-        "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e"
+        "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e",
+        "8da0c5e4b6fb38c7cdeddd65f86f1256186da1aa1876c00c454bedb303e4bbfd"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -216,7 +220,8 @@ KNOWN_PRIOR = {
         "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352",
         "f02cbba6296578a498566f577edde0c7cf897e37a1916bdceb7fa3faea6ef3a2",
         "91e45b0b566ffd433cae627f3167f42123abb3c2ccf8e53c388767e4618254b3",
-        "0232570ab566d79d5d2a563928c51a470098df18f760ffe71a47cb6769897dcf"
+        "0232570ab566d79d5d2a563928c51a470098df18f760ffe71a47cb6769897dcf",
+        "1f47edbdd7eff17746e6f851d0ff89e13e67b92dab21598b86690bbfb00adc91"
     ],
     "model/keowee_priority.py": [
         "9686b4b9224f2d09f705e09a4300877f2bf5ce39a4405c81aa5fc84b2cd8949e",
@@ -482,13 +487,21 @@ KNOWN_PRIOR = {
         "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2"
     ],
     "model/conservation_report_source.py": [
-        "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538"
+        "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538",
+        "72182c02d1d91e710139026c24d1ce5af1ab3961174426a7790c2ebd81bfc482"
     ],
     "model/CONSERVATION_REPORT_SOURCE.md": [
-        "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885"
+        "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885",
+        "0337aca8899e357dea61ea672413ae85f2cbe413cf4bf18936faf423322f6ccd"
     ],
     "integration/conservation_report_operator_composition.json": [
         "44675f162fb4d1e2276abab5da7e75ea55717ed77776c0b1bc71e44cccf18fa1"
+    ],
+    "model/conservation_report_source_cli.py": [
+        "a653d0b858b46d2ff1f69c0628acf80c4681c2a4cde351932bb6f984a678d1c4"
+    ],
+    "integration/component_fragments/conservation-scientific-report-source.json": [
+        "b701d372ba30d3f8372a58cddfba33e11434f29be891970e367a3fe9baee9c99"
     ]
 }
 
@@ -1019,6 +1032,9 @@ def verify_application_dependencies(application, incoming):
         "source/capture_original_overlays.py", "source/capture_upstream_network.py",
         "source_tools/soil_sources.py", "operator/extension_registry.py",
     )
+    if ("model/conservation_report_maps.py" in incoming
+            or (application / "model/conservation_report_maps.py").is_file()):
+        required += ("model/scientific_figures.py", "model/scientific_map_figures.py")
     missing = [name for name in required
                if name not in incoming and not (application / name).is_file()]
     if missing:

@@ -16,6 +16,7 @@ def main(argv=None):
     prepare = commands.add_parser("prepare", help="Retain the selected original portfolio as a report source")
     prepare.add_argument("--plan-id", required=True)
     prepare.add_argument("--title")
+    prepare.add_argument("--no-maps", action="store_true", help="Retain a source-only edition without geographic figures")
     inspect = commands.add_parser("inspect", help="Verify and reopen an imported report-source receipt")
     inspect.add_argument("--id", required=True)
     listing = commands.add_parser("list", help="List completed report-source receipts")
@@ -23,7 +24,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     workspace = Workspace(args.workspace.resolve(), create=False)
     if args.command == "prepare":
-        spec = {"plan_id": args.plan_id}
+        spec = {"plan_id": args.plan_id, "include_maps": not args.no_maps}
         if args.title is not None:
             spec["title"] = args.title
         value = report_source.prepare(workspace, spec)
