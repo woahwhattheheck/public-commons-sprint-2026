@@ -60,3 +60,10 @@ Before calling an outgoing product client-ready, the producing worker must run/o
 Repair broken, cramped, clipped, overflowing or unreadable output in the same authorized work. Keep the plain industrial design and original scientific computation. Source review and check commands do not replace actual rendered product use. Carry the owner instruction into every existing receiving handoff and return actual inspected screenshots/files to the producing team.
 
 The existing Ecosystem sprint cutoff remains **October 13, 2026 at 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville). This component adds no watcher, parallel receiving worker or new deadline.
+
+
+## Complete Measurements1.2 continuity
+
+The current inventory also includes the original large-file intake, incremental source retention, complete large exports and independent receive. Both browser wrapper layouts retain their own relative imports. The source includes the original standalone compiler under `measurement_workspace/legacy_chemistry.py`, while the active Chemistry adapter keeps the full atomic revision, compound/interval mapping and original binary companions. The large-file entry delegates to this same guarded installer for complete scientific releases. It does not replace the original parser, solver, authenticated host or saved operations.
+
+Known preimages include the original core, merged source-bound edition and exact original1.2 composition. Unknown newer files remain available for their current owner to compose. Original source-instruction and owner-direction files travel with the complete release. Restart the same provider at its ordinary idle boundary so the managed Node engine loads the combined module edition.

@@ -9,7 +9,8 @@
     "measured_observations.css",
     "measured_observations_extension.mjs",
     "measured_collections.mjs",
-    "measured_chemistry.mjs"
+    "measured_chemistry.mjs",
+    "measured_large_files.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",

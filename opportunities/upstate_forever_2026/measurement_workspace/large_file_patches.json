@@ -1,0 +1,229 @@
+{
+  "measurement_workspace/engine/workspace.mjs": [
+    {
+      "old": "import {DatabaseSync} from 'node:sqlite';\nimport fs from 'node:fs';\nimport path from 'node:path';\n",
+      "new": "import {installLargeFileReads} from './large_intake.mjs';\nimport {DatabaseSync} from 'node:sqlite';\nimport fs from 'node:fs';\nimport path from 'node:path';\n",
+      "before": "",
+      "after": "import {randomUUID} from 'node:crypto';\nimport {parseSource, hash, stable, FIELDS} from './normalise.mjs';\nimport {InputError, clean, csv} from './parse.mjs';\n"
+    },
+    {
+      "old": "    return this.summary();\n  }\n}\n",
+      "new": "    return this.summary();\n  }\n}\n\ninstallLargeFileReads(MeasurementWorkspace);\n",
+      "before": "      this.db.prepare(\"UPDATE meta SET value=? WHERE key='revision'\").run(packageValue.revision);\n      this.event('receive','workspace',{sourceCreatedAt:packageValue.createdAt,sourceRevision:packageValue.revision});\n    });\n",
+      "after": ""
+    }
+  ],
+  "measurement_workspace/engine/http.mjs": [
+    {
+      "old": "import {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+      "new": "import {largeOperation} from './large_http.mjs';\nimport {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+      "before": "",
+      "after": "import {MeasurementWorkspace} from './workspace.mjs';\nimport {InputError,safeJSON} from './parse.mjs';\nimport {providerQuery,fetchProvider} from './providers.mjs';\n"
+    },
+    {
+      "old": "    }\n    const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);\n      const s=get();\n      const reaches=async()=>reachProvider?await reachProvider():await baseData(s.directory,'reaches.json');\n      if(parts[0]==='collections'){\n        if(method==='GET'&&parts.length===1){send(response,200,{collections:listCollections(s)});return;}\n",
+      "new": "    }\n    const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);\n      const s=get();\n      if(parts[0]==='large'){send(response,200,await largeOperation(s,method,parts.slice(1),query,['POST','PUT'].includes(method)?await readBody(request):{}));return;}\n      const reaches=async()=>reachProvider?await reachProvider():await baseData(s.directory,'reaches.json');\n      if(parts[0]==='collections'){\n        if(method==='GET'&&parts.length===1){send(response,200,{collections:listCollections(s)});return;}\n",
+      "before": "    if(!['GET','HEAD'].includes(request.method)&&request.headers.origin){\n      let origin;try{origin=new URL(request.headers.origin);}catch{throw new InputError('Invalid request origin',403);}\n      if(origin.host!==request.headers.host)throw new InputError('Cross-origin writes are not accepted',403);\n",
+      "after": "        if(method==='POST'&&parts[1]==='preview'&&parts.length===2){send(response,200,previewCollection(s,await readBody(request)));return;}\n        if(method==='POST'&&parts[1]==='receive'&&parts.length===2){send(response,200,receiveCollection(s,await readBody(request)));return;}\n        if(method==='POST'&&parts.length===3&&parts[2]==='publish'){send(response,200,publishCollection(s,parts[1]));return;}\n"
+    }
+  ],
+  "measurement_workspace/engine/cli.mjs": {
+    "variants": [
+      {
+        "source": "retained-1.1.0",
+        "operations": [
+          {
+            "old": "#!/usr/bin/env node\nimport {collectionFromFiles,previewCollection,receiveCollection,listCollections,publishCollection} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+            "new": "#!/usr/bin/env node\nimport {runLargeCLI} from './large_cli.mjs';\nimport {collectionFromFiles,previewCollection,receiveCollection,listCollections,publishCollection} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+            "before": "",
+            "after": "import http from 'node:http';\nimport {fileURLToPath} from 'node:url';\nimport {MeasurementWorkspace} from './workspace.mjs';\n"
+          },
+          {
+            "old": "const [command='help',...args]=process.argv.slice(2), options={};\nfor(let i=0;i<args.length;i++){if(!args[i].startsWith('--')||args[i+1]===undefined)throw new Error('Options require --name value pairs');options[args[i].slice(2)]=args[++i];}\nconst directory=path.resolve(options.workspace||process.env.DATA_DIR||'./data');\nconst readText=async file=>new TextDecoder('utf-8',{fatal:true}).decode(await fs.readFile(file));\nconst output=async value=>{const text=typeof value==='string'?value:JSON.stringify(value,null,2)+'\\n';if(options.output)await fs.writeFile(options.output,text);else process.stdout.write(text);};\nif(command==='help')console.log(`Measurements workspace, Node >=22.16\\n\\ncollection-preview|collection-receive --workspace ./data --manifest collection.json --source-root ./originals\\ncollection-publish --workspace ./data --id COLLECTION_SHA\\ncollections --workspace ./data\\nserve --workspace ./data --port 3101\\npreview|import --workspace ./data --kind wqp|stations|usgs-daily --file input.csv --label Source\\nfetch --workspace ./data --kind wqp|stations|usgs-daily --station USGS-... --from YYYY-MM-DD --to YYYY-MM-DD\\nsummary|records|calibration|export|portable --workspace ./data --output result.json\\nreceive --workspace ./empty-data --file complete-workspace.json\\nmap --workspace ./data --station ORG-ID --reach r1 --reviewer Name --reason Rationale\\nreview --workspace ./data --id HASH --state include|exclude|pending --reviewer Name --reason Rationale\\nloads --workspace ./data --station ORG-ID --flow-station USGS-ID --parameter tn|tp --reason Rationale\\n\\nThe server also exposes the original-app integration API /api/measurement-workspace.\\n`);\nelse if(command==='serve'){\n  const handler=createMeasurementHandler({directory}),publicDir=fileURLToPath(new URL('../web/',import.meta.url));\n  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n",
+            "new": "const [command='help',...args]=process.argv.slice(2), options={};\nfor(let i=0;i<args.length;i++){if(!args[i].startsWith('--')||args[i+1]===undefined)throw new Error('Options require --name value pairs');options[args[i].slice(2)]=args[++i];}\nconst directory=path.resolve(options.workspace||process.env.DATA_DIR||'./data');\nconst readText=async file=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await fs.readFile(file));\nconst output=async value=>{const text=typeof value==='string'?value:JSON.stringify(value,null,2)+'\\n';if(options.output)await fs.writeFile(options.output,text);else process.stdout.write(text);};\nif(command.startsWith('large-'))await runLargeCLI(command.slice(6),options,directory);\nelse if(command==='help')console.log(`Measurements workspace, Node >=22.16\\n\\nlarge-prepare|large-import --workspace ./data --file original.csv --kind wqp --label Source\\nlarge-commit --workspace ./data --intake ID\\nlarge-status --workspace ./data\\nlarge-export --workspace ./data --output ./complete-edition\\nlarge-receive --workspace ./empty-data --file complete-edition/project.zip\\n\\ncollection-preview|collection-receive --workspace ./data --manifest collection.json --source-root ./originals\\ncollection-publish --workspace ./data --id COLLECTION_SHA\\ncollections --workspace ./data\\nserve --workspace ./data --port 3101\\npreview|import --workspace ./data --kind wqp|stations|usgs-daily --file input.csv --label Source\\nfetch --workspace ./data --kind wqp|stations|usgs-daily --station USGS-... --from YYYY-MM-DD --to YYYY-MM-DD\\nsummary|records|calibration|export|portable --workspace ./data --output result.json\\nreceive --workspace ./empty-data --file complete-workspace.json\\nmap --workspace ./data --station ORG-ID --reach r1 --reviewer Name --reason Rationale\\nreview --workspace ./data --id HASH --state include|exclude|pending --reviewer Name --reason Rationale\\nloads --workspace ./data --station ORG-ID --flow-station USGS-ID --parameter tn|tp --reason Rationale\\n\\nThe server also exposes the original-app integration API /api/measurement-workspace.\\n`);\nelse if(command==='serve'){\n  const handler=createMeasurementHandler({directory}),publicDir=fileURLToPath(new URL('../web/',import.meta.url));\n  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n",
+            "before": "import {createMeasurementHandler} from './http.mjs';\nimport {fetchProvider} from './providers.mjs';\nimport {calibrationExport,calibrationCSV,pairedLoads} from './calibration.mjs';\n",
+            "after": "  const server=http.createServer(async(req,res)=>{\n    if(token&&req.headers['x-measurement-internal-token']!==token){res.statusCode=403;res.end('Forbidden');return;}\n    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n"
+          },
+          {
+            "old": "    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n    if(req.url.startsWith('/api/measurement-workspace'))return handler(req,res);\n    const name=new URL(req.url,'http://localhost').pathname;\n    if(name==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(`<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Upper Savannah \u00b7 Measured data</title><body style=\"margin:0\"><main id=\"measurements\"></main><script type=\"module\">import{mountMeasurements}from'/measurements/workspace.js';mountMeasurements(document.getElementById('measurements'));</script></body></html>`);}\n    const files={'/measurements/workspace.js':['workspace.js','text/javascript'],'/measurements/workspace.css':['workspace.css','text/css']};\n    if(files[name])try{const[file,mime]=files[name];res.setHeader('Content-Type',mime+'; charset=utf-8');res.end(await fs.readFile(path.join(publicDir,file)));return;}catch(error){console.error(error);}\n    res.statusCode=404;res.end('Not found');\n  });\n",
+            "new": "    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n    if(req.url.startsWith('/api/measurement-workspace'))return handler(req,res);\n    const name=new URL(req.url,'http://localhost').pathname;\n    if(name==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(`<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Upper Savannah \u00b7 Measured data</title><body style=\"margin:0\"><section id=\"large-files\"></section><main id=\"measurements\"></main><script type=\"module\">import{mountLargeFilePanel}from'/measurements/large_files.mjs';import{mountMeasurements}from'/measurements/workspace.js';const measurements=mountMeasurements(document.getElementById('measurements'));mountLargeFilePanel(document.getElementById('large-files'),{refresh:()=>measurements.refresh()});</script></body></html>`);}\n    const files={'/measurements/large_files.mjs':['large_files.mjs','text/javascript'],'/measurements/workspace.js':['workspace.js','text/javascript'],'/measurements/workspace.css':['workspace.css','text/css']};\n    if(files[name])try{const[file,mime]=files[name];res.setHeader('Content-Type',mime+'; charset=utf-8');res.end(await fs.readFile(path.join(publicDir,file)));return;}catch(error){console.error(error);}\n    res.statusCode=404;res.end('Not found');\n  });\n",
+            "before": "  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n  const server=http.createServer(async(req,res)=>{\n    if(token&&req.headers['x-measurement-internal-token']!==token){res.statusCode=403;res.end('Forbidden');return;}\n",
+            "after": "  server.listen(Number(options.port||3101),options.host||'127.0.0.1',()=>console.log(JSON.stringify({ready:true,host:options.host||'127.0.0.1',port:server.address().port,pid:process.pid})));\n  if(token){process.stdin.resume();process.stdin.once('end',()=>server.close(()=>{handler.close();process.exit(0);}));}\n  for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>{handler.close();process.exit(0);}));\n"
+          }
+        ]
+      },
+      {
+        "source": "published-PR3713-a81e0728",
+        "operations": [
+          {
+            "old": "#!/usr/bin/env node\nimport {collectionFromFiles,previewCollection,receiveCollection,listCollections,publishCollection} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+            "new": "#!/usr/bin/env node\nimport {runLargeCLI} from './large_cli.mjs';\nimport {collectionFromFiles,previewCollection,receiveCollection,listCollections,publishCollection} from './collections.mjs';\nimport fs from 'node:fs/promises';\nimport path from 'node:path';\n",
+            "before": "",
+            "after": "import http from 'node:http';\nimport {fileURLToPath} from 'node:url';\nimport {MeasurementWorkspace} from './workspace.mjs';\n"
+          },
+          {
+            "old": "const directory=path.resolve(options.workspace||process.env.DATA_DIR||'./data');\nconst readText=async file=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await fs.readFile(file));\nconst output=async value=>{const text=typeof value==='string'?value:JSON.stringify(value,null,2)+'\\n';if(options.output)await fs.writeFile(options.output,text);else process.stdout.write(text);};\nif(command==='help')console.log(`Measurements workspace, Node >=22.16\\n\\ncollection-preview|collection-receive --workspace ./data --manifest collection.json --source-root ./originals\\ncollection-publish --workspace ./data --id COLLECTION_SHA\\ncollections --workspace ./data\\nserve --workspace ./data --port 3101\\npreview|import --workspace ./data --kind wqp|stations|usgs-daily --file input.csv --label Source\\nfetch --workspace ./data --kind wqp|stations|usgs-daily --station USGS-... --from YYYY-MM-DD --to YYYY-MM-DD\\nsummary|records|calibration|export|portable --workspace ./data --output result.json\\nreceive --workspace ./empty-data --file complete-workspace.json\\nmap --workspace ./data --station ORG-ID --reach r1 --reviewer Name --reason Rationale\\nreview --workspace ./data --id HASH --state include|exclude|pending --reviewer Name --reason Rationale\\nloads --workspace ./data --station ORG-ID --flow-station USGS-ID --parameter tn|tp --reason Rationale\\n\\nThe server also exposes the original-app integration API /api/measurement-workspace.\\n`);\nelse if(command==='serve'){\n  const handler=createMeasurementHandler({directory}),publicDir=fileURLToPath(new URL('../web/',import.meta.url));\n  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n",
+            "new": "const directory=path.resolve(options.workspace||process.env.DATA_DIR||'./data');\nconst readText=async file=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await fs.readFile(file));\nconst output=async value=>{const text=typeof value==='string'?value:JSON.stringify(value,null,2)+'\\n';if(options.output)await fs.writeFile(options.output,text);else process.stdout.write(text);};\nif(command.startsWith('large-'))await runLargeCLI(command.slice(6),options,directory);\nelse if(command==='help')console.log(`Measurements workspace, Node >=22.16\\n\\nlarge-prepare|large-import --workspace ./data --file original.csv --kind wqp --label Source\\nlarge-commit --workspace ./data --intake ID\\nlarge-status --workspace ./data\\nlarge-export --workspace ./data --output ./complete-edition\\nlarge-receive --workspace ./empty-data --file complete-edition/project.zip\\n\\ncollection-preview|collection-receive --workspace ./data --manifest collection.json --source-root ./originals\\ncollection-publish --workspace ./data --id COLLECTION_SHA\\ncollections --workspace ./data\\nserve --workspace ./data --port 3101\\npreview|import --workspace ./data --kind wqp|stations|usgs-daily --file input.csv --label Source\\nfetch --workspace ./data --kind wqp|stations|usgs-daily --station USGS-... --from YYYY-MM-DD --to YYYY-MM-DD\\nsummary|records|calibration|export|portable --workspace ./data --output result.json\\nreceive --workspace ./empty-data --file complete-workspace.json\\nmap --workspace ./data --station ORG-ID --reach r1 --reviewer Name --reason Rationale\\nreview --workspace ./data --id HASH --state include|exclude|pending --reviewer Name --reason Rationale\\nloads --workspace ./data --station ORG-ID --flow-station USGS-ID --parameter tn|tp --reason Rationale\\n\\nThe server also exposes the original-app integration API /api/measurement-workspace.\\n`);\nelse if(command==='serve'){\n  const handler=createMeasurementHandler({directory}),publicDir=fileURLToPath(new URL('../web/',import.meta.url));\n  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n",
+            "before": "import {calibrationExport,calibrationCSV,pairedLoads} from './calibration.mjs';\nconst [command='help',...args]=process.argv.slice(2), options={};\nfor(let i=0;i<args.length;i++){if(!args[i].startsWith('--')||args[i+1]===undefined)throw new Error('Options require --name value pairs');options[args[i].slice(2)]=args[++i];}\n",
+            "after": "  const server=http.createServer(async(req,res)=>{\n    if(token&&req.headers['x-measurement-internal-token']!==token){res.statusCode=403;res.end('Forbidden');return;}\n    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n"
+          },
+          {
+            "old": "    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n    if(req.url.startsWith('/api/measurement-workspace'))return handler(req,res);\n    const name=new URL(req.url,'http://localhost').pathname;\n    if(name==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(`<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Upper Savannah \u00b7 Measured data</title><body style=\"margin:0\"><section id=\"collections\"></section><main id=\"measurements\"></main><script type=\"module\">import{mountMeasurements}from'/measurements/workspace.js';import{mountCollectionPanel}from'/measurements/collections.mjs';const desk=mountMeasurements(document.getElementById('measurements'));mountCollectionPanel(document.getElementById('collections'),{request:(path,method='GET',payload)=>fetch('/api/measurement-workspace'+path,{method,headers:{'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)}),refresh:()=>desk.refresh()});</script></body></html>`);}\n    const files={'/measurements/workspace.js':['workspace.js','text/javascript'],'/measurements/workspace.css':['workspace.css','text/css'],'/measurements/collections.mjs':['collections.mjs','text/javascript']};\n    if(files[name])try{const[file,mime]=files[name];res.setHeader('Content-Type',mime+'; charset=utf-8');res.end(await fs.readFile(path.join(publicDir,file)));return;}catch(error){console.error(error);}\n    res.statusCode=404;res.end('Not found');\n  });\n",
+            "new": "    if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host){res.statusCode=403;res.end('Cross-origin request rejected');return;}}catch{res.statusCode=403;res.end('Invalid origin');return;}}\n    if(req.url.startsWith('/api/measurement-workspace'))return handler(req,res);\n    const name=new URL(req.url,'http://localhost').pathname;\n    if(name==='/'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(`<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Upper Savannah \u00b7 Measured data</title><body style=\"margin:0\"><section id=\"large-files\"></section><main id=\"measurements\"></main><script type=\"module\">import{mountLargeFilePanel}from'/measurements/large_files.mjs';import{mountMeasurements}from'/measurements/workspace.js';const measurements=mountMeasurements(document.getElementById('measurements'));mountLargeFilePanel(document.getElementById('large-files'),{refresh:()=>measurements.refresh()});</script></body></html>`);}\n    const files={'/measurements/large_files.mjs':['large_files.mjs','text/javascript'],'/measurements/workspace.js':['workspace.js','text/javascript'],'/measurements/workspace.css':['workspace.css','text/css']};\n    if(files[name])try{const[file,mime]=files[name];res.setHeader('Content-Type',mime+'; charset=utf-8');res.end(await fs.readFile(path.join(publicDir,file)));return;}catch(error){console.error(error);}\n    res.statusCode=404;res.end('Not found');\n  });\n",
+            "before": "  const token=process.env.MEASUREMENTS_INTERNAL_TOKEN;\n  const server=http.createServer(async(req,res)=>{\n    if(token&&req.headers['x-measurement-internal-token']!==token){res.statusCode=403;res.end('Forbidden');return;}\n",
+            "after": "  server.listen(Number(options.port||3101),options.host||'127.0.0.1',()=>console.log(JSON.stringify({ready:true,host:options.host||'127.0.0.1',port:server.address().port,pid:process.pid})));\n  if(token){process.stdin.resume();process.stdin.once('end',()=>server.close(()=>{handler.close();process.exit(0);}));}\n  for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>{handler.close();process.exit(0);}));\n"
+          }
+        ]
+      }
+    ]
+  },
+  "measurement_workspace/operator.py": {
+    "variants": [
+      {
+        "edition": "current-collections",
+        "operations": [
+          {
+            "old": "import secrets\nimport shutil\nimport subprocess\nimport threading\nfrom typing import Any, Callable\nfrom urllib.parse import urlsplit\n",
+            "new": "import secrets\nimport shutil\nimport subprocess\nimport sys\nimport threading\nfrom typing import Any, Callable\nfrom urllib.parse import urlsplit\n",
+            "before": "import os\nfrom pathlib import Path\nimport queue\n",
+            "after": "\nBASE = \"/api/measurement-workspace\"\nMAX_BODY = 128 * 1024 * 1024\n"
+          },
+          {
+            "old": "                self._log.close()\n            self._log = (self.directory / \"measurement-process.log\").open(\"ab\", buffering=0)\n            env = {**os.environ, \"MEASUREMENTS_INTERNAL_TOKEN\": self._token}\n            command = [self.node, str(Path(__file__).parent / \"engine\" / \"cli.mjs\"),\n                       \"serve\", \"--workspace\", str(self.directory), \"--host\", \"127.0.0.1\", \"--port\", \"0\"]\n            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,\n",
+            "new": "                self._log.close()\n            self._log = (self.directory / \"measurement-process.log\").open(\"ab\", buffering=0)\n            env = {**os.environ, \"MEASUREMENTS_INTERNAL_TOKEN\": self._token}\n            env['MEASUREMENTS_PYTHON'] = sys.executable\n            command = [self.node, str(Path(__file__).parent / \"engine\" / \"cli.mjs\"),\n                       \"serve\", \"--workspace\", str(self.directory), \"--host\", \"127.0.0.1\", \"--port\", \"0\"]\n            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,\n",
+            "before": "                for stream in (self._process.stdin, self._process.stdout):\n                    if stream: stream.close()\n            if self._log:\n",
+            "after": "                                       stderr=self._log, env=env, close_fds=True)\n            self._process = process\n            ready = queue.Queue()\n"
+          },
+          {
+            "old": "    @staticmethod\n    def handles(path: str) -> bool:\n        p = urlsplit(path).path\n        return p == BASE or p.startswith(BASE + \"/\") or p in {\"/measurements\", \"/measurements/\", \"/measurements/workspace.js\", \"/measurements/workspace.css\", \"/measurements/collections.mjs\"}\n\n    def try_handle(self, handler) -> bool:\n        \"\"\"Return False without touching unrelated native routes or response writers.\"\"\"\n",
+            "new": "    @staticmethod\n    def handles(path: str) -> bool:\n        p = urlsplit(path).path\n        return p == BASE or p.startswith(BASE + \"/\") or p in {\"/measurements\", \"/measurements/\", \"/measurements/workspace.js\", \"/measurements/workspace.css\", \"/measurements/collections.mjs\", \"/measurements/large_files.mjs\"}\n\n    def try_handle(self, handler) -> bool:\n        \"\"\"Return False without touching unrelated native routes or response writers.\"\"\"\n",
+            "before": "            raise RuntimeError(f\"Measured-data HTTP {status}: {result.get('error', 'request failed')}\")\n        return result\n\n",
+            "after": "        if not self.handles(handler.path):\n            return False\n        try:\n"
+          }
+        ]
+      },
+      {
+        "edition": "original-1.2",
+        "operations": [
+          {
+            "old": "import secrets\nimport shutil\nimport subprocess\nimport threading\nfrom typing import Any, Callable\nfrom urllib.parse import urlsplit\n",
+            "new": "import secrets\nimport shutil\nimport subprocess\nimport sys\nimport threading\nfrom typing import Any, Callable\nfrom urllib.parse import urlsplit\n",
+            "before": "import os\nfrom pathlib import Path\nimport queue\n",
+            "after": "\nBASE = \"/api/measurement-workspace\"\nMAX_BODY = 128 * 1024 * 1024\n"
+          },
+          {
+            "old": "                self._log.close()\n            self._log = (self.directory / \"measurement-process.log\").open(\"ab\", buffering=0)\n            env = {**os.environ, \"MEASUREMENTS_INTERNAL_TOKEN\": self._token}\n            command = [self.node, str(Path(__file__).parent / \"engine\" / \"cli.mjs\"),\n                       \"serve\", \"--workspace\", str(self.directory), \"--host\", \"127.0.0.1\", \"--port\", \"0\"]\n            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,\n",
+            "new": "                self._log.close()\n            self._log = (self.directory / \"measurement-process.log\").open(\"ab\", buffering=0)\n            env = {**os.environ, \"MEASUREMENTS_INTERNAL_TOKEN\": self._token}\n            env['MEASUREMENTS_PYTHON'] = sys.executable\n            command = [self.node, str(Path(__file__).parent / \"engine\" / \"cli.mjs\"),\n                       \"serve\", \"--workspace\", str(self.directory), \"--host\", \"127.0.0.1\", \"--port\", \"0\"]\n            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,\n",
+            "before": "                for stream in (self._process.stdin, self._process.stdout):\n                    if stream: stream.close()\n            if self._log:\n",
+            "after": "                                       stderr=self._log, env=env, close_fds=True)\n            self._process = process\n            ready = queue.Queue()\n"
+          },
+          {
+            "old": "    @staticmethod\n    def handles(path: str) -> bool:\n        p = urlsplit(path).path\n        return p == BASE or p.startswith(BASE + \"/\") or p in {\"/measurements\", \"/measurements/\", \"/measurements/workspace.js\", \"/measurements/workspace.css\"}\n\n    def try_handle(self, handler) -> bool:\n        \"\"\"Return False without touching unrelated native routes or response writers.\"\"\"\n",
+            "new": "    @staticmethod\n    def handles(path: str) -> bool:\n        p = urlsplit(path).path\n        return p == BASE or p.startswith(BASE + \"/\") or p in {\"/measurements\", \"/measurements/\", \"/measurements/workspace.js\", \"/measurements/workspace.css\", \"/measurements/large_files.mjs\"}\n\n    def try_handle(self, handler) -> bool:\n        \"\"\"Return False without touching unrelated native routes or response writers.\"\"\"\n",
+            "before": "            raise RuntimeError(f\"Measured-data HTTP {status}: {result.get('error', 'request failed')}\")\n        return result\n\n",
+            "after": "        if not self.handles(handler.path):\n            return False\n        try:\n"
+          }
+        ]
+      }
+    ]
+  },
+  "measurement_workspace/extension.py": [
+    {
+      "old": "import threading\nfrom urllib.parse import urlsplit\nfrom .operator import Measurements, BASE\n\nclass MeasuredObservationExtension:\n    def __init__(self, operator, fault):\n",
+      "new": "import threading\nfrom urllib.parse import urlsplit\nfrom .operator import Measurements, BASE\nfrom .large_context import capture_native_domain, retained_native_reaches\n\nclass MeasuredObservationExtension:\n    def __init__(self, operator, fault):\n",
+      "before": "import os\nfrom pathlib import Path\nimport re\n",
+      "after": "        self.operator = operator\n        self.fault = fault\n        self._services = {}\n"
+    },
+    {
+      "old": "                    value = json.loads(registry.read_text(\"utf-8\"))\n                    source = Path(workspace.root).resolve() / value[\"source_path\"]\n                    if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != value[\"source_sha256\"]:\n                        # Do not leave obsolete source IDs available for new assignments.\n                        return []\n                    return value[\"reaches\"]\n                self._services[key] = Measurements(workspace, data_dir=directory, reaches=reaches)\n            return self._services[key]\n",
+      "new": "                    value = json.loads(registry.read_text(\"utf-8\"))\n                    source = Path(workspace.root).resolve() / value[\"source_path\"]\n                    if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != value[\"source_sha256\"]:\n                        # Received projects retain their explicitly selected original domain.\n                        return retained_native_reaches(directory, value) or []\n                    return value[\"reaches\"]\n                self._services[key] = Measurements(workspace, data_dir=directory, reaches=reaches)\n            return self._services[key]\n",
+      "before": "                def reaches(_):\n                    registry = directory / \"native-domain.json\"\n                    if not registry.exists(): return []\n",
+      "after": "\n    def bind_domain(self, workspace, payload):\n        \"\"\"Read actual retained JSON/GeoJSON IDs; require an explicit source field path.\n"
+    },
+    {
+      "old": "            if any(part in {'.','..'} for part in parsed.path.split('/')):\n                raise ValueError('Invalid measured-data path')\n            service=self._service(workspace)\n            body=b'' if payload.get('payload') is None else json.dumps(payload['payload'],allow_nan=False).encode()\n            status,headers,content=service.request(method,BASE+path,body)\n            return {'status':status,'content_type':headers.get('Content-Type','application/json'),\n",
+      "new": "            if any(part in {'.','..'} for part in parsed.path.split('/')):\n                raise ValueError('Invalid measured-data path')\n            service=self._service(workspace)\n            if method == 'POST' and parsed.path == '/large/editions':\n                capture_native_domain(Path(workspace.root), service.directory)\n            body=b'' if payload.get('payload') is None else json.dumps(payload['payload'],allow_nan=False).encode()\n            status,headers,content=service.request(method,BASE+path,body)\n            return {'status':status,'content_type':headers.get('Content-Type','application/json'),\n",
+      "before": "            parsed=urlsplit(path)\n            if parsed.scheme or parsed.netloc or not path.startswith('/') and path!='' or parsed.fragment:\n                raise ValueError('Measured-data path must be local to the extension')\n",
+      "after": "                    'body':content.decode('utf-8')}\n        except Exception as error:\n            raise self.fault('MEASUREMENT_OPERATION',str(error),422) from error\n"
+    }
+  ],
+  "measurement_workspace/web/extension.mjs": {
+    "variants": [
+      {
+        "edition": "measurement_workspace/web/extension.mjs",
+        "operations": [
+          {
+            "old": "import {mountMeasuredChemistry} from './chemistry.mjs';\n",
+            "new": "import {mountMeasuredChemistry} from './chemistry.mjs';\nimport {mountLargeFilePanel} from './large_files.mjs';\n",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "collections=null,chemistry=null",
+            "new": "collections=null,largeFiles=null,chemistry=null",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "outer.append(binding);const chemistryHost",
+            "new": "outer.append(binding);const largeHost=document.createElement('section');outer.append(largeHost);const boundWorkspace=key;largeFiles=mountLargeFilePanel(largeHost,{workspaceKey:key,request:async(...args)=>{if(getWorkspace()!==boundWorkspace)throw new Error('Measurement workspace changed; reopen its retained file operation.');return request(...args);},refresh:()=>instance?.refresh()});const chemistryHost",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "function suspend(){chemistry?.destroy();",
+            "new": "function suspend(){largeFiles?.destroy();largeFiles=null;chemistry?.destroy();",
+            "before": "",
+            "after": ""
+          }
+        ]
+      },
+      {
+        "edition": "operator/web/measured_observations_extension.mjs",
+        "operations": [
+          {
+            "old": "import {mountMeasuredChemistry} from './measured_chemistry.mjs';\n",
+            "new": "import {mountMeasuredChemistry} from './measured_chemistry.mjs';\nimport {mountLargeFilePanel} from './measured_large_files.mjs';\n",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "collections=null,chemistry=null",
+            "new": "collections=null,largeFiles=null,chemistry=null",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "outer.append(binding);const chemistryHost",
+            "new": "outer.append(binding);const largeHost=document.createElement('section');outer.append(largeHost);const boundWorkspace=key;largeFiles=mountLargeFilePanel(largeHost,{workspaceKey:key,request:async(...args)=>{if(getWorkspace()!==boundWorkspace)throw new Error('Measurement workspace changed; reopen its retained file operation.');return request(...args);},refresh:()=>instance?.refresh()});const chemistryHost",
+            "before": "",
+            "after": ""
+          },
+          {
+            "old": "function suspend(){chemistry?.destroy();",
+            "new": "function suspend(){largeFiles?.destroy();largeFiles=null;chemistry?.destroy();",
+            "before": "",
+            "after": ""
+          }
+        ]
+      },
+      {
+        "edition": "original-1.2",
+        "operations": [
+          {
+            "old": "import {mountCollectionPanel} from './measured_collections.mjs';\nimport {mountMeasurements} from './measured_observations.mjs';\n/** Existing extension-host lifecycle, authenticated API and Workspace selection. */\nexport function createMeasuredObservations({api,getWorkspace}){\n  let instance=null,collections=null,root=null,key=null;\n  const request=async(path,method='GET',payload)=>{\n    const value=await api('/api/measurements/rpc',{method:'POST',body:{workspace:getWorkspace(),path,method,payload}});\n    return {ok:value.status<400,status:value.status,type:value.content_type,text:async()=>value.body};\n",
+            "new": "import {mountLargeFilePanel} from './measured_large_files.mjs';\nimport {mountCollectionPanel} from './measured_collections.mjs';\nimport {mountMeasurements} from './measured_observations.mjs';\n/** Existing extension-host lifecycle, authenticated API and Workspace selection. */\nexport function createMeasuredObservations({api,getWorkspace}){\n  let instance=null,collections=null,largeFiles=null,root=null,key=null;\n  const request=async(path,method='GET',payload)=>{\n    const value=await api('/api/measurements/rpc',{method:'POST',body:{workspace:getWorkspace(),path,method,payload}});\n    return {ok:value.status<400,status:value.status,type:value.content_type,text:async()=>value.body};\n",
+            "before": "",
+            "after": "  };\n  function mount(host){\n    if(root===host&&key===getWorkspace()&&instance)return;\n"
+          },
+          {
+            "old": "    const binding=document.createElement('details');binding.className='mw-domain-binding';\n    binding.style.cssText='padding:18px;background:#f3f3f3;border:1px solid #cecece;font:14px system-ui';\n    binding.innerHTML='<summary>Bind an original native reach or HUC source</summary><p>Read IDs from a retained Workspace JSON/GeoJSON source. This does not infer station drainage relationships.</p><form style=\"display:grid;gap:8px\"><label>Original workspace-relative source file <input name=\"source_path\" required style=\"width:100%\"></label><label>List field path, e.g. features <input name=\"items_path\" style=\"width:100%\"></label><label>ID field path, e.g. properties.HUC12 <input name=\"id_path\" style=\"width:100%\"></label><label>Name field path, optional <input name=\"name_path\" style=\"width:100%\"></label><button>Read original identifiers</button></form><p role=\"status\"></p>';\n    outer.append(binding);const collectionHost=document.createElement('section');outer.append(collectionHost);collections=mountCollectionPanel(collectionHost,{request,refresh:()=>instance?.refresh()});const component=document.createElement('div');outer.append(component);\n    binding.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();const status=binding.querySelector('[role=status]');try{const result=await api('/api/measurements/domain',{method:'POST',body:{workspace:getWorkspace(),...Object.fromEntries(new FormData(event.target))}});status.textContent=`${result.count} original identifiers registered; source SHA-256 ${result.source_sha256}`;await instance.refresh();}catch(error){status.textContent=error.message;}});\n    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css'});\n  }\n  function suspend(){collections?.destroy();collections=null;instance?.destroy();instance=null;root=null;key=null;}\n  return {mount,update(){if(root&&key!==getWorkspace())mount(root);},suspend};\n}\n",
+            "new": "    const binding=document.createElement('details');binding.className='mw-domain-binding';\n    binding.style.cssText='padding:18px;background:#f3f3f3;border:1px solid #cecece;font:14px system-ui';\n    binding.innerHTML='<summary>Bind an original native reach or HUC source</summary><p>Read IDs from a retained Workspace JSON/GeoJSON source. This does not infer station drainage relationships.</p><form style=\"display:grid;gap:8px\"><label>Original workspace-relative source file <input name=\"source_path\" required style=\"width:100%\"></label><label>List field path, e.g. features <input name=\"items_path\" style=\"width:100%\"></label><label>ID field path, e.g. properties.HUC12 <input name=\"id_path\" style=\"width:100%\"></label><label>Name field path, optional <input name=\"name_path\" style=\"width:100%\"></label><button>Read original identifiers</button></form><p role=\"status\"></p>';\n    outer.append(binding);const largeHost=document.createElement('section');outer.append(largeHost);const boundWorkspace=key;largeFiles=mountLargeFilePanel(largeHost,{workspaceKey:key,request:async(...args)=>{if(getWorkspace()!==boundWorkspace)throw new Error('Measurement workspace changed; reopen its retained file operation.');return request(...args);},refresh:()=>instance?.refresh()});const collectionHost=document.createElement('section');outer.append(collectionHost);collections=mountCollectionPanel(collectionHost,{request,refresh:()=>instance?.refresh()});const component=document.createElement('div');outer.append(component);\n    binding.querySelector('form').addEventListener('submit',async event=>{event.preventDefault();const status=binding.querySelector('[role=status]');try{const result=await api('/api/measurements/domain',{method:'POST',body:{workspace:getWorkspace(),...Object.fromEntries(new FormData(event.target))}});status.textContent=`${result.count} original identifiers registered; source SHA-256 ${result.source_sha256}`;await instance.refresh();}catch(error){status.textContent=error.message;}});\n    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css'});\n  }\n  function suspend(){largeFiles?.destroy();largeFiles=null;collections?.destroy();collections=null;instance?.destroy();instance=null;root=null;key=null;}\n  return {mount,update(){if(root&&key!==getWorkspace())mount(root);},suspend};\n}\n",
+            "before": "    if(root===host&&key===getWorkspace()&&instance)return;\n    suspend();root=host;key=getWorkspace();\n    const outer=document.createElement('div');root.replaceChildren(outer);\n",
+            "after": ""
+          }
+        ]
+      }
+    ]
+  }
+}
