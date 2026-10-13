@@ -144,4 +144,39 @@ The imported source manifest contains the native FW body and an additional
 `SOURCE_COVERAGE` entry backed by the unchanged original model-domain gzip.
 The default source profile selects it as freshwater and retains ORW/TN/TPGT in
 the separate high-quality role. A native criterion evaluated wholly inside this
-captured domain can distinguish a measured absence from missing coverage.
+captured domain can distinguish no matching retained SCDES FW feature from
+missing query coverage. This is coverage of the selected classification
+inventory. A cross-state inventory gap does not establish ecological
+freshwater absence; a broader freshwater criterion retains that gap as unknown.
+
+## Reuse the already retained native legacy-code supplement
+
+The maintained application also includes the complete original 52-feature
+publisher-code supplement at:
+
+`source_data/scdes_fw_publisher030601030101_20261013/source/sources.json`
+
+Append that exact manifest to the physical capture command:
+
+~~~sh
+--reuse-source source_data/scdes_fw_publisher030601030101_20261013/source/sources.json
+~~~
+
+The receiver verifies and retains the entire original manifest and all body and
+companion hashes. It matches the original native count and ID responses to the
+same published query as the geometry, validates native OBJECTID and CRS, then
+uses the unchanged feature response. Physical polygon queries still decide
+which original features belong. Only physical IDs absent from both the completed
+publisher capture and the retained supplement cause geometry downloads.
+
+The original 26,931-feature publisher cohort remains the comparison baseline.
+The additional source keeps its exact publisher HUC `030601030101`; the physical
+model domain keeps its original `030601030100`. A reused source is never relabeled
+or assumed inside the domain. Cohort output separately records source identity,
+the number of physically selected reused records and genuinely new downloads.
+
+The reuse manifest set produces its own descriptor/comparison and additional
+request namespace. Resume with the same `--reuse-source` inputs and source
+directory. Earlier publisher capture, original physical descriptor and native
+query responses remain unchanged. Use a new edition/archive path when adopting
+this added source context.

@@ -453,6 +453,9 @@ def _parcel_source_context(source, target, descriptor, entry, binding, report):
         "fields": {"classification": binding["classification_field"]},
         "class_scope": ["FW"], "where": dict(binding["where"]),
         "reference": "Original SCDES freshwater-only source edition; other classes use their own retained source",
+        "meaning": "Presence of retained SCDES FW-classified geometry. A complete negative means no matching "
+                   "retained FW feature in this source inventory; ecological freshwater presence outside the "
+                   "publisher's inventory remains unknown.",
     }
     declared = descriptor.get("criteria_coverage")
     if declared is None:
@@ -800,6 +803,10 @@ def bind_workspace(workspace, edition):
                          "id_field": binding["id_field"], "where": dict(binding["where"]),
                          "fields": {"classification": binding["classification_field"]},
                          "class_scope": ["FW"]}
+            declared = entry.get("metadata", {}).get("parcel_criteria", {})
+            for key in ("reference", "meaning"):
+                if key in declared:
+                    criterion[key] = declared[key]
             if binding.get("criteria_coverage"):
                 coverage = json.loads(json.dumps(binding["criteria_coverage"]))
                 coverage["source"]["source_collection_id"] = source["id"]

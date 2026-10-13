@@ -392,9 +392,15 @@ Pass this object as the `sources.classifications` override to the existing
 parcel-criteria builder. Automatic selection prefers the complete physical
 freshwater context over the publisher-HUC-only freshwater edition.
 
-A parcel with a retained FW intersection is positive. An absent intersection
-can become a complete negative only inside the actually queried coverage.
-Outside that coverage, the existing criterion remains unknown. Publisher-HUC
-captures without the complete physical-domain query retain no inferred polygon
-coverage. Original high-quality, impairment and freshwater sources retain their
-separate class scope and scientific meaning.
+A parcel with a retained SCDES FW intersection is positive. A negative inside
+complete queried coverage means no matching retained FW feature in this source
+inventory. It does not establish ecological freshwater absence where another
+state's inventory is missing. Outside the queried coverage the classification
+criterion remains unknown. Publisher-HUC captures without the complete physical
+query retain no inferred polygon coverage.
+
+The source metadata and explicit selector preserve this meaning and original
+reference alongside class scope. Parcel decision JSON carries that scope and
+each requested classification result in the row evidence, with the complete
+source/coverage bindings in the same export. Original high-quality, impairment
+and freshwater sources retain their separate class scope and scientific meaning.
