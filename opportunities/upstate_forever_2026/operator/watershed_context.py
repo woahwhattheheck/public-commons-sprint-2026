@@ -70,7 +70,16 @@ class WatershedContextActions:
             if root.is_dir():
                 self.roots.setdefault(_hash(str(root).encode("utf-8"))[:16], root)
 
+    def _team_administrator(self):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        return not context or context["principal"]["administrator"]
+
     def _source_path(self, root_id, member):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        if context:
+            team.require(context["principal"], administrator=True)
         root = self.roots.get(str(root_id))
         if root is None:
             raise self.Fault("WATERSHED_SOURCE", "Choose a registered regional source directory.", 422)
@@ -95,6 +104,8 @@ class WatershedContextActions:
                         "title": entry.get("title") or collection.get("title") or "Imported regional source edition",
                         "origin": "workspace",
                     })
+        if not self._team_administrator():
+            return choices
         seen = set()
         for root_id, root in self.roots.items():
             for found in sorted(root.rglob(CONTEXT_NAME)):
@@ -127,6 +138,8 @@ class WatershedContextActions:
                     "title": entry.get("title") or "Retained native HUC12 / ToHUC network",
                     "sha256": identity, "bytes": len(body), "origin": "workspace",
                 })
+        if not self._team_administrator():
+            return choices
         for root_id, root in self.roots.items():
             for name in NETWORK_NAMES:
                 for found in sorted(root.rglob(name)):
