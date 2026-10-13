@@ -1,0 +1,39 @@
+{
+  "schema": "upstate.guided-journey-component/v1",
+  "edition": 2,
+  "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
+  "files": {
+    "operator/install_guided_journey.py": {
+      "bytes": 17677,
+      "sha256": "15f8942a58710c143e20d1d3cc47a06a6e6e1a589ed4d6b23ee8cc2ed85af4e7"
+    },
+    "operator/Guided_Journey_Integration.json": {
+      "bytes": 9348,
+      "sha256": "0bf4a32ee13f604711545658cdb7b42b67d15a8f1e9a5a03e7a6ce7f0a6482d0"
+    },
+    "operator/extensions/guided-journey.json": {
+      "bytes": 1284,
+      "sha256": "301e7f2672c63d6f709a5d86e43dba83a8bf9f2735831a7ee12fcf23f6ebaba9"
+    },
+    "operator/web/journey.mjs": {
+      "bytes": 55378,
+      "sha256": "901b2ea83d98ddd19eb950cad9ce427092bbff2252d5ce83977e818fbf2811d8"
+    },
+    "operator/web/journey.css": {
+      "bytes": 6235,
+      "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
+    },
+    "operator/GUIDED_JOURNEY.md": {
+      "bytes": 14494,
+      "sha256": "c89ef53a45316b74bd692d4dc130843d648170c2901b177357cf7bcbb185ff77"
+    }
+  },
+  "source_context": {
+    "application_source_blob": "5bccea713bed9ae3f43d076c3ab76351ef5845c4",
+    "application_files": 252,
+    "application_carrier_sha256": "49d32e6b7f5c3a764054076c65059cc6856f33d7b7cef5d6408adbd0de7d5c67",
+    "extension_composition_blob": "1890ae3e0f2287a5661205fd149fa6cbbb1a4bf6",
+    "extension_composition_sha256": "9505048ab330032f08d5073ecf4b3bd696bad0b38b2f61805e68155abd43de15",
+    "public_application_head": "b376331722f7780cf12e7f17c498f69a0ae28946"
+  }
+}

@@ -221,8 +221,8 @@ class Workspace:
         reporting = geometry(spec["reporting_area"])
         model_core = geometry(spec["model_domain"])
         buffer_m = float(spec["upstream_buffer_m"])
-        if not 0 < buffer_m < 1000000:
-            raise ValueError("Specify the actual positive model-context buffer in metres")
+        if not 0 <= buffer_m < 1000000:
+            raise ValueError("Specify the actual nonnegative model-context buffer in metres")
         if not model_core.buffer(1e-5).covers(reporting):
             raise ValueError("Model-domain source must cover the full selected reporting basin")
         model_geometry = model_core.buffer(buffer_m)

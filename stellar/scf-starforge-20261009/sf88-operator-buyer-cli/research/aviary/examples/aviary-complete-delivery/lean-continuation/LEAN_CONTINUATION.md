@@ -85,7 +85,7 @@ The complete original LibraryUploadWorkflow now runs in the owning foreground. N
 
 Both older bridge editions, the original name-collision adoption, C998 receipt, and complete 14280 result history remain retained. Existing completed direct-file saves still reopen through their original receipt handler. Any unresolved prior request retains its original identity and requires its actual outcome to be reconciled before another dispatch.
 
-The entry validates selected bridge/runtime bytes and all three helpers before execution. The original 1,258,636-byte embedded producer input remains byte-identical. Current bridge: 25926 bytes / 2c9468f0b5c26e5279aede0af0690fb613e2788c29fd9f689e8f16ee04fdaf5f. Complete public input: 1909306 bytes / 42848fc09edd62685e4ada2c3154bef60cb4cc4843a2b0ee19172b564357f493.
+The entry validates selected bridge/runtime bytes and all three helpers before execution. The original 1,258,636-byte embedded producer input remains byte-identical. Current bridge: 25926 bytes / 2c9468f0b5c26e5279aede0af0690fb613e2788c29fd9f689e8f16ee04fdaf5f. Complete public input: 1909392 bytes / 5184d94d6fc128dfb4ca46744a81d4e2a2755ceb13c1927d68ca36cd4a6c681e.
 
 For each new file the foreground persists its source and original call, then emits LIBRARY_PREPARED_TOOL_REQUEST. The controller permits only the canonical connector_openai_library prepare_uploads and finalize_uploads actions for that bound artifact:
 
@@ -98,7 +98,7 @@ The original workflow performs the actual transfer between these calls. Finaliza
 
 Private transfer state retains the exact source SHA, prepared objects, transfer completion and final response. Recovery reuses that original successful result. A finalization intent without its response keeps the uncertainty attached to that same intent until the provider outcome is reconciled. Signed URLs and headers are excluded from public controller history and the delivery archive.
 
-A successful original save includes validated file and Library IDs, actual returned name, source bytes/SHA, provider metadata and receipt. Names may use the already-reviewed positive-number collision suffix. The separate shared receipt mirror can report failure when that volume is full; the private original receipt and finalized file identities stay authoritative.
+A successful original save includes validated file and Library IDs, actual returned name, source bytes/SHA, provider metadata and receipt. Preparation and finalization names may use the same already-reviewed positive-number collision suffix; the controller preserves that actual returned name. The separate shared receipt mirror can report failure when that volume is full; the private original receipt and finalized file identities stay authoritative.
 
 The first browser-complete checkpoint contains the four original PNGs for unfinished private visual review. Keep the native foreground continuously awaited through that checkpoint, actual image review and all six final saves.
 

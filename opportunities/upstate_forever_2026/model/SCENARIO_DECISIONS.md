@@ -118,6 +118,14 @@ Import build(workspace, selection, progress=None) from model.scenario_decisions 
 
 Saved reports live in WORKSPACE/scenario-decisions/*/decision.json. The complete Workspace archive already walks these directories and includes model/ and operator/ source, carrying saved outputs and the executable producer.
 
+### Saved controls and changing projects
+
+The operator restores saved form selections using the complete matching control collection. A polygon choice is retained by its original source collection and source-entry identities, so importing another dataset or refreshing the catalog cannot change the selected source. Existing saved drafts continue to resolve those original identities when reopened. If the saved reference is no longer available, the reference picker asks for a completed run instead of substituting a different run. Unavailable pollutant controls remain unchecked; a changed cohort asks the operator to review its available native outputs.
+
+Source-schema requests and draft restoration belong to the project and form that started them. Closing the controls, opening another report form, or changing projects invalidates an older pending restoration. The same ownership checks apply to failed source requests and completion callbacks, so a previous project cannot replace the current project's status. Closing the current project clears its report display and disables report creation until a project is open. An in-flight submission in one project does not disable report controls in another project; retries within the same selected report keep their original operation identity.
+
+The current ECSA registry, typed authenticated preview and selected-native-model producer remain the receiving interfaces. The report schema, native aggregation, original run selections and opened-report event are unchanged.
+
 ### Data contract
 
 Top-level schema: upstate.scenario-decisions/v1.
@@ -156,4 +164,3 @@ Prepared by TokenJunkieLabs from the original ES-20261012-ASTRA-S1 watershed rep
 
 **Needs expert review.** Native modeled exports, original source-area interpretation and planning decisions require appropriate scientific review. The report retains its actual study title, native model edition, annual units and common-support basis.
 
-The operator restores saved form selections using the complete matching control collection. The current ECSA registry, typed verified preview and selected-native-model producer remain the maintained receiving interfaces.

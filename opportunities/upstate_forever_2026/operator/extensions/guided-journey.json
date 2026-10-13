@@ -1,0 +1,66 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "guided-journey",
+  "title": "Guided operating journey",
+  "version": "2",
+  "order": 10,
+  "assets": [
+    "journey.mjs",
+    "journey.css"
+  ],
+  "requires_actions": [
+    "profile.save",
+    "scenario.save",
+    "grid.prepare",
+    "run.prepare",
+    "run.start",
+    "run.compare",
+    "delivery.build",
+    "workspace.backup",
+    "workspace.restore"
+  ],
+  "client": {
+    "module": "/web/journey.mjs",
+    "factory": "attachOperatingJourney",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "getView",
+      "api",
+      "refresh",
+      "navigate",
+      "showTask",
+      "openItem",
+      "toast",
+      "reportError",
+      "selectWorkspace",
+      "setJourneyController",
+      "openMap",
+      "openScenario",
+      "openProfile",
+      "openGrid",
+      "openRun",
+      "openComparison",
+      "openJourneyDelivery",
+      "openBackup",
+      "openRestore"
+    ],
+    "styles": [
+      "/web/journey.css"
+    ],
+    "view": {
+      "id": "journey",
+      "title": "Guided journey",
+      "after": "overview"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "action_prefixes": [
+      "journey-"
+    ],
+    "dispatch": "dispatch"
+  }
+}

@@ -34,15 +34,29 @@ The InVEST NDR/SDR comparisons describe contributions within the selected footpr
 
 ## Original physical quantities and geographic coverage
 
-The pinned InVEST 3.20 NDR registry outputs n_total_export and p_surface_export are kg/hectare/year. SDR sed_export is metric tonnes/hectare/year. This module reads those original native rate files and multiplies each selected cell by its polygon-cell intersection area in hectares. Full 30 m cells cover 0.09 ha; boundary cells use their actual intersection area.
+The pinned InVEST 3.20 NDR registry outputs n_total_export and p_surface_export are kg/hectare/year. SDR sed_export is metric tonnes/hectare/year. This module reads those original native rate files and multiplies each selected cell by its polygon-cell intersection area in hectares. The retained grid supplies its actual resolution_m and pixel_area_ha. Full 30 m cells cover 0.09 ha; full 300 m cells cover 9 ha. Boundary cells always use their actual intersection area.
 
-This areal allocation assumes the original modeled rate is uniform inside its 30 m cell. It preserves the model grid and avoids dropping a small parcel merely because no cell centre falls inside it. Actual projected geometry is used for areas and distances. Web Mercator and native feet sources are reprojected into the declared analysis CRS.
+This areal allocation assumes the original modeled rate is uniform inside each original native cell. It preserves the selected model resolution and avoids dropping a small parcel merely because no cell centre falls inside it. Actual projected geometry is used for areas and distances. Web Mercator and native feet sources are reprojected into the declared analysis CRS.
 
 For every pollutant, the study retains valid native area, original structural stream omissions, unexpected missing area, total selected area and coverage fraction. Stream omissions are recognized only from original NoData plus the same-stage native stream registry. No export mass is added for them. Annual quantities aggregate valid cells; a unit containing no valid export cells keeps an unavailable mass.
 
 Scenario deltas use the shared valid support of baseline and alternative. Shared structural stream omissions contribute only to the reported common-support coverage. Different missing-data footprints cannot silently create a load reduction. Profile differences and the exact native argument/output identities remain in the result.
 
 The source-context and quantitative paths reuse the maintained esri_polygon parser for original Esri polygon sources. Original rings, attributes, Z/M declarations, source-array positions and recorded geometry corrections remain inspectable with the source edition.
+
+The Upper Savannah regional product selects the required 30 m grid. Other retained source-native cases keep their declared original resolution in the saved binding and decision report. Conservation aggregation checks the native raster's actual cell size against that same retained grid and does not resample a coarser case into an apparent finer result.
+
+## Selected NDR and SDR runs
+
+A completed case can select NDR, SDR or both. The maintained run selection is authoritative: an omitted models field means the historical combined NDR/SDR selection; an explicit partial list selects only its named model. NDR supplies nitrogen_export and phosphorus_export. SDR supplies sediment_export. Every selected stage must retain its original argument file, native export registry and stream registry.
+
+All candidate and portfolio records still expose the three separate pollutant rows. A baseline output omitted by its original model selection has availability: not_selected, an availability_reason identifying that run/model, and null baseline and native-coverage fields. Its known selected_area_ha remains the selected geographic area. A source-context row retains availability: unbound. These are distinct from a selected native output with zero valid-area coverage.
+
+Each alternative carries its own availability and reason. An alternative-only native quantity keeps its value and its own coverage even when the baseline omits that pollutant. comparison_availability is modeled when both cases selected that pollutant, otherwise not_shared with comparison_availability_reason. Every delta, common quantity and common-coverage field remains null for a pollutant omitted from either case. When both outputs exist, the original common-valid-cell and shared-structural-support method applies unchanged.
+
+The current-export score uses outputs selected in the baseline. A scenario score uses the intersection of the baseline and its chosen scoring alternative. If weights are omitted, available scoring outputs default to weight 1 and unavailable outputs to 0. An explicit positive weight requires that selected output in each scoring case. The browser keeps unavailable axes visible and inactive. Other alternative cases remain in the full physical inventory even when their model scope differs from the scoring pair.
+
+CSV, GeoPackage, HTML and the implementation/design consumer retain these separate availability and comparison reasons. A completed partial run does not acquire invented values for its omitted model. Opening historical combined or source-context studies retains their original selection identities and exports.
 
 ## Portfolios
 
@@ -81,3 +95,54 @@ The existing whole-Workspace backup includes these folders and the additive appl
 - NDR 3.20: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html
 - SDR 3.20: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html
 - Original upstream parser: source/capture_upstream_network.py:esri_polygon.
+
+
+## Published parcel practice scores and native experiment continuation
+
+The maintained practice engine adds `score.basis="published_method"` to this
+same conservation study. It binds a selected published method/category and the
+actual source fields used by each criterion. Its source table can be prepared
+from the original imported GIS layers through `source_tools.parcel_criteria`.
+The complete rules, geometry-source choices and operator journey are in
+`KEOWEE_PRIORITIES.md` and `../source_tools/PARCEL_CRITERIA.md`.
+
+Every candidate retains its original physical quantities and geographic source
+properties. Published practice scoring adds `point_score`, `point_priority`,
+`score_unit="points"` and criterion components. The point record contains the
+known/possible bounds, prerequisite, completed point total, method/category,
+definition hash and metric-source bindings. Saved CSV and GeoPackage products
+include these fields. The existing plan ID, union geometry and source references
+remain authoritative.
+
+The optimizer accepts `objective.kind="published-method"` and
+`weights={"published_points":1}`. It preserves the original published score
+and requires complete applicable criteria. A native export criterion also
+retains its selected baseline pollutant and native coverage. See
+`CONSERVATION_OPTIMIZATION.md` for exact input and result shapes.
+
+General conservation aggregation continues to check the actual retained native
+grid resolution. The published practice module's mean-cell-mass criterion
+retains its explicit 30-metre criterion definition; it does not change the
+aggregation resolution for other source-native studies.
+
+The scenario bridge now exposes:
+
+- `create_scenario(workspace, spec)`
+- `prepare_experiment(workspace, spec)`
+- `inspect_scenario(workspace, conservation_scenario_id)`
+- `list_scenarios(workspace)`
+
+A saved plan supplies the same verified `selected_union` footprint. Native run
+preparation validates its complete coverage by the original model domain and
+reports overlap with the reporting boundary separately. The retained coverage
+record includes both original boundary descriptors, actual covered fraction,
+selected/outside/reporting hectares and declared analysis CRS.
+
+An explicit model choice must be supported by the selected grid and profile.
+Omission resolves the actual common model families; the resulting full model
+selection uses the maintained historical ID convention. The paired experiment
+uses a matching original-landcover baseline and the exact saved portfolio
+scenario. Additional profiles must support the selected models, original
+land-cover classes and all scenario replacement codes. The existing experiment
+queue executes the actual native cases and reopens their results. The full
+contract is in `CONSERVATION_EXPERIMENTS.md`.
