@@ -1,4 +1,5 @@
 import { mountOperations } from './operations.mjs';
+import { mountPlanningSourceTables } from './source-tables.mjs';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 function sourceBase64(buffer) {
@@ -10,11 +11,13 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':
 const money = value => value === null || value === undefined || value === '' ? 'Not entered' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(value));
 const amount = value => new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(value || 0));
 const label = value => String(value).replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./, character => character.toUpperCase());
-const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['operations','Delivery operations']];
+const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['source-tables','Source tables'],['operations','Delivery operations']];
 const state = {token:null,plans:[],current:null,draft:null,tab:'overview',dirty:false,stale:false,busy:false,history:[],selectedHistory:null};
 let controlId = 0;
 let operationsView = null;
 function closeOperations() {operationsView?.dispose();operationsView=null;}
+let sourceTablesView = null;
+function closeSourceTables() {sourceTablesView?.dispose();sourceTablesView=null;}
 let requestIds = {};
 try { requestIds = JSON.parse(sessionStorage.getItem('sf47.requests') || '{}'); } catch {}
 function inform(message, error = false) {
@@ -22,6 +25,7 @@ function inform(message, error = false) {
 }
 function busy(value) {
   state.busy = value; $('#workbench').setAttribute('aria-busy',String(value));
+  sourceTablesView?.setHostBusy(value);
   for(const control of document.querySelectorAll('#workbench button,#workbench input:not([type=file]),#workbench select,#workbench textarea')) {
     control.disabled = value || control.dataset.fixedDisabled === 'true' || control.dataset.action === 'save' && !state.dirty;
   }
@@ -218,6 +222,7 @@ function history() {
 }
 function render(focus = false) {
   closeOperations();
+  closeSourceTables();
   if(!state.current) return;
   controlId=0;
   $('#plan-select').innerHTML=state.plans.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===state.current.id?' selected':'')+'>'+esc(row.name)+'</option>').join('');
@@ -227,6 +232,16 @@ function render(focus = false) {
     const mounted=mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId});
     operationsView=mounted;
     mounted.ready.catch(error=>{if(operationsView===mounted&&mounted.root.isConnected)inform(error.message,true);});
+  } else if(state.tab==='source-tables') {
+    const mounted=mountPlanningSourceTables({
+      container:$('#main-panel'),api,inform,run,
+      getPlan:()=>state.current,getDraft:()=>state.draft,
+      storeBook:value=>{state.draft.planning.sourceTables=value;state.dirty=true;updateBar();},
+      applyDraft:value=>{state.draft=value;state.dirty=true;state.stale=false;updateBar();}
+    });
+    sourceTablesView=mounted;
+    mounted.setHostBusy(state.busy);
+    mounted.ready.catch(error=>{if(sourceTablesView===mounted&&mounted.root.isConnected)inform(error.message,true);});
   } else {
     $('#main-panel').innerHTML=({overview,work,milestones,staffing,payments,delivery,history}[state.tab])();
   }
@@ -376,6 +391,7 @@ $('#access-form').addEventListener('submit',event=>{event.preventDefault();run((
 $('#sign-out').addEventListener('click',()=>{
   if(state.dirty && !confirm('Close access and discard this unsaved draft?'))return;
   closeOperations();
+  closeSourceTables();
   state.token=null;state.current=null;state.draft=null;state.plans=[];state.history=[];state.selectedHistory=null;state.dirty=false;
   sessionStorage.removeItem('sf47.access');$('#main-panel').replaceChildren();$('#plan-select').replaceChildren();$('#sections').replaceChildren();
   $('#workbench').hidden=true;$('#sign-out').hidden=true;$('#access-panel').hidden=false;$('#access-key').value='';inform('Workspace access closed. Saved revisions remain available.');
