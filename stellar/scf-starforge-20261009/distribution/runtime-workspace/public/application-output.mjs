@@ -14,7 +14,7 @@ const PAGE = 65536;
 export function createApplicationOutputReader({ root, api, getWorkspaceId, error, output = null,
   pageRoute = '/api/applications/output-page', downloadRoute = '/api/applications/output-download',
   searchRoute = '/api/applications/output-search', searchDownloadRoute = '/api/applications/output-search-download',
-  sourceFields = ['applicationId', 'operationId'], storagePrefix = 'starforge-application-output-',
+  outputKind = 'application', sourceFields = ['applicationId', 'operationId'], storagePrefix = 'starforge-application-output-',
   describe = value => 'operation ' + value.operationId }) {
   const sourceInput = value => Object.fromEntries(sourceFields.filter(key => value[key] !== undefined).map(key => [key, value[key]]));
   const sourceIdentity = value => [value.workspaceId, ...sourceFields.map(key => value[key] ?? '')].join(':');
@@ -76,6 +76,13 @@ export function createApplicationOutputReader({ root, api, getWorkspaceId, error
   });
   root.append(toolbar, info, failure, location, findRow, body);
   const completeSearch = createOutputSearch({ root, api, route: searchRoute, downloadRoute: searchDownloadRoute, storagePrefix,
+    async onRetain(selected) {
+      if(!context||context.workspaceId!==getWorkspaceId())throw new Error('Reopen the selected original Runtime workspace.');
+      const detail={workspaceId:context.workspaceId,output:{kind:outputKind,input:sourceInput(context),...selected},accept:null};
+      root.dispatchEvent(new CustomEvent('runtime-output-procedure',{bubbles:true,detail}));
+      if(!detail.accept)throw new Error('Open this output in the complete Runtime workspace to retain its procedure.');
+      await detail.accept;
+    },
     async onOpen(value) {
       if (!context) return;
       generation++; loading = requested = failed = false;

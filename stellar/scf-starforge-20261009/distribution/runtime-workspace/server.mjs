@@ -50,6 +50,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
     ['/application-output.mjs', 'application-output.mjs', 'text/javascript; charset=utf-8'],
+    ['/output-review.css', 'output-review.css', 'text/css; charset=utf-8'],
+    ['/output-review.mjs', 'output-review.mjs', 'text/javascript; charset=utf-8'],
     ['/output-search.mjs', 'output-search.mjs', 'text/javascript; charset=utf-8'],
     ['/output-search.css', 'output-search.css', 'text/css; charset=utf-8'],
     ['/runtime-output.mjs', 'runtime-output.mjs', 'text/javascript; charset=utf-8'],
@@ -277,7 +279,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
           decide:['runtimeProcedureDecide',['requestId','procedureId','expectedSha256','reviewId','key','decision']],
           apply:['runtimeProcedureApply',['requestId','procedureId','expectedSha256','reviewId']],
           receive:['runtimeProcedureReceive',['requestId','document']],
-          export:['runtimeProcedureExport',['procedureId','format','reviewId']],
+          export:['runtimeProcedureExport',['procedureId','format','reviewId','captureId']],
         };
         const action=url.pathname.slice('/api/runtime-procedures/'.length);
         need(Object.hasOwn(actions,action),'RUNTIME_PROCEDURE_ACTION',undefined,404);

@@ -22,7 +22,7 @@ export function createRuntimeOutputView({ root, api, getWorkspaceId, error, onSe
   const detail = el('p', '', 'note'), readerRoot = el('div');
   root.replaceChildren(title, info, actions, attemptLabel, more, detail, readerRoot);
   const reader = createApplicationOutputReader({
-    root: readerRoot, api, getWorkspaceId, error,
+    root: readerRoot, api, getWorkspaceId, error, outputKind: 'runtime',
     pageRoute: '/api/runtime-output/page', downloadRoute: '/api/runtime-output/download',
     searchRoute: '/api/runtime-output/search', searchDownloadRoute: '/api/runtime-output/search-download',
     sourceFields: ['operationId', 'runtimeId', 'logFile'], storagePrefix: 'starforge-runtime-output-',
