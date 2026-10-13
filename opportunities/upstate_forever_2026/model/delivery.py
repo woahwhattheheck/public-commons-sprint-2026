@@ -14,7 +14,7 @@ import tempfile
 from .report_release import bind_report, retain_report
 from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
-from . import receiving_water_delivery, scientific_report, observed_context
+from . import receiving_water_delivery, scientific_report, observed_context, delivery_datasets
 from . import scenario_analysis_delivery as analysis_delivery
 from .robust_decisions.eco_robust import decision_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
@@ -141,7 +141,7 @@ def _grid_measurements(grid):
             "pixels": pixels, "resolution": resolution}
 
 def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact,
-          native_model=None, native_execution=None):
+          native_model=None, native_execution=None, dataset=None):
     from pyproj import CRS, Transformer
     cells = _grid_measurements(grid)
     native_model = native_model or {}
@@ -254,6 +254,58 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
             add("metainfo/metc/cntinfo/" + route, contact[key])
     add("metainfo/metstdn", "FGDC Content Standard for Digital Geospatial Metadata")
     add("metainfo/metstdv", "FGDC-STD-001-1998")
+    if dataset is not None:
+        # Derived rasters have their own quantity, support and process lineage.
+        # The baseline conversion prose above remains exclusive to physical exports.
+        kind = dataset["kind"]
+        quantity = ("Signed alternative-minus-baseline annual mass per original pixel."
+                    if kind == "scenario_difference"
+                    else "Dimensionless relative export priority under the retained normalization and weights.")
+        process = json.dumps(dataset["derivation"], ensure_ascii=False, sort_keys=True)
+        add("idinfo/descript/abstract", title + ". " + quantity + " Units: " + unit +
+            ". " + dataset["support"] + " Exact original dataset: " + dataset["source_raster"] +
+            "; delivered SHA256 " + raster["sha256"] + ".")
+        add("dataqual/attracc/attraccr", "The delivered GeoTIFF and its actual companions preserve "
+            "the original bytes and numerical representation. " + quantity +
+            " The map display range is presentation metadata and does not change dataset values.")
+        add("dataqual/complete", dataset["support"] +
+            " The retained grid distinguishes the model-domain context from the reporting area.")
+        add("dataqual/logic", "Original CRS, affine alignment, band type, NoData and mask flags "
+            "are retained in the atlas dataset record. No reprojection, resampling or numerical "
+            "conversion occurs during dataset packaging.")
+        step.find("procdesc").text = "Original retained derivation: " + process
+        # Run completion dates describe the producing stages, not necessarily
+        # the later comparison or normalization process.
+        step.find("procdate").text = "Unknown"
+        for source in sources:
+            ET.SubElement(step, "srcused").text = source["id"]
+        transfer = ET.SubElement(lineage, "procstep")
+        ET.SubElement(transfer, "procdesc").text = (
+            "Retain the original dataset and present companions for editable GIS delivery; "
+            "verify original and delivered byte counts and SHA256. Source " +
+            dataset["source_raster"] + "; source SHA256 " +
+            dataset["source_file"]["sha256"] + "; delivered member " + dataset["file"]["path"] +
+            "; delivered SHA256 " + dataset["file"]["sha256"] +
+            ". Original map relationships, selected runs, source editions and physical header "
+            "are retained in maps/atlas-index.json.")
+        ET.SubElement(transfer, "procdate").text = day
+        add("idinfo/descript/supplinf", json.dumps({
+            "dataset_id": dataset["id"], "grid_id": dataset["grid_id"],
+            "profile_id": dataset["profile_id"], "runs": dataset["runs"],
+            "comparison_id": dataset.get("comparison_id"),
+            "native_execution": dataset["native_execution"],
+            "header": dataset["grid"], "support": dataset["support"],
+            "derivation": dataset["derivation"],
+        }, ensure_ascii=False, sort_keys=True))
+        add("eainfo/overview/eaover", "Single raster band: " + title + "; units " + unit +
+            "; NoData " + str(dataset["grid"]["nodata"]) +
+            "; signed values " + str(dataset["signed"]) +
+            ". Complete original physical header and companions are in the atlas dataset record.")
+        add("distinfo/resdesc", dataset["file"]["path"])
+        add("distinfo/stdorder/digform/digtinfo/formname", "GeoTIFF")
+        # Derived metadata is retained at gis/metadata/<id>.xml.
+        add("distinfo/stdorder/digform/digtopt/onlinopt/computer/networka/networkr",
+            "../../" + dataset["file"]["path"])
     ET.indent(root)
     atomic_bytes(path, ET.tostring(root, encoding="utf-8", xml_declaration=True) + b"\n")
 
@@ -374,6 +426,7 @@ def build(workspace, selection):
                   "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
                   "map_atlas": map_atlas.ATLAS_VERSION,
+                  "gis_datasets": delivery_datasets.VERSION,
                   "overlay_labels": OVERLAY_LABELS,
                   **({"parcel_source_lineage": LINEAGE_VERSION}
                      if selection.get("overlays", {}).get("parcels") else {})})
@@ -639,6 +692,12 @@ def build(workspace, selection):
                 atlas_pages.append({"key": map_key, "family": family,
                     "title": cartography.TITLES[family], "panels": panels,
                     "overlays": selected_overlays, "subtitle": subtitle})
+            delivery_datasets.retain(workspace, directory, atlas_pages,
+                state=state, grid=grid, selection=selection, profile=profile, sources=records,
+                baseline=baseline, alternatives=alternatives, comparison=comparison,
+                metadata_writer=_fgdc, copy_file=_copy,
+                receptor_product=receptor_product, water_product=water_product)
+            atomic_json(state_path, state)
             map_atlas.write(directory, atlas_pages, workspace=workspace, selection=selection,
                 grid=grid, boundary=boundary, crs=crs, footer=footer,
                 state=state, state_path=state_path, water_links=water_links)
