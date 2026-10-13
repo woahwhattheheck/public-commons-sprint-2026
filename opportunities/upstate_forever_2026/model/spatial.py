@@ -20,6 +20,7 @@ import threading
 import zlib
 
 from .common import canonical, digest, held, identifier, read_json, relative_file
+from . import receiving_water_spatial
 
 MAX_SIZE = 1024
 MAX_PIXELS = 1024 * 1024
@@ -133,7 +134,7 @@ def _file_kind(value):
 def _categorical(layer):
     units = str(layer.get("units") or "").strip().lower()
     role = str(layer.get("role") or "").lower()
-    return units in {"class", "classes", "mask", "category", "categorical", "code", "codes"} or role in {
+    return units in {"class", "classes", "mask", "binary", "category", "categorical", "code", "codes"} or role in {
         "nlcd", "reporting_mask", "scenario_lulc", "landcover"}
 
 
@@ -156,6 +157,7 @@ class SpatialReview:
         for folder, name in (("grids", "grid.json"), ("runs", "run.json"),
                              ("comparisons", "comparison.json"), ("deliveries", "delivery-state.json")):
             paths.extend((root / folder).glob("*/" + name))
+        paths.extend(receiving_water_spatial.manifest_paths(self.workspace))
         return tuple((str(p.relative_to(root)), _signature(p)) for p in sorted(paths))
 
     def _layers(self):
@@ -245,6 +247,7 @@ class SpatialReview:
                     add("delivery", delivery["id"], role, item, scope=path.parent,
                         title=role.replace("_", " ") + " / delivery " + delivery["id"][:12],
                         baseline_run_id=delivery.get("selection", {}).get("baseline_run_id"))
+            receiving_water_spatial.add_layers(ws, add)
             # Atomic source manifests can be added during a native run. Never cache
             # a mixed catalogue signature; the next request rebuilds it if needed.
             observed = self._manifest_signature()
@@ -989,7 +992,11 @@ class SpatialReview:
         value = {"selection": selection, "sha256": public["sha256"], "bytes": public["bytes"],
                  "group": public["group"], "owner_id": public["owner_id"], "role": public["role"]}
         for name in ("source_collection_id", "source_id", "source_uri", "vintage", "run_id", "grid_id",
-                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction"):
+                     "profile_id", "scenario_id", "baseline_run_id", "alternative_run_id", "direction",
+                     "receiving_water_plan_id", "receiving_water_analysis_id", "subject_id",
+                     "subject_kind", "family", "relationship_precision", "quantity_scope",
+                     "quantity", "statistic", "normalization_id", "relationship_method",
+                     "source_body_sha256", "source_selection_id", "invest_version"):
             if name in public:
                 value[name] = public[name]
         if native is not None:
