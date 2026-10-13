@@ -16,6 +16,12 @@ Large assessments use resumable authenticated transfers within the original oper
 
 See [Scenario decisions](operator/SCENARIO_DECISIONS.md), the [component contract](operator/SCENARIO_DECISIONS_COMPONENT.md), and [performance notes](operator/SCENARIO_DECISIONS_PERFORMANCE.md).
 
+## Prepare a report from an economic decision
+
+Open a completed edition in **Economic desk** and choose **Prepare client report**. The existing map-release form opens with that edition and its original ordered native cohort. Select the source overlays, responsible GIS contact and map settings, then build through the normal workspace queue. You can also choose a compatible completed economic edition from the saved watershed report's Map release panel.
+
+The completed GIS package contains the scientific report in PDF, offline HTML, Markdown and structured JSON, plus the original economic desk, costs, source records and complete economic ZIP. See [Client report and selected-zone economics](model/CLIENT_REPORT.md) for the full workflow and retained quantities.
+
 ## Regional decision context
 
 Open **Decision context** in the operator to combine a saved receiving-water analysis or source plan with retained NRCS state/HUC context and the classified-water crosswalk. The desk preserves original paired physical quantities and source editions, saves portable HTML/CSV/ZIP reports, and links compatible map deliveries. See [DECISION_CONTEXT.md](DECISION_CONTEXT.md) for the operator workflow and original-workspace receiving journey.

@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-"""Receive a completed original watershed calculation into a retained Workspace."""
+"""Receive original regional archives through the maintained native receiver."""
 from __future__ import annotations
 
 import argparse
 import base64
 import csv
-import gzip
 import hashlib
-import io
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
-import shutil
-import stat
 import sys
+import stat
 import tempfile
 import zipfile
 
@@ -23,10 +21,8 @@ APPLICATION = Path(__file__).resolve().parents[1]
 if str(APPLICATION) not in sys.path:
     sys.path.insert(0, str(APPLICATION))
 
-from model.common import atomic_bytes, atomic_json, describe_file, held, now, read_json, verify_file
+from model.common import atomic_bytes, atomic_json, describe_file, held, read_json, verify_file
 
-SCHEMA = "upstate.operator-watershed-context/v1"
-MODEL_SCHEMA = "upstate.watershed-context/v1"
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_MEMBER_BYTES = 256 * 1024 * 1024
 
@@ -35,21 +31,15 @@ def _hash(body):
     return hashlib.sha256(body).hexdigest()
 
 
-def _canonical(value):
-    return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True,
-                      separators=(",", ":")).encode("utf-8")
-
-
 def _member(name):
     if (not isinstance(name, str) or not name or "\\" in name or "\0" in name
             or name.startswith("/") or any(part in {"", ".", ".."} for part in name.split("/"))):
-        raise ValueError("Retain an ordinary relative archive member")
+        raise ValueError("Retain an ordinary relative source member")
     return PurePosixPath(name)
 
 
 def _matches(body, descriptor, name):
-    length = descriptor.get("bytes")
-    digest = descriptor.get("sha256")
+    length, digest = descriptor.get("bytes"), descriptor.get("sha256")
     if (isinstance(length, bool) or not isinstance(length, int) or length < 0
             or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
             or len(body) != length or _hash(body) != digest):
@@ -63,152 +53,21 @@ def _archive_bytes(source):
     else:
         path = Path(source)
         if path.stat().st_size > MAX_ARCHIVE_BYTES:
-            raise ValueError("The completed watershed archive exceeds the receiving capacity")
+            raise ValueError("The completed archive exceeds the receiving capacity")
         body = path.read_bytes()
     if len(body) > MAX_ARCHIVE_BYTES:
-        raise ValueError("The completed watershed archive exceeds the receiving capacity")
+        raise ValueError("The completed archive exceeds the receiving capacity")
     return body
 
 
-def inspect_completed_archive(source, *, expected_sha256=None):
-    """Read original result/source manifests and retain their actual complete bytes."""
-    archive_body = _archive_bytes(source)
-    archive_sha = _hash(archive_body)
-    if expected_sha256 is not None and archive_sha != expected_sha256:
-        raise ValueError("The original completed watershed archive changed")
-    with zipfile.ZipFile(io.BytesIO(archive_body)) as archive:
-        entries = archive.infolist()
-        if len(entries) > 5000 or sum(item.file_size for item in entries) > MAX_MEMBER_BYTES:
-            raise ValueError("The completed watershed members exceed the receiving capacity")
-        indexed = {}
-        for item in entries:
-            if item.is_dir():
-                _member(item.filename.rstrip("/"))
-                continue
-            _member(item.filename)
-            mode = item.external_attr >> 16
-            if stat.S_ISLNK(mode) or (stat.S_IFMT(mode) not in (0, stat.S_IFREG)):
-                raise ValueError("Receive regular original source and report files")
-            if item.filename in indexed:
-                raise ValueError("Repeated completed watershed archive member")
-            indexed[item.filename] = item
-
-        def read(name):
-            if name not in indexed:
-                raise ValueError("Retain the original completed watershed member: " + name)
-            return archive.read(indexed[name])
-
-        def document(name):
-            return json.loads(read(name).decode("utf-8-sig"))
-
-        run_body = read("run-receipt.json")
-        run = json.loads(run_body.decode("utf-8-sig"))
-        if run.get("returncode") != 0 or not run.get("completed_at"):
-            raise ValueError("Receive the completed original watershed operation")
-        source_receipt_name = run.get("source_receipt")
-        _member(source_receipt_name)
-        source_receipt_body = read(source_receipt_name)
-        source_receipt = json.loads(source_receipt_body.decode("utf-8-sig"))
-        original_sources = {}
-        for item in source_receipt.get("files", []):
-            name = item.get("path")
-            _member(name)
-            if name in original_sources:
-                raise ValueError("Repeated original watershed source record")
-            original_sources[name] = _matches(read("application/" + name), item, name)
-        if not original_sources:
-            raise ValueError("Retain the original watershed calculation sources")
-
-        result = run.get("result") or {}
-        descriptors = result.get("files") or {}
-        if not isinstance(descriptors, dict) or "watershed-context.json" not in descriptors:
-            raise ValueError("Retain the original complete regional report manifest")
-        candidates = [name for name in indexed
-                      if name.startswith("application/") and name.endswith("/watershed-context.json")]
-        if len(candidates) != 1:
-            raise ValueError("Choose one completed original regional report")
-        report_member = candidates[0]
-        report_prefix = report_member.rsplit("/", 1)[0] + "/"
-        outputs = {}
-        for name, item in descriptors.items():
-            if _member(name).name != name or item.get("path") != name:
-                raise ValueError("Retain the original report output filenames")
-            outputs[name] = _matches(read(report_prefix + name), item, name)
-        report = json.loads(outputs["watershed-context.json"].decode("utf-8-sig"))
-        key = report.get("id")
-        if (report.get("schema") != MODEL_SCHEMA or not isinstance(key, str)
-                or not re.fullmatch(r"watershed-[0-9a-f]{20}", key) or result.get("id") != key
-                or result.get("summary") != report.get("summary")):
-            raise ValueError("The completed regional report differs from its original operation")
-
-        def source_document(filename, required=True):
-            choices = [(name, body) for name, body in original_sources.items()
-                       if PurePosixPath(name).name == filename]
-            if not choices and not required:
-                return None
-            if len(choices) != 1:
-                raise ValueError("Retain one original watershed source: " + filename)
-            return json.loads(choices[0][1].decode("utf-8-sig"))
-
-        context = source_document("full-domain-water-context.json")
-        coverage = source_document("scdes-domain217-source-coverage.json")
-        network_names = ("native-network.json", "native-network.json.gz")
-        network_members = [(name, body) for name, body in original_sources.items()
-                           if PurePosixPath(name).name in network_names]
-        if len(network_members) > 1:
-            raise ValueError("Retain one original watershed native network")
-        network = None
-        if network_members:
-            network_body = network_members[0][1]
-            network = json.loads(
-                (gzip.decompress(network_body) if network_body.startswith(b"\x1f\x8b")
-                 else network_body).decode("utf-8-sig"))
-        if context.get("schema") != "upstate.water-context/v1":
-            raise ValueError("Retain the original watershed domain source")
-        originals = {"water_context": context, "classification_coverage": coverage}
-        if network is not None:
-            originals["native_network"] = network
-        sources = report.get("sources") or []
-        if len(sources) != len(originals) or {row.get("source_id") for row in sources} != set(originals):
-            raise ValueError("The completed report source set differs from its original input")
-        for row in sources:
-            if _hash(_canonical(originals[row["source_id"]])) != row.get("canonical_sha256"):
-                raise ValueError("The completed report changed its original source binding")
-        domain = context.get("model_domain_huc12s")
-        rows = report.get("hucs")
-        if (not isinstance(domain, list) or not domain or len(set(domain)) != len(domain)
-                or not isinstance(rows, list) or len(rows) != len(domain)
-                or {row.get("huc12") for row in rows} != set(domain)
-                or set(report.get("model_domain_huc12s", [])) != set(domain)
-                or report["summary"].get("huc_count") != len(domain)):
-            raise ValueError("The completed report must retain its whole original model domain")
-        selection = report.get("selection") or {}
-        selected = selection.get("huc12s")
-        if (not isinstance(selected, list) or sorted(set(selected)) != selected
-                or set(selected) - set(domain)
-                or not isinstance(selection.get("requested"), bool)):
-            raise ValueError("Retain the original selected watersheds within the full report")
-        identity = {
-            "schema": report["schema"], "analysis_version": report["analysis_version"],
-            "source_context": context, "classification_coverage": coverage, "network": network,
-            "selected_huc12s": selected, "selection_requested": selection["requested"],
-        }
-        if "watershed-" + _hash(_canonical(identity))[:20] != key:
-            raise ValueError("The completed regional report's original identity changed")
-        if run.get("selection") is not None and run["selection"] != selection:
-            raise ValueError("The original operation and report selections differ")
-        stdout = read("stdout.json")
-        if _hash(stdout) != run.get("stdout_sha256"):
-            raise ValueError("The original completed operation output changed")
-        if json.loads(stdout.decode("utf-8-sig")) != result:
-            raise ValueError("The original operation output and result manifest differ")
-        provenance = {"run-receipt.json": run_body,
-                      "source-receipt.json": source_receipt_body, "stdout.json": stdout}
-        if "stderr.txt" in indexed:
-            provenance["stderr.txt"] = read("stderr.txt")
-        return {"archive": archive_body, "archive_sha256": archive_sha,
-                "run": run, "report": report, "outputs": outputs,
-                "original_sources": original_sources, "provenance": provenance}
+def _native_receiver():
+    path = APPLICATION / "operator" / "receive_watershed_context.py"
+    spec = importlib.util.spec_from_file_location("_upstate_completed_watershed_receiver", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Install the maintained regional native receiver")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _completed_connectivity(source_root, report, report_body):
@@ -291,25 +150,6 @@ def _retain_connectivity(directory, record, connectivity):
     return joined
 
 
-def _native_bundle(source, received):
-    """Use the maintained original-invocation and source-bank receiver contract."""
-    path = APPLICATION / "operator" / "receive_watershed_context.py"
-    spec = importlib.util.spec_from_file_location("upstate_native_watershed_receiver", path)
-    if spec is None or spec.loader is None:
-        raise ValueError("Install the maintained native watershed receiver.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    operation_id = received["run"].get("operation_id")
-    if not isinstance(operation_id, str) or not operation_id:
-        raise ValueError("Retain the original native watershed operation identity.")
-    if isinstance(source, bytes):
-        with tempfile.TemporaryDirectory(prefix="upstate-regional-receive-") as temporary:
-            archive = Path(temporary) / "original-native-result.zip"
-            archive.write_bytes(source)
-            return module.receive_bundle(archive, received["archive_sha256"], operation_id)
-    return module.receive_bundle(Path(source), received["archive_sha256"], operation_id)
-
-
 def _retain_native_bundle(directory, record, bundle):
     """Enrich a matching report with canonical inputs and complete native sources."""
     edition = record.get("source_edition")
@@ -348,94 +188,61 @@ def _retain_native_bundle(directory, record, bundle):
 
 def receive_completed(workspace, source, *, expected_sha256=None, title=None,
                       connectivity_root=None):
-    """Publish an already completed report through the original operator representation."""
-    received = inspect_completed_archive(source, expected_sha256=expected_sha256)
-    bundle = _native_bundle(source, received)
-    report, run = received["report"], received["run"]
-    if bundle["id"] != report["id"] or bundle["report"] != report:
-        raise ValueError("The completed report differs between its retained native records")
-    key = report["id"]
-    connectivity = _completed_connectivity(
-        connectivity_root or APPLICATION / "outputs/watershed-connectivity-20261013",
-        report, received["outputs"]["watershed-context.json"])
-    directory = workspace.root / "watershed-context" / key
-    record_path = directory / "operator-report.json"
+    """Use the existing adoption engine, then retain its source-bound graph edition."""
+    body = _archive_bytes(source)
+    digest = _hash(body)
+    if expected_sha256 is not None and digest != expected_sha256:
+        raise ValueError("The original completed watershed archive changed")
+    with zipfile.ZipFile(io.BytesIO(body)) as package:
+        entries = package.infolist()
+        if len(entries) > 5000 or sum(entry.file_size for entry in entries) > MAX_MEMBER_BYTES:
+            raise ValueError("The completed members exceed the receiving capacity")
+        seen = set()
+        for entry in entries:
+            _member(entry.filename.rstrip("/") if entry.is_dir() else entry.filename)
+            if entry.filename in seen:
+                raise ValueError("Repeated completed watershed archive member")
+            seen.add(entry.filename)
+            mode = entry.external_attr >> 16
+            if stat.S_ISLNK(mode) or (not entry.is_dir() and stat.S_IFMT(mode) not in (0, stat.S_IFREG)):
+                raise ValueError("Receive original regular watershed source and report files")
+        run = json.loads(package.read("run-receipt.json"))
+    operation_id = run.get("operation_id")
+    if not isinstance(operation_id, str) or not operation_id:
+        raise ValueError("Retain the original regional operation identifier")
+    receiver = _native_receiver()
+    with tempfile.TemporaryDirectory(prefix="upstate-completed-watershed-") as temporary:
+        archive = Path(temporary) / "original-native-result.zip"
+        archive.write_bytes(body)
+        bundle = receiver.receive_bundle(archive, digest, operation_id)
+        directory = workspace.root / "watershed-context" / bundle["id"]
+        with held(workspace.root / ".workspace.lock"):
+            record_path = directory / "operator-report.json"
+            if record_path.is_file():
+                record = read_json(record_path)
+                if (record.get("id") != bundle["id"]
+                        or record.get("schema") != receiver.OPERATOR_SCHEMA
+                        or record.get("files", {}).get("watershed-context.json", {}).get("sha256")
+                        != _hash(bundle["files"]["watershed-context.json"])):
+                    raise ValueError("The completed native report differs from the saved result")
+                for descriptor in record["files"].values():
+                    verify_file(directory, descriptor)
+                _retain_native_bundle(directory, record, bundle)
+        result = receiver.adopt(
+            APPLICATION, workspace.root, archive, digest, operation_id=operation_id,
+            expected_report_id=(run.get("result") or {}).get("id"))
+    directory = workspace.root / "watershed-context" / result["id"]
     with held(workspace.root / ".workspace.lock"):
-        if directory.parent.is_symlink() or directory.is_symlink():
-            raise ValueError("Receive into the original workspace report directory")
-        if record_path.is_file():
-            existing = read_json(record_path)
-            if (existing.get("schema") != SCHEMA or existing.get("id") != key
-                    or existing.get("files", {}).get("watershed-context.json", {}).get("sha256")
-                    != _hash(received["outputs"]["watershed-context.json"])):
-                raise ValueError("The saved watershed identity belongs to another retained result")
-            for descriptor in existing["files"].values():
-                verify_file(directory, descriptor)
-            existing = _retain_native_bundle(directory, existing, bundle)
-            return _retain_connectivity(directory, existing, connectivity)
-        directory.parent.mkdir(parents=True, exist_ok=True)
-        pending = Path(tempfile.mkdtemp(prefix=".receive-watershed-", dir=directory.parent))
-        try:
-            bodies = dict(bundle["files"])
-            bodies.update({"source/" + name: body
-                           for name, body in received["original_sources"].items()})
-            bodies.update({"receiving/" + name: body
-                           for name, body in received["provenance"].items()})
-            bodies["receiving/source-archive.zip"] = received["archive"]
-            files = {}
-            for name, body in sorted(bodies.items()):
-                path = pending.joinpath(*_member(name).parts)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                with path.open("xb") as output:
-                    output.write(body)
-                    output.flush()
-                    os.fsync(output.fileno())
-                files[name] = describe_file(pending, path)
-            source_inputs = bundle["source_inputs"]
-            fingerprint = bundle["source_fingerprint"]
-            record = {
-                "schema": SCHEMA, "id": key,
-                "title": str(title or report.get("title") or "Regional watershed context"),
-                "state": "complete", "created_at": run.get("started_at") or run["completed_at"],
-                "completed_at": run["completed_at"], "received_at": now(),
-                "summary": report["summary"], "selection": report["selection"],
-                "source_fingerprint": fingerprint, "source_inputs": source_inputs,
-                "native_source_files": bundle["source_files"],
-                "source_validation": {
-                    "state": "received_completed_original",
-                    "whole_domain_huc_count": len(report["hucs"]),
-                    "native_source_bank_sha256": bundle["source"]["source_bank_sha256"],
-                    "native_source_bank_archive_sha256": bundle["source_bank_archive_sha256"],
-                },
-                "receiving": {"operation_id": run.get("operation_id"),
-                              "archive_bytes": len(received["archive"]),
-                              "archive_sha256": received["archive_sha256"],
-                              "original_result_id": key},
-                "files": files,
-            }
-            atomic_json(pending / "operator-report.json", record)
-            if directory.exists():
-                # Resume only matching original bodies from an interrupted receive.
-                for path in directory.rglob("*"):
-                    if path.is_symlink():
-                        raise ValueError("Receive original regular report members")
-                    if path.is_dir():
-                        continue
-                    name = path.relative_to(directory).as_posix()
-                    if path.is_symlink() or name not in files:
-                        raise ValueError("Retain the unfinished regional report source before receiving")
-                    verify_file(directory, files[name])
-                for name in files:
-                    target = directory.joinpath(*_member(name).parts)
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    os.replace(pending.joinpath(*_member(name).parts), target)
-                os.replace(pending / "operator-report.json", record_path)
-            else:
-                os.replace(pending, directory)
-            return _retain_connectivity(directory, record, connectivity)
-        finally:
-            if pending.exists():
-                shutil.rmtree(pending)
+        record = read_json(directory / "operator-report.json")
+        report_body = (directory / "watershed-context.json").read_bytes()
+        report = json.loads(report_body)
+        connectivity = _completed_connectivity(
+            connectivity_root or APPLICATION / "outputs/watershed-connectivity-20261013",
+            report, report_body)
+        if title is not None:
+            record = {**record, "title": str(title)}
+            atomic_json(directory / "operator-report.json", record)
+        return _retain_connectivity(directory, record, connectivity)
 
 
 def main(argv=None):

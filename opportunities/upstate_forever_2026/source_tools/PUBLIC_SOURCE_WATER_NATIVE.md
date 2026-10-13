@@ -4,7 +4,9 @@ This input package supplies the original SCDES surface-water intake response, th
 
 ## Prepare the existing Workspace
 
-The maintained application includes all seven native preparation files. Download the complete original geometry carrier already shared with the receiving GIS account, then pass its actual local path through --geometry-carrier. The same entrypoint receives the exact original polygon body and prepares its Workspace source areas.
+The maintained application includes the seven native preparation files and the complete original polygon response at source/water_context/20261012/public-water/raw/scdes-arjws-prwd-source-water-protection-original.json. Run the existing preparer directly against the actual South Carolina Workspace. It verifies the original body and prepares its source areas; the current application archive supplies all required source inputs.
+
+The original polygon body was committed as acfc70fbc6e27380f27e396ebe344d814730b638 and independently read back byte for byte. For an older application whose original geometry has not yet been received, the same preparer accepts --geometry-carrier with the existing retained carrier below.
 
 Existing original geometry carrier:
 https://drive.google.com/file/d/1387FGNr-Rjpm9-pf1fzaUgPiNLThugRN/view?usp=drivesdk
@@ -19,11 +21,10 @@ Run this from the project root with the interpreter already used by the applicat
 /opt/pyvenv/bin/python source_tools/prepare_public_source_water.py \
   --model-root /ABSOLUTE/EXISTING/APPLICATION \
   --workspace /ABSOLUTE/EXISTING/WORKSPACE \
-  --geometry-carrier /ABSOLUTE/DOWNLOADED/scdes-original-public-source-water-polygons-20261013.md \
   --out /ABSOLUTE/NATIVE/PREPARATION/OUTPUT
 ~~~
 
-The default source directory is source/water_context/20261012/public-water beside the entrypoint. Supply --source-dir when the original inputs are mounted elsewhere. Omit --geometry-carrier when the exact original polygon is already retained there. Repeating intake reuses identical original bytes; an existing different source is preserved and reported. Each typed OBJECTID/INTAKE/BUFFER_FT selector must match one of the four distinct original records before import. The preparation result records the actual received carrier, original source path, bytes/hash and reuse state alongside the native collection and plan identities.
+The default source directory is source/water_context/20261012/public-water beside the entrypoint. Supply --source-dir when the original inputs are mounted elsewhere. For a preceding application that lacks the original JSON, add --geometry-carrier /ABSOLUTE/DOWNLOADED/scdes-original-public-source-water-polygons-20261013.md to the command above. Repeating intake reuses identical original bytes; an existing different source is preserved and reported. Each typed OBJECTID/INTAKE/BUFFER_FT selector must match one of the four distinct original records before import. The preparation result records the actual received carrier, original source path, bytes/hash and reuse state alongside the native collection and plan identities.
 
 The entrypoint imports sources.public-native.json through Workspace.import_sources, uses the returned immutable collection ID in the four source selectors, and calls model.receiving_waters.prepare. The installed Workspace verifies the source and metadata hashes. The output public-water-preparation.json records the actual collection ID, plan ID/state, source hashes, original feature counts, and native selection path. The four receptors use relation.method source_area.
 

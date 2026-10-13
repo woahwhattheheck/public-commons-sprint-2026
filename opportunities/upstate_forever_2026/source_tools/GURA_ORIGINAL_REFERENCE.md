@@ -2,14 +2,16 @@
 
 This command receives the official InVEST 3.20.0 Gura example, runs its supplied native arguments, imports the same scientific inputs into the maintained Workspace, and measures agreement between the two output sets. It preserves the source raster's 15 m lattice in EPSG:32737.
 
-The reference driver is authored by TokenJunkieLabs' C8FF receiving operation and integrated here as `source_tools/receive_gura_reference.py`. Its full body is the current original source from [the receiving Page](https://chatgpt.com/space/page_970b4d1253208191b732c9a82221d705), source block `915bfe7b-f271-4326-83d1-826ba265f049`: 39,637 UTF-8 bytes, SHA256 `c9946ddf74a9a6614f24f6ba15d985615082deafd98c27051dddfcb99343c66f`. This edition includes the author's native flow-direction normalization while retaining the original argument strings in provenance.
+The maintained reference driver is TokenJunkieLabs' C8FF implementation at `source_tools/receive_gura_native.py`. The existing `source_tools/receive_gura_reference.py` command imports that same entry point, so previously shared commands continue the same operation and receive all original-cell and recovery improvements.
+
+The adopted author edition is recorded in [the receiving Page](https://chatgpt.com/space/page_970b4d1253208191b732c9a82221d705), correction block `66bf8e31-580c-4619-a9ed-cde339703a85`: 44,421 UTF-8 bytes, SHA256 `427e02256bbf5c490381c3d5af50e27633b0a7f40a3fd8924fcb16b232898bab`, Git blob `d6b44f5084f67e4c4b751c47cd21c7226c26c813`. It preserves original argument strings, normalizes the native flow-direction option, and checks the prepared rasters against actual original source cells before dispatch.
 
 ## Select the intended operation
 
 | Operation | Existing entry point | Retained scientific inputs and grid |
 | --- | --- | --- |
-| Original-resolution reference and direct model comparison | `python -m source_tools.receive_gura_reference` | Official 3.20.0 sample archives and their embedded tables/arguments; original 15 m lattice; zero added context buffer |
-| Existing broader diagnostic and delivery continuation | `source_tools/gura_workflow.py` with `source_tools/receive_gura.py` | Its retained 3.16.1 example archives, separately selected current tables, 300 m land-cover reference and 300 m context buffer |
+| Original-resolution reference and direct model comparison | `python -m source_tools.receive_gura_native` | Official 3.20.0 sample archives and their embedded tables/arguments; original 15 m lattice; zero added context buffer |
+| Existing broader diagnostic and delivery continuation | `source_tools/gura_workflow.py` with `source_tools/receive_gura.py` | The current workflow pins the same original 3.20.0 archives, derives their actual 15 m land-cover cells, uses separately pinned biophysical tables and retains its independent 300 m context buffer; reopened cases keep their original source and grid identities |
 
 Keep each operation's Workspace and existing process. The reference command uses the original release archive, including its README, embedded source-version label, model-specific tables and selected native arguments. The original README describes a 30 m SRTM source resampled to the supplied 15 m land-use grid; the received raster's actual affine controls the reference run.
 
@@ -24,7 +26,9 @@ Reuse already retained copies with these exact identities. `--inputs` names thei
 
 The driver verifies the archive bytes, every extracted member and the embedded original arguments. Both-model intake checks equivalence of the original DEM, land cover and watershed geometries. It joins original biophysical fields by integer land-cover code and records any excluded noncommon codes; the native Workspace checks the actual land-cover classes.
 
-Use the actual equipped interpreter and complete application directory. The application needs its maintained GIS environment and pinned InVEST 3.20.0 runtime. The current Workspace accepts `resolution_m: 15` and an explicitly selected zero `upstream_buffer_m`; PR2762 supplied the zero-buffer join while preserving other grid identities.
+Use the actual equipped interpreter and complete application directory. The application needs its maintained GIS environment and pinned InVEST 3.20.0 runtime. The current Workspace accepts `resolution_m: 15` and an explicitly selected zero `upstream_buffer_m`. Its zero-buffer path retains the selected model geometry directly, and the grid uses the original reference lattice. The regional 30 m and existing 300 m operations keep their saved source/grid selections.
+
+Before Workspace native execution, the receiver verifies every prepared input's source selection, CRS, actual affine, integer source-window offset, dimensions and retained grid definition. It then compares valid-cell masks and source values window by window after the maintained output dtype conversion. These measured checks and original/prepared hashes are retained with the run selection.
 
 ## Execute and continue the same reference
 
@@ -40,7 +44,7 @@ First run the original nutrient example if an immediate native-stage result is u
 
 ```bash
 cd "$UPSTATE_APPLICATION"
-"$UPSTATE_PYTHON" -B -m source_tools.receive_gura_reference \
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gura_native \
   --application "$UPSTATE_APPLICATION" \
   --workspace "$GURA_REFERENCE_WORKSPACE" \
   --inputs "$GURA_320_INPUTS" --models ndr --mode native
@@ -49,7 +53,7 @@ cd "$UPSTATE_APPLICATION"
 Then execute the full original reference and Workspace comparison using the same directory:
 
 ```bash
-"$UPSTATE_PYTHON" -B -m source_tools.receive_gura_reference \
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gura_native \
   --application "$UPSTATE_APPLICATION" \
   --workspace "$GURA_REFERENCE_WORKSPACE" \
   --inputs "$GURA_320_INPUTS" --models ndr sdr --mode both \
