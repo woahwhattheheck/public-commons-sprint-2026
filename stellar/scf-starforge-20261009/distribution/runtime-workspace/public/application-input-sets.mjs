@@ -200,7 +200,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
       const result=await api('/api/application-input-sets?'+new URLSearchParams({query:search.value,offset,limit:20,workingOffset,workingLimit:10}));
       if(!current(own)||version!==listing)return;
       list.replaceChildren(...result.sets.items.map(item=>{
-        const row=node('article',undefined,'operation');row.append(node('h4',item.name),node('p',item.files+' files · '+human(item.bytes)+' bytes','note'),
+        const row=node('article',undefined,'operation');row.dataset.inputSetId=item.setId;row.append(node('h4',item.name),node('p',item.files+' files · '+human(item.bytes)+' bytes','note'),
           button('Open original source set',()=>perform(()=>openSet(item.setId))));return row;
       }));
       back.disabled=offset===0;next.disabled=offset+20>=result.sets.total;page.textContent=result.sets.total+' source sets';

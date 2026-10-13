@@ -109,7 +109,7 @@ archive tools. The receiving control accepts unchanged complete ZIPs emitted by
 this Runtime profile. For another ZIP format, extract it with its normal tool
 and choose the complete source folder through the existing intake. Source sets
 still allow 1,024 files, 4,096 directories, 16 MiB per file and 64 MiB of original
-content. The complete archive allowance is 96 MiB, including paths and metadata.
+content. The complete archive allowance is 128 MiB, including paths and metadata.
 No files are omitted to fit. Paths and case collisions use the original source
 normalizer.
 

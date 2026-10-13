@@ -1,7 +1,7 @@
 // MIT. Complete stored ZIP handover for the original Runtime companion-set format.
 // This scoped profile reads the ordinary ZIPs emitted by Runtime, without extraction.
 import {APPLICATION_INPUT_SET_LIMITS as LIMITS,normalizeApplicationInputSet,applicationInputSetJSON} from './application-input-set-format.mjs';
-export const APPLICATION_INPUT_SET_ARCHIVE_LIMITS=Object.freeze({bytes:96*1024*1024,metadata:8*1024*1024,members:LIMITS.files+LIMITS.directories+3});
+export const APPLICATION_INPUT_SET_ARCHIVE_LIMITS=Object.freeze({bytes:128*1024*1024,metadata:24*1024*1024,members:LIMITS.files+LIMITS.directories+3});
 const encoder=new TextEncoder(),decoder=new TextDecoder('utf-8',{fatal:true});
 const check=(ok,message)=>{if(!ok)throw Object.assign(new Error(message),{code:'APPLICATION_INPUT_SET_ARCHIVE_INVALID',status:400});};
 const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
@@ -39,7 +39,7 @@ export function inputSetArchiveLayout(record,complete){
 }
 /** read(offset,length) must return exactly those retained original bytes. No writer is called. */
 export async function inspectApplicationInputSetArchive({bytes,read,sha256,onProgress=()=>{},signal}){
- check(Number.isSafeInteger(bytes)&&bytes>=22&&bytes<=APPLICATION_INPUT_SET_ARCHIVE_LIMITS.bytes,'Choose a complete Runtime source-set ZIP no larger than 96 MiB.');
+ check(Number.isSafeInteger(bytes)&&bytes>=22&&bytes<=APPLICATION_INPUT_SET_ARCHIVE_LIMITS.bytes,'Choose a complete Runtime source-set ZIP no larger than 128 MiB.');
  check(typeof read==='function'&&typeof sha256==='function','A complete original archive reader is required.');
  async function get(offset,length){
   signal?.throwIfAborted();check(Number.isSafeInteger(offset)&&Number.isSafeInteger(length)&&offset>=0&&length>=0&&offset+length<=bytes,'A complete ZIP member is outside the original file.');
