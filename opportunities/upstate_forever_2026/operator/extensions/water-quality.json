@@ -118,7 +118,7 @@
     },
     "dispatch": "dispatch",
     "action_prefixes": [
-      "water-quality-"
+      "waterquality-"
     ]
   }
 }

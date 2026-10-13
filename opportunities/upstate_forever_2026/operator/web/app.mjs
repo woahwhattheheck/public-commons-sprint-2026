@@ -96,7 +96,7 @@ const extensions=createExtensionHost({
  openNativeProgramme:options=>experiments.openForInvestigation(options),
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
- openForm,submitAction,detail,fileList,uploadFile,
+ openForm,submitAction,detail,fileList,uploadFile,sourceForm,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
  openDelivery:selection=>deliveryForm(undefined,selection),
  openReceivingPlan:id=>receivingWaters.openPlan(id),
