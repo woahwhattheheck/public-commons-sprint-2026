@@ -6,12 +6,14 @@ import csv
 import hashlib
 import html
 import io
+import importlib
 import json
 import os
 import re
 import secrets
 import sqlite3
 import tempfile
+import threading
 import uuid
 import zipfile
 from contextlib import contextmanager
@@ -25,6 +27,7 @@ from workbooks import cell_parts, cell_value, col_letters, col_number, read_xlsx
 ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,79}$")
 KINDS = {"text","number","integer","date","boolean","choice","table"}
 SOURCE = Path(__file__).resolve().parent
+EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation")
 
 
 class OperationError(ValueError):
@@ -79,6 +82,88 @@ def csv_safe(value):
         except OperationError:
             return "'"+text
     return text
+
+
+def disclosure_projection(definition,values,disclosures=None,public_confirmed=False,final=True):
+    """Project released values without exposing protected inputs or computed derivatives."""
+    disclosures = disclosures or {}
+    if not isinstance(disclosures,dict):
+        raise OperationError("DISCLOSURE","Disclosure choices must be keyed by question identifier")
+    questions = {q["id"]:q for q in definition["questions"]}
+    if set(disclosures)-set(questions):
+        raise OperationError("DISCLOSURE","A disclosure choice names an absent question")
+    choices,public_values,alternatives,classifications = {},{},{},{}
+
+    def selected(field,choice,default):
+        if not isinstance(choice,dict) or set(choice)-{"classification","public_alternative","cells","derived_from_protected"}:
+            raise OperationError("DISCLOSURE","Use a classification and optional public alternative")
+        classification = default if choice.get("derived_from_protected") else choice.get("classification",default)
+        if classification not in {"public","protected"} or default == "protected" and classification != "protected":
+            raise OperationError("DISCLOSURE","A protected field cannot be changed to public; supply a public alternative")
+        alternative = choice.get("public_alternative")
+        if alternative is not None and (not isinstance(alternative,str) or len(alternative)>10000):
+            raise OperationError("DISCLOSURE","A public alternative must be text of at most 10,000 characters")
+        if alternative and classification != "protected":
+            raise OperationError("DISCLOSURE","Public alternatives accompany protected answers")
+        return {"classification":classification,**({"public_alternative":alternative} if alternative else {})}
+
+    for key,field in questions.items():
+        default = field.get("disclosure","protected")
+        choice = disclosures.get(key,{})
+        item = selected(field,choice,default)
+        value = values.get(key)
+        classifications[key] = item["classification"]
+        if item.get("public_alternative"): alternatives[key] = item["public_alternative"]
+        if field["kind"] == "table":
+            cell_choices = choice.get("cells",[])
+            if not isinstance(cell_choices,list) or len(cell_choices)>len(value or []):
+                raise OperationError("DISCLOSURE","Table disclosure choices must follow the retained answer rows")
+            columns = {c["id"]:c for c in field["columns"]}
+            projected,cells = [],[]
+            for index,row in enumerate(value or []):
+                selected_row = cell_choices[index] if index<len(cell_choices) else {}
+                if not isinstance(selected_row,dict) or set(selected_row)-set(columns):
+                    raise OperationError("DISCLOSURE","A table disclosure choice names an absent column")
+                projected_row,retained_row = {},{}
+                for column_id,column in columns.items():
+                    column_default = "protected" if item["classification"] == "protected" else column.get("disclosure",default)
+                    cell_choice = selected_row.get(column_id,{})
+                    if item["classification"] == "protected": cell_choice = {**cell_choice,"classification":"protected"}
+                    cell = selected(column,cell_choice,column_default)
+                    retained_row[column_id] = cell
+                    projected_row[column_id] = row.get(column_id) if cell["classification"] == "public" else None
+                projected.append(projected_row)
+                cells.append(retained_row)
+            item["cells"] = cells
+            public_values[key] = projected if item["classification"] == "public" else None
+        else:
+            if "cells" in choice:
+                raise OperationError("DISCLOSURE","Only table answers have cell disclosure choices")
+            public_values[key] = value if item["classification"] == "public" else None
+        choices[key] = item
+
+    # A public calculated answer must not reveal a protected source answer.
+    unresolved = {q["id"]:q for q in definition["questions"] if "calculation" in q}
+    while unresolved:
+        ready = [k for k,q in unresolved.items() if not expression_refs(q["calculation"]) & set(unresolved)]
+        if not ready: raise OperationError("DISCLOSURE","Calculation dependencies contain a cycle")
+        for key in ready:
+            q = unresolved.pop(key)
+            protected = False
+            for dependency in expression_refs(q["calculation"]):
+                dep = choices[dependency]
+                if dep["classification"] == "protected" or any(cell["classification"] == "protected" for row in dep.get("cells",[]) for cell in row.values()):
+                    protected = True
+            if protected:
+                choices[key]["classification"] = classifications[key] = "protected"
+                choices[key]["derived_from_protected"] = True
+                public_values[key] = None
+
+    has_public = bool(alternatives) or any(v is not None and v != "" and v != [] for v in public_values.values()) or any(cell.get("public_alternative") for item in choices.values() for row in item.get("cells",[]) for cell in row.values())
+    issues = []
+    if final and has_public and public_confirmed is not True:
+        issues.append({"field":"public_confirmation","code":"PUBLIC_CONFIRMATION","message":"Confirm that the public answers and public alternatives may be released publicly"})
+    return {"disclosures":choices,"public_values":public_values,"public_alternatives":alternatives,"public_confirmed":public_confirmed is True,"disclosure_issues":issues}
 
 
 def scalar(field,value):
@@ -282,6 +367,7 @@ class Workspace:
         self.directory = Path(directory).expanduser().resolve()
         self.directory.mkdir(parents=True,exist_ok=True,mode=0o700)
         self.db_path = self.directory/"questionnaires.sqlite3"
+        self.context = threading.local()
         with self.connection() as db:
             db.executescript("""
             CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -291,9 +377,11 @@ class Workspace:
             CREATE TABLE IF NOT EXISTS publications(id TEXT PRIMARY KEY,questionnaire_id TEXT NOT NULL,definition_version INTEGER NOT NULL,created TEXT NOT NULL,FOREIGN KEY(questionnaire_id,definition_version) REFERENCES definitions(questionnaire_id,version));
             CREATE TABLE IF NOT EXISTS respondents(id TEXT PRIMARY KEY,publication_id TEXT NOT NULL,name TEXT NOT NULL,key_hash TEXT NOT NULL,version INTEGER NOT NULL,accepted_revision TEXT,status TEXT NOT NULL,created TEXT NOT NULL,FOREIGN KEY(publication_id) REFERENCES publications(id));
             CREATE TABLE IF NOT EXISTS revisions(id TEXT PRIMARY KEY,respondent_id TEXT NOT NULL,number INTEGER NOT NULL,answers TEXT NOT NULL,validation TEXT NOT NULL,workbook_sha TEXT,comparison TEXT,created TEXT NOT NULL,UNIQUE(respondent_id,number),FOREIGN KEY(respondent_id) REFERENCES respondents(id),FOREIGN KEY(workbook_sha) REFERENCES workbooks(sha));
+            CREATE TABLE IF NOT EXISTS drafts(respondent_id TEXT PRIMARY KEY,version INTEGER NOT NULL,answers TEXT NOT NULL,validation TEXT NOT NULL,updated TEXT NOT NULL,FOREIGN KEY(respondent_id) REFERENCES respondents(id));
             CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,revision_id TEXT NOT NULL,decision TEXT NOT NULL,note TEXT NOT NULL,created TEXT NOT NULL,FOREIGN KEY(revision_id) REFERENCES revisions(id));
             CREATE TABLE IF NOT EXISTS reports(id TEXT PRIMARY KEY,publication_id TEXT NOT NULL,edition TEXT NOT NULL,created TEXT NOT NULL,released INTEGER NOT NULL DEFAULT 0,release_note TEXT,FOREIGN KEY(publication_id) REFERENCES publications(id));
             CREATE TABLE IF NOT EXISTS journal(sequence INTEGER PRIMARY KEY AUTOINCREMENT,method TEXT NOT NULL,identity TEXT NOT NULL,detail TEXT NOT NULL,created TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS operation_requests(request_id TEXT PRIMARY KEY,method TEXT NOT NULL,payload_sha256 TEXT NOT NULL,result TEXT NOT NULL,created TEXT NOT NULL);
             """)
             if not db.execute("SELECT 1 FROM settings WHERE key='workspace_id'").fetchone():
                 db.execute("INSERT INTO settings VALUES('workspace_id',?)",(identifier(),))
@@ -307,6 +395,23 @@ class Workspace:
         os.chmod(self.db_path,0o600)
         from respondent_operations import RespondentOperations
         self.outreach = RespondentOperations(self)
+        self.extensions = {}
+        self.extension_modules = []
+        for name in EXTENSION_MODULES:
+            try: module = importlib.import_module(name)
+            except ModuleNotFoundError as error:
+                if error.name == name: continue
+                raise OperationError("DEPENDENCY","Install the native dependency required by "+name) from error
+            operations = getattr(module,"OPERATIONS",{})
+            if not isinstance(operations,dict) or any(not isinstance(k,str) or not callable(v) for k,v in operations.items()):
+                raise OperationError("EXTENSION","The native extension operation map is invalid")
+            for method,handler in operations.items():
+                if method in self.extensions or callable(getattr(self,"op_"+method,None)):
+                    raise OperationError("EXTENSION","An extension duplicates an original native operation")
+                self.extensions[method] = handler
+            installer = getattr(module,"install_schema",None)
+            if installer: installer(self)
+            self.extension_modules.append(name)
 
     @contextmanager
     def connection(self):
@@ -351,20 +456,54 @@ class Workspace:
             if not row: raise OperationError("NOT_FOUND","Original workbook is not retained")
             return {**json.loads(row["summary"]),"name":row["name"],"source_url":row["source_url"]}
 
+    def workbook_bytes(self,sha):
+        with self.connection() as db:
+            row = db.execute("SELECT bytes FROM workbooks WHERE sha=?",(sha,)).fetchone()
+            if not row: raise OperationError("NOT_FOUND","Original workbook is not retained")
+            return row[0]
+
+    get_workbook_bytes = workbook_bytes
+
     def invoke(self,method,params=None):
         params = params or {}
         if isinstance(method,str) and method.startswith("outreach."):
-            return self.outreach.invoke(method[len("outreach."):],params)
+            if not isinstance(params,dict): raise OperationError("PARAMS","Native parameters must be an object")
+            previous = getattr(self.context,"request",None)
+            # Outreach owns its nested stable requests; preserve the original writer's actor.
+            self.context.request = {"request_id":None,"actor":params.get("_actor",{"role":"native_operator"})}
+            try: return self.outreach.invoke(method[len("outreach."):],params)
+            finally: self.context.request = previous
         function = getattr(self,"op_"+method,None)
+        if function is None and method in self.extensions:
+            function = lambda p:self.extensions[method](self,p)
         if function is None or not callable(function): raise OperationError("METHOD","Unknown native operation")
-        return function(params)
+        if not isinstance(params,dict): raise OperationError("PARAMS","Native parameters must be an object")
+        request_id = params.get("request_id")
+        if request_id is not None and (not isinstance(request_id,str) or not 1 <= len(request_id) <= 200):
+            raise OperationError("REQUEST_ID","Use a stable request identifier of at most 200 characters")
+        previous = getattr(self.context,"request",None)
+        self.context.request = {"request_id":request_id,"payload_sha256":digest(encoded({k:v for k,v in params.items() if k not in {'request_id','_actor'}}).encode()),"actor":params.get("_actor",{"role":"native_operator"})}
+        try: return function(params)
+        finally: self.context.request = previous
 
     def _write(self,method,key,detail,action):
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
+                context = getattr(self.context,"request",None) or {"actor":{"role":"native_operator"},"request_id":None}
+                request_id = context.get("request_id")
+                if request_id:
+                    previous = db.execute("SELECT * FROM operation_requests WHERE request_id=?",(request_id,)).fetchone()
+                    if previous:
+                        if previous["method"] != method or previous["payload_sha256"] != context["payload_sha256"]:
+                            raise OperationError("REQUEST_CONFLICT","This request identifier belongs to different native inputs")
+                        db.rollback()
+                        return json.loads(previous["result"])
                 result = action(db)
-                db.execute("INSERT INTO journal(method,identity,detail,created) VALUES(?,?,?,?)",(method,key,encoded(detail),now()))
+                event = {**detail,"actor":context["actor"],"outcome":"saved","request_id":request_id}
+                db.execute("INSERT INTO journal(method,identity,detail,created) VALUES(?,?,?,?)",(method,key,encoded(event),now()))
+                if request_id:
+                    db.execute("INSERT INTO operation_requests VALUES(?,?,?,?,?)",(request_id,method,context["payload_sha256"],encoded(result),now()))
                 db.commit()
                 return result
             except BaseException:
@@ -373,7 +512,7 @@ class Workspace:
 
     def op_status(self,p):
         with self.connection() as db:
-            return {"workspace_id":db.execute("SELECT value FROM settings WHERE key='workspace_id'").fetchone()[0],"questionnaires":[dict(x) for x in db.execute("SELECT * FROM questionnaires ORDER BY created")],"publications":[dict(x) for x in db.execute("SELECT * FROM publications ORDER BY created")],"workbooks":[dict(x) for x in db.execute("SELECT sha,name,source_url,created FROM workbooks ORDER BY created")],"respondents":[{k:v for k,v in dict(x).items() if k != 'key_hash'} for x in db.execute("SELECT * FROM respondents ORDER BY created")],"reports":[{k:v for k,v in dict(x).items() if k != 'edition'} for x in db.execute("SELECT * FROM reports ORDER BY created")],"journal_entries":db.execute("SELECT COUNT(*) FROM journal").fetchone()[0]}
+            return {"workspace_id":db.execute("SELECT value FROM settings WHERE key='workspace_id'").fetchone()[0],"questionnaires":[dict(x) for x in db.execute("SELECT * FROM questionnaires ORDER BY created")],"publications":[dict(x) for x in db.execute("SELECT * FROM publications ORDER BY created")],"workbooks":[dict(x) for x in db.execute("SELECT sha,name,source_url,created FROM workbooks ORDER BY created")],"respondents":[{k:v for k,v in dict(x).items() if k != 'key_hash'} for x in db.execute("SELECT * FROM respondents ORDER BY created")],"reports":[{k:v for k,v in dict(x).items() if k != 'edition'} for x in db.execute("SELECT * FROM reports ORDER BY created")],"journal_entries":db.execute("SELECT COUNT(*) FROM journal").fetchone()[0],"extensions":self.extension_modules,"extension_operations":sorted(self.extensions)}
 
     def op_import_workbook(self,p):
         try: data = base64.b64decode(p["data_base64"],validate=True)
@@ -476,7 +615,12 @@ class Workspace:
         def action(db):
             return self._invite_record(db,p,key,access)
         result = self._write("invite",key,{"publication_id":p["publication_id"],"name":name},action)
-        self._private_file("respondent-"+key+".json",json.dumps(result,ensure_ascii=False,indent=2)+"\n")
+        retained = "respondent-"+result["respondent_id"]+".json"
+        invitation = json.dumps(result,ensure_ascii=False,indent=2)+"\n"
+        path = self.directory/retained
+        if path.exists():
+            if path.read_text() != invitation: raise OperationError("INVITATION","The retained invitation differs from this native request")
+        else: self._private_file(retained,invitation)
         return result
 
     def op_get_respondent(self,p):
@@ -488,7 +632,33 @@ class Workspace:
                 for field in ("answers","validation","comparison"):
                     if revision[field] is not None: revision[field] = json.loads(revision[field])
                 revision["reviews"] = [dict(x) for x in db.execute("SELECT * FROM reviews WHERE revision_id=? ORDER BY created",(revision["id"],))]
-            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"revisions":revisions}
+            draft = db.execute("SELECT * FROM drafts WHERE respondent_id=?",(respondent["id"],)).fetchone()
+            draft = None if draft is None else dict(draft)
+            if draft:
+                draft["answers"] = json.loads(draft["answers"])
+                draft["validation"] = json.loads(draft["validation"])
+            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"revisions":revisions,"draft":draft}
+
+    def op_save_progress(self,p):
+        key = p["respondent_id"]
+        def action(db):
+            respondent = self._row(db,"respondents",key)
+            if respondent["status"] == "accepted" and (getattr(self.context,"request",None) or {}).get("actor",{}).get("role") == "respondent":
+                raise OperationError("RESPONSE_LOCKED","The accepted response is retained; the analyst can reopen it for a revised submission")
+            if respondent["version"] != p.get("expected_version"):
+                raise OperationError("VERSION_CONFLICT","This respondent has a newer sealed revision; reopen the current edition")
+            previous = db.execute("SELECT version FROM drafts WHERE respondent_id=?",(key,)).fetchone()
+            version = 0 if previous is None else previous[0]
+            if version != p.get("expected_draft_version",0):
+                raise OperationError("VERSION_CONFLICT","The saved response progress changed; reopen before editing",{"current_draft_version":version})
+            _,definition = self._definition(db,respondent["publication_id"])
+            answers = p.get("answers",{})
+            validation = validate_answers(definition,answers)
+            validation.update(disclosure_projection(definition,validation["values"],p.get("disclosures"),p.get("public_confirmed",False),final=False))
+            stamp = now()
+            db.execute("INSERT INTO drafts VALUES(?,?,?,?,?) ON CONFLICT(respondent_id) DO UPDATE SET version=excluded.version,answers=excluded.answers,validation=excluded.validation,updated=excluded.updated",(key,version+1,encoded(answers),encoded(validation),stamp))
+            return {"respondent_id":key,"draft_version":version+1,"sealed_revision":respondent["version"],"validation":validation,"updated":stamp}
+        return self._write("save_progress",key,{"expected_version":p.get("expected_version"),"expected_draft_version":p.get("expected_draft_version",0)},action)
 
     def op_workbook_answers(self,p):
         with self.connection() as db:
@@ -523,19 +693,30 @@ class Workspace:
         else: answers = p.get("answers",{})
         def action(db):
             respondent = self._row(db,"respondents",p["respondent_id"])
+            if respondent["status"] == "accepted" and (getattr(self.context,"request",None) or {}).get("actor",{}).get("role") == "respondent":
+                raise OperationError("RESPONSE_LOCKED","The accepted response is retained; the analyst can reopen it for a revised submission")
             if respondent["version"] != p.get("expected_version"):
                 raise OperationError("VERSION_CONFLICT","This respondent has a newer revision; reopen before submitting",{"current_version":respondent["version"]})
             _,definition = self._definition(db,respondent["publication_id"])
             validation = validate_answers(definition,answers)
+            projection = disclosure_projection(definition,validation["values"],p.get("disclosures"),p.get("public_confirmed",False))
+            validation.update(projection)
+            validation["issues"].extend(projection["disclosure_issues"])
+            validation["valid"] = not validation["issues"]
             previous = db.execute("SELECT * FROM revisions WHERE respondent_id=? ORDER BY number DESC LIMIT 1",(respondent["id"],)).fetchone()
             before = {} if previous is None else json.loads(previous["validation"])["values"]
             changes = [{"field":k,"before":before.get(k),"after":validation["values"].get(k)} for k in sorted(set(before)|set(validation["values"])) if before.get(k) != validation["values"].get(k)]
             comparison = {"answerChanges":changes,"answerChangeCount":len(changes)}
+            before_disclosure = {} if previous is None else json.loads(previous["validation"]).get("disclosures",{})
+            disclosure_changes = [{"field":k,"before":before_disclosure.get(k),"after":projection["disclosures"].get(k)} for k in sorted(set(before_disclosure)|set(projection["disclosures"])) if before_disclosure.get(k) != projection["disclosures"].get(k)]
+            comparison["disclosureChanges"] = disclosure_changes
+            comparison["disclosureChangeCount"] = len(disclosure_changes)
             if p.get("workbook_sha256") and previous is not None and previous["workbook_sha"]:
                 comparison["workbook"] = workbook_diff(self.workbook(previous["workbook_sha"]),self.workbook(p["workbook_sha256"]))
             number = respondent["version"]+1
             db.execute("INSERT INTO revisions VALUES(?,?,?,?,?,?,?,?)",(key,respondent["id"],number,encoded(answers),encoded(validation),p.get("workbook_sha256"),encoded(comparison),now()))
             db.execute("UPDATE respondents SET version=?,status='received' WHERE id=?",(number,respondent["id"]))
+            db.execute("DELETE FROM drafts WHERE respondent_id=?",(respondent["id"],))
             return {"revision_id":key,"respondent_id":respondent["id"],"number":number,"validation":validation,"comparison":comparison}
         return self._write("submit_revision",key,{"respondent_id":p["respondent_id"],"workbook_sha256":p.get("workbook_sha256")},action)
 
@@ -557,42 +738,55 @@ class Workspace:
             return {"review_id":review_id,"revision_id":revision["id"],"decision":decision,"accepted_revision":revision["id"] if decision == 'accept' else respondent["accepted_revision"]}
         return self._write("review_revision",p["revision_id"],{"decision":decision},action)
 
+    def compose_report(self,db,p,key):
+        publication,definition = self._definition(db,p["publication_id"])
+        selected_questions = p.get("question_ids")
+        known_questions = {q["id"]:q for q in definition["questions"]}
+        if selected_questions is not None and (not isinstance(selected_questions,list) or not selected_questions or len(selected_questions)!=len(set(selected_questions)) or not set(selected_questions)<=set(known_questions)):
+            raise OperationError("REPORT_SELECTION","Select distinct question identifiers from the published definition")
+        report_questions = definition["questions"] if selected_questions is None else [known_questions[q] for q in selected_questions]
+        selected_respondents = p.get("respondent_ids")
+        if selected_respondents is not None and (not isinstance(selected_respondents,list) or not selected_respondents or len(selected_respondents)!=len(set(selected_respondents))):
+            raise OperationError("REPORT_SELECTION","Select distinct accepted respondent identifiers")
+        responses = []
+        for row in db.execute("SELECT r.id,r.name,r.status,r.version,r.accepted_revision,v.number,v.validation,v.workbook_sha FROM respondents r JOIN revisions v ON v.id=r.accepted_revision WHERE r.publication_id=? AND r.status='accepted' AND r.version=v.number ORDER BY r.created",(publication["id"],)):
+            if selected_respondents is not None and row["id"] not in selected_respondents: continue
+            validation = json.loads(row["validation"])
+            projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
+            responses.append({"respondent_id":row["id"],"name":row["name"],"status":row["status"],"latest_version":row["version"],"revision_id":row["accepted_revision"],"accepted_number":row["number"],"workbook_sha256":row["workbook_sha"],"values":validation["values"],"disclosures":projection["disclosures"],"public_values":projection["public_values"],"public_alternatives":projection["public_alternatives"],"public_confirmed":projection["public_confirmed"]})
+        if selected_respondents is not None and set(selected_respondents)!={r["respondent_id"] for r in responses}:
+            raise OperationError("REPORT_SELECTION","Every selected respondent needs an accepted revision in this publication")
+        if not responses:
+            raise OperationError("REPORT_EMPTY","Accept a respondent revision before consolidating a report")
+        protected = {"schema":"atssc.report.protected.v1","report_id":key,"publication":publication,"definition":definition,"questions":report_questions,"created":now(),"accepted_responses":responses}
+        public_questions = []
+        for q in report_questions:
+            item = {k:q[k] for k in ("id","label","kind","unit","disclosure") if k in q}
+            if q["kind"] == "table":
+                item["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
+            public_questions.append(item)
+        public_responses = []
+        for index,response in enumerate(responses,1):
+            selected = {q["id"] for q in public_questions}
+            public_responses.append({"response_number":index,"values":{k:v for k,v in response["public_values"].items() if k in selected},"public_alternatives":{k:v for k,v in response["public_alternatives"].items() if k in selected},"disclosures":{k:v for k,v in response["disclosures"].items() if k in selected}})
+        public = {"schema":"atssc.report.public.v1","report_id":key,"created":protected["created"],"questionnaire_title":definition.get("title","Questionnaire"),"questions":public_questions,"accepted_responses":public_responses}
+        for edition,questions,records in ((public,public_questions,public_responses),(protected,report_questions,responses)):
+            totals = {}
+            for field in questions:
+                if field["kind"] not in {"number","integer"}: continue
+                numbers = [decimal(r["values"][field["id"]]) for r in records if r["values"].get(field["id"]) is not None]
+                total = sum(numbers,Decimal(0))
+                totals[field["id"]] = {"answered":len(numbers),"sum":format(total,"f") if numbers else None,"mean":format(total/len(numbers),"f") if numbers else None,"minimum":format(min(numbers),"f") if numbers else None,"maximum":format(max(numbers),"f") if numbers else None,"unit":field.get("unit")}
+            edition["numeric_totals"] = totals
+        edition = {"protected":protected,"public":public}
+        return edition
+
     def op_create_report(self,p):
         key = identifier()
         def action(db):
-            publication,definition = self._definition(db,p["publication_id"])
-            responses = []
-            for row in db.execute("SELECT r.id,r.name,r.status,r.version,r.accepted_revision,v.number,v.validation,v.workbook_sha FROM respondents r JOIN revisions v ON v.id=r.accepted_revision WHERE r.publication_id=? ORDER BY r.created",(publication["id"],)):
-                responses.append({"respondent_id":row["id"],"name":row["name"],"status":row["status"],"latest_version":row["version"],"revision_id":row["accepted_revision"],"accepted_number":row["number"],"workbook_sha256":row["workbook_sha"],"values":json.loads(row["validation"])["values"]})
-            protected = {"schema":"atssc.report.protected.v1","report_id":key,"publication":publication,"definition":definition,"created":now(),"accepted_responses":responses}
-            public_questions = []
-            for q in definition["questions"]:
-                if q.get("disclosure","protected") != "public": continue
-                item = {k:q[k] for k in ("id","label","kind","unit") if k in q}
-                if q["kind"] == "table":
-                    item["columns"] = [{k:c[k] for k in ("id","label","kind","unit") if k in c} for c in q["columns"] if c.get("disclosure",q.get("disclosure","protected")) == "public"]
-                public_questions.append(item)
-            public_responses = []
-            for index,response in enumerate(responses,1):
-                values = {}
-                for field in public_questions:
-                    value = response["values"].get(field["id"])
-                    if field["kind"] == "table" and value is not None:
-                        columns = {c["id"] for c in field["columns"]}
-                        value = [{k:v for k,v in row.items() if k in columns} for row in value]
-                    values[field["id"]] = value
-                public_responses.append({"response_number":index,"values":values})
-            public = {"schema":"atssc.report.public.v1","report_id":key,"created":protected["created"],"questionnaire_title":definition.get("title","Questionnaire"),"questions":public_questions,"accepted_responses":public_responses}
-            for edition,questions,records in ((public,public_questions,public_responses),(protected,definition["questions"],responses)):
-                totals = {}
-                for field in questions:
-                    if field["kind"] not in {"number","integer"}: continue
-                    numbers = [decimal(r["values"][field["id"]]) for r in records if r["values"].get(field["id"]) is not None]
-                    totals[field["id"]] = {"answered":len(numbers),"sum":format(sum(numbers,Decimal(0)),"f") if numbers else None,"unit":field.get("unit")}
-                edition["numeric_totals"] = totals
-            edition = {"protected":protected,"public":public}
-            db.execute("INSERT INTO reports VALUES(?,?,?, ?,0,NULL)",(key,publication["id"],encoded(edition),now()))
-            return {"report_id":key,"accepted_respondents":len(responses),"public_questions":len(public_questions),"protected_questions":len(definition["questions"]),"released":False,"edition":edition}
+            edition = self.compose_report(db,p,key)
+            db.execute("INSERT INTO reports VALUES(?,?,?, ?,0,NULL)",(key,p["publication_id"],encoded(edition),now()))
+            return {"report_id":key,"accepted_respondents":len(edition["protected"]["accepted_responses"]),"public_questions":len(edition["public"]["questions"]),"protected_questions":len(edition["protected"]["questions"]),"released":False,"edition":edition}
         return self._write("create_report",key,{"publication_id":p["publication_id"]},action)
 
     def op_get_report(self,p):
@@ -614,22 +808,69 @@ class Workspace:
         if not result["released"]: raise OperationError("NOT_FOUND","Public report was not found")
         return result["edition"]["public"]
 
+    def response_edition(self,respondent_id,edition):
+        if edition not in {"public","protected"}: raise OperationError("EDITION","Choose public or protected response edition")
+        record = self.op_get_respondent({"respondent_id":respondent_id})
+        current = record["draft"] or (record["revisions"][-1] if record["revisions"] else None)
+        definition = record["definition"]
+        answers = {} if current is None else current["answers"]
+        validation = validate_answers(definition,answers) if current is None else current["validation"]
+        projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
+        public = edition == "public"
+        questions = [{k:q[k] for k in ("id","label","kind","unit","disclosure","columns") if k in q} for q in definition["questions"]]
+        if public:
+            for q in questions:
+                if "columns" in q: q["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
+        values = projection["public_values"] if public else {**answers,**validation["values"]}
+        response = {"values":values,"public_alternatives":projection["public_alternatives"],"disclosures":projection["disclosures"]}
+        if not public: response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"]})
+        stamp = record["respondent"]["created"] if current is None else current.get("updated",current.get("created"))
+        return {"schema":"atssc.response-document."+edition+".v1","edition":edition,"questionnaire_title":definition.get("title","Questionnaire"),"created":now(),"updated":stamp,"questions":questions,"accepted_responses":[response],"state":"Saved draft" if record["draft"] else "Submitted revision" if current else "Empty questionnaire","document_state":"draft" if record["draft"] else "submitted" if current else "empty","sealed_revision":record["respondent"]["version"],"draft_version":None if not record["draft"] else record["draft"]["version"],"public_confirmed":projection["public_confirmed"],"validation_issues":validation["issues"] if not public else [],"numeric_totals":{}}
+
+    def response_bytes(self,respondent_id,edition,format_name):
+        if format_name not in {"pdf","docx"}: raise OperationError("FORMAT","Respondent downloads use PDF or Word")
+        from document_exports import render_document
+        return render_document(self.response_edition(respondent_id,edition),format_name)
+
+    def op_export_response(self,p):
+        directory = Path(p["directory"]).expanduser().resolve()
+        directory.mkdir(parents=True,exist_ok=False)
+        manifest = {"schema":"atssc.response-files.v1","respondent_id":p["respondent_id"],"files":[]}
+        for edition in ("public","protected"):
+            for fmt in ("pdf","docx"):
+                name = edition+"."+fmt
+                data = self.response_bytes(p["respondent_id"],edition,fmt)
+                (directory/name).write_bytes(data)
+                manifest["files"].append({"path":name,"bytes":len(data),"sha256":digest(data),"edition":edition})
+        (directory/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
+        return {"directory":str(directory),"manifest":manifest}
+
     def report_bytes(self,report_id,edition,format_name,public=False):
         if edition not in {"public","protected"}: raise OperationError("EDITION","Choose public or protected report edition")
         report = self.public_report(report_id) if public else self.op_get_report({"report_id":report_id})["edition"][edition]
+        if format_name in {"pdf","docx"}:
+            from document_exports import render_document
+            return render_document({**report,"edition":edition},format_name)
         if format_name == "json": return (json.dumps(report,ensure_ascii=False,indent=2)+"\n").encode()
         questions = report.get("questions",report.get("definition",{}).get("questions",[]))
         if format_name == "csv":
             out = io.StringIO(newline="")
             writer = csv.writer(out)
-            writer.writerow(["response","question","row","column","answer"])
+            writer.writerow(["response","question","row","column","answer","disclosure","public_alternative"])
             for index,response in enumerate(report["accepted_responses"],1):
                 for question in questions:
                     value = response["values"].get(question["id"])
+                    choice = response.get("disclosures",{}).get(question["id"],{})
+                    classification = choice.get("classification",question.get("disclosure","protected"))
                     if question["kind"] == "table":
+                        if value is None:
+                            writer.writerow([index,question["id"],"","","",classification,csv_safe(choice.get("public_alternative"))])
                         for rowno,row in enumerate(value or [],1):
-                            for column in question["columns"]: writer.writerow([index,question["id"],rowno,column["id"],csv_safe(row.get(column["id"]))])
-                    else: writer.writerow([index,question["id"],"","",csv_safe(value)])
+                            for column in question["columns"]:
+                                cells = choice.get("cells",[])
+                                cell = cells[rowno-1].get(column["id"],{}) if rowno<=len(cells) else {}
+                                writer.writerow([index,question["id"],rowno,column["id"],csv_safe(row.get(column["id"])),cell.get("classification",column.get("disclosure",classification)),csv_safe(cell.get("public_alternative"))])
+                    else: writer.writerow([index,question["id"],"","",csv_safe(value),classification,csv_safe(choice.get("public_alternative"))])
             return out.getvalue().encode("utf-8-sig")
         if format_name == "html":
             title = report.get("questionnaire_title",report.get("definition",{}).get("title","Questionnaire"))
@@ -639,11 +880,18 @@ class Workspace:
                 for question in questions:
                     value = response["values"].get(question["id"])
                     text = json.dumps(value,ensure_ascii=False,indent=2) if isinstance(value,(list,dict)) else "" if value is None else str(value)
-                    parts.append("<tr><td>"+html.escape(question["label"])+"</td><td><pre>"+html.escape(text)+"</pre></td></tr>")
+                    choice = response.get("disclosures",{}).get(question["id"],{})
+                    alternatives = []
+                    if choice.get("public_alternative"): alternatives.append(choice["public_alternative"])
+                    for rowno,row in enumerate(choice.get("cells",[]),1):
+                        for column,cell in row.items():
+                            if cell.get("public_alternative"): alternatives.append("Row "+str(rowno)+", "+column+": "+cell["public_alternative"])
+                    alternative_html = "" if not alternatives else "<p>Public alternative</p><pre>"+html.escape("\n".join(alternatives))+"</pre>"
+                    parts.append("<tr><td>"+html.escape(question["label"])+"</td><td><pre>"+html.escape(text)+"</pre>"+alternative_html+"</td></tr>")
                 parts.append("</tbody></table>")
             parts.append("</html>")
             return "".join(parts).encode()
-        raise OperationError("FORMAT","Choose JSON, CSV or HTML")
+        raise OperationError("FORMAT","Choose JSON, CSV, HTML, PDF or DOCX")
 
     def op_export_report(self,p):
         report = self.op_get_report({"report_id":p["report_id"]})
@@ -651,7 +899,7 @@ class Workspace:
         directory.mkdir(parents=True,exist_ok=False)
         manifest = {"schema":"atssc.report-files.v1","report_id":report["id"],"released":bool(report["released"]),"files":[]}
         for edition in ("public","protected"):
-            for fmt in ("json","csv","html"):
+            for fmt in ("json","csv","html","pdf","docx"):
                 name = edition+"."+fmt
                 data = self.report_bytes(report["id"],edition,fmt)
                 (directory/name).write_bytes(data)
@@ -678,18 +926,29 @@ class Workspace:
     def op_export_project(self,p):
         path = Path(p["path"]).expanduser().resolve()
         if path.exists(): raise OperationError("DESTINATION_EXISTS","Choose a new project archive path")
+        if self.directory in path.parents: raise OperationError("EXPORT_DESTINATION","Export the project outside its native workspace directory")
         path.parent.mkdir(parents=True,exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="questionnaire-project-") as temp:
             temp = Path(temp)
             backup = self.op_backup({"path":str(temp/"questionnaires.sqlite3")})
             files = {"workspace/questionnaires.sqlite3":(temp/"questionnaires.sqlite3").read_bytes()}
-            for source in sorted(SOURCE.iterdir()):
-                if source.is_file() and (source.name == "LICENSE" or source.suffix in {".py",".mjs",".mts",".html",".css",".md",".json"}):
-                    files["application/"+source.name] = source.read_bytes()
+            for source in sorted(SOURCE.rglob("*")):
+                relative = source.relative_to(SOURCE)
+                if source.is_file() and not source.is_symlink() and not any(part.startswith(".") or part in {"__pycache__","node_modules"} for part in relative.parts) and (source.name == "LICENSE" or source.suffix in {".py",".java",".mjs",".mts",".html",".css",".md",".json",".txt",".ttf",".otf"}):
+                    files["application/"+relative.as_posix()] = source.read_bytes()
             for source in self.directory.glob("*.txt"):
                 if source.name == "operator-key.txt": files["workspace/"+source.name] = source.read_bytes()
             for source in self.directory.glob("respondent-*.json"):
                 files["workspace/"+source.name] = source.read_bytes()
+            for folder in ("source-evidence","calculations","document-runtime","calculation-runtime"):
+                base = self.directory/folder
+                if folder.endswith("-runtime") and not base.exists(): base = self.directory.parent/folder
+                for source in sorted(base.rglob("*")):
+                    if source.is_symlink(): raise OperationError("PROJECT_FILE","Native project attachments must be retained files")
+                    if not source.is_file(): continue
+                    relative = Path(folder)/source.relative_to(base)
+                    name = relative.as_posix() if folder.endswith("-runtime") else "workspace/"+relative.as_posix()
+                    files[name] = source.read_bytes()
             manifest = {"schema":"atssc.project.v1","workspace_id":self.op_status({})["workspace_id"],"created":now(),"files":[{"path":name,"bytes":len(data),"sha256":digest(data)} for name,data in sorted(files.items())]}
             files["MANIFEST.json"] = (json.dumps(manifest,indent=2)+"\n").encode()
             pending = temp/"project.zip"
@@ -713,6 +972,7 @@ def receive_project(archive_path,destination,expected_sha256=None):
     data = archive_path.read_bytes()
     if expected_sha256 and digest(data) != expected_sha256: raise OperationError("SOURCE_HASH","Project archive SHA256 does not match")
     if destination.exists(): raise OperationError("DESTINATION_EXISTS","Receive into a new workspace directory")
+    destination.parent.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         names = archive.namelist()
         if len(names) != len(set(names)): raise OperationError("ARCHIVE","Project contains duplicate member paths")
@@ -734,11 +994,18 @@ def receive_project(archive_path,destination,expected_sha256=None):
                 os.chmod(path,0o600)
             with sqlite3.connect(f"file:{temp/'workspace/questionnaires.sqlite3'}?mode=ro&immutable=1",uri=True) as db:
                 if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok": raise OperationError("ARCHIVE","Received native database failed integrity verification")
+                if db.execute("PRAGMA foreign_key_check").fetchone(): raise OperationError("ARCHIVE","Received native relationships failed integrity verification")
+                identity = db.execute("SELECT value FROM settings WHERE key='workspace_id'").fetchone()
+                if not identity or identity[0] != manifest["workspace_id"]: raise OperationError("ARCHIVE","Received native workspace identity differs from its manifest")
+                operator = temp/"workspace/operator-key.txt"
+                key_hash = db.execute("SELECT value FROM settings WHERE key='operator_key_hash'").fetchone()
+                if not operator.is_file() or not key_hash or digest(operator.read_text().strip().encode()) != key_hash[0]:
+                    raise OperationError("ARCHIVE","Received operator access code differs from its native record")
                 for sha,raw in db.execute("SELECT sha,bytes FROM workbooks"):
                     if digest(raw) != sha: raise OperationError("ARCHIVE","Received original workbook bytes failed verification")
             os.mkdir(destination,0o700)
-            for root in ("application","workspace"):
-                os.rename(temp/root,destination/root)
+            for root in ("application","workspace","document-runtime","calculation-runtime"):
+                if (temp/root).exists(): os.rename(temp/root,destination/root)
     received_workspace = Workspace(destination/"workspace")
     received_workspace.outreach.verify_sources()
     result = received_workspace.op_status({})

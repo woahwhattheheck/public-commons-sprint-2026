@@ -229,8 +229,8 @@ def main():
         reminder=prepare(by_company["A"],"REMINDER",{"followup_key":due_a["key"]})
         own=client.op("get_assignment",{"id":by_company["A"]["id"]})["assignment"]
         respondent=Client(opening["url"]);respondent.request("/api/session",{"role":"respondent","respondent_id":own["respondent_id"],"access_code":own["access_code"]})
-        response=respondent.invoke("submit_revision",{"respondent_id":own["respondent_id"],"expected_version":0,"answers":{"company_name":own["company"]["name"],"reported_value":"700.00"}})
-        assert response["validation"]["valid"] and len(response["notifications"]["messages"])==2
+        response=respondent.invoke("submit_revision",{"respondent_id":own["respondent_id"],"expected_version":0,"public_confirmed":True,"answers":{"company_name":own["company"]["name"],"reported_value":"700.00"}})
+        assert response["validation"]["valid"] and response["notifications"]["prepared_count"]==2
         suppressed=client.op("followups",{"at":stamp()})
         assert all(not x["eligible"] for x in suppressed["items"] if x["assignment_id"]==own["id"])
         before=len(relay.messages)
@@ -240,7 +240,7 @@ def main():
         assert len(relay.messages)==before
         review=client.invoke("review_revision",{"revision_id":response["revision_id"],"expected_version":1,"decision":"changes_requested","note":"Please revise the original reported value to include its recorded adjustment."})
         assert len(review["notifications"]["messages"])==1
-        revised=respondent.invoke("submit_revision",{"respondent_id":own["respondent_id"],"expected_version":1,"answers":{"company_name":own["company"]["name"],"reported_value":"699.90"}})
+        revised=respondent.invoke("submit_revision",{"respondent_id":own["respondent_id"],"expected_version":1,"public_confirmed":True,"answers":{"company_name":own["company"]["name"],"reported_value":"699.90"}})
         client.invoke("review_revision",{"revision_id":revised["revision_id"],"expected_version":2,"decision":"accept","note":"Original adjusted response accepted"})
         resync=client.change("sync_notifications",{"at":stamp()});assert not resync["messages"]
         phase("native_received_revision_confirmation_correction_and_reminder_suppression",{"first_revision":response["revision_id"],"revised_revision":revised["revision_id"],"original_comparison":revised["comparison"],"suppressed_followup_key":due_a["key"],"automatic_notices":5,"resync":resync})

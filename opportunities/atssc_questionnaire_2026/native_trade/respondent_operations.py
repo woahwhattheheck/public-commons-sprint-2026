@@ -153,6 +153,7 @@ class RespondentOperations:
         result["contact"]=self._entity(db,"contact",row["contact_id"])
         result["company"]=self._entity(db,"company",row["company_id"])
         result["email"]=result["contact"].get("email","")
+        result["language"]=result["contact"]["language"]
         result["active"]=result.get("active",True) and result["contact"].get("active",True)
         revision=db.execute("SELECT id,number,created FROM revisions WHERE respondent_id=? ORDER BY number DESC LIMIT 1",(row["respondent_id"],)).fetchone()
         result["latest_response"]=dict(revision) if revision else None
@@ -633,6 +634,8 @@ class RespondentOperations:
             templates=self._entities(db,"template")
             messages=[];skipped=[]
             for assignment in self._assignments(db):
+                if p.get("respondent_id") and assignment["respondent_id"]!=p["respondent_id"]:
+                    continue
                 if not assignment["active"] or assignment.get("paused"):
                     continue
                 existing=[self._message(db,row[0]) for row in db.execute("SELECT id FROM outreach_messages WHERE assignment_id=?",(assignment["id"],))]
@@ -672,7 +675,7 @@ class RespondentOperations:
             before=self._message(db,p.get("id"))
             if before["version"]!=p.get("expected_version"):
                 problem("VERSION_CONFLICT","Reopen the current communication")
-            if before["delivery"]["state"] not in ("QUEUED","REJECTED","BOUNCED"):
+            if before["delivery"]["state"] not in ("QUEUED","REJECTED"):
                 problem("DELIVERY_OUTCOME","Recover the original delivery outcome before cancelling this operation")
             self._event(db,before["id"],"workspace","cancel:"+p["request_id"],"CANCELLED",now(),{"actor":actor,"reason":reason})
             db.execute("UPDATE outreach_messages SET version=version+1,updated=? WHERE id=?",(now(),before["id"]))
