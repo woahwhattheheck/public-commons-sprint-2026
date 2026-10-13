@@ -3,11 +3,12 @@
   "id": "gis-native-study",
   "components": {
     "gis-native-study": {
-      "title": "Saved native-model study to complete editable GIS handover",
+      "title": "Saved native study, scientific report and selected execution history to editable GIS",
       "requires": [
         "core",
         "gis-projects",
-        "ensembles"
+        "ensembles",
+        "scientific-report-review"
       ],
       "paths": [
         "model/gis_native_study.py",
@@ -20,7 +21,10 @@
         "model/ensemble_study_transfer.py",
         "model/native_versions.py",
         "integration/component_fragments/gis-native-study.json",
-        "CURRENT_OWNER_DIRECTION.md"
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/gis_study_context.py",
+        "operator/source_report_editions.py",
+        "operator/web/source_report_editions.mjs"
       ]
     }
   },
@@ -30,6 +34,7 @@
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "retained_gis_review_merge": "340a3073f21147e1622ce82373386dde6b7f973e",
-    "source_contract": "upstate.ensemble-study-source/v1, producer versions1 and2"
+    "source_contract": "upstate.ensemble-study-source/v1, producer versions1 and2",
+    "context_contract": "Saved scientific report edition plus optional native-run-history snapshot, original bytes and matched cohort"
   }
 }

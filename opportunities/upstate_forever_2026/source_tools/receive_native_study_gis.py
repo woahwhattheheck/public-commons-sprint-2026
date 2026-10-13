@@ -8,14 +8,15 @@ import sys
 import time
 
 
-def receive(application, workspace, state_directory, *, source_collection_id=None, timeout=600):
+def receive(application, workspace, state_directory, *, source_collection_id=None,
+            scientific_report_id=None, execution_history_id=None, timeout=600):
     application, workspace = Path(application).resolve(), Path(workspace).resolve()
     state_directory = Path(state_directory).resolve()
     state_directory.mkdir(parents=True, exist_ok=True)
     sys.path[:0] = [str(application / "operator"), str(application)]
     from server import Operator
     from gis_projects import GISProjects
-    from model import gis_project as gis, gis_native_study
+    from model import gis_project as gis, gis_native_study, gis_study_context
     from model.common import atomic_json, digest
 
     journal_path = state_directory / "native-study-gis-receiving.json"
@@ -35,17 +36,35 @@ def receive(application, workspace, state_directory, *, source_collection_id=Non
             source_collection_id = candidates[0]["source_collection_id"]
         chosen = {"source_collection_id": source_collection_id,
                   "source_id": "saved-native-ensemble-study"}
+        requested = {"scientific_report": scientific_report_id, "execution_history": execution_history_id}
+        for field, requested_id in requested.items():
+            saved_id = ((retained or {}).get("payload", {}).get("native_study", {}).get(field) or {}).get("id")
+            if retained and requested_id and requested_id != saved_id:
+                raise ValueError("Use a separate receiving state for a different saved report or execution history.")
+            selected_id = saved_id if retained else requested_id
+            if selected_id:
+                chosen[field + "_id"] = selected_id
         original = gis_native_study.preview(ws, chosen)
         identity = {"project_id": ws.project["id"],
                     "source_collection_id": source_collection_id,
                     "source_id": original["source_id"], "source_sha256": original["source_sha256"],
                     "ensemble_id": original["ensemble_id"], "report_id": original["report_id"],
                     "receiver_version": gis_native_study.VERSION}
+        context_bindings = {}
+        for field in ("scientific_report", "execution_history"):
+            selected_context = original.get("selected_" + field)
+            if selected_context:
+                context_bindings[field] = selected_context["binding"]
+        if context_bindings:
+            identity["saved_contexts"] = context_bindings
         if retained and retained["identity"] != identity:
             raise ValueError("The retained GIS receiving belongs to another original native-study edition.")
         receipt = retained or {"schema": "upstate.native-study-gis-receiving/v1",
                               "identity": identity, "phases": {}}
         if "payload" not in receipt:
+            chosen.pop("scientific_report_id", None)
+            chosen.pop("execution_history_id", None)
+            chosen.update(context_bindings)
             chosen["source_sha256"] = original["source_sha256"]
             if original["rendered_report"]:
                 chosen["rendered_report"] = {
@@ -125,6 +144,25 @@ def receive(application, workspace, state_directory, *, source_collection_id=Non
         if sorted((row["sha256"], row["bytes"]) for row in expected) != sorted(
                 (row["sha256"], row["bytes"]) for row in actual):
             raise AssertionError("The editable handover lost an original native-study source companion.")
+        source_collection, source_entry, captured = gis_native_study._selected(ws, receipt["payload"]["native_study"])
+        expected_contexts = gis_study_context.selected_contexts(
+            ws, source_collection["id"], source_entry["id"], captured, receipt["payload"]["native_study"])
+        contexts_by_id = {row["binding"]["id"]: row["attachment"] for row in expected_contexts}
+        saved_contexts = []
+        for field, context_binding in context_bindings.items():
+            matches = [row for row in outgoing["attachments"]
+                       if row.get("source", {}).get("id") == context_binding["id"]
+                       and row.get("source", {}).get("files_sha256") == context_binding["files_sha256"]]
+            if len(matches) != 1:
+                raise AssertionError("The selected saved context lost its original identity.")
+            attachment = matches[0]
+            expected_context = contexts_by_id[context_binding["id"]]
+            expected_members = [expected_context["file"], *expected_context["companions"]]
+            if [(row["source_path"], row["bytes"], row["sha256"]) for row in attachment.get("files", [])] != [
+                    (row["path"], row["bytes"], row["sha256"]) for row in expected_members]:
+                raise AssertionError("The selected saved context lost an original member or companion hierarchy.")
+            saved_contexts.append({"kind": field, "binding": context_binding,
+                                   "attachment_id": attachment["id"], "files": attachment["files"]})
         for layer in outgoing["layers"]:
             source = layer.get("source", {}).get("native_study")
             if not source or source["source_sha256"] != original["source_sha256"]:
@@ -135,7 +173,7 @@ def receive(application, workspace, state_directory, *, source_collection_id=Non
                   "run_count": original["run_count"], "comparison_count": original["comparison_count"],
                   "grid": original["grid"], "scope": original["scope"], "quantities": original["quantities"],
                   "layers": len(outgoing["layers"]), "attachments": len(outgoing["attachments"]),
-                  "original_source_members": len(expected), "archive": {
+                  "original_source_members": len(expected), "saved_contexts": saved_contexts, "archive": {
                       "bytes": ticket["bytes"], "sha256": ticket["sha256"]},
                   "viewer": str(incoming_root / "OPEN_GIS.html"),
                   "qgis_project": str(incoming_root / "project.qgz"),
@@ -176,8 +214,12 @@ if __name__ == "__main__":
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--state-directory", type=Path, required=True)
     parser.add_argument("--source-collection-id")
+    parser.add_argument("--scientific-report-id")
+    parser.add_argument("--execution-history-id")
     parser.add_argument("--timeout", type=float, default=600)
     args = parser.parse_args()
     print(json.dumps(receive(args.application, args.workspace, args.state_directory,
                              source_collection_id=args.source_collection_id,
+                             scientific_report_id=args.scientific_report_id,
+                             execution_history_id=args.execution_history_id,
                              timeout=args.timeout), ensure_ascii=False, indent=2))
