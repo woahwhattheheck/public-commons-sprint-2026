@@ -17,7 +17,7 @@ const csv=rows=>{
   return [columns,...rows.map(row=>columns.map(name=>row[name]))].map(row=>row.map(value).join(',')).join('\r\n')+'\r\n';
 };
 
-export function renderComparablePeriods(data,{yearA,yearB,station='',series='',tab='comparison',query='',page=0}={}){
+export function renderComparablePeriods(data,{yearA,yearB,station='',series='',tab='comparison',query='',page=0,activityFilter=null}={}){
   const matching=item=>(!station||item.station===station)&&(!series||item.series_id===series||item.id===series);
   const seriesRows=list(data.series).filter(matching),ids=new Set(seriesRows.map(x=>x.id));
   const labels=data.presentation?.series_labels||Object.fromEntries(list(data.series).map((x,i)=>[x.id,'S'+String(i+1).padStart(3,'0')]));
@@ -30,7 +30,7 @@ export function renderComparablePeriods(data,{yearA,yearB,station='',series='',t
       exportRows.map(row=>'<tr><td title="'+esc(seriesLabel(row))+'">'+esc(labels[row.series_id])+'</td><td>'+esc(row.year)+'</td><td>'+esc(row.month)+'</td><td>'+esc(row.activities)+'</td><td>'+esc(row.original_rows)+'</td><td>'+esc(row.admitted_activities)+'</td><td>'+esc(row.complete_source_support?'Complete':'Incomplete')+'</td><td>'+esc(interval(row.mean))+'</td><td>'+esc(row.censored_activities)+'</td></tr>').join(''));
   }else if(tab==='originals'){
     const needle=query.trim().toLowerCase(),allowed=new Set(seriesRows.map(row=>key(originalFields.map(field=>row[field]))));
-    exportRows=list(data.original_rows).filter(row=>allowed.has(key(originalFields.map(field=>row[field])))&&(!needle||Object.values(row).some(value=>String(value).toLowerCase().includes(needle))));
+    exportRows=list(data.original_rows).filter(row=>allowed.has(key(originalFields.map(field=>row[field])))&&(!activityFilter||(row.activity===activityFilter.activity&&row.date===activityFilter.date))&&(!needle||Object.values(row).some(value=>String(value).toLowerCase().includes(needle))));
     const totalPages=Math.max(1,Math.ceil(exportRows.length/50)),shownPage=Math.min(Math.max(0,page),totalPages-1);
     const columns=['result_id','activity','date',...originalFields,'reported_value','reported_unit','condition','limit_types','limit_values','lower','upper','lower_open','upper_open','censoring','analysis_eligible','quality_flag'];
     content='<p>'+esc(exportRows.length)+' complete original rows · page '+(shownPage+1)+' of '+totalPages+'. Download includes every matched row and every original field.</p>'+
@@ -42,7 +42,8 @@ export function renderComparablePeriods(data,{yearA,yearB,station='',series='',t
       exportRows.map(row=>'<tr><th scope="row" title="'+esc(seriesLabel(row))+'">'+esc(labels[row.series_id]+' · '+row.characteristic)+'</th><td>'+esc(row.station+' / '+row.project)+'</td><td>'+esc(row.unit+' / '+row.method)+'</td><td>'+esc(row.common_months.join(', ')||'None')+'</td><td>'+esc(row.activities_a)+'</td><td>'+esc(row.activities_b)+'</td><td>'+esc(interval(row.matched_mean_a))+'</td><td>'+esc(interval(row.matched_mean_b))+'</td><td>'+esc(interval(row.change))+'<br>'+esc(row.direction)+'</td><td>'+button('series','Inspect exact series','data-series="'+esc(row.series_id)+'"')+'</td></tr>').join(''));
   }
   if(!exportRows.length)content='<p class="oc-empty">No original rows match this view. Choose another retained year pair or clear the station/series filter.</p>';
-  return {html:detail+content,rows:exportRows};
+  const exactNote=tab==='originals'&&activityFilter?'<p class="oc-exact-activity">Exact original activity '+esc(activityFilter.activity)+' on '+esc(activityFilter.date)+'. '+button('clear-activity','Clear exact activity')+' '+button('return-contributions','Return to comparison and contributions')+'</p>':'';
+  return {html:detail+exactNote+content,rows:exportRows};
 }
 
 export function renderActivityContributions(ledger,{station='',series='',yearA=null,yearB=null}={}){
@@ -75,7 +76,7 @@ export function renderActivityContributions(ledger,{station='',series='',yearA=n
             interval(row.original_interval),row.month_weight_exact+' × '+row.within_month_weight_exact+' = '+row.mean_weight_exact,
             interval(row.mean_contribution),row.signed_change_weight_exact,interval(row.change_contribution)]
             .map(value=>'<td class="oc-raw">'+esc(value)+'</td>').join('')+
-            '<td>'+button('contribution','Inspect original results','data-series="'+esc(pair.series_id)+'" data-activity="'+esc(row.activity_id)+'"')+detail+'</td></tr>';
+            '<td>'+button('contribution','Inspect original results','data-series="'+esc(pair.series_id)+'" data-activity="'+esc(row.activity_id)+'" data-date="'+esc(row.date)+'"')+detail+'</td></tr>';
         }).join(''),'Every original activity and exact signed weight');
       return '<section><h3>'+esc(label)+' · '+esc(pair.year_b+' versus '+pair.year_a)+'</h3>'+identity+
         '<p>Original interval: '+esc(interval(pair.original_mean_a))+' → '+esc(interval(pair.original_mean_b))+
@@ -95,7 +96,7 @@ export function attachObservationComparability(host){
   const context=w=>{
     if(!contexts.has(w)){
       let saved={};try{saved=JSON.parse(globalThis.localStorage?.getItem(storageKey(w))||'{}');}catch{}
-      contexts.set(w,{source:'',yearA:null,yearB:null,title:'',station:'',series:'',tab:'comparison',query:'',page:0,lastOpened:'',lastTask:'',...saved,edit:0,titleEdit:0,yearEdit:0,observedTasks:new Set()});
+      contexts.set(w,{source:'',yearA:null,yearB:null,title:'',station:'',series:'',tab:'comparison',query:'',page:0,activityFilter:null,lastOpened:'',lastTask:'',...saved,edit:0,titleEdit:0,yearEdit:0,observedTasks:new Set()});
     }
     return contexts.get(w);
   };
@@ -146,6 +147,7 @@ export function attachObservationComparability(host){
     const c=context(workspace),stations=[...new Set(list(data.series).map(row=>row.station))].sort();
     if(!stations.includes(c.station))c.station='';
     if(!list(data.series).some(row=>row.id===c.series&&(!c.station||row.station===c.station)))c.series='';
+    if(c.activityFilter&&c.activityFilter.series_id!==c.series)c.activityFilter=null;
     field('station').innerHTML=option('','All retained stations',c.station)+stations.map(value=>option(value,value,c.station)).join('');
     field('series').innerHTML=option('','All exact analytical series',c.series)+list(data.series).filter(row=>!c.station||row.station===c.station).map(row=>option(row.id,seriesLabel(row),c.series)).join('');
     field('tab').value=['comparison','calendar','originals'].includes(c.tab)?c.tab:'comparison';c.tab=field('tab').value;
@@ -155,7 +157,7 @@ export function attachObservationComparability(host){
     find('[data-oc-summary]').innerHTML='<h3>'+esc(title)+'</h3><p>'+esc(data.period.start+' through '+data.period.end)+' · '+esc(counts.original_result_ids)+' original result IDs · '+esc(counts.activities)+' activities · '+esc(counts.analytical_series)+' exact analytical series.</p>'+
       (opened?'<p>Saved original edition '+esc(opened.edition.id.slice(0,16))+'. Full originals and the report source are retained in this Workspace.</p>':'<p>Original source opened. Save this selection to retain its report source, full offline desk and portable source package.</p>')+sourceContext();
     find('[data-oc-view]').hidden=false;
-    const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page});
+    const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page,activityFilter:c.activityFilter});
     renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html+savedFigures(data,c)+(opened?renderActivityContributions(opened._contributions,{station:c.station,series:c.series,yearA:c.yearA,yearB:c.yearB}):'');
     find('[data-oc-action="compose"]').disabled=!opened;
     find('[data-oc-action="append"]').disabled=!opened;
@@ -197,6 +199,7 @@ export function attachObservationComparability(host){
     const w=workspace,g=epoch,c=context(w),ticket=++contentRead,chosen=c.source,titleEdit=c.titleEdit,yearEdit=c.yearEdit;
     const row=source?{choice:source}:list(catalog?.sources).find(item=>key(item.choice)===chosen);
     if(!row||key(row.choice)!==chosen)throw Error('Choose one retained original cohort.');
+    c.activityFilter=null;
     loaded=null;opened=null;renderedRows=[];find('[data-oc-view]').hidden=true;find('[data-oc-summary]').textContent='';
     find('[data-oc-action="save"]').disabled=true;note('Reading the original index, complete publisher responses and source selectors…');
     const result=await api(endpoint('/api/observation-comparability/inputs',{workspace:w}),{method:'POST',body:{source:clone(row.choice)}});
@@ -252,7 +255,7 @@ export function attachObservationComparability(host){
     if(context(w).edit!==edit){note('Your current draft changed while the saved result was opening. Reopen that edition when ready.');return;}
     if(result.edition?.id!==id||result.edition.project_id!==getState()?.data?.project?.id)throw Error('The saved comparison belongs to another original Workspace.');
     opened=result;
-    const c=context(w),s=result.edition.selection;c.edit++;c.source=key(s.source);c.yearA=s.year_a;c.yearB=s.year_b;c.title=s.title;c.lastOpened=id;
+    const c=context(w),s=result.edition.selection;c.edit++;c.source=key(s.source);c.yearA=s.year_a;c.yearB=s.year_b;c.title=s.title;c.lastOpened=id;c.activityFilter=null;
     loaded={source:clone(s.source),binding:clone(result.edition.identity.binding),
       binding_sha256:s.binding_sha256,producers:clone(s.producers),data:result.data,
       defaults:result.data.default_comparison,presentation:result.data.presentation,
@@ -265,16 +268,16 @@ export function attachObservationComparability(host){
   function changed(event){
     const name=event.target.name,c=context(workspace);
     if(name==='source'){
-      c.source=event.target.value;c.edit++;c.lastOpened='';c.page=0;persist(workspace);
+      c.source=event.target.value;c.edit++;c.lastOpened='';c.page=0;c.activityFilter=null;persist(workspace);
       if(!c.source){++contentRead;loaded=null;opened=null;find('[data-oc-view]').hidden=true;find('[data-oc-action="save"]').disabled=true;return;}
       const w=workspace,g=epoch;loadSource().catch(error=>{if(alive(w,g))note(error.message,true);});return;
     }
     if(name==='edition')return;
     if(['yearA','yearB','title'].includes(name)){
       c[name]=name==='title'?event.target.value:Number(event.target.value);c.edit++;
-      if(name==='title')c.titleEdit++;else c.yearEdit++;
+      if(name==='title')c.titleEdit++;else{c.yearEdit++;c.activityFilter=null;}
       opened=null;c.lastOpened='';
-    }else if(['station','series','tab','query'].includes(name)){c[name]=event.target.value;c.page=0;}
+    }else if(['station','series','tab','query'].includes(name)){c[name]=event.target.value;c.page=0;if(['station','series'].includes(name))c.activityFilter=null;}
     else return;
     persist(workspace);display();
   }
@@ -295,8 +298,10 @@ export function attachObservationComparability(host){
     }
     if(name==='csv')return download();
     const c=context(workspace);
-    if(name==='series'){c.series=node.dataset.series;c.tab='calendar';c.page=0;}
-    else if(name==='contribution'){c.series=node.dataset.series;c.tab='originals';c.query=node.dataset.activity;c.page=0;}
+    if(name==='series'){c.series=node.dataset.series;c.tab='calendar';c.page=0;c.activityFilter=null;}
+    else if(name==='contribution'){c.series=node.dataset.series;c.tab='originals';c.query='';c.page=0;c.activityFilter={series_id:node.dataset.series,activity:node.dataset.activity,date:node.dataset.date};}
+    else if(name==='clear-activity'){c.activityFilter=null;c.page=0;}
+    else if(name==='return-contributions'){c.activityFilter=null;c.tab='comparison';c.page=0;}
     else if(name==='previous')c.page=Math.max(0,c.page-1);
     else if(name==='next')c.page++;
     else throw Error('Choose an original comparison action.');
