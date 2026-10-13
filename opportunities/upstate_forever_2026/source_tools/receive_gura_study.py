@@ -20,8 +20,8 @@ def parser():
     value = argparse.ArgumentParser(description=__doc__)
     value.add_argument("--application", type=Path, required=True)
     value.add_argument("--workspace", type=Path, required=True)
-    value.add_argument("--inputs", type=Path, required=True,
-                       help="Directory containing the original NDR and SDR sample archives")
+    value.add_argument("--inputs", type=Path,
+                       help="Official ZIP directory for first intake; omit to verify retained Workspace inputs")
     value.add_argument("--baseline-run-id", help="Existing original Gura baseline")
     value.add_argument("--alternative-run-id", action="append", default=[],
                        help="Completed original-grid land-cover alternative; repeat in map order")
@@ -94,9 +94,11 @@ def main(argv=None):
             if need_planning:
                 values = [
                     "--application", str(application), "--workspace", str(root),
-                    "--inputs", str(args.inputs.resolve()), "--max-count", str(args.max_count),
+                    "--max-count", str(args.max_count),
                     "--min-coverage", str(args.min_coverage), "--solver", args.solver,
                 ]
+                if args.inputs is not None:
+                    values += ["--inputs", str(args.inputs.resolve())]
                 for flag, value in (
                     ("--baseline-run-id", args.baseline_run_id),
                     ("--area-ha", args.area_ha),
@@ -116,8 +118,7 @@ def main(argv=None):
             if not baseline_id:
                 raise ValueError("Select the original completed Gura baseline")
             baseline_id = identifier(baseline_id)
-            originals = {model: receiver.unpack_original(args.inputs.resolve(), receiving, model)
-                         for model in ("ndr", "sdr")}
+            originals = planning.original_sources(args.inputs, receiving, receiver)
             baseline, grid = planning.original_baseline(workspace, baseline_id, originals, receiver)
             alternative_ids = list(args.alternative_run_id)
             if not alternative_ids:

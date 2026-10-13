@@ -22,7 +22,8 @@ def parser():
     value = argparse.ArgumentParser(description=__doc__)
     value.add_argument("--application", type=Path, required=True)
     value.add_argument("--workspace", type=Path, required=True)
-    value.add_argument("--inputs", type=Path, required=True)
+    value.add_argument("--inputs", type=Path,
+                       help="Official ZIP directory for first intake; omit to verify retained Workspace inputs")
     value.add_argument("--baseline-run-id",
                        help="Completed original Gura application baseline; omitted runs the receiving driver first")
     value.add_argument("--max-count", type=int, default=3,
@@ -37,6 +38,25 @@ def parser():
     value.add_argument("--archive", type=Path,
                        help="Optional complete workspace backup after the evaluated portfolio")
     return value
+
+
+def original_sources(inputs, receiving, receiver):
+    """Read the exact release inputs, including a relocated portable Workspace."""
+    if inputs is not None:
+        return {model: receiver.unpack_original(inputs, receiving, model)
+                for model in ("ndr", "sdr")}
+    record_path = receiving / "gura-receiving-state.json"
+    if not record_path.is_file():
+        raise ValueError("First Gura intake requires --inputs with the official NDR.zip and SDR.zip")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    if (not isinstance(record, dict) or record.get("schema") != "upstate.gura-receiving/v1"
+            or not isinstance(record.get("original_sources"), dict)):
+        raise ValueError("The retained Gura receiving source inventory is missing or malformed")
+    # The maintained receiver verifies each retained source descriptor, original
+    # argument document and scientific setting before rebinding machine paths.
+    return {model: receiver.restored_original(
+        receiving, model, record["original_sources"].get(model))
+        for model in ("ndr", "sdr")}
 
 
 def checked_conversion(originals, receiving_driver):
@@ -198,11 +218,13 @@ def main(argv=None):
         try:
             checkpoint("original-inputs")
             if args.baseline_run_id is None:
-                result = receiver.main([
+                original_args = [
                     "--application", str(application), "--workspace", str(root),
-                    "--inputs", str(args.inputs.resolve()), "--models", "ndr", "sdr",
-                    "--mode", "both",
-                ])
+                    "--models", "ndr", "sdr", "--mode", "both",
+                ]
+                if args.inputs is not None:
+                    original_args += ["--inputs", str(args.inputs.resolve())]
+                result = receiver.main(original_args)
                 if result:
                     raise RuntimeError("Original Gura receiving did not complete; inspect gura-receiving-state.json")
                 original_state = json.loads(
@@ -211,8 +233,7 @@ def main(argv=None):
             else:
                 baseline_id = args.baseline_run_id
             workspace = Workspace(root)
-            originals = {model: receiver.unpack_original(args.inputs, receiving, model)
-                         for model in ("ndr", "sdr")}
+            originals = original_sources(args.inputs, receiving, receiver)
             classes = checked_conversion(originals, receiver)
             baseline, grid = original_baseline(workspace, baseline_id, originals, receiver)
             units = import_units(workspace, receiving, originals, receiver)

@@ -15,13 +15,27 @@ GURA_PYTHON=/path/to/equipped/python
   --application "$GURA_APPLICATION" --operation "$GURA_OPERATION"
 ```
 
-The default scientific Workspace is `OPERATION/workspace` and the input directory is `OPERATION/inputs`. To continue an already retained scientific Workspace and archives elsewhere, provide both paths explicitly:
+The default scientific Workspace is `OPERATION/workspace`. For a first intake, place the official ZIPs in `OPERATION/inputs` or select their directory explicitly. When that default directory is absent and `--inputs` is omitted, the supervisor and all four receivers verify the original source inventory already retained inside the Workspace.
+
+To continue an already retained scientific Workspace and archives elsewhere, provide both paths explicitly:
 
 ```bash
 "$GURA_PYTHON" -B "$GURA_APPLICATION/source_tools/receive_gura_operation.py" \
   --application "$GURA_APPLICATION" --operation "$GURA_OPERATION" \
   --workspace /path/to/existing-gura-workspace --inputs /path/to/original-archives
 ```
+
+A portable Workspace retains the original extracted inputs, argument documents and their exact descriptors. It can therefore resume without the old machine's external ZIP directory. Use a new operation directory outside the restored Workspace and omit `--inputs`:
+
+```bash
+"$GURA_PYTHON" -B "$GURA_APPLICATION/source_tools/receive_gura_operation.py" \\
+  --application "$GURA_APPLICATION" --operation /path/to/reopened-gura-operation \\
+  --workspace /path/to/reopened/workspace --deadline-utc 2026-10-13T14:00:00Z
+```
+
+The native, planning, report and parameter receivers all use the maintained original-inventory verifier: exact member paths, sizes and hashes; original model arguments; release metadata; and the original scientific settings. It rebinds only machine-local paths. Missing or changed retained input bytes fail before a scientific selection is built. An explicit `--inputs` directory always follows the original pinned ZIP intake and is never silently replaced by another source.
+
+The restored Workspace keeps its original project, grid, run, profile and parameter-suite selections. Completed matching cases are reused. Its newly written continuation arguments point to the receiving machine's paths; earlier archived attempts and reports remain unchanged.
 
 The supervisor creates the operation directory when needed. Its saved operation manifest binds the resolved application, scientific Workspace, inputs and interpreter paths. Use those same paths on subsequent invocations. The established private `run_gura_operation.py` supervisor and this maintained entrypoint share the same operation schema and lock; the maintained command can resume that operation directly.
 
