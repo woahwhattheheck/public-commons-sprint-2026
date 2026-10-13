@@ -1,0 +1,15 @@
+// MIT. Revision-checked browser working copies and complete original command requests.
+const DB='bim-routing-browser-v1',STORE='working',SCHEMA='bim.browser-storage.v1';
+let dbPromise=null,tail=Promise.resolve();const observed=new Map();
+function open(){if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onerror=()=>reject(r.error);r.onsuccess=()=>resolve(r.result);});return dbPromise;}
+function unpack(record){if(record?.schema===SCHEMA&&Number.isSafeInteger(record.revision)&&record.revision>0)return record;return{schema:SCHEMA,revision:0,value:record??null};}
+export async function loadWorking(key){await tail.catch(()=>{});const db=await open();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(key);r.onsuccess=()=>{const stored=unpack(r.result);observed.set(key,stored.revision);resolve(stored.value??null);};r.onerror=()=>reject(r.error);});}
+export function saveWorking(key,value){const snapshot=structuredClone(value);const task=tail.catch(()=>{}).then(async()=>{const db=await open();return new Promise((resolve,reject)=>{const expected=observed.get(key)??0,tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),r=store.get(key);let conflict=null,next;
+r.onsuccess=()=>{const current=unpack(r.result);if(current.revision!==expected){conflict=Object.assign(new Error('Another tab saved a newer working copy. Preserve this tab and reconcile the two complete copies.'),{code:'BROWSER_WORKING_COPY_CONFLICT',current:current.value,draft:snapshot,details:{expectedRevision:expected,currentRevision:current.revision}});tx.abort();return;}next=current.revision+1;store.put({schema:SCHEMA,revision:next,value:snapshot},key);};
+tx.oncomplete=()=>{observed.set(key,next);resolve({revision:next});};tx.onerror=()=>reject(conflict??tx.error);tx.onabort=()=>reject(conflict??tx.error??Error('Browser save was interrupted.'));});});tail=task;return task;}
+export async function flushWorking(){await tail;}
+export async function archiveWorking(key,value){return saveWorking(key+':archive:'+crypto.randomUUID(),value);}
+export async function sha256(bytes){const input=typeof bytes==='string'?new TextEncoder().encode(bytes):bytes;const digest=await crypto.subtle.digest('SHA-256',input);return Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');}
+export function bytesBase64(bytes){let s='';for(let i=0;i<bytes.length;i+=32768)s+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(s);}
+export function decodeBase64(text){const raw=atob(text),b=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)b[i]=raw.charCodeAt(i);return b;}
+export function download(name,content,type='application/json'){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}

@@ -1,0 +1,200 @@
+{
+  "schema": "bim.settlement-analytics-consumer-contract.v1",
+  "operationId": "BIM-STELLAR-INTEGRATION-2769-20261013",
+  "owner": "4593",
+  "sourceOwner": "2769",
+  "issuer": {
+    "url": "https://communityfund.stellar.org/submissions/recMWcSVJ3u1AoGy2",
+    "round": 45,
+    "fundedDeliverables": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      9
+    ],
+    "sourceCanvas": "F0C8S69ASF5",
+    "sourcePacketSha256": "19c358fe7a0cc9bad22c3e40490f4df49cfc15d7040af14130453d69333dea50"
+  },
+  "integration": {
+    "source": "Original complete backend1836ed358fa751263ce56cc2ca47842942b0f553; immutable service/source-report lookup; actual Web Request/Response mount remains with2769.",
+    "mutation": "Consume the original immutable captures, request store and note/review mutation route. Do not create a transfer, signing, submission or provider-poll writer.",
+    "retention": "Each derived fact has original source identity, record pointer and retained digest. Export contains original complete selected inventory and all data needed to reproduce the same report.",
+    "reader": {
+      "path": "lib/settlement-stellar.mjs",
+      "export": "createStellarSettlementReader",
+      "argument": "{sdk: original @stellar/stellar-sdk16.0.1 instance}",
+      "providerRequests": false
+    },
+    "routes": [
+      "build",
+      "receive",
+      "source",
+      "file",
+      "reviews",
+      "review-prepare",
+      "review"
+    ],
+    "files": [
+      "report.json",
+      "complete-source.json",
+      "volume.csv",
+      "selections.csv",
+      "route-attempts.csv",
+      "balance-observations.csv",
+      "vault-activities.csv",
+      "positions.csv",
+      "execution-quality.csv",
+      "movements.csv",
+      "reconciliation.csv",
+      "fallbacks.csv",
+      "lifecycle.csv",
+      "exceptions.csv",
+      "report.html",
+      "manifest.json"
+    ],
+    "preparedReview": {
+      "service": "prepareReview(input)",
+      "result": [
+        "args",
+        "expectedRevision",
+        "workspaceId",
+        "sourceSha256",
+        "reportSha256"
+      ],
+      "writer": "Original note.save command uses this exact expectedRevision and workspace identity; it must not select a later revision from its queue."
+    }
+  },
+  "monetaryRules": [
+    "Exact asset identity includes chain/network, native-or-issued/token address identity and original decimals. Display symbols are never grouping keys.",
+    "All source amounts enter as original integer or decimal strings according to their original API contract; decimal conversion is exact and rejects excess precision. No floating point aggregation.",
+    "Protocol volume sums independently confirmed executed input and output amounts separately by exact asset identity and protocol. Pending/failed quotes and submitted-but-unconfirmed actions remain separate populations.",
+    "Mixed-currency and mixed-asset figures do not have an implicit total. No USD value is inferred without an original dated valuation source.",
+    "Source transfers, destination transfers and refunds are separate evidence roles. Source-only confirmation cannot increase destination settled volume or an account's destination credit.",
+    "Gas/network fees are separate original native-asset movements. Provider fees denominated in the traded asset are classified with original gross/net semantics so an amount is not deducted twice.",
+    "Actual original confirmed movement time, provider reported time and locally observed time remain distinct. Unknown economic time is undated, not silently assigned to observation time.",
+    "MoneyGram documented Z-labelled timestamps representing US Central are retained as source text and cannot drive dates or chronology without authoritative corrected information."
+  ],
+  "metrics": [
+    {
+      "id": "executed-volume",
+      "denominator": "Unique confirmed economic executions, not query, quote or status-observation count.",
+      "dimensions": [
+        "protocol",
+        "chain",
+        "network",
+        "asset",
+        "decimals",
+        "input-or-output",
+        "confirmed-economic-date"
+      ],
+      "unknown": "Confirmed transaction without complete decoded amounts is counted but excluded from monetary sums and appears in the amount-coverage exceptions."
+    },
+    {
+      "id": "selection-distribution",
+      "denominator": "Distinct original selection/plan decisions in scope, with execution outcomes separately grouped.",
+      "dimensions": [
+        "selectedProtocol",
+        "quoteMode",
+        "assetPair",
+        "selectionOutcome"
+      ],
+      "unknown": "Missing protocol or explicit selection record remains unknown; auto-discovery responses do not imply a user selected them."
+    },
+    {
+      "id": "execution-quality",
+      "denominator": "Unique confirmed execution with its exact original selected comparable quote and original input/output amounts.",
+      "dimensions": [
+        "protocol",
+        "quoteMode",
+        "assetPair"
+      ],
+      "calculations": [
+        "For exact-input compare confirmed output to expected and minimum output only when original executed input equals selected quoted input; display signed exact output difference and rational basis points.",
+        "For exact-output compare confirmed input to quoted input/max input when original confirmed output meets the exact selected output basis.",
+        "Ratio basis points retain integer numerator/denominator and explicit display rounding; aggregate only same-asset economically comparable amounts."
+      ],
+      "unknown": "Missing/changed quote basis, incomplete result or different executed quantity is NOT_COMPARABLE with full original records retained."
+    },
+    {
+      "id": "fallback-events",
+      "denominator": "Distinct source-recorded failed simulation or unavailable-route event with an explicit following proposal/selection link.",
+      "dimensions": [
+        "fromProtocol",
+        "toProtocol",
+        "reason",
+        "proposalOutcome",
+        "executionOutcome"
+      ],
+      "unknown": "A change of selected route without an original fallback relationship is a route change, not an invented fallback."
+    },
+    {
+      "id": "account-reconciliation",
+      "denominator": "The operator's explicit exact account/asset inventory and original dated balance/transfer range.",
+      "bridge": "Opening confirmed balance + confirmed credits - confirmed debits - additional confirmed fees = derived closing; compare with the original closing observation for the same authority/range.",
+      "unknown": "Missing opening/closing/range or incomplete transfer coverage yields UNRECONCILED with a visible exact known movement subtotal; never a fabricated zero."
+    }
+  ],
+  "sourceCoverage": {
+    "required": [
+      "workspace/export identity",
+      "selected accounts and networks",
+      "all included original record/file identities",
+      "report time bounds and timezone",
+      "source range/cursor bounds where supplied",
+      "provider observations as original timelines"
+    ],
+    "states": [
+      "COMPLETE_FOR_DECLARED_RANGE",
+      "PARTIAL",
+      "UNSPECIFIED"
+    ],
+    "rule": "Report coverage from explicit original pagination/range evidence. An available response or closed local dataset is not automatically a complete provider history."
+  },
+  "lifecycle": {
+    "swap": [
+      "quoted",
+      "selected",
+      "simulation-returned",
+      "signed",
+      "submitted",
+      "confirmed-success",
+      "confirmed-failure"
+    ],
+    "bridge": [
+      "source-confirmed",
+      "destination-pending",
+      "destination-confirmed",
+      "refund-pending",
+      "refund-confirmed"
+    ],
+    "cashOut": [
+      "widget-done",
+      "funds-received",
+      "pickup-ready",
+      "paid-out",
+      "refund-pending",
+      "refunded"
+    ],
+    "rule": "Preserve original vocabularies and independent evidence. These display categories are derived projections, never replacements for original provider state."
+  },
+  "review": {
+    "semantics": "Versioned operator exception decisions tied to the exact source/report basis; later source changes retain old decisions and visibly require renewed review.",
+    "decisions": [
+      "ACKNOWLEDGED",
+      "RESOLVED_WITH_SOURCE",
+      "EXCLUDED_FROM_SELECTED_SCOPE"
+    ],
+    "requirements": "An exclusion requires a reason and remains in the source inventory and report counts. Resolution needs retained exact supporting source. No decision changes an original transaction or amount."
+  },
+  "deliverables": [
+    "Complete source adapter against actual backend",
+    "Exact financial and funded analytics model",
+    "Industrial operator with full populations, filters and original-source inspection",
+    "Versioned exception review through existing request writer",
+    "Full JSON/CSV/HTML report and immutable source manifest",
+    "Independent import/reopen using exact original source",
+    "Whole source-native worked course and original current-provider run continuation"
+  ]
+}
