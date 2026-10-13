@@ -82,8 +82,8 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--application", type=Path, required=True)
     p.add_argument("--workspace", type=Path, required=True)
-    p.add_argument("--inputs", type=Path, required=True,
-                   help="Original release NDR.zip and SDR.zip directory")
+    p.add_argument("--inputs", type=Path,
+                   help="Official ZIP directory for first intake; omit to verify retained Workspace inputs")
     p.add_argument("--baseline-run-id",
                    help="Existing completed original both-model Gura baseline")
     p.add_argument("--scopes", choices=tuple(SCOPES), nargs="+",
@@ -394,7 +394,7 @@ def main(argv=None):
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("GDAL_CACHEMAX", "64")
     import receive_gura_native as receiver
-    from receive_gura_planning import original_baseline
+    from receive_gura_planning import original_baseline, original_sources
     from model import parameter_studies
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
@@ -405,7 +405,7 @@ def main(argv=None):
     root = args.workspace.resolve()
     receiving = root / "gura-receiving"
     receiving.mkdir(parents=True, exist_ok=True)
-    inputs = args.inputs.resolve(strict=True)
+    inputs = args.inputs.resolve(strict=True) if args.inputs is not None else None
     scopes = [name for name in SCOPES if name in set(args.scopes)]
     state, directory = None, None
     custody_fds = ()
@@ -468,7 +468,9 @@ def main(argv=None):
                 checkpoint("original-reference")
                 original_args = [
                     "--application", str(application), "--workspace", str(root),
-                    "--inputs", str(inputs), "--models", "ndr", "sdr", "--mode", "both"]
+                    "--models", "ndr", "sdr", "--mode", "both"]
+                if inputs is not None:
+                    original_args += ["--inputs", str(inputs)]
                 if args.isolate_native_cases:
                     # The original reference receiver owns its separate .driver
                     # lease. It does not reacquire this suite's native batch lease.
@@ -483,8 +485,7 @@ def main(argv=None):
                     raise RuntimeError("Original Gura receiving requires recovery; inspect its retained state")
                 baseline_id = read_json(recorded)["workspace_baseline"]["run_id"]
             workspace = ReusingWorkspace(root)
-            originals = {model: receiver.unpack_original(inputs, receiving, model)
-                         for model in ("ndr", "sdr")}
+            originals = original_sources(inputs, receiving, receiver)
             # Resume only the explicitly retained original both-model selection.
             candidate = workspace.inspect_run(identifier(baseline_id))
             if (run_models(candidate) != ("ndr", "sdr") or workspace._get(
@@ -552,8 +553,10 @@ def main(argv=None):
             # pointer, so an explicit continuation reopens the same suite.
             continuation = [sys.executable, "-B", str(Path(__file__).resolve()),
                             "--application", str(application), "--workspace", str(root),
-                            "--inputs", str(inputs), "--baseline-run-id", baseline["id"],
+                            "--baseline-run-id", baseline["id"],
                             "--scopes", *scopes, "--design", args.design]
+            if inputs is not None:
+                continuation += ["--inputs", str(inputs)]
             for target in targets[1:]:
                 continuation.extend(["--evaluation-run-id", target["id"]])
             if args.difference_maps:
