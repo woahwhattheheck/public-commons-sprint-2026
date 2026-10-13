@@ -1,0 +1,20 @@
+{
+  "schema": "tjlabs.bubble-adapter-reuse.v1",
+  "license": "MIT",
+  "maintainedOriginal": "products/migration-acceptance/adaptations/airtable-netsuite",
+  "originalPublicCommit": "60d7fbc044831faaf146345e42cbc7c90c2853e8",
+  "retainedComponents": [
+    "Complete editable project and original operation replay",
+    "Exact JSON number parser and original SHA-256",
+    "Original Workspace/source.retain/plan.compile/native dlt and acceptance",
+    "Original native receiving/archive/cold copied-application reopen",
+    "Full review/editor and offline source bundler"
+  ],
+  "changes": [
+    "Read-only Bubble capture validation and exact independent projection",
+    "Bubble field pointers, captured parent lookups and list expansion",
+    "Bubble labels, source paths and native prepared schema",
+    "Four-type complete authored reference programme"
+  ],
+  "customerDataIncluded": false
+}
