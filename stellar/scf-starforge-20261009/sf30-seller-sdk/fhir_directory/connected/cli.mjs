@@ -72,9 +72,11 @@ export async function main(argv=process.argv.slice(2),{environment=process.env,s
         client=await openHumanServicesDirectoryMerchantClient({url:required('url'),tokenEnv:flags['--token-env']??'MCP_ACCESS_TOKEN',environment,signal});
       }
       if(command==='call'){
-        const args=decode(await readSourceFile(resolve(required('args')),{maxBytes:4*1024*1024+65536})),timeout=flags['--timeout-ms'];
+        const action=required('action'),nativeAction=action.replace(/^merchant_human_services_directory_/,''),
+          maximum=nativeAction.startsWith('directory_correction_')?32*1024*1024+65536:4*1024*1024+65536,
+          args=decode(await readSourceFile(resolve(required('args')),{maxBytes:maximum})),timeout=flags['--timeout-ms'];
         need(timeout===undefined || /^[1-9]\d*$/.test(timeout) && Number(timeout)<=600000,'HUMAN_SERVICES_DIRECTORY_CLI_INPUT');
-        result=await client.call(required('action'),args,timeout?{timeoutMs:Number(timeout)}:undefined);
+        result=await client.call(action,args,timeout?{timeoutMs:Number(timeout)}:undefined);
       }else if(command==='value')result=await readHumanServicesDirectoryValue({...selected(),client,file:flags['--file']??'original-response.json',
         expectedManifestSha256:required('manifest-sha256')});
       else if(command==='inspect')result=await inspectHumanServicesDirectoryExport({...selected(),client});

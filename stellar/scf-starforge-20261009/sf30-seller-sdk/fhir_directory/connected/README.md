@@ -242,6 +242,14 @@ const accepted = await changeHumanServicesDirectoryCorrection({
 });
 ```
 
-The native32MiB correction input allowance does not alter the connected inline or host-input limits. Use the native CLI for accepted inputs above the existing connected request bound. Full connected file receiving remains512MiB and native editable workspace receiving remains2GiB.
+The explicit directory_correction_ action family uses the native32MiB JSON allowance through the scoped connected transport. Unrelated action defaults remain4MiB. For large MCP inputs, use a complete host-declared input with input_apply and its original SHA. Full connected file receiving remains512MiB and native editable workspace receiving remains2GiB.
 
 [Source corrections](../SOURCE_CORRECTIONS.md) explains the full operator and native contract. [Complete client/customer course](../CORRECTION_CLIENTS.md) receives original files, reopens Merchant, independently restores the customer workspace and exports that actual customer state.
+
+## Complete offline customer worksheets
+
+The same provider exposes directory_correction_worksheet_prepare/export/import/review with exact native input schemas, directory_correction_worksheet_receive for complete raw returned files, and document/rows/file reads. Immutable worksheet, intake, return and review records preserve exact original source identities and field presence. A reviewed plan is prepared without previewing or accepting it.
+
+Use receiveHumanServicesDirectoryWorksheet with either the full intake profile or its saved importId. Host input aliases must exist before connection startup. The error details preserve the same original intake for recovery. iterateHumanServicesDirectoryWorksheet checks every contiguous native page; downloadHumanServicesDirectoryWorksheetFile receives complete original JSONL when a row exceeds4MiB. The portable package helper retains the native export and every byte.
+
+[Complete worksheet guide](../CORRECTION_WORKSHEETS.md) lists all exact actions, limits, CLI/HTTP paths and typed semantics. [The full client course](../CORRECTION_WORKSHEET_CLIENTS.md) operates the actual offline editor, private operator, Merchant reopening and independently restored customer workspace.
