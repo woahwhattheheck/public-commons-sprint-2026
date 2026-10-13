@@ -118,7 +118,7 @@ def run(directory):
                           "file_sha256":staged["sha256"],"bytes":staged["bytes"],"filename":staged["filename"],"format":"inventory_jsonl",
                           "context":{"scope_id":"grant-public-requirements","identity_namespace":"operator_requirements",
                            "role":"source_inventory" if side=="source" else "target_inventory","capture_kind":"local_reference",
-                           "coverage":"complete","captured_at":captured,"note":"Complete operator-authored requirements register only; no tenant data."}})
+                           "coverage":{"mode":"complete","description":"Complete operator-authored family for this local design edition.","expected_rows":len(rows)},"captured_at":captured,"note":"Complete operator-authored requirements register only; no tenant data."}})
                         columns={name:{"pointer":"/"+original} for name,original in
                                  {"case_id":"id","status":"status","label":"label","requirement":"requirement","source_ids":"source_ids"}.items()}
                         if family=="workflows":columns["programme"]={"pointer":"/programme"}

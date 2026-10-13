@@ -95,7 +95,9 @@ def validate_input(value):
         context=imported.get("context",{})
         need(context.get("role")==("source_inventory" if side=="source" else "target_inventory"),
              "Independent target observations cannot be replaced by loader receipts")
-        need(context.get("coverage") in ("complete","partial","failure_only","unknown"),
+        coverage=context.get("coverage")
+        need(isinstance(coverage,dict) and coverage.get("mode") in ("complete","partial","failure_only","unknown") and
+             isinstance(coverage.get("description"),str) and coverage["description"].strip(),
              "Retain actual population coverage for every family occurrence")
         expected="customer_export" if mode=="customer_migration" else None
         if expected:need(context.get("capture_kind")==expected,"Real receiving requires the selected institution export/return")
