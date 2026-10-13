@@ -21,6 +21,25 @@ The profiler uses every existing source line feature, transforms the original co
 Additional --source inputs accept original Esri Z/M response JSON (XY path coordinates are the same horizontal geometry used by Water Context). The original CRS comes from the response spatialReference, GeoJSON crs, or standard GeoJSON EPSG:4326. Use --source-crs only for an explicitly known original CRS. Select the assessment's actual CRS with --measurement-crs. On final original NHD import, run the same profile on an acquired body, then continue the full saved Water Context assessment and portable export/reopen.
 
 
+## Completed native measurement — 13 October 2026
+
+The first actual native run used Python 3.13.5, pyproj 3.7.2 and Shapely 2.1.2 on Linux. It measured all 45 retained SV-833 upstream reaches, with five full passes per method and CRS. Exact original source SHA-256: 09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c. Measured model/water_context.py SHA-256: 30d92117cada4f6b2578b36393b18e35b53626beb680f43cb4d82632b2d764f9.
+
+| Measurement CRS | Prior median /45 features | Cached median /45 features | Observed ratio |
+| --- | ---: | ---: | ---: |
+| EPSG:5070 | 79.665413 ms | 2.179771 ms | 36.547607× |
+| EPSG:32617 | 10.855827 ms | 2.089404 ms | 5.195657× |
+
+Every individual length is bitwise equal before/after within each CRS. Maximum absolute difference is zero. Both cases have one context-cache miss and 269 hits, including the comparison pass and five timed passes. The totals are 62.00994641943648 km (5070) and 62.009946419444496 km (32617); the benchmark retains each CRS's transformed input geometry and full individual results.
+
+These measured timings apply to the repeated geometry-length routine on this native host and source family. Use the actual model and complete Water Context workflow for end-to-end production timings.
+
+The unchanged 15,496-byte native result is [water-context-45-reach-native-profile-20261013.json](water-context-45-reach-native-profile-20261013.json), SHA-256 6286783310e60b376c429935681554792fc631bdf09605b7bbd601e937c301e6. Native production message: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887375671549. Actual output file identity: libfile_2d1f87f856608191868ab68d9499bf61 / file_000000002f2c8243afc457c727fb699a.
+
+## Current owner model direction
+
+Bryce's 13 October instruction is to execute the simulated model and deliver a production workshare relevant to Tim/Ecosystem's existing workflow: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359. Continue the Upper Savannah native NDR/SDR baseline/restoration/matched-control execution with actual geographic/source shapes, a 30 m grid, upstream model extent, South Carolina reporting mask, utility focus and clearly simulated realistic input fields. Preserve annual N/P kg/year and sediment tonnes/year reaching-stream units, editable parameters/source editions and export/cold reopen. Make real elapsed speed visible through choose inputs → run → inspect → revise → hand over. Keep active calculations and existing single Workspace owners running, and carry this direction into current receiving handoffs. The original source/native/model workers continue with the existing 14:00 UTC cutoff and full product/all-attachments inspection rule below.
+
 ## Owner instruction: inspect the actual outgoing product
 
 Before calling a client/prospect-facing app, website, dashboard, demo, report,

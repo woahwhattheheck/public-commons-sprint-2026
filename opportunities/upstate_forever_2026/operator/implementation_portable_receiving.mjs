@@ -15,7 +15,7 @@ for (let i = 0; i < argv.length; i += 2) {
 for (const key of Object.keys(options)) if (!['html','out','playwright-module','chromium'].includes(key)) throw Error('Unknown option: ' + key);
 if (!options.html || !options.out) throw Error('Provide the actual saved HTML and a new private output directory.');
 const htmlPath = path.resolve(options.html), output = path.resolve(options.out);
-const expected = {bytes:285878, sha256:'a69e977cefd9122bc3885d21f5b21cfa15f640964e2f7d78d89a54a1081a7f94'};
+const expected = {bytes:385959, sha256:'8803daa5f6adbaaef23dda65b1f44a5f5cd594b46df1049999321b320a1f43b0'};
 const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const html = await fs.readFile(htmlPath);
 assert.equal(html.length, expected.bytes, 'Original portable artifact bytes');

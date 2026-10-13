@@ -1,0 +1,4 @@
+site_id,latitude,longitude,datum,epsg,monitoring_location_id,description,original_source_path,original_source_sha256,source_csv_row
+SV-735,34.6275440000,-82.7464160000,WGS84,4326,21SC60WQ_WQX-SV-735,SV-735,original/three-twenty-sv-735-station-2026-original.csv,0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16,2
+SV-111,34.5997849700,-82.7722911100,WGS84,4326,21SC60WQ_WQX-SV-111,SV-111,original/three-twenty-sv-111-station-2026-original.csv,445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939,2
+SV-833,34.7047920000,-82.6369660000,WGS84,4326,21SC60WQ_WQX-SV-833,SV-833,original/seneca-nutrient-stations.csv,c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c,45

@@ -48,6 +48,27 @@ def augment(closure, retained, result):
                 if edition_id in by_report:
                     by_report[edition_id]["customer_review_ids"].append(key)
             scientific.append(source)
+        comparisons = []
+        for source in row.get("report_comparisons", []):
+            source = deepcopy(source)
+            if not source.get("external"):
+                comparison_id = identifier(source["comparison_id"])
+                node = closure.nodes.get(("scientific-report-comparisons", comparison_id))
+                if node is None:
+                    raise ValueError("The retained review lost its original report comparison.")
+                source["title"] = node.get("title", comparison_id[:12])
+                source["edition_links"] = []
+                for side in ("left", "right"):
+                    edition_id = identifier(source[side + "_edition_id"])
+                    edition = closure.nodes.get(("scientific-report-editions", edition_id))
+                    if edition is None:
+                        raise ValueError("The retained comparison review lost an original report edition.")
+                    source["edition_links"].append({
+                        "id": edition_id, "side": side,
+                        "title": edition.get("title", edition_id[:12])})
+                    if edition_id in by_report:
+                        by_report[edition_id]["customer_review_ids"].append(key)
+            comparisons.append(source)
         result["customer_reviews"].append({
             "id": key, "project_id": row["project_id"], "title": row["title"],
             "purpose": row["purpose"], "review_sha256": row["review_sha256"],
@@ -58,6 +79,7 @@ def augment(closure, retained, result):
             "returned_response_count": len(row["returned_response_ids"]),
             "reconciliation_count": len(row["reconciliations"]),
             "scientific_reports": scientific,
+            "report_comparisons": comparisons,
         })
     for report in by_report.values():
         report["customer_review_ids"] = sorted(set(report["customer_review_ids"]))

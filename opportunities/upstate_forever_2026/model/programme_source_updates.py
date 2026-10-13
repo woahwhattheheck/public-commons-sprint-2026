@@ -11,6 +11,7 @@ from copy import deepcopy
 from .common import digest, held, identifier
 from .compute_programme import ComputeProgrammes, _engine_sources
 from . import source_refresh
+from .programme_reuse import successor_candidates
 
 VERSION = 1
 KIND = "programme-source-updates"
@@ -208,7 +209,8 @@ def _relevant(record, nodes):
 def _lineage_rows(rows):
     fields = ("key", "source_run_id", "target_run_id", "source_profile_id",
               "target_profile_id", "source_scenario_id", "target_scenario_id",
-              "source_grid_id", "target_grid_id", "models", "action", "mapping_origin")
+              "source_grid_id", "target_grid_id", "models", "action", "mapping_origin",
+              "reuse_source_run_ids")
     return [{field: deepcopy(row[field]) for field in fields} for row in rows]
 
 
@@ -301,6 +303,7 @@ def preview(ws, programme_id, refresh_plan_id, *, title=None):
             "prepared_on_create": mapping_origin == "programme-preparation",
             "target_existing": target is not None and mapping_origin != "programme-preparation",
             "requires_native_rerun": requires_rerun, "mapping_origin": mapping_origin,
+            "reuse_source_run_ids": [], "reuse_candidates": [], "reuse_skipped": [],
             "source_ids": {"from": _references(ws, old),
                            "to": _references(ws, target) if target else []},
             "reasons": list(dict.fromkeys(reasons))}
@@ -308,6 +311,8 @@ def preview(ws, programme_id, refresh_plan_id, *, title=None):
         if target:
             selected["profile_id"] = target_selection["profile_id"]
             selected["scenario_id"] = target_selection["scenario_id"]
+            if action == "replace":
+                selected.pop("reuse_source_run_ids", None)
             if mapping_origin == "programme-preparation":
                 selected.pop("source_runs", None)
                 selected.pop("native_run_id", None)
@@ -348,6 +353,34 @@ def preview(ws, programme_id, refresh_plan_id, *, title=None):
                         raise ValueError("Programme preparation changed the selected native models")
                 elif native["run_id"] != row["target_run_id"]:
                     raise ValueError("Programme preparation does not preserve the mapped native identities")
+            # Only now has the maintained preview resolved every target run ID.
+            # Offer original completed sources to the native matcher, including
+            # donors from a previous completed-stage assembly.
+            original_by_key = {row["key"]: row for row in record["runs"]}
+            selected_by_key = {row["key"]: row for row in selection["runs"]}
+            candidates_changed = False
+            for row in rows:
+                chosen = selected_by_key[row["key"]]
+                if row["action"] == "replace":
+                    candidates = successor_candidates(
+                        ws, original_by_key[row["key"]], row["target_run_id"], row["models"])
+                    before_candidates = chosen.get("reuse_source_run_ids")
+                    if candidates["run_ids"]:
+                        chosen["reuse_source_run_ids"] = candidates["run_ids"]
+                    else:
+                        chosen.pop("reuse_source_run_ids", None)
+                    candidates_changed |= before_candidates != chosen.get("reuse_source_run_ids")
+                    row["reuse_skipped"] = candidates["skipped"]
+                row["reuse_source_run_ids"] = list(chosen.get("reuse_source_run_ids", []))
+            if candidates_changed:
+                programme_preview = manager.preview(selection)
+                selection = programme_preview["selection"]
+            final_bindings = {row["key"]: row for row in programme_preview["runs"]}
+            for row in rows:
+                final = final_bindings[row["key"]]
+                if final["run_id"] != row["target_run_id"]:
+                    raise ValueError("Native candidate selection changed the target run identity")
+                row["reuse_candidates"] = deepcopy(final.get("reuse_candidates", []))
             warnings.extend(programme_preview.get("warnings", []))
         except (OSError, ValueError, KeyError) as exc:
             issues.append(_issue("programme_selection_invalid", exc))
@@ -490,6 +523,14 @@ def _verify_link(ws, link):
                 raise ValueError("Programme source-update dependency lineage changed")
         if row["models"] != _models(old["native_selection"]) or row["models"] != _models(new["native_selection"]):
             raise ValueError("Programme source-update selected model lineage changed")
+        if row.get("reuse_source_run_ids", []) != new.get("reuse_source_run_ids", []):
+            raise ValueError("Programme source-update native reuse candidate lineage changed")
+        if "reuse_source_run_ids" in new:
+            from .programme_reuse import candidate_bindings
+            actual_candidates = candidate_bindings(
+                ws, new["reuse_source_run_ids"], new["run_id"], row["models"])
+            if actual_candidates != new.get("reuse_candidates"):
+                raise ValueError("Programme source-update original reuse selections changed")
     return before, after
 
 

@@ -5,7 +5,8 @@ import argparse, hashlib, json, os, tempfile
 from pathlib import Path
 
 MEMBERS=(
- 'model/report_changes.py', 'operator/report_changes.py',
+ 'model/report_changes.py', 'model/report_changes_review.py',
+ 'model/scientific_report_review.py', 'operator/report_changes.py',
  'operator/web/report_changes.mjs', 'operator/web/report_changes.css',
  'operator/extensions/report-changes.json', 'docs/SCIENTIFIC_REPORT_CHANGES.md',
  'integration/component_fragments/scientific-report-changes.json',
@@ -15,8 +16,14 @@ MEMBERS=(
 def install(application):
     source=Path(__file__).resolve().parent
     target=Path(application).resolve(strict=True)
-    for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py'):
+    for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py',
+                 'model/workspace.py','model/reviews.py','model/scientific_report_editions.py'):
         if not (target/name).is_file():raise ValueError('The original application is missing '+name)
+    for name in ('operator/web/app.mjs','operator/web/reviews.mjs'):
+        path=target/name
+        if not path.is_file() or 'prepareReportComparisonReview' not in path.read_text(encoding='utf-8'):
+            raise ValueError('Install the current complete original application before this component; '
+                             'the report comparison review host port is missing from '+name)
     pending=[]
     for name in MEMBERS:
         original=source/name
@@ -37,7 +44,7 @@ def install(application):
             except FileExistsError:
                 if output.read_bytes()!=body:raise ValueError('A concurrent component installation differs: '+str(output))
         finally:temporary.unlink(missing_ok=True)
-    return {'component':'scientific-report-changes','version':'1.0.0','installed_files':len(pending),'complete_files':len(MEMBERS),'restart':'Restart the original operator to discover Report changes.'}
+    return {'component':'scientific-report-changes','version':'1.2.0','installed_files':len(pending),'complete_files':len(MEMBERS),'restart':'Restart the original operator to discover Report changes.'}
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--application',required=True,type=Path)

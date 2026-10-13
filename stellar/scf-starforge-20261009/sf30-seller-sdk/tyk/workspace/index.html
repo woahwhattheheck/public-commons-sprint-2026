@@ -9,7 +9,7 @@
 <div class="shell">
 <aside><nav aria-label="Workspace sections">
 <button data-tab="targets" aria-current="page">Targets</button><button data-tab="portfolio">Portfolio</button>
-<button data-tab="cohorts">Cohorts</button><button data-tab="rollouts">Rollouts</button><button data-tab="handover">Handover</button>
+<button data-tab="cohorts">Cohorts</button><button data-tab="commissioning">Commissioning</button><button data-tab="rollouts">Rollouts</button><button data-tab="handover">Handover</button>
 </nav><dl id="workspace-identity"></dl></aside>
 <main>
 <div id="notice" role="status" aria-live="polite"></div>
@@ -33,6 +33,26 @@
 <details id="definition-details" class="panel" hidden><summary>Original selected definition</summary><div id="definition-meta"></div><textarea id="definition-text" readonly rows="16" spellcheck="false"></textarea><div class="row"><label>Request target<select id="definition-target" class="target-select"></select></label><button id="use-definition">Prepare definition for target</button><a id="download-definition">Download original capture</a></div></details>
 </section>
 <section id="cohorts" class="section" hidden><div class="section-heading"><div><h2>Cohorts</h2><p>Saved API selections retain their exact portfolio capture.</p></div></div><div id="cohort-list" class="table-wrap"></div><div id="cohort-pages" class="pager"></div><div id="cohort-details"></div></section>
+<section id="commissioning" class="section" hidden>
+<div class="section-heading"><div><h2>Cohort commissioning</h2><p>Move a complete saved API cohort through native conversion, staged operation, production acceptance and full handover.</p></div></div>
+<form id="commissioning-form" class="panel"><h3>New commissioning</h3>
+<p id="commissioning-empty" class="hint">Capture a Dashboard portfolio and save a Classic API cohort to begin.</p>
+<div class="fields"><label>Saved Dashboard cohort<select name="cohortId" required></select></label>
+<label>Commissioning label<input name="label" maxlength="300" value="API cohort commissioning" required></label>
+<label>Customer<input name="customer" maxlength="300"></label><label>Operating owner<input name="operator" maxlength="300"></label></div>
+<label>Operational checks, one per line<textarea name="checkNames" rows="5" required>Routing and upstream
+Authentication and access
+Request validation
+Response and error handling</textarea></label>
+<div class="row"><label class="checkbox"><input name="abortOnFailure" type="checkbox" checked>Stop the native batch on failure</label>
+<label class="checkbox"><input name="overrideStaged" type="checkbox">Replace existing staged copies during staging</label></div>
+<p class="hint">Every selected check is recorded for every API against the current staged definitions. Promotion uses the accepted source edition.</p>
+<label>Complete workshare source (optional)<input name="workshare" type="file"></label>
+<p class="hint">Attach the complete agreed scope, acceptance matrix or partner source package. The original file remains bound to this saved cohort and its operating history.</p>
+<button type="submit">Save complete commissioning</button></form>
+<div id="commissioning-list" class="table-wrap"></div><div id="commissioning-pages" class="pager"></div>
+<div id="commissioning-current" class="panel" hidden></div><div id="commissioning-source" class="panel" hidden></div>
+</section>
 <section id="rollouts" class="section" hidden><div class="section-heading"><div><h2>Rollouts</h2><p>Prepare a native request, review it, then execute that saved request.</p></div></div>
 <form id="rollout-form" class="panel"><h3>Prepare a request</h3><div class="fields">
 <label>Label<input name="label" maxlength="300" required value="Tyk rollout"></label><label>Target<select name="connectionId" class="target-select" required></select></label>

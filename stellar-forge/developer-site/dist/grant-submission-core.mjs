@@ -1,3 +1,4 @@
+import {validateRequirementReviews,captureRequirementReview} from './grant-requirement-review-core.mjs';
 import {validateGrantOperatingSelection} from './grant-operating-plan-core.mjs';
 import {validateProductSourceAuthoring,productSourceSelectionOf,restoreProductSourceSelection} from './grant-product-authoring-core.mjs';
 import {validatePlanningUpdateState,selectPlanningRevision} from './grant-plan-update-core.mjs';
@@ -60,9 +61,18 @@ function limit(value,name){need(value===null||(Number.isSafeInteger(value)&&valu
 function webUrl(value,loopback=false){const match=value.match(/^(https?):\/\/(\[[0-9a-f:.]+\]|[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::(\d{1,5}))?(?:[/?#][^\s]*)?$/i);return !!match&&(!match[3]||Number(match[3])<=65535)&&(match[1].toLowerCase()==='https'||(loopback&&['127.0.0.1','localhost','[::1]'].includes(match[2].toLowerCase())));}
 function httpsOrEmpty(value,name){string(value,name);need(!value||webUrl(value),name+' needs an HTTPS URL without credentials.');}
 export function measureText(value){
-  string(value,'Answer');let utf8Bytes=0;
-  for(const ch of value){const n=ch.codePointAt(0);utf8Bytes+=n<=0x7f?1:n<=0x7ff?2:n<=0xffff?3:4;}
-  return {words:value.trim()?value.trim().split(/\s+/u).length:0,characters:Array.from(value).length,utf16:value.length,utf8Bytes};
+  string(value,'Answer');
+  let words=0,characters=0,utf8Bytes=0,inWord=false;
+  const whitespace=/\s/u;
+  // Count in one pass without retaining a code-point array or word substrings.
+  for(const ch of value){
+    characters++;
+    const n=ch.codePointAt(0);
+    utf8Bytes+=n<=0x7f?1:n<=0x7ff?2:n<=0xffff?3:4;
+    if(whitespace.test(ch))inWord=false;
+    else if(!inWord){words++;inWord=true;}
+  }
+  return {words,characters,utf16:value.length,utf8Bytes};
 }
 export function parseAnswers(markdown){
   string(markdown,'Original application');
@@ -129,6 +139,14 @@ function validateState(state,sources,planSources=[]){
     need(['unreviewed','covered','needs-edit','not-applicable'].includes(item.status),'Select an explicit review status.');
     string(item.note,'Review note');list(item.answers,'Review answer selection');unique(item.answers,'review answer identities');need(item.answers.every(x=>ids.includes(x)),'Select original answers for review.');
   }
+  validateRequirementReviews(state,ids);
+}
+export function recordRequirementReview(draft,id,input,at=new Date().toISOString()){
+  validateDraft(draft);
+  const review=captureRequirementReview(draft,id,input,{at,criteria:{url:OFFICIAL.criteria,reviewedAt:OFFICIAL.reviewedAt}});
+  const result=retainVersion(draft,'Before recording required-content review '+id,at);
+  result.reviews[result.reviews.findIndex(row=>row.id===id)]=review;
+  return validateDraft(result);
 }
 export function validateDraft(input){
   need(input&&typeof input==='object'&&input.schema===SCHEMA,'Open a complete SCF submission draft.');

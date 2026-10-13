@@ -221,6 +221,67 @@ export function canRegisterReport(w){
  p.plan?.id===w.plan.id&&p.plan.revision===w.plan.revision&&!!p.plan.document_digest&&!!p.operation_id&&
  same(f.reviewed_selection,f.existing_report_selection);
 }
+
+const retainedReportCatalogues=new WeakMap();
+function retainedReportCatalogue(w,s){
+ const id=s.active_package?.dispatch_id,view=retainedReportCatalogues.get(s);
+ const c=view?.dispatch_id===id?view:null,disabled=busy(s)||w.pending?'disabled':'';
+ const rows=(c?.items||[]).map(item=>[
+  'Revision '+esc(item.plan.revision),
+  esc(item.source_count)+' original source'+(item.source_count===1?'':'s'),
+  '<code>'+esc(item.operation_id.slice(0,12))+'</code>',
+  button('report-open-saved',c.opening===item.operation_id?'Opening…':'Open retained selection','data-operation="'+esc(item.operation_id)+'" '+disabled)
+ ]);
+ return '<section aria-label="Saved laboratory report selections"><h5>Saved laboratory report selections</h5>'+
+ '<p>Recover a completed registration from this Workspace, including after transfer or in a fresh browser. Opening it restores the original report choices; your editable plan and request draft stay unchanged.</p>'+
+ button('report-load-saved',c?.loading?'Loading saved selections…':c?.loaded?'Refresh saved selections':'Load saved selections',(c?.loading?'disabled':disabled))+
+ (c?.error?'<p role="alert">'+esc(c.error)+'</p>':'')+
+ (c?.loaded?w.table(['Results revision','Report context','Original operation','Open'],rows,'No committed scientific report source is retained for this request.'):'')+'</section>';
+}
+async function loadRetainedReports(w){
+ editable(w);const s=w.labDispatch,id=s?.active_package?.dispatch_id;if(!id)throw Error('Open an original laboratory request first.');
+ const turn=w.generation,workspace=w.workspace,c={dispatch_id:id,loading:true,loaded:false,items:[],error:'',opening:null,openEpoch:0};
+ retainedReportCatalogues.set(s,c);w.render();
+ const isCurrent=()=>current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&retainedReportCatalogues.get(s)===c;
+ try{
+  const result=await w.read('/api/implementation/dispatch-report-catalogue',{plan_id:w.plan.id,dispatch_id:id});
+  if(!isCurrent())return false;
+  if(result?.schema!=='upstate.implementation-lab-dispatch-report-catalogue/v1'||result.workspace_key!==workspace||
+     result.plan_id!==w.plan.id||result.dispatch_id!==id||!Array.isArray(result.items)||
+     result.items.some(item=>!item||item.dispatch_id!==id||item.plan?.id!==w.plan.id||
+      !Number.isSafeInteger(item.plan.revision)||item.plan.revision<1||!/^[0-9a-f]{64}$/.test(item.operation_id||'')))
+   throw Error('The saved report catalogue differs from this original laboratory request.');
+  c.items=clone(result.items);c.loaded=true;return true;
+ }catch(error){if(isCurrent())c.error=error.message||String(error);return false;}
+ finally{if(isCurrent()){c.loading=false;w.render();}}
+}
+async function openSavedReport(w,operation){
+ editable(w);const s=w.labDispatch,c=retainedReportCatalogues.get(s),id=s?.active_package?.dispatch_id;
+ const item=c?.dispatch_id===id&&c.items.find(row=>row.operation_id===operation);
+ if(!item)throw Error('Load the original saved report catalogue and choose its retained selection.');
+ const turn=w.generation,workspace=w.workspace,epoch=++c.openEpoch,receipts=clone(s.report_receipts||[]);
+ c.opening=operation;c.error='';w.render();
+ const isCurrent=()=>current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&
+  retainedReportCatalogues.get(s)===c&&c.openEpoch===epoch&&!w.pending&&!busy(s)&&same(s.report_receipts||[],receipts);
+ try{
+  const r=await w.read('/api/implementation/dispatch-report-detail',{plan_id:w.plan.id,operation_id:operation});
+  if(!isCurrent())return false;
+  if(r?.schema!==REPORT||r.state!=='imported'||r.operation_id!==operation||r.workspace_key!==workspace||
+     r.plan_id!==w.plan.id||r.dispatch_id!==id||!same(r.plan,item.plan)||
+     r.report_source?.source_collection_id!==item.source_collection_id||r.report_source?.source_id!==item.source_id||
+     !r.delivery_selection||!same(r.delivery_selection,r.report_source?.delivery_selection))
+   throw Error('The saved laboratory report changed its original revision or source selection.');
+  s.report_receipts=[...(s.report_receipts||[]).filter(row=>row.operation_id!==operation),clone(r)];
+  w.message='Opened the original laboratory report selection from results revision '+r.plan.revision+
+   '. Your editable plan remains at revision '+w.plan.revision+'; the request draft is unchanged.';
+  w.cache();return true;
+ }catch(error){if(isCurrent())c.error=error.message||String(error);return false;}
+ finally{
+  if(current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&
+     retainedReportCatalogues.get(s)===c&&c.openEpoch===epoch){c.opening=null;w.render();}
+ }
+}
+
 function reportPanel(w,s){
  const id=s.active_package?.dispatch_id;if(!id)return '';
  const f=s.reportFlow?.dispatch_id===id?s.reportFlow:null,p=f?.preview;
@@ -238,7 +299,7 @@ function reportPanel(w,s){
  (prior?button('report-use-field','Use registered field report revision '+prior.revision,disabled):'')+
  field('Original delivery-selection JSON (optional)','<input type="file" accept=".json,application/json" data-dispatch-report-selection '+disabled+'>')+
  (f?.existing_report_selection?'<p>'+esc(f.selection_label||'Original report selection retained')+'</p><pre class="iw-json">'+esc(JSON.stringify(f.existing_report_selection,null,2))+'</pre>'+button('report-clear-selection','Clear preceding report selection',disabled):'<p>No preceding report selection chosen.</p>')+'</details>'+
- '<div class="iw-actions">'+button('report-review',w.dirty||!w.nativePlan?'Save and review report source':'Review scientific report source',disabled)+'</div>'+summary+ready+'</section>';
+ '<div class="iw-actions">'+button('report-review',w.dirty||!w.nativePlan?'Save and review report source':'Review scientific report source',disabled)+'</div>'+summary+ready+retainedReportCatalogue(w,s)+'</section>';
 }
 async function reviewReport(w){
  editable(w);const s=w.labDispatch,f=reportFlow(s);
@@ -278,6 +339,8 @@ function selectedReportReceipt(w){
 }
 async function reportAction(w,action,b){
  const s=w.labDispatch;if(!s)return;
+ if(action==='report-load-saved')return loadRetainedReports(w);
+ if(action==='report-open-saved')return openSavedReport(w,b.dataset.operation);
  if(action==='report-review')return reviewReport(w);
  if(action==='report-register')return registerReport(w);
  if(action==='report-export-preview'){const p=s.reportFlow?.preview;if(!p)throw Error('Review the original report source first.');download(p.dispatch_id+'-report-source-review.json',p);return;}

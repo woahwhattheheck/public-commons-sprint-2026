@@ -89,7 +89,21 @@ The desk provides four tables without changing their scientific values:
 | Native watershed changes | Alternative-minus-baseline changes in native watershed quantities |
 | Same-cell changes and coverage | Baseline/alternative intersection, paired masses and coverage differences |
 
-Each page shows up to 100 original rows. Model, run and watershed filters apply only where that original CSV has the corresponding column. The full CSV download remains unchanged by these view filters. Table headers and values are displayed as recorded; blank unavailable values remain blank.
+Each page shows up to 100 original rows. Select the model, native watershed, original quantity or field, unit, and run or baseline/alternative pair wherever that original CSV has the corresponding column. The **Alternative or matched control** selector distinguishes each actual retained comparison; a control is never inferred from a scenario name or kind. Scenario/profile labels accompany the exact run IDs, and original native feature labels accompany watershed geometry identities.
+
+**Key quantities and support** shows the useful physical columns first. Choose **Every original CSV field** for the complete row. Numerical strings, trailing zeroes and blank unavailable values remain exactly as recorded. No UI sum, conversion or additional clipping occurs. The original model-domain watershed basis stays visible beside both native and same-cell tables.
+
+### Save and reopen a quantity review
+
+1. Open the saved native process report and choose **Native watershed changes**.
+2. Choose the actual restoration run under **Alternative or matched control**, then choose the watershed, quantity and original unit. Repeat with the matched control when comparing the two cases. Use **Same-cell changes and coverage** to inspect the corresponding original field and the paired finite-cell support separately.
+3. Choose **Download selected CSV** to save every matching row and every original column, including rows beyond the displayed page. The original complete CSV remains available under **Original report and data**.
+4. Choose **Save selection and original rows** to save the complete source-bound JSON. It includes the report/project/grid identities, ordered native run selection, table path/length/SHA-256, exact filters, original record ordinals, columns and unrounded row strings. Record ordinals are one-based data-record numbers after the header; they are not physical line numbers for quoted multiline CSV cells.
+5. In this desk, choose **Open saved table selection** and open that JSON. The server verifies the actual retained report and original CSV, reapplies all selectors, and returns the complete current original rows. The browser compares the complete saved record with that source response before changing the selected report or table. Wrong project/report/source bytes, changed filters or row text, missing alternatives, or modified ordinals preserve the current view and display an error.
+
+A restored copy of the same scientific Workspace can reopen the selection when its report and table identities remain exact. A JSON review does not import missing model inputs or run another model. Receive the complete original Workspace/source package first when the report is absent. The JSON does not replace the complete report or editable GIS handoff.
+
+Each save is bounded to 100,000 rows and 32 MiB. If it exceeds that bound, narrow the selectors or download the unchanged full original CSV. CSV protects formula-like text for spreadsheet opening; exact numeric strings, including negative values, stay unrounded. JSON retains every original cell verbatim, including text that needs spreadsheet escaping. Both exports preserve native watershed and reconstructed same-cell bases as separate tables.
 
 Native watershed masses and reconstructed pixel-centre masses have different support and remain separately labeled. NDR nutrient values use kg/year; SDR values use metric tonnes/year. Per-hectare raster values are converted once by the producer's observed pixel area. No additional calculation or aggregation occurs in the desk.
 
@@ -138,7 +152,8 @@ The operator's build and package actions hold the original Workspace archive loc
 | GET `/api/native-processes/catalog` | Original completed-stage catalogue and retained report summaries |
 | POST `/api/native-processes/preview` | Producer preview for `{selection}` |
 | GET `/api/native-processes/report?id=...` | Saved original report, execution details and ordinary file tickets |
-| GET `/api/native-processes/table?id=...&table=...` | Original CSV page; optional model/run_id/watershed/offset/limit |
+| GET `/api/native-processes/table?id=...&table=...` | Original CSV page; optional model/run_id/baseline_run_id/alternative_run_id/watershed/quantity/field/units/offset/limit |
+| POST `/api/native-processes/table-selection` | Read the complete filtered original rows and source-bound review JSON; optional expected_source must match the exact retained CSV |
 | POST `/api/native-processes/delivery` | Read saved delivery and append the exact report source |
 | `native.process.build` | Queued `{selection, expected_preview_id, render}` through the original producer |
 | `native.process.package` | Queued `{id}` complete linked package |

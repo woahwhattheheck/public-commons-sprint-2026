@@ -9,7 +9,7 @@ existing operator file transport remain the production implementation.
 Read the complete current [owner direction](../CURRENT_OWNER_DIRECTION.md),
 version **2026-10-13.3**, and [application instructions](../AGENTS.md).
 The receiver copies both complete current files into its output's
-\`instructions/<original-SHA256>/\` directories, alongside the executed source
+`instructions/<original-SHA256>/` directories, alongside the executed source
 map. Preserve the original source bank, current scientific runtime and active
 receiving owner. Today's cutoff remains **2026-10-13 14:00 UTC**.
 
@@ -32,13 +32,13 @@ also honors `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
   --playwright-module "$INSTALLED_PLAYWRIGHT_MODULE"
 ~~~
 
-Run from the complete current application source root. \`RECEIVING_OUTPUT\`
+Run from the complete current application source root. `RECEIVING_OUTPUT`
 is a separate sibling directory outside the scientific Workspace. Keep the
 same output on interruption: it pins the actual selected pair and preserves
 the report, source identities, previous elapsed intervals and browser artifacts.
 
-The command reads the actual complete \`gis-exports/*/export.json\` and
-\`gis-received/*/receipt.json\` records and their original project manifests.
+The command reads the actual complete `gis-exports/*/export.json` and
+`gis-received/*/receipt.json` records and their original project manifests.
 Compatible candidate pairs share their actual request-bound selection identity
 and complete source request. Automatic selection prefers a retained raster
 pair, then more retained raster layers, then the full export/receipt IDs for a
@@ -63,15 +63,15 @@ invocation with the same receiving output retains that exact pair. A changed
 producer edition or changed original pair uses a separate receiving output,
 while the original immutable reports and adopted source contexts remain usable.
 
-\`--require-raster\` requires an actual raster layer in the retained pair.
+`--require-raster` requires an actual raster layer in the retained pair.
 A vector/table-only county case remains useful for its own original-source
 decisions and working-edition comparison; it is not presented as a raster
 course. A raster may legitimately be unpaired because its actual grid or
-selected band changed. Only real retained \`raster_view\` records provide
+selected band changed. Only real retained `raster_view` records provide
 geographic panels. The report preserves those unpaired explanations.
 
-For a receiving owner locating an existing pair, \`--inspect\` writes
-\`pair-catalogue.json\` with actual complete record counts, compatible pairs,
+For a receiving owner locating an existing pair, `--inspect` writes
+`pair-catalogue.json` with actual complete record counts, compatible pairs,
 raster/vector membership and concrete malformed-record diagnostics. This is
 a discovery mode; the same owner proceeds to the ordinary full command after
 selecting the existing case. A missing compatible pair is reported with that
@@ -94,7 +94,7 @@ selection for that same study. Save the real selection JSON and pass it:
 ~~~
 
 The selection has the same complete shape used by the existing GIS desk and
-\`workspace-export\` CLI: actual \`delivery_id\`, or retained source/grid/run/
+`workspace-export` CLI: actual `delivery_id`, or retained source/grid/run/
 comparison selections, with the chosen title and actual project CRS. Use the
 completed record IDs from that Workspace; preserve its simulated or original
 case label, actual native resolution and support. Clear unrelated default
@@ -103,12 +103,12 @@ managed ID is introduced.
 
 For this explicit selection, the receiver first reuses an existing compatible
 pair for the installed builder's exact request, preferring an already edited
-received edition. If absent, it invokes maintained \`gis_workspace.export\`
-and \`gis_workspace.receive\` on that actual export's checked original archive.
+received edition. If absent, it invokes maintained `gis_workspace.export`
+and `gis_workspace.receive` on that actual export's checked original archive.
 The true returned IDs are pinned before the ordinary edition review. These are
-the same APIs behind \`workspace-export\` and \`workspace-receive\`; scientific
+the same APIs behind `workspace-export` and `workspace-receive`; scientific
 model calculations remain untouched. The input selection, source hash and
-actual export/receive elapsed history are retained in \`gis-intake.json\`.
+actual export/receive elapsed history are retained in `gis-intake.json`.
 
 Receiving an unchanged original archive legitimately produces zero data
 changes. This still exercises the actual full native raster/support/report
@@ -119,7 +119,7 @@ those flags with a new GIS selection file.
 ## Native review, complete package and original operator
 
 The command invokes the installed
-\`model.gis_edition_review.review\` with the exact pair and current producer
+`model.gis_edition_review.review` with the exact pair and current producer
 version. It uses the original per-review execution lock and layer checkpoints.
 It does not launch an InVEST model, change a GIS edition, seal desktop edits,
 or alter an adopted source selection. Only the explicitly supplied
@@ -134,7 +134,7 @@ report through a fresh Workspace object. Native failure preserves the actual
 exception and receiving history; already completed native output is retained
 before the browser stage begins.
 
-The browser uses the ordinary offline \`REVIEW.html\`, independently extracted
+The browser uses the ordinary offline `REVIEW.html`, independently extracted
 copy and current operator preview. By default, the receiver starts the normal
 loopback operator with its own receiving state solely for this course, then
 closes that temporary server when the browser returns. It never stops another
@@ -153,7 +153,7 @@ after the browser returns. Shared results contain public context labels and
 relative artifact identities. The browser process log is private as well;
 never post an operator capability or an unredacted local login URL.
 
-\`--native-only\` supports the existing split-runtime arrangement when native
+`--native-only` supports the existing split-runtime arrangement when native
 Python and the accepting browser worker are on different machines. It leaves
 the complete native report/reopening/source map in place. The same receiving
 owner then operates the browser course on those exact retained files, or reruns
@@ -186,7 +186,7 @@ output in the existing owned source, repeat the affected interaction and keep
 the complete source and scientific identities. Use focused product operation,
 without a new approval controller, broad test suite or verification product.
 
-The output's \`result.json\` identifies the exact Workspace/project, original
+The output's `result.json` identifies the exact Workspace/project, original
 export/receipt/edition identities and fingerprints, current review ID,
 executed source hashes, original report files, extracted reopening directory,
 real elapsed intervals and browser result/artifact paths. Browser artifacts

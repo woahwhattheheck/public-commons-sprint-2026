@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "trace-metal-published-study",
+  "source_reference": "Original Ecosystem operation 1791888697.520629; complete original WQP and 153-metal/51-chemistry source identities retained.",
+  "components": {
+    "trace-metal-published-study": {
+      "title": "Original trace-metal Published study and selected review",
+      "paths": [
+        "measurement_workspace/trace_metal_observations.py",
+        "measurement_workspace/TRACE_METAL_OBSERVATIONS.md",
+        "source/trace-metal-native/20261013/stations-original.csv",
+        "operator/published_study_operator.py"
+      ],
+      "requires": [
+        "published-studies",
+        "eighteenmile-trace-metals"
+      ]
+    },
+    "trace-metal-study-receiving": {
+      "title": "Original trace cohort through scientific report and editable Study receiving",
+      "paths": [
+        "source_tools/receive_trace_metal_study.py",
+        "measurement_workspace/TRACE_METAL_OBSERVATIONS.md"
+      ],
+      "requires": [
+        "trace-metal-published-study",
+        "scientific-report-editions",
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "trace-metal-published-study"
+  ]
+}

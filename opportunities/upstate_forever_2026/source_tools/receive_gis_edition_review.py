@@ -99,7 +99,16 @@ def receive_selected_gis(workspace, output, selection_file, choices, gis, review
         raise ValueError("The original explicit GIS receiving selection changed; use a new output")
     state["selection_file"] = {"absolute_path": str(source), **gis.record(source.parent, source)}
     gis.copy_checked(source.parent, gis.record(source.parent, source), output / "gis-selection.json")
-    if existing:
+    pinned_receipt = state.get("receipt_id") or state.get("receive")
+    if pinned_receipt:
+        pinned_export = state.get("export_id") or export_id
+        if pinned_export != export_id:
+            raise ValueError("The retained GIS intake export differs from its original request")
+        reviews._pair(workspace, {"export_id": pinned_export, "receipt_id": pinned_receipt})
+        state.update({"state": "complete", "export_id": pinned_export, "receipt_id": pinned_receipt})
+        gis.save(path, state)
+        return pinned_export, pinned_receipt, state
+    if existing and not state.get("history") and not state.get("receive_archive"):
         state.update({"state": "complete", "retained_pair": existing[0],
                       "export_id": existing[0]["export_id"], "receipt_id": existing[0]["receipt_id"]})
         gis.save(path, state)
@@ -128,7 +137,12 @@ def receive_selected_gis(workspace, output, selection_file, choices, gis, review
         exported = run("export", lambda: gis_workspace.export(workspace, selection))
     if exported["id"] != export_id:
         raise ValueError("The original GIS exporter returned another selection identity")
-    archive = gis.checked(workspace.root, exported["archive"])
+    if state.get("receive_archive") and state["receive_archive"] != exported["archive"]:
+        raise ValueError("The original retained GIS receiving archive changed")
+    state["receive_archive"] = exported["archive"]
+    state["export_id"] = exported["id"]
+    gis.save(path, state)
+    archive = gis.checked(workspace.root, state["receive_archive"])
     received = run("receive", lambda: gis_workspace.receive(workspace, archive))
     state["state"] = "complete"
     state["export_id"], state["receipt_id"] = exported["id"], received["id"]

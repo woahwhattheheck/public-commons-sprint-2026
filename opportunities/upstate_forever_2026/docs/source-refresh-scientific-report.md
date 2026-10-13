@@ -87,3 +87,43 @@ Look at the actual screenshots and rendered HTML/PDF, including long source labe
 ## Original comparison recovery
 
 The previous cross-edition builder reused its comparison-ID variable while counting coverage. The corrected builder uses a dedicated coverage_key. For that exact known predecessor only (id equal to neither_valid_cells inside its correct digest directory), the existing retry validates the complete original cohort, context, support/output/difference hashes and coverage before repair. It retains the original malformed JSON in a hash-named history file and publishes the original digest ID atomically. Every scientific raster remains unchanged. Other mismatches remain descriptive failures.
+
+
+## Receive the complete report flow in the actual browser
+
+The existing browser course can open a saved update directly. This mode leaves its native cases in their current state unless you explicitly supply --run-models. Use a completed original plan for the scientific report course:
+
+~~~bash
+cd "$APP"
+node source/run_source_updates_browser.mjs \
+  --url-file "$PRIVATE_OPERATOR_URL_FILE" \
+  --workspace "$OPERATOR_WORKSPACE_KEY" \
+  --plan-id "$ACTUAL_COMPLETED_PLAN_ID" \
+  --report-selection "$ACTUAL_REPORT_INPUT_JSON" \
+  --transfer --video --output "$OWNED_BROWSER_OUTPUT"
+~~~
+
+Use --plan-id instead of --from-collection, --to-collection, --mapping or --title. The original from/to mode remains available when the actual task is to prepare and explicitly execute a new source update. --expect-reuse still requires --run-models and verifies the actual saved per-model reuse receipts.
+
+The browser input uses the actual source rationale and optional existing report choices:
+
+~~~json
+{
+  "plan_id": "ACTUAL_COMPLETED_PLAN_ID",
+  "title": "Actual source update report title",
+  "rationale": "The scientific reason for this retained input change.",
+  "notes": "",
+  "report_title": "Actual composed report title",
+  "append_to": []
+}
+~~~
+
+plan_id is optional in this file and, when present, must match the opened plan. notes is one optional text note (or a one-item string list), matching the existing form. append_to may contain the actual existing {source_collection_id,source_id} choices to keep before the new update chapter. Leave it empty for a source-update report on its own. The driver selects only saved sources returned by the original composer; it creates no scientific observations or reviewer answers.
+
+The course fills the real source form, submits its original queued operation, downloads the retained identity, opens the prepared source with explicit replacement, and then exercises Add against the operator-selected ordered draft. It verifies that Add keeps the title/order and does not duplicate the source. It prepares the actual preview, renders or reopens the existing edition, opens the original report viewer at desktop and 390-pixel widths, and downloads every original report member and its complete ZIP. Downloads stream to disk and are checked against the actual provider's byte counts and SHA256 values.
+
+With --transfer, the same original Workspace archive includes that report source and edition. The browser restores it through the existing operator, reopens the actual source and report, and compares all retained report file identities. It also keeps the earlier original-to-restored workspace race receiving course. The source-update report CLI above separately follows the smaller editable Study and Customer review closure.
+
+journey.json retains actual operation/result IDs, source choices, downloaded identities and saved screenshots. The producing peer must open and look at the desktop/narrow operator and report screenshots, plus the downloaded HTML and PDF, and operate the resulting product. The recorded geometry and completed browser commands do not replace that visual inspection. Correct visible defects before using the report or recording the demonstration.
+
+For the current Upper Savannah demonstration, use the actual original geographic shapes, 30 m source edition, upstream model domain versus South Carolina reporting area and utility focus provided by the responsible model owner. Explicitly simulated physical inputs stay labeled. A source-update difference describes the effect of changed inputs; use the saved baseline/restoration/matched-control comparisons to discuss management effects. Annual nitrogen/phosphorus mass reaching streams, sediment units, and any separate intake/concentration calculations retain their distinct scientific meanings.
