@@ -234,7 +234,7 @@ async function capturedCollection(id,method,collection){
 const captured=collection=>capturedCollection(state.portfolio,'readPortfolio',collection);
 const capturedDecision=collection=>capturedCollection(state.decisionPortfolio,'readDecisionPortfolio',collection);
 const capturedCase=collection=>capturedCollection(state.casePortfolio,'readCasePortfolio',collection);
-const programmeBrowser=installProgrammeBrowser({api,write,busy,button,node,pre,keyValues,table,originalLink,notice,reload,openRecord,requireEngine,records,forEngine,detail});
+const programmeBrowser=installProgrammeBrowser({api,write,busy,button,node,pre,keyValues,table,originalLink,notice,reload,openRecord,requireEngine,records,forEngine,detail,workspaceId:()=>state.view?.workspaceId});
 async function renderAll(){
   await programmeBrowser.render();
   retainSelectedCollections();
