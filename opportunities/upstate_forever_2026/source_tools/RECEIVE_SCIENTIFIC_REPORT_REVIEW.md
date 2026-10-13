@@ -138,3 +138,71 @@ This command belongs to the existing review/source-report workflow. Its saved so
 - model/reviews.py: original request, artifacts, package inspection, export, receiving and responses.
 - model/portable.py: complete Workspace backup and separate restore.
 - model/SCIENTIFIC_REPORT_REVIEW.md: operator workflow and adapter contract.
+
+
+## Transfer only the selected review and continue real feedback
+
+The existing whole-Workspace receiving course can now finish with the original
+Study transfer archive. Add `--selected-study` to its ordinary command. It
+selects the actual saved review as `{kind: "reviews", id: REVIEW_ID}`, follows
+its required saved report and native sources, captures the original response
+and engineering history, and restores an independent editable Workspace.
+
+When the original course already completed, reuse its existing result receipt:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" \
+  --continue-receipt "$ORIGINAL_OPERATION/result.json"
+```
+
+This does not recreate a report, review, native model case or completed
+whole-Workspace archive. The new leg stays under the original operation's
+`selected-review/` directory. It reuses a completed selected archive after a
+lost response, verifies the original project/review/edition and captured
+feedback receipt, and invokes the original selected-study receiving verifier.
+An interrupted restore is adopted only after checking every archived member;
+a recorded restore can later contain additional original customer responses.
+
+The actual receiver emits `selected-review/result.json`, including the
+selected Study ID, archive bytes/SHA, independent Workspace/application paths,
+exact captured review history and original source verification. Use the
+received application's original operator with that returned Workspace to open
+**Customer reviews**, **Read PDF**, **Current requests**, and engineering
+handbacks. Sender-local browser caches are rebuilt by those original controls.
+
+### Supply a real returned response
+
+A further invocation can supply an actual response document from the existing
+review package:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" \
+  --continue-receipt "$ORIGINAL_OPERATION/result.json" \
+  --response "$ACTUAL_RETURNED_CUSTOMER_RESPONSE_JSON"
+```
+
+The command retains the exact submitted JSON bytes. It imports them **only into
+the independent selected received Workspace**, using `reviews.import_response`.
+The original review ID, project ID and predecessor rules apply. Exact replay
+reuses the existing response. A divergent predecessor is rejected and must be
+reconciled through the maintained Customer review UI; this command does not
+invent decisions or choose between customer branches.
+
+After import, the original selected-study verifier runs again: the transferred
+response prefix, report files and engineering history must still be retained.
+The command exports the continued response generation as an ordinary offline
+review package and ZIP. Its receipt is
+`selected-review/feedback/<original-response-sha256>/result.json`.
+If an external package directory is lost after a completed export, its retained
+original control files rebuild that exact package before reopening the ZIP.
+The donor Workspace's customer responses remain untouched.
+
+The receiving source deliberately leaves the original `receive(...)` API and
+its complete-course result unchanged. The optional continuation is a separate
+phase of that same retained operation. Existing consumers such as
+`receive_observed_scientific_review.py` can finish their ordinary course first
+and pass its actual result receipt to this command. Never substitute a fabricated
+edition, review or response ID. Install the current Customer review Study-transfer
+component and its original native review dependencies before enabling this leg.
