@@ -4,14 +4,14 @@ The receiver continues the existing ECO13-AE11 source operation from its retaine
 
 The maintained original-HUC mode queries the actual watershed envelopes instead of requiring completion of the entire rectangular domain grid. Existing broad queries and their native IDs remain part of the acquisition. The final original polygon selection determines which whole flowlines enter the scientific source.
 
-## Current original source edition
+## Select the original source edition
 
-The current published revision 9 bank is [F0C8A4JQM39](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8A4JQM39). Its decoded source-bank JSON has:
+The following verified source example uses revision 10, [F0C8TFT58P3](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8TFT58P3). Its decoded source-bank JSON has:
 
-- **1,987,929 bytes**
-- **SHA256 `0621d79589fe5bf1da454d8dff2b860490b884e2ca3cd7a8884b52019ce3ba34`**
-- 42 retained original geometry responses, covering 16,431 native IDs and 58,316,085 original response bytes.
-- Five retained inventory scopes and their 21,286 candidate IDs.
+- **2,797,473 bytes**
+- **SHA256 `0816e8b4749c1e1d383dcd0e9c5c079a03a6e98951595890b6074d44d46b3aaa`**
+- 61 retained original geometry responses, covering 26,414 native IDs and 91,009,987 original response bytes.
+- Six retained inventory scopes and their 26,414 candidate IDs.
 
 Follow that carrier's stated part order and encoding to recover its complete JSON. Verify the decoded byte count and SHA256. The receiver verifies the bank and every embedded member independently. A later source bank can be selected with its own actual published identity.
 
@@ -41,7 +41,7 @@ Alternatively, provide a local JSON mapping from each recorded filename to its d
 
 ## Complete the original-HUC source import
 
-Use the established operation paths and GIS interpreter. In the example below, `NHD_BANK` is the decoded revision 9 bank, `NHD_DOMAIN_ARCHIVE` is the original domain ZIP, and the capture, download, edition and Workspace variables name their existing operation directories.
+Use the established operation paths and GIS interpreter. In the example below, `NHD_BANK` is the decoded revision 10 bank, `NHD_DOMAIN_ARCHIVE` is the original domain ZIP, and the capture, download, edition and Workspace variables name their existing operation directories.
 
 ```sh
 cd "$APPLICATION"
@@ -57,7 +57,7 @@ NHD_HUC_BOUNDS_SHA256=$("$GIS_PYTHON" -c \
 
 "$GIS_PYTHON" -m source_tools.resume_nhd_originals \
   --bank "$NHD_BANK" \
-  --bank-sha256 0621d79589fe5bf1da454d8dff2b860490b884e2ca3cd7a8884b52019ce3ba34 \
+  --bank-sha256 0816e8b4749c1e1d383dcd0e9c5c079a03a6e98951595890b6074d44d46b3aaa \
   --domain-archive "$NHD_DOMAIN_ARCHIVE" \
   --huc-bounds "$NHD_HUC_BOUNDS" \
   --huc-bounds-sha256 "$NHD_HUC_BOUNDS_SHA256" \
