@@ -28,7 +28,7 @@ export function nativePresentation(snapshot,state){
   const chosen=selection.models===undefined?['ndr','sdr']:list(selection.models);
   const models=['ndr','sdr'].filter(name=>chosen.includes(name));
   const stages=native.stages||{},artifacts=native.artifacts||{};
-  const context=native.study_context?'Parameter-study case':native.programme_context?'Programme case':'Selected calculation';
+  const context=native.study_context?'Parameter-study case':native.programme_context?'Programme case':native.ensemble_context?'Ensemble case':'Selected calculation';
   const fields=[
     {label:'Scenario',value:title(scenario,'Saved scenario'),kind:'scenarios',id:selection.scenario_id},
     {label:'Parameter profile',value:title(profile,'Saved parameter profile'),kind:'profiles',id:selection.profile_id},
@@ -56,15 +56,19 @@ export function nativePresentation(snapshot,state){
     completeStages.map(name=>name.toUpperCase()).join(' and ')+' completed '+(completeStages.length===1?'stage is':'stages are')+' retained.':
     'No completed selected model stage has been recorded yet.';
   let heading='Prepared calculation',message='The saved scientific selection is ready for its original execution task.',tone='normal';
-  if(native.stop_requested&&native.alive){
-    heading='Stopping this calculation';message='The original worker is closing. Its completed stages remain saved; wait for the stopped state before continuing.';
+  if(native.stop_requested&&(native.alive||(native.ensemble_context&&task.state==='running'))){
+    if(native.alive){
+      heading='Stopping this calculation';message='The original worker is closing. Its completed stages remain saved; wait for the stopped state before continuing.';
+    }else{
+      heading='Stopping saved ensemble';message='Stop is saved for this same ensemble. The coordinator will pause at the case boundary; completed case outputs remain available.';
+    }
   }else if(native.alive){
     [heading,message]=phaseLabels[native.native_execution?.phase]||['Calculation running','The original worker is running the saved scientific selection.'];
     if(native.native_execution?.model)heading+=' · '+String(native.native_execution.model).toUpperCase();
     if(task.state==='interrupted')message+=' Reconnect to follow this same running worker.';
   }else if(native.run_state==='complete'){
     heading='Selected case complete';message='Open the native result to inspect its maps, physical quantities and original files.';
-    if(native.study_context||native.programme_context)message+=' This is the selected case; the parent task determines whether the whole study or programme has finished.';
+    if(native.study_context||native.programme_context||native.ensemble_context)message+=' This is the selected case; the parent task determines whether the whole study, programme or ensemble has finished.';
   }else if(task.state==='queued'){
     heading='Waiting in the calculation queue';message='The original task is queued with this saved input selection.';
   }else if(task.state==='cancelled'||native.run_error?.kind==='interrupted'){
@@ -106,7 +110,7 @@ export function nativePresentation(snapshot,state){
     runId:native.run_id,taskId:task.id,
     canOpenResult:Boolean(native.run_id),
     originalIdentity:{selection,run_id:native.run_id,task_id:task.id,
-      execution_id:native.execution_id,programme:native.programme_context,parameter_study:native.study_context}
+      execution_id:native.execution_id,programme:native.programme_context,parameter_study:native.study_context,ensemble:native.ensemble_context}
   };
 }
 
