@@ -404,3 +404,10 @@ The **Operations** desk now filters and pages retained work while preserving its
 Open **Launch groups** to save an ordered selection of existing Applications, review their complete original inputs and provider sources, and retain one run with stable per-member request IDs. Continue members through the original lifecycle, recover interrupted requests, review changed remaining members, accept an exact final outcome, and stop the current group. Earlier definitions, runs and complete original output remain available after reopening the workspace.
 
 The browser, authenticated API and installed CLI use the same records. See [APPLICATION_GROUPS.md](./APPLICATION_GROUPS.md) for the complete workflow, command requests, preserved output and current native receiving continuation.
+
+
+## Complete setups and Grant case receiving
+
+Use the Applications setup controls to retain every configuration variant, compare a saved setup against current Application edits, select each change explicitly and reopen the complete draft. The [setup guide](APPLICATION_SETUP.md) covers browser export/receive and the five `application-setup-*` commands, including the original review and same-request save recovery.
+
+**Applications → Grant case handoff** exports a native Grant case with its saved Application or receives a complete native case ZIP directly. Select the actual destination runtime, workspace and Python path, prepare the existing host review, receive the original case and save its reviewed Application. [The full operating guide](../../../../products/grant-operations/HANDOFF.md) describes retained operations, CLI continuation, download/reopen and the `grant-application-handoff` installed source selection.

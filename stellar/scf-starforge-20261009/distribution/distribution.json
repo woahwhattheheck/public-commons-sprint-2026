@@ -66,7 +66,8 @@
     "stellar/scf-starforge-20261009/sf61-bazaar-explorer",
     "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent",
     "stellar/scf-starforge-20261009/partners/unstructured",
-    "stellar/scf_2026/presentation/reviewer"
+    "stellar/scf_2026/presentation/reviewer",
+    "products/grant-operations"
   ],
   "browserAssets": [
     {
@@ -828,7 +829,8 @@
       "import": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
     },
     "./buyer/dataset-session-portable": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-session-portable.mjs",
-    "./buyer/dataset-session-location": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-location.mjs"
+    "./buyer/dataset-session-location": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-location.mjs",
+    "./runtime-workspace/application-setup": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-setup-operations.mjs"
   },
   "nativePeers": {
     "@x402/core": {
