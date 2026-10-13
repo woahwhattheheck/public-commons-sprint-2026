@@ -1,0 +1,110 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "implementation-cost-review",
+  "title": "Field cost review",
+  "version": "1.0.0",
+  "order": 74,
+  "assets": [
+    "implementation_cost_review.mjs"
+  ],
+  "backend": {
+    "module": "implementation_cost_review",
+    "factory": {
+      "handler": "ImplementationCostReview",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-costs/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-costs/context",
+        "operation": "context",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-costs/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation-costs/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-costs/apply",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "actions": [
+      "implementation.cost-review.apply"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "requires_actions": [
+    "economic.draft.save",
+    "economic.edition.build"
+  ]
+}

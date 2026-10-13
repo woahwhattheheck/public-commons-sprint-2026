@@ -32,6 +32,7 @@ export function attachEconomicDesk(host) {
   let epoch=0,busy=false,pending=null,preview=null,openEditionId=null,requestedSource=null;
   let rowFingerprint='',completedTask=null,worksheetPreview=null;
   let editionEpoch=0,implementationOptions=null,implementationRun='';
+  let requestedEdition=null,mountReady=null;
   const operations=new Map();
   const node=selector=>frame?.querySelector(selector);
   const key=()=> 'upstate-economic-desk:'+workspace;
@@ -375,7 +376,7 @@ export function attachEconomicDesk(host) {
     renderImplementation();
     if(implementation){implementationOptions=economicImplementationOptions(value,workspace);renderImplementation();}
     section.scrollIntoView({block:'start',behavior:'smooth'});
-    message('Complete economic edition opened with its original modeled outcomes and cost inputs.');remember();
+    message('Complete economic edition opened with its original modeled outcomes and cost inputs.');remember();return value;
   }
 
   function renderImplementation() {
@@ -573,9 +574,12 @@ export function attachEconomicDesk(host) {
     pending=(state?.tasks||[]).find(row=>row.id===restored?.pendingId)||null;
     openEditionId=restored?.openEditionId||null;
     shell();
-    loadCatalog().then(()=>{update(getState());if(openEditionId&&!pending)openEdition(openEditionId).catch(error=>message(error.message,true));});
+    mountReady=loadCatalog().then(()=>{update(getState());if(!requestedEdition&&openEditionId&&!pending)return openEdition(openEditionId).catch(error=>message(error.message,true));});
+    mountReady.then(()=>consumeSavedEdition()).catch(error=>{message(error.message||String(error),true);rejectSavedEdition(error);});
   }
   function detach() {
+    if(frame)rejectSavedEdition(Error('The Economic desk closed before the retained edition opened.'));
+    mountReady=null;
     if(frame){current();remember();frame.removeEventListener('click',onClick);frame.removeEventListener('change',onChange);frame.removeEventListener('input',onInput);}
     epoch++;editionEpoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;worksheetPreview=null;implementationOptions=null;implementationRun='';
   }
@@ -586,5 +590,38 @@ export function attachEconomicDesk(host) {
     if(typeof host.navigate==='function')host.navigate('economic-desk');
     if(wasMounted&&frame)await loadCatalog({preserve:false});
   }
-  return {mount,update,detach,openReport,openEdition,loadSaved,prepareClientReport,prepareImplementation};
+  function rejectSavedEdition(error) {
+    const request=requestedEdition;if(!request)return;requestedEdition=null;request.reject(error);
+  }
+  async function consumeSavedEdition() {
+    const request=requestedEdition;if(!request||!frame||request.consuming)return;
+    request.consuming=true;
+    try{
+      if(mountReady)await mountReady;
+      if(requestedEdition!==request)return;
+      if(!frame||workspace!==request.workspace_key||getState()?.workspace_key!==request.workspace_key)throw Error('Open the retained edition in its original Workspace.');
+      if(busy||pending||requestedSource)throw Error('Finish or recover the original Economic operation before opening this retained edition.');
+      current();remember();
+      const value=await openEdition(request.edition_id);
+      if(requestedEdition!==request)return;
+      if(!value||!frame||workspace!==request.workspace_key||getState()?.workspace_key!==request.workspace_key)throw Error('The Workspace changed before the retained Economic edition opened.');
+      requestedEdition=null;request.resolve({workspace_key:workspace,edition_id:request.edition_id,open_url:value.open_url});
+    }catch(error){if(requestedEdition===request){requestedEdition=null;request.reject(error);}}
+  }
+  function openSavedEdition(selection) {
+    if(!selection||selection.workspace_key!==getState()?.workspace_key||typeof selection.edition_id!=='string'||!selection.edition_id.trim())return Promise.reject(Error('Choose the complete Economic edition in its original Workspace.'));
+    if(requestedEdition)return Promise.reject(Error('The original retained edition is already opening.'));
+    if(frame&&(busy||pending||requestedSource))return Promise.reject(Error('Finish or recover the original Economic operation first.'));
+    const stored=!frame?(()=>{try{return JSON.parse(localStorage.getItem('upstate-economic-desk:'+selection.workspace_key)||'null');}catch{return null;}})():null;
+    if(stored?.pendingId)return Promise.reject(Error('Open the Economic desk and reconcile its retained original task before opening another edition.'));
+    return new Promise((resolve,reject)=>{
+      requestedEdition={workspace_key:selection.workspace_key,edition_id:selection.edition_id,resolve,reject,consuming:false};
+      try{
+        if(typeof host.navigate!=='function')throw Error('The original Economic navigation capability is unavailable.');
+        host.navigate('economic-desk');
+        if(frame)consumeSavedEdition();
+      }catch(error){rejectSavedEdition(error);}
+    });
+  }
+  return {mount,update,detach,openReport,openEdition,openSavedEdition,loadSaved,prepareClientReport,prepareImplementation};
 }
