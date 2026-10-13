@@ -69,8 +69,14 @@ def _reopen(workspace, selected, original):
         if specification != {field: captured["selection_file"][field] for field in ("bytes", "sha256")}:
             raise ValueError("The receiving study now names another original specification: " + key)
         if (state["id"] != key or state["selection"]["baseline_run_id"] != captured["baseline_run_id"]
-                or state["baseline_selection"] != captured["baseline_selection"]):
+                or state["baseline_selection"] != captured["baseline_selection"]
+                or state["models"] != captured["models"]
+                or state["pollutants"] != captured["pollutants"]):
             raise ValueError("Reopening changed the original native study selection: " + key)
+        case_binding = lambda rows: sorted((row["id"], row["run_id"], row["profile_id"])
+                                           for row in rows)
+        if case_binding(state["cases"]) != case_binding(captured["cases"]):
+            raise ValueError("Reopening changed the original study case/run/profile identities: " + key)
         rows.append({
             "id": key, "title": state["selection"]["title"],
             "state": state["state"], "progress": state["progress"],
