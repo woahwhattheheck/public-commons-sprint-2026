@@ -468,6 +468,16 @@ class Connector:
         for extension in manifest.get("extensions", []):
             for route in extension.get("reads", []):
                 routes.add((route["method"], route["path"]))
+        for asset in manifest.get("web_assets", []):
+            if not isinstance(asset, str):
+                raise ConnectorError("NATIVE_WEB_ASSET_INVALID")
+            relative = asset.removeprefix("/web/")
+            parts = relative.split("/")
+            if (not relative or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", part)
+                                    or part in (".", "..") for part in parts)
+                    or Path(relative).suffix not in (".mjs", ".css", ".html")):
+                raise ConnectorError("NATIVE_WEB_ASSET_INVALID")
+            routes.add(("GET", "/web/" + relative))
         for path in (self.config.application / "operator" / "web").iterdir():
             if path.is_file() and path.suffix in (".mjs", ".css", ".html") and path.name != "team.html":
                 routes.add(("GET", "/web/" + path.name))
@@ -475,7 +485,13 @@ class Connector:
             routes.add((route["method"], route["path"]))
         routes = {(m, p) for m, p in routes if m in ("GET", "POST", "PUT", "PATCH", "DELETE") and clean_target(p).path not in DENIED}
         self.routes = routes
+        native_workspace = (self.config.native_binding or {}).get("workspace_key")
+        if native_workspace is None:
+            native_workspace = self.local_json("/api/whoami").get("default_workspace")
+        if not isinstance(native_workspace, str) or not HEX.fullmatch(native_workspace):
+            raise ConnectorError("NATIVE_WORKSPACE_BINDING_REQUIRED")
         self.edge.json("POST", "/register", {"operator_id": self.config.operator_id,
+                       "native_workspace_key": native_workspace,
                        "protocol": "upstate.eco-transport/v1",
                        "routes": [{"method": m, "path": p} for m, p in sorted(routes)]})
         event("connected", routes=len(routes), protocol="upstate.eco-transport/v1")
