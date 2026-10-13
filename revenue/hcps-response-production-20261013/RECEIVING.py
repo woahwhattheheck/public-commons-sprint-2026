@@ -77,7 +77,7 @@ def main():
                 if group_alive(process.pid): drain(process,root,"close original descendant group after completed native course")
         result=verify_stages(root)
         source_copy=root/"complete-application-source";source_copy.mkdir(exist_ok=True)
-        source_names=["hcps-core.cjs","hcps-app.js","hcps.css","index.template.html","production-seed.json","BUILD.cjs","VERIFY.cjs","ASSEMBLE.py","RECEIVING.cjs","RECEIVING.py","OPERATING.md"]
+        source_names=["hcps-core.cjs","hcps-return.cjs","hcps-app.js","hcps-return-ui.js","hcps.css","index.template.html","production-seed.json","BUILD.cjs","VERIFY.cjs","ASSEMBLE.py","RECEIVING.cjs","RECEIVING.py","OPERATING.md"]
         for name in source_names: retain(source_copy/name,(source/name).read_bytes())
         # Render every complete assembled page and every page of the retained readable derivative.
         import shutil
