@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Map Release Operations</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/runtime/preview.css"></head>
+<title>Map Release Operations</title><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/runtime/preview.css"><link rel="stylesheet" href="/commerce.css"></head>
 <body>
 <header><div><strong>Map Release Operations</strong><span id="identity">Connect to a saved workspace</span></div><button id="refresh">Refresh</button></header>
 <div id="connection" class="panel"><label>Workspace access token<input id="token" type="password" autocomplete="off"></label><button id="connect">Connect</button></div>
@@ -66,5 +66,6 @@
 <div class="row"><button id="packageWorkspace">Build portable package</button><button id="downloadPackage" disabled>Download complete package</button></div>
 <div id="packageResult"></div>
 </section>
+<section class="panel" id="commercePanel" hidden aria-label="Paid map delivery"></section>
 </div>
 </main><script type="module" src="/app.js"></script></body></html>
