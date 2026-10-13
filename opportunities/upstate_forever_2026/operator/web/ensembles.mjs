@@ -907,7 +907,7 @@ export function attachEnsembles(context) {
         escapeHTML(value)+'</strong></div>').join('')+'</div>'+
       '<p>'+escapeHTML(item.reason||'')+'</p>'+
       '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
-      'Each land-cover contrast uses matching parameter choices; parameter contrasts retain the retained baseline. '+
+      'Each land-cover contrast uses matching parameter choices; parameter contrasts hold the retained baseline fixed. '+
       'The original annual units, common-cell coverage and undefined values remain unchanged.</p>';
     if(!local)html+='<p>This scientific source originated in another project. Its captured choices and results are available here.</p>';
     const errors=[...(summary.run_errors||[]),...(summary.errors||[])];
