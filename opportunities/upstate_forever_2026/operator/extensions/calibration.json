@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "8+source-design1",
+  "version": "9+source-design1",
   "order": 65,
   "assets": [
     "calibration.mjs",
@@ -251,7 +251,8 @@
       "openItem",
       "showTask",
       "toast",
-      "openDelivery"
+      "openDelivery",
+      "openScientificReport"
     ],
     "styles": [
       "/web/calibration.css"
@@ -269,6 +270,7 @@
     "dispatch": "dispatch",
     "action_prefixes": [
       "calibration-"
-    ]
+    ],
+    "task_actions": "taskActions"
   }
 }

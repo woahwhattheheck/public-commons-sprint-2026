@@ -6,7 +6,7 @@ const section=(title,note,body)=>'<section class="panel"><div class="section-hea
 const option=(id,text,selected)=>'<option value="'+esc(id)+'"'+(id===selected?' selected':'')+'>'+esc(text)+'</option>';
 
 /** Whole original calibration review, within the maintained desk and task queue. */
-export function createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,getReport,getData,repaint,activate,openReport,openDelivery,openItem}){
+export function createCalibrationReviews({current,read,submitAction,openForm,detail,fileList,getReport,getData,repaint,activate,openReport,openDelivery,openScientificReport,openItem}){
   let packet=null,request=0,formRevision=0,sourceFingerprint='';
   const active=()=>!!packet&&packet.workspace_key===current();
   function reset(){packet=null;request++;formRevision++;sourceFingerprint='';}
@@ -31,6 +31,22 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
     if(!active()||packet.review.id!==id)throw Error('Open the exact retained review before preparing its report source.');
     return submitAction('calibration.review.source',{review_id:id});
   }
+  async function scientificReport(id){
+    const workspace=current(),revision=++request;
+    const result=await read('report-source',{id});
+    if(current()!==workspace||revision!==request)return;
+    const record=result.report_source,selection=result.scientific_report_selection;
+    if(result.workspace_key!==workspace||record?.id!==id)throw Error('The report source belongs to a different selection.');
+    if(selection?.workspace_key!==workspace||!Array.isArray(selection.sources)||selection.sources.length!==1||
+       selection.sources[0]?.source_collection_id!==record.source_collection_id||
+       selection.sources[0]?.source_id!==record.source_id){
+      throw Error('Receive the original scientific report selection for this retained calibration review.');
+    }
+    if(typeof openScientificReport!=='function')throw Error('Receive the current Sources desk and its scientific report composer.');
+    return openScientificReport({workspace_key:workspace,
+      sources:[{source_collection_id:record.source_collection_id,source_id:record.source_id}],
+      title:selection.title});
+  }
   async function delivery(id){
     const workspace=current(),revision=++request;
     const result=await read('report-source',{id});
@@ -42,13 +58,14 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
   }
   function sourceSection(){
     const sources=reportSources();
-    return section('Include this review in the complete client delivery',
-      'Prepare its registered scientific source, then use the existing ordered report picker. Original tables, equal-axis figures, map files and the complete dossier ZIP travel with the client report and editable workspace.',
+    return section('Create a saved scientific report',
+      'Prepare the original review as a scientific source, then open the existing ordered report composer. Nutrient-only, sediment-only and combined analyses keep their exact supported pollutants, tables, equal-axis figures and complete source companions. The composer preserves your other selected sources, report title and contact.',
       '<div class="section-body"><div class="page-actions">'+button('source','Prepare report source',packet.review.id,!sources.length)+'</div></div>'+
       (sources.length?table(['Registered source','Figures','Companions',''],sources.map(row=>
         '<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.source_collection_id))+' · '+esc(row.source_id)+'</small><small>'+esc(row.edition||'Retained original edition')+'</small></td>'+
         '<td>'+esc(row.figure_count)+'</td><td>'+esc(row.companion_count)+'</td><td>'+
-        button('source-delivery','Open complete delivery',row.id,true)+
+        button('source-report','Open scientific report',row.id,true)+
+        button('source-delivery','Open mapped report form',row.id)+
         button('source-edition','Open source edition',row.source_collection_id)+'</td></tr>')):
         '<p class="calibration-empty">The report source preserves this saved review and its exact native selection. Preparing it uses the current task queue.</p>'));
   }
@@ -142,6 +159,7 @@ export function createCalibrationReviews({current,read,submitAction,openForm,det
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^calibration-review-/,'');
     if(action==='source')return makeSource(node.dataset.id);
+    if(action==='source-report')return scientificReport(node.dataset.id);
     if(action==='source-delivery')return delivery(node.dataset.id);
     if(action==='source-edition'){
       if(!active()||!reportSources().some(row=>row.source_collection_id===node.dataset.id))throw Error('Open the original registered report source first.');
