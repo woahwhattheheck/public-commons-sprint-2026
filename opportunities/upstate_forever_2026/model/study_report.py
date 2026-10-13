@@ -11,7 +11,7 @@ import json
 import math
 from pathlib import Path
 
-from . import study_comparison_view
+from . import study_comparison_view, profile_report_comparison
 
 POLLUTANTS = {
     "nitrogen_export": "Nitrogen export",
@@ -465,7 +465,9 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
         "is paired with the baseline using the same coefficient profile. Percent change "
         "uses alternative minus baseline.</p></section>")
     sections.extend((_execution_section(execution), _geography_section(geography),
-                     _interpretation_section(interpretation, profiles)))
+                     _interpretation_section(interpretation, profiles),
+                     profile_report_comparison.html_section(
+                         (interpretation or {}).get("original_profile_comparison"))))
     spatial = (profiles or {}).get("spatial_programme", {})
     if spatial.get("scenarios"):
         values = []
@@ -577,7 +579,7 @@ section{padding:26px 0;border-bottom:1px solid #ddd}.status-grid{display:grid;gr
 .status-grid span{display:block;color:#555;font-size:12px;margin-bottom:8px}.status-grid strong{font-size:24px}.status-grid .time{font-size:14px}
 .definition{font-size:13px;color:#4b4b4b}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #ddd;vertical-align:top}th{background:#f4f4f4;font-weight:600}
-td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}tbody tr:hover{background:#f7f7f7}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.source-cell{white-space:pre-wrap;overflow-wrap:anywhere}tbody tr:hover{background:#f7f7f7}
 td:first-child{min-width:160px}code{font-size:11px;overflow-wrap:anywhere}a{color:#222;text-decoration:underline}
 .controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:12px 0}.controls label{display:grid;gap:5px;font-size:12px}
 select,input,button{font:inherit;padding:9px;border:1px solid #999;border-radius:2px;background:#fff;color:#171717;max-width:330px}
@@ -708,6 +710,7 @@ def build(workspace, experiment_id, *, profiles=None):
         geography = study_geography.collect(workspace, summary)
         decisions = study_decisions.analyse(summary)
         interpretation = study_interpretation.collect(workspace, summary, profiles=profiles)
+        interpretation["original_profile_comparison"] = profile_report_comparison.collect(workspace, summary)
         published_context = _published_context(interpretation)
         context = {
             "schema": "upstate.study-report-context/v1",
@@ -757,6 +760,7 @@ def build(workspace, experiment_id, *, profiles=None):
                 "study-landcover-transitions.csv": (
                     "Actual land-cover transition CSV", "text/csv",
                     study_interpretation.transition_csv(interpretation)),
+                **profile_report_comparison.downloads(interpretation["original_profile_comparison"]),
                 **published_context,
             }
             if geography is not None:
