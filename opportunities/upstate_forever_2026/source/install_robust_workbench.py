@@ -21,6 +21,42 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "operator/delivery_preparation_receiving.mjs",
+    "operator/web/delivery_preparation_storage.mjs",
+    "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+    "operator/multivariate_control_operator.py",
+    "operator/web/multivariate_control_core.mjs",
+    "model/multivariate_control_study_transfer.py",
+    "operator/web/multivariate_control.css",
+    "model/multivariate_control_report.py",
+    "model/multivariate_control_design.py",
+    "model/multivariate_control_cli.py",
+    "operator/web/multivariate_control.mjs",
+    "integration/component_fragments/multivariate-control.json",
+    "integration/component_fragments/multivariate-control-study-transfer.json",
+    "source_tools/MULTIVARIATE_CONTROL_RECEIVING.md",
+    "operator/MULTIVARIATE_CONTROL.md",
+    "model/multivariate_control.py",
+    "source/MULTIVARIATE_CONTROLS.md",
+    "integration/component_fragments/multivariate-control-receiving.json",
+    "source_tools/multivariate_control_browser.mjs",
+    "source_tools/multivariate_control_receiving.py",
+    "operator/extensions/multivariate-control.json",
+    "model/multivariate_control_outcomes.py",
+    "model/multivariate_control_outcome_analysis.py",
+    "model/multivariate_control_outcome_report.py",
+    "model/multivariate_control_outcome_transfer.py",
+    "model/multivariate_control_outcomes_cli.py",
+    "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    "integration/component_fragments/multivariate-control-outcomes.json",
+    "operator/multivariate_control_outcomes_operator.py",
+    "operator/extensions/multivariate-control-outcomes.json",
+    "operator/web/multivariate_control_outcomes_core.mjs",
+    "operator/web/multivariate_control_outcomes.mjs",
+    "operator/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    "integration/component_fragments/multivariate-control-outcome-desk.json",
+    "model/experiments.py",
+    "model/scientific_report.py",
     "source_tools/geographic_programme_browser.mjs",
     "source_tools/receive_geographic_handover_browser.mjs",
     "source_tools/geographic_review_browser.mjs",
@@ -356,6 +392,42 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "operator/delivery_preparation_receiving.mjs",
+    "operator/web/delivery_preparation_storage.mjs",
+    "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+    "operator/multivariate_control_operator.py",
+    "operator/web/multivariate_control_core.mjs",
+    "model/multivariate_control_study_transfer.py",
+    "operator/web/multivariate_control.css",
+    "model/multivariate_control_report.py",
+    "model/multivariate_control_design.py",
+    "model/multivariate_control_cli.py",
+    "operator/web/multivariate_control.mjs",
+    "integration/component_fragments/multivariate-control.json",
+    "integration/component_fragments/multivariate-control-study-transfer.json",
+    "source_tools/MULTIVARIATE_CONTROL_RECEIVING.md",
+    "operator/MULTIVARIATE_CONTROL.md",
+    "model/multivariate_control.py",
+    "source/MULTIVARIATE_CONTROLS.md",
+    "integration/component_fragments/multivariate-control-receiving.json",
+    "source_tools/multivariate_control_browser.mjs",
+    "source_tools/multivariate_control_receiving.py",
+    "operator/extensions/multivariate-control.json",
+    "model/multivariate_control_outcomes.py",
+    "model/multivariate_control_outcome_analysis.py",
+    "model/multivariate_control_outcome_report.py",
+    "model/multivariate_control_outcome_transfer.py",
+    "model/multivariate_control_outcomes_cli.py",
+    "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    "integration/component_fragments/multivariate-control-outcomes.json",
+    "operator/multivariate_control_outcomes_operator.py",
+    "operator/extensions/multivariate-control-outcomes.json",
+    "operator/web/multivariate_control_outcomes_core.mjs",
+    "operator/web/multivariate_control_outcomes.mjs",
+    "operator/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    "integration/component_fragments/multivariate-control-outcome-desk.json",
+    "model/experiments.py",
+    "model/scientific_report.py",
     "source_tools/geographic_programme_browser.mjs",
     "source_tools/receive_geographic_handover_browser.mjs",
     "source_tools/geographic_review_browser.mjs",
@@ -1374,7 +1446,178 @@ def verify_geographic_browser_dependencies(application, pending):
         raise ValueError("Retain the original Geographic receiving browser component")
 
 
+def verify_multivariate_control_dependencies(application, pending):
+    """Admit the original native family only when its actual consumer is installed."""
+    def source(name):
+        value = pending.get(name)
+        return read_existing(application, name) if value is None else value
+
+    def require(paths):
+        for name in paths:
+            assembled_data(application, pending, name)
+
+    control = source("model/multivariate_control.py")
+    control_transfer = source("model/multivariate_control_study_transfer.py")
+    transfer = source("model/study_transfer.py")
+    if control is not None or (transfer is not None and b"multivariate_control_study_transfer" in transfer):
+        require((
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_cli.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "source_tools/precipitation_matching.py",
+        "source/MULTIVARIATE_CONTROLS.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/common.py",
+        "model/workspace.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+    ))
+    outcomes = source("model/multivariate_control_outcomes.py")
+    if outcomes is not None or (control_transfer is not None and b"multivariate_control_outcome_transfer" in control_transfer):
+        require((
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py",
+    ))
+    control_provider = source("operator/multivariate_control_operator.py")
+    if control_provider is not None:
+        require((
+        "operator/multivariate_control_operator.py",
+        "operator/extensions/multivariate-control.json",
+        "operator/web/multivariate_control_core.mjs",
+        "operator/web/multivariate_control.mjs",
+        "operator/web/multivariate_control.css",
+        "operator/MULTIVARIATE_CONTROL.md",
+    ))
+    outcome_provider = source("operator/multivariate_control_outcomes_operator.py")
+    if outcome_provider is not None:
+        require((
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py",
+    ))
+        require((
+        "operator/multivariate_control_outcomes_operator.py",
+        "operator/extensions/multivariate-control-outcomes.json",
+        "operator/web/multivariate_control_outcomes_core.mjs",
+        "operator/web/multivariate_control_outcomes.mjs",
+        "operator/web/multivariate_control.mjs",
+        "operator/web/multivariate_control.css",
+        "operator/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    ))
+        descriptor = json.loads(assembled_data(application, pending, "operator/extensions/multivariate-control-outcomes.json"))
+        if (descriptor.get("id") != "multivariate-control-outcomes"
+                or descriptor.get("backend", {}).get("module") != "multivariate_control_outcomes_operator"
+                or set(descriptor.get("backend", {}).get("actions", [])) != {"control.outcomes.prepare"}):
+            raise ValueError("Compose the original completed-outcome provider and read/report action")
+        for asset in descriptor.get("assets", []):
+            assembled_data(application, pending, "operator/web/" + asset)
+    receiver = source("source_tools/multivariate_control_receiving.py")
+    if receiver is not None:
+        require((
+            "source_tools/multivariate_control_receiving.py", "source_tools/geographic_headwaters_reopen.py",
+            "source_tools/simulated_headwaters_receiving.py", "model/multivariate_control.py",
+            "model/study_transfer.py", "model/portable.py"))
+        if b"outcome_selection_path" in receiver:
+            require((
+        "model/multivariate_control_outcomes.py",
+        "model/multivariate_control_outcome_analysis.py",
+        "model/multivariate_control_outcome_report.py",
+        "model/multivariate_control_outcome_transfer.py",
+        "model/multivariate_control_study_transfer.py",
+        "model/multivariate_control_outcomes_cli.py",
+        "source/MULTIVARIATE_CONTROL_OUTCOMES.md",
+        "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/multivariate_control.py",
+        "model/multivariate_control_design.py",
+        "model/multivariate_control_report.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_siting_contrasts.py",
+        "model/receiving_waters.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/native_versions.py",
+        "model/rasters.py",
+        "model/scenario_footprint.py",
+        "model/experiments.py",
+        "model/geographic_study_transfer.py",
+        "source_tools/precipitation_matching.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_scenario_allocation_report.py",
+    ))
+    driver = source("source_tools/receive_geographic_handover_browser.mjs")
+    if driver is not None and b"multivariate_control_browser.mjs" in driver:
+        require(("source_tools/multivariate_control_browser.mjs",))
+    if driver is not None and b"delivery_preparation_receiving.mjs" in driver:
+        require(("operator/delivery_preparation_receiving.mjs",
+                 "operator/web/delivery_preparation_storage.mjs"))
+    browser = source("source_tools/multivariate_control_browser.mjs")
+    if browser is not None and b"operateMatchedControlOutcomes" in browser:
+        require((
+        "operator/multivariate_control_outcomes_operator.py",
+        "operator/extensions/multivariate-control-outcomes.json",
+        "operator/web/multivariate_control_outcomes_core.mjs",
+        "operator/web/multivariate_control_outcomes.mjs",
+        "operator/web/multivariate_control.mjs",
+        "operator/web/multivariate_control.css",
+        "operator/MULTIVARIATE_CONTROL_OUTCOMES.md",
+    ))
+
+
 def verify_composition(application, pending):
+    verify_multivariate_control_dependencies(application, pending)
     verify_geographic_browser_dependencies(application, pending)
     verify_geographic_received_study_dependencies(application, pending)
     verify_geographic_programme_dependencies(application, pending)
