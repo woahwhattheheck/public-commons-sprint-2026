@@ -149,3 +149,7 @@
  .water-plan-comparison .rwpc-plan-pair section{padding:.75rem}
  .water-plan-comparison .rwpc-analysis,.water-comparison-revision{padding:.75rem}
 }
+
+.water-plan-comparison .rwpc-pair-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:.75rem;align-items:end;margin:1rem 0}
+.water-plan-comparison .rwpc-pair-controls label{display:grid;gap:.35rem;min-width:0}
+@media(max-width:650px){.water-plan-comparison .rwpc-pair-controls{grid-template-columns:1fr}}

@@ -127,6 +127,12 @@ export function attachReceivingWaters(context){
     display.search=event.target.value;display.page=0;updateResults();
   }
   function onChange(event){
+    if(event.target.matches('[name="plan_compare_reference"],[name="plan_compare_candidate"]')){
+      const target=host?.querySelector('#water-selected'),pending=target?.querySelector('[data-water-compare-pending]');
+      const changed=target?.querySelector('[name="plan_compare_reference"]')?.value!==record?.comparison?.reference.id||target?.querySelector('[name="plan_compare_candidate"]')?.value!==record?.comparison?.candidate.id;
+      if(pending)pending.hidden=!changed;
+      const button=target?.querySelector('[data-action="water-compare-analysis"]');if(button)button.disabled=changed;return;
+    }
     if(event.target.matches('[data-water-compare-status]')){display.compareStatus=event.target.value;display.comparePage=0;updateComparison();return;}
     const name=event.target.dataset.waterFilter;if(!name)return;
     display[name]=event.target.value;if(name==='catalogFilter'){display.catalogPage=0;updateCatalog();}else{display.page=0;updateResults();}
@@ -173,7 +179,15 @@ export function attachReceivingWaters(context){
     if(!target||selected?.kind!=='plan-comparison'||!record?.comparison)return;
     const previous=target.querySelector('[data-water-compare-search]'),cursor=restoreSearch&&document.activeElement===previous?previous.selectionStart:null;
     const chosen=target.querySelector('[data-water-compare-analysis]')?.value;
-    target.innerHTML=renderPlanComparison(record.comparison,{search:display.compareSearch||'',status:display.compareStatus||'',page:display.comparePage||0,analyses:analyses()});
+    const existing=target.querySelector('[data-water-plan-comparison]'),samePair=existing?.dataset.reference===record.comparison.reference.id&&existing?.dataset.candidate===record.comparison.candidate.id;
+    const pairDraft=samePair?{reference:value('plan_compare_reference',target),candidate:value('plan_compare_candidate',target)}:null;
+    target.innerHTML=renderPlanComparison(record.comparison,{search:display.compareSearch||'',status:display.compareStatus||'',page:display.comparePage||0,analyses:analyses(),plans:plans()});
+    if(pairDraft){
+      for(const [name,id]of [['plan_compare_reference',pairDraft.reference],['plan_compare_candidate',pairDraft.candidate]]){const node=target.querySelector('[name="'+name+'"]');if(node&&[...node.options].some(option=>option.value===id))node.value=id;}
+      const dirty=pairDraft.reference!==record.comparison.reference.id||pairDraft.candidate!==record.comparison.candidate.id;
+      const pending=target.querySelector('[data-water-compare-pending]');if(pending)pending.hidden=!dirty;
+      const action=target.querySelector('[data-action="water-compare-analysis"]');if(action)action.disabled=dirty;
+    }
     if(chosen){const select=target.querySelector('[data-water-compare-analysis]');if(select&&[...select.options].some(x=>x.value===chosen))select.value=chosen;}
     target.dataset.waterRecordId=selected.id;target.dataset.waterRecordKind='plan-comparison';target.setAttribute('aria-busy','false');
     if(cursor!==null){const input=target.querySelector('[data-water-compare-search]');input?.focus();input?.setSelectionRange?.(cursor,cursor);}
@@ -184,25 +198,22 @@ export function attachReceivingWaters(context){
     return loadSelection().then(()=>host?.querySelector('#water-selected')?.scrollIntoView({behavior:'smooth',block:'start'}));
   }
   async function comparePlanForm(referenceId='',candidateId=''){
-    const workspace=currentWorkspace(),marker=version,request=++formRequest,view=context.getView?.();
+    const workspace=currentWorkspace(),marker=version,request=++studyRequest,view=context.getView?.();
     await loadCatalog();
-    if(workspace!==currentWorkspace()||marker!==version||request!==formRequest||(view!==undefined&&view!==context.getView?.()))throw Error('Open plan comparison in its original workspace.');
+    if(workspace!==currentWorkspace()||marker!==version||request!==studyRequest||(view!==undefined&&view!==context.getView?.()))throw Error('Open plan comparison in its original workspace.');
     const complete=plans().filter(row=>row.state==='complete');
     if(!complete.length)throw Error('Save or receive an original source plan before comparing editions.');
     if(referenceId&&!complete.some(row=>row.id===referenceId))throw Error('The reference plan is no longer available in this workspace.');
     if(candidateId&&!complete.some(row=>row.id===candidateId))throw Error('The candidate plan is no longer available in this workspace.');
-    const rows=complete.map(row=>[row.id,row.title+' · '+short(row.id)]);
-    let root;openForm('Compare saved Receiving source plans','Inspect original sources, selected features and contribution relationships before changing an analysis. Selecting the same original record shows a no-change view.',
-      '<div class="form-grid">'+field('Reference plan',select('plan_compare_reference',rows,referenceId||complete[0].id),'',true)+
-      field('Candidate plan',select('plan_compare_candidate',rows,candidateId||complete.find(row=>row.id!==(referenceId||complete[0].id))?.id||complete[0].id),'',true)+'</div>',
-      'Compare original plans',()=>{
-        if(workspace!==currentWorkspace()||marker!==version||root!==formRoot()||!root.isConnected)throw Error('Reopen this comparison in its original workspace.');
-        return openPlanComparison(value('plan_compare_reference',root),value('plan_compare_candidate',root));
-      },()=>{root=formRoot();});
+    const reference=referenceId||complete[0].id,candidate=candidateId||complete.find(row=>row.id!==reference)?.id||reference;
+    return openPlanComparison(reference,candidate);
   }
   function comparisonRecord(){
     if(selected?.kind!=='plan-comparison'||!record?.comparison||record.comparison.reference.id!==selected.reference_id||record.comparison.candidate.id!==selected.id)
       throw Error('Open the current saved plan comparison first.');
+    const target=host?.querySelector('#water-selected');
+    if(target?.querySelector('[name="plan_compare_reference"]')?.value!==record.comparison.reference.id||target?.querySelector('[name="plan_compare_candidate"]')?.value!==record.comparison.candidate.id)
+      throw Error('Apply the selected plan pair before continuing with its comparison.');
     return record;
   }
   async function reviseComparedAnalysis(){
@@ -993,6 +1004,10 @@ export function attachReceivingWaters(context){
     if(action?.startsWith('water-report-'))return report.dispatch(button);
     if(action?.startsWith('water-monitoring-'))return monitoring.dispatch(button);
     if(action==='water-task-result'&&button.dataset.kind==='monitoring')return monitoring.open(id);
+    if(action==='water-compare-apply'){
+      const target=host?.querySelector('#water-selected');if(!target?.querySelector('[data-water-plan-comparison]'))throw Error('Open the current Receiving plan comparison.');
+      return openPlanComparison(value('plan_compare_reference',target),value('plan_compare_candidate',target));
+    }
     if(action==='water-compare-new')return comparePlanForm(button.dataset.reference||'',button.dataset.candidate||'');
     if(action==='water-compare-swap'){const current=comparisonRecord().comparison;return openPlanComparison(current.candidate.id,current.reference.id);}
     if(action==='water-compare-page'){comparisonRecord();const direction=Number(button.dataset.direction);if(![-1,1].includes(direction))throw Error('Choose a comparison page.');display.comparePage=Math.max(0,(display.comparePage||0)+direction);updateComparison();return;}
