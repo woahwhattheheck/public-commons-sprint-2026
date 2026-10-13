@@ -20,6 +20,8 @@ function tasksFrom(state) {
   return value && typeof value === "object" ? Object.values(value).filter(v => v && typeof v === "object" && v.id) : [];
 }
 function cell(row, field) {
+  if (field === "value" && "source_value_token" in row) return row.source_value_token;
+  if (field === "depth" && "source_depth_token" in row) return row.source_depth_token;
   if (field === "parameter") return label(row.parameter);
   if (field === "month") return MONTHS[Number(row.month) - 1] || row.month;
   if (field === "sd") return row.sd_published_token || row.raw_cells?.sd || row.sd;
@@ -76,7 +78,7 @@ export function createPublishedStudiesDesk(host) {
       '<label class="ps-wide">Source file or study directory<input name="relative_path" placeholder="studies/eighteenmile-2023.json" required></label>' +
       '<label>Original report file<input name="report_path" placeholder="Optional PDF in the same folder"></label>' +
       '<label>Table 7 image<input name="image_path" placeholder="Optional PNG in the same folder"></label></div>' +
-      '<p class="ps-help">Accepts the study companion JSON, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
+      '<p class="ps-help">Accepts the original study JSON, its complete Canvas Markdown, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
       '<button type="submit">Import study</button></form></details></section>' +
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
@@ -91,7 +93,7 @@ export function createPublishedStudiesDesk(host) {
       MONTHS.map((month, index) => '<option value="' + (index + 1) + '">' + month + "</option>").join("") +
       '</select></label></div><p class="ps-help">Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
       '<nav class="ps-tabs" aria-label="Study tables">' +
-      [["seasonal","Seasonal"],["continuous","Continuous"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
+      [["seasonal","Seasonal"],["continuous","Continuous"],["observed","Report comparison"],["wqp","WQP source context"],["flow","Upstream flow"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
         .map(([id, title]) => '<button type="button" data-ps-tab="' + id + '" aria-pressed="' + (id === tab) + '">' + title + "</button>").join("") +
       '</nav><div data-ps-tables></div><aside class="ps-row-detail" data-ps-detail hidden aria-label="Original row details"></aside>';
   }
@@ -128,14 +130,14 @@ export function createPublishedStudiesDesk(host) {
     target.innerHTML = '<section class="ps-summary"><h2>' + esc(study.title) + '</h2><p>' +
       esc(study.issuing_body) + " · Technical report " + esc(study.technical_report) + " · " + esc(study.publication) +
       '</p><dl class="ps-counts">' +
-      [["Stations",counts.stations],["Seasonal rows",counts.seasonal],["Monthly DO",counts.monthly_do],["Monthly pH",counts.monthly_ph],["Field range rows",counts.surface_ranges]]
+      [["Stations",counts.stations],["Seasonal rows",counts.seasonal],["Monthly DO",counts.monthly_do],["Monthly pH",counts.monthly_ph],["Field range rows",counts.surface_ranges],["Comparison activities",counts.observed_activities || 0],["WQP result rows",counts.original_result_rows || 0],["WQP activities",counts.original_activity_count || 0],["Flow dates",counts.flow_dates || 0]]
         .map(([key,value]) => "<div><dt>" + esc(key) + "</dt><dd>" + esc(value) + "</dd></div>").join("") +
       '</dl><div class="ps-support"><p><strong>Grab sampling:</strong> ' + esc(grab.start) + " through " + esc(grab.end) +
       "; surface " + esc(grab.surface_depth_m) + " m; " + esc(grab.visits_per_site) + " planned visits per site.</p>" +
       '<p><strong>Continuous sensors:</strong> ' + esc(arr(continuous.stations).join(", ")) + "; " +
       esc(continuous.interval_minutes) + " minute interval at approximately " + esc(continuous.approximate_depth_m) +
       " m. Monthly sample counts are days.</p></div></section>";
-    const availableSites = arr(complete.tables.stations).map(row => row.site_id);
+    const availableSites = arr(complete.available_stations || complete.tables.stations).map(row => row.site_id);
     selection.site_ids = selection.site_ids.filter(id => availableSites.includes(id));
     if (!selection.site_ids.length) selection.site_ids = availableSites;
     find("[data-ps-sites]").innerHTML = availableSites.map(id => '<label class="ps-check"><input type="checkbox" name="site" value="' +
@@ -144,18 +146,31 @@ export function createPublishedStudiesDesk(host) {
     const yearControl = find('form[data-ps-filters] select[name="year"]');
     yearControl.innerHTML = '<option value="">All years</option>' + years.map(year => '<option value="' + year + '">' + year + "</option>").join("");
     yearControl.value = selection.year || "";
-    find('form[data-ps-filters] select[name="parameter"]').value = selection.parameters[0] || "";
+    const parameterControl = find('form[data-ps-filters] select[name="parameter"]');
+    const parameterOptions = [...new Set([...Object.keys(PARAMETERS), ...arr(complete.original_measurements).map(row => row.parameter)])].sort((a,b) => label(a).localeCompare(label(b)));
+    parameterControl.innerHTML = '<option value="">All parameters</option>' + parameterOptions.map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
+    parameterControl.value = selection.parameters[0] || "";
     find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";
     find('form[data-ps-filters] select[name="month"]').value = selection.months[0] || "";
     find("[data-ps-filters]").hidden = false;
   }
 
   function sourcePage(row) {
+    if (row.source_file?.startsWith("wqp") || row.source_file?.startsWith("cohort_reconciliation")) {
+      const source = arr(complete?.source_artifacts).find(item => item.path === row.source_file);
+      let result = link(source?.download?.url, "Retained CSV · row " + row.source_csv_row);
+      if (row.original_source_path) {
+        const raw = arr(complete?.source_artifacts).find(item => item.path === row.original_source_path);
+        result += "<br>" + link(raw?.download?.url, "Original response · record " + row.original_source_record_index);
+      }
+      return result;
+    }
     const pdf = arr(complete?.source_artifacts).find(item => item.path.toLowerCase().endsWith(".pdf"));
     const url = pdf?.download?.url || row.source_url || row.report_url || complete?.study?.original_url;
     const page = row.source_pdf_page || row.report_pdf_page;
     return link(page && url ? url.split("#")[0] + "#page=" + page : url, "Table " + (row.source_table || row.report_table || "—") + " · PDF " + (page || "—"));
   }
+
   function table(title, rows, columns, source = true) {
     if (!rows.length) return '<section class="ps-table-section"><h2>' + esc(title) + '</h2><p class="ps-empty-row">No rows match this selection.</p></section>';
     return '<section class="ps-table-section"><h2>' + esc(title) + ' <span class="ps-help">(' + rows.length + ')</span></h2><div class="ps-table-scroll"><table><thead><tr>' +
@@ -184,6 +199,89 @@ export function createPublishedStudiesDesk(host) {
       const columns = [["site_id","Station"],["year","Year"],["month","Month"],["units","Unit"],["avg_daily_minimum","Avg daily min"],["avg_daily_maximum","Avg daily max"],["published_avg_daily_range","Published avg daily range"],["n_days","Days"]];
       output = table("Monthly dissolved oxygen", arr(tables.monthly_do), columns) +
         table("Monthly pH", arr(tables.monthly_ph), [...columns,["days_with_max_above_8_5","Days max > 8.5"]]);
+    } else if (tab === "observed") {
+      const observed = context.observations || {}, series = arr(observed.series).map(row => ({
+        ...row, record_id: row.published?.record_id,
+        observed_mean: row.mean == null ? "" : Number(row.mean).toFixed(6),
+        observed_sd: row.sample_sd == null ? "" : Number(row.sample_sd).toFixed(6),
+        reported_depths: arr(row.depths_as_reported).join("; "),
+      }));
+      output = '<section class="ps-methods"><h2>Original activities and published summaries</h2><p>' +
+        esc(observed.temporal_support || "Import the current installed study to retain its original activity sources.") +
+        '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
+      const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
+      if (illustrated) output += '<p>' + link(illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
+      output += table("Observed series and report rows", series, [
+        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
+        ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
+        ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
+        ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
+      ]);
+      output += series.map(row => '<p class="ps-help"><strong>' + esc(row.site_id) + " / " + esc(label(row.parameter)) +
+        ":</strong> " + esc(row.basis) + "</p>").join("");
+      const calendars = series.map(row => ({
+        ...row, missing_dates: arr(row.missing_chlorophyll_dates).join("; "),
+        extra_dates: arr(row.additional_dates).join("; "), methods: arr(row.original_methods).join("; "),
+      }));
+      output += table("Original observation calendars", calendars, [
+        ["site_id","Station"],["parameter","Parameter"],["period_start","First date"],["period_end","Last date"],
+        ["missing_dates","Dates absent from chlorophyll visits"],["extra_dates","Additional dates"],["methods","Source methods"]
+      ],false);
+      output += table("Original activity chronology", arr(observed.rows), [
+        ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
+        ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["value","Value"],["unit","Unit"],
+        ["detection_condition","Detection"],["detection_limit","Limit"],["detection_limit_unit","Limit unit"],
+        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"]
+      ]);
+      const cohort = context.cohort_reconciliation;
+      if (cohort) {
+        output += '<section class="ps-methods"><h3>Original chlorophyll cohort selection</h3><p>' + esc(cohort.cohort_basis) +
+          '</p><p>The same-date activity assignment is an inference from the publisher-displayed local clocks, routine-project records and reproduced summaries. Original EST and EDT labels remain unchanged.</p><ul>' +
+          arr(cohort.exclusion_evidence).filter(row => selection.site_ids.includes(row.site_id)).map(row => "<li>" +
+            esc(row.site_id) + " · " + esc(row.date) + ": retained " + esc(row.retained_original_record?.activity_id) +
+            "; separate routine " + esc(row.excluded_original_record?.activity_id) + ". " + esc(row.timezone_interpretation) + "</li>").join("") + "</ul></section>";
+      }
+      const ambiguity = context.observation_reconciliation?.additional_station_cohorts;
+      if (!context.cohort_reconciliation && ambiguity && arr(ambiguity.scope).some(site => selection.site_ids.includes(site))) {
+        output += '<section class="ps-methods"><h3>Additional station activity cohorts</h3><p>' + esc(ambiguity.selection) +
+          '</p><ul>' + arr(ambiguity.same_campaign_date_ambiguities).filter(row => selection.site_ids.includes(row.station_id)).map(row =>
+            "<li>" + esc(row.station_id) + " · " + esc(row.date) + " · " + esc(arr(row.chlorophyll_values_ug_l).join(", ")) +
+            " ug/L · source times " + esc(arr(row.source_times).join(", ")) + " " + esc(row.source_timezone) + "</li>").join("") + "</ul></section>";
+      }
+    } else if (tab === "wqp") {
+      const dated = context.dated_context || {};
+      output = '<section class="ps-methods"><h2>Original WQP source context</h2><p>Browse the complete acquired source year with original projects, fractions, depths, units, limits and activity identifiers. The report comparison uses its separately identified chlorophyll cohort. Station and parameter filters select these source rows.</p></section>';
+      output += table("Source coverage", arr(dated.coverage), [
+        ["site_id","Station"],["project_id","Project"],["characteristic","Original characteristic"],
+        ["sample_fraction","Fraction"],["reported_unit","Unit"],["record_count","Rows"],
+        ["numeric_reported_count","Numeric reported"],["quantified_count","Quantified"],["censored_below_count","Censored below"]
+      ]);
+      output += table("Retained original results", arr(dated.rows), [
+        ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
+        ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
+        ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
+        ["detection_limit_unit","Limit unit"],["depth","Depth"],["depth_unit","Depth unit"],
+        ["cohort_selection","Cohort selection"],["activity_id","Activity identifier"]
+      ]);
+      const empty = arr(dated.summary?.empty_source_stations).filter(id => selection.site_ids.includes(id));
+      if (empty.length) output += '<p class="ps-help">The exact organization/station/year query returned a header-only original response for ' + esc(empty.join(", ")) + '. Its original response is retained with the source collection.</p>';
+      output += '<details class="ps-source-notes"><summary>Source selection methods</summary>' +
+        arr(dated.summary?.method_notes).map(value => "<p>" + esc(value) + "</p>").join("") + "</details>";
+    } else if (tab === "flow") {
+      const dated = context.dated_context || {}, methods = dated.flow_methods?.method || {};
+      output = '<section class="ps-methods"><h2>Observed upstream discharge on sample dates</h2><p>' +
+        esc(methods.statistic || "Retained daily mean discharge") + ". " + esc(methods.date_join || "Original reporting calendar date") +
+        '.</p><p>Antecedent windows contain the previous three or seven reporting dates and exclude the sampling date. Discharge remains in ft³/s; each original qualifier and response record index is available in row details.</p></section>';
+      output += table("Upstream daily and antecedent flow", arr(dated.flow_rows), [
+        ["sampling_date","Sampling date"],["gauge_id","Gauge"],["same_date_mean_cfs","Daily mean ft³/s"],
+        ["same_date_qualifiers","Qualifier"],["annual_flow_percentile_midrank","Annual percentile"],
+        ["prior_3d_mean_cfs","Prior 3-day mean ft³/s"],["prior_7d_mean_cfs","Prior 7-day mean ft³/s"],
+        ["prior_7d_maximum_daily_cfs","Prior 7-day maximum ft³/s"],["prior_7d_maximum_dates","Maximum date"],
+        ["prior_7d_valid_days","Valid days"],["prior_7d_expected_days","Expected days"],
+        ["annual_p95_daily_cfs","Annual p95 ft³/s"],["annual_reference_valid_days","Annual valid days"]
+      ]);
+      output += '<p class="ps-help">Selected activity dates outside this retained flow-date table: ' +
+        esc(arr(dated.dates_without_flow_context).join(", ") || "none") + ".</p>";
     } else if (tab === "ranges") {
       const rows = arr(context.surface_parameter_ranges).map(row => ({...row, record_id: arr(tables.surface_ranges).find(raw => raw.site_id === row.site_id)?.record_id}));
       output = table("Surface field ranges", rows, [
@@ -274,7 +372,7 @@ export function createPublishedStudiesDesk(host) {
     finally { if (workspace === expectedWorkspace) { busy = false; if (node) renderCatalog(); } }
   }
   function detail(id) {
-    const rows = Object.values(complete?.tables || {}).flat();
+    const rows = [...Object.values(complete?.tables || {}).flat(), ...arr(complete?.observation_rows), ...arr(complete?.original_measurements), ...arr(complete?.wqp_coverage), ...arr(complete?.flow_rows)];
     const row = rows.find(item => item.record_id === id);
     if (!row) return;
     const target = find("[data-ps-detail]");

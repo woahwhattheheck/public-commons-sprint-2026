@@ -6,6 +6,14 @@ from model.common import describe_file, read_json
 
 
 def read(operator, workspace_key, operation, payload, fault=None):
+    if operation == "compare":
+        from model.atlas_comparison import comparison_target
+        workspace = operator.ws(workspace_key)
+        value = payload or {}
+        target = comparison_target(
+            workspace, operator.spatial_reviews[workspace_key], value.get("delivery_id"),
+            value.get("left"), value.get("right"), value.get("mode", "compare"))
+        return {"workspace_key": workspace_key, "target": target}
     if operation == "inspect":
         from model.atlas_spatial import panel_target
         workspace = operator.ws(workspace_key)

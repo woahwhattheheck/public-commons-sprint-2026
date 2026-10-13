@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/web/programmes.css">
 <script type="module" src="/web/app.mjs"></script>
 <link rel="stylesheet" href="/web/experiments.css">
+<link rel="stylesheet" href="/web/portfolio.css">
 <link rel="stylesheet" href="/web/receiving_waters.css">
 <link rel="stylesheet" href="/web/rehearsal.css">
 </head>
@@ -19,7 +20,7 @@
 <header class="topbar">
   <div class="brand"><span class="brand-mark" aria-hidden="true">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>
   <label class="workspace-control"><span>Workspace</span><select id="workspace-select" aria-label="Selected workspace"></select></label>
-  <div class="top-actions"><button type="button" data-action="refresh" title="Refresh retained state">Refresh</button><button type="button" data-action="tasks" aria-controls="task-panel" aria-expanded="false">Operations <span id="task-count">0</span></button></div>
+  <div class="top-actions"><button type="button" data-action="journey-save-view" title="Save the selected analysis and notes in this workspace">Save view and notes</button><button type="button" data-action="refresh" title="Refresh retained state">Refresh</button><button type="button" data-action="tasks" aria-controls="task-panel" aria-expanded="false">Operations <span id="task-count">0</span></button></div>
 </header>
 <div class="shell">
   <nav class="sidebar" aria-label="Scientific workflow">
@@ -33,6 +34,7 @@
     <button data-view="runs">Native model runs</button>
     <button data-view="programmes">Run programmes</button>
     <button data-view="experiments">Scenario experiments</button>
+    <button data-view="portfolios">Conservation portfolios</button>
     <button data-view="comparisons">Run comparisons</button>
     <button type="button" data-view="conservation">Conservation plans</button>
     <button type="button" data-view="rehearsal">Operator rehearsal</button>

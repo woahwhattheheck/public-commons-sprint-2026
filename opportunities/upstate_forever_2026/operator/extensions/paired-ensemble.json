@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "paired-ensemble",
   "title": "Paired raster analysis",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "order": 55,
   "assets": [
     "paired_ensemble_desk.mjs",
@@ -132,6 +132,32 @@
         ],
         "path": "/api/paired-ensemble/edition",
         "operation": "edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/paired-ensemble/view",
+        "operation": "view",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/paired-ensemble/view",
+        "operation": "view.save",
         "handler": "read",
         "args": [
           "workspace_key",

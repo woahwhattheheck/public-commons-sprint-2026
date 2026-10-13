@@ -31,25 +31,67 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self):
-        names = (
+        required = (
             "study.json", "stations.csv", "stations.json", "seasonal_summaries.csv",
             "surface_ranges.csv", "continuous_monthly_do.csv", "continuous_monthly_ph.csv",
             "reported_npdes_permits.csv", "source_notes.json", "README.md",
-            "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
         )
-        files = []
-        for name in names:
-            path = self.builtin / name
-            if not path.is_file():
-                if name.startswith("table7-"):
-                    continue
-                self._fail("STUDY_BUILTIN", "The installed study is missing " + name, 404)
+        selected = {}
+        def retain(path, name=None):
+            path = path.resolve(strict=True)
+            root = self.builtin.resolve(strict=True)
+            if name is None:
+                if not path.is_relative_to(root):
+                    self._fail("STUDY_BUILTIN_PATH", "A study manifest points outside its installed study directory.")
+                name = path.relative_to(root).as_posix()
             raw = path.read_bytes()
-            files.append({
-                "path": name, "encoding": "utf-8", "bytes": len(raw),
-                "sha256": hashlib.sha256(raw).hexdigest(), "content": raw.decode("utf-8"),
-            })
-        evidence = {}
+            if name in selected and selected[name] != raw:
+                self._fail("STUDY_BUILTIN_PATH", "Installed source files conflict at " + name)
+            selected[name] = raw
+
+        for name in required:
+            retain(self.builtin / name)
+        for name in (
+            "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
+            "map-layer-capture.json", "NATIVE_IMPORT.md", "wqp/flow-context-sources.json",
+        ):
+            path = self.builtin / name
+            if path.is_file():
+                retain(path)
+        manifests = (
+            self.builtin / "model-sources.json",
+            self.builtin / "wqp_20261013" / "source-manifest.json",
+            self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
+        )
+        for manifest_path in manifests:
+            if not manifest_path.is_file():
+                continue
+            manifest_name = (
+                manifest_path.name if manifest_path.parent == self.builtin.parent.parent
+                else manifest_path.relative_to(self.builtin).as_posix()
+            )
+            retain(manifest_path, manifest_name)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            if manifest.get("schema") != "upstate.sources/v1":
+                self._fail("STUDY_BUILTIN_MANIFEST", "The installed study manifest has an incompatible schema.")
+            for entry in manifest.get("entries", []):
+                for item in [entry, *entry.get("companions", [])]:
+                    relative = item["path"]
+                    part = PurePosixPath(relative)
+                    if part.is_absolute() or ".." in part.parts or "\\" in relative or str(part) != relative:
+                        self._fail("STUDY_BUILTIN_PATH", "An installed source path is not a canonical relative path.")
+                    retain(manifest_path.parent / relative)
+        files, evidence = [], {}
+        for name, raw in sorted(selected.items()):
+            if Path(name).suffix.lower() in (".pdf", ".png", ".jpg", ".jpeg"):
+                evidence[name] = raw
+            else:
+                files.append({
+                    "path": name, "encoding": "utf-8", "bytes": len(raw),
+                    "sha256": hashlib.sha256(raw).hexdigest(), "content": raw.decode("utf-8"),
+                })
         for name in (
             "2023LakeProgramFinalReport.pdf", "scdes-2023-lake-program-original.pdf",
             "table7-page21.png", "table7-crop.png",

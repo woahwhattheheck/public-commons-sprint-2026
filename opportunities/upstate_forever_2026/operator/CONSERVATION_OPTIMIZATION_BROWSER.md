@@ -56,3 +56,9 @@ The current science author has the independently reported empty-selection publis
 The complete source includes the bridge, the original retained_desks factory join and the core Conservation manifest. The bridge mounts the original study browser and this decision client as sibling regions, so core study repainting preserves the decision region. Normal shared-host remounts reuse the same client state. Catalog reads are refreshed after original optimizer task completion and on explicit refresh, rather than on each progress update.
 
 Project credit: TokenJunkieLabs. The repository MIT license applies. **Needs expert review**: scientific, geographic and supplied-cost interpretation remains subject to the original project's domain review.
+
+## Direct host composition
+
+The main operator directly owns the Conservation action family. Its application now creates the same composed Conservation controller, forwards its original form, navigation and detail capabilities, and dispatches both Conservation and optimizer controls to that controller. Its static-file route serves the existing bridge, optimizer module and stylesheet. The bridge loads the stylesheet once when the direct host mounts it. Registry-only hosts retain the existing core descriptor and composed adapter route.
+
+The final retained adapter preserves the bridge while handling same-view navigation, task envelopes and experiment-state changes. Export task tickets are attached only when their original saved plan is still the active plan after asynchronous reads. The adopted completion-based catalog refresh remains intact.
