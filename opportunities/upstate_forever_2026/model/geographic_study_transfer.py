@@ -589,6 +589,8 @@ def _programmes(closure, prepared):
             raise ValueError("The saved Geographic Programme changed during selection")
         closure.need("compute-programmes", key,
                      "Saved Geographic Programme for the exact original reference cohort")
+        from .geographic_operator_transfer import include_programme
+        include_programme(closure, prepared, key)
         # The maintained visitor owns programme/progress/report trees, native
         # donors, comparisons, deliveries and pair-completion descendants.
         # Its existing locks protect those files during the second resolution.
@@ -1044,7 +1046,8 @@ def related_native_cohort(closure):
 
 
 def lock_paths(closure):
-    paths = set()
+    from .geographic_operator_transfer import lock_paths as operator_lock_paths
+    paths = set(operator_lock_paths(closure))
     for relative in closure.files:
         parts = PurePosixPath(relative).parts
         if len(parts) < 3:
