@@ -41,13 +41,17 @@ def verify_choice(workspace, output, choice):
     # The original engine validates every retained step/version before returning
     # the actual current plan. The recording must not silently use a later edit.
     actual = inspect_campaign(workspace, choice["operation_id"])
-    if canonical(actual) != canonical(frozen):
+    original = {key: value for key, value in frozen.items() if key != "presentation"}
+    if canonical(actual) != canonical(original):
         raise ValueError("The completed field plan advanced after this recording was bound; "
                          "retain the original course and bind a new edition to the current inspection")
+    if "presentation" in frozen:
+        from model.field_report_presentation import inspect_selection
+        inspect_selection(workspace, choice["operation_id"], frozen["presentation"])
     return {**choice, "path": str(path.resolve())}
 
 
-def bind_campaign(workspace, receipt, output):
+def bind_campaign(workspace, receipt, output, *, presentation=None):
     operation_id = receipt.get("fieldwork_operation_id")
     if operation_id is None:
         return None
@@ -57,6 +61,10 @@ def bind_campaign(workspace, receipt, output):
             or campaign["original_project_id"] != workspace.project["id"]
             or campaign["plan_id"] != receipt.get("fieldwork_plan_id")):
         raise ValueError("Complete this original field campaign before recording its QC chapter")
+    if presentation is not None:
+        from model.field_report_presentation import inspect_selection
+        supplied = read_json(Path(presentation)) if isinstance(presentation, (str, Path)) else presentation
+        campaign = {**campaign, "presentation": inspect_selection(workspace, operation_id, supplied)}
     path = Path(output) / PATH
     current = Path(output)
     current.mkdir(parents=True, exist_ok=True)
