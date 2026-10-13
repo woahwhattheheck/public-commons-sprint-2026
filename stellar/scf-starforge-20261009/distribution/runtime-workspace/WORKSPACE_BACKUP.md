@@ -39,6 +39,46 @@ archive is associated with its exact review and manifest.
 The storage location is an operator preference for this workspace. Switching
 the selected location opens its existing records; it does not move old archives.
 
+## Backup read work and stable source capture
+
+The review and export each keep their own temporary digest cache while holding
+the original workspace and resource leases. Every inventory still walks the
+complete source tree and checks ownership, type, permissions, symlinks and lease
+inodes. A digest is reused only after opening the same regular file without
+following links and matching its device, inode, size, nanosecond modification
+and change times, and complete mode. The cache is discarded at the end of that
+invocation. An earlier review or interrupted export cannot supply cached source
+digests to a later export.
+
+Export hashes every byte actually read into each archive member and compares it
+with the original reviewed file. It then repeats the complete inventory before
+publication. Changed content, topology or selected source identity prevents
+completion. The original canonical manifest and archive format are unchanged.
+
+The completed archive receives one full compressed-byte hash and one complete
+manifest/member verification pass. After the archive reaches its final path,
+export hashes the complete final file again and records that destination's actual
+identity. The already verified manifest is published into the normal inspection
+record for those exact final bytes. Ordinary archive inspection and restoration
+still validate the whole selected archive digest before any member receiver runs.
+Continuing an existing completed archive also revalidates every member.
+
+Open **Backup read totals** on the completed operation for the actual
+application-level bytes consumed in that export invocation. The complete result
+and existing CLI also retain `readWork`: inventory passes, source hash reads and
+bytes, source digest reuses, copied files and bytes, complete archive hash reads
+and bytes, and member verification passes and bytes. These are not disk-device
+I/O measurements or elapsed-time estimates. An invocation that resumes an already
+written archive has no source-copy work. Retained interrupted archives contribute
+their real hash reads to the same invocation's archive totals.
+
+For an unchanged new export with no interrupted archive, the implementation
+hashes the source content once and reads it once more while copying; it still
+performs all three metadata inventories. The archive is hashed twice and its
+members decompressed once. These are source-path expectations. Record the
+existing native operation's actual totals and duration for workload comparisons;
+do not substitute an invented workspace or claimed native timing.
+
 ## Receive an archive on another host
 
 Run the maintained Runtime workspace tools on the receiving Linux machine. Use
@@ -527,6 +567,22 @@ On completion, `operator-output/COMPLETE_RECEIVING_RESULT.json` names the actual
 archive, restore and receiving identities. Publish the complete private case
 through the existing artifact handoff for the operation; the programme does not
 send it to an external service.
+
+The read-work continuation runs at the end of that same original course. It opens
+the actual restored workspace, retains one additional review/export request pair
+in `OPERATING_CASE.json`, and preserves every earlier export/receiving checkpoint.
+It operates the new completed backup through the existing browser, opens **Backup
+read totals** at desktop and 390-pixel widths, downloads its full archive, inspects
+that downloaded archive through the original receiver and reopens the same export
+request. Its complete native result is `operator-output/BACKUP_READ_WORK.json`;
+the original `COMPLETE_RECEIVING_RESULT.json` remains intact. A resumed partial
+phase reuses those same retained requests and complete downloaded bytes.
+
+The producing operator must personally view the new desktop/phone captures and
+open the actual downloaded archive through its normal receiving workflow. The
+course records actual source identities and work totals; generating those records
+or screenshots does not replace that observation. Keep this continuation on the
+original 9F05/3459/8910/F2A6/0C7A receiving operation and its existing lease.
 
 ## Model and HTTP integration
 

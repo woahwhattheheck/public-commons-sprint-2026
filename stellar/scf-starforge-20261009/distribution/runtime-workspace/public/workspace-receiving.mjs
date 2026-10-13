@@ -425,6 +425,19 @@ export function createWorkspaceReceivingView({ root, api, getState, getToken, ge
         }), Boolean(busy)));
       if (item.result?.archiveId) {
         article.append(node('p', bytesText(item.result.bytes) + ' · SHA-256 ' + item.result.sha256, 'note'));
+        if (item.result.readWork) {
+          const work = item.result.readWork, totals = node('details'), values = node('div');
+          facts(values, [
+            ['Source content hashed', bytesText(work.sourceHashBytes)],
+            ['Source bytes copied into archive', bytesText(work.copiedBytes)],
+            ['Complete archive bytes hashed', bytesText(work.archiveHashBytes)],
+            ['Archive member bytes verified', bytesText(work.archiveMemberBytes)],
+            ['Complete member verification passes', count(work.archiveMemberPasses)],
+          ]);
+          totals.append(node('summary', 'Backup read totals'), values,
+            node('p', 'Reads performed by this completed invocation. A continued archive is verified again; filesystem caching is separate.', 'note'));
+          article.append(totals);
+        }
         actions.append(button('Download complete backup', () => action(() => download(item.result.archiveId)), Boolean(busy)));
       }
       if (item.result?.receivingId) actions.append(button('Review restored bindings',
