@@ -1,0 +1,13 @@
+class_id,label,measure,opening_2025_01_01,increases,decreases_signed,closing_2025_12_31
+land,Land,gross,84367786,2009879,0,86377665
+construction,Construction in progress,gross,51461259,35037005,-18267323,68230941
+buildings,Buildings and Structures,gross,200281048,7571706,-1127467,206725287
+intangibles,Intangible Assets,gross,1076754,301672,0,1378426
+improvements,Improvements/Infrastructure,gross,244199541,11763133,-3932719,252029955
+equipment,Machinery and Equipment,gross,19178840,597748,-400145,19376443
+lease,Right-to-Use Lease Assets,gross,0,4341703,0,4341703
+buildings,Buildings and Structures,accumulated,107028366,6008327,-855875,112180818
+intangibles,Intangible Assets,accumulated,0,348376,0,348376
+improvements,Improvements/Infrastructure,accumulated,131364146,8639944,-3511046,136493044
+equipment,Machinery and Equipment,accumulated,13602105,1051638,-387770,14265973
+lease,Right-to-Use Lease Assets,accumulated,0,30708,0,30708

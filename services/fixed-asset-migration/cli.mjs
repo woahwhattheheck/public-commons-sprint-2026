@@ -5,6 +5,7 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import * as engine from './engine.mjs';
+import * as workOrders from './work-orders.mjs';
 import {sha256Utf8} from './sha256.mjs';
 
 const need=(ok,message)=>{if(!ok)throw Error(message);};
@@ -49,6 +50,7 @@ export function main(argv=process.argv.slice(2)){
  const {command,options:o}=args(argv.slice()),workspace=o['--workspace']?absolute(o['--workspace'],'workspace path'):null;
  if(command==='templates'){const root=absolute(o['--out'],'template directory');for(const domain of Object.keys(engine.DOMAINS))publish(path.join(root,domain+'.csv'),engine.templateCsv(domain));return {state:'COMPLETE',directory:root,templates:Object.keys(engine.DOMAINS)};}
  need(workspace,'Supply --workspace ABS_WORKSPACE_JSON.');
+ if(command==='wo-templates'){const root=absolute(o['--out'],'template directory');for(const domain of Object.keys(workOrders.FIELDS))publish(path.join(root,'work-order-'+domain+'.csv'),workOrders.templateCsv(domain));return {state:'COMPLETE',directory:root};}
  if(command==='recover-lock')return recoverLock(workspace,o['--token']);
  if(command==='init')return locked(workspace,()=>{
   need(exists(workspace)===null,'The original workspace already exists; reopen it.');
@@ -61,6 +63,12 @@ export function main(argv=process.argv.slice(2)){
    return{state:'RETAINED',workspace,id:current.id,revision:current.revision,incomingRevision:incoming.revision};
   }
   publish(workspace,engine.exportWorkspace(incoming));return{state:'RECEIVED',workspace,id:incoming.id,revision:incoming.revision};
+ });
+ if(command.startsWith('wo-')&&!['wo-report','wo-inspect'].includes(command))return locked(workspace,()=>{
+  const before=regular(workspace),ws=engine.importWorkspace(before),request=JSON.parse(regular(absolute(o['--request'],'saved work-order request JSON'))),action=command.slice(3);
+  if(['import','allocate-batch','match-batch','order-match-batch'].includes(action)){need(request.text===undefined,'Keep original CSV bytes in --csv.');const csv=absolute(o['--csv'],'complete original CSV');request.filename=request.filename||path.basename(csv);request.text=regular(csv);}
+  const result=workOrders.run(ws,action,request);if(!result.replayed)replace(workspace,before,engine.exportWorkspace(result.workspace));
+  return{state:result.replayed?'REPLAYED':'SAVED',workspace,id:result.workspace.id,revision:result.workspace.revision,receipt:result.receipt,result:result.workOrderResult};
  });
  if(['import','map','correct','policy','supporting'].includes(command))return locked(workspace,()=>{
   const before=regular(workspace),ws=engine.importWorkspace(before),request=JSON.parse(regular(absolute(o['--request'],'saved request JSON')));
@@ -78,10 +86,12 @@ export function main(argv=process.argv.slice(2)){
   return{state:result.replayed?'REPLAYED':'SAVED',workspace,id:result.workspace.id,revision:result.workspace.revision,receipt:result.receipt};
  });
  const ws=engine.importWorkspace(regular(workspace));
+ if(command==='wo-report'){const report=workOrders.reconcile(ws);output(o['--out'],report);return {state:'RECONCILED',workspace,revision:ws.revision,ready:report.ready,accepted:report.accepted,summary:report.summary};}
+ if(command==='wo-inspect')return workOrders.read(ws);
  if(command==='inspect')return{id:ws.id,title:ws.title,revision:ws.revision,sources:ws.sources.map(({text,rows,...x})=>({...x,rowCount:rows.length})),mappings:ws.mappings,corrections:ws.corrections,financePolicies:ws.financePolicies,financePolicyHistory:ws.financePolicyHistory,supportingFiles:ws.supportingFiles.map(({base64,...f})=>f),financeBasis:engine.financeBasis(ws),operations:ws.operations};
  if(command==='reconcile'){const report=engine.reconcile(ws);output(o['--out'],report);return{state:'RECONCILED',workspace,revision:ws.revision,ready:report.ready,summary:report.summary,report:absolute(o['--out'],'report output')};}
  if(command==='handover'){
-  const root=absolute(o['--out'],'handover directory'),packet=engine.buildHandover(ws);
+  const root=absolute(o['--out'],'handover directory'),packet=workOrders.buildHandover(ws);
   fs.mkdirSync(root,{recursive:true,mode:0o700});const st=fs.lstatSync(root);need(st.isDirectory()&&!st.isSymbolicLink(),'Use an ordinary handover directory.');
   // Every complete member is immutable; interrupted publication reuses exact prior members.
   for(const f of packet.files){const target=path.resolve(root,f.path);need(target.startsWith(root+path.sep),'Retain the original handover directory.');fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o700});const actualRoot=fs.realpathSync(root),actualParent=fs.realpathSync(path.dirname(target));need(actualParent===actualRoot||actualParent.startsWith(actualRoot+path.sep),'Keep complete handover members in their original directory.');if(f.base64!==undefined)publishBytes(target,Buffer.from(f.base64,'base64'));else publish(target,f.text);}
