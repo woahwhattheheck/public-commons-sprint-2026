@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "bc3f465556801b5254dea6d3c8696f06e1e27e4a",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension.",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The maintained microbial temporal report is included when its complete native source manifest is installed; its original relative source tree and separately bound recipe remain together.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -38,8 +38,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 12492,
-      "sha256": "639a7365ece94c46ceb6520ca816554100984ea08ed792b40328b48af9394963"
+      "bytes": 12779,
+      "sha256": "7c3e31aedbaf2a9286a19bb5684efff4a3dba82b7b5e3e48136b601821c79061"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -68,13 +68,18 @@
     },
     {
       "path": "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
-      "bytes": 5565,
-      "sha256": "9628f1eb87df13b801eb216f3f9d6cbe8b127744f770cdc2ba02971c27c3b8e3"
+      "bytes": 7476,
+      "sha256": "1784281b7523e18de34e57270b18f399a09464255c384418ca2ec4081a8813a0"
+    },
+    {
+      "path": "measurement_workspace/utility_microbiology_context.py",
+      "bytes": 16066,
+      "sha256": "57e727ae4d3cc7828a49b0367a335a2219a80898a7d16067e3fb2e9305c02a3a"
     },
     {
       "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 20691,
-      "sha256": "953f6fc320ed53ab08ac3a08c01b8e9b1ce41b1c4c1ecf438a73dad262193fae"
+      "bytes": 23319,
+      "sha256": "f987e5e8a89aa9f372b8db7a96400b1fd8537df5f02ec74d0d39934d35685b2a"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",

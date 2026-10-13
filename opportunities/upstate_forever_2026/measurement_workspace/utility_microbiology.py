@@ -102,6 +102,10 @@ def catalog_entry(application=None):
 
 def build_files(application=None):
     originals = source_files(application)
+    from . import utility_microbiology_context as temporal_context
+    application_root = Path(application) if application is not None else Path(__file__).resolve().parents[1]
+    temporal = (temporal_context.load_companion(application_root)
+                if (application_root / temporal_context.SOURCE_MANIFEST).is_file() else None)
     inputs = json.loads(originals["source-inputs.json"])
     captures = {entry["path"]: entry for entry in inputs["sources"]}
     for name, capture in captures.items():
@@ -192,6 +196,7 @@ def build_files(application=None):
         "Station, characteristic, year and month filters select original dated E. coli result rows. Every complete agency CSV remains in the exported study.",
         "Project, activity type, fraction, analytical method, result type, basis and original support-unit spelling define separate series. The field replicate remains its own activity-type series.",
         "Original result values, reported limits and missing values retain distinct source fields. Arithmetic means summarize quantified rows within each selected series.",
+        "Quantified means include every selected numeric original, including results whose original comment says Information Only. All 72 source markers remain visible beside the result rows; the retained original explorer provides explicit comment-based comparisons.",
         "Utility groups retain their original source-selection basis. Native Station geography joins the original datum-specific points to retained watershed polygons.",
     ]
     study = {"schema": "upstate.published-water-quality-study/v1", "study_id": BUILTIN_ID,
@@ -208,6 +213,7 @@ def build_files(application=None):
             "temporal_support": "Original sampling dates and methods; routine and field-replicate activity types remain distinct."}}
     notes = [
         {"code": "ORIGINAL_RECORDS", "context": "All 730 original WQP result rows retain all 63 source fields, six response identities and CSV row selectors."},
+        {"code": "ORIGINAL_COMMENTS", "context": "The original result comments identify 72 Information Only or Infomation Only records, including the reported 24,000 value at RV_01_14 on 2025-03-24. Result, activity and laboratory comments remain visible in the study; quantified means include all numeric rows selected by the study filters. The original explorer retains explicit comment-selection controls."},
         {"code": "DETECTION_CONDITIONS", "context": "554 quantified results; six above-limit, 67 below-limit and 102 not-detected results retain their original boundary fields; one not-reported result remains blank."},
         {"code": "SOURCE_UNITS", "context": "Original MPN/100mL and MPN/100 ml spellings remain separate series. A blank result-unit field stays blank; bound quantities use their original bound-unit field."},
         {"code": "ORIGINAL_DATUMS", "context": "The original station table and two derived native point sources use the unchanged CSV coordinate values in their declared WGS84/NAD83 datums. The preserved WQP GeoJSON files remain display-source documents."},
@@ -215,7 +221,17 @@ def build_files(application=None):
         {"code": "NOT_REPORTED", "site_id": "21GAEPD_WQX-LK_01_11", "context": "Original activity 21GAEPD_WQX-A00431284 on 2023-07-18 has no result or limit value. Its original sample-temperature comment remains attached."},
         {"code": "GEOGRAPHIC_SUPPORT", "context": "ARJWS source selection uses the four original upstream HUC12s; PRWD uses the original publisher Tugaloo HUC8 assignment. The retained native Station geography study supplies independently retained polygon membership."},
     ]
+    if temporal is not None:
+        study["source_interpretation"]["temporal_analysis"] = temporal["provenance"]
+        notes.append({"code": "TEMPORAL_AND_FLOW_CONTEXT",
+            "context": "The retained complete temporal explorer preserves the author's original station, calendar, method, comment-sensitivity and same-station flow analyses. Its original analytical edition and three original inputs remain together; the native observed-report selection binds a separate path-derived recipe to these exact source bodies.",
+            "report_path": temporal["report_path"]})
     files = {"original/" + name: data for name, data in originals.items()}
+    if temporal is not None:
+        for name, body in temporal["files"].items():
+            if name in files and files[name] != body:
+                raise ValueError("The retained temporal context conflicts with an original study member: " + name)
+            files[name] = body
     files.update({"study.json": _json(study), "source_notes.json": _json(notes),
         "stations.csv": _csv_bytes(list(station_table[0]), station_table),
         "seasonal_summaries.csv": SEASONAL_HEADER.encode("utf-8"),
@@ -263,6 +279,11 @@ def build_files(application=None):
             "station_count": count, "coordinate_datum": datum, "companions": companions,
             "metadata": {"coordinate_basis": "Unchanged original station CSV values and datum",
                 "source_csv_sha256": captures["raw/stations-original.csv"]["sha256"]}})
+    if temporal is not None:
+        entries.extend([temporal["report_entry"], temporal["recipe_entry"]])
+        summary = json.loads(files["source-summary.json"])
+        summary["temporal_analysis"] = temporal["provenance"]
+        files["source-summary.json"] = _json(summary)
     # Each source view retains its neighbours, while omitting its own primary body.
     for entry in entries:
         entry["companions"] = [item for item in entry["companions"] if item["path"] != entry["path"]]
@@ -280,6 +301,13 @@ def build_files(application=None):
         "The original field replicate remains in its own activity-type series. "
         "Station geography supplies the retained native polygon-membership journey.\n"
     ).encode("utf-8")
+    if temporal is not None:
+        files["README.md"] += (
+            "\nThe maintained temporal and flow explorer is retained at " + temporal["report_path"] +
+            ". Its complete source tree and original inputs preserve the published relative paths. "
+            "The separately bound observed-report recipe is available to the ordinary scientific delivery picker, "
+            "including ordered multi-report deliveries.\n"
+        ).encode("utf-8")
     return files
 
 
