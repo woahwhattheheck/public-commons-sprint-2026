@@ -1153,8 +1153,8 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 4412,
-      "sha256": "f20a3a09bbad3018353a7a170a480be513e3b807d40bd1104f41017793069afa"
+      "bytes": 5132,
+      "sha256": "1aa58c9fe23ec42072b56f03f207cf98b6f50034c5ec5bff0d3a9f2002ae5651"
     },
     {
       "path": "operator/extensions/station-geography.json",
@@ -1168,13 +1168,13 @@
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 26325,
-      "sha256": "3383710dfd07904afbc793eabf2e7d502b8e80dcaee2a90ad16b2108b0c7382f"
+      "bytes": 26955,
+      "sha256": "8d229833413b8173703ecd3c1044404509f973bdd00c7ce9e358288f86c97f9a"
     },
     {
       "path": "operator/team_route_policy.json",
-      "bytes": 6250,
-      "sha256": "d8ab44660b9d411018b826258f80e514d552a953c358808445b15a220206fead"
+      "bytes": 6634,
+      "sha256": "23aca138fb70aa7ee9c84f5915c6c941e72b89b2567cde04f22883d04545662d"
     },
     {
       "path": "operator/web/published_review_reports.mjs",
@@ -1188,8 +1188,8 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 73651,
-      "sha256": "3ce28db7dc3456b1e6bacab9e826a930ee125cdf9fd1dfa48241b9546c07f25f"
+      "bytes": 74650,
+      "sha256": "767e583709a623930ad34bbac4599fe94177e6901893d486c9a878ee8b5dba4f"
     },
     {
       "path": "operator/web/station_geography.mjs",
