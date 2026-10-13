@@ -4,6 +4,7 @@ import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {mountObservedSeries} from './observed_series.mjs';
+import {mountObservedReports} from './observed_reports.mjs';
 import {observedValueMarkup} from './observed_series.mjs';
 import {supportFields,supportOptions,observationSupportMarkup,observationSupportSummary,observationContextMarkup,observationDiagnosticsMarkup} from './observation_support.mjs';
 import {createDeliveryReview,deliveryRevision,deliveryChanged} from './delivery_review.mjs';
@@ -968,8 +969,7 @@ async function deliveryForm(id,initialSelection){
  const roles=[['PROTECTED_LANDS','Protected-lands source'],['PARCEL','Original parcel source'],['NHD','National Hydrography Dataset source'],['NWI','National Wetlands Inventory source']];
  const overlays=[['drinking_water','Critical drinking-water source boundaries',true],['high_quality_waters','Designated high-quality waters',true],['protected_lands','Protected-lands cartographic overlay',false],['parcels','Parcel priority inventory and GIS export',false]];
  const settings=row?.map_settings||{},weights=settings.weights||{};
- const observedReportChoices=[['','Use modeled results and selected load comparisons'],...state.data.sources.flatMap(collection=>collection.entries.filter(entry=>entry.kind==='document'&&entry.metadata?.report_schema==='upstate.observed-report/v1').map(entry=>[JSON.stringify({source_collection_id:collection.id,source_id:entry.id}),entry.title+' · '+entry.vintage]))];
- const observedReportSelected=row?.source_roles?.OBSERVED_CONTEXT?JSON.stringify({source_collection_id:row.source_roles.OBSERVED_CONTEXT.source_collection_id,source_id:row.source_roles.OBSERVED_CONTEXT.source_id}):'';
+ let observedReports;
  const attachedAnalysis=row?.source_scenario_analysis_id?{id:row.source_scenario_analysis_id,sha256:row.source_scenario_analysis_sha256,title:row.source_scenario_analysis_title||row.title||'Saved scenario analysis'}:null;
  openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery','Join the completed native baseline and alternatives with original water designations and supporting source data. The existing delivery engine writes the physical rasters, PDFs, report, metadata, parcel inventory when selected, and a restorable scientific workspace.',
  '<div class="form-grid">'+(attachedAnalysis?'<fieldset class="full"><legend>Saved analysis attached</legend><p>'+esc(attachedAnalysis.title)+'</p><p class="note">Original analysis '+esc(attachedAnalysis.id)+'. The delivery retains its exact source areas, native cohort, settings and result files. Map settings below describe this delivery; the attached saved analysis preserves its original calculations.</p></fieldset>':'')+field('Delivery title',input('title','text',row?.title||'','required'),'',true)+
@@ -978,7 +978,7 @@ async function deliveryForm(id,initialSelection){
  receivingWaters.deliveryFields(row||{})+
  '<h3 class="subheading full">Actual supporting source editions</h3><p class="note full">The five modeled raster sources and computed LS factor come from the selected original run. Choose these additional original sources for the delivery lineage.</p>'+
  roles.map(([key,label])=>deliverySource('role_'+key,label,row?.source_roles?.[key])).join('')+
- field('Observed science context',select('observed_report_source',observedReportChoices,observedReportSelected),'Include retained lake measurements, observed flows, source quantities and their scientific figures in this report.',true)+
+ '<div class="full" id="delivery-observed-reports"></div>'+
  '<h3 class="subheading full">Source-backed cartography and parcel priority</h3>'+
  overlays.map(([key,label,requiredField])=>deliverySource('overlay_'+key,label,row?.overlays?.[key],requiredField,true)).join('')+
  '<h3 class="subheading full">Combined export priority</h3><p class="note full">The original engine normalizes actual export values against each pollutant’s positive-cell 95th percentile unless an explicit cap is supplied. Weights are recorded in the retained delivery.</p>'+
@@ -996,7 +996,7 @@ async function deliveryForm(id,initialSelection){
   const alternatives=retainedDeliveryCohort(row,val('baseline'),chosen('alternatives'));if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
   const source_roles={...(row?.source_roles||{})},selectedOverlays={...(row?.overlays||{})},weights={},caps={};
   for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
-  const observedReportSource=val('observed_report_source');if(observedReportSource)source_roles.OBSERVED_CONTEXT=JSON.parse(observedReportSource);else delete source_roles.OBSERVED_CONTEXT;
+  const observedReportSources=observedReports.selection();if(observedReportSources.length)source_roles.OBSERVED_CONTEXT=observedReportSources[0];else delete source_roles.OBSERVED_CONTEXT;
   for(const [key,,requiredField]of overlays){
    const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
    if(x)selectedOverlays[key]=x;else delete selectedOverlays[key];
@@ -1010,8 +1010,9 @@ async function deliveryForm(id,initialSelection){
   if(Object.values(weights).every(x=>x===0))throw Error('At least one pollutant weight must be positive.');
   const map_settings={...(row?.map_settings||{}),weights,dpi:num('dpi')};delete map_settings.caps;delete map_settings.title;if(Object.keys(caps).length)map_settings.caps=caps;if(val('map_title').trim())map_settings.title=val('map_title').trim();
   const sourceBinding={...(row?.economic_edition_id?{economic_edition_id:row.economic_edition_id,...(row.economic_edition_sha256?{economic_edition_sha256:row.economic_edition_sha256}:{})}:{}),...(row?.source_report_id?{source_report_id:row.source_report_id,...(row.source_report_sha256?{source_report_sha256:row.source_report_sha256}:{})}:{}),...(attachedAnalysis?{source_scenario_analysis_id:attachedAnalysis.id,...(attachedAnalysis.sha256?{source_scenario_analysis_sha256:attachedAnalysis.sha256}:{})}:{})};
-  return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
+  return submitAction('delivery.build',{...sourceBinding,...receivingWaters.deliverySelection({baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:val('title'),baseline_run_id:val('baseline'),scenario_run_ids:alternatives,source_roles,...(observedReportSources.length>1?{observed_context_sources:observedReportSources}:{}),overlays:selectedOverlays,map_settings,observation_comparison_ids:chosen('observation_comparisons'),spatial_review_ids:chosen('spatial_reviews'),spatial_export_ids:chosen('spatial_exports'),contact:{name:val('contact_name'),organization:val('contact_organization'),email:val('contact_email')},notes:lines(val('notes'))});
  },()=>{
+  observedReports=mountObservedReports($('#delivery-observed-reports'),state.data.sources,row||{});
   for(const [key]of roles)bindDeliverySource('role_'+key,true,false);
   for(const [key,,requiredField]of overlays)bindDeliverySource('overlay_'+key,requiredField,true);
   let initial=row?.scenario_run_ids||[];

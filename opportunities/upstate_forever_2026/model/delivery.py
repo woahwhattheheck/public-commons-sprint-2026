@@ -48,6 +48,12 @@ def _source_records(workspace, selection, grid, baseline):
                                                        "catalogue_source_id", "source_labels")
                             if key in entry}}
     source_choices = dict(selection.get("source_roles", {}))
+    selected_reports = observed_context.source_choices(selection)
+    if "observed_context_sources" in selection:
+        source_choices.pop(observed_context.ROLE, None)
+        for index, choice in enumerate(selected_reports):
+            role = observed_context.ROLE if index == 0 else observed_context.ROLE + "_%03d" % (index + 1)
+            source_choices[role] = choice
     overlay_choices = selection.get("overlays", {})
     for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
                        ("drinking_water", "SOURCE_WATER_PROTECTION_AREAS"),
