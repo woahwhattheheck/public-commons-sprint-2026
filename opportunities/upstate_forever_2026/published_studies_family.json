@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "158ae309ec112f09d2063d006d5b9b085384b3f3",
+  "source_reference_base": "75fd43d00aea71192a62eb36ecadcc3ddbbd711e",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source.",
   "external_source_edition": {
     "files": 62,
@@ -63,8 +63,8 @@
     },
     {
       "path": "integration/component_fragments/published-review-report-source.json",
-      "bytes": 759,
-      "sha256": "87a05b5e1e98de3024d5b6912be0b59e9582c4c0ee767d2c5a08ef73991eb13d"
+      "bytes": 1087,
+      "sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042"
     },
     {
       "path": "integration/component_fragments/published-study-reviews.json",
@@ -2211,7 +2211,9 @@
       "source_folder": "published-review-report-sources",
       "scope": "Exact saved review and original study edition with current selected interpretation; full original archive separately retained",
       "composer": "Existing ordered Sources scientific composer",
-      "installer": "Guarded scoped registration preserves the installed shared dispatcher"
+      "installer": "Guarded scoped registration preserves the installed shared dispatcher",
+      "component_graph_repair_commit": "82db8c08a26d2f3e36bae8a51f61573f0ac8e4df",
+      "component_fragment_sha256": "b61b1dba18a72cb6d9c752769e945a7561a5ae2290dd12431de8098500f45042"
     }
   }
 }
