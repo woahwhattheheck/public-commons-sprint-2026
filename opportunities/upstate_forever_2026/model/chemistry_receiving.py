@@ -27,4 +27,9 @@ def verify_all(workspace):
         if run.get('checkpoint'):
             verify_file(service.root / key, run['checkpoint'])
         runs += 1
-    return {'cases': len(cases), 'runs': runs}
+    from .chemistry_reports import verify_all as verify_reports
+    reports = verify_reports(workspace)
+    from .chemistry_report_source import verify_workspace
+    report_sources = verify_workspace(workspace)
+    return {'cases': len(cases), 'runs': runs, 'scientific_reports': reports['reports'],
+            'scientific_report_sources': report_sources}

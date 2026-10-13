@@ -16,6 +16,11 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_report_source.py",
+    "model/conservation_report_source_cli.py",
+    "model/CONSERVATION_REPORT_SOURCE.md",
+    "integration/component_fragments/conservation-scientific-report-source.json",
+    "integration/conservation_report_operator_composition.json",
     "integration/conservation_native_report_composition.json",
     "integration/conservation_native_versions_composition.json",
     "model/CONSERVATION_NATIVE_VERSIONS.md",
@@ -110,7 +115,8 @@ KNOWN_PRIOR = {
         "8755fb5f3b9e7870868db8f3c5345030b117259340918e14250c85ea5d4c67f3",
         "771681f14e61426ce74b10844f203627eaf8c1a435f674fed42bb87ad08470d0",
         "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39",
-        "b1a6595b575beac4b1f7656544e37af721df198c8499742e323e15eb7f2ebd27"
+        "b1a6595b575beac4b1f7656544e37af721df198c8499742e323e15eb7f2ebd27",
+        "dcc4ceaeb17f0f174ddd99805029b14923b0d9f715a96ebec91c1741be81e0fb"
     ],
     "model/conservation_cli.py": [
         "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed"
@@ -138,7 +144,8 @@ KNOWN_PRIOR = {
         "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301",
         "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda",
         "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e",
-        "86a82e53e7b8e0890ecc26c5777c8d81b800f092b826bbe8af5fcb3430a1c6a9"
+        "86a82e53e7b8e0890ecc26c5777c8d81b800f092b826bbe8af5fcb3430a1c6a9",
+        "5e9c5259ec989f3ee0bbe7c3a324e398e37ec6acd6bb1985b6c5f7e2b7629481"
     ],
     "operator/web/conservation.mjs": [
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
@@ -151,7 +158,8 @@ KNOWN_PRIOR = {
         "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65",
         "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
         "60da58ce834260465f74dd03f6af420ecfabd8e4ab244e9150abdd506d3177b9",
-        "80cbc140e5b9ffbbf5a37fdd1a4d41ab185e76519c0dff8bce8b1395d7399816"
+        "80cbc140e5b9ffbbf5a37fdd1a4d41ab185e76519c0dff8bce8b1395d7399816",
+        "00531dd16ad0fe512f8d4dbf3727709ce1973e2405fc0bc35f9a9d9d58fd1b68"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
@@ -194,7 +202,9 @@ KNOWN_PRIOR = {
         "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3",
         "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7",
         "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c",
-        "27c1f0189ff1cdefdba33052a18d3e09725fb4dd63fd8fc070fbd145f72b580a"
+        "27c1f0189ff1cdefdba33052a18d3e09725fb4dd63fd8fc070fbd145f72b580a",
+        "706708c62a9e881f635b898935c3de948bdc4ab92552ea0d07d5a44014b13536",
+        "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -470,6 +480,15 @@ KNOWN_PRIOR = {
     ],
     "model/native_versions.py": [
         "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2"
+    ],
+    "model/conservation_report_source.py": [
+        "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538"
+    ],
+    "model/CONSERVATION_REPORT_SOURCE.md": [
+        "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885"
+    ],
+    "integration/conservation_report_operator_composition.json": [
+        "44675f162fb4d1e2276abab5da7e75ea55717ed77776c0b1bc71e44cccf18fa1"
     ]
 }
 
@@ -630,7 +649,9 @@ def patch_server(text, registered=False):
                 '                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id", "operation_id")}))\n',
                 "Conservation read routes", marker='conservation_reads = {"/api/conservation/"')
     text = text.replace('for name in ("study_id", "plan_id")',
-                        'for name in ("study_id", "plan_id", "operation_id")')
+                        'for name in ("study_id", "plan_id", "operation_id", "report_source_id")')
+    text = text.replace('for name in ("study_id", "plan_id", "operation_id")',
+                        'for name in ("study_id", "plan_id", "operation_id", "report_source_id")')
     # Preserve the current extension-host union and either quote style.
     # Edit only the literal static set inside the original selected-file guard.
     static_sets = []
@@ -694,6 +715,7 @@ def conservation_action_labels(text):
         ("conservation.criteria.prepare", "Prepare original parcel criteria"),
         ("conservation.experiment.prepare", "Prepare paired conservation experiment"),
         ("conservation.sources.capture", "Acquire soil and floodplain sources"),
+        ("conservation.report.source.prepare", "Prepare Conservation scientific report source"),
         ("conservation.optimization.preview", "Preview conservation portfolio"),
         ("conservation.optimization.save", "Save optimized conservation portfolio"),
         ("conservation.optimization.export", "Export conservation decision packet"),
@@ -915,6 +937,11 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
+        "model/conservation_report_source.py",
+        "model/conservation_report_source_cli.py",
+        "model/CONSERVATION_REPORT_SOURCE.md",
+        "integration/component_fragments/conservation-scientific-report-source.json",
+        "integration/conservation_report_operator_composition.json",
         "model/native_versions.py",
         "integration/conservation_catalog_browser_composition.json",
         "model/conservation.py",

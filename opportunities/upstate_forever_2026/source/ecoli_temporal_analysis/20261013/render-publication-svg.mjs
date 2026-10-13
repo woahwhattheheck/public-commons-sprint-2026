@@ -2,6 +2,21 @@
 export function renderScientificFigureSvg(figure,d3){
  const e=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const n=value=>{if(!Number.isFinite(value))throw Error("Figure coordinate must be finite");return String(Math.round(value*1000)/1000);};
+ const axisValue=(axis,value)=>{
+  if(axis.unit==="days since 1970-01-01 UTC"){
+   const date=new Date(value*86400000);
+   if(!Number.isFinite(date.getTime()))throw Error("Figure date must be finite");
+   return date.toISOString().slice(0,10)+" UTC";
+  }
+  return String(value)+(axis.unit&&axis.unit!=="station index"?" "+axis.unit:"");
+ };
+ const pointTitle=(panel,series,point)=>{
+  const label=String(series.label??"").trim()||(point.censored&&series.geometry==="line"?"Censoring interval endpoint":series.geometry==="line"?"Source line":"Source point");
+  let title=label+": "+(panel.x.unit==="days since 1970-01-01 UTC"?"":(panel.x.label||"x")+" ")+axisValue(panel.x,point.x)+"; "+(panel.y.label||"y")+" "+axisValue(panel.y,point.y);
+  if(point.date&&panel.x.unit!=="days since 1970-01-01 UTC")title+="; sample date "+point.date;
+  if(point.reference_years)title+="; reference years "+point.reference_years.join(", ");
+  return title;
+ };
  const columns=figure.layout?.columns||1,panelW=columns===1?1060:540,panelH=330,W=columns*panelW+40;
  const wrap=(value,chars)=>{const result=[];let row="";for(const word of String(value).split(/\s+/)){if(row&&row.length+word.length+1>chars){result.push(row);row=word;}else row+=(row?" ":"")+word;}if(row)result.push(row);return result;};
  const titleLines=wrap(figure.title,Math.floor((W-80)/12)),captionLines=wrap(figure.caption,Math.floor((W-80)/7.2)),top=46+titleLines.length*27,rows=Math.ceil(figure.panels.length/columns),captionY=top+rows*panelH+18,H=captionY+captionLines.length*20+28;
@@ -33,7 +48,7 @@ export function renderScientificFigureSvg(figure,d3){
    for(const point of points){const ys=series.geometry==="boxplot"?["minimum","q1","median","q3","maximum"].map(k=>point[k]):point.y===null?[]:[point.y];if(!Number.isFinite(point.x)||point.x<xmin||point.x>xmax||ys.some(y=>!Number.isFinite(y)||y<ymin-1e-9||y>ymax+1e-9))throw Error("Source point is outside original panel bounds");if(series.geometry==="boxplot"&&ys.some((v,i)=>i&&v<ys[i-1]))throw Error("Original boxplot ordering differs");}
    if(series.geometry==="boxplot"){for(const p of points){const x=X(p.x),w=Math.min(32,pw/Math.max(12,points.length*3)),lo=Y(p.minimum),hi=Y(p.maximum),q1=Y(p.q1),q3=Y(p.q3),median=Y(p.median);svg+='<g><title>'+e((p.site||p.season||"")+" · n="+p.n+" · years "+(p.reference_years||p.complete_years||[]).join(", ")+": median "+p.median)+'</title>'+line(x,lo,x,hi,'stroke="#333"')+line(x-w/3,lo,x+w/3,lo,'stroke="#333"')+line(x-w/3,hi,x+w/3,hi,'stroke="#333"')+'<rect x="'+n(x-w/2)+'" y="'+n(q3)+'" width="'+n(w)+'" height="'+n(q1-q3)+'" fill="#f1f1f1" stroke="#333"/>'+line(x-w/2,median,x+w/2,median,'stroke="#111" stroke-width="2"');if(p.mean!==null&&p.mean!==undefined)svg+=marker(x,Y(p.mean),"diamond-mean",true,3);svg+='</g>';}}
    else if(series.geometry==="line"||series.geometry==="scatter"){if(series.geometry==="line"){const path=d3.line().defined(p=>p.y!==null).x(p=>X(p.x)).y(p=>Y(p.y))(points);if(path)svg+='<path d="'+path+'" fill="none" stroke="#222" stroke-width="1.5"'+(si?' stroke-dasharray="5 3"':'')+'/>';}
-    for(const p of points)if(p.y!==null&&series.markers!==false)svg+='<g><title>'+e(series.label+": "+p.x+", "+p.y+(p.reference_years?"; reference years "+p.reference_years.join(", "):""))+'</title>'+marker(X(p.x),Y(p.y),series.marker||"circle",Boolean(p.censored||series.open_marker||("filled"in p&&!p.filled)))+'</g>';
+    for(const p of points)if(p.y!==null&&series.markers!==false)svg+='<g><title>'+e(pointTitle(panel,series,p))+'</title>'+marker(X(p.x),Y(p.y),series.marker||"circle",Boolean(p.censored||series.open_marker||("filled"in p&&!p.filled)))+'</g>';
    }else throw Error("Unsupported original scientific geometry "+series.geometry);
   }
   // Keep supplied annotations and threshold labels with their native coordinates.

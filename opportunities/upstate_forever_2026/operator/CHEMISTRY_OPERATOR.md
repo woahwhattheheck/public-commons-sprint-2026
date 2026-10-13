@@ -62,3 +62,54 @@ After receiving, open Reach chemistry, choose the received case, inspect a compl
 Original REACT12 source version: `0.1.0`, whose complete 31-member manifest is retained in `integration/reach_chemistry/SOURCE_MANIFEST.json`. Its eight solver/model/service modules remain unchanged.
 
 This operator continuation adds the native extension descriptor, per-workspace browser lifecycle, read-only source-reference verification, receiving hook and current installer. The original distribution installer is retained at `integration/reach_chemistry/install_chemistry_legacy.py`; the root entry point now installs through the current registry without rewriting shared server or application files.
+
+
+## Saved scientific reports
+
+Open a completed analysis and select **Prepare scientific report**. The existing queued action renders the saved result with its physical units, source provenance, fit/held-out records, convergence and supplied prior assumptions. Open the completed edition under **Saved scientific reports**. The inline report uses original authenticated file tickets; the complete ZIP opens offline with all original members and the editable project. See [Chemistry scientific reports](../model/CHEMISTRY_REPORTS.md) for the source contract, native CLI and receiving course.
+
+## Publish a saved Chemistry report with other scientific studies
+
+A completed Chemistry report can now become an original source in **Scientific Reports**. This preserves the saved analysis and its report edition, then uses the same ordered composer, PDF/HTML renderer, source archive and reopening controls as other scientific studies.
+
+1. Open **Saved scientific reports** in Reach chemistry and inspect the completed original report.
+2. Select **Prepare source for scientific reports**. The existing queue runs `chemistry.report.source.prepare` with the saved `report_id`; it reuses the original result and retains its figures, complete tables, scientific report members, editable project and source provenance.
+3. Open the completed task's **Open scientific report** control, or use the matching entry under **Sources for scientific reports**.
+4. The existing composer receives the exact source collection and entry, appends it once after any already selected sources and preserves the current report title and contact. Preview the ordered report, prepare its PDF/HTML/data package and reopen the same saved edition through the original report controls.
+5. Use **Inspect retained source** to inspect its original report/run IDs, scientific figure and companion counts, collection/entry identity and authenticated downloads. **Open original saved report** and **Open original analysis** return to those original records.
+
+The existing desk and completed-task controls both verify the selected workspace and the returned source record before opening the composer. A delayed response from a previous workspace or superseded action is discarded. The per-workspace editor remains retained by the existing Chemistry host.
+
+### Queue, read and native APIs
+
+The original Chemistry dispatcher and CLI accept these additive actions:
+
+```json
+{"action":"chemistry.report.source.prepare","payload":{"report_id":"<saved report ID>"}}
+{"action":"chemistry.report.source.get","payload":{"source_record_id":"<saved source record ID>"}}
+{"action":"chemistry.report.source.list","payload":{"report_id":"<optional saved report ID>"}}
+```
+
+Use `GET /api/chemistry/report-source?workspace=<registered workspace>&source_record_id=<saved source record ID>` for the inspected source and its actual `scientific_report_selection`. The maintained host receives:
+
+```json
+{
+  "workspace_key":"<registered workspace>",
+  "sources":[{"source_collection_id":"<original collection>","source_id":"<original entry>"}],
+  "title":"<saved report title>"
+}
+```
+
+The scientific producer's exact retained-source contract is in [Chemistry report sources](../model/CHEMISTRY_REPORT_SOURCE.md). Its native records are stored in `chemistry-report-sources`; files remain in `chemistry-report-source-exports/<selection_id>`. The provider resolves their original relative descriptors against that retained directory before handing them to the existing workspace file registrar.
+
+### Install, transfer and reopen the complete feature
+
+Receive the complete Chemistry component plus the current Scientific Reports component. Run the existing installer:
+
+```sh
+python -B operator/install_chemistry.py --application ACTUAL_APP --source-root ACTUAL_SOURCE
+```
+
+The installer includes the producer, guide and append-only `chemistry_report_sources.json` component fragment, accepts the exact merged scientific-report predecessors and preserves independently changed source. It checks the currently installed shared publisher, figure renderer, observed-context reader and extension host without replacing them.
+
+Whole-workspace transfer retains the original source records, source objects and report-source export directory through the existing recursive workspace inventory. Chemistry's receiving validator invokes the producer's original `verify_workspace`, so a reopened workspace checks each saved source against its original scientific report and retained members. The editable Chemistry project export remains its original project/run format; use the whole-workspace transfer to move saved report/source editions together with other scientific studies.

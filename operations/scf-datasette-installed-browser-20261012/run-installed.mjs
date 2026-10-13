@@ -40,6 +40,56 @@ async function runCommand(executable,args,options={}) {
       fail(Object.assign(new Error('Installed command failed: '+stderr),{code:'DATASETTE_INSTALLED_COMMAND',result:{code,signal,stdout,stderr}})));
   });
 }
+async function controllerCheckpoint(request) {
+  need(!process.stdin.destroyed&&!process.stdin.readableEnded,
+    'DATASETTE_INSTALLED_CHECKPOINT_CHANNEL_CLOSED');
+  return new Promise((done,fail)=>{
+    let pending='',settled=false;
+    const finish=(error,value)=>{
+      if(settled)return;settled=true;
+      process.stdin.removeListener('data',received);
+      process.stdin.removeListener('end',ended);
+      process.stdin.removeListener('close',ended);
+      process.stdin.removeListener('error',broken);
+      process.stdin.pause();
+      if(error)fail(error);else done(value);
+    };
+    const broken=error=>finish(error);
+    const ended=()=>finish(Object.assign(new Error('The original checkpoint controller closed before acknowledgment.'),
+      {code:'DATASETTE_INSTALLED_CHECKPOINT_CHANNEL_CLOSED'}));
+    const received=raw=>{
+      pending+=raw.toString();
+      if(pending.length>1024*1024)return finish(Object.assign(new Error('Checkpoint acknowledgment exceeds its control-frame limit.'),
+        {code:'DATASETTE_INSTALLED_CHECKPOINT_RESPONSE'}));
+      const newline=pending.indexOf('\n');
+      if(newline<0)return;
+      try{
+        const response=JSON.parse(pending.slice(0,newline));
+        need(response.protocol===request.protocol&&response.operation===request.operation&&
+          response.requestId===request.requestId,'DATASETTE_INSTALLED_CHECKPOINT_RESPONSE');
+        need(response.status==='SAVED','DATASETTE_INSTALLED_CHECKPOINT_SAVE_FAILED',
+          response.error?.message??'The complete installed checkpoint was not saved.');
+        finish(null,response);
+      }catch(error){finish(error);}
+    };
+    process.stdin.on('data',received);process.stdin.once('end',ended);process.stdin.once('close',ended);process.stdin.once('error',broken);
+    process.stderr.write(JSON.stringify(request)+'\n',error=>{if(error)finish(error);});
+    process.stdin.resume();
+  });
+}
+function savedCheckpointDelivery(delivery) {
+  const saved=row=>row?.status==='succeeded'&&typeof row.library_file_id==='string'&&
+    typeof row.file_id==='string'&&row.library_file_id.length>0&&row.file_id.length>0;
+  if(delivery?.state!=='INSTALLED_SOURCE_VERIFIED'||delivery.checkpoint_phase!=='installed-ready'||
+    !Number.isSafeInteger(delivery.archive?.bytes)||delivery.archive.bytes<=0||
+    !/^[a-f0-9]{64}$/.test(delivery.archive?.sha256??'')||
+    !Array.isArray(delivery.saved)||delivery.saved.length!==2||!delivery.saved.every(saved))return false;
+  if(delivery.mode==='complete_archive')return true;
+  return delivery.mode==='complete_archive_parts'&&Array.isArray(delivery.parts)&&delivery.parts.length>0&&
+    delivery.parts.every((part,index)=>part.order===index+1&&Number.isSafeInteger(part.bytes)&&part.bytes>0&&
+      /^[a-f0-9]{64}$/.test(part.sha256??'')&&saved(part.saved))&&
+    delivery.parts.reduce((bytes,part)=>bytes+part.bytes,0)===delivery.archive.bytes;
+}
 async function waitFor(read,accept,label,timeout=120000) {
   const until=Date.now()+timeout;let value;
   do{value=await read();if(accept(value))return value;await delay(150);}while(Date.now()<until);
@@ -100,13 +150,16 @@ function absolute(value,name) {
 export async function runInstalledDatasetteBrowser({
   repository,sourceRef,publisherProgrammeDirectory,outputDirectory,
   playwrightModule='playwright',browserExecutable,port=53173,receivedPort=53174,
-  offline=false,npmCache,python='python3',npm='npm',
+  offline=false,npmCache,python='python3',npm='npm',installedCheckpoint,
 }={}) {
   for(const [name,value] of Object.entries({repository,publisherProgrammeDirectory,outputDirectory}))
     absolute(value,name);
   need(Number.isInteger(port)&&port>0&&port<65536&&Number.isInteger(receivedPort)&&receivedPort>0&&receivedPort<65536&&port!==receivedPort,
     'DATASETTE_INSTALLED_EXPLICIT_PORTS');
   need(Number(process.versions.node.split('.')[0])>=24,'DATASETTE_INSTALLED_NODE_24');
+  if(installedCheckpoint!==undefined)need(installedCheckpoint?.protocol==='controller-stdio-v1'&&
+    installedCheckpoint.operation==='SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012',
+    'DATASETTE_INSTALLED_CHECKPOINT_INPUT');
   await mkdir(outputDirectory,{recursive:true,mode:0o700});
   need(await realpath(outputDirectory)===outputDirectory,'DATASETTE_INSTALLED_CANONICAL_DIRECTORY');
   const stateFile=join(outputDirectory,'installed-browser-journey.json');
@@ -233,6 +286,35 @@ export async function runInstalledDatasetteBrowser({
       commands:Object.fromEntries(['datasette','datasette-application','datasette-mcp','datasette-analysis'].map(name=>[name,spec.commands[name]]))};
     state.checks={...state.checks,selectedSourceBuilt:true,installedRuntimeReady:true,originalGzipRetained:true,pythonTypesRetained:true,typedClientExports:true};
     await save('INSTALLED_SOURCE_VERIFIED');
+    if(installedCheckpoint!==undefined){
+      const binding={journalId:state.id,workspaceId:input.workspaceId,sourceCommit:sourceRef,
+        buildArchive:state.build.archive,buildSha256:state.build.sha256,buildBytes:state.build.archiveBytes,
+        runtimeDirectory,sourceRoot:runtime.sourceRoot};
+      state.installedCheckpoints??=[];
+      let checkpoint=state.installedCheckpoints.find(item=>same(item.binding,binding));
+      if(!checkpoint){
+        checkpoint={id:randomUUID(),binding,requestedAt:stamp(),status:'REQUESTED'};
+        state.installedCheckpoints.push(checkpoint);
+      }
+      if(checkpoint.status==='SAVED'){
+        need(savedCheckpointDelivery(checkpoint.delivery)&&checkpoint.receipt?.status==='succeeded'&&
+          checkpoint.receipt.library_file_id&&checkpoint.receipt.file_id,
+          'DATASETTE_INSTALLED_CHECKPOINT_RECEIPT_CHANGED');
+      }else{
+        need(checkpoint.status==='REQUESTED','DATASETTE_INSTALLED_CHECKPOINT_STATE');
+        await save('INSTALLED_SOURCE_VERIFIED');
+        const request={stage:'datasette_installed_checkpoint_requested',protocol:installedCheckpoint.protocol,
+          operation:installedCheckpoint.operation,
+          requestId:checkpoint.id,journalFile:stateFile,binding};
+        const response=await controllerCheckpoint(request);
+        need(same(response.binding,binding)&&savedCheckpointDelivery(response.delivery)&&
+          response.receipt?.status==='succeeded'&&response.receipt.library_file_id&&response.receipt.file_id,
+          'DATASETTE_INSTALLED_CHECKPOINT_RECEIPT_CHANGED');
+        checkpoint.status='SAVED';checkpoint.savedAt=response.savedAt;
+        checkpoint.delivery=response.delivery;checkpoint.receipt=response.receipt;
+      }
+      await save('INSTALLED_SOURCE_CHECKPOINT_SAVED');
+    }
     const runtimeModel=await fromInstalled(DIST+'runtime-workspace/model.mjs');
     if(!state.applicationWorkspace){
       state.applicationWorkspace={attempts:[{directory:join(outputDirectory,'applications'),createdAt:stamp()}]};

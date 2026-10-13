@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "original-landcover-analysis",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/issues/3485",
+  "components": {
+    "original-landcover-analysis": {
+      "title": "Original annual land-cover watershed areas and paired class transitions",
+      "paths": [
+        "source_tools/ORIGINAL_LANDCOVER_TRANSITIONS.md",
+        "source_tools/original_landcover_transitions.mjs",
+        "source_tools/original_landcover_zonal.mjs",
+        "source_tools/read_original_landcover.mjs",
+        "source_tools/run_original_landcover.mjs"
+      ],
+      "requires": [
+        "annual-nlcd-native-source",
+        "landcover-ledger"
+      ]
+    }
+  },
+  "required_components": [
+    "original-landcover-analysis"
+  ]
+}

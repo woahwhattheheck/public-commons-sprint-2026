@@ -251,11 +251,34 @@ actual laboratory applied revision. Use the catalogue's plan binding and
 group IDs in the selection file; group IDs include original measurement
 support, so never fabricate them from a display label.
 
-The existing Implementation report bank retains 17 members: the original
+The existing Implementation report bank retains the original 17 core members: the original
 `plan.json`, `summary.json`, seven original plan CSVs, and `manifest.json`;
 the original plan report as `implementation-plan.html`; and the new
 `report.html`, `outcomes.json`, `outcome_rows.csv`,
 `period_summary.csv`, `sampled_dates.csv`, and `matched_controls.csv`.
+
+Newly built editions also retain `outcome-figures.json` and one original SVG
+for every evaluated site and measurement group. The complete figure specification
+contains each unchanged full-support interval, date/result support, original
+measurement support and source selection. It drives the retained SVG and the
+existing scientific-report vector renderer. The saved HTML embeds those same
+SVG bodies so the readable outcome remains self-contained.
+
+Each figure shows before/after site means, same-date site-minus-reference means
+when selected, and direct, paired and common-month balanced changes. A filled
+endpoint belongs to the bound; a hollow endpoint is open. An unbounded side
+continues to the displayed axis edge with an explicit label. Unavailable full
+support has no value marker. Month-balanced rows remain unavailable when the
+two periods share no calendar month. These marks describe reporting-limit
+bounds, not confidence intervals, and never join different sites or periods.
+The full numeric values and original support remain in the adjacent tables.
+
+Already saved editions keep their original bytes and identities. Receiving
+accepts their original 17-member format; figure-bearing editions additionally
+verify the complete specification and every listed SVG before registration.
+The normal observed-source collector carries that exact specification and all
+original figure files into the scientific and client report. Native PDFs use
+the existing vector renderer, and HTML/Markdown keep the original SVG files.
 The manifest and saved edition bind the original revision and file bytes.
 The ordinary Workspace archive carries this report bank.
 

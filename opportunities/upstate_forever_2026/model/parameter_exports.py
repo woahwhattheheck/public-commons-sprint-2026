@@ -9,12 +9,57 @@ import tempfile
 import time
 import zipfile
 
-from .common import describe_file, identifier, relative_file
+from .common import atomic_json, describe_file, digest, identifier, relative_file
 from .model_selection import required_outputs, run_models
 from .rasters import MASS_UNITS
 from .reuse import copy_verified
 
-EDITION = "parameter-study-exports/2"
+EDITION = "parameter-study-exports/3"
+
+MEMBER_SCHEMA = "upstate.parameter-export-members/v1"
+
+
+def member_descriptors(directory, descriptors):
+    """Validate one complete, uniquely named set of retained export bodies."""
+    directory = Path(directory)
+    members = {}
+    for item in descriptors:
+        if not isinstance(item, dict):
+            raise ValueError("A parameter export member must describe one file")
+        name, size, checksum = item.get("path"), item.get("bytes"), item.get("sha256")
+        if (not isinstance(name, str) or not name
+                or isinstance(size, bool) or not isinstance(size, int) or size < 0
+                or not isinstance(checksum, str) or len(checksum) != 64
+                or any(c not in "0123456789abcdef" for c in checksum)):
+            raise ValueError("A parameter export member needs its path, byte length and SHA256")
+        relative_file(directory, name)
+        if name in members and members[name] != item:
+            raise ValueError("Parameter exports repeat a member with different source metadata")
+        members[name] = dict(item)
+    return members
+
+
+def retain_member_manifest(workspace, directory, state, descriptors):
+    """Describe all standalone ZIP members, including retained scientific context."""
+    members = member_descriptors(directory, descriptors)
+    if "export-manifest.json" in members or "experiment-results.zip" in members:
+        raise ValueError("The study member manifest cannot recursively include its own bundle")
+    value = {
+        "schema": MEMBER_SCHEMA, "edition": EDITION,
+        "workspace_id": workspace.project["id"], "study_id": state["id"],
+        "selection_sha256": digest(state["selection"]),
+        "files": [members[name] for name in sorted(members)],
+        "members": len(members),
+        "logical_bytes": sum(item["bytes"] for item in members.values()),
+        "layout": "All members use their original study-relative paths.",
+        "scientific_context": (
+            "Includes native arguments, requested arguments, paired aggregation context "
+            "and adopted aggregation ancestry alongside the quantitative results and requested maps."
+        ),
+    }
+    atomic_json(Path(directory) / "export-manifest.json", value)
+    return describe_file(directory, Path(directory) / "export-manifest.json")
+
 
 
 def retain_differences(workspace, directory, state):

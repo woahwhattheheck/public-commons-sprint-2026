@@ -17,7 +17,7 @@ function editable(w){active(w);if(w.pending||busy(w.labDispatch))throw Error('Fi
 function current(w,s,turn){return !w.gone&&w.labDispatch===s&&w.plan?.id===s.plan_id&&w.generation===turn&&w.host.getState?.()?.workspace_key===w.workspace;}
 function touch(w,s){s.preview=null;s.operation_id=null;s.stage='editing';s.reconciliation=null;w.cache();}
 function download(name,value){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
-function state(plan){return {plan_id:plan.id,stage:'editing',selection:{schema:SELECTION,label:'',laboratory:'',laboratory_reference:'',instructions:'',orders:[],attachment_source_ids:[]},selected_activities:[],sample_query:'',sample_page:0,order_page:0,draft_analyte:{parameter:'',unit:'',basis:'',fraction:'',method:'',notes:''},items:[],preview:null,reconciliation:null,active_package:null};}
+function state(plan){return {plan_id:plan.id,stage:'editing',selection:{schema:SELECTION,label:'',laboratory:'',laboratory_reference:'',instructions:'',orders:[],attachment_source_ids:[]},selected_activities:[],sample_query:'',sample_page:0,order_page:0,draft_analyte:{parameter:'',unit:'',basis:'',fraction:'',method:'',method_context:'',method_name:'',notes:''},items:[],preview:null,reconciliation:null,active_package:null};}
 export function samples(plan,query=''){
  const sites=new Map(plan.sites.map(x=>[x.id,x])),visits=new Map(plan.visits.map(x=>[x.id,x]));
  const tokens=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
@@ -42,7 +42,7 @@ function reconcileHtml(w,s){
  const rows=r.orders||[],start=Math.min(s.reconciliation_page||0,Math.max(0,Math.ceil(rows.length/50)-1))*50;
  const summaries=Object.entries(r.summary||{}).map(([key,value])=>esc(key.replaceAll('_',' '))+': '+esc(typeof value==='object'?JSON.stringify(value):value)).join(' · ');
  return '<h4>Requested analyses and returned results</h4><p>Compared with original saved plan revision '+esc(r.plan?.revision)+'. '+summaries+'</p>'+
- w.table(['Order','Sample activity','Requested analysis','Return status','Original result IDs','Issues'],rows.slice(start,start+50).map(row=>[esc(row.order_id),esc(row.activity_id),'<b>'+esc(row.parameter)+'</b><br>'+esc(['unit','basis','fraction','method'].filter(key=>row[key]).map(key=>key+': '+row[key]).join(' · ')),esc(row.status)+(row.result_types?.length?'<br>'+esc(row.result_types.join(', ')):''),'<span>Matched: '+esc((row.observation_ids||[]).join(', ')||'None')+'</span>'+(row.ambiguous_observation_ids?.length?'<br><span>Competing: '+esc(row.ambiguous_observation_ids.join(', '))+'</span>':''),esc((row.issues||[]).map(x=>typeof x==='string'?x:x.message||x.code||JSON.stringify(x)).join('\n'))]),'No requested analysis rows.')+
+ w.table(['Order','Sample activity','Requested analysis','Return status','Original result IDs','Issues'],rows.slice(start,start+50).map(row=>[esc(row.order_id),esc(row.activity_id),'<b>'+esc(row.parameter)+'</b><br>'+esc(['unit','basis','fraction','method','method_context','method_name'].filter(key=>row[key]).map(key=>key+': '+row[key]).join(' · ')),esc(row.status)+(row.result_types?.length?'<br>'+esc(row.result_types.join(', ')):''),'<span>Matched: '+esc((row.observation_ids||[]).join(', ')||'None')+'</span>'+(row.ambiguous_observation_ids?.length?'<br><span>Competing: '+esc(row.ambiguous_observation_ids.join(', '))+'</span>':'')+(row.returned_method_definitions?.length?'<details><summary>Original returned method definitions</summary>'+row.returned_method_definitions.map(item=>'<p>'+esc(item.observation_id)+'<br>'+esc(['method','method_context','method_name'].filter(key=>item[key]).map(key=>key+': '+item[key]).join(' · '))+'<br>'+esc(item.binding||'')+'</p>').join('')+'</details>':''),esc((row.issues||[]).map(x=>typeof x==='string'?x:x.message||x.code||JSON.stringify(x)).join('\n'))]),'No requested analysis rows.')+
  '<div class="iw-actions">'+button('reconcile-prev','Previous returns',start?'':'disabled')+'<span>Showing '+(rows.length?start+1:0)+'–'+Math.min(start+50,rows.length)+' of '+rows.length+'</span>'+button('reconcile-next','Next returns',start+50<rows.length?'':'disabled')+button('export-reconciliation','Export complete reconciliation')+'</div>'+
  '<details><summary>'+esc((r.unrequested_observation_ids||[]).length)+' results outside the requested order set</summary><pre class="iw-json">'+esc((r.unrequested_observation_ids||[]).join('\n'))+'</pre></details>'+
  '<details><summary>'+esc((r.preexisting_observation_ids||[]).length)+' unchanged original results predating this request</summary><p>These original saved records remain separate from new or changed laboratory returns.</p><pre class="iw-json">'+esc((r.preexisting_observation_ids||[]).join('\n'))+'</pre></details>';
@@ -65,7 +65,10 @@ export function render(w){
   '<input type="checkbox" data-dispatch-sample="'+esc(a.id)+'" aria-label="Select original sample '+esc(a.sample_id||a.id)+'" '+(chosen.has(a.id)?'checked':'')+' '+disabled+'>',
   esc(a.sample_id),esc(a.id),esc(site.label||site.id),esc(visit.id),esc(a.collected_at||'Not recorded'),esc(a.custody_ref||'Not recorded')]);
  const orderRows=s.selection.orders.slice(orderPage*50,orderPage*50+50).map((row,n)=>{const index=orderPage*50+n;
-  return [esc(row.activity_id),...['parameter','unit','basis','fraction','method','notes'].map(key=>'<input data-dispatch-order="'+index+'" data-dispatch-key="'+key+'" aria-label="'+esc(key)+' for '+esc(row.activity_id)+'" value="'+esc(row[key]??'')+'" '+disabled+'>'),button('remove-order','Remove','data-index="'+index+'" '+disabled)];
+  const originalInput=key=>'<input data-dispatch-order="'+index+'" data-dispatch-key="'+key+'" aria-label="'+esc(key)+' for '+esc(row.activity_id)+'" value="'+esc(row[key]??'')+'" '+disabled+'>';
+  const methodFields=['method','method_context','method_name'].map(key=>field(({method:'Method',method_context:'Naming context',method_name:'Full name'})[key],originalInput(key))).join('');
+  const analysisFields=['unit','basis','fraction'].map(key=>field(({unit:'Unit',basis:'Basis',fraction:'Fraction'})[key],originalInput(key))).join('');
+  return [esc(row.activity_id),originalInput('parameter'),analysisFields,methodFields,originalInput('notes'),button('remove-order','Remove','data-index="'+index+'" '+disabled)];
  });
  const attachments=w.plan.source_links.filter(x=>x.kind==='local_file');
  const summary=s.preview?.summary;
@@ -82,9 +85,9 @@ export function render(w){
  '<div class="iw-actions">'+button('samples-prev','Previous samples',samplePage?disabled:'disabled')+'<span>Page '+(samplePage+1)+' of '+Math.max(1,Math.ceil(all.length/50))+'</span>'+button('samples-next','Next samples',samplePage*50+50<all.length?disabled:'disabled')+'</div>'+
  '<h4>Add an explicit requested analysis</h4>'+
  (choices.length?field('Optional original campaign parameter','<select data-dispatch-campaign '+disabled+'>'+option('','Choose a source parameter explicitly','')+choices.map(row=>option(row.key,row.parameter+' — '+row.title,'')).join('')+'</select>'):'')+
- '<div class="iw-two">'+['parameter','unit','basis','fraction','method','notes'].map(key=>field(({parameter:'Requested parameter',unit:'Requested unit (optional)',basis:'Chemical basis (optional)',fraction:'Fraction (optional)',method:'Method (optional)',notes:'Analysis notes'})[key],'<input data-dispatch-analyte="'+key+'" value="'+esc(s.draft_analyte[key]||'')+'" '+disabled+'>')).join('')+'</div>'+
- '<p>Optional unit, basis, fraction and method restrict the requested analysis and its return comparison. Leave a field blank when the request does not specify it.</p>'+button('add-orders','Add analysis to selected samples',disabled)+
- '<h4>'+s.selection.orders.length+' explicit requested analyses</h4>'+w.table(['Original activity','Parameter','Unit','Basis','Fraction','Method','Notes',''],orderRows,'Select original samples and add an explicit analysis.')+
+ '<div class="iw-two">'+['parameter','unit','basis','fraction','method','method_context','method_name','notes'].map(key=>field(({parameter:'Requested parameter',unit:'Requested unit (optional)',basis:'Chemical basis (optional)',fraction:'Fraction (optional)',method:'Method (optional)',method_context:'Method naming context (optional)',method_name:'Full method name (optional)',notes:'Analysis notes'})[key],'<input data-dispatch-analyte="'+key+'" value="'+esc(s.draft_analyte[key]||'')+'" '+disabled+'>')).join('')+'</div>'+
+ '<p>Optional unit, basis, fraction, method, naming context and full name restrict the requested analysis by exact declared text. Enter only an explicitly requested definition; the returned context/name must come from the actual laboratory source. Leave a field blank when the request does not specify it.</p>'+button('add-orders','Add analysis to selected samples',disabled)+
+ '<h4>'+s.selection.orders.length+' explicit requested analyses</h4>'+w.table(['Original activity','Parameter','Unit, basis and fraction','Method','Notes',''],orderRows,'Select original samples and add an explicit analysis.')+
  '<div class="iw-actions">'+button('orders-prev','Previous orders',orderPage?disabled:'disabled')+'<span>Page '+(orderPage+1)+' of '+Math.max(1,Math.ceil(s.selection.orders.length/50))+'</span>'+button('orders-next','Next orders',orderPage*50+50<s.selection.orders.length?disabled:'disabled')+'</div>'+
  '<details><summary>Original files to include ('+s.selection.attachment_source_ids.length+')</summary>'+w.table(['Include','Original file','Source identity'],attachments.map(link=>['<input type="checkbox" data-dispatch-attachment="'+esc(link.id)+'" aria-label="Include '+esc(link.label||link.id)+'" '+(s.selection.attachment_source_ids.includes(link.id)?'checked':'')+' '+disabled+'>',esc(link.label||link.id),esc(link.id)]),'No original local files in this plan.')+'</details>'+
  '<div class="iw-actions">'+button('preview',w.dirty||!w.nativePlan?'Save plan and review request':'Review saved request',disabled)+button('refresh','Refresh retained requests',disabled)+'</div>'+preview+
@@ -181,7 +184,7 @@ export async function act(w,b){
  if(action==='add-orders'){
   if(!s.draft_analyte.parameter.trim())throw Error('Enter an explicit requested parameter.');
   const allowed=new Set(samples(w.plan).map(row=>row.activity.id)),selected=s.selected_activities.filter(id=>allowed.has(id));if(!selected.length)throw Error('Select original sample activities first.');
-  for(const activity_id of selected)s.selection.orders.push({activity_id,...clone(s.draft_analyte)});
+  for(const activity_id of selected){const definition=clone(s.draft_analyte);for(const key of ['method_context','method_name'])if(!String(definition[key]??'').trim())delete definition[key];s.selection.orders.push({activity_id,...definition});}
   touch(w,s);w.render();return;
  }
  if(action==='remove-order'){const index=Number(b.dataset.index);if(!Number.isInteger(index)||index<0||index>=s.selection.orders.length)throw Error('The requested analysis row changed. Reopen it.');s.selection.orders.splice(index,1);touch(w,s);w.render();}
@@ -198,8 +201,8 @@ export async function change(w,e){
  if(t.dataset.dispatchAnalyte){s.draft_analyte[t.dataset.dispatchAnalyte]=t.value;w.cache();return;}
  if(t.dataset.dispatchField){s.selection[t.dataset.dispatchField]=t.value;touch(w,s);w.render();return;}
  if(t.hasAttribute('data-dispatch-order')){
-  const index=Number(t.dataset.dispatchOrder),key=t.dataset.dispatchKey;if(!Number.isInteger(index)||!s.selection.orders[index]||!['parameter','unit','basis','fraction','method','notes'].includes(key))throw Error('The original requested analysis changed.');
-  s.selection.orders[index][key]=t.value;touch(w,s);w.render();return;
+  const index=Number(t.dataset.dispatchOrder),key=t.dataset.dispatchKey;if(!Number.isInteger(index)||!s.selection.orders[index]||!['parameter','unit','basis','fraction','method','method_context','method_name','notes'].includes(key))throw Error('The original requested analysis changed.');
+  if(['method_context','method_name'].includes(key)&&!t.value.trim())delete s.selection.orders[index][key];else s.selection.orders[index][key]=t.value;touch(w,s);w.render();return;
  }
  if(t.dataset.dispatchAttachment){const set=new Set(s.selection.attachment_source_ids);if(t.checked)set.add(t.dataset.dispatchAttachment);else set.delete(t.dataset.dispatchAttachment);s.selection.attachment_source_ids=[...set];touch(w,s);w.render();}
 }
@@ -227,7 +230,7 @@ function reportPanel(w,s){
  w.table(['Source coverage','Original count'],Object.entries(p.summary||{}).map(([key,value])=>[esc(key.replaceAll('_',' ')),esc(typeof value==='object'?JSON.stringify(value):value)]))+
  '<p>'+esc(p.interpretation||'')+'</p><div class="iw-actions">'+button('report-register','Register report source',canRegisterReport(w)?'':'disabled')+button('report-export-preview','Export report-source review')+'</div>':'';
  const ready=receipt?'<h5>Retained report source · saved revision '+esc(receipt.plan.revision)+'</h5><p>This source keeps its exact request and compared plan revision when later records change.</p><div class="iw-actions">'+button('report-source','Open retained report source')+
- (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
+ (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof w.host.openScientificReport==='function'?button('report-publish','Prepare standalone scientific report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
  return '<section><h4>Use this request and its results in a scientific report</h4><p>Retain the complete original request, saved results, unresolved matches and sample context in the existing scientific report flow. Requests with no returned results remain reportable.</p>'+
  '<details><summary>Preserve an existing report selection</summary><p>Use an existing registered field report or choose its complete delivery-selection JSON to retain earlier report sections, figures and selected model/geography settings.</p>'+
  (prior?button('report-use-field','Use registered field report revision '+prior.revision,disabled):'')+
@@ -282,6 +285,13 @@ async function reportAction(w,action,b){
   if(document.querySelector('dialog[open]'))throw Error('Finish the current editor before opening another source.');
   w.cache();await (w.host.refreshState?.({force:true})||w.host.refresh?.({force:true}));
   if(!current(w,s,turn))return;w.host.navigate?.('sources');await w.host.openItem('sources',id);return;
+ }
+ if(action==='report-publish'){
+  const r=selectedReportReceipt(w),turn=w.generation;
+  if(w.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening the report publisher.');
+  const module=await import('./implementation_source_reports.mjs');
+  if(!current(w,s,turn))return;
+  await module.openImplementationSourceReport(w,[r.report_source],{title:'Laboratory request and results · saved revision '+r.plan.revision});return;
  }
  if(action==='report-delivery'){
   const r=selectedReportReceipt(w);

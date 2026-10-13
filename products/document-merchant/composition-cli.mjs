@@ -10,6 +10,7 @@ import {acquireStateLease} from '../../stellar/scf-starforge-20261009/merchant-f
 import {startJobCustomerWorkspace} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/server.mjs';
 import {inspectDocumentMerchant} from './setup.mjs';
 import {documentError,defaultDocumentSettings} from './contracts.mjs';
+import {documentCorrectionDraft,composeDocumentCorrection,stageDocumentCorrection} from './corrections.mjs';
 import {
   documentCompositionTemplate,reviewDocumentComposition,prepareDocumentComposition,
   readDocumentComposition,receiveDocumentComposition,prepareDocumentCompositionBatch,
@@ -32,6 +33,9 @@ const HELP=[
   'review --request FILE --source-root DIR',
   'stage --directory SOURCE_DIR [--request FILE --source-root DIR]',
   'source --directory SOURCE_DIR [--sha256 SAVED_SOURCE_SHA]',
+  'correction-draft --directory ORIGINAL_SOURCE_DIR --sha256 ORIGINAL_SOURCE_SHA --selection FILE --out NEW_DRAFT',
+  'review-correction --parent-directory ORIGINAL_SOURCE_DIR --draft FILE [--out NEW_COMPLETE_PLAN]',
+  'correct --parent-directory ORIGINAL_SOURCE_DIR --draft FILE --directory NEW_SOURCE_DIR',
   'prepare --directory SOURCE_DIR --workspace-options FILE [--request FILE --source-root DIR]',
   'show --directory SOURCE_DIR --workspace-options FILE',
   'review-batch --directory SOURCE_DIR --workspace-options FILE --out NEW_REPORT_DIR',
@@ -66,6 +70,9 @@ const ACCEPTED=Object.freeze({
   review:['--request','--source-root'],
   stage:['--directory','--request','--source-root'],
   source:['--directory','--sha256'],
+  'correction-draft':['--directory','--sha256','--selection','--out'],
+  'review-correction':['--parent-directory','--draft','--out'],
+  correct:['--parent-directory','--draft','--directory'],
   prepare:[...CUSTOMER,'--request','--source-root','--intake-key-env'],
   show:CUSTOMER,
   'review-batch':[...CUSTOMER,'--out'],
@@ -168,6 +175,7 @@ function sourceSummary(received){
     directory:received.directory,planPath:received.planPath,sha256:received.sha256,bytes:received.bytes,
     batchDirectory:received.batchDirectory??join(received.directory,'batch'),
     batchInputPath:received.batchInputPath,previewPath:received.previewPath,counts:received.counts,
+    ...(plan.request.correction?{correction:plan.request.correction}:{}),
     dataset:plan.files.filter(file=>file.role==='dataset').map(({content,...file})=>file),
     templates:plan.request.templates.map(template=>({
       id:template.id,format:template.format,
@@ -299,6 +307,27 @@ export async function runDocumentCompositionCommand(argv=process.argv.slice(2),{
         need(value.templates.length>0,'DOCUMENT_COMPOSITION_MERCHANT_FORMAT_REQUIRED');
       }else value=documentCompositionTemplate(required(flags,'--provider'));
       return emit(flags.has('--out')?await saveJson(flags.get('--out'),value):value);
+    }
+    if(command==='correction-draft'){
+      const source=await readDocumentComposition(absolute(required(flags,'--directory')),{
+        requireFiles:false,expectedSha256:exactSha(flags,'--sha256'),signal:controller.signal});
+      const selected=parse(await ownedBytes(absolute(required(flags,'--selection')),1048576,{privateMode:false}));
+      need(plain(selected)&&Object.keys(selected).every(key=>['id','name','mode','reason','documentIds'].includes(key)),
+        'DOCUMENT_CORRECTION_SELECTION_REQUIRED');
+      const draft=documentCorrectionDraft({source,...selected});
+      const saved=await saveJson(required(flags,'--out'),draft);
+      return emit({schema:draft.schema,id:draft.id,parent:draft.parent,documents:draft.documentIds.length,draft:saved});
+    }
+    if(command==='review-correction'||command==='correct'){
+      const sourceDirectory=absolute(required(flags,'--parent-directory'));
+      const draft=parse(await ownedBytes(absolute(required(flags,'--draft')),32*1048576,{privateMode:false}));
+      if(command==='correct')return emit(sourceSummary(await stageDocumentCorrection({
+        sourceDirectory,directory:absolute(required(flags,'--directory')),draft,signal:controller.signal})));
+      const source=await readDocumentComposition(sourceDirectory,{
+        requireFiles:false,expectedSha256:draft?.parent?.sourceSha256,signal:controller.signal});
+      const plan=composeDocumentCorrection({source,draft});
+      const saved=flags.has('--out')?await saveJson(flags.get('--out'),plan):null;
+      return emit({...reviewSummary(plan),correction:plan.request.correction,...(saved?{completeSource:saved}:{})});
     }
     if(command==='review'){
       required(flags,'--request');required(flags,'--source-root');

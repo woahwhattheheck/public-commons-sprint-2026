@@ -138,3 +138,54 @@ Use the receiving operator's `workspace_key`, which is derived from its actual r
 The selected JSON file's SHA-256, actual workspace key, original IDs and chosen context are frozen in the new `request-state.json`. The full native network/plan/campaign/calendar/source-binding fingerprints are retained after their first read. Continue an interrupted operation with the same selection bytes, actual key and output directory plus `--resume`. The original opening/receiving mode keeps its previous input identity and remains available unchanged. A fresh receiving operation gets its own output directory; original request files from a different workspace retain their original identity.
 
 All modes use the same original queued export and Workspace restore requests. Report and project downloads retain the native file tickets' exact byte lengths and SHA-256 values.
+
+
+## Continue through a saved budget comparison
+
+After the saved-budget UI and native comparison provider are installed, the same browser journey can operate an existing frontier as part of the original campaign course. Add `--comparison-selection BUDGET_SELECTION.json` to either existing input mode.
+
+The optional file is:
+
+```json
+{
+  "schema": "upstate.monitoring-budget-browser-selection/v1",
+  "frontier_id": "ACTUAL_SAVED_FRONTIER_ID",
+  "baseline_plan_id": "ACTUAL_PLAN_ID_FROM_THAT_FRONTIER",
+  "context_ids": [],
+  "title": "Retained regional monitoring budget choices"
+}
+```
+
+Use an actual frontier from the selected network. Its complete original record supplies the ordered `plan_ids`; the paged frontier library summaries do not include that inventory. Omit `baseline_plan_id` to use the first original plan. Each optional context must name the exact network and one of those saved plans; select at most one context per plan. The driver normalizes selected contexts to original frontier-plan order without changing the supplied file or its hash.
+
+The existing campaign plan may be different from the frontier plan at the same budget. Keep the original campaign selection unchanged. The browser explicitly reopens that campaign after operating the frontier and before the existing report and full Workspace export stages.
+
+This optional continuation:
+
+1. Reads the actual native frontier and preview, then freezes the original frontier, plan and context fingerprints in the existing request journal.
+2. Opens **Saved budget choices**, selects the baseline and original observed contexts, and compares the displayed complete preview with the native response.
+3. Saves the comparison through the original queue. The existing request interceptor retains the exact payload and operation before sending it; resume reenters that original task.
+4. Reopens the saved comparison from its native library and opens one exact original plan in the existing map/calendar desk.
+5. Downloads the complete comparison ZIP through its original task-detail file ticket, checking the actual bytes and hash.
+6. Returns to the original campaign and completes its normal exports.
+7. Reopens the saved comparison in a fresh browser and again after the same full Workspace transfer, comparing complete native records and rendered source details.
+
+The journey records the new comparison ID, source fingerprints, screenshots and downloaded package alongside the original campaign outputs. Both additional queued stages (`budget-comparison-save` and `budget-comparison-export`) use the existing durable request-state file and original task-resume behavior.
+
+Commands without this option preserve their previous input object and resume identity. A comparison file adds its exact SHA-256 and parsed selection to `journal.input.comparison`. Resume with the same file, selections and output directory. To add comparison work to an already completed earlier browser course, choose a new output directory for the expanded intent.
+
+The optional route opens retained solver results. It does not submit `monitoring.design` or `monitoring.frontier`. Newly prepared observed contexts must first be saved through the original observed-support workflow; this selection then references their actual immutable IDs.
+
+
+For the completed original b9d5 scientific Workspace, the actual retained three-budget frontier selection is:
+
+```json
+{
+  "schema": "upstate.monitoring-budget-browser-selection/v1",
+  "frontier_id": "2c1c770ffb1b00c85995a58ad93823407a628052b7b2b01d58aeced5387d12e5",
+  "context_ids": [],
+  "title": "Regional 217-catchment monitoring budget choices"
+}
+```
+
+The native receiver reads this frontier's actual ordered plans and uses its first plan as the baseline. The original separate six-area campaign remains the campaign selected by the existing Monitoring browser selection. Attach observed contexts only after reading their actual saved IDs for these exact frontier plans.

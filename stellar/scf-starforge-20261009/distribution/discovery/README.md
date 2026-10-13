@@ -180,3 +180,9 @@ for the resulting source edition.
 
 The implementation uses the installed Node runtime. Browser rendering uses text
 nodes for original metadata and exact registered static assets.
+
+## Complete operating procedures and returned work
+
+The original Runtime workspace includes **Operating procedures** for editable customer steps, retained source captures, complete carried files and returned-work receiving. See [Runtime operating procedures](../runtime-workspace/RUNTIME_PROCEDURES.md) for the installed browser and `starforge runtime-workspace procedure-*` commands.
+
+The discovery component supplies the shared typed engines through `./operator/operating-plans` and `./operator/operating-plan-returns`. [Complete files in operating procedures](./OPERATING_PLAN_FILES.md) explains original bytes, saved file editions, limits and downloads. [Review returned operating procedures](./OPERATING_PLAN_RETURNS.md) explains complete history comparison, carried-result grouping, decisions, replay and the Runtime receiving workflow. Existing Command finder search and product requirements remain available through their original routes above.

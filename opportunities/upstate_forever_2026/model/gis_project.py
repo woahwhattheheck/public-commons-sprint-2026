@@ -26,7 +26,7 @@ import zipfile
 
 SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 CHUNK = 1024 * 1024
 
 
@@ -519,6 +519,52 @@ def _bounds_union(layers):
     return [result[0]-pad, result[1]-pad, result[2]+pad, result[3]+pad]
 
 
+
+def source_table_preview(root: Path, attachment: dict) -> dict | None:
+    """Literal, offline display rows; the complete retained primary stays separate."""
+    primary = attachment["files"][0]
+    path = checked(root, primary)
+    suffixes = [value.lower() for value in path.suffixes]
+    compressed = suffixes[-1:] == [".gz"]
+    suffix = suffixes[-2] if compressed and len(suffixes) > 1 else path.suffix.lower()
+    declared = str((attachment.get("source") or {}).get("format") or "").lower()
+    delimiter = "\t" if suffix == ".tsv" or declared == "tsv" else ","
+    if suffix not in {".csv", ".tsv"} and declared not in {"csv", "tsv"}:
+        return None
+    result = {"format": "table", "columns": [], "rows": [], "complete": False,
+              "row_limit": 2000, "character_limit": 1000000,
+              "source_sha256": primary["sha256"], "source_bytes": primary["bytes"],
+              "row_width_mismatches": 0}
+    try:
+        if compressed:
+            import gzip
+            stream = gzip.open(path, "rt", encoding="utf-8-sig", newline="")
+        else:
+            stream = path.open("r", encoding="utf-8-sig", newline="")
+        with stream:
+            reader = csv.reader(stream, delimiter=delimiter)
+            header = next(reader, None)
+            if header is None:
+                result["complete"] = True
+                return result
+            result["columns"] = header
+            characters = sum(len(cell) for cell in header)
+            for row in reader:
+                size = sum(len(cell) for cell in row)
+                if len(result["rows"]) >= result["row_limit"] or characters + size > result["character_limit"]:
+                    break
+                result["rows"].append(row)
+                characters += size
+                if len(row) != len(header):
+                    result["row_width_mismatches"] += 1
+            else:
+                result["complete"] = True
+    except (UnicodeError, csv.Error, OSError, EOFError) as error:
+        result["rows"] = []
+        result["error"] = "The retained table could not be previewed as UTF-8 CSV/TSV (" + type(error).__name__ + "). Download its unchanged original file."
+    return result
+
+
 def catalogue(root: Path, manifest: dict) -> None:
     columns = ["id", "title", "group", "kind", "purpose", "units", "run_id", "scenario_id", "profile_id",
                "crs", "feature_count", "valid_cells", "working_path", "original_sha256"]
@@ -531,20 +577,27 @@ def catalogue(root: Path, manifest: dict) -> None:
             row["original_sha256"] = l["originals"][0]["sha256"]
             # Protect spreadsheet consumers without modifying the scientific data.
             writer.writerow({k:("'"+v if isinstance(v,str) and v.startswith(("=","+","-","@")) else v) for k,v in row.items()})
-    # Embed only generated map overviews. Full-resolution datasets remain explicit
-    # relative downloads; the original manifest remains compact and byte-addressable.
+    # Embed generated map overviews and literal table display rows for file:// use.
+    # Complete original files remain explicit relative downloads; the original
+    # project manifest stays compact and byte-addressable.
     import base64
     view_manifest = json.loads(canonical(manifest))
     for layer in view_manifest["layers"]:
         preview = local(root, layer["preview"]["path"])
         mime = "image/svg+xml" if preview.suffix == ".svg" else "image/png"
         layer["preview"]["embedded_uri"] = "data:" + mime + ";base64," + base64.b64encode(preview.read_bytes()).decode("ascii")
+    for attachment in view_manifest.get("attachments", []):
+        attachment.update(attachment_metadata(manifest, attachment))
+        if attachment["kind"] == "table":
+            attachment["browser_table"] = source_table_preview(root, attachment)
     template = Path(__file__).with_name("gis_project_view.html").read_text(encoding="utf-8")
     data = canonical(view_manifest).decode().replace("<", "\\u003c").replace("&", "\\u0026")
     (root / "OPEN_GIS.html").write_text(template.replace("__PROJECT_JSON__", data), encoding="utf-8")
     (root / "OPEN_GIS.md").write_text(
         "# " + manifest["title"] + "\n\n"
-        "Open OPEN_GIS.html for the layer inventory, geography and downloads. Open project.qgz in QGIS "
+        "Open OPEN_GIS.html for the layer map, Sources and tables desk, dated source metadata, "
+        "literal table rows and every primary/companion download. Table display previews state whether "
+        "all rows are included; the complete original table is always downloadable. Open project.qgz in QGIS "
         "for the complete editable GIS project. Keep the entire extracted directory together.\n\n"
         "Vector working copies are in layers/; original files and companions are retained under originals/. "
         "The source_row_id field maps each working feature to its native original. Raster cells and CRS "

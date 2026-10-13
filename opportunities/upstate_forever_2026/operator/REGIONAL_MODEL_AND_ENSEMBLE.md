@@ -62,7 +62,7 @@ Reuse the completed original files and their companion metadata.
 | Upstream model domain | libfile_cce17e762e948191be1d226b1dbce00d; complete ZIP 8,800,689 bytes; SHA256 1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04 | 217 selected HUC12 polygons, with the original reporting and upstream context |
 | Precipitation | Slack F0C8H2FGAUV; original ZIP 62,685,097 bytes; SHA256 763f97b677711112ff7b1082c794476e2d9b7abe1f6e55dd4f1166e32523ccd3 | PRISM 1991–2020 precipitation normal, original 30-arcsecond source |
 | Rainfall erosivity | Slack F0C9BC7MKME; original 47,143,128 bytes; SHA256 157bbcaa54b445f96506fb1caffda4bbaea6b28f71bc7199235705e69cd00596 | Retained NOAA R source and its original unit definition |
-| Land cover | Original Annual NLCD2025 regional TIFF from the completed source receiver in source/annual-nlcd-native-20261013/ | Original categorical pixels for the full217-HUC domain and1,000m buffer, retained on the published EPSG:5070 grid |
+| Land cover | Original Annual NLCD 2025 regional TIFF from the completed source receiver in source/annual-nlcd-native-20261013/ | Original categorical pixels for the full217-HUC domain and1,000m buffer, retained on the published EPSG:5070 grid |
 | Soil erodibility | The regional capture and preparation in section 3 | Source-native USDA mapunit geometry, ratings, survey editions and a grid-aligned K raster |
 | Elevation | The selected retained DEM source in the model plan | Actual elevation and vertical units used by the native terrain calculations |
 
@@ -74,7 +74,7 @@ The equipped receiving host can obtain the complete original domain directly wit
 
 Pass that object to mcp__codex_apps__library_prepare_materialize. Its successful transfer returns either the actual workspace_path or a GET download_url with required headers. Reuse a returned workspace_path directly; otherwise the equipped host retrieves the complete archive into its actual task directory using that returned transfer. Keep signed URLs and headers in the receiving process. Verify the 8,800,689-byte archive against the domain SHA256 above, then extract it for the source commands. This original-domain transfer is available independently of a separate Drive upload.
 
-Use the corrected original Annual NLCD2025 TIFF and eleven-file receiver/metadata component in source/annual-nlcd-native-20261013/ and select the actual output TIFF and source manifest. Its published EPSG:5070 grid, explicit2025 source time, original categorical classes and full217-HUC domain plus1,000m buffer travel with the source. Section21 gives the exact receiving and soil continuation.
+Use the corrected original Annual NLCD 2025 TIFF and eleven-file receiver/metadata component in source/annual-nlcd-native-20261013/ and select the actual output TIFF and source manifest. Its published EPSG:5070 grid, explicit2025 source time, original categorical classes and full217-HUC domain plus1,000m buffer travel with the source. Section21 gives the exact receiving and soil continuation.
 
 The source collection must identify the South Carolina reporting area, complete upstream model domain and the four utility focus watersheds separately. The regional domain's source ID is upstate-wbd-upstream-domain-20261012. The earlier local copy was /dev/shm/dbc61-upstate-model-domain-20261012/sources.json; use the same manifest from its recovered archive when that temporary path is unavailable.
 
@@ -824,7 +824,7 @@ sources in their requested order through the current scientific/client delivery.
 Open **Scenario sensitivity**, choose a completed saved calibration, then choose
 **Prepare scientific report**. The existing task queue registers the original
 source and renders its PDF, offline HTML, Markdown, structured data and complete
-report ZIP. Reopen the same saved result for downloads and **Include in delivery**.
+report ZIP. Reopen the same saved result for downloads, **Compose scientific report**, and **Include in delivery**.
 
 The standalone report uses the completed calibration's actual native candidates;
 it can render before the full baseline-and-alternative map delivery is available:
@@ -860,9 +860,10 @@ source, original numerical interpretation and extension continuation.
 ### Saved Gauge support
 
 Open the saved Gauge support edition and choose **Use in scientific report**.
-Choose an existing delivery to preserve its original runs, overlays, map settings,
-contact fields and other scientific sources, or start a new report selection.
-The completed operation offers **Open prepared report form**.
+The shared Scientific reports composer opens the original typed sources in their
+retained order with the saved Gauge report title. Choose **Open prepared mapped
+delivery** when continuing the selected full model delivery. Its original runs,
+overlays, map settings, contact fields and other scientific sources remain saved.
 
 The same preparation, source import and standalone scientific report rendering are available from the command line:
 
@@ -940,7 +941,7 @@ structured report data and a complete source ZIP. The edition keeps the same
 original station, catchment, regional and daily-flow records. Its retained maps
 and original geometries remain linked from the report and packaged beside it.
 The standalone report uses the saved source directly; its selection is the same
-one available through **Use in scientific report** and **Open prepared report form**.
+one available through **Use in scientific report** and the saved report composer.
 
 The default Gauge command in section18 now renders these outputs. Reopen them
 with the same Workspace and original saved edition:
@@ -967,7 +968,7 @@ Both formats and their full source ZIP preserve the same original values.
 
 | Figure | Original quantity and interpretation |
 | --- | --- |
-| Selected candidate against observations | Original observed and predicted annual constituent mass, separated by physical unit. Validation units use their distinct marker; the diagonal is the1:1 reference. |
+| Selected candidate against observations | Original observed and predicted annual constituent mass, separated by physical unit. Validation units use their distinct marker; the diagonal is the 1:1 reference. |
 | Physical residuals | Saved predicted-minus-observed annual mass, retaining original constituent units, catchment, spatial partition and period aggregation. |
 | Candidate ranking | Saved dimensionless objective and original rank for every eligible native candidate, with the selected run identified. |
 | Reference-period flow coverage | Original numeric-day and outside-capture counts divided by that observation's full requested exclusive-end date interval. |
@@ -990,8 +991,10 @@ the entrypoints; no separate plotting operation or Workspace is needed.
 
 ### Complete source installation
 
-The current inventory contains270 paths in14 full families. The study consumer
-has15 files, Gauge support9, source/profile comparison12 and regional reporting96.
+The current inventory contains 274 paths in 14 full families. The study consumer
+has 16 files, Gauge support 11, source/profile comparison 12, regional reporting 96,
+and original native land-cover receiving 13. Gauge support includes its original
+receiving recovery guide; land-cover receiving includes the maintained PNG replay.
 The regional family includes the original utility-observation manifest and all
 its physical companions, plus the native utility-source receiver's own input
 manifest, original topology result and original USGS topology network. Its
@@ -1012,20 +1015,20 @@ operation checks this composed catalogue and its full retained source members.
 
 ## 21. Receive the original native land-cover source and continue soil preparation
 
-The corrected Annual NLCD2025 source is retained at
+The corrected Annual NLCD 2025 source is retained at
 `source/annual-nlcd-native-20261013/source/land-cover.tif` with its adjacent
-`source-manifest.json`. The9,443,751-byte TIFF has SHA256
+`source-manifest.json`. The 9,443,751-byte TIFF has SHA256
 `3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`
 and source ID `usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`.
-The complete output's40,713,317 cells were compared with all49 original
+The complete output's 40,713,317 cells were compared with all 49 original
 PNG tiles; the retained validation records zero mismatches or missing cells.
 Use the coherent source edition returned by the successful receiver: its
 raster path, source ID, byte count and complete TIFF hash stay together.
-Its source plan retains all49 original lossless provider tiles and their
+Its source plan retains all 49 original lossless provider tiles and their
 individual request, PNG and decoded-pixel identities.
 
-The selected source window is6,443 by6,319 cells in EPSG:5070, covering the
-original217-HUC12 domain and selected1,000m buffer. Source time is
+The selected source window is 6,443 by 6,319 cells in EPSG:5070, covering the
+original 217-HUC12 domain and selected 1,000m buffer. Source time is
 2025-01-01T00:00:00.000Z. The decoder and writer, discrete class style and
 original validation are retained beside the source metadata.
 
@@ -1052,15 +1055,20 @@ Select its returned raster as `UPSTATE_NLCD` for the original saved soil capture
 ```
 
 Preserve the capture's source index, journal, native ratings and selected
-buffer. The original source cell sizes are29.999999995403137m and
-30.000000026127967m. Each independently meets the maintained nominal30m rule.
+buffer. The original source cell sizes are 29.999999995403137m and
+30.000000026127967m. Each independently meets the maintained nominal 30m rule.
 The grid receiver recognizes that case before the generic square-axis
 comparison, preserving the original affine and existing upper-left anchor.
 The maximum normalization corner shift for this full source window is
 0.000167738125m. The prepared model window records its own actual source
 and working grid; other source resolutions retain their existing checks.
 
-The complete regional soil family includes the maintained raster preparer.
+The complete regional soil family includes the maintained raster preparer and
+original geometry repair. Invalid publisher polygons are repaired in the existing
+source index using the retained original geometry; valid rows remain unchanged.
+The source retains original and indexed geometry identities, the native repair
+reason and area accounting. Continue the same capture and checkpoint before
+preparing the model raster.
 Use the original land-cover time and actual climate periods when selecting
 the native model and annual-reference cases. Retain distinct source editions
 separately in the working project.
@@ -1069,7 +1077,7 @@ separately in the working project.
 
 The complete original geographic result is
 `source/annual-reference-assessment-20261013/`. Its eight retained files
-contain159 original station points,192 source assessment records, all795
+contain 159 original station points,192 source assessment records, all 795
 station-by-reference-basin membership decisions, eleven original annual
 targets, five upstream basin summaries and all ten pairwise basin overlaps.
 
@@ -1094,15 +1102,15 @@ and assessment components.
 | ARJWS | 6 stations / 10 records | 6 stations / 10 records | 6 stations / 10 records |
 | PRWD | 18 stations / 22 records | 17 stations / 21 records | 17 stations / 19 records |
 
-The physical selections use the original four-HUC ARJWS and32-HUC PRWD
-upstream unions. Every one of the159 points lies in exactly one original
-HUC polygon. All152 nonempty station-publisher HUC12 values agree with
-that location. Six July2026 assessment records retain a different original
+The physical selections use the original four-HUC ARJWS and 32-HUC PRWD
+upstream unions. Every one of the 159 points lies in exactly one original
+HUC polygon. All 152 nonempty station-publisher HUC12 values agree with
+that location. Six July 2026 assessment records retain a different original
 assessment attribution; both the original field and geometric result remain
 available. The source README identifies all six records and their boundary
 distances.
 
-These are the159-station assessment cohort's counts. Other retained microbial,
+These are the 159-station assessment cohort's counts. Other retained microbial,
 lake-study and broader station editions carry their own source populations.
 Keep the selected source cohort and geographical basis with every map filter
 and displayed total.
@@ -1119,9 +1127,9 @@ and displayed total.
 
 The three tributary basins are mutually disjoint and supply seven
 constituent-specific annual targets. Each lies inside both downstream
-Savannah basins. Jackson lies inside Cohens and covers88.6983% of its area.
-The two downstream references therefore share all159 selected stations and
-all192 records. Retain their nested spatial support when assigning calibration
+Savannah basins. Jackson lies inside Cohens and covers 88.6983% of its area.
+The two downstream references therefore share all 159 selected stations and
+all 192 records. Retain their nested spatial support when assigning calibration
 and validation groups and when presenting regional coverage.
 
 Broad's zero applies to the selected South Carolina assessment cohort;
@@ -1132,14 +1140,82 @@ The two sediment targets belong to Chattooga and Broad.
 
 Continue the existing **Annual load observations** intake and saved-study
 calibration using the actual original reference rows and catchments.
-Nitrogen/phosphorus values use `ACTUAL` inkg/year, and sediment uses
-`ACTUAL_MT` inmetric tonnes/year. They are already annual rates.
-Keep the original2012 reference year and1999-10-01 through2014-10-01
-exclusive-end source horizon with them. The2024 assessment source covers
-2018–2022; July2026 status remains its separate edition.
+Nitrogen/phosphorus values use `ACTUAL` in kg/year, and sediment uses
+`ACTUAL_MT` in metric tonnes/year. They are already annual rates.
+Keep the original 2012 reference year and 1999-10-01 through2014-10-01
+exclusive-end source horizon with them. The 2024 assessment source covers
+2018–2022; July 2026 status remains its separate edition.
 
 The full [source interpretation](../source/annual-reference-assessment-20261013/README.md)
 retains native coordinates, original request/body hashes, source locators,
 explicit EPSG:5070 transforms and the completed original geometric method.
 The source-import manifest and complete companion set are the working
 application inputs.
+
+## 23. Compose, save and reopen the scientific report
+
+The saved calibration and Gauge desks now open the maintained **Scientific
+reports** composer directly. Both routes carry the original Workspace, ordered
+source collection and entry IDs, and saved title. The composer uses the current
+source reports and report-edition services already installed in the application.
+
+### Saved calibration course
+
+1. Open **Scenario sensitivity** and the saved calibration result.
+2. Choose **Prepare scientific report** if its original typed source has not
+   yet been prepared. Follow that retained task to completion.
+3. Choose **Compose scientific report** on the saved result. The original
+   calibration source and title are selected in the shared composer.
+4. Inspect the source order and report preview. Save the report edition, then
+   export the available report formats and full source package.
+5. Reopen the saved edition and its original source selection from the same
+   Workspace. Include the saved report in the complete Workspace archive.
+
+**Include in delivery** remains the route for a selected mapped model delivery.
+It appends the original scientific source while preserving that delivery's
+existing ordered sources and run selection.
+
+### Saved Gauge course
+
+1. Open the retained Gauge support edition.
+2. Choose **Use in scientific report** to prepare the original typed source
+   and enter the composer, or **Open scientific report composer** when the
+   source is already prepared.
+3. Reopen a completed Gauge report task through **Compose scientific report**.
+   It uses the saved task's original source and ordered selection.
+4. Preview, save and export through the shared report composer. The original
+   station, catchment, flow and regional support tables travel with the source.
+5. Choose **Open prepared mapped delivery** to continue the existing mapped
+   delivery selection, or **Download scientific report** for the direct saved
+   Gauge report formats.
+
+The source selection is resolved against the original Workspace before the
+composer opens. A Workspace or study change during source loading returns to
+the current view; reopening the original saved result supplies its own sources.
+Completed source preparation remains a saved operation.
+
+### Preserve the original receiving and report package
+
+The maintained Gauge receiver continues its original output directory under
+one operation lock. A completed support build is reopened directly. Its archive
+must retain the selected Gauge and station editions, original regional report,
+source collections, complete original bodies and companions. An existing archive
+is verified from the same opened file before reuse, and an existing reopened
+directory is checked against the archive's members.
+
+Use the original command and selections from
+[source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md](../source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md).
+The original whole, indexed split and coordinate-delineated support choices
+remain distinct throughout the report and archive.
+
+The component declarations
+`ensemble-scientific-report-composer.json` and
+`gauge-scientific-composer.json` join these complete source families to the
+maintained `scientific-report-editions` component. Install both their complete
+files and the existing shared composer. The source catalogue resolves the
+dependencies and retains peer component declarations in the same application.
+
+The full operator guides provide the detailed source interpretation and existing
+command-line entrypoints:
+[Saved-study consumers](../model/ENSEMBLE_CONSUMERS.md) and
+[Gauge support](GAUGE_SUPPORT.md).

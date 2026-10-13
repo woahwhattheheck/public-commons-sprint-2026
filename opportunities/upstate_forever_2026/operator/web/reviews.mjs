@@ -36,6 +36,44 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(current()!==workspace)throw Error('The workspace changed. Reopen the review in the selected workspace.');
     return result;
   }
+
+
+  function reviewFormRequest(){
+    const workspace=current(),serial=++generation,body=$('#form-body'),anchor=body?.firstChild;
+    const dialog=$('#operation-form')?.closest('dialog'),wasOpen=dialog?.open;
+    return {workspace,current:()=>current()===workspace&&generation===serial&&
+      $('#form-body')===body&&body?.firstChild===anchor&&dialog?.open===wasOpen};
+  }
+
+  let activeReviewForm=null;
+  function reviewFormSession(selector,workspace){
+    activeReviewForm?.release();
+    const form=$('#operation-form'),anchor=form?.querySelector(selector),dialog=form?.closest('dialog');
+    if(!form||!anchor)throw Error('Reopen the original review form.');
+    let released=false;
+    const listeners=[];
+    const session={
+      form,anchor,
+      current:()=>!released&&current()===workspace&&form.isConnected&&$('#operation-form')===form&&
+        dialog?.open!==false&&form.querySelector(selector)===anchor,
+      ensure(){if(!session.current())throw Error('The original review form changed or closed. Reopen it before continuing.');},
+      listen(node,event,callback){
+        const guarded=eventValue=>{if(!session.current()){session.release();return;}return callback(eventValue);};
+        node.addEventListener(event,guarded);listeners.push([node,event,guarded]);
+      },
+      release(){
+        if(released)return;released=true;
+        for(const [node,event,callback]of listeners)node.removeEventListener(event,callback);
+        dialog?.removeEventListener('close',onClose);
+        if(activeReviewForm===session)activeReviewForm=null;
+      }
+    };
+    const onClose=()=>{if(dialog?.open===false)session.release();};
+    dialog?.addEventListener('close',onClose);
+    activeReviewForm=session;
+    return session;
+  }
+
   function inventoryRows(){
     const list=rows().map(row=>({row,latest:outcome(responses(row.id))})).filter(({row,latest})=>
       (filter==='all'||(latest?.response.disposition??'in-review')===filter)&&
@@ -120,39 +158,73 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       detail:$('[data-requirement-detail]',row).value,
     }));
   }
-  async function newReview(id,exportId=null){
-    const requestedWorkspace=current(),catalogue=await read('catalog');
+  async function newReview(id,exportId=null,scientificRequest=null){
+    const opening=reviewFormRequest(),requestedWorkspace=opening.workspace;
+    if(scientificRequest&&scientificRequest.workspace_key!==requestedWorkspace)
+      throw Error('Open this saved scientific report in its original Workspace.');
+    const catalogue=await read('catalog');
+    const scientific=scientificRequest?await api(endpoint('/api/source-reports/scientific-edition',{
+      workspace:requestedWorkspace,id:scientificRequest.edition_id})):null;
+    if(scientific&&(scientific.workspace_key!==requestedWorkspace||scientific.edition?.id!==scientificRequest.edition_id))
+      throw Error('The saved scientific report differs from the selected original edition.');
     const original=id?(await read('review',{review_id:id})).review:null;
+    if(!opening.current()||(scientificRequest?.isCurrent&&!scientificRequest.isCurrent()))return;
+    let editor=null;
     if(requestedWorkspace!==current())throw Error('Reopen the form in the selected workspace.');
     const selection=original?.selection??{source_collection_ids:[],run_ids:[],delivery_ids:[],spatial_export_ids:[],requirements:[],notes:[]};
     const maps=catalogue.spatial_exports??[],chosenMaps=exportId?[exportId]:(selection.spatial_export_ids??[]);
     if(chosenMaps.some(key=>!maps.some(row=>row.id===key)))throw Error('Reopen the completed map export in this workspace before selecting it for review.');
-    const title=original?original.title+' — revised selection':'';
+    const title=scientific?scientific.edition.title+' — review':original?original.title+' — revised selection':'';
     const single=!exportId&&catalogue.sources.length===1?[catalogue.sources[0].id]:[];
-    openForm(original?'Create a revised review selection':'Create customer review',
-      'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
+    openForm(scientific?'Review saved scientific report':original?'Create a revised review selection':'Create customer review',
+      scientific?'Retain this exact report edition, its original figures and companions, and the review purpose. Returned feedback uses the existing Customer review history and worklist.':'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
       '<div class="form-grid">'+field('review_title','Review title',title,{required:true,wide:true,maximum:300})+
       field('review_purpose','Purpose',original?.purpose??'',{type:'textarea',required:true,wide:true,rows:3,maximum:20000,note:'Describe the decision this selected work should support.'})+'</div>'+
+      (scientific?'<section class="review-intro"><h3>'+esc(scientific.edition.title)+'</h3><p>'+scientific.edition.source_count+' original studies · '+scientific.edition.section_count+' sections · '+scientific.edition.figure_count+' figures · '+scientific.files.length+' retained files</p><p class="mono">'+esc(scientific.edition.id)+'</p><p>The complete saved edition is fixed for this review. Preparing the review does not change the report or its source ordering.</p><details><summary>Original report files</summary><ul>'+scientific.files.map(item=>'<li>'+esc(item.path)+' · '+Number(item.bytes).toLocaleString()+' bytes</li>').join('')+'</ul></details></section>':
       '<div class="review-choice-grid">'+choices('source_collection_ids','Original source editions',catalogue.sources,original?selection.source_collection_ids:single)+
       choices('run_ids','Completed model runs',catalogue.runs,selection.run_ids)+
       choices('delivery_ids','Completed deliveries',catalogue.deliveries,selection.delivery_ids)+
-      mapChoices(maps,chosenMaps)+'</div>'+
+      mapChoices(maps,chosenMaps)+'</div>')+
       '<section class="review-requirement-section"><header><div><h3>Requirements</h3><p>Retain the issuer’s source text and add the specific criteria for this selection.</p></div><div class="page-actions">'+
       (catalogue.issuer?button('issuer-load','Add issuer requirements'):'')+button('requirement-add','Add requirement')+'</div></header>'+
       '<p id="review-issuer-pin" class="note"></p><div id="review-requirement-editors">'+selection.requirements.map(requirementRow).join('')+'</div></section>'+
       '<div class="form-grid">'+field('review_notes','Notes',selection.notes.join('\n'),{type:'textarea',wide:true,rows:3,note:'One note per line. Notes are retained with the review selection.'})+'</div>',
       'Retain review',async()=>{
+        editor.ensure();
         const value={schema:'upstate.customer-review-selection/v1',title:val('review_title'),purpose:val('review_purpose'),
           source_collection_ids:checkValues('source_collection_ids'),run_ids:checkValues('run_ids'),delivery_ids:checkValues('delivery_ids'),
           spatial_export_ids:checkValues('spatial_export_ids'),
           requirements:requirementValues(),notes:notes(val('review_notes'))};
-        if(!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
+        if(!scientific&&!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
         const ids=value.requirements.map(x=>x.id);
         if(new Set(ids).size!==ids.length)throw Error('Give every requirement its own ID.');
+        if(scientific){
+          const reviewSelection={title:value.title,purpose:value.purpose,requirements:value.requirements,notes:value.notes};
+          const snapshot=JSON.stringify(reviewSelection);
+          let preview;
+          try{preview=await api('/api/source-reports/review-preview',{method:'POST',body:{
+            workspace:requestedWorkspace,edition_id:scientific.edition.id,review_selection:reviewSelection}});}
+          catch(error){if(!editor.current())return;throw error;}
+          if(!editor.current())return;
+          const latest={title:val('review_title'),purpose:val('review_purpose'),requirements:requirementValues(),notes:notes(val('review_notes'))};
+          if(JSON.stringify(latest)!==snapshot)throw Error('Your review fields changed during source verification. Submit the current fields again.');
+          if(preview.workspace_key!==requestedWorkspace||preview.scientific_report_edition_id!==scientific.edition.id||
+              !/^[0-9a-f]{64}$/.test(preview.operation_id||'')||!preview.review_selection)
+            throw Error('The review preview does not identify this saved scientific report.');
+          return submitAction('source-reports.review',{edition_id:scientific.edition.id,
+            review_selection:preview.review_selection,expected_operation_id:preview.operation_id});
+        }
         await submitAction('customer.review.create',{selection:value});
       },()=>{
-        $('#operation-form')._reviewIssuer=catalogue.issuer;
+        editor=reviewFormSession('[name="review_title"]',requestedWorkspace);
+        editor.form._reviewIssuer=catalogue.issuer;
       });
+  }
+  async function prepareScientificReportReview(value){
+    if(!value||value.workspace_key!==current()||!/^[0-9a-f]{64}$/.test(value.edition_id||''))
+      throw Error('Choose a saved scientific report in its original Workspace.');
+    return newReview(null,null,{workspace_key:value.workspace_key,edition_id:value.edition_id,
+      isCurrent:typeof value.isCurrent==='function'?value.isCurrent:null});
   }
   function loadIssuer(){
     const issuer=$('#operation-form')._reviewIssuer;
@@ -302,21 +374,22 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       }))};
   }
   async function newHandback(reviewId,handbackId=null,responseId=null){
-    const workspace=current(),formSerial=++generation,params={review_id:reviewId,...(handbackId?{handback_id:handbackId}:{}),...(responseId?{response_id:responseId}:{})};
+    const opening=reviewFormRequest(),workspace=opening.workspace,params={review_id:reviewId,...(handbackId?{handback_id:handbackId}:{}),...(responseId?{response_id:responseId}:{})};
     const [source,packet]=await Promise.all([read('handback-template',params),read('review',{review_id:reviewId})]);
-    ensureHandbackWorkspace(workspace);if(formSerial!==generation)return;
+    ensureHandbackWorkspace(workspace);if(!opening.current())return;
     if(!source.draft||source.draft.review_id!==reviewId)throw Error('Reopen the engineering response for this retained review.');
     const key=[workspace,reviewId,source.draft.response_id,source.draft.previous_handback_id??'initial'].join(':');
     let draft=handbackDrafts.get(key)??source.draft,revision=source.revision,revisionSerial=0,loadingRevision=false,revisionFailed=false;
     if(draft.revised_review_id!==source.draft.revised_review_id&&draft.revised_review_id){
       const selected=await read('handback-template',{...params,response_id:draft.response_id,revised_review_id:draft.revised_review_id});
-      ensureHandbackWorkspace(workspace);if(formSerial!==generation)return;revision=selected.revision;
+      ensureHandbackWorkspace(workspace);if(!opening.current())return;revision=selected.revision;
     }else if(!draft.revised_review_id)revision=null;
     const sourceResponse=packet.responses.find(row=>row.id===draft.response_id);
     if(!sourceResponse)throw Error('The selected original customer response is not in this review.');
     const requests=source.requests;
     const byId=new Map(draft.items.map(row=>[row.request_id,row]));
     if(requests.some(row=>!byId.has(row.id))||requests.length!==draft.items.length)throw Error('The saved draft differs from its original requested changes. Reopen the saved engineering response.');
+    let editor=null;
     const itemsMarkup=()=>requests.map(request=>handbackItemEditor(request,byId.get(request.id),revision)).join('');
     openForm(handbackId?'Revise engineering response':'Prepare engineering response',
       'Keep the customer’s original decisions and record the engineering work that answers them. Save a planning edition while work is underway; mark it ready when each request has an explanation and revised work is selected.',
@@ -330,7 +403,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       field('handback_summary','Engineering response summary',draft.summary,{type:'textarea',wide:true,required:true,rows:3,maximum:20000})+'</div>'+
       '<p id="handback-edit-state" role="status">Draft stays available in this workspace until saved.</p><div id="handback-request-editors">'+itemsMarkup()+'</div>',
       'Save engineering response',async()=>{
-        ensureHandbackWorkspace(workspace);
+        ensureHandbackWorkspace(workspace);editor.ensure();
         if(loadingRevision)throw Error('Wait for the selected revised review to load.');
         if(revisionFailed)throw Error('Reload the selected revised review before saving this response.');
         draft=handbackValues(draft);handbackDrafts.set(key,draft);
@@ -346,26 +419,28 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
         }
         await submitAction('customer.review.handback.save',{handback:draft});
       },()=>{
-        const form=$('#operation-form'),revisionSelect=$('[name="handback_revision"]',form),state=$('#handback-edit-state',form);
+        editor=reviewFormSession('[name="handback_revision"]',workspace);
+        const form=editor.form,revisionSelect=$('[name="handback_revision"]',form),state=$('#handback-edit-state',form);
         const remember=()=>{draft=handbackValues(draft);handbackDrafts.set(key,draft);state.textContent='Draft retained in this workspace. Save an edition to include it in the project.';};
-        form.addEventListener('input',remember);form.addEventListener('change',remember);
+        editor.listen(form,'input',remember);editor.listen(form,'change',remember);
         const reloadRevision=async()=>{
+          editor.ensure();
           draft=handbackValues(draft);handbackDrafts.set(key,draft);const serial=++revisionSerial,selectedId=draft.revised_review_id;
           loadingRevision=true;revisionFailed=false;state.textContent='Loading the selected revised review…';
           try{
             let value=null;
             if(selectedId){const result=await read('handback-template',{...params,response_id:draft.response_id,revised_review_id:selectedId});value=result.revision;}
-            if(serial!==revisionSerial||!form.isConnected||workspace!==current())return;
+            if(serial!==revisionSerial||!editor.current())return;
             // Capture edits made while the file inventory was loading.
             draft=handbackValues(draft);handbackDrafts.set(key,draft);revision=value;
             byId.clear();for(const row of draft.items)byId.set(row.request_id,row);
-            $('#handback-request-editors',form).innerHTML=itemsMarkup();
+            form.querySelector('#handback-request-editors').innerHTML=itemsMarkup();
             state.textContent='Revised review loaded. Review the replacement references for each requested change.';
-          }catch(error){if(serial===revisionSerial&&form.isConnected){revisionFailed=true;state.textContent=error.message||String(error);}}
+          }catch(error){if(serial===revisionSerial&&editor.current()){revisionFailed=true;state.textContent=error.message||String(error);}}
           finally{if(serial===revisionSerial)loadingRevision=false;}
         };
         form._reloadHandbackRevision=reloadRevision;
-        revisionSelect.addEventListener('change',reloadRevision);
+        editor.listen(revisionSelect,'change',reloadRevision);
       });
   }
   function handbackRequestRows(result){
@@ -397,24 +472,29 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       {kind:'customer-review-handback',id:row.id});
   }
   async function exportHandback(id){
-    const workspace=current(),result=await read('handback',{handback_id:id}),row=result.handback;
+    const opening=reviewFormRequest(),workspace=opening.workspace,result=await read('handback',{handback_id:id}),row=result.handback;
+    if(!opening.current())return;
+    let editor=null;
     if(row.state!=='ready')throw Error('Save a ready engineering response before exporting its customer handback.');
     openForm('Export complete customer handback','Export the original customer review, the selected revised review and the complete engineering response history together.',
       '<div class="review-intro"><h3>'+esc(result.original?.title||short(row.review_id))+'</h3><p class="review-source-detail">'+esc(row.summary)+'</p><p>Revised selection: '+esc(result.revised?.title||short(row.revised_review_id))+'</p><p>'+row.items.length+' requested changes with retained engineering dispositions.</p></div>',
-      'Export handback',()=>{ensureHandbackWorkspace(workspace);return submitAction('customer.review.handback.export',{handback_id:id});});
+      'Export handback',()=>{editor.ensure();return submitAction('customer.review.handback.export',{handback_id:id});},()=>{editor=reviewFormSession('.review-intro',workspace);});
   }
   function receiveHandback(reviewId){
-    const workspace=current();
+    const workspace=current();let editor=null;
     openForm('Receive complete handback package','Choose the complete handback ZIP in its restored source project. The task retains its full files and joins the original review and response records to that project.',
       '<label class="review-file-picker"><span>Complete handback ZIP</span><input name="handback_package" type="file" accept=".zip,application/zip" required></label><p id="handback-receive-selection" role="status"></p>',
       'Receive handback',async()=>{
-        ensureHandbackWorkspace(workspace);const file=$('#operation-form [name="handback_package"]').files[0];
+        editor.ensure();const file=editor.anchor.files[0];
         if(!file)throw Error('Choose the complete exported handback ZIP.');
-        const uploaded=await uploadFile(file);ensureHandbackWorkspace(workspace);
+        const uploaded=await uploadFile(file);editor.ensure();
+        if(editor.anchor.files[0]!==file)throw Error('The selected handback changed during upload. Review the selected file before receiving it.');
         await submitAction('customer.review.handback.import',{upload_id:uploaded.id});
-      },()=>{$('#operation-form [name="handback_package"]').addEventListener('change',event=>{const file=event.target.files[0];$('#handback-receive-selection').textContent=file?file.name+' · '+file.size.toLocaleString()+' bytes':'';});});
+      },()=>{
+        editor=reviewFormSession('[name="handback_package"]',workspace);
+        editor.listen(editor.anchor,'change',event=>{const file=event.target.files[0];$('#handback-receive-selection',editor.form).textContent=file?file.name+' · '+file.size.toLocaleString()+' bytes':'';});
+      });
   }
-
 
   // Complete ordinary review packages retain their original ZIP and response generation.
   function ensurePacketWorkspace(workspace){
@@ -719,37 +799,42 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     drawPacket(packet,tab);
   }
   async function exportReview(id){
-    const workspace=current(),packet=await read('review',{review_id:id});
+    const opening=reviewFormRequest(),workspace=opening.workspace,packet=await read('review',{review_id:id});
+    if(!opening.current())return;
+    let editor=null;
     openForm('Export complete review desk',
       'Create a portable copy of this selection, its original files and this exact response history.',
       '<div class="review-intro"><h3>'+esc(packet.review.title)+'</h3><p>'+esc(packet.review.purpose)+'</p><p>'+packet.review.artifacts.length+' complete files · '+packet.review.requirements.length+' requirements · '+packet.responses.length+' retained responses</p><p>After export, open the desk here or download and extract its ZIP. Record decisions in the desk and export its response JSON for receiving.</p></div>',
       'Export review',()=>{
-        if(current()!==workspace)throw Error('The workspace changed. Reopen the original review before exporting.');
+        editor.ensure();
         return submitAction('customer.review.export',{review_id:id,expected_response_id:packet.latest_response_id});
-      });
+      },()=>{editor=reviewFormSession('.review-intro',workspace);});
   }
   async function receiveResponse(id){
-    const packet=await read('review',{review_id:id});
-    let originalFile=null,documentValue=null;
+    const opening=reviewFormRequest(),workspace=opening.workspace,packet=await read('review',{review_id:id});
+    if(!opening.current())return;
+    let originalFile=null,documentValue=null,editor=null;
     openForm('Receive review response',
       'Choose the complete response JSON exported by this review desk. The original predecessor and each selected decision are preserved.',
       '<div class="review-intro"><h3>'+esc(packet.review.title)+'</h3><p>'+esc(packet.review.purpose)+'</p></div><label class="review-file-picker"><span>Returned response JSON</span><input name="review_response_file" type="file" accept=".json,application/json" required></label><div id="review-response-preview" aria-live="polite"></div>',
       'Retain response',async()=>{
-        const file=$('#operation-form [name="review_response_file"]').files[0];
+        editor.ensure();const file=editor.anchor.files[0];
         if(!file||file!==originalFile||!documentValue)throw Error('Choose and inspect the complete returned response.');
         if(documentValue.review_id!==id||documentValue.project_id!==packet.review.project.id)throw Error('This file belongs to a different review or project. Open the review named by the returned response.');
-        const uploaded=await uploadFile(file);
+        const originalDocument=documentValue,uploaded=await uploadFile(file);editor.ensure();
+        if(editor.anchor.files[0]!==file||originalFile!==file||documentValue!==originalDocument)throw Error('The selected response changed during upload. Inspect the selected original document before receiving it.');
         await submitAction('customer.review.response.import',{review_id:id,upload_id:uploaded.id});
       },()=>{
-        $('#operation-form [name="review_response_file"]').addEventListener('change',async event=>{
+        editor=reviewFormSession('[name="review_response_file"]',workspace);
+        editor.listen(editor.anchor,'change',async event=>{
           originalFile=null;documentValue=null;
-          const preview=$('#review-response-preview'),file=event.target.files[0];
+          const preview=$('#review-response-preview',editor.form),file=event.target.files[0];
           if(!file){preview.textContent='';return;}
           try{
             if(file.size>32*1024*1024)throw Error('The original review response format permits at most 32 MiB.');
             const value=JSON.parse(await file.text());
             if(value.schema!=='upstate.customer-review-response/v1')throw Error('Choose the response JSON exported by the review desk.');
-            if(event.target.files[0]!==file)return;
+            if(!editor.current()||event.target.files[0]!==file)return;
             originalFile=file;documentValue=value;
             const match=value.review_id===id&&value.project_id===packet.review.project.id;
             const predecessor=value.previous_response_id===packet.latest_response_id;
@@ -758,7 +843,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
               (!match?'<p class="notice error">This response belongs to a different review or project.</p>':!predecessor&&!duplicate?'<p class="notice">A newer response is retained. Inspect its history and reconcile this draft; the receiver will preserve the original response chain.</p>':'')+
               '<p><strong>'+esc(value.reviewer?.name??'Reviewer name missing')+'</strong> · '+esc(value.reviewer?.organization??'')+'</p><p>'+badge(value.disposition)+' · '+esc(date(value.created_at))+'</p><p>'+esc(value.summary??'')+'</p><p>'+(value.artifact_decisions?.length??0)+' artifact decisions · '+(value.requirement_decisions?.length??0)+' requirement decisions · '+(value.corrections?.length??0)+' corrections</p>'+
               '<details><summary>Complete returned document</summary><pre class="json-view">'+esc(pretty(value))+'</pre></details></div></section>';
-          }catch(error){preview.textContent=error.message;}
+          }catch(error){if(editor.current()&&event.target.files[0]===file)preview.textContent=error.message;}
         });
       });
   }
@@ -783,17 +868,22 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       {kind:'customer-review-response',id});
   }
   async function compareForm(){
-    const catalogue=await read('catalog');
+    const opening=reviewFormRequest(),workspace=opening.workspace,catalogue=await read('catalog');
+    if(!opening.current())return;
+    let editor=null;
     if(catalogue.reviews.length<2)throw Error('Retain two review selections to compare their original files and requirements.');
     const options=catalogue.reviews.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+' · '+esc(short(x.id))+'</option>').join('');
     openForm('Compare retained review selections','Compare the exact file editions, purpose, and requirement changes.',
       '<div class="form-grid"><label><span>Earlier selection</span><select name="review_before" required>'+options+'</select></label><label><span>Later selection</span><select name="review_after" required>'+options+'</select></label></div>',
       'Compare selections',async()=>{
-        if(val('review_before')===val('review_after'))throw Error('Choose two different retained review selections.');
-        const result=await read('compare',{before_id:val('review_before'),after_id:val('review_after')});
+        editor.ensure();const before=val('review_before'),after=val('review_after');
+        if(before===after)throw Error('Choose two different retained review selections.');
+        const result=await read('compare',{before_id:before,after_id:after});
+        if(!editor.current())return;
+        if(val('review_before')!==before||val('review_after')!==after)throw Error('The selected reviews changed while comparing. Compare the current selection again.');
         closeForm();
         showComparison(result);
-      },()=>{$('#operation-form [name="review_after"]').value=catalogue.reviews.at(-1).id;});
+      },()=>{editor=reviewFormSession('[name="review_before"]',workspace);$('#operation-form [name="review_after"]').value=catalogue.reviews.at(-1).id;});
   }
   function showComparison(result){
     const changed=result.changed.map(row=>'<tr><td>'+esc(row.label)+'</td><td>Changed '+esc(row.changed_fields.join(', '))+'</td></tr>');
@@ -852,5 +942,5 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='compare')return compareForm();
     if(action==='template')return template(id);
   }
-  return {render,mount,detach,dispatch,taskActions,openReview,mapActions};
+  return {render,mount,detach,dispatch,taskActions,openReview,mapActions,prepareScientificReportReview};
 }

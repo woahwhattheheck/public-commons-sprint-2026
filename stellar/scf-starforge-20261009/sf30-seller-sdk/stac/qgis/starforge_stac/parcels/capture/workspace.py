@@ -214,9 +214,44 @@ class CaptureWorkspace:
                json_bytes({"status": value["status"], "attemptId": value["attemptId"]}), immutable=False)
         return True
 
-    def blocked(self, item):
+    def blocked(self, item, *, reconcile=False):
+        """Recover admission from original durable events, including interrupted progress writes."""
         path = self.root / "progress" / (item["id"] + ".json")
-        return read_json(path) if path.exists() else None
+        progress = read_json(path) if path.exists() else None
+        events = []
+        directory = self.root / "attempts" / item["id"]
+        for pattern in ("*.response.json", "*.failure.json"):
+            for retained in directory.glob(pattern):
+                value = read_json(retained)
+                if value.get("job") == item and value.get("status") in ("WAITING", "BLOCKED"):
+                    events.append(value)
+        if not events:
+            return progress
+        newest = max(events, key=lambda row: (moment(row["startedAt"]), row["attemptId"]))
+        current = [row for row in events if row["attemptId"] == newest["attemptId"]]
+        value = dict(max(current, key=lambda row: moment(row.get("failedAt", row.get("capturedAt", row["startedAt"])))))
+        # A local write failure after a durable HTTP response must not shorten Retry-After.
+        deadlines = [row["retryAfter"] for row in current if row.get("retryAfter")]
+        if deadlines:
+            value["retryAfter"] = max(deadlines, key=moment)
+        if any(row["status"] == "BLOCKED" for row in current):
+            value["status"] = "BLOCKED"
+        retries = []
+        for retained in (self.root / "retries").glob("*.json"):
+            retry = read_json(retained)
+            previous = retry.get("previous") or {}
+            if (retry.get("jobId") == item["id"] and retry.get("reason") and
+                    previous.get("attemptId") == value["attemptId"] and
+                    moment(retry["createdAt"]) >= moment(value["startedAt"]) and
+                    (not value.get("retryAfter") or moment(retry["createdAt"]) >= moment(value["retryAfter"]))):
+                retries.append((retry["createdAt"], retained.name))
+        if retries:
+            created, retry_id = max(retries, key=lambda row: (moment(row[0]), row[1]))
+            value = {"status": "READY", "attemptId": value["attemptId"],
+                     "retryRecord": retry_id, "retryAt": created}
+        if reconcile and progress != value:
+            atomic(path, json_bytes(value), immutable=False)
+        return value
 
     def graph(self):
         self.config()
@@ -283,7 +318,7 @@ class CaptureWorkspace:
                 if not graph["pending"]: break
                 item = graph["pending"][0]
                 if self.recover_response(item): continue
-                progress = self.blocked(item) or {}
+                progress = self.blocked(item, reconcile=True) or {}
                 if progress.get("status") == "BLOCKED": break
                 if progress.get("retryAfter") and moment(progress["retryAfter"]) > moment(now()): break
                 attempt_id = str(uuid.uuid4())
@@ -340,7 +375,7 @@ class CaptureWorkspace:
             graph = self.graph()
             check(job_id in {item["id"] for item in graph["pending"]}, "CAPTURE_JOB", "Select an existing unresolved request.")
             item = next(x for x in graph["pending"] if x["id"] == job_id)
-            previous = self.blocked(item) or {}
+            previous = self.blocked(item, reconcile=True) or {}
             check(not previous.get("retryAfter") or moment(previous["retryAfter"]) <= moment(now()),
                   "CAPTURE_COOLDOWN", "Preserve the publisher's actual retry deadline.", retryAfter=previous.get("retryAfter"))
             record = {"jobId": job_id, "reason": reason, "createdAt": now(), "previous": previous}

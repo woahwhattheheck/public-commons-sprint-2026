@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "chemistry",
   "title": "Reach chemistry",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "order": 84,
   "assets": [
     "chemistry.mjs",
@@ -27,7 +27,13 @@
       "chemistry.result.page",
       "chemistry.case.from-source",
       "chemistry.export",
-      "chemistry.receive"
+      "chemistry.receive",
+      "chemistry.report.prepare",
+      "chemistry.report.get",
+      "chemistry.report.list",
+      "chemistry.report.source.prepare",
+      "chemistry.report.source.get",
+      "chemistry.report.source.list"
     ],
     "invoke": {
       "handler": "invoke",
@@ -98,6 +104,32 @@
           "workspace_key",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -122,7 +154,10 @@
       "api",
       "showTask",
       "toast",
-      "fileList"
+      "fileList",
+      "navigate",
+      "getWorkspace",
+      "openScientificReport"
     ],
     "styles": [
       "/web/chemistry.css"
@@ -136,6 +171,11 @@
       "mount": "mount",
       "update": "update",
       "detach": "detach"
-    }
+    },
+    "task_actions": "taskActions",
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "chemistry-"
+    ]
   }
 }

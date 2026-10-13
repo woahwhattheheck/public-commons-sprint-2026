@@ -1,8 +1,10 @@
 import {verifyProductSourceImports} from './grant-product-authoring-core.mjs';
+import {verifyIssuerProgrammes,issuerContextSection} from './grant-issuer-source.mjs';
+import {selectedIssuerContext} from './grant-issuer-core.mjs';
 // MIT. Exact original files and prepared output inside the existing submission draft.
 import {
   ANSWERS, REQUIREMENTS, SCHEMA, ENVELOPE, MAX_BYTES, makeSource, validateDraft,
-  validateSource, retainVersion, receiveSource, outputText, applicationOutput, fieldStatus,
+  validateSource, retainVersion, receiveSource, outputText, applicationOutput, fieldStatus, formSourceReview,
 } from './grant-submission-core.mjs';
 import {verifyPlanningSource} from './grant-plan-source.mjs';
 import {
@@ -308,10 +310,13 @@ function sourceContext(draft) {
     issues.push('No complete four-file reviewer bundle was received for application '+sha+'. Its original application text is retained.');
   if(!value.selection.actor.trim())issues.push('No preparing operator name was entered.');
   if(!value.selection.evidenceIds.length)issues.push('No separate evidence files were selected for this prepared edition.');
+  const issuer=selectedIssuerContext(draft);
+  if(issuer && (draft.planningReview?.sourceSha!==issuer.body.plan.fileSha256 || draft.planningReview?.revision!==issuer.body.plan.revision))
+    issues.push('The selected issuer programme retains native plan revision '+issuer.body.plan.revision+'. Its exact plan can be received and reviewed through Native planning.');
   return {bundles,issues,selectedBundleId:current?.id||null};
 }
-export async function prepareSubmission(draft,{at=now()}={}) {
-  enteredDate(at,'Preparation time');await verifyHandover(draft);
+export async function prepareSubmission(draft,{at=now(),planningOptions={}}={}) {
+  enteredDate(at,'Preparation time');await verifyHandover(draft,{planningOptions});
   const selection=handoverOf(draft).selection,context=sourceContext(draft);
   const items=preparedItems(draft,{kind:selection.outputKind,format:selection.format});
   need(items.length>0,'Add the actual issuer fields or select the canonical answers.');
@@ -319,9 +324,11 @@ export async function prepareSubmission(draft,{at=now()}={}) {
   const snapshot=authorSnapshot(draft);
   const body={createdAt:at,title:selection.title,actor:selection.actor,note:selection.note,snapshot,
     selectedBundleId:context.selectedBundleId,bundleIds:context.bundles.map(row=>row.id),evidenceIds:[...selection.evidenceIds],
+    issuerProgrammeId:selection.issuerProgrammeId??null,
     output:{kind:selection.outputKind,format:selection.format,items,text:output,bytes:utf8(output).length,sha256:await contentHash(output)},
     fieldIssues:selection.outputKind==='fields'?draft.fields.map(row=>({id:row.id,label:row.label,
       ...fieldStatus(row,draft.form,selection.format)})):[],
+    fieldSourceReview:selection.outputKind==='fields'?formSourceReview(draft):null,
     contextIssues:context.issues,
     statusMeaning:'Prepared exact output and retained context. Preparation is not a submission, issuer receipt, award decision, payment or approval.',
   };
@@ -360,6 +367,9 @@ export function comparePrepared(draft,id) {
     const after=Object.prototype.hasOwnProperty.call(current,key)?current[key]:null;
     if(!same(before,after))context.push({key,before,after});
   }
+  const frozenIssuer=edition.body.issuerProgrammeId??null,currentIssuer=handoverOf(draft).selection.issuerProgrammeId??null;
+  if(frozenIssuer!==currentIssuer)context.push({key:'issuerProgramme',before:frozenIssuer?clone(selectedIssuerContext(draft,frozenIssuer).body):null,
+    after:currentIssuer?clone(selectedIssuerContext(draft,currentIssuer).body):null});
   const outputItems=changedItems(edition.body.output.items,currentItems);
   return {editionId:id,preparedAt:edition.body.createdAt,currentUpdatedAt:draft.updatedAt,
     outputKind:kind,format,outputItems,answers,fields,context,
@@ -377,6 +387,7 @@ export async function verifyHandover(draft,{planningOptions={}}={}) {
   for(const object of value.objects)await verifyRetainedObject(draft,object);
   for(const collection of ['bundles','evidence','editions','returns'])for(const row of value[collection])
     need(await contentHash(canonical(row.body))===row.id,'The retained '+collection+' record differs from its original content identity.');
+  await verifyIssuerProgrammes(draft,{planningOptions});
   for(const bundle of value.bundles)await verifyReviewerBundle(draft,bundle);
   for(const edition of value.editions) {
     const body=edition.body,snapshot=hydrateAuthorSnapshot(draft,body.snapshot);
@@ -393,6 +404,9 @@ export async function verifyHandover(draft,{planningOptions={}}={}) {
       'The frozen output differs from its complete retained authoring state.');
     const expected=body.output.kind==='fields'?snapshot.fields.map(row=>({id:row.id,label:row.label,...fieldStatus(row,snapshot.form,body.output.format)})):[];
     need(same(expected,body.fieldIssues),'The frozen field observations differ from their actual retained fields.');
+    // Earlier prepared editions predate this observation and keep their exact bodies.
+    if(Object.prototype.hasOwnProperty.call(body,'fieldSourceReview'))need(same(body.fieldSourceReview,body.output.kind==='fields'?formSourceReview(snapshot):null),
+      'The prepared field source comparison differs from its frozen authoring state.');
   }
   return draft;
 }
@@ -446,9 +460,15 @@ export function preparedReport(draft,id) {
     ...body.evidenceIds.map(id=>{const item=handoverOf(draft).evidence.find(row=>row.id===id),e=item.body;return '<h3>'+escaped(e.title)+'</h3>'+para(e.kind+' · recorded '+e.createdAt+' · operator '+(e.actor||'not entered'))+
       para('Original observation '+(e.observedAt||'not entered'))+para(e.sourceUrl)+para(e.targets.map(row=>row.kind+': '+row.label+' ['+row.id+']').join('; ')||'No item-specific association was entered.')+pre(e.note)+para('Evidence '+id);}),
     ...body.contextIssues.map(para),
+    issuerContextSection(draft,body.issuerProgrammeId??null),
     '<h2>Recorded field observations</h2>',
     ...(body.fieldIssues.length?body.fieldIssues.map(row=>'<h3>'+escaped(row.label||row.id)+'</h3>'+para(JSON.stringify(row.counts))+
       (row.issues.length?row.issues.map(para).join(''):para('No issue from the recorded field conventions.'))):[para('Canonical-answer output; no issuer-field limit comparison was recorded.')]),
+    ...(body.fieldSourceReview?[
+      '<h2>Answer coverage and source wording at preparation</h2>',para(body.fieldSourceReview.meaning),
+      table(['Answer area','Mapped field identities'],body.fieldSourceReview.answers.map(row=>[row.title,row.fieldIds.join(', ')||'No association entered'])),
+      table(['Field','Source state','Changed answer identities','Last wording choice','Reviewed at'],body.fieldSourceReview.fields.map(row=>[row.label||row.id,row.status,row.changedAnswerIds.join(', '),row.choice||'',row.reviewedAt||''])),
+    ]:[]),
     '<h2>Original issuer observations</h2>',
     para('These are the operator’s retained observations and original files. File hashes identify received bytes; they do not independently authenticate an issuer or prove submission or approval.'),
     ...(returns.length?returns.map(row=>'<h3>'+escaped(row.body.kind)+'</h3>'+

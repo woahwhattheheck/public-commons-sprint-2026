@@ -307,3 +307,7 @@ source companions. The complete Workspace remains the transfer route for native
 run inputs, execution environment, other studies and further calculations.
 Capturing an existing study is not a new native execution or a delivery to an
 external recipient.
+
+## Retained task-result controls
+
+The registered Receiving waters desk supplies its original `taskActions` method for queued plan, source and analysis results. The report provider decorates a completed source task with `_extension_task_actions: {"extension_id": "receiving-waters"}`. The shared host resolves this hint only to an already registered desk with an explicit `client.task_actions` method; it never imports a module supplied by a task payload. The original controller generates the Inspect source and Use in scientific report controls, which retain the exact captured Workspace and source identity. The installer removes the legacy mounted controller and admits the published version 6 descriptor when applying version 7.

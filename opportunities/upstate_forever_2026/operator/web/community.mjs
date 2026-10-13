@@ -1,3 +1,5 @@
+import {attachCommunityRevisions} from './community_revisions.mjs';
+
 /**
  * Utility/community planning inside the original Upper Savannah operator.
  * Every mutation uses the host's retained form operation and native task queue.
@@ -31,6 +33,60 @@ const empty=(title,description,actions='')=>'<div class="empty"><h2>'+e(title)+'
 const priorityOptions=['high','medium','low','watch'].map(id=>({id,title:human(id)}));
 const strategyOptions=['protect','restore','monitor','investigate','other'].map(id=>({id,title:human(id)}));
 const statusOptions=['proposed','selected','in_progress','complete'].map(id=>({id,title:human(id)}));
+
+
+/** Compare the two retained plan editions printed by the original report producer. */
+export function communityPlanRevisionMarkup(revision){
+  if(!revision)return '';
+  if(revision.schema!=='upstate.community-plan-revision/v1')return '<p class="notice">Open the original report files to inspect this plan revision edition.</p>';
+  const value=x=>x===null||x===undefined?'Not entered':x===''?'Empty':
+    Array.isArray(x)?(x.length?x.map(value).join('; '):'None'):
+    typeof x==='object'?Object.entries(x).map(([k,v])=>human(k)+': '+value(v)).join('; '):
+    typeof x==='boolean'?(x?'Yes':'No'):String(x);
+  const row=cells=>'<tr>'+cells.map(cell=>'<td>'+e(cell)+'</td>').join('')+'</tr>';
+  const counts=revision.counts||{},selection=revision.selection||{},costs=revision.costs||{},
+    before=costs.before||{},after=costs.after||{},context=revision.scientific_context||{},csv=revision.received_csv||{};
+  const summary=table(['Interventions added','Removed','Changed','Unchanged','Changed fields'],[
+    row([counts.added_interventions,counts.removed_interventions,counts.changed_interventions,
+      counts.unchanged_interventions,counts.changed_fields].map(value))]);
+  const changes=list(revision.changes),planChanges=list(revision.plan_changes);
+  const changeTable=changes.length?table(['Change','Intervention','Field','Previous value','Saved value'],
+    changes.map(item=>row([human(item.change),item.title||item.intervention_id,human(item.field),
+      value(item.before),value(item.after)]))):'<p class="note">No intervention fields changed in this saved revision.</p>';
+  const estimateTable=table(['Entered estimate basis','Previous plan','Saved plan'],[
+    row(['Entered total (USD)',before.entered_total_usd==null?'Not entered':usd(before.entered_total_usd),
+      after.entered_total_usd==null?'Not entered':usd(after.entered_total_usd)]),
+    row(['Interventions with entered estimates',value(before.known_estimate_count),value(after.known_estimate_count)]),
+    row(['Interventions without estimates',value(before.unknown_estimate_count),value(after.unknown_estimate_count)])]);
+  const membership=table(['Whole source block-group selection','Saved change'],[
+    row(['Previous selection',value(selection.before)]),row(['Saved selection',value(selection.after)]),
+    row(['Added block groups',value(selection.added_geoids)]),row(['Removed block groups',value(selection.removed_geoids)]),
+    row(['Previous whole-group summary',value(selection.before_summary)]),row(['Saved whole-group summary',value(selection.after_summary)])]);
+  const contextRows=list(context.identifier_changes).map(item=>row([human(item.field),value(item.before),value(item.after)]));
+  const snapshots=table(['Original lineage','Previous plan','Saved plan'],[
+    row(['Scientific snapshot SHA256',value(context.before_snapshot_sha256),value(context.after_snapshot_sha256)]),
+    row(['Received CSV SHA256',value(csv.before_sha256),value(csv.after_sha256)]),
+    row(['CSV import plan',value(csv.before_import_plan_id),value(csv.after_import_plan_id)])]);
+  const previous=typeof revision.previous_plan_id==='string'&&/^[a-f0-9]{64}$/.test(revision.previous_plan_id)?
+    button('plan-open','Open previous saved plan','data-id="'+e(revision.previous_plan_id)+'"'):'';
+  return section('Changes from previous saved plan',
+    'Revision '+value(revision.previous_revision_number)+' → '+value(revision.revision_number)+
+    '. This register compares retained planning decisions and original selections.',
+    summary+'<h3>Intervention changes</h3>'+changeTable+
+    (planChanges.length?'<h3>Plan details</h3>'+table(['Field','Previous value','Saved value'],
+      planChanges.map(item=>row([human(item.field),value(item.before),value(item.after)]))):'')+
+    '<h3>Entered cost estimates</h3>'+estimateTable+
+    '<p class="note">Entered-estimate difference: '+e(costs.entered_estimate_difference_usd==null?'Not entered':usd(costs.entered_estimate_difference_usd))+
+    '. '+e(costs.basis||'This difference compares entered estimates; unknown estimates remain separate.')+'</p>'+
+    '<h3>Selected communities</h3><p class="note">Counts describe whole original source block groups. Overlapping utility and watershed selections retain their original membership.</p>'+membership+
+    '<h3>Scientific context and original CSV</h3><p class="note">'+
+    e(context.snapshot_changed?'The retained scientific snapshot changed.':'The retained scientific snapshot is unchanged.')+'</p>'+
+    (contextRows.length?table(['Context selection','Previous value','Saved value'],contextRows):'')+
+    '<details class="technical"><summary>Original plan and source identities</summary>'+
+    table(['Edition','Plan ID'],[row(['Previous',revision.previous_plan_id]),row(['Saved',revision.plan_id])])+
+    snapshots+'</details>'+
+    '<p class="note">The complete report includes the previous plan, revision summary and field-change CSV.</p>',previous);
+}
 
 export function selectCommunityGroups(groups,selection={}){
   const utilities=list(selection.utility_ids),watersheds=list(selection.watershed_ids),geoids=list(selection.geoids);
@@ -303,6 +359,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   const tables=()=>list(data().community_tables);
   const plans=()=>list(data().community_plans);
   const reports=()=>list(data().community_reports);
+  const revisions=attachCommunityRevisions({getState:current,api,endpoint,openForm,submitAction,detail,fileList,openPlan:id=>planDetail(id)});
   const key=(kind,id)=>workspace()+'|'+kind+'|'+id;
   function sync(){
     if(activeWorkspace!==workspace()){
@@ -470,14 +527,15 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       const count=list(p.selected_groups).length||p.summaries?.overall?.groups;
       return '<tr><th scope="row">'+e(p.title)+'<small>'+e(p.purpose||'')+'</small></th><td>'+e(row('community_tables',p.table_id)?.title||short(p.table_id))+'</td>'+
         '<td class="number-cell">'+n(count)+'</td><td class="number-cell">'+n(list(p.interventions).length)+'</td><td>'+e(p.previous_plan_id?'Revised plan':'Initial plan')+'</td>'+
-        '<td class="actions-cell">'+button('plan-open','Open','data-id="'+e(p.id)+'"','small')+button('plan-revise','Revise','data-id="'+e(p.id)+'"','small')+button('report-new','Build report','data-id="'+e(p.id)+'"','small')+'</td></tr>';
+        '<td class="actions-cell">'+button('plan-open','Open','data-id="'+e(p.id)+'"','small')+button('plan-revise','Revise','data-id="'+e(p.id)+'"','small')+button('report-new','Build report','data-id="'+e(p.id)+'"','small')+revisions.planButton(p)+'</td></tr>';
     });
   }
   function planView(){
-    return plans().length?section('Intervention plans','Each saved plan keeps its original source table, selected communities, model context and previous revision.',
+    const body=plans().length?section('Intervention plans','Each saved plan keeps its original source table, selected communities, model context and previous revision.',
       table(['Plan / purpose','Community table','Groups','Interventions','Revision',''],planRows()),
       button('plan-new','New intervention plan','','primary')):
       empty('Build a source-water intervention plan','Select communities, connect the original scientific results, and record a complete protection, restoration or monitoring work program.',button('plan-new','New intervention plan','','primary'));
+    return body+revisions.renderList();
   }
   function reportView(){
     return reports().length?section('Community and utility reports','Open a retained report to preview its full narrative and download every original editable file.',
@@ -957,7 +1015,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     selectRetainedTable(p.table_id);local.plan=p.id;local.tab='plans';if(row('community_reports',local.report)?.plan_id!==p.id)local.report='';persist();
     const related=reports().filter(r=>(r.plan_id||r.selection?.plan_id)===id);
     detail(p.title,
-      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+'</div>'+
+      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+revisions.planButton(p)+'</div>'+
       metrics(groups)+section('Selected communities',t.title,groupTable(groups,t))+
       section('Intervention work program','Retained priorities, work owners, intended benefits and costs.',interventionTable(p.interventions,t))+
       (p.intervention_import?section('Received intervention programme',p.intervention_import.source.filename,'<div class="section-body"><p>'+n(p.intervention_import.summary.row_count)+' original CSV rows retained with this revision. '+n(p.intervention_import.summary.added_ids.length)+' added, '+n(p.intervention_import.summary.changed_ids.length)+' changed and '+n(p.intervention_import.summary.removed_ids.length)+' removed from the preceding saved plan.</p><p class="note">Build the complete report to download the original received CSV beside the current editable programme.</p></div>'):'')+
@@ -1034,6 +1092,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openDelivery(JSON.parse(JSON.stringify(selection)));
   }
   function taskActions(task){
+    if(task?.action==='community.plan.compare')return revisions.taskActions(task);
     if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
       (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
@@ -1049,7 +1108,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
       (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+
       button('report-source','Use in scientific report','data-id="'+e(id)+'"')+'</div>'+
-      '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+
+      '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+communityPlanRevisionMarkup(r.plan_revision)+
       (preview&&html?'<iframe class="community-report-preview" title="'+e(title)+'" src="'+e(html.url)+'" sandbox="" referrerpolicy="no-referrer"></iframe>':'')+
       (files.length?fileList(files):'<p class="notice">The report has no completed file tickets yet. Inspect its original operation for progress.</p>')+
       '<details class="technical"><summary>Complete retained report record</summary><pre class="json-view">'+e(JSON.stringify(r,null,2))+'</pre></details>';
@@ -1059,6 +1118,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openItem(buttonNode.dataset.kind,buttonNode.dataset.id);
   }
   async function dispatch(node){
+    if(node.dataset.action?.startsWith('community-revision-'))return revisions.dispatch(node);
     const action=node.dataset.action?.replace(/^community-/,'');
     if(action?.startsWith('tab-')){local.tab=action.slice(4);redraw();return;}
     if(action==='sources'){document.getElementById('detail-dialog')?.close();return sourceForm();}

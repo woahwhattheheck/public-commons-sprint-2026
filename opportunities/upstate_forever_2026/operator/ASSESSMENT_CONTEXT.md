@@ -34,9 +34,10 @@ a negative impairment finding or proof of complete assessment coverage.
 
 ## Operator workflow
 
-The maintained extension registry discovers these six files:
+The maintained extension registry discovers these seven files:
 
 - model/assessment_context.py
+- model/assessment_report_context.py
 - operator/assessment_context.py
 - operator/extensions/assessment-context.json
 - operator/web/assessment_context.mjs
@@ -359,7 +360,9 @@ The saved report and operator show each original edition reference as its own so
 
 ## Send a saved context to the existing scientific and client report
 
-Open the exact saved assessment context. Under **Scientific and client report**, choose a saved delivery if its native runs, map selection and previously ordered scientific sources should be retained. Leave the choice at **New report selection** to prepare a new report form. Select **Use saved assessment context in report**. The original task queue retains the operation; after it completes, **Open prepared report form** opens the existing Maps and delivery form. Review the delivery settings and use its normal generation and download controls.
+Open the exact saved assessment context. Under **Scientific and client report**, select **Use saved assessment context in report**. The original task queue retains the operation. After it completes, **Open scientific report** opens the existing ordered scientific composer with this exact retained source. Review the source order, title and contact, preview the report, then use the composer’s normal generation and download controls. This source-only report can be published from the completed assessment or parcel context without selecting a regional model run.
+
+To retain an existing map delivery’s native runs, map settings and previously selected scientific studies, choose that saved delivery before preparing the context. **Open Maps and delivery** opens its original full selection. **Open scientific report** passes that selection’s ordered scientific source choices into the composer, where the existing draft order and nonempty title/contact remain under the operator’s control. The two buttons use the same original completed report-source task.
 
 The same controls appear below an opened parcel association. **Use saved parcel and assessment context in report** includes its exact original context, parcel study, reporting boundary, parcel attributes, relationship rows and complete packages. A received parcel association keeps its original context identity and the destination context binding separately. Its retained values can be reported directly without recalculating them.
 
@@ -383,7 +386,7 @@ python -B -m model.assessment_report_context \
 
 Omit `--parcel-id` for assessment context alone. Omit `--delivery-id` for a new report selection. `--prepare-only` writes the complete recipe, source manifest and retained companion files without importing them; it cannot be combined with a selected delivery.
 
-The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass that selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
+The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass its source choices to `host.openScientificReport({workspace_key, sources, title})` for the standalone scientific composer, or pass the full selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
 
 Native operator action:
 
@@ -398,6 +401,13 @@ Native operator action:
 }
 ```
 
-The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list reopen the prepared report form only in the task's original Workspace.
+The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and both maintained composer modules, and records their source hashes in its receipt. An older application must receive the maintained Scientific reports implementation before this client is installed.
 
 For a focused receiving check, use the same actual saved context, prepare and import its report source, bind and collect it through `model.observed_context`, and verify every delivered companion against the original source member descriptor. Archive/restore the current Workspace through its normal operation and reopen the same saved source and delivery. Preserve actual context, parcel, collection, document, report and receiving IDs in the existing operation receipt.
+
+
+### Complete component installation
+
+The station installer composes its owned source with the original WBD producer's selected component inventory. Every selected original response, input and source companion is included and checked before any file changes. The WBD context module remains available when opening the existing station studies; its dated boundary association preserves each selected point's original datum and coordinates.
+
+The additive assessment scientific-report component declaration names the existing composer runtime files directly. Their implementation stays with the maintained Scientific reports producer. This explicit source membership avoids a dependency cycle with the broader observed-context data component and keeps ordinary station and assessment selections usable without introducing unrelated source datasets.

@@ -28,10 +28,15 @@ imports or documentation asset links are not treated as current application
 runtime dependencies. A maintained import, descriptor or browser asset pointing
 to that file is an explicit source-role error.
 
-This edition uses that role for the original package-based Monitoring adapter,
-the earlier Chemistry patch-installer test, and three original GeographicLib
-JSDoc pages. The current Monitoring descriptor names `monitoring_native`.
-The complete scientific sources and native source manifests remain selected.
+This edition uses that role for the archived package-based Monitoring adapter,
+its archived workspace fallback, the earlier Chemistry patch-installer test,
+and three original GeographicLib JSDoc pages. The Monitoring installer selects
+the maintained bodies listed in `current_application_files.json` when the current
+application is present. Both maintained `operator/monitoring.py` and
+`model/monitoring_workspace.py` remain required and runtime-validated; only the
+exact archived fallback bodies receive the historical role. The current
+Monitoring descriptor names `monitoring_native`. The complete scientific sources
+and native source manifests remain selected.
 
 ## HTML route templates
 
@@ -39,7 +44,10 @@ The complete scientific sources and native source manifests remain selected.
 `url_prefix` and `asset_root` values. Source Refresh's retained
 `__SOURCE_REFRESH_BASE__` route resolves to the original adjacent CSS/module
 files. Each resolved file must exist and is included in the closure. The mapping
-does not turn local route assets into ignored absolute URLs.
+does not turn local route assets into ignored absolute URLs. Source-map and
+directory inspection use the same selected bindings, including non-code resource
+bytes below a different declared asset root. Retained-only documentation does
+not pull its historical browser assets into the runtime resource traversal.
 
 Declarations reject escaping paths, unknown fields, duplicate identities and
 conflicting selected contexts. They compose with the existing component fragment

@@ -56,65 +56,14 @@ def table(rows: list[dict], fields: list[tuple[str, str]], caption: str) -> str:
             "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>" + html.escape(value(row.get(k))) + "</td>" for k,_ in fields) + "</tr>" for row in rows) + "</tbody></table>")
 
 
-def report(project: Project, result: dict) -> str:
-    schema = result.get("schema", "")
-    title = html.escape(project.title)
-    intro = ("Concentrations are milligrams of the declared conserved basis per litre. "
-             "Masses and exports are kilograms of that basis. Each reach is completely mixed at fixed volume. "
-             "Changes between input phases are explicit; coefficients and source references are retained in project.json.")
-    sections = []
-    run = result.get("baseline", result)
-    if "budgets" in run:
-        sections.append("<h2>Where the chemical mass went</h2>" + table(run["budgets"],
-            [("basis","Basis"),("initial_kg","Starting kg"),("input_kg","Added kg"),
-             ("final_storage_kg","Remaining kg"),("boundary_export_kg","Exported kg"),
-             ("untracked_reaction_sink_kg","Other sinks kg"),("residual_kg","Balance residual kg")], "Complete duration mass balance"))
-        sections.append("<h2>Final reach conditions</h2>" + table(run["final"],
-            [("reach","Reach"),("species","Species"),("basis","Basis"),("mg_l","mg/L"),("kg","Stored kg")], "Final concentrations and retained mass"))
-        series = [{"day": sample["day"], **value} for sample in run["samples"] for value in sample["values"]]
-        sections.append("<h2>Time-series results</h2>" + table(series,
-            [("day","Day"),("reach","Reach"),("species","Species"),("mg_l","mg/L"),("kg","Stored kg")], "Every requested observation point"))
-    if "sources" in result:
-        rows = [{"source": part["source_tag"], **b} for part in result["sources"] for b in part["result"]["budgets"]]
-        sections.append("<h2>Source attribution</h2>" + table(rows,
-            [("source","Source"),("basis","Basis"),("input_kg","Added kg"),("final_storage_kg","Remaining kg"),
-             ("boundary_export_kg","Exported kg"),("untracked_reaction_sink_kg","Other sinks kg")], "Original source contributions carried through the same chemistry"))
-    if "observations" in result:
-        sections.append("<h2>Observation fit and independent holdout</h2>" + table(result["observations"],
-            [("id","Observation"),("role","Use"),("day","Day"),("observed_mg_l","Observed mg/L"),
-             ("predicted_mg_l","Modeled mg/L"),("qualifier","Qualifier"),("weighted_residual","Weighted residual")], "Fitted and held-out records remain separate"))
-        sections.append(table(result["parameters"],[("id","Parameter"),("kind","Unit-bearing field"),("original","Original"),("fitted","Fitted"),("active_bound","Bound indicator")], "Calibrated coefficients"))
-        ident = result["identifiability"]
-        sections.append("<p>Local weighted-Jacobian rank: " + str(ident["rank"]) + " / " + str(ident["parameters"]) +
-                        ". " + html.escape(ident["interpretation"]) + "</p>")
-    if "rows" in result:
-        rows = [{"observation": r["observation"]["id"], "predicted_mg_l":r["predicted_mg_l"], **d}
-                for r in result["rows"] for d in r["derivatives"]]
-        sections.append("<h2>Which parameters change the result</h2>" + table(rows,
-            [("observation","Observation"),("parameter","Parameter"),("predicted_mg_l","Modeled mg/L"),
-             ("mg_l_per_parameter_unit","mg/L per parameter unit"),("elasticity","Elasticity")], "Exact forward-tangent sensitivities"))
-    if "selected" in result:
-        rows = [{"order": r["order"], **r["candidate"], "incremental_logdet_gain":r["incremental_logdet_gain"]} for r in result["selected"]]
-        sections.append("<h2>Monitoring design</h2>" + table(rows,
-            [("order","Order"),("id","Candidate"),("reach","Reach"),("species","Species"),("day","Day"),
-             ("incremental_logdet_gain","Added information")], "Local greedy design under the supplied prior"))
-    if "summaries" in result:
-        rows = [{**r["observation"], **{k:v for k,v in r.items() if k != "observation"}} for r in result["summaries"]]
-        sections.append("<h2>Parameter ensemble</h2><p>"+html.escape(result["interpretation"])+"</p>"+table(rows,
-            [("id","Observation"),("p05_mg_l","5th percentile mg/L"),("median_mg_l","Median mg/L"),("p95_mg_l","95th percentile mg/L")], "All generated parameter draws are included in the export"))
-    prov = project.raw.get("provenance", {})
-    sections.append("<h2>Input identity</h2><p>" + html.escape(str(prov.get("reference", "See project.json for input provenance."))) +
-                    "</p><p class='mono'>SHA-256 " + project.fingerprint + "</p>")
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} — chemistry results</title><style>
-*{{box-sizing:border-box}}body{{margin:0;background:#fff;color:#171717;font:15px/1.5 system-ui,sans-serif}}
-main{{max-width:1280px;margin:0 auto;padding:32px}}header{{border-bottom:2px solid #222;margin-bottom:24px;padding-bottom:18px}}
-h1{{font-size:28px;line-height:1.2}}h2{{font-size:21px;margin-top:32px}}p{{max-width:100ch}}.mono{{font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}}
-table{{width:100%;border-collapse:collapse;margin:16px 0;display:block;overflow-x:auto}}th,td{{padding:9px 12px;text-align:left;vertical-align:top;border-bottom:1px solid #ccc}}
-th{{background:#ededed;white-space:nowrap}}caption{{text-align:left;font-weight:600;margin-bottom:8px}}td{{font-variant-numeric:tabular-nums}}footer{{border-top:1px solid #aaa;margin-top:32px;padding-top:12px}}
-@media print{{main{{max-width:none;padding:0}}table{{display:table;font-size:10px}}tr{{break-inside:avoid}}h2{{break-after:avoid}}}}
-</style></head><body><main><header><p>ECOSYSTEM SCIENCES · REACH CHEMISTRY</p><h1>{title}</h1><p>{html.escape(intro)}</p></header>
-{''.join(sections)}<footer>TokenJunkieLabs · {html.escape(schema)} · Complete editable inputs and machine-readable results accompany this report.</footer></main></body></html>"""
+def report(project: Project, result: dict, request: dict | None = None) -> str:
+    """Render the current scientific presentation without changing result values."""
+    from .reporting import report as scientific_report
+    return scientific_report(project, result, request, links=[
+        ("Complete result JSON", "result.json"),
+        ("Original chemical project", "project.json"),
+        *([("Original analysis request", "request.json")] if request is not None else []),
+    ])
 
 
 def write_outputs(directory: Path, project: Project | dict, result: dict, request: dict | None = None) -> dict:
@@ -123,7 +72,7 @@ def write_outputs(directory: Path, project: Project | dict, result: dict, reques
     json_write(directory/'project.json', p.raw)
     json_write(directory/'result.json', result)
     if request is not None: json_write(directory/'request.json', request)
-    atomic_write(directory/'report.html', report(p, result).encode('utf-8'))
+    atomic_write(directory/'report.html', report(p, result, request).encode('utf-8'))
     if 'calibrated_project' in result: json_write(directory/'calibrated-project.json', result['calibrated_project'])
     run = result.get('baseline', result)
     if 'final' in run:
