@@ -1190,6 +1190,19 @@ def summarize(workspace, key):
     directory = workspace.root / "experiments" / key
     with held(directory / ".experiment.lock", blocking=False):
         state = inspect(workspace, key)
+        if (state["state"] == "complete"
+                and state.get("export_edition") == EXPORT_EDITION
+                and state.get("native_version_edition") == NATIVE_VERSION_EDITION
+                and state.get("summary_edition") == SUMMARY_EDITION
+                and state.get("response_interpretation_edition") != RESPONSE_EDITION):
+            # The normal completed-study button opens this route. Upgrade the
+            # interpretation from its authenticated saved matrix, just as execute
+            # does, without reaggregating unchanged native pixels.
+            verify_file(directory, state["artifacts"]["results"])
+            state["artifacts"] = _exports(workspace, state)
+            state["updated_at"] = now()
+            atomic_json(directory / "experiment.json", state)
+            return read_json(directory / "results.json")
         def aggregation_progress(value):
             state.update(aggregation_progress=value, updated_at=now())
             atomic_json(directory / "experiment.json", state)
