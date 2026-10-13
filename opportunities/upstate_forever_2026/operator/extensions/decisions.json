@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "decisions",
   "title": "Scenario decisions",
-  "version": "1",
+  "version": "2",
   "order": 60,
   "assets": [
     "decision_bridge.mjs",
     "scenario_decisions.mjs",
-    "scenario_decisions.css"
+    "scenario_decisions.css",
+    "decision_transfer.mjs"
   ],
   "backend": {
     "module": "decision_workbench",
@@ -44,6 +45,20 @@
         ],
         "path": "/api/decisions/view",
         "operation": "view",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/decisions/assessment/upload",
+        "operation": "assessment.upload",
         "handler": "read",
         "args": [
           "operator",

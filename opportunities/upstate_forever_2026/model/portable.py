@@ -13,7 +13,12 @@ from .common import SCHEMA, atomic_json, canonical, file_digest, held, now, read
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_delivery.py",
-                     "delivery_snapshot.py", "handoff_view.py", "focused_check.py")
+                     "delivery_snapshot.py", "handoff_view.py", "focused_check.py",
+                     "install_extensions.py", "install_experiments.py", "install_terrain.py",
+                     "receive_application_source.py", "requirements-terrain.txt",
+                     "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md",
+                     "environment.yml", "PROGRAMMES.md", "PAIRED_ENSEMBLES.md",
+                     "install_programmes.py", "requirements-paired-ensemble.txt")
 APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source")
 MAX_MANIFEST = 64 * 1024 * 1024
 
@@ -202,18 +207,8 @@ def restore(archive_path, destination):
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
-        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
-                     "community-tables", "community-plans", "community-reports"):
+        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons"):
             restored._list(kind)
-        from .communities import verify_plan_context
-        for plan in restored._list("community-plans"):
-            verify_plan_context(restored, plan)
-        for report in restored._list("community-reports"):
-            for retained in report["files"].values():
-                path = restored.root.joinpath(*member_name(retained["path"]).parts)
-                if (not path.is_file() or path.stat().st_size != retained["bytes"]
-                        or file_digest(path) != retained["sha256"]):
-                    raise ValueError("Receiving changed a complete community report")
         reviews = restored._list("spatial-reviews")
         if reviews:
             from .spatial import SpatialReview
@@ -230,6 +225,29 @@ def restore(archive_path, destination):
             from .reviews import validate_workspace
             # The archive inspection and extraction already checked every byte.
             validate_workspace(restored)
+        community_tables = restored._list("community-tables")
+        community_plans = restored._list("community-plans")
+        community_reports = restored._list("community-reports")
+        if community_tables or community_plans or community_reports:
+            from . import communities
+            from .common import verify_file
+            for table in community_tables:
+                original, _ = restored.source_file(
+                    table["source"]["collection_id"], table["source"]["source_id"])
+                if file_digest(original) != table["source"]["sha256"]:
+                    raise ValueError("Receiving changed the original community source")
+            for plan in community_plans:
+                table = communities.get_table(restored, plan["table_id"])
+                if table["source"] != plan["source"]:
+                    raise ValueError("Received community plan changed its table edition")
+                communities.verify_plan_context(restored, plan)
+            for report in community_reports:
+                plan = communities.get_plan(restored, report["plan_id"])
+                if (report["table_id"] != plan["table_id"] or
+                        report["context_snapshot_sha256"] != plan["context"]["snapshot_sha256"]):
+                    raise ValueError("Received community report changed its saved plan")
+                for artifact in report["files"].values():
+                    verify_file(restored.root, artifact)
         for grid in restored.overview()["grids"]:
             if grid["state"] == "complete":
                 restored.get_grid(grid["id"])

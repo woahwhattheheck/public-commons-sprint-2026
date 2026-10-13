@@ -184,3 +184,14 @@ The programme uses the maintained Merchant host, imports all declared original d
 The connected catalogue includes all four conformance writes, complete finding and row paging, exact finding reads, all declared full files, and the four immutable conformance collections. The input schemas come from the installed native catalogue.
 
 See [Conformance](../CONFORMANCE.md) for the complete operator workflow, SDK helpers, typed arguments, native routes, review semantics and editable receiving. The same local client, normal Merchant host, retained downloader and installed Applications entry operate these records.
+
+
+## Complete Operating Plans
+
+The same provider exposes all eight native Operating Plans operations plus full catalogue, document, draft, input and basis reads. Exact schemas come from **directory-operating-plans-schema.json**, alongside the existing Directory and Conformance contracts. Existing source/acquisition operation ownership and full-file transport are unchanged.
+
+Use **directory_operating_plan_preview** with **operating_plan_create**, review the complete response, then **directory_operating_plan_create** with the exact accepted **previewRecordId**. Save, copy and prefix-history receiving use the original OperatingPlan model and saved-head checks. Step preparation and current-registration comparison do not write native plan records.
+
+The typed client exports **prepareHumanServicesDirectoryOperatingPlan**, **saveHumanServicesDirectoryOperatingPlan**, **readHumanServicesDirectoryOperatingPlan** and **downloadHumanServicesDirectoryOperatingPlan**. The read helper reopens the entire document, working draft, source basis and complete accepted input through the maintained original-response range reader. Its optional historical revision selects old content while retaining the full history's latest draft base. The download helper receives every native JSON, Markdown or HTML byte with the existing export manifest and resume protocol.
+
+See [Operating Plans](../OPERATING_PLANS.md) for all thirteen action names, input keys, strict limits, native and browser/SDK/MCP receiving commands, saved-history semantics and the original-model source. Complete workspace imports carry the immutable **operatingPlans** records and their four retained files through the original Directory receiver; receiver-local import receipts retain their existing meaning.
