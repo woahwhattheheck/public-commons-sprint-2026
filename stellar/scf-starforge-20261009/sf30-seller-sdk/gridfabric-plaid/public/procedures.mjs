@@ -6,6 +6,9 @@ import {
   renderOperatingPlanMarkdown, renderOperatingPlanHTML, compareOperatingPlan, STEP_STATES
 } from '/procedures/model/operating-plan.mjs';
 
+import {GRID_COMPARISON_SCHEMA,compareGridFabricCaptures,receiveGridFabricComparison,renderGridFabricComparisonHTML}
+  from '/procedures/model/gridfabric-procedure-comparison.mjs';
+
 const $=id=>document.getElementById(id);
 const copy=value=>structuredClone(value);
 const format=value=>JSON.stringify(value,null,2);
@@ -185,6 +188,12 @@ async function inspectBrowserBundle(value){
       }else delete local.archive;
     }
   }
+  if(data.comparison){
+    need(object(data.comparison)&&['before','after','beforeReport','afterReport'].every(k=>typeof data.comparison[k]==='string'),
+      'Keep the complete entered comparison selection.');
+    need(['before','after'].every(k=>data.comparison[k].length<=36),'Keep the complete entered comparison request text.');
+  }
+  if(data.comparisonIncoming)need(data.comparisonIncoming.schema===GRID_COMPARISON_SCHEMA,'Keep the complete original comparison JSON.');
   if(data.incoming?.plan)inspectOperatingPlan(data.incoming.plan);
   return {data,exportedAt:framed?value.exportedAt:null};
 }
@@ -220,6 +229,9 @@ function previewBrowserMerge(incoming){
     if(!(existing.archive instanceof Blob)&&request.archive instanceof Blob)existing.archive=request.archive;
     if(request.archiveExternal)existing.archiveExternal=copy(request.archiveExternal);
   }
+  if(incoming.comparison&&!merged.comparison)merged.comparison=copy(incoming.comparison);
+  if(incoming.comparisonIncoming&&!merged.comparisonIncoming)merged.comparisonIncoming=copy(incoming.comparisonIncoming);
+  // Divergent comparison selections remain whole in backupImports.metadata; native requests and plans keep their original merge rules.
   if(!merged.current)merged.current=incoming.current;
   return {merged,conflicts,addedPlans,joinedPlans,addedRequests};
 }
@@ -258,6 +270,7 @@ async function receiveBrowserBundle(separate=false){
     try{await persist();}catch(error){Object.assign(state,previous);throw error;}
     sessionStorage.setItem('gridfabric-procedure-journal:'+browserHomeKey(),key);
   }
+  clearComparison();state.comparisonRead=null;
   state.backupPreview=null;state.journalToOpen=null;state.recordPage=null;state.detail=null;state.selectedRequest=Object.keys(state.data.requests).at(-1)||null;
   await listBrowserJournals();render();notice('The complete browser journal is received. Read each restored original request before any explicit continuation.');
 }
@@ -266,6 +279,7 @@ async function openBrowserJournal(key){
   const saved=await loadLocal(key);need(saved&&same(saved.data.workspace,state.context.workspace),'The saved browser journal belongs to another workspace.');
   Object.assign(state,{key,data:saved.data,diskVersion:saved.version,sequence:0,savedSequence:0,queue:Promise.resolve(),storageError:null,
     selectedRequest:Object.keys(saved.data.requests).at(-1)||null,backupPreview:null,journalToOpen:null,recordPage:null,detail:null});
+  clearComparison();state.comparisonRead=null;
   sessionStorage.setItem('gridfabric-procedure-journal:'+browserHomeKey(),key);render();notice('The selected complete browser journal is open. No request was sent.');
 }
 function renderBrowserRecovery(root){
@@ -365,7 +379,7 @@ const dirty=entry=>{
 };
 function changeView(section){
   state.section=section;
-  for(const name of ['plan','selection','capture','receive'])$('section-'+name).hidden=name!==section;
+  for(const name of ['plan','selection','capture','compare','receive'])$('section-'+name).hidden=name!==section;
   for(const b of document.querySelectorAll('[data-section]'))b.setAttribute('aria-current',b.dataset.section===section?'page':'false');
 }
 async function connect(){
@@ -383,7 +397,7 @@ async function connect(){
   state.context=context;state.key=key;state.diskVersion=stored?.version??0;state.sequence=0;state.savedSequence=0;
   state.data=stored?.data??{schema:'gridfabric.procedure-browser.v1',workspace:copy(context.workspace),plans:{},current:null,requests:{},incoming:null};
   state.storageError=null;state.queue=Promise.resolve();state.connected=true;
-  state.selectedRequest=Object.keys(state.data.requests).at(-1)||null;state.journalToOpen=null;
+  state.selectedRequest=Object.keys(state.data.requests).at(-1)||null;state.journalToOpen=null;clearComparison();state.comparisonRead=null;
   if(!state.data.current){const input=freshInput(context);state.data.plans[input.id]={input,plan:null,draft:null};state.data.current=input.id;await persist();}
   $('connection-panel').hidden=true;$('connection-state').textContent='Original owner connected';
   $('workspace-identity').textContent=context.workspace.workspace_id+' · '+context.workspace.workspace_directory;
@@ -412,7 +426,7 @@ async function newPlan(){
 }
 function render(){
   if(!state.data)return;
-  renderPlan();renderSelection();renderCapture();renderReceive();changeView(state.section);storageNotice();
+  renderPlan();renderSelection();renderCapture();renderCompare();renderReceive();changeView(state.section);storageNotice();
 }
 
 
@@ -863,6 +877,134 @@ function renderReceive(){
   }
   renderBrowserRecovery(root);
 }
+
+// Compare original report outcomes inside this existing desk. Reading sends no native mutation.
+function comparisonSelection(){
+  state.data.comparison??={before:'',after:'',beforeReport:'',afterReport:''};
+  return state.data.comparison;
+}
+function clearComparison(){state.comparisonResult=null;state.comparisonOffset=0;$('comparison-result')?.remove();}
+function comparisonReports(id){
+  const result=state.data.requests[id]?.view?.result,rows=new Map();
+  for(const item of result?.capture?.records||[])if(item.collection==='reports')rows.set(item.id,item.record);
+  return [...rows].map(([id,r])=>[id,id+' · '+r.status+' · '+r.row_count+' intervals']);
+}
+async function readComparisonCaptures(){
+  await flush();const chosen=copy(comparisonSelection());
+  need(UUID.test(chosen.before)&&UUID.test(chosen.after),'Select or enter the two original saved request UUIDs.');
+  const before=await readRequest(chosen.before),after=chosen.after===chosen.before?before:await readRequest(chosen.after);
+  need(before.state==='COMPLETE'&&after.state==='COMPLETE','Both original requests must have complete captures.');
+  need(same(chosen,comparisonSelection()),'The selected comparison changed while its original requests were read.');
+  clearComparison();state.comparisonRead={key:state.key,before:chosen.before,after:chosen.after,
+    beforeReceipt:before.result.receipt.sha256,afterReceipt:after.result.receipt.sha256};renderCompare();notice('Both full original captures are received. Select reports and compare their original outcomes.');
+}
+function selectedComparisonResults(){
+  const chosen=comparisonSelection(),before=state.data.requests[chosen.before],after=state.data.requests[chosen.after];
+  need(before?.status==='COMPLETE'&&after?.status==='COMPLETE'&&before.view?.result&&after.view?.result,
+    'Read both original capture outcomes before comparing. Restored browser responses require a fresh original read.');
+  need(state.comparisonRead?.key===state.key&&state.comparisonRead.before===chosen.before&&state.comparisonRead.after===chosen.after&&
+    state.comparisonRead.beforeReceipt===before.view.result.receipt.sha256&&state.comparisonRead.afterReceipt===after.view.result.receipt.sha256,
+    'Read both original captures in this page before comparing or reopening.');
+  return {before:before.view.result,after:after.view.result};
+}
+async function compareCaptures(){
+  await flush();const chosen=comparisonSelection(),{before,after}=selectedComparisonResults();
+  const value=compareGridFabricCaptures(before,after,{beforeReportId:chosen.beforeReport||null,afterReportId:chosen.afterReport||null});
+  if(state.data.comparisonIncoming){const reopened=receiveGridFabricComparison(state.data.comparisonIncoming,before,after);
+    need(same(value,reopened),'Keep the received report selection, or retain it in backup before starting another comparison.');}
+  chosen.beforeReport=value.selection.beforeReportId||'';chosen.afterReport=value.selection.afterReportId||'';
+  chosen.receipts={before:value.before.receipt.sha256,after:value.after.receipt.sha256};
+  await persist();state.comparisonResult=value;state.comparisonOffset=0;renderCompare();
+  notice('Compared the original prepared quantities and retained outcomes. No report was recalculated or dispatched.');
+}
+async function receiveComparisonFile(file){
+  await flush();const value=JSON.parse(await file.text());
+  need(value?.schema===GRID_COMPARISON_SCHEMA&&value.selection&&
+    /^[a-f0-9]{64}$/.test(value.before?.receipt?.sha256||'')&&/^[a-f0-9]{64}$/.test(value.after?.receipt?.sha256||''),
+    'Choose the full comparison JSON exported by this workflow.');
+  state.data.comparisonIncoming=copy(value);const chosen=comparisonSelection();
+  const find=sha=>Object.values(state.data.requests).find(r=>r.view?.result?.receipt?.sha256===sha)?.request_id||'';
+  chosen.before=find(value.before.receipt.sha256);chosen.after=find(value.after.receipt.sha256);
+  chosen.beforeReport=value.selection.beforeReportId||'';chosen.afterReport=value.selection.afterReportId||'';
+  chosen.receipts={before:value.before.receipt.sha256,after:value.after.receipt.sha256};
+  clearComparison();await persist();renderCompare();
+  notice('Saved comparison is retained. Receive both original archives if needed, read their requests, and explicitly reopen the comparison.');
+}
+function comparisonTable(headers,rows){
+  const table=node('table'),head=node('tr');for(const value of headers)head.append(text('th',value));
+  table.append(node('thead',{},head));const body=node('tbody');for(const row of rows){const tr=node('tr');
+    for(const value of row)tr.append(node('td',{},typeof value==='object'&&value?.nodeType?value:String(value??'—')));body.append(tr);}
+  table.append(body);return node('div',{class:'procedure-scroll'},table);
+}
+function renderCompare(){
+  const root=$('section-compare');root.replaceChildren();if(!state.data)return;
+  const chosen=comparisonSelection(),candidates=Object.values(state.data.requests).filter(r=>r.view?.state==='COMPLETE')
+    .map(r=>[r.request_id,(r.view.result?.input?.title||'Original capture')+' · '+(r.view.result?.input?.period||'No period label')+' · '+r.request_id]);
+  const set=(key,value)=>{chosen[key]=value;clearComparison();if(key==='before'||key==='after')chosen[key+'Report']='';};
+  root.append(text('h2','Compare prepared reports and operating outcomes'),
+    text('p','After a source correction or mapping review, inspect which original intervals changed and which still need source. Select retained captures of the same GridFabric instance. Different measurement semantics are shown without subtracting quantities.'),
+    text('p','Use Capture and saved requests to open any native history page, or Receive and return to import complete archives first. No device or management request is sent by comparison.','small'));
+  const grid=node('div',{class:'procedure-grid'});
+  for(const side of ['before','after']){
+    const box=node('section',{},text('h3',side==='before'?'Before':'After'));
+    box.append(select('Retained capture', [['','Select an original request'],...candidates],chosen[side],v=>set(side,v)),
+      field('Original '+side+' request UUID',chosen[side],v=>set(side,v),{max:36}),
+      select('Original report', [['','Use the only report, if exactly one'],...comparisonReports(chosen[side])],chosen[side+'Report'],v=>set(side+'Report',v)));
+    grid.append(box);
+  }
+  root.append(grid,actions(button('Read both original captures',readComparisonCaptures),button('Compare selected reports',compareCaptures)),
+    fileInput('Reopen full comparison JSON','.json,application/json',receiveComparisonFile));
+  if(state.data.comparisonIncoming)root.append(details('Received comparison selection and original capture identities',{
+    selection:state.data.comparisonIncoming.selection,before:state.data.comparisonIncoming.before.receipt,after:state.data.comparisonIncoming.after.receipt}),
+    text('p','The imported report will be re-derived from the two exact original archives. Changed source or quantities are rejected.'),
+    button('Keep received comparison in backup and start another selection',async()=>{
+      state.data.comparisonHistory??=[];state.data.comparisonHistory.push(copy(state.data.comparisonIncoming));
+      delete state.data.comparisonIncoming;clearComparison();await persist();renderCompare();
+    }));
+  const result=state.comparisonResult;if(!result)return;
+  const body=node('div',{id:'comparison-result'});root.append(body);
+  body.append(text('h3','Reporting decision'),text('p',result.summary.sourceResolved+' source gaps resolved; '+
+    result.summary.sourceNeeded+' intervals now need source; '+result.summary.incompatible+' matched intervals use different semantics.','procedure-banner'),
+    text('p',result.scope.measurement),text('p',result.scope.coverage),
+    actions(button('Download full comparison JSON',async()=>jsonDownload('GridFabric_Report_Comparison.json',result)),
+      button('Download readable comparison report',async()=>downloadBlob('GridFabric_Report_Comparison.html',new Blob([renderGridFabricComparisonHTML(result)],{type:'text/html;charset=utf-8'})))));
+  body.append(comparisonTable(['Report','Before','After'],[
+    ['Original state',result.reports.before?.report.status,result.reports.after?.report.status],
+    ['Prepared intervals',result.reports.before?.report.row_count,result.reports.after?.report.row_count],
+    ['Original source issues',result.reports.before?.report.issue_count,result.reports.after?.report.issue_count],
+    ['Source edition',result.before.input.workspace.source_sha256,result.after.input.workspace.source_sha256],
+    ['Captured period label',result.before.input.period,result.after.input.period]]));
+  body.append(details('Queries, mapping parameters and source precedence',{before:result.reports.before&&{query:result.reports.before.report.query,mapping:result.reports.before.mapping},
+    after:result.reports.after&&{query:result.reports.after.report.query,mapping:result.reports.after.mapping}}));
+  const rows=state.comparisonOnlyChanged?result.intervals.filter(r=>r.changed):result.intervals;
+  const toggle=node('input',{type:'checkbox',checked:!!state.comparisonOnlyChanged});
+  toggle.addEventListener('change',()=>run(async()=>{state.comparisonOnlyChanged=toggle.checked;state.comparisonOffset=0;renderCompare();}));
+  body.append(node('label',{class:'inline-check'},toggle,text('span','Show changed intervals only')));
+  const offset=state.comparisonOffset||0,currentRows=rows.slice(offset,offset+50),value=(v,s)=>v===null?'—':(typeof v==='string'?v:format(v))+(s?.unit?' '+s.unit:'');
+  body.append(text('p','Showing '+(rows.length?offset+1:0)+'–'+(offset+currentRows.length)+' of '+rows.length+' intervals. Downloads contain every interval.'),
+    comparisonTable(['rId / timestamp','Before','After','After − before','Interpretation and source'],currentRows.map(r=>[
+      r.rId+' / '+r.timestamp,(r.before?.status||'Not selected')+'\n'+value(r.beforeValue,r.beforeSemantics),
+      (r.after?.status||'Not selected')+'\n'+value(r.afterValue,r.afterSemantics),r.difference===null?'—':r.difference+' '+r.differenceUnit,
+      details(r.reason||r.outcome,r)])));
+  const prev=button('Previous intervals',async()=>{state.comparisonOffset=Math.max(0,offset-50);renderCompare();});
+  const next=button('Next intervals',async()=>{state.comparisonOffset=offset+50;renderCompare();});
+  prev.disabled=offset===0;next.disabled=offset+50>=rows.length;body.append(actions(prev,next));
+  body.append(text('h3','Device and management outcomes'),text('p',result.scope.delivery));
+  const outcomes=result.outcomes.filter(r=>r.changed);
+  body.append(comparisonTable(['Original operation','Before','After','Complete source outcome'],outcomes.map(r=>[
+    r.collection+' / '+r.id,(r.before?[r.before.status,r.before.opt_type].filter(Boolean).join(' · '):'Not selected'),(r.after?[r.after.status,r.after.opt_type].filter(Boolean).join(' · '):'Not selected'),
+    details(r.presence==='both'?'Retained outcome changed':'Selected in one capture only',r)])));
+  body.append(text('h3','Customer procedure changes'),text('p',result.plan.samePlan?(result.plan.sharedPrefix?
+    'The two plans share their exact earlier history.':'The same plan ID has divergent history; neither is adopted by this comparison.'):'These are different named plans; steps are shown by their original IDs.'),
+    ...result.plan.steps.filter(r=>r.changed).map(r=>details((r.after||r.before).title||r.id,r)),
+    details('Complete plan metadata and step differences',result.plan),details('Source editions and correction links',result.sourceChanges),
+    details('Original file identities',result.fileChanges),text('p',result.scope.portable));
+  for(const side of ['before','after'])body.append(button('Download complete '+side+' capture archive',()=>downloadOriginal(
+    '/api/procedures/archive?'+new URLSearchParams({request_id:chosen[side]}),'GridFabric_'+side+'.gridprocedure.jsonl.gz',null,true)),
+    ...(typeof window.showSaveFilePicker==='function'?[button('Stream complete '+side+' archive to a file',()=>downloadOriginal(
+      '/api/procedures/archive?'+new URLSearchParams({request_id:chosen[side]}),'GridFabric_'+side+'.gridprocedure.jsonl.gz',null,true,true))]:[]));
+}
+
 $('connection-form').addEventListener('submit',event=>{
   event.preventDefault();run(async()=>{state.token=$('connection-token').value.trim();sessionStorage.setItem('gridfabric-connection',state.token);await connect();});
 });
