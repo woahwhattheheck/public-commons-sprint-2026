@@ -44,7 +44,7 @@ if (caseState.operationId !== identity || caseState.directory !== root || caseSt
   throw new Error('The retained native case has different original inputs.');
 const now = () => new Date().toISOString(), check = (value, message) => { if (!value) throw new Error(message); };
 async function checkpoint() { await saveJSON(files.journal, caseState, true); }
-for (const name of ['writerReview','installationReview','review','export','restore','upload'])
+for (const name of ['writerReview','installationReview','review','export','restore','upload','readWorkReview','readWorkExport'])
   caseState.ids[name] ??= randomUUID();
 caseState.inputSeed ??= randomUUID();
 function id(name) { check(Boolean(caseState.ids[name]), 'Original request ID was not retained: ' + name); return caseState.ids[name]; }
@@ -466,9 +466,102 @@ try {
     await saveJSON(join(files.output, 'COMPLETE_RECEIVING_RESULT.json'), summary, true);
     return summary;
   });
+  // Continue the same completed receiving case using its actual restored
+  // workspace. Original export/restore checkpoints and outputs remain intact.
+  const readWorkModel = await openRuntimeWorkspace({ directory: files.source });
+  try {
+    const readReview = await step('review_backup_read_work', async () => {
+      const current = await readWorkModel.state();
+      check(current.workspaceId === caseState.workspaceId, 'Read-work continuation changed the original workspace.');
+      return readWorkModel.workspaceBackupReview({ requestId: id('readWorkReview'),
+        label: 'Current received workspace backup read work', storageDirectory: files.backups });
+    });
+    const readOperation = await step('start_backup_read_work', () => readWorkModel.workspaceBackupCreate({
+      requestId: id('readWorkExport'), reviewId: readReview.reviewId,
+      reviewSha256: readReview.reviewSha256, storageDirectory: files.backups }));
+    const readExport = await step('complete_backup_read_work', async () => {
+      const retained = (await readWorkModel.workspaceBackupState({ storageDirectory: files.backups }))
+        .operations.find(item => item.operationId === readOperation.operationId);
+      if (retained?.workerActive === false && ['FAILED', 'INTERRUPTED'].includes(retained.phase))
+        await readWorkModel.workspaceBackupContinue({ storageDirectory: files.backups, operationId: readOperation.operationId });
+      return waitOperation(readWorkModel, files.backups, readOperation.operationId);
+    });
+    const readArchive = readExport.result;
+    await step('receive_backup_read_work', async () => {
+      const work = readArchive.readWork;
+      check(work && Object.values(work).every(value => Number.isSafeInteger(value) && value >= 0),
+        'Selected native export did not return its actual read totals.');
+      const copiedCurrentSource = work.inventoryPasses === 3 && work.copiedFiles === readReview.files &&
+        work.copiedBytes === readReview.bytes && work.sourceHashBytes >= readReview.bytes;
+      const resumedWrittenArchive = work.inventoryPasses === 0 && work.copiedFiles === 0 && work.copiedBytes === 0 &&
+        work.sourceHashFiles === 0 && work.sourceHashBytes === 0 && work.sourceDigestReuses === 0;
+      check((copiedCurrentSource || resumedWrittenArchive) && work.archiveHashFiles >= 2 && work.archiveHashBytes >= 2 * readArchive.bytes &&
+        work.archiveMemberPasses === 1 && work.archiveMemberBytes === readReview.bytes,
+        'Native export read totals do not cover its complete original source and archive.');
+      const destination = await stat(readArchive.archivePath, { bigint: true });
+      const finalIdentity = { dev: String(destination.dev), ino: String(destination.ino),
+        size: String(destination.size), mtimeNs: String(destination.mtimeNs), ctimeNs: String(destination.ctimeNs) };
+      check(Object.entries(finalIdentity).every(([key, value]) => readArchive.archiveIdentity?.[key] === value),
+        'Export did not retain the final destination archive identity.');
+      const selectedFiles = {};
+      for (const path of ['workspace-backup.py', 'workspace-backup.d.mts',
+        'public/workspace-receiving.mjs', 'receiving/WORKSPACE_BACKUP_RECEIVE.mjs'])
+        selectedFiles[path] = await hashFile(join(sourceRoot, path));
+      const served = await page.request.get(server.origin + '/workspace-receiving.mjs');
+      check(served.ok() && createHash('sha256').update(await served.body()).digest('hex') ===
+        selectedFiles['public/workspace-receiving.mjs'].sha256, 'Native receiving screen differs from selected source.');
+      await page.setViewportSize({ width: 1360, height: 950 });
+      await page.locator('[data-view="workspace-backups"]').click();
+      await page.locator('#wb-storage').fill(files.backups);
+      await page.getByRole('button', { name: 'Open backup storage', exact: true }).click();
+      const selected = page.locator('#wb-operations article').filter({ hasText: readOperation.operationId });
+      await selected.getByText('COMPLETE', { exact: true }).waitFor();
+      await selected.getByText('Backup read totals', { exact: true }).click();
+      await selected.getByText('Source content hashed', { exact: true }).waitFor({ state: 'visible' });
+      await page.screenshot({ path: join(files.screenshots, 'desktop-backup-read-work.png'), fullPage: true });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({ path: join(files.screenshots, 'phone-backup-read-work.png'), fullPage: true });
+      check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+        'Backup read totals overflow the narrow operator viewport.');
+      const output = join(files.output, 'received-workspace-backup-read-work.tgz');
+      if (await exists(output)) {
+        const prior = await hashFile(output);
+        if (prior.sha256 !== readArchive.sha256 || prior.bytes !== readArchive.bytes) {
+          const retained = output + '.interrupted-' + prior.sha256 + '-' + randomUUID();
+          await rename(output, retained);
+        }
+      }
+      if (!await exists(output)) {
+        const incoming = page.waitForEvent('download');
+        await selected.getByRole('button', { name: 'Download complete backup', exact: true }).click();
+        const download = await incoming; await download.saveAs(output);
+      }
+      const downloaded = await hashFile(output);
+      check(downloaded.sha256 === readArchive.sha256 && downloaded.bytes === readArchive.bytes,
+        'Read-work archive download differs from the complete native export.');
+      const inspection = await control.workspaceBackupInspect({ archivePath: output,
+        sha256: readArchive.sha256, storageDirectory: files.receiving });
+      check(inspection.manifestSha256 === readArchive.manifestSha256 &&
+        inspection.review.inventorySha256 === readReview.inventorySha256,
+        'Downloaded read-work archive does not reopen to its complete reviewed inventory.');
+      const reopened = await readWorkModel.workspaceBackupCreate({ requestId: id('readWorkExport'),
+        reviewId: readReview.reviewId, reviewSha256: readReview.reviewSha256, storageDirectory: files.backups });
+      check(reopened.operationId === readExport.operationId && reopened.result?.sha256 === readArchive.sha256 &&
+        JSON.stringify(reopened.result?.readWork) === JSON.stringify(work), 'Same-request reopen replaced the original backup result.');
+      check(errors.length === 0, 'Browser errors: ' + errors.join('; '));
+      const result = { operationId: identity, workspaceId: caseState.workspaceId,
+        exportOperationId: readExport.operationId, review: readReview, archive: readArchive,
+        download: { output, ...downloaded }, inspection, selectedFiles,
+        sameRequestReopened: true, readWork: work,
+        screenshots: ['desktop-backup-read-work.png', 'phone-backup-read-work.png'] };
+      await saveJSON(join(files.output, 'BACKUP_READ_WORK.json'), result, true);
+      return result;
+    });
+  } finally { await readWorkModel.close(); }
   attempt.status = 'COMPLETE'; attempt.completedAt = now(); await checkpoint();
   process.stdout.write(JSON.stringify({ status: 'COMPLETE', operation: identity, journal: files.journal,
-    result: join(files.output, 'COMPLETE_RECEIVING_RESULT.json') }) + '\n');
+    result: join(files.output, 'COMPLETE_RECEIVING_RESULT.json'),
+    readWorkResult: join(files.output, 'BACKUP_READ_WORK.json') }) + '\n');
 } catch (error) {
   attempt.status = 'INTERRUPTED'; attempt.interruptedAt = now();
   attempt.error = { code: error.code ?? null, message: error.message };
