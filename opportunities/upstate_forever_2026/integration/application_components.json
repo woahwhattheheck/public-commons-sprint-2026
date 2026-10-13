@@ -1210,8 +1210,8 @@
             "mode": "100644"
           },
           "operator/NATIVE_INTERACTIONS.md": {
-            "bytes": 10305,
-            "sha256": "cd85bf2e38baa3839e769976526dccac1752123f4f6377cbab81c4d0ef6d490b",
+            "bytes": 10654,
+            "sha256": "6e8aee8898ccbf1e1f98b22a7255c57485b0dab7091bf85bbb2088e032b8a95a",
             "mode": "100644"
           },
           "operator/extensions/native-interactions.json": {
