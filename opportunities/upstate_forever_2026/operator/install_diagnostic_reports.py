@@ -21,8 +21,13 @@ PREDECESSORS = json.loads(r'''{
   "operator/experiment_diagnostics.py": "fd86e59a6223fb0671a5cff79c49a3ee945d4e5b19d3ce934d8b7c2458651d9b",
   "operator/web/experiment_diagnostics.mjs": "41d8de2d22e489621c190b8367f30c566ec9e5724f8f53826fea540f1103f78f",
   "operator/extensions/experiment-diagnostics.json": "958d8df24c61d94cc0651df634abfb29a1735c9bf9c9ccbe61038ad3c2846389",
-  "operator/DIAGNOSTIC_REPORTS.md": null,
-  "operator/DIAGNOSTICS.md": "ecfbc5e7c2cee90deaaeee1bb306ef532fae9b120b3028aa6932b4fba7443f3b"
+  "operator/DIAGNOSTIC_REPORTS.md": [
+    null,
+    "f607e7f8a42a19a28aa23e89bc2b24101e5fd4a0b03279ab4fb26760b652b29a"
+  ],
+  "operator/DIAGNOSTICS.md": "ecfbc5e7c2cee90deaaeee1bb306ef532fae9b120b3028aa6932b4fba7443f3b",
+  "model/study_report_transfer.py": null,
+  "model/study_transfer.py": "9518fbd91208df57b56e9b7390226bfaaea43ffc823400043a95295c0fbe65c2"
 }''')
 SELF = "operator/install_diagnostic_reports.py"
 
@@ -46,14 +51,15 @@ def install(application, source):
     with (application / ".diagnostic-report-install.lock").open("a+b") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         before, after = {}, {}
-        for relative, predecessor in {**PREDECESSORS, SELF: None}.items():
+        for relative, predecessor in {**PREDECESSORS, SELF: [None, "5966d02cbbe99da3715b6d2ef54bf310457a1b237afcc0d40239c7e50cd4876c"]}.items():
             body = _bytes(source / relative)
             if body is None:
                 raise ValueError("Complete report source is missing: " + relative)
             current = _bytes(application / relative)
             if current == body:
                 continue
-            if _sha(current) != predecessor:
+            accepted = predecessor if isinstance(predecessor, list) else [predecessor]
+            if _sha(current) not in accepted:
                 raise ValueError("Compose the newer original source before installing " + relative)
             before[relative], after[relative] = current, body
         for relative, body in after.items():
