@@ -1706,6 +1706,13 @@ export function attachConservation({
         html += '<p>' + number(prior.reused_requests) + ' retained provider responses reused' +
           (finite(prior.reused_bytes) ? ' · ' + number(prior.reused_bytes) + ' bytes' : '') +
           '. Coverage and parcel-source classifications are recalculated by the current application.</p>';
+        if (finite(prior.successful_responses) || finite(prior.retained_failures)) {
+          html += '<p class="cons-metric-note">' +
+            (finite(prior.successful_responses) ? number(prior.successful_responses) + ' successful responses' : '') +
+            (finite(prior.successful_responses) && finite(prior.retained_failures) ? ' · ' : '') +
+            (finite(prior.retained_failures) ? number(prior.retained_failures) + ' retained failed attempts' : '') +
+            '</p>';
+        }
       }
     }
     if (row.implementation_changed) {
