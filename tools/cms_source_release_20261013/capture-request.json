@@ -1,0 +1,28 @@
+{
+  "schema": "cms-api-capture-request/1",
+  "metadata": {
+    "source_modified": "2026-07-22",
+    "source_released": "2026-08-13",
+    "dataset_url": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+    "dictionary_url": "https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HOSPITAL_Data_Dictionary.pdf",
+    "captured_on": "2026-10-13"
+  },
+  "pages": [
+    {
+      "path": "original/cms-ca-offset-0.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D"
+    },
+    {
+      "path": "original/cms-ca-offset-100.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=100"
+    },
+    {
+      "path": "original/cms-ca-offset-200.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=200"
+    },
+    {
+      "path": "original/cms-ca-offset-300.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=300"
+    }
+  ]
+}
