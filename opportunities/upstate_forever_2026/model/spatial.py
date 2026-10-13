@@ -364,7 +364,17 @@ class SpatialReview:
                 raise ValueError("The original selected source edition changed")
             current = tuple((str(p), _signature(p)) for p in originals)
             if current != original_signatures:
-                raise ValueError("Original source changed during native receiving")
+                # Creating a source-view hardlink updates the original inode's
+                # ctime without changing its bytes. Verify that narrow case
+                # against the retained digest, then cache the post-link state.
+                for body, (name, before), (_, after) in zip(bodies, original_signatures, current):
+                    if before == after:
+                        continue
+                    if before[:4] != after[:4]:
+                        raise ValueError("Original source changed during native receiving")
+                    self._verify_file(self.workspace.root, {
+                        "path": body["object"], "sha256": body["sha256"], "bytes": body["bytes"]})
+                current = tuple((str(p), _signature(p)) for p in originals)
             view_root = self.workspace.root / "source-views" / collection / digest(source_id)
             views = tuple((str(view_root / body.get("view_path", body["filename"])),
                            _signature(view_root / body.get("view_path", body["filename"]))) for body in bodies)
@@ -377,8 +387,15 @@ class SpatialReview:
         try:
             yield path, signatures
         finally:
-            if any(_signature(name) != expected for name, expected in signatures):
-                raise ValueError("Original spatial source changed during this read")
+            observed = tuple((name, _signature(name)) for name, _ in signatures)
+            if observed != signatures:
+                if any(actual[:4] != expected[:4]
+                       for (_, expected), (_, actual) in zip(signatures, observed)):
+                    raise ValueError("Original spatial source changed during this read")
+                # Another retained source may create a link to a shared original
+                # companion during this read. Re-enter byte verification rather
+                # than treating link metadata as a scientific source revision.
+                self._path(record)
 
     @staticmethod
     def _units(source, record, band):
