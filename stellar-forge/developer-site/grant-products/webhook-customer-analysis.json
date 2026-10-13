@@ -28,6 +28,13 @@
           "git_blob": "b7f8d9c6963f626d06595a2e34d582e0297a04dd",
           "bytes": 23823,
           "sha256": "1a6c3b97582dadcc5572db88e0d1e2aac12c257ddfed024dc12460f0d3c933af"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "b7f8d9c6963f626d06595a2e34d582e0297a04dd",
+          "bytes": 23823,
+          "sha256": "1a6c3b97582dadcc5572db88e0d1e2aac12c257ddfed024dc12460f0d3c933af"
         }
       ]
     },
@@ -49,6 +56,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "62d3e6f3de5133b0023578e4b79f1059a641c5ed",
+          "bytes": 24680,
+          "sha256": "3f26540b42cb477131bc06dd1f8a9901484642737767f5b4a7ebf14891a38b7a"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "62d3e6f3de5133b0023578e4b79f1059a641c5ed",
           "bytes": 24680,
           "sha256": "3f26540b42cb477131bc06dd1f8a9901484642737767f5b4a7ebf14891a38b7a"
@@ -83,6 +97,20 @@
           "git_blob": "364c97e34c89c21f01b81be4a0487aa44dc1a3a3",
           "bytes": 13173,
           "sha256": "b573473b297ebeee7f0652ed47665a9f00e96dce15fe8e01edd0e0370f53bd06"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "9f8092939e0aa886a646443abeaa8ba8d729ac22",
+          "bytes": 16773,
+          "sha256": "b9ae328038a24037f2de74ddb46f482f39fb08d0e2e9b8248f74926fc25dbbad"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "9f8092939e0aa886a646443abeaa8ba8d729ac22",
+          "bytes": 16773,
+          "sha256": "b9ae328038a24037f2de74ddb46f482f39fb08d0e2e9b8248f74926fc25dbbad"
         }
       ]
     },
@@ -114,6 +142,20 @@
           "git_blob": "a7d9d3d1af683bd0d84ffdaf575fd75ad87c4b79",
           "bytes": 20786,
           "sha256": "ddf8c0f782ddbccd17c297a797f12ed9d56d04306c6c952cabbc00660f2a94a8"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "0b5b1939f1acdcdd4083809b7b13647b0c65b935",
+          "bytes": 28949,
+          "sha256": "4b41305e0e0b8963ca16c9d3354412ee37c03d2288ec71ee6f13233bf61c5058"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "0b5b1939f1acdcdd4083809b7b13647b0c65b935",
+          "bytes": 28949,
+          "sha256": "4b41305e0e0b8963ca16c9d3354412ee37c03d2288ec71ee6f13233bf61c5058"
         }
       ]
     },
@@ -135,6 +177,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "fb636f9f349f62f2871914c71e8624ed35bab2e8",
+          "bytes": 57187,
+          "sha256": "68073bd2c7a0f79be1206d8893e60429fc4dfdd24d15a4b1f5b8508d334107ee"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "fb636f9f349f62f2871914c71e8624ed35bab2e8",
           "bytes": 57187,
           "sha256": "68073bd2c7a0f79be1206d8893e60429fc4dfdd24d15a4b1f5b8508d334107ee"
@@ -169,6 +218,27 @@
           "git_blob": "24ddd3d965df7f2dc8bc9e5f6d93da5a88c4d63b",
           "bytes": 16025,
           "sha256": "651bb95197c0cdc8f08c663275e86ab54558e5a421e1dd0d1d2c4022157cd91c"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "24ac0131ed49124f9986b40b7ef935ed00a8dc52",
+          "bytes": 16979,
+          "sha256": "28914358e67451208955df9e842b872cda875ed6960593168870088be15440a8"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "b60018393f926449f647cac88dfc1906bf02b03a",
+          "bytes": 25142,
+          "sha256": "37068e60850b2ba6044e32992f83e05139beac7b0c3c0236cba2efe39499a589"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "b60018393f926449f647cac88dfc1906bf02b03a",
+          "bytes": 25142,
+          "sha256": "37068e60850b2ba6044e32992f83e05139beac7b0c3c0236cba2efe39499a589"
         }
       ]
     },
@@ -200,6 +270,20 @@
           "git_blob": "f5dcc7abad1996579ece6da6a81221b2b8945bee",
           "bytes": 21363,
           "sha256": "4b7aee956a7f873c885431731df14bd20e661fb3a6bd3db90759244d5b603118"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "70b664dac9435a1c6b6ec54d0e4ebe5320e5d6e2",
+          "bytes": 29460,
+          "sha256": "78752b9442441b749045633cd5a2d0772ee716839a1f87f5745f91bdfe76806d"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "70b664dac9435a1c6b6ec54d0e4ebe5320e5d6e2",
+          "bytes": 29460,
+          "sha256": "78752b9442441b749045633cd5a2d0772ee716839a1f87f5745f91bdfe76806d"
         }
       ]
     },
@@ -231,6 +315,27 @@
           "git_blob": "48d98766294c7139fd66c9531aabef708902d546",
           "bytes": 2880,
           "sha256": "ecc0a6e0d52248472105511efe1d56dc40025b1a221a95858ef3e660b5ac7c57"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "1316a01c5c585b9a66396f42ee5d648f7602b128",
+          "bytes": 3090,
+          "sha256": "cd73f8bc35c67a8f8a6d9fe9ce8dfd94d65cc92fb16cba120bcc1b8a285b7aba"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "09dad6b1f8b27fb83025071989321f0e98c07712",
+          "bytes": 3414,
+          "sha256": "071fd67b5b9979a736e4cc96077c39f9ef210f146a8091f0dd6efc93671e06bc"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "09dad6b1f8b27fb83025071989321f0e98c07712",
+          "bytes": 3414,
+          "sha256": "071fd67b5b9979a736e4cc96077c39f9ef210f146a8091f0dd6efc93671e06bc"
         }
       ]
     },
@@ -262,6 +367,27 @@
           "git_blob": "3b1f6fd0edc2ade166c7bf6fca1c8de2f5bb59e3",
           "bytes": 38627,
           "sha256": "37b0395557191e97d5ad0cef8fad3b687f3dfec82385a3137512d32ce76ee180"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "7ef36ae22361f20bc8434da5f21ceb88f11e795c",
+          "bytes": 41605,
+          "sha256": "d0d865a3cd71082167af5f3e7bf3762fc7543c1fc084597317d86de9695467dc"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "b3675075d54c34e694aab0e02e0b93b4852d76e7",
+          "bytes": 56850,
+          "sha256": "0b94dc88b2a5df28d72cc8e785c6a65441009420fd47c0daadeac9ecafa34d31"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "b3675075d54c34e694aab0e02e0b93b4852d76e7",
+          "bytes": 56850,
+          "sha256": "0b94dc88b2a5df28d72cc8e785c6a65441009420fd47c0daadeac9ecafa34d31"
         }
       ]
     },
@@ -283,6 +409,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "c3a5f040289c40e9f0f2b4b42e018680585b347a",
+          "bytes": 3985,
+          "sha256": "06fd77f9e4ab4bcd377ef6690e03aa170f51842a9117523d79e1b72b54e56d19"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "c3a5f040289c40e9f0f2b4b42e018680585b347a",
           "bytes": 3985,
           "sha256": "06fd77f9e4ab4bcd377ef6690e03aa170f51842a9117523d79e1b72b54e56d19"
@@ -317,6 +450,20 @@
           "git_blob": "ed00cf4fced8fb8f46818669673fa62868f08703",
           "bytes": 5626,
           "sha256": "1b0dcbf8a3fd9c56c1b38bf5210618cd16f4a1f71e140966a8b750dc909074da"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "02757a9f08139ab6eea38a387626a08712ba231f",
+          "bytes": 6666,
+          "sha256": "16bd5d62d6cbd07b9c9d16c4ab57620d2618ccc08669e04a31da792c9a6f0257"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "02757a9f08139ab6eea38a387626a08712ba231f",
+          "bytes": 6666,
+          "sha256": "16bd5d62d6cbd07b9c9d16c4ab57620d2618ccc08669e04a31da792c9a6f0257"
         }
       ]
     },
@@ -348,6 +495,20 @@
           "git_blob": "8f5beb95c2aaeaaa85546ffd7615f9ae223266a9",
           "bytes": 18953,
           "sha256": "0b20a31ccfd31a3a8598b01cdf0dd04ba4ea637a5aeff570b15ed5b6f783f27d"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "0e7fdfb80094712afd332d4dd9f482774a76222a",
+          "bytes": 22439,
+          "sha256": "893b75d9400ec25ed1bd30f4b7c18f37dce2c8bcbf91224163f1a8719465d71d"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "0e7fdfb80094712afd332d4dd9f482774a76222a",
+          "bytes": 22439,
+          "sha256": "893b75d9400ec25ed1bd30f4b7c18f37dce2c8bcbf91224163f1a8719465d71d"
         }
       ]
     },
@@ -379,6 +540,20 @@
           "git_blob": "8bd1dfcfa6568d5eead11a3eb71b627ef438849b",
           "bytes": 10820,
           "sha256": "7b3498d9deeb960ac17a85f02aa54e71de646cf23c763b53250c159a19e412c6"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "1660faacd1c24103a9f460a6feeb957ede7b5f6b",
+          "bytes": 12451,
+          "sha256": "e1f26f6c3c670edd71299b1231eba8508d9aefed82b612124d9b12eb81dabde8"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "1660faacd1c24103a9f460a6feeb957ede7b5f6b",
+          "bytes": 12451,
+          "sha256": "e1f26f6c3c670edd71299b1231eba8508d9aefed82b612124d9b12eb81dabde8"
         }
       ]
     },
@@ -410,6 +585,20 @@
           "git_blob": "4fcfdae9672346d5185a836225c67fbb42201d7f",
           "bytes": 3127,
           "sha256": "017e278282c74e2b714418c174791a5e13a12693fb0bb98ede19c63df462b150"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "6277ac8273158f102479bddb2ad5e148c9875719",
+          "bytes": 4588,
+          "sha256": "2ae82da3d6bf830b549cc453619d95e0cd8f1c828c5715989302ea8291b15625"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "6277ac8273158f102479bddb2ad5e148c9875719",
+          "bytes": 4588,
+          "sha256": "2ae82da3d6bf830b549cc453619d95e0cd8f1c828c5715989302ea8291b15625"
         }
       ]
     },
@@ -434,6 +623,13 @@
           "git_blob": "a3651d039f8daf16e4e4dd8e600cf314283cc710",
           "bytes": 12014,
           "sha256": "35c39445afb50195771ade012efd350e25522a4e1268d74eba84b80bed1ac483"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "a3651d039f8daf16e4e4dd8e600cf314283cc710",
+          "bytes": 12014,
+          "sha256": "35c39445afb50195771ade012efd350e25522a4e1268d74eba84b80bed1ac483"
         }
       ]
     },
@@ -455,6 +651,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "1d4947b39aca05082962b901fe9a8de69ed2bcf7",
+          "bytes": 2093,
+          "sha256": "10c04ae4b7f3b7293cbb26375b8d30fa795d8494dc1da29ff77a75e02e4b49d3"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "1d4947b39aca05082962b901fe9a8de69ed2bcf7",
           "bytes": 2093,
           "sha256": "10c04ae4b7f3b7293cbb26375b8d30fa795d8494dc1da29ff77a75e02e4b49d3"
@@ -496,6 +699,27 @@
           "git_blob": "00e92460b0883d9e19fc69717bf67e73487e986c",
           "bytes": 21391,
           "sha256": "38f91b1425d2d2e9fc140890d501db91cc680de76503c889f29fe1e7f2479788"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "fc813b63d0c906af0dd5ee09dd839238cf134bd6",
+          "bytes": 22523,
+          "sha256": "636a158e09eb0a0c9e8fd5f65c5857c3cde80c55c2237614a8d3f56a188e001a"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "40848fd7ab688e5a8326c95b6134c77b30ac316d",
+          "bytes": 25144,
+          "sha256": "1c3fc69480c2d51c66fe70328be55849d837b5be57c9827ac8c2b41f44aefad4"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "40848fd7ab688e5a8326c95b6134c77b30ac316d",
+          "bytes": 25144,
+          "sha256": "1c3fc69480c2d51c66fe70328be55849d837b5be57c9827ac8c2b41f44aefad4"
         }
       ]
     },
@@ -527,6 +751,20 @@
           "git_blob": "21160b82c327068fabdcce4d6d2a16ec3e8d6c28",
           "bytes": 2293,
           "sha256": "c07452ca609dd66a9f2cef938bcc727ae8d949581bbaa44844a00666c078dad2"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "8252fd7ee287a667eff979855958bd152e556f5f",
+          "git_blob": "c04682ace77413a943399fbea667660679cc6b19",
+          "bytes": 2793,
+          "sha256": "6d4b0a396cdceeb4b709b1b219e48bce468cc86af4b14ce95d854d1c06ff21e8"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "c04682ace77413a943399fbea667660679cc6b19",
+          "bytes": 2793,
+          "sha256": "6d4b0a396cdceeb4b709b1b219e48bce468cc86af4b14ce95d854d1c06ff21e8"
         }
       ]
     },
@@ -548,6 +786,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "4f132fa391471f5b2592790c4e2ba02f605632c2",
+          "bytes": 3650,
+          "sha256": "1d3bd1de74cfe6dc359bfeabf364d2b9fda8bf0edbdf05d6effb72efce5532ed"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "4f132fa391471f5b2592790c4e2ba02f605632c2",
           "bytes": 3650,
           "sha256": "1d3bd1de74cfe6dc359bfeabf364d2b9fda8bf0edbdf05d6effb72efce5532ed"
@@ -575,6 +820,13 @@
           "git_blob": "770bb051e6e73890667b59baeb821fc70d5736ee",
           "bytes": 14885,
           "sha256": "9a4009098ba649c4cd2a00ff802b17ccc194f5111caf389ec0ede3a3c6533617"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "770bb051e6e73890667b59baeb821fc70d5736ee",
+          "bytes": 14885,
+          "sha256": "9a4009098ba649c4cd2a00ff802b17ccc194f5111caf389ec0ede3a3c6533617"
         }
       ]
     },
@@ -596,6 +848,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "d65b77b559b017fafc419626101d3131927346a5",
+          "bytes": 1660,
+          "sha256": "2f01a3c450089994f7f614b5476d3ad1afeec0c304ddce4c793abbb41db9aca4"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "d65b77b559b017fafc419626101d3131927346a5",
           "bytes": 1660,
           "sha256": "2f01a3c450089994f7f614b5476d3ad1afeec0c304ddce4c793abbb41db9aca4"
@@ -623,6 +882,13 @@
           "git_blob": "aac67fe12e484d8a84b940fc4f86d42eaffb25db",
           "bytes": 14200,
           "sha256": "ef735cae2796efec3641a8164d9707d81e3b5589ede3a1f530480a8e8e1d6a59"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "aac67fe12e484d8a84b940fc4f86d42eaffb25db",
+          "bytes": 14200,
+          "sha256": "ef735cae2796efec3641a8164d9707d81e3b5589ede3a1f530480a8e8e1d6a59"
         }
       ]
     },
@@ -644,6 +910,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "d8d75c733e8542be31a0589bd56f435ccbfb118b",
+          "bytes": 17416,
+          "sha256": "da5c6813fc060282ce6d913327476fa3079ca57f70ffcb16781d5a468bafb52d"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "d8d75c733e8542be31a0589bd56f435ccbfb118b",
           "bytes": 17416,
           "sha256": "da5c6813fc060282ce6d913327476fa3079ca57f70ffcb16781d5a468bafb52d"
@@ -671,6 +944,20 @@
           "git_blob": "dbccf8381d25b80b0682ae10cfef88d357ff9a5f",
           "bytes": 3662,
           "sha256": "bd458e99d99dab13f6f8af52bf1d0ccdc6a0002f8c51328bf935b7b29eeaaa07"
+        },
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "a3865ec3545ad88a8c97cb370611c28d243ac3ab",
+          "git_blob": "88e7272550524b13b23f0d7eee2d7f35518c2f2a",
+          "bytes": 4531,
+          "sha256": "0460c0122b1decc4d01004767f2bccf8fc84a929e2c4a82e45095323b0ee0533"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "88e7272550524b13b23f0d7eee2d7f35518c2f2a",
+          "bytes": 4531,
+          "sha256": "0460c0122b1decc4d01004767f2bccf8fc84a929e2c4a82e45095323b0ee0533"
         }
       ]
     },
@@ -692,6 +979,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "c29e21b87cf42da52546763bda9598f640351446",
+          "bytes": 37437,
+          "sha256": "9a8ac7c53ffe169eb1c70741571890de8f74def2ffce922fe35e0813244726fc"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "c29e21b87cf42da52546763bda9598f640351446",
           "bytes": 37437,
           "sha256": "9a8ac7c53ffe169eb1c70741571890de8f74def2ffce922fe35e0813244726fc"
@@ -719,6 +1013,13 @@
           "git_blob": "59aa1295b51d343cd7361989ae3619ae92142154",
           "bytes": 11878,
           "sha256": "38b7ecc62255a24a52451dcb890dbeeb330ac70efd7fc676722348d914cbcd69"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "59aa1295b51d343cd7361989ae3619ae92142154",
+          "bytes": 11878,
+          "sha256": "38b7ecc62255a24a52451dcb890dbeeb330ac70efd7fc676722348d914cbcd69"
         }
       ]
     },
@@ -740,6 +1041,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "32363ef88dbf39a63abe64a24b0359415c9a4171",
+          "bytes": 5089,
+          "sha256": "2475b0c595bcff69be88da2c94b8994221eb40f4ba009676949d48390c3c49c5"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "32363ef88dbf39a63abe64a24b0359415c9a4171",
           "bytes": 5089,
           "sha256": "2475b0c595bcff69be88da2c94b8994221eb40f4ba009676949d48390c3c49c5"
@@ -767,6 +1075,13 @@
           "git_blob": "f74795b1f070b845a8d6acc7548a5adea4424a16",
           "bytes": 12769,
           "sha256": "aec429f858bc05fddb095d3d4a2e5596bbb128715f59478be0f6451949c6633c"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "f74795b1f070b845a8d6acc7548a5adea4424a16",
+          "bytes": 12769,
+          "sha256": "aec429f858bc05fddb095d3d4a2e5596bbb128715f59478be0f6451949c6633c"
         }
       ]
     },
@@ -788,6 +1103,13 @@
         {
           "repository": "woahwhattheheck/public-commons-sprint-2026",
           "commit": "131fce461f90a29bf3fd1bd430aa89efc0bef164",
+          "git_blob": "2be45f830332c0bfec95897138da0900b9001baf",
+          "bytes": 16789,
+          "sha256": "7e408dcbee48760bd775f20f7e0af15d2f36307459610ac583515bd3f8bb9598"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
           "git_blob": "2be45f830332c0bfec95897138da0900b9001baf",
           "bytes": 16789,
           "sha256": "7e408dcbee48760bd775f20f7e0af15d2f36307459610ac583515bd3f8bb9598"
@@ -815,6 +1137,85 @@
           "git_blob": "ac401a422f7096a9a3cf6d65a78da982ae53075f",
           "bytes": 14166,
           "sha256": "98554a08642a4665167874172d8da1dc51690479d4a898d226bddf5c181f365d"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "ac401a422f7096a9a3cf6d65a78da982ae53075f",
+          "bytes": 14166,
+          "sha256": "98554a08642a4665167874172d8da1dc51690479d4a898d226bddf5c181f365d"
+        }
+      ]
+    },
+    {
+      "id": "webhook-event-workbook-columns",
+      "label": "Complete source-bound customer worksheet column continuation",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns.mjs",
+      "required": false,
+      "editions": [
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "3af4f10a75b0ed4c53ada678579b617746e58dac",
+          "bytes": 23387,
+          "sha256": "9cee0b18e2fcc95802416e03eff4d5e672eecef04c947f6795cb02a4fa026848"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "3af4f10a75b0ed4c53ada678579b617746e58dac",
+          "bytes": 23387,
+          "sha256": "9cee0b18e2fcc95802416e03eff4d5e672eecef04c947f6795cb02a4fa026848"
+        }
+      ]
+    },
+    {
+      "id": "webhook-event-workbook-columns-cli",
+      "label": "Installed complete customer worksheet handover and file receiving command",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns-cli.mjs",
+      "required": false,
+      "editions": [
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "97cdb7c2ca921ff9cfbcab7ce33dc11073e661c4",
+          "git_blob": "ea690fada260fd01d3f2bad9e5e5f303152cb58e",
+          "bytes": 4807,
+          "sha256": "72abd69c2532e05ee798a1a326859efcd4d5bd16eee2b39025211e849737ab04"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "ea690fada260fd01d3f2bad9e5e5f303152cb58e",
+          "bytes": 4807,
+          "sha256": "72abd69c2532e05ee798a1a326859efcd4d5bd16eee2b39025211e849737ab04"
+        }
+      ]
+    },
+    {
+      "id": "webhook-event-workbook-columns-operating",
+      "label": "Complete worksheet operating and independent receiving course",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md",
+      "required": false,
+      "editions": [
+        {
+          "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+          "commit": "8252fd7ee287a667eff979855958bd152e556f5f",
+          "git_blob": "58979eb9bc0c324628a663745e62de68740803cb",
+          "bytes": 13387,
+          "sha256": "002745244c9656af21ee1e6d56a11cc36c76f29ee45ec3a502d7ab96466c7d76"
+        },
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "126fbbdb51fe9bf76ea50e74f61b5a430d639c73",
+          "git_blob": "58979eb9bc0c324628a663745e62de68740803cb",
+          "bytes": 13387,
+          "sha256": "002745244c9656af21ee1e6d56a11cc36c76f29ee45ec3a502d7ab96466c7d76"
         }
       ]
     }

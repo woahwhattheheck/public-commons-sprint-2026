@@ -11,6 +11,12 @@ const mapping={type:'object',additionalProperties:false,required:['fields'],prop
  schema:{const:'stellar-forge.event-feed-analysis-mapping.v1'},
  fields:{type:'array',maxItems:100,items:{type:'object',additionalProperties:false,required:['name','pointer'],
  properties:{name:{type:'string',pattern:'^[A-Za-z][A-Za-z0-9_]{0,47}$'},pointer:{type:'string',maxLength:2000}}}}}};
+const mappingReview={type:'object',additionalProperties:false,
+ required:['comparison_sha256','programme_revision','baseline_operation_id','reviewer','note','decisions'],
+ properties:{comparison_sha256:hash,programme_revision:natural,baseline_operation_id:id,
+ reviewer:{type:'string',minLength:1,maxLength:240},note,
+ decisions:{type:'array',maxItems:200,items:{type:'object',additionalProperties:false,required:['name','reason'],
+ properties:{name:{type:'string',minLength:1,maxLength:48},reason:{type:'string',minLength:1,maxLength:4000}}}}}};
 const common={programme,id,operation_id:id,resume:{type:'boolean'}};
 const spec=(required,properties,description)=>({required,properties,description});
 export const nativeEventOperations=Object.freeze({
@@ -28,7 +34,10 @@ export const nativeEventOperations=Object.freeze({
  base64:{type:'string',minLength:1,maxLength:87384},sha256:hash},'Receive up to64KiB original bytes at the retained offset; identical replay is accepted by the original SQLite receiver.'),
  'event-programme':spec(['programme'],{programme,offset:natural,limit:{type:'integer',minimum:1,maximum:100}},
  'Read the original customer programme and paged operation summaries. Read the full retained record for exact mappings, reviews and customer definitions.'),
- 'event-review':spec(['programme','id','operation_id','input_id','mapping'],{...common,input_id:id,mapping},
+ 'event-mapping-compare':spec(['programme','input_id','mapping'],{programme,input_id:id,mapping,
+ field_offset:natural,field_limit:{type:'integer',minimum:1,maximum:50},mapping_offset:natural,mapping_limit:{type:'integer',minimum:1,maximum:25}},
+ 'Compare both exact accepted/current source editions and proposed mapping. The full immutable record retains every pointer, original mappings and new-event coverage; no native review/apply is dispatched.'),
+ 'event-review':spec(['programme','id','operation_id','input_id','mapping'],{...common,input_id:id,mapping,mapping_review:mappingReview},
  'Review the full received original event window through the existing native programme. The input, mapping and stable action are saved before dispatch.'),
  'event-apply':spec(['programme','id','operation_id','review_sha256','note'],{...common,review_sha256:hash,note,
  columns:{type:'object',description:'Complete existing workbook replacement-column arrays keyed by original sheet index. Original WorkbookRefresh validates every selected column.'}},
@@ -38,7 +47,7 @@ export const nativeEventOperations=Object.freeze({
  'event-deliver':spec(['programme','id','operation_id'],common,
  'Prepare a fresh linked whole-workspace delivery from an accepted result. The action ID becomes its retained delivery ID; reusing it retains its original snapshot.'),
  'event-action':spec(['id'],{id},'Read the saved original action, current progress and full result record; ERROR or INTERRUPTED continues only with the same request and explicit resume.'),
- 'event-record-file':spec(['kind','record_id','sha256','bytes'],{kind:{enum:['overview','programme','action','fields','values']},
+ 'event-record-file':spec(['kind','record_id','sha256','bytes'],{kind:{enum:['overview','programme','action','fields','values','mapping']},
  record_id:{type:'string',minLength:1,maxLength:24+32},sha256:hash,bytes:{type:'integer',minimum:1,maximum:67108864},...range},
  'Read every exact byte of a retained native response, at most64KiB per call. Bind all ranges to the same selected digest and original workspace.'),
  'event-delivery-index':spec(['programme','delivery_id'],{programme,delivery_id:id},
