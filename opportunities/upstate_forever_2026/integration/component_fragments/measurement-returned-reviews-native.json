@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-returned-reviews-native",
+  "source_reference": "Original returned-review 1.0.2 engine with the existing authenticated operator queue, retained archive catalog and original decision desk.",
+  "components": {
+    "measurement-returned-reviews-native": {
+      "title": "Returned measurement reviews in the original operator",
+      "paths": [
+        "operator/measurement_returned_reviews_native.py",
+        "operator/extensions/measurement-returned-reviews-native.json",
+        "operator/web/measured_returned_reviews.mjs",
+        "measurement_workspace/web/returned_reviews.mjs",
+        "operator/MEASUREMENT_RETURNED_REVIEWS.md"
+      ],
+      "requires": [
+        "measurement-returned-reviews"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-returned-reviews-native"
+  ]
+}
