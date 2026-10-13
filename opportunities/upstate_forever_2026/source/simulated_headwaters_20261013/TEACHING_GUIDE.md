@@ -166,6 +166,64 @@ Add three actual screenshot frames to the same teaching packet: original laborat
 
 [EPA Method 365.1, Revision 2.0 (August 1993)](https://www.epa.gov/sites/default/files/2015-08/documents/method_365-1_1993.pdf), sections 1.3 and 3.12–3.15, defines the method scope and phosphorus forms, including total phosphorus and reporting as P. The entered 20% precision criterion and five-times-limit applicability are authored project choices retained with this case. The source method label and exact total-phosphorus basis remain visible with every laboratory result.
 
+## Continue into customer requests and engineering handback
+
+The same completed field campaign can be taught through **Customer reviews** and its **Worklist**. This uses the retained laboratory, QC and corrective-action evidence. The reviewer wording, engineer names, assignments and engineering dispositions are explicitly labelled **SIMULATED TEACHING INPUT** in the original records and visible titles.
+
+Start from the completed field operation returned by the driver. The maintained consumer is `model.simulated_customer_review`; its full guide is [SIMULATED_CUSTOMER_REVIEW.md](../../docs/SIMULATED_CUSTOMER_REVIEW.md). It advances the same project through three phases:
+
+| Phase | What Bryce opens | What to explain |
+| --- | --- | --- |
+| Request | **SIMULATED TEACHING INPUT — initial field quality review**, its original response, then the filtered **Worklist**. | The original QC and open corrective-action reports support two authored requests: explain the follow-up evidence, and preserve the original laboratory records and source flags. |
+| Planning | The original review's **Handbacks** tab and saved planning edition. | Each original request has an assigned engineer and a documented plan. Requested assignee and current engineering owner remain separate fields. |
+| Ready | **SIMULATED TEACHING INPUT — revised field evidence and engineering closeout**, then the ready handback. | The actual revised artifacts come from all five saved field source editions. Follow each request to its replacement evidence and original requirement. |
+
+Open the original observation context, initial and repeat QC reports, and both closeout action reports from the revised review. The original response and planning edition remain available in history. Read the engineering explanation beside its selected evidence; the application's separate customer-response controls let the reviewer decide what to do with the handback.
+
+For an interactive explanation, advance one phase at a time from the same application:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/simulated-headwaters-workspace \
+  continue --field-operation ACTUAL_FIELDWORK_OPERATION_ID --through request
+~~~
+
+Repeat with `--through planning` and then `--through ready`. The complete driver may already have prepared all three; in that case open the saved historical editions. The returned `original_review_id`, `response_id`, `planning_handback_id`, `revised_review_id` and `handback_id` identify them exactly. `operation_id` identifies this same customer continuation. An earlier phase reopens retained work without rolling it back. If a new human response has arrived before a new phase, continue that current request in the ordinary review editor.
+
+### Open the complete review packages
+
+The maintained export uses an ordinary delivery directory outside the application and scientific Workspace:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/simulated-headwaters-workspace \
+  export --operation ACTUAL_CUSTOMER_OPERATION_ID \
+  --output /owned/demo-output/customer-review-case
+~~~
+
+Open `original-review/index.html` for the selected original review and its authored response. Then open `engineering-handback/index.html` for the ready engineering edition and its linked original/revised evidence. These complete offline desks are useful on a browser that supports local HTML. Use actual application navigation when showing the live Worklist or editing a response.
+
+The accompanying `original-review.zip` and `engineering-handback.zip` are the maintained native packages. `current-worklist.json` and `.csv` contain every matching request at their stated captured snapshot, including owners, wording, dispositions and replacement IDs. `selection.json` retains the project, field operation and all selected review generations. `case-manifest.json` binds the original package identities and companion bytes.
+
+Create the scientific project archive after this customer continuation reaches ready. Its selected edition must include the customer operation and all five review/response/handback IDs, plus the saved `06-ready-handback.result.json` under the returned operation directory. The integrated driver uses those identities to distinguish this complete handback from its earlier field-only archive.
+
+### Reopen the same customer case after project transfer
+
+Keep the complete `customer-review-case` directory beside the scientific project archive. Restore the original project using the maintained portable receiver, then run from the **received application**:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/received-headwaters/workspace \
+  receive --source /owned/delivered/customer-review-case \
+  --output /owned/received-customer-review
+~~~
+
+Use the returned `receipt_id` in **Customer reviews → Received packages**. Open the retained incoming generation and its local viewer, then the original ready handback and revised evidence. The receive result also returns the current filtered Worklist; later local responses can appear there while the historical teaching IDs remain unchanged. Repeating the same receive command verifies and reopens the same package identity.
+
+For a short spoken handoff: “We started with the saved quality finding. The reviewer asked for follow-up evidence and original laboratory context. Engineering assigned the work, linked the five actual closeout documents, and returned a revised review. This received copy opens those same records, and the next response continues their history.”
+
+Add two actual frames to the same teaching packet: the original request beside its assigned engineering work; and the independently received ready handback with its revised source evidence. Retain their exact review, response and handback IDs and the measured preparation/receive times alongside the existing model and field frames.
+
 ## Retained handoff
 
 The complete handoff contains the simulated original inputs and their assumptions; application source; original and restored Workspace identities; saved run/comparison/delivery IDs; readable report and maps; physical GIS outputs; source and runtime metadata; actual timing; screenshots/recording; and this teaching explanation. The maintained rehearsal receiver saves these within the scientific archive and its accompanying teaching packet.

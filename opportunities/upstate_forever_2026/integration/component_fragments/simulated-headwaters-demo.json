@@ -44,7 +44,8 @@
         "delivery-datasets",
         "implementation",
         "headwaters-parameter-course",
-        "programme-activity"
+        "programme-activity",
+        "simulated-customer-review"
       ],
       "source_reference": {
         "operation": "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z",
