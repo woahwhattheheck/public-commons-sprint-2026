@@ -1,0 +1,106 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for action",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_09866c454b0b04cfbbce69b821ffedf8325edea9683a2933510747247d1829bd",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "siteKey",
+    "kind",
+    "status",
+    "quotedAmount",
+    "startDate",
+    "notes"
+  ],
+  "rows": [
+    {
+      "rowId": "original_action_job_first:1",
+      "recordId": "job_779faa4b66922b14eb35097cde34434d",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "action-J001",
+        "customerKey": "DEMO-action-customer-1",
+        "siteKey": "DEMO-action-site-1",
+        "kind": "Repair diagnosis",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "action-J001",
+        "customerKey": "action-C001",
+        "siteKey": "action-S001",
+        "kind": "Repair diagnosis",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_de1ee672541c784ef03242fba5466d0f",
+        "siteKey": "site_c7bb7c82517fac60ac966cb79ef8792c"
+      }
+    },
+    {
+      "rowId": "original_action_job_first:2",
+      "recordId": "job_16eeb4bb53848d509db437f17495ccfc",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "action-J002",
+        "customerKey": "DEMO-action-customer-2",
+        "siteKey": "DEMO-action-site-2",
+        "kind": "Planned installation",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "sourceFields": {
+        "externalKey": "action-J002",
+        "customerKey": "action-C002",
+        "siteKey": "action-S002",
+        "kind": "Planned installation",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "links": {
+        "customerKey": "customer_d12437d0a5800317a166fa31eb023003",
+        "siteKey": "site_ff32445dcbc848c9ace751ba29e0fb28"
+      }
+    },
+    {
+      "rowId": "original_action_job_first:3",
+      "recordId": "job_129dc2655cfb77abf093151235dbf9e6",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "action-J003",
+        "customerKey": "DEMO-action-customer-1",
+        "siteKey": "DEMO-action-site-1",
+        "kind": "Maintenance review",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "action-J003",
+        "customerKey": "action-C001",
+        "siteKey": "action-S001",
+        "kind": "Maintenance review",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_de1ee672541c784ef03242fba5466d0f",
+        "siteKey": "site_c7bb7c82517fac60ac966cb79ef8792c"
+      }
+    }
+  ]
+}

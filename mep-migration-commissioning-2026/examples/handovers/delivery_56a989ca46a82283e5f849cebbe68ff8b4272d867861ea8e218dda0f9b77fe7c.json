@@ -1,0 +1,51 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for dixie",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_ace21b492d9276bb4e9bdf642673cbb45bdd844af2aaf8438672c6a7ffe008b8",
+  "columns": [
+    "externalKey",
+    "name",
+    "status",
+    "address"
+  ],
+  "rows": [
+    {
+      "rowId": "original_dixie_customer_first:1",
+      "recordId": "customer_b956902e9e7f21181004e83f86a79d75",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "dixie-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "links": {}
+    },
+    {
+      "rowId": "original_dixie_customer_first:2",
+      "recordId": "customer_1f365d2d3e2eaebf76caf71536279d7f",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "dixie-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "links": {}
+    }
+  ]
+}

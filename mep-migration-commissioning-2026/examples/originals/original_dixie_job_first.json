@@ -1,0 +1,35 @@
+{
+  "label": "Explicit fictional original job export",
+  "rows": [
+    {
+      "legacy_job": "dixie-J001",
+      "customer_key": "dixie-C001",
+      "site_key": "dixie-S001",
+      "job_kind": "Water heater diagnosis",
+      "source_status": "Open",
+      "quoted_amount": "125.00",
+      "start_date": "2026-10-14",
+      "note": "Fictional operating input."
+    },
+    {
+      "legacy_job": "dixie-J002",
+      "customer_key": "dixie-C002",
+      "site_key": "dixie-S002",
+      "job_kind": "Drain repair",
+      "source_status": "Booked",
+      "quoted_amount": "1800.00",
+      "start_date": "2026-10-15",
+      "note": "Exact original\nmultiline scope, with comma."
+    },
+    {
+      "legacy_job": "dixie-J003",
+      "customer_key": "dixie-C001",
+      "site_key": "dixie-S001",
+      "job_kind": "Accepted replacement",
+      "source_status": "Done",
+      "quoted_amount": "95.00",
+      "start_date": "2026-10-16",
+      "note": "Fictional operating input."
+    }
+  ]
+}
