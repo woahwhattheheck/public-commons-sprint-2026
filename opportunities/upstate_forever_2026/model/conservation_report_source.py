@@ -150,12 +150,34 @@ def _retained_optimization(workspace, state, plan):
 
 
 def _optimization_section(retained):
+    """Explain the retained decision in the original structured report format."""
     analysis = retained["analysis"]
     request = analysis["request"]
+    objective = request["objective"]
+    candidates = {row["feature_id"]: row for row in analysis["candidates"]}
+    selected = [candidates[key] for key in analysis["selected_ids"]]
+    criteria = {row["id"]: row for row in objective.get("criteria", [])}
+    labels = {axis: criteria.get(axis, {}).get("label", axis.replace("_", " "))
+              for axis in request["axes"]}
+
+    def units(keys):
+        return "; ".join((candidates[key].get("label") or key) + " [" + key + "]"
+                         for key in keys) or "None"
+
+    def rank_range(value):
+        if not value or value.get("minimum_rank") is None:
+            return "Not available"
+        return str(value["minimum_rank"]) + " to " + str(value["maximum_rank"])
+
+    def frequency(value, selected_key, total_key):
+        if not value:
+            return "Not compared"
+        return str(value[selected_key]) + " / " + str(value[total_key])
+
     rows = [
         ["Original analysis ID", analysis["id"]],
-        ["Objective kind", request["objective"].get("kind")],
-        ["Objective basis", request["objective"].get("basis")],
+        ["Objective kind", objective.get("kind")],
+        ["Objective basis", objective.get("basis")],
         ["Objective scope", analysis["methods"].get("objective_scope")],
         ["Original candidate count", analysis["counts"].get("inventory")],
         ["Eligible candidate count", analysis["counts"].get("eligible")],
@@ -164,30 +186,171 @@ def _optimization_section(retained):
         ["Original solver module", analysis["engine"].get("module")],
         ["Original solver SHA-256", analysis["engine"].get("sha256")],
     ]
-    for group, values in (
-            ("Weight", request.get("weights", {})),
-            ("Constraint", request.get("constraints", {})),
-            ("Solver result", analysis.get("optimization", {}))):
+    for group, values in (("Constraint", request.get("constraints", {})),
+                          ("Solver result", analysis.get("optimization", {}))):
         rows.extend([group + ": " + name, value] for name, value in values.items()
                     if not isinstance(value, (dict, list)))
-    return ["Original saved optimization", [
-        "This portfolio was selected by its retained optimization analysis and then "
-        "stored through the original manual-ID plan interface. The storage mode does "
-        "not replace its original objective, solver or constraints.",
+    blocks = [
+        "This portfolio was selected by its retained optimization analysis and then stored "
+        "through the original manual-ID plan interface. The storage mode does not replace "
+        "its original objective, solver or constraints.",
         _table(["Decision record", "Retained value"], rows),
         _text(analysis["methods"].get("optimality_scope")),
         _text(analysis["methods"].get("selected_result")),
-        _text(analysis.get("stability", {}).get("interpretation")),
-        "The full normalized candidate table, all declared preference profiles and "
-        "solver details are attached unchanged. Independent-unit objective sums and "
-        "union-recomputed physical quantities retain their original meanings.",
+    ]
+    meanings = {
+        "source-context": "Original geographic overlap or designation context; not pollutant removal",
+        "current-export": "Baseline modeled export; not an intervention benefit",
+        "restoration": "Baseline minus the retained alternative on common valid native support",
+        "avoided-conversion": "Retained disturbance alternative minus baseline on common valid native support",
+        "published-method": "Original method/category priority points with their retained prerequisites",
+        "source-attribute": "Unchanged numeric source attribute with analyst-declared unit/reference; no inferred connectivity or unit conversion",
+    }
+    definitions, source_rows, weighted = [], [], []
+    for axis in request["axes"]:
+        criterion = criteria.get(axis, {})
+        kind = criterion.get("kind", objective["kind"])
+        first = next((row for row in candidates.values() if axis in row["objective_units"]), None)
+        unit = first["objective_units"][axis] if first else criterion.get("unit")
+        basis = criterion.get("basis", objective.get("basis", "total"))
+        direction = criterion.get("direction", "maximize")
+        definitions.append([labels[axis] + " [" + axis + "]",
+                            criterion.get("field") or criterion.get("axis") or axis,
+                            unit, basis, direction])
+        description = meanings.get(kind, kind)
+        references = []
+        if criterion.get("reference"):
+            references.append(criterion["reference"])
+        source = criterion.get("source") or {}
+        if source.get("source_id"):
+            references.append("Original source " + source["source_id"])
+        if source.get("source_collection_id"):
+            references.append("Collection " + source["source_collection_id"])
+        baseline = source.get("baseline_run_id")
+        if baseline:
+            references.append("Baseline " + baseline)
+        alternative = criterion.get("scenario_run_id", objective.get("scenario_run_id"))
+        if alternative:
+            references.append("Alternative " + alternative)
+        method = criterion.get("published_method") or analysis["request"].get("published_method") or {}
+        if method:
+            references += [str(method[name]) for name in ("method_id", "category_id", "reference", "source_uri")
+                           if method.get(name)]
+        source_rows.append([labels[axis], description,
+                            "; ".join(references) or "Original study/source bindings in the attached analysis"])
+        weighted.append([labels[axis], request["weights"].get(axis, 0),
+                         analysis["normalization"]["scales"].get(axis),
+                         "Negated normalized value" if direction == "minimize" else "Signed normalized value"])
+    blocks += [
+        "The following criteria are the scientist's explicit decision choices. Each keeps its "
+        "own units and original source meaning; only their normalized weighted contributions "
+        "are combined into a dimensionless score.",
+        _table(["Criterion / ID", "Original axis or field", "Unit", "Quantity basis", "Direction"], definitions),
+        _table(["Criterion", "Source meaning", "Original reference"], source_rows),
+        _table(["Criterion", "Normalized weight", "Fixed absolute scale", "Score direction"], weighted),
+        "A supported value is divided by its criterion's maximum absolute scale. Minimize negates "
+        "that normalized value. Weights total one and weighted contributions sum to the score. "
+        "A supported zero has zero contribution; unavailable positive-weight support excludes a "
+        "candidate. Missing values are not credited as zeros.",
+        ("Scales are fixed across the selected case and every distinct enabled native comparison "
+         "case, then reused across all named preference profiles. Adding a case defines a new analysis."
+         if analysis["normalization"].get("fixed_across_scenario_cases") else
+         "Scales are fixed across the selected source-qualified candidate universe and reused for "
+         "the preference comparisons."),
+    ]
+    preference = analysis["stability"]
+    preference_compared = bool(preference["enabled"] and len(preference["profiles"]) > 1)
+    preference_rows = []
+    for profile in preference["profiles"]:
+        weights = "; ".join(labels.get(key, key) + ": " + _text(value)
+                            for key, value in profile["weights"].items() if value > 0)
+        preference_rows.append([profile["name"], weights, profile["eligible_count"],
+                                units(profile["selected_ids"]), profile["optimization"]["objective_score"]])
+    blocks += [
+        ("Preference comparison changes weights within the selected case; it does not vary the "
+         "native inputs. The rows below retain each explicit profile's feasible selection."
+         if preference_compared else
+         "No distinct preference comparison is enabled. The following row retains the selected "
+         "weights and their feasible selection."),
+        _table(["Preference", "Positive normalized weights", "Eligible units", "Selected original units", "Objective score"],
+               preference_rows),
+        _text(preference.get("interpretation")),
+    ]
+    scenario = analysis.get("scenario_stability") or {}
+    compared = bool(scenario.get("enabled") and len(scenario.get("cases", [])) > 1)
+    if compared:
+        case_rows = []
+        for case in scenario["cases"]:
+            mapping = "; ".join(labels.get(key, key) + ": " + value
+                                for key, value in case["scenario_run_ids"].items()) or "No paired criterion"
+            case_rows.append([case["name"], mapping, case["eligible_count"],
+                              units(case["selected_ids"]), case["optimization"]["objective_score"]])
+        blocks += [
+            "Native-case comparison changes only the explicitly mapped original alternatives, "
+            "keeping the baseline, selected weights and resource limits fixed. Context and source "
+            "attributes do not acquire an invented native scenario.",
+            _table(["Retained case", "Criterion / original alternative", "Eligible units", "Selected original units", "Objective score"],
+                   case_rows),
+            _text(scenario.get("interpretation")),
+            "Each paired criterion retains its own common valid baseline/alternative support. "
+            "Coverage and parameter-profile changes can also affect ranks; a rank difference is "
+            "not automatically an intervention effect. This is separate from the named weight "
+            "comparisons, without a joint case probability or an uncomputed weight-by-case design.",
+        ]
+    else:
+        blocks.append("No distinct native-case comparison is enabled in this decision. The "
+                      "selected case alone does not establish scenario robustness.")
+    stability_rows, contribution_rows = [], []
+    for row in selected:
+        name = (row.get("label") or row["feature_id"]) + " [" + row["feature_id"] + "]"
+        pref = row["preference_stability"] if preference_compared else None
+        case = row.get("scenario_stability") if compared else None
+        stability_rows.append([name, row["rank"], row["score"],
+                               ("Selected " + frequency(pref, "selected_profiles", "profile_count")
+                                + "; eligible " + frequency(pref, "eligible_profiles", "profile_count")
+                                + "; rank " + rank_range(pref)) if pref else "Not compared",
+                               ("Selected " + frequency(case, "selected_cases", "case_count")
+                                + "; eligible " + frequency(case, "eligible_cases", "case_count")
+                                + "; rank " + rank_range(case))
+                               if case else "Not compared"])
+        for axis in request["axes"]:
+            support = row["axis_support"][axis]
+            contribution = row.get("score_contributions", {}).get(axis)
+            if "score_contributions" not in row and support["eligible_support"]:
+                contribution = request["weights"][axis] * row["normalized_metrics"][axis]
+            detail = str(support["availability"])
+            if support.get("coverage_fraction") is not None:
+                detail += "; coverage " + _text(support["coverage_fraction"])
+            if support.get("valid_area_ha") is not None:
+                detail += "; valid area " + _text(support["valid_area_ha"]) + " ha"
+            if support.get("availability_reason"):
+                detail += "; " + support["availability_reason"]
+            if support.get("profile_changed"):
+                detail += "; parameter profile changed"
+            contribution_rows.append([name, labels[axis],
+                                      _text(row["objective_values"][axis]) + " " + row["objective_units"][axis],
+                                      contribution, detail])
+    blocks += [
+        "The following detail is limited to the land selected in this saved portfolio. All "
+        "unselected candidates and case-specific values remain in the unchanged attached analysis.",
+        _table(["Selected original unit", "Rank", "Score", "Preference selection / eligibility / rank",
+                "Case selection / eligibility / rank"], stability_rows),
+        _table(["Selected original unit", "Criterion", "Original value and unit",
+                "Weighted score contribution", "Source support"], contribution_rows),
+        "Selection frequencies describe only the included preferences and cases; they are not "
+        "probabilities or calibrated confidence levels. Original quantities, points and hectares "
+        "remain separate. Additive candidate scores and density sums are not basin totals, and "
+        "overlapping source units can repeat support. The authoritative saved plan recomputes "
+        "physical quantities on the selected reporting union.",
+        "The full normalized candidate table, original source references, all declared preference "
+        "profiles, native-case quantities and solver details are attached unchanged.",
         _links([
             ("Original complete optimization analysis", "optimization/analysis.json"),
             ("Original full optimization candidate table", "optimization/candidates.csv"),
             ("Original optimization report", "optimization/index.html"),
         ]),
-    ]]
-
+    ]
+    return ["Original saved optimization", blocks]
 
 def _sections(state, plan, rows, packet, sources, optimization=None):
     spec, summary = state["selection"]["spec"], plan["summary"]
