@@ -70,3 +70,11 @@ The source archives and their original guide/manifests are kept separately in th
 `edition.json.workspaceRevision` and the report heading identify the retained sender snapshot. The verified calculation copy is an independent original-engine receive, which adds its native receiving event. Its actual revision is preserved as `edition.json.analysisWorkspaceRevision` and `calibration.json.workspaceRevision`; the separate `analysis-context.json` binds its actual analysis revision to `sourceWorkspaceRevision` and `sourceCollectionId`. The native calibration JSON, including its digest, stays unchanged. Neither a receiving revision nor a source record identifier is reassigned. The immutable `project.json` contains the sender revision and every original row/history; normal customer receiving advances its own revision.
 
 Original UTF-8 BOM bytes are preserved by collection intake, the ordinary browser file picker and provider acquisition. Parser header handling remains separate from the retained original byte identity.
+
+## Streamed originals and recoverable working copies
+
+The same installed collection panel now selects large WQP/station CSV files through the original 256 KiB checked intake and retains the complete reviewed receiving request before dispatch. Ordinary USGS and companion files retain their original inline path. A set keeps its canonical collection ID, full source list and per-file native progress. Current large editions use the original streaming ZIP64 exporter and carry an explicit collection binding with every whole original. Earlier inline study editions keep their original opening routes.
+
+[Complete large-collection operating and receiving guide](measurement_workspace/LARGE_COLLECTIONS.md) gives the exact source-reference contract, partial-receive recovery, workspace revision rules, actual member/chunk downloads and installed CLI. Complete project archives include the entire native workspace; report filters do not discard original source custody.
+
+[Browser working-file and complete download course](MEASUREMENT_COLLECTION_WORKING.md) explains saved drafts, exact original request recovery, resumed uploads and every current download control.

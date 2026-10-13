@@ -69,18 +69,27 @@ function verifyMembers(root,members){
  }
 }
 /** One revision, durable phase boundaries, same-ID reconnect after process death. */
-export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
+export async function exportEdition(w,{id=hash(randomUUID()),filters={},expectedRevision,collectionBinding}={}){
+ if(expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0))throw new InputError('Select a valid workspace revision');
+ if(collectionBinding!==undefined&&(!collectionBinding||collectionBinding.format!=='upper-savannah-collection-large-edition/v1'||!identifier(collectionBinding.collectionId)||collectionBinding.editionId!==id||collectionBinding.expectedRevision!==expectedRevision||stable(collectionBinding.filters)!==stable(filters)))throw new InputError('Collection publication requires its exact original binding');
+ const selection={...(expectedRevision===undefined?{}:{expectedRevision}),...(collectionBinding===undefined?{}:{collectionBinding})};
+ const checkSelection=(value)=>{
+  if(expectedRevision!==undefined&&value.workspaceRevision!==expectedRevision)throw new InputError('Native edition belongs to another selected revision',409);
+  if(collectionBinding!==undefined&&stable(value.collectionBinding)!==stable(collectionBinding))throw new InputError('Native edition belongs to another collection selection',409);
+  return value;
+ };
  const root=editionRoot(w,id);
  return withDirectoryLock(root,async()=>{
   const resultFile=path.join(root,'edition.json'),ready=path.join(root,'files');
   const requestFile=path.join(root,'request.json');
   if(fs.existsSync(requestFile)){
-   if(stable(readJSON(requestFile).filters)!==stable(filters))throw new InputError('This edition retains different filters; reopen it or choose a new identifier',409);
-  }else atomicJSON(requestFile,{format:'upper-savannah-measurement-export-request/v1',id,filters});
-  if(fs.existsSync(resultFile))return registerEdition(w,readJSON(resultFile));
+   const previous=readJSON(requestFile);
+   if(stable(previous.filters)!==stable(filters)||stable(previous.expectedRevision)!==stable(expectedRevision)||stable(previous.collectionBinding)!==stable(collectionBinding))throw new InputError('This edition retains different filters, revision or collection selection; reopen its original request',409);
+  }else atomicJSON(requestFile,{format:'upper-savannah-measurement-export-request/v1',id,filters,...selection});
+  if(fs.existsSync(resultFile))return registerEdition(w,checkSelection(readJSON(resultFile)));
   // Publication may have completed just before the response/outer receipt was lost.
   if(fs.existsSync(path.join(ready,'edition.json'))){
-   const result=readJSON(path.join(ready,'edition.json'));verifyMembers(ready,result.files);
+   const result=checkSelection(readJSON(path.join(ready,'edition.json')));verifyMembers(ready,result.files);
    atomicJSON(resultFile,result);atomicJSON(path.join(root,'status.json'),{id,phase:'complete',workspaceRevision:result.workspaceRevision});return registerEdition(w,result);
   }
   const savedFile=path.join(w.directory,'saved-measurement-editions',id,'edition.json');
@@ -89,7 +98,7 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
   // A transferred saved population is already complete. Its receiving workspace
   // creates a new archive under a new ID; it never silently replaces that history.
   if(fs.existsSync(savedFile)&&!fs.existsSync(capturedFile)){
-   const saved=readJSON(savedFile);if(stable(saved.filters)!==stable(filters))throw new InputError('This saved edition retains different filters',409);return registerEdition(w,saved);
+   const saved=checkSelection(readJSON(savedFile));if(stable(saved.filters)!==stable(filters))throw new InputError('This saved edition retains different filters',409);return registerEdition(w,saved);
   }
   let view;
   try{
@@ -100,11 +109,15 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
     await backup(w.db,path.join(snapshot,'measurements.sqlite'));
     for(const member of before)copyVerified(path.join(w.directory,member.path),path.join(snapshot,member.path),member);
     if(stable(before)!==stable(listFiles(w.directory,{exclude:SKIP})))throw new InputError('Companion sources changed during capture; repeat this edition identifier',409);
-    view=new MeasurementWorkspace(snapshot);const revision=view.revision();materializeOriginals(view,snapshot);view.close();view=null;
+    view=new MeasurementWorkspace(snapshot);const revision=view.revision();
+    if(expectedRevision!==undefined&&revision!==expectedRevision)throw new InputError('Workspace changed before the selected snapshot; retain this request and select a new edition after review',409);
+    if(collectionBinding!==undefined){const selected=readJSON(path.join(snapshot,'collections',collectionBinding.collectionId,'large-editions',id,'selection.json'));if(stable(selected)!==stable(collectionBinding))throw new InputError('Captured collection binding differs',409);}
+    materializeOriginals(view,snapshot);view.close();view=null;
     for(const suffix of ['-wal','-shm','-journal'])fs.rmSync(path.join(snapshot,'measurements.sqlite'+suffix),{force:true});
     atomicJSON(capturedFile,{workspaceRevision:revision,files:listFiles(snapshot)});
    }
    const captured=readJSON(capturedFile),revision=captured.workspaceRevision;
+   if(expectedRevision!==undefined&&revision!==expectedRevision)throw new InputError('Retained capture belongs to another selected revision',409);
    verifyMembers(snapshot,captured.files);
    const populationNames=['records.csv','calibration.json','calibration.csv','accepted.jsonl','excluded.jsonl'];
    if(!fs.existsSync(populationFile)){
@@ -116,7 +129,7 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
    }
    const population=readJSON(populationFile),{calibration}=population,populationFiles=population.files;
    verifyMembers(build,populationFiles);
-   const saved={format:'upper-savannah-measurements-edition/v1',id,workspaceRevision:revision,createdAt:calibration.createdAt,filters,counts:calibration.counts,recordCount:calibration.counts.accepted+calibration.counts.excluded,calibrationSha256:calibration.sha256,files:populationFiles,chunkBytes:CHUNK};
+   const saved={format:'upper-savannah-measurements-edition/v1',id,workspaceRevision:revision,createdAt:calibration.createdAt,filters,counts:calibration.counts,recordCount:calibration.counts.accepted+calibration.counts.excluded,calibrationSha256:calibration.sha256,files:populationFiles,chunkBytes:CHUNK,...(collectionBinding===undefined?{}:{collectionBinding})};
    const savedRelative='saved-measurement-editions/'+id,snapshotSaved=path.join(snapshot,savedRelative);
    fs.mkdirSync(snapshotSaved,{recursive:true});
    for(const member of populationFiles)copyVerified(path.join(build,member.path),path.join(snapshotSaved,member.path),member);
