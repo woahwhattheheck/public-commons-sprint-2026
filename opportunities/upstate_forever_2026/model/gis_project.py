@@ -26,7 +26,7 @@ import zipfile
 
 SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 CHUNK = 1024 * 1024
 
 
@@ -285,6 +285,147 @@ def _palette(classes: dict) -> list[dict]:
             for i, v in enumerate(values)]
 
 
+
+def atlas_styles(layer: dict) -> list[dict]:
+    """Retain each saved atlas range as a named style on the same native layer."""
+    source = layer.get("source", {})
+    if source.get("kind") != "original completed delivery dataset":
+        return []
+    dataset = source.get("dataset", {})
+    maps = dataset.get("maps")
+    if dataset.get("schema") != "upstate.atlas-dataset/v1" or not isinstance(maps, list) or not maps:
+        raise ValueError("An atlas GIS layer needs its original dataset and map relationships")
+    signed = layer.get("purpose") == "difference"
+    if dataset.get("signed") is not signed or dataset.get("units") != layer["data"]["units"]:
+        raise ValueError("The original atlas quantity differs from this GIS layer")
+    band_scale, offset = layer["data"]["scale"], layer["data"]["offset"]
+    if not math.isfinite(band_scale) or band_scale == 0 or not math.isfinite(offset):
+        raise ValueError("An atlas legend needs a finite, nonzero native band scale")
+    # This is the same palette API used by maintained cartography.map_pdf.
+    # Retain the resolved colors so receiving/sealing does not need Matplotlib.
+    palette_name = "RdBu_r" if signed else "Greys"
+    old = {row["id"]: row for row in layer.get("atlas_styles", [])}
+    palette = None
+    variants = {}
+    for relation in maps:
+        scale = relation.get("display_scale")
+        if not isinstance(scale, dict):
+            raise ValueError("Rebuild the original atlas edition to retain its exact display scale")
+        low, high = scale.get("minimum"), scale.get("maximum")
+        if (isinstance(low, bool) or isinstance(high, bool)
+                or not isinstance(low, (int, float)) or not isinstance(high, (int, float))
+                or not math.isfinite(low) or not math.isfinite(high) or low >= high
+                or scale.get("signed") is not signed
+                or scale.get("units") != layer["data"]["units"]
+                or (signed and not low < 0 < high) or (not signed and low != 0)):
+            raise ValueError("The saved atlas scale has incompatible bounds, sign or units")
+        if not isinstance(relation.get("map_key"), str) or not isinstance(relation.get("panel"), int):
+            raise ValueError("An atlas style needs its original map and panel identity")
+        identity = fingerprint({"scale": scale, "palette": palette_name,
+                                "band_scale": band_scale, "band_offset": offset})
+        if identity in variants:
+            variants[identity]["maps"].append(json.loads(canonical(relation)))
+            continue
+        retained = old.get(identity, {}).get("style", {})
+        if (retained.get("palette") == palette_name
+                and isinstance(retained.get("colors"), list) and len(retained["colors"]) == 256
+                and all(isinstance(color, list) and len(color) == 4
+                        and all(type(v) is int and 0 <= v <= 255 for v in color)
+                        for color in retained["colors"])):
+            colors = retained["colors"]
+            palette_version = retained.get("palette_version")
+        else:
+            if palette is None:
+                import matplotlib
+                import numpy as np
+                palette = (matplotlib.colormaps[palette_name](np.arange(256), bytes=True).tolist(),
+                           matplotlib.__version__)
+            colors, palette_version = palette
+        def raw_at(fraction):
+            if signed:
+                return low * (1 - fraction * 2) if fraction <= .5 else high * (fraction * 2 - 1)
+            return low + (high - low) * fraction
+        physical_low, physical_high = low * band_scale + offset, high * band_scale + offset
+        if not all(math.isfinite(v) for v in (physical_low, physical_high)) or physical_low == physical_high:
+            raise ValueError("Native scale/offset cannot represent this saved atlas range")
+        def entry(value, rgba):
+            return {"value": value, "color": "#" + "".join(format(v, "02x") for v in rgba[:3]),
+                    "alpha": rgba[3]}
+        entries = [entry(physical_low, colors[0])]
+        for index in range(1, 256):
+            boundary = raw_at(index / 256) * band_scale + offset
+            # Adjacent representable values retain Matplotlib's discrete LUT,
+            # while QGIS's INTERPOLATED mode keeps under/over values visible.
+            before = math.nextafter(boundary, -math.inf if band_scale > 0 else math.inf)
+            entries.extend((entry(before, colors[index - 1]), entry(boundary, colors[index])))
+        entries.append(entry(physical_high, colors[-1]))
+        entries.sort(key=lambda row: row["value"])
+        if any(not math.isfinite(row["value"]) for row in entries) or any(
+                a["value"] >= b["value"] for a, b in zip(entries, entries[1:])):
+            raise ValueError("The saved atlas range is too narrow for distinct native legend stops")
+        style = {"type": "atlas", "minimum": min(physical_low, physical_high),
+                 "maximum": max(physical_low, physical_high),
+                 "center": offset if signed else None, "signed": signed,
+                 "units": layer["data"]["units"], "palette": palette_name,
+                 "palette_version": palette_version, "colors": colors, "entries": entries,
+                 "source_scale": json.loads(canonical(scale)),
+                 "band_scale": band_scale, "band_offset": offset,
+                 "basis": "original saved atlas display scale and maintained map palette",
+                 "label": scale.get("label", ""), "outside_range": "endpoint colors; cells remain visible"}
+        name = str(relation["map_key"]) + " · panel " + str(relation["panel"]) + " · " + identity[:10]
+        variants[identity] = {"id": identity, "name": name, "style": style,
+                              "maps": [json.loads(canonical(relation))]}
+        if "qml" in old.get(identity, {}):
+            variants[identity]["qml"] = old[identity]["qml"]
+    return list(variants.values())
+
+
+def _atlas_rgba(values, valid, style):
+    import numpy as np
+    raw = (values[valid] - style["band_offset"]) / style["band_scale"]
+    low, high = style["source_scale"]["minimum"], style["source_scale"]["maximum"]
+    if style["signed"]:
+        normalized = np.where(raw <= 0, .5 * (raw - low) / -low, .5 + .5 * raw / high)
+    else:
+        normalized = (raw - low) / (high - low)
+    indices = np.minimum((np.clip(normalized, 0, 1) * 256).astype("uint16"), 255)
+    rgba = np.zeros((*values.shape, 4), dtype="uint8")
+    rgba[valid] = np.asarray(style["colors"], dtype="uint8")[indices]
+    return rgba
+
+
+def _atlas_renderer(parent, data, style):
+    pipe = _element(parent, "pipe")
+    renderer = _element(pipe, "rasterrenderer", type="singlebandpseudocolor",
+                        band=data["band"], alphaBand="-1", opacity="1",
+                        classificationMin=style["minimum"], classificationMax=style["maximum"])
+    _element(renderer, "rasterTransparency")
+    shader = _element(_element(renderer, "rastershader"), "colorrampshader",
+                      colorRampType="INTERPOLATED", classificationMode="1", clip="0",
+                      minimumValue=style["minimum"], maximumValue=style["maximum"], labelPrecision="12")
+    for row in style["entries"]:
+        _element(shader, "item", value=row["value"], color=row["color"],
+                 alpha=row["alpha"], label=format(row["value"], ".12g"))
+    _element(shader, "rampLegendSettings", useContinuousLegend="1",
+             minimumLabel=format(style["minimum"], ".12g"),
+             maximumLabel=format(style["maximum"], ".12g"), suffix=" " + style["units"])
+    _element(pipe, "rasterresampler", maxOversampling="2")
+    return pipe
+
+
+def _atlas_named_styles(parent, layer):
+    variants = layer["atlas_styles"]
+    manager = _element(parent, "map-layer-style-manager", current=variants[0]["name"])
+    for index, variant in enumerate(variants):
+        saved = _element(manager, "map-layer-style", name=variant["name"])
+        qml = ET.Element("qgis", version="3.34.0", styleCategories="Symbology")
+        _atlas_renderer(qml, layer["data"], variant["style"])
+        if index:
+            saved.append(qml)
+        # Standalone QML is also a normal native style file in the complete package.
+        yield variant, ET.tostring(qml, encoding="utf-8", xml_declaration=True)
+
+
 def styles(layers: list[dict]) -> None:
     """Use identical limits for physically comparable baseline/alternative layers."""
     groups = {}
@@ -294,6 +435,11 @@ def styles(layers: list[dict]) -> None:
             continue
         if layer.get("purpose") == "categorical":
             layer["style"] = {"type": "categories", "entries": _palette(d["classes"])}
+            continue
+        variants = atlas_styles(layer)
+        if variants:
+            layer["atlas_styles"] = variants
+            layer["style"] = variants[0]["style"]
             continue
         key = (layer.get("metric", layer["id"]), d["units"], layer.get("purpose", "context"))
         groups.setdefault(key, []).append(layer)
@@ -333,6 +479,18 @@ def preview_raster(root: Path, layer: dict, project_crs: str) -> dict:
             valid = (view.read_masks(layer["data"]["band"]) > 0) & np.isfinite(output)
     # QgsRasterDataProvider::block applies the same native band scale and offset.
     output = output * layer["data"]["scale"] + layer["data"]["offset"]
+    variants = layer.get("atlas_styles")
+    if variants:
+        for variant in variants:
+            image = _atlas_rgba(output, valid, variant["style"])
+            target = root / "previews" / (layer["key"] + "-" + variant["id"][:16] + ".png")
+            target.parent.mkdir(exist_ok=True)
+            Image.fromarray(image).save(target)
+            variant["preview"] = {**record(root, target), "bounds": bounds, "width": width, "height": height,
+                                  "method": "nearest-cell overview with the selected original atlas legend"}
+        selected = next((item for item in variants if item["id"] == layer.get("atlas_view_style")), variants[0])
+        layer["style"] = selected["style"]
+        return selected["preview"]
     gray = np.zeros((height, width), dtype="uint8")
     style = layer["style"]
     if style["type"] == "categories":
@@ -418,6 +576,45 @@ def _extent(parent, b):
         _element(e, key, value)
 
 
+
+def atlas_desktop_binding(layer, map_layer):
+    """Recognize saved native styles without overwriting recipient style edits."""
+    variants = layer.get("atlas_styles", [])
+    if not variants:
+        return
+    renderer = map_layer.find("./pipe/rasterrenderer")
+    manager = map_layer.find("./map-layer-style-manager")
+    binding = {"state": "recipient_desktop_style",
+               "native_name": manager.get("current", "") if manager is not None else "",
+               "offline_basis": "Original atlas views; the recipient desktop renderer remains in project.qgs."}
+    if renderer is not None:
+        binding["renderer_sha256"] = hashlib.sha256(ET.tostring(renderer, encoding="utf-8")).hexdigest()
+        shader = renderer.find("./rastershader/colorrampshader")
+        if renderer.get("type") == "singlebandpseudocolor" and shader is not None:
+            try:
+                observed = [{"value": float(row.get("value")), "color": row.get("color", "").lower(),
+                             "alpha": int(row.get("alpha", "255"))} for row in shader.findall("item")]
+                for variant in variants:
+                    style = variant["style"]
+                    rows = style["entries"]
+                    if (shader.get("colorRampType") == "INTERPOLATED" and shader.get("clip", "0") == "0"
+                            and int(renderer.get("band", "-1")) == layer["data"]["band"]
+                            and float(renderer.get("opacity", "1")) == 1
+                            and int(renderer.get("alphaBand", "-1")) == -1
+                            and len(observed) == len(rows)
+                            and all(math.isclose(a["value"], b["value"], rel_tol=1e-12, abs_tol=0)
+                                    and a["color"] == b["color"] and a["alpha"] == b["alpha"]
+                                    for a, b in zip(observed, rows))):
+                        layer["atlas_view_style"] = variant["id"]
+                        layer["style"] = style
+                        binding.update(state="matches_retained_atlas_style", style_id=variant["id"],
+                                       offline_basis="Selected retained atlas legend")
+                        break
+            except (TypeError, ValueError, OverflowError):
+                pass
+    layer["atlas_desktop_binding"] = binding
+
+
 def qgis_project(root: Path, manifest: dict) -> None:
     """Write documented QGS layer references, CRS, styles, metadata and grouping."""
     from pyproj import CRS
@@ -470,7 +667,14 @@ def qgis_project(root: Path, manifest: dict) -> None:
         _element(metadata, "abstract", json.dumps({"source": layer.get("source", {}),
                     "units": d["units"], "purpose": layer.get("purpose"),
                     "run_id": layer.get("run_id"), "source_files": layer["originals"]}, ensure_ascii=False))
-        if d["kind"] == "raster":
+        if d["kind"] == "raster" and layer.get("atlas_styles"):
+            _atlas_renderer(m, d, layer["style"])
+            for variant, body in _atlas_named_styles(m, layer):
+                target = root / "styles" / (layer["key"] + "-" + variant["id"][:16] + ".qml")
+                target.parent.mkdir(exist_ok=True)
+                target.write_bytes(body)
+                variant["qml"] = record(root, target)
+        elif d["kind"] == "raster":
             pipe = _element(m, "pipe")
             style = layer["style"]
             if style["type"] == "categories":
@@ -586,6 +790,9 @@ def catalogue(root: Path, manifest: dict) -> None:
         preview = local(root, layer["preview"]["path"])
         mime = "image/svg+xml" if preview.suffix == ".svg" else "image/png"
         layer["preview"]["embedded_uri"] = "data:" + mime + ";base64," + base64.b64encode(preview.read_bytes()).decode("ascii")
+        for variant in layer.get("atlas_styles", []):
+            image = checked(root, variant["preview"])
+            variant["preview"]["embedded_uri"] = "data:image/png;base64," + base64.b64encode(image.read_bytes()).decode("ascii")
     for attachment in view_manifest.get("attachments", []):
         attachment.update(attachment_metadata(manifest, attachment))
         if attachment["kind"] == "table":
@@ -602,7 +809,8 @@ def catalogue(root: Path, manifest: dict) -> None:
         "Vector working copies are in layers/; original files and companions are retained under originals/. "
         "The source_row_id field maps each working feature to its native original. Raster cells and CRS "
         "are preserved; browser overviews are display products, not replacement numerical inputs.\n\n"
-        "Toggle baseline/alternative groups rather than comparing unrelated legend ranges. Matching physical "
+        "Toggle baseline/alternative groups rather than comparing unrelated legend ranges. Atlas layers retain their saved "
+        "map ranges and palettes; choose the matching named style in QGIS or the offline Atlas view field. Other matching physical "
         "metric/units/purpose layers share a native-cell range. Dimensionless priorities, categorical codes, "
         "physical quantities and signed differences keep their own meanings. Read each layer's units and lineage.\n\n"
         "For an independent edit, use QGIS Save As within this directory, edit the copied GeoPackage and save. "
@@ -1013,6 +1221,8 @@ def seal(root: Path | str, reason: str, *, project_file: str | None=None) -> dic
             else:
                 layer["data"]=inspect_raster(p,layer,manifest["project_crs"])
         styles(manifest["layers"])
+        for map_layer in maps:
+            atlas_desktop_binding(expected[map_layer.findtext("id")], map_layer)
         for layer in manifest["layers"]:
             layer["preview"]=(preview_vector if layer["data"]["kind"]=="vector" else preview_raster)(root,layer,manifest["project_crs"])
         changed=[]
