@@ -22,7 +22,8 @@
       "source_manifest_sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db"
     },
     "monitoring_field_selection_commit": "bce7959671e0ba7106847106012327e4868d6afa",
-    "monitoring_field_selection_pull_request": 4266
+    "monitoring_field_selection_pull_request": 4266,
+    "field_capture_continuity": "e51ec185cfd7d4d3706df6c8718d985b496efaf9"
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -189,8 +190,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 33042,
-      "sha256": "28f0179dbd2d81040c75af6b94880471c125b704a97eaee61ae041194ae7d921"
+      "bytes": 33743,
+      "sha256": "0f2749231643587880f074bbac7d04c5a6d08cf9f7bb8c3357220dc4ff83a99a"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -229,8 +230,8 @@
     },
     {
       "path": "source/monitoring-chemistry-study/README.md",
-      "bytes": 10436,
-      "sha256": "e5a81b7d8bb7e135c2a626bd5b3c1be6b2cd00ce904427e3f77c7caceb284441"
+      "bytes": 14422,
+      "sha256": "5f1dd0d418164d0609398c546a941ace48d21e4df7cfdb56b976385ea90d6c49"
     },
     {
       "path": "source/monitoring-chemistry-study/build_study_workbench.py",
@@ -239,8 +240,8 @@
     },
     {
       "path": "source/monitoring-chemistry-study/capture_editable_workspace.py",
-      "bytes": 11655,
-      "sha256": "213fd73b7a12749c7d60e9c45d5ee36ebb23049048948d26600639758e637b3e"
+      "bytes": 12732,
+      "sha256": "3f6d35598148188b6eaa37ad285359d46a6b6c034af9e838b1245090e24e8f3d"
     },
     {
       "path": "source/monitoring-chemistry-study/make_study_brief.py",
@@ -249,8 +250,8 @@
     },
     {
       "path": "source/monitoring-chemistry-study/open_completed_study.py",
-      "bytes": 11929,
-      "sha256": "a58c4e2007b1ea8840292954cff7de9b6cf34b6a8adc3a382c3e835624753732"
+      "bytes": 15458,
+      "sha256": "fda28c95aebc32e608e3f9204982f3d5fe9ff01a0c80e4add57b570b2f7276bd"
     },
     {
       "path": "source/monitoring-chemistry-study/prepare_budget_study.py",
@@ -334,8 +335,8 @@
     },
     {
       "path": "source/monitoring-field-study/INSTALLATION.md",
-      "bytes": 20237,
-      "sha256": "6abe8ae299217ceba68e508982807e4e290cc75e1083529776a23a1f43395038"
+      "bytes": 21241,
+      "sha256": "c3374d5f109820a16e6f1245fbafe8d92a83d5092f086a818c006bb716e71c42"
     },
     {
       "path": "model/monitoring_field_selection.py",

@@ -96,6 +96,7 @@ def capture(args):
             "Install the maintained native portable.resume_restore before starting capture")
     workspace = workspace_module.Workspace(root, create=False)
     opener = load_opener()
+    chosen_fields = opener.field_ids(getattr(args, "field_selection_ids", None))
     output.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(output.with_name("." + output.name + ".lock"),
                  os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
@@ -110,6 +111,12 @@ def capture(args):
                   "reports_sha256": common.file_digest(reports),
                   "comparison_sha256": common.file_digest(comparison),
                   "renderer_sha256": common.file_digest(application / "model/reach_chemistry/reporting.py")}
+        if chosen_fields:
+            producer = application / "model/monitoring_field_selection.py"
+            require(producer.is_file(),
+                    "Install the original field-selection component before selected-field capture")
+            intent["field_selection_ids"] = chosen_fields
+            intent["field_selection_producer_sha256"] = common.file_digest(producer)
         require(state.get("intent", intent) == intent,
                 "Resume with the original receiving paths, saved inputs and renderer")
         require(existed or not archive.exists(),
@@ -127,7 +134,8 @@ def capture(args):
         selected_path = output.with_name(output.name + ".selection.json")
         inspected = opener.open_study(
             application, root, reports, comparison,
-            output.with_name(output.name + ".original.json"), lock_fd=fd)
+            output.with_name(output.name + ".original.json"), lock_fd=fd,
+            field_selection_ids=chosen_fields or None)
         selected = {key: inspected[key] for key in ("retained", "files", "producers")}
         if selected_path.exists():
             require(common.read_json(selected_path) == selected,
@@ -171,7 +179,8 @@ def capture(args):
         cold = opener.open_study(
             Path(receiving["application"]), Path(receiving["workspace"]),
             reports, comparison, output.with_name(output.name + ".cold.json"),
-            expected=selected, lock_fd=fd)
+            expected=selected, lock_fd=fd,
+            field_selection_ids=chosen_fields or None)
         # The full cold record includes all original science, artifact bytes and
         # exact imported producer identities; the original compact view stays useful.
         save("cold_receiving", {
@@ -187,6 +196,11 @@ def capture(args):
             "frontier_id": selected["retained"]["frontier"]["id"],
             "plan_ids": [row["plan_id"] for row in cold["plans"]],
             "comparison_id": cold["comparison_id"]})
+        if chosen_fields:
+            reopened = dict(state["steps"]["reopened"])
+            reopened["field_selection_ids"] = list(cold["retained"]["field_selections"])
+            reopened["field_source_collection_ids"] = list(cold["retained"]["field_source_collections"])
+            save("reopened", reopened)
         state["state"] = "complete"
         common.atomic_json(output, state)
         return state
@@ -203,6 +217,8 @@ def main():
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--receive-into", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--field-selection", action="append", dest="field_selection_ids",
+                        help="Retained native field-selection ID; repeat for multiple editions")
     state = capture(parser.parse_args())
     print(json.dumps({"state": state["state"], "archive": state["steps"]["backup"],
                       "received": state["steps"]["restore"],

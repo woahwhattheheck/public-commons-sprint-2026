@@ -20,7 +20,7 @@ python -B STAGE/operator/install_chemistry.py --application APP --source-root ST
 python -B STAGE/operator/install_chemistry.py --application APP --source-root STAGE
 ```
 
-Use actual absolute paths; BANK and STAGE are separate owned directories outside APP and the scientific Workspace. The existing installer takes the shared extension lock, validates complete source and known predecessors, preserves independently edited source, and installs the same original registry/component inventory. Its existing capture/open helpers and original engine remain unchanged. Use the independently restored and installed application/Workspace copy. Start its original operator normally after installation with its own operator-state directory and an automatically selected port; the registry loads providers during Operator construction. Browser reload alone does not load a newly installed descriptor. Leave active calculations and the original receiving process intact.
+Use actual absolute paths; BANK and STAGE are separate owned directories outside APP and the scientific Workspace. The existing installer takes the shared extension lock, validates complete source and known predecessors, preserves independently edited source, and installs the same original registry/component inventory. Its original engine remains unchanged. The existing capture/open tools now accept optional retained field-selection IDs; omitting them preserves completed older capture intents and records. Use the independently restored and installed application/Workspace copy. Start its original operator normally after installation with its own operator-state directory and an automatically selected port; the registry loads providers during Operator construction. Browser reload alone does not load a newly installed descriptor. Leave active calculations and the original receiving process intact.
 
 The component declaration is `integration/component_fragments/monitoring-field-study.json`, requiring the retained `monitoring-chemistry-study` component. Thus complete editable application exports retain these original tools and instructions along with their native dependencies.
 
@@ -99,6 +99,10 @@ In the exact received desk, choose each saved budget and search area; inspect or
 A browser selection does not silently revise the native campaign's station IDs: original observation and assessment candidates remain distinct. Source import retains the complete unchanged finished study; the installed Saved field selections workflow retains each reviewed selection and its working desk in the original Workspace.
 
 The actual producer already reported desktop/390px selection, note/calendar export and independent reopen. The integrating/receiving peer still must personally inspect its exact outgoing version, actual attachment pixels and complete cold-reopened project. Do not replace inspection with a source count or an inherited claim.
+
+### Capture the reviewed selection with the completed native study
+
+Use the actual completed receive task's `result.id` as the optional repeatable `--field-selection` argument to `source/monitoring-chemistry-study/capture_editable_workspace.py`. Choose new archive/progress/receiving paths for this newly selected edition. The existing course freezes the field record, exact JSON/working HTML, source manifest and all companions, then verifies them through the archived application's own native inspector. Its existing `open_completed_study.py --expected-selection` derives the field IDs from that frozen selection. Follow `source/monitoring-chemistry-study/README.md` for the complete command beside the original four analyses and three-budget comparison. Omitted flags preserve earlier accepted captures. Reopen the actual received operator and working desk after the native checks.
 
 ## Current owner direction
 
