@@ -7,7 +7,7 @@ import json
 import math
 from pathlib import Path
 from .common import atomic_json, digest, finite, now, read_json, retain_file, verify_file
-from . import rasters, observation_support
+from . import rasters, observation_support, observation_diagnostics
 
 NATIVE = {"nitrogen": ("ndr", "n_total_export", "kg/year"),
           "phosphorus": ("ndr", "p_surface_export", "kg/year"),
@@ -379,7 +379,7 @@ def compare(workspace, run_id, observation_id, catchments):
         }
     profile = workspace._get("profiles", state["selection"]["profile_id"])
     value = {
-        "comparison_version": 5, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
+        "comparison_version": 6, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
         "model_scope": scope,
         "catchment_source": {"uri": entry["uri"], "vintage": entry["vintage"],
                              "sha256": entry["body"]["sha256"]},
@@ -405,4 +405,5 @@ def compare(workspace, run_id, observation_id, catchments):
                           "remain with every row. Review reservoir and point-source influences, model/source vintages "
                           "and repeated station periods when interpreting the descriptive comparison.",
     }
+    value["diagnostics"] = observation_diagnostics.build(value)
     return workspace._save("observation-comparisons", value)

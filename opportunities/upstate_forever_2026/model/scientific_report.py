@@ -13,11 +13,11 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from .common import atomic_bytes, atomic_json, describe_file
-from . import rasters
+from . import rasters, observation_diagnostics
 from .model_selection import run_scope
 from .native_versions import guide_url, model_versions, models_for_outputs, version_label
 
-REPORT_VERSION = "upstate.scientific-report/v12"
+REPORT_VERSION = "upstate.scientific-report/v12-observation-diagnostics-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -385,6 +385,7 @@ def _observations(results):
             ))
         if result.get("metrics_basis"):
             blocks.append(str(result["metrics_basis"]))
+        blocks.extend(observation_diagnostics.build(result)["blocks"])
         methods = result.get("observation_method", {})
         if methods:
             blocks.append("Observation method and original references: " + _plain(methods))
@@ -947,7 +948,7 @@ def report_pdf(path, title, sections, *, contact, source_records):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     SimpleDocTemplate(str(path), pagesize=letter, rightMargin=.7 * inch, leftMargin=.7 * inch,
                       topMargin=.65 * inch, bottomMargin=.65 * inch,
-                      title=str(title), author=str(contact["organization"])).build(
+                      title=str(title), author=str(contact.get("organization", ""))).build(
                           story, onFirstPage=page_number, onLaterPages=page_number)
 
 
