@@ -61,3 +61,13 @@
 @media(max-width:420px){
   .water-heading .water-actions,.water-filters{grid-template-columns:1fr}
 }
+
+.water-accounting-summary{padding:1rem 1.15rem;border-top:1px solid #ddd}
+.water-accounting-summary h3{margin:.2rem 0 .6rem;font-size:1.1rem}
+.water-accounting-group{border:1px solid #aaa;border-radius:3px;padding:1rem;margin:1rem 0}
+.water-accounting-group legend{font-weight:600;padding:0 .4rem}
+.water-accounting-member{border-top:1px solid #ddd;padding:.6rem 0}
+.water-accounting-member>label{display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,200px);gap:1rem;align-items:center}
+.water-accounting-member small{display:block;color:#555;overflow-wrap:anywhere;margin-top:.2rem}
+.water-accounting-member select{width:100%;min-height:36px}
+@media(max-width:600px){.water-accounting-member>label{grid-template-columns:1fr;gap:.4rem}.water-accounting-group{padding:.7rem}}
