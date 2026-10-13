@@ -217,6 +217,9 @@ def restore(archive_path, destination):
             reviewer = SpatialReview(restored)
             for review in reviews:
                 reviewer.validate_saved(review, verified_members=manifest["members"])
+        if restored._list("spatial-regions"):
+            from .spatial_regions import SpatialRegions
+            SpatialRegions(restored).verify()
         spatial_exports = restored.overview().get("spatial_exports", [])
         if spatial_exports:
             from .spatial_exports import SpatialExports
