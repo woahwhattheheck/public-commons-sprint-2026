@@ -14,6 +14,7 @@ from .delivery_archive import package_archive
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+DELIVERY_FORMAT_VERSION = "native-grid-metadata-2"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -245,7 +246,8 @@ def build(workspace, selection):
     cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
     key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
-                  "map_renderer": cartography.MAP_RENDERER_VERSION})
+                  "map_renderer": cartography.MAP_RENDERER_VERSION,
+                  "delivery_format": DELIVERY_FORMAT_VERSION})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
