@@ -286,7 +286,7 @@ class Course{
   async connected(name){
     for(let i=0;i<600;i++){
       const a=await this.app(name);need(a,'MERCHANT_APPLICATION','The original saved application is absent.');
-      if(a.release)return a;
+      if(a.release&&a.connectionReady===true)return a;
       if(i===0||a.adoption?.active===false)await this.observed(name+'-connect',()=>this.apps.applicationsConnect({applicationId:a.id}));
       await delay(1000);
     }throw Object.assign(new Error('The original Applications connection is still pending; resume it.'),{code:'MERCHANT_CONNECTION_PENDING'});
