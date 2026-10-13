@@ -81,15 +81,23 @@ def _field(fields, requested):
     return matches[0]
 
 
-def _ids(value, label):
+def _ids(value, label, *, expected_count=None):
     if isinstance(value, dict):
         if value.get("exceededTransferLimit"):
             raise ValueError(label + " is truncated")
+        has_ids = "objectIds" in value
         value = value.get("objectIds")
+        # ArcGIS may return an explicit null objectIds for a genuine empty query.
+        # The original response stays unchanged; its paired native count decides.
+        if has_ids and value is None and type(expected_count) is int and expected_count == 0:
+            value = []
     if not isinstance(value, list) or any(type(item) is not int for item in value):
         raise ValueError(label + " must contain original integer object IDs")
     if len(value) != len(set(value)):
         raise ValueError(label + " repeats an original object ID")
+    if expected_count is not None and (
+            type(expected_count) is not int or expected_count < 0 or len(value) != expected_count):
+        raise ValueError(label + " differs from its original count")
     return set(value)
 
 
@@ -186,11 +194,18 @@ def _hucs(value):
     return set(value)
 
 
-def _layer(source, target, descriptor, captured_at, scope):
+def _layer(source, target, descriptor, captured_at, scope, capture_time_status=None):
     kind = descriptor.get("kind")
     if kind not in KINDS:
         raise ValueError("Water context kind must be stream_order or freshwater")
     contract = KINDS[kind]
+    huc_selection_mode = descriptor.get("huc_selection_mode", "publisher")
+    if huc_selection_mode not in ("publisher", "geometry"):
+        raise ValueError("HUC selection mode must be publisher or geometry")
+    if kind == "freshwater" and huc_selection_mode == "geometry":
+        if any(not descriptor.get(name) for name in (
+                "selected_ids", "selection_geometry", "selection_method")):
+            raise ValueError("Geometry-selected freshwater needs exact selected IDs, original geometry and selection method")
     identity = descriptor.get("source_id") or contract["source_id"]
     if not isinstance(identity, str) or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]*", identity):
         raise ValueError("Source ID must be a portable name")
@@ -224,7 +239,7 @@ def _layer(source, target, descriptor, captured_at, scope):
     for query in queries:
         count = _json(_path(source, query["count"]))
         listed = _json(_path(source, query["ids"]))
-        ids = _ids(listed, "Original ID selection")
+        ids = _ids(listed, "Original ID selection", expected_count=count.get("count"))
         if type(count.get("count")) is not int or count["count"] != len(ids):
             raise ValueError("Original count and native ID membership differ")
         listed_oid = listed.get("objectIdFieldName") if isinstance(listed, dict) else None
@@ -243,6 +258,7 @@ def _layer(source, target, descriptor, captured_at, scope):
 
     selected = expected
     local_selection = None
+    selection_geometry = None
     if descriptor.get("selected_ids"):
         selected = _ids(_json(_path(source, descriptor["selected_ids"])), "Exact domain selection")
         if not selected <= expected:
@@ -250,7 +266,7 @@ def _layer(source, target, descriptor, captured_at, scope):
         local_selection = retain.add(descriptor["selected_ids"])
         if not descriptor.get("selection_method") or not descriptor.get("selection_geometry"):
             raise ValueError("A local domain selection needs its method and original geometry")
-        retain.add(descriptor["selection_geometry"])
+        selection_geometry = retain.add(descriptor["selection_geometry"])
 
     allowed_hucs = None
     huc_record = None
@@ -267,7 +283,8 @@ def _layer(source, target, descriptor, captured_at, scope):
     if not isinstance(pages, list) or (expected and not pages):
         raise ValueError("Supply all original feature pages")
     seen, page_records, page_sr, flags = {}, [], None, None
-    field_values, null_orders, original_hucs = {}, 0, set()
+    field_values, null_orders, original_hucs = {}, 0, {}
+    publisher_huc_mismatches = []
     for member in pages:
         body = _json(_path(source, member))
         if body.get("exceededTransferLimit"):
@@ -320,9 +337,22 @@ def _layer(source, target, descriptor, captured_at, scope):
                 if properties[required["H2OCLASS"]] != "FW":
                     raise ValueError("Freshwater source includes a different original H2OCLASS")
                 huc = properties[required["HUC_12"]]
-                if huc not in allowed_hucs:
-                    raise ValueError("Freshwater feature is outside the selected original HUC_12 set")
-                original_hucs.add(huc)
+                in_publisher_selection = isinstance(huc, str) and huc in allowed_hucs
+                if not in_publisher_selection:
+                    if huc_selection_mode == "publisher":
+                        raise ValueError("Freshwater feature is outside the selected original HUC_12 set")
+                    publisher_huc_mismatches.append({
+                        "native_object_id": object_id,
+                        "publisher_huc12": huc,
+                        "reason": ("missing_publisher_huc" if huc is None or huc == ""
+                                   else "publisher_huc_outside_selected_domain"),
+                    })
+                # Canonical bytes order native values without converting nulls,
+                # blanks or other retained field values into different HUC IDs.
+                huc_key = _bytes(huc)
+                if huc_key not in original_hucs:
+                    original_hucs[huc_key] = {"value": huc, "native_feature_count": 0}
+                original_hucs[huc_key]["native_feature_count"] += 1
         record = retain.add(member)
         page_records.append({**record, "native_feature_count": len(rows)})
     if set(seen) != expected:
@@ -362,18 +392,24 @@ def _layer(source, target, descriptor, captured_at, scope):
                      "bytes": vector_path.stat().st_size, "storage_encoding": "gzip"}
     selection_record = {"schema": "upstate.water-context-layer/v1", "source_id": identity,
                         "kind": kind, "role": contract["role"], "uri": uri, "captured_at": captured_at,
+                        "capture_time_status": capture_time_status,
                         "native_object_id_field": oid, "native_field_bindings": required,
                         "metadata": metadata_record, "queries": query_records, "pages": page_records,
                         "scope": descriptor.get("scope", scope),
                         "provider_candidate_count": len(expected), "feature_count": len(selected),
                         "object_ids": sorted(selected), "local_selection": local_selection,
+                        "selection_geometry": selection_geometry,
                         "selection_method": descriptor.get("selection_method", "Original publisher query membership"),
                         "source_spatial_reference": metadata.get("sourceSpatialReference") or metadata.get("extent", {}).get("spatialReference"),
                         "vector_spatial_reference": page_sr, "native_vector": native_record,
                         "stream_order_counts": field_values if kind == "stream_order" else None,
                         "null_stream_order_count": null_orders if kind == "stream_order" else None,
                         "huc_selection": huc_record, "huc_selection_count": len(allowed_hucs) if allowed_hucs is not None else None,
-                        "hucs_with_features": sorted(original_hucs) if allowed_hucs is not None else None}
+                        "huc_selection_mode": huc_selection_mode if kind == "freshwater" else None,
+                        "hucs_with_features": [original_hucs[key]["value"] for key in sorted(original_hucs)] if allowed_hucs is not None else None,
+                        "publisher_huc_inventory": [original_hucs[key] for key in sorted(original_hucs)] if allowed_hucs is not None else None,
+                        "publisher_huc_mismatch_count": len(publisher_huc_mismatches) if kind == "freshwater" else None,
+                        "publisher_huc_mismatches": sorted(publisher_huc_mismatches, key=lambda row: row["native_object_id"]) if kind == "freshwater" else None}
     _write(folder / "layer-intake.json", _bytes(selection_record))
     unique_members = {record["path"]: record for record in retain.members.values()}
     members = [{"path": identity + "/" + record["path"], "sha256": record["sha256"],
@@ -382,24 +418,30 @@ def _layer(source, target, descriptor, captured_at, scope):
                     "sha256": _file_sha(folder / "layer-intake.json"),
                     "bytes": (folder / "layer-intake.json").stat().st_size})
     entry = {"id": identity, "title": descriptor.get("title") or contract["title"],
-             "uri": uri, "vintage": descriptor.get("vintage") or captured_at,
+             "uri": uri, "vintage": descriptor.get("vintage") or captured_at or "Capture time unavailable after response recovery",
              "kind": "vector", "role": contract["role"],
              "path": identity + "/" + native_record["path"], "sha256": native_record["sha256"],
              "bytes": native_record["bytes"], "id_field": oid, "companions": members,
              "metadata": {"feature_count": len(selected), "provider_candidate_count": len(expected),
+                          "captured_at": captured_at, "capture_time_status": capture_time_status,
                           "source_crs": page_sr, "native_field_bindings": required,
                           "scope": descriptor.get("scope", scope), "classification": "FW" if kind == "freshwater" else None,
+                          "huc_selection_mode": huc_selection_mode if kind == "freshwater" else None,
+                          "publisher_huc_mismatch_count": len(publisher_huc_mismatches) if kind == "freshwater" else None,
                           "intake_record": "layer-intake.json", "source_description": metadata.get("description", ""),
                           "source_copyright": metadata.get("copyrightText", "")}}
     binding = {"kind": kind, "role": contract["role"], "source_id": identity,
                "source_collection_id": None, "id_field": oid, "fields": required,
                "source_uri": uri, "body_sha256": native_record["sha256"],
+               "captured_at": captured_at, "capture_time_status": capture_time_status,
                "feature_count": len(selected), "scope": descriptor.get("scope", scope)}
     if kind == "stream_order":
         binding["stream_order_field"] = required["streamorde"]
     else:
         binding.update(classification_field=required["H2OCLASS"], huc12_field=required["HUC_12"],
-                       where={required["H2OCLASS"]: "FW"})
+                       where={required["H2OCLASS"]: "FW"},
+                       huc_selection_mode=huc_selection_mode,
+                       publisher_huc_mismatch_count=len(publisher_huc_mismatches))
     return entry, binding, selection_record
 
 
@@ -412,8 +454,15 @@ def assemble(capture_path, output):
     source = capture_path.parent
     output = Path(output).absolute()
     captured_at = capture.get("captured_at")
-    if not isinstance(captured_at, str) or not captured_at.strip():
+    capture_time_status = capture.get("capture_time_status")
+    if captured_at is None:
+        if capture_time_status != "unavailable_after_response_recovery":
+            raise ValueError("Retain the original capture UTC date/time or its explicit unavailable-after-recovery status")
+    elif not isinstance(captured_at, str) or not captured_at.strip():
         raise ValueError("Retain the original capture UTC date/time")
+    elif capture_time_status == "unavailable_after_response_recovery":
+        raise ValueError("An unavailable original capture time must remain null")
+    vintage = captured_at or "Capture time unavailable after response recovery"
     layers = capture.get("layers")
     if not isinstance(layers, list) or not layers:
         raise ValueError("Select at least one original water-context layer")
@@ -436,7 +485,8 @@ def assemble(capture_path, output):
         stage.mkdir()
         entries, bindings, summary = [], {}, []
         for descriptor in layers:
-            entry, binding, report = _layer(source, stage, descriptor, captured_at, capture.get("scope", {}))
+            entry, binding, report = _layer(source, stage, descriptor, captured_at, capture.get("scope", {}),
+                                            capture_time_status=capture_time_status)
             if entry["id"] in {row["id"] for row in entries} or binding["kind"] in bindings:
                 raise ValueError("Select a single original edition for each water-context kind")
             entries.append(entry)
@@ -446,26 +496,32 @@ def assemble(capture_path, output):
                             "provider_candidate_count": report["provider_candidate_count"],
                             "stream_order_counts": report["stream_order_counts"],
                             "null_stream_order_count": report["null_stream_order_count"],
-                            "huc_selection_count": report["huc_selection_count"]})
+                            "huc_selection_count": report["huc_selection_count"],
+                            "huc_selection_mode": report["huc_selection_mode"],
+                            "publisher_huc_mismatch_count": report["publisher_huc_mismatch_count"]})
         shutil.copyfile(capture_path, stage / "original-capture.json")
         entries.append({"id": "water-context-capture-" + descriptor_sha[:20],
                         "title": "Original water-context capture selection",
-                        "uri": "urn:sha256:" + descriptor_sha, "vintage": captured_at,
+                        "uri": "urn:sha256:" + descriptor_sha, "vintage": vintage,
+                        "metadata": {"captured_at": captured_at, "capture_time_status": capture_time_status},
                         "kind": "document", "role": "SOURCE_SELECTION",
                         "path": "original-capture.json", "sha256": descriptor_sha,
                         "bytes": capture_path.stat().st_size, "companions": []})
         _write(stage / "model-sources.json", _bytes({"schema": "upstate.sources/v1",
             "title": capture.get("title", "Original Upper Savannah water-context sources"),
-            "captured_at": captured_at, "scope": capture.get("scope", {}),
+            "captured_at": captured_at, "capture_time_status": capture_time_status,
+            "scope": capture.get("scope", {}),
             "entries": entries,
             "notes": ["Native object identities, attributes and returned geometry accompany their original publisher responses."]}))
         _write(stage / "bindings.json", _bytes({"schema": BINDING_SCHEMA, "bindings": bindings,
-            "manifest": "model-sources.json", "capture_sha256": descriptor_sha}))
+            "manifest": "model-sources.json", "capture_sha256": descriptor_sha,
+            "captured_at": captured_at, "capture_time_status": capture_time_status}))
         # This walk is restricted to the newly staged source edition.
         files = [{"path": path.relative_to(stage).as_posix(), "sha256": _file_sha(path),
                   "bytes": path.stat().st_size} for path in sorted(stage.rglob("*")) if path.is_file()]
         receipt = {"schema": "upstate.water-context-intake/v1", "capture_sha256": descriptor_sha,
-                   "captured_at": captured_at, "manifest": "model-sources.json", "bindings": "bindings.json",
+                   "captured_at": captured_at, "capture_time_status": capture_time_status,
+                   "manifest": "model-sources.json", "bindings": "bindings.json",
                    "sources": summary, "files": files}
         _write(stage / "intake.json", _bytes(receipt))
         os.rename(stage, output)

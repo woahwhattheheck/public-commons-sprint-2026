@@ -182,6 +182,8 @@ from source_tools.high_quality_water_preparation import BUILTINS as WATER_BUILTI
 
 BUILTINS.update(WATER_BUILTINS)
 METHODS.append(WATER_METHOD)
+from source_tools.nlcd_range_preparation import method_schema as nlcd_range_method_schema
+METHODS.append(nlcd_range_method_schema(_input, _option, DOMAIN_OPTIONS))
 BY_METHOD = {item["id"]: item for item in METHODS}
 
 
@@ -653,12 +655,18 @@ class SourcePreparation:
             label = ("USGS elevation assembly: " + str(item["assembled_tiles"]) + " / "
                      + str(item["tile_count"]) + " tiles; " + str(item["valid_cells"])
                      + " valid cells; " + str(item["nodata_cells"]) + " NoData cells")
+        elif schema == "upstate.original-range-progress/v1":
+            label = ("Original NLCD: " + str(item["completed_ranges"]) + " retained ranges; "
+                     + str(item["received_bytes_this_invocation"]) + " received bytes; "
+                     + str(item["reused_bytes_this_invocation"]) + " reused bytes; "
+                     + str(item["retained_bytes"]) + " / "
+                     + str(item["maximum_source_bytes"]) + " retained-byte allowance")
         else:
             raise ValueError("The native source helper returned an unsupported progress record")
-        label += " (" + item["state"] + ")"
+        label += " (" + str(item.get("state", item.get("stage", "running"))) + ")"
         if item.get("provider_deferral"):
             label += "; provider Retry-After retained in the native progress record"
-        updated = item["updated_at"]
+        updated = item.get("updated_at") or now()
         record.update(native_progress=item, stage=label, updated_at=updated)
         events = record.setdefault("native_events", [])
         events.append({"at": updated, "message": label})
@@ -840,6 +848,9 @@ class SourcePreparation:
                 work_directory=native / "expanded-national-source",
                 **({"read_mode": options["read_mode"]} if "read_mode" in options else {}),
                 **self._domain_options(options, snapshots["domain"])))
+        elif method_id == "nlcd-range":
+            from source_tools.nlcd_range_preparation import prepare_entry
+            entry = prepare_entry(self, workspace, task, native, record, files, snapshots, options)
         elif method_id == "erosivity":
             from source_tools import erosivity_sources
             capture_directory = None
@@ -871,6 +882,8 @@ class SourcePreparation:
                 companions.append({**item, **describe_file(native, verify_file(output, item))})
             companions.append(describe_file(native, original, role="ORIGINAL_NATIVE_SOURCE_ENTRY"))
             companions.append(describe_file(native, native / "selection.json", role="PREPARATION_SELECTION"))
+            if method_id == "nlcd-range":
+                companions.append(describe_file(native, native / "range-reuse.json", role="ORIGINAL_RANGE_REUSE"))
             for name, snapshot in snapshots.items():
                 folder = native / "inputs" / name
                 companions.append(describe_file(native, folder / "input-snapshot.json", role="ORIGINAL_INPUT_SELECTION"))

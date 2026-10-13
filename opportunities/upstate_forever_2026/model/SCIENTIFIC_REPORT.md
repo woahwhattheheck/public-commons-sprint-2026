@@ -1,26 +1,10 @@
 # Scientific delivery report
 
 The scientific report presents current physical exports, native scenario changes,
-profile settings, receiving-water quantities and observation comparisons as
-readable tables. PDF and offline HTML share the same ordered report blocks.
+profile settings and original biophysical coefficients, receiving-water quantities and observation comparisons as
+readable tables. PDF, offline HTML and Markdown share the same ordered report blocks.
 The structured report companion retains those exact blocks, full source editions
 and the selected original record IDs.
-
-## Generate a complete delivery
-
-The maintained model/delivery.py applies the formatter, selected receiving-water
-map panels, original GIS assets and report companions in the normal delivery
-operation. Use the current complete application and the retained Workspace:
-
-    python -B -m model.cli --workspace ACTUAL_WORKSPACE delivery-build ORIGINAL_DELIVERY_SELECTION.json
-
-The existing selection supplies the completed baseline, explicit land-cover
-alternatives, source roles, overlays and responsible metadata contact. To use a
-retained receiving-water analysis or plan, include the existing receiving_waters
-selection described in RECEIVING_WATERS.md. The resulting report.pdf, report.html
-and report-data.json share the same native records and report sections. The final
-project archive includes all three and the complete selected receiving-water GIS
-records. Original delivery IDs and report editions remain independently saved.
 
 ## Scientific data contract
 
@@ -69,14 +53,49 @@ defines sediment export density in metric tons/hectare/year. The existing native
 adapter multiplies those rates by actual pixel area once. This formatter consumes
 its retained mass artifacts and preserves their units.
 
-## Maintained delivery interfaces
+## Original biophysical coefficients
 
-The complete application already binds model/scientific_report.py through
-model/delivery.py. The following interfaces describe the preserved integration
-for source consumers. Existing receptor, atlas, saved spatial review and native
-delivery operations remain part of the same build.
+The coefficient addition from edition v5 reads the saved profile's original CSV through Workspace.source_file,
+then checks its exact body SHA256 against profile.table_summary.sha256. It uses
+profiles.inspect_table with the saved profile's selected native models, preserving
+the native validation and the source row order. table_summary.rows is a count;
+the report obtains actual coefficients from the original CSV.
 
-The module import is:
+The selected-profile section includes the profile ID, selected models, source
+collection and source ID, original edition/reference/filename/hash, and complete
+row/column counts. Separate nitrogen, phosphorus and sediment tables preserve
+original source strings and every land-cover code. Nitrogen and phosphorus loads
+retain their per-row load_type_n/load_type_p choices. Additional original fields,
+including land-cover descriptions and source citations, appear in a separate
+three-column table. No coefficient row is truncated or sampled.
+
+The pinned NDR definitions label loads as kg/ha/year, critical lengths as metres,
+and efficiencies/subsurface shares as fractions. The original application-rate
+value stays visible; the report explains the native load * (1 - eff) adjustment
+and the direct measured-runoff interpretation without recomputing results. SDR C
+and P are dimensionless. The l_max algorithm setting is the maximum dimensionless
+USLE L factor, corrected from the earlier metre label.
+
+Normalization tables also display the original recorded cap units, reference,
+scope and comparison description when the retained priority record supplies them.
+
+The public refine_sections interface is unchanged. The formatter already receives
+workspace and profile; edition v6 retains the complete original table and composes
+the economic link and Markdown additions onto those coefficient tables.
+The existing delivery REPORT_VERSION binding gives this combined v6 report a distinct
+edition while earlier complete reports remain reproducible.
+
+## Integrate in the maintained delivery
+
+The formatter is model/scientific_report.py. The maintained delivery integration
+is composed in [PR 2821](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2821),
+including the original scientific formatter from [PR 2737](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2737).
+Updating an application that already has that integration requires only this
+module and guide; all public call signatures are unchanged. The hooks below
+describe the existing integration for receiving an earlier application. Preserve
+its receiving-water pipeline and other installed sections.
+
+Add the module import:
 
     from . import scientific_report
 
@@ -104,13 +123,14 @@ records already bound by the delivery:
 This preserves every unrecognized section, including independently installed
 scientific sections. A section is an ordered pair of heading and blocks. Blocks
 can be ordinary strings or dictionaries with kind=table, columns, rows, optional
-relative widths, and optional caption.
+relative widths, and optional caption. Link blocks have kind=links and an items
+array of title/path objects; paths refer to files retained inside the delivery.
 
 For the selected receiving-water product returned by the existing
 receiving_water_delivery.collect operation, append the maintained readable
 receiving-water section exactly once:
 
-    sections.extend(scientific_report.receiving_sections(receiving_water_product))
+    sections.extend(scientific_report.receiving_sections(water_product))
 
 Use this section in place of the older receiving_water_delivery.report_section
 JSON paragraphs. Keep the existing collect, attach_state, apply_map_specs and
@@ -145,15 +165,15 @@ Retain the offline companions before saving the report state:
         },
     ))
 
-The returned descriptor keys are report_html and report_data. Include their
+The returned descriptor keys are report_html, report_markdown and report_data. Include their
 original paths in manifest.project_assets before packaging:
 
     manifest["project_assets"].extend(
         state["files"][name]["path"]
-        for name in ("report_html", "report_data")
+        for name in ("report_html", "report_markdown", "report_data")
     )
 
-The original PDF descriptor remains state.files.report. All three artifacts use
+The original PDF descriptor remains state.files.report. All four artifacts use
 the same selected records and report blocks. Including REPORT_VERSION in the
 delivery identity lets previous complete deliveries retain their original report
 bytes while new deliveries use the updated format.
@@ -164,11 +184,34 @@ report.pdf uses the existing ReportLab dependency, repeating table headers and
 page-aware rows. report.html is self-contained, has a linked section index,
 supports narrow screens and prints with repeating table headers. It requires no
 network or browser script. report-data.json retains the displayed section
-structure and full selection/source binding. All three belong in the original
+structure and full selection/source binding. report.md preserves the same complete
+ordered sections, coefficient tables and relative links as readable Markdown. All four belong in the original
 delivery archive and normal authenticated file inventory.
 
-Receive the current complete application and open its completed native delivery
-through the existing operator.
+Receive this module in the complete application, compose the hooks above, and
+open the current completed native delivery through the existing operator.
 Inspect its PDF and offline HTML scenario-change tables, receive the full archive,
 then reopen the same Workspace and report IDs. The actual native rendering and
 reopening operation uses the existing completed model outputs.
+
+
+## Combined economic links and coefficient source
+
+Edition v6 is the complete three-way composition of the common 31,003-byte v4
+formatter, ASTRA13's 35,965-byte coefficient successor and the economic team's
+33,787-byte link/Markdown successor. The coefficient and rendering additions are
+disjoint; both source implementations are retained, with a new shared report
+version. The original quantity, paired-support and family-union calculations
+remain unchanged.
+
+The existing client_economics collector supplies selected economic edition blocks
+and original retained member paths. PDF and offline HTML render those package-relative
+links directly; Markdown includes the same paths and source labels. The formatter
+validates that link targets stay relative to the delivered package. The maintained
+delivery integration retains each economic source member, edition record and ZIP,
+and includes report_markdown in its original asset manifest.
+
+Receiving uses the existing native report operation: compile the composed module,
+open the current source-bound delivery, follow an economic link from its PDF or
+HTML, compare its coefficient tables with the exact saved profile CSV, and reopen
+the complete archive. The same ordered report blocks drive each output format.

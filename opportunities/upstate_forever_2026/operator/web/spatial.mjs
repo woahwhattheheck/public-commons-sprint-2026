@@ -128,6 +128,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const add=c.root.querySelector('[data-spatial-input="add-overlay"]'),addValue=add.value;
     add.innerHTML=layerOptions(c,'vector',addValue,'Choose a vector source');
     if(focused)controls.querySelector('[data-spatial-input="'+focused+'"]')?.focus({preventScroll:true});
+    c.regions?.updateSources();
   }
   function renderMarkers(c){
     c.root.querySelector('[data-spatial-markers]').innerHTML=c.model.markers.length?c.model.markers.map((item,index)=>
@@ -226,7 +227,38 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     if(target.kind==='deliveries')return row.owner_id===target.id&&row.group==='delivery';
     return row.id===target.id;
   }
+  function applyAtlasTarget(c,target){
+    const value=target.selection;
+    if(target.project_id!==c.model.catalog.project?.id)throw Error('This atlas panel belongs to another scientific project.');
+    if(!value||value.mode!=='single'||!validView(value.view)||!value.primary||
+       value.comparison!==null||!Array.isArray(value.overlays)||!Array.isArray(target.bindings)){
+      throw Error('Open the complete retained atlas panel selection.');
+    }
+    if(value.scale?.mode!=='fixed'||!finite(value.scale.minimum)||!finite(value.scale.maximum)||
+       value.scale.minimum>=value.scale.maximum)throw Error('The atlas panel needs its retained physical display scale.');
+    if(value.overlays.length>(c.model.catalog.limits?.overlays??24))throw Error('The atlas panel exceeds the original spatial overlay capacity.');
+    const choices=[value.reference,value.primary,...value.overlays.map(item=>item.selection)];
+    for(const choice of choices){
+      const row=layer(c,choice),binding=target.bindings.find(item=>selectionKey(item.selection)===selectionKey(choice));
+      if(!row||!binding||row.sha256!==binding.sha256||row.bytes!==binding.bytes||row.kind!==binding.kind){
+        throw Error('Restore the exact native atlas source before opening this panel.');
+      }
+    }
+    if(layer(c,value.primary)?.kind!=='raster'||value.overlays.some(item=>layer(c,item.selection)?.kind!=='vector')){
+      throw Error('The atlas raster and original vector overlays must retain their native layer kinds.');
+    }
+    stopGroup(c,'drawControl');stopGroup(c,'pointControl');
+    Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),
+      comparison:null,mode:'single',view:clone(value.view),scale:clone(value.scale),
+      overlays:clone(value.overlays),markers:[],title:value.title,notes:value.notes,
+      previous_review_id:null,point:null,pendingSave:null,frame:null,swipe:50});
+    c.model.exportOptions.review_id='';
+    c.root.querySelector('[data-spatial-input="title"]').value=value.title;
+    c.root.querySelector('[data-spatial-input="notes"]').value=value.notes;
+    renderExports(c);dirty(c);
+  }
   function applyTarget(c,target){
+    if(target.kind==='atlas-panel')return applyAtlasTarget(c,target);
     const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));
     if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}
     if(!matches.length)throw Error('This retained item has no spatial layers available yet. Complete its native operation or choose an original source.');
@@ -279,6 +311,20 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const scale=image.scale||{};
     return fmt(scale.minimum)+' to '+fmt(scale.maximum)+(image.units?' '+image.units:'');
   }
+  function legendHTML(name,image){
+    if(image?.categorical){
+      const classes=(image.categories||[]).map(row=>{
+        const colour=/^#[0-9a-f]{6}$/i.test(row.colour||'')?row.colour:'#7f7f7f';
+        return '<li><svg class="spatial-category-swatch" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="16" height="16" fill="'+colour+'" stroke="#777"/></svg><span><b>'+esc(row.value)+'</b> '+esc(row.label||('Code '+row.value))+'</span></li>';
+      }).join('');
+      const source=image.category_source||{},sources=source.sources||[],conflicts=source.conflicts||[];
+      const provenance=sources.length?'<details class="spatial-category-sources"><summary>Original class labels · '+sources.length+' retained table'+(sources.length===1?'':'s')+'</summary><ul>'+sources.map(row=>'<li>'+esc(row.source_id)+'<br><small>'+esc(row.uri||'')+'</small><br><code>'+esc(row.sha256||'')+'</code></li>').join('')+'</ul></details>':'';
+      const warning=conflicts.length?'<p class="note">Original tables disagree for codes '+esc(conflicts.join(', '))+'. Their codes are shown without an assigned label.</p>':'';
+      return '<section class="spatial-category-legend"><strong>'+esc(name)+' · '+esc(image.title||'Land cover')+'</strong><p class="note">'+esc(image.scale?.basis||'Discrete original class codes; grey shade has no magnitude')+'</p><ul class="spatial-category-list">'+classes+'</ul>'+warning+provenance+'</section>';
+    }
+    const constant=image?.scale?.minimum===image?.scale?.maximum;
+    return '<span class="spatial-legend-item"><span class="spatial-ramp'+(constant?' spatial-ramp-constant':'')+'" aria-hidden="true"></span><strong>'+esc(name)+'</strong> '+esc(rangeText(image))+'<small>'+esc(image?.scale?.basis||'')+'</small></span>';
+  }
   function renderFrame(c){
     const focusedMap=document.activeElement?.closest?.('[data-spatial-map]'),focusName=focusedMap&&c.root.contains(focusedMap)?focusedMap.dataset.spatialMap:null;
     const m=c.model,frame=m.frame,p=frame.images?.primary,a=frame.images?.comparison,d=frame.images?.difference;
@@ -293,7 +339,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     c.root.querySelector('[data-spatial-swipe-control]').hidden=!(m.mode==='swipe'&&p&&a);
     c.root.querySelector('[data-spatial-input="swipe"]').value=m.swipe;
     const images=m.mode==='difference'&&d?[['Difference',d]]:m.mode!=='single'&&a?[['Baseline',p],['Alternative',a]]:p?[['Raster',p]]:[];
-    c.root.querySelector('[data-spatial-legend]').innerHTML=images.map(([name,image])=>'<span class="spatial-legend-item"><span class="spatial-ramp" '+(image?.scale?.minimum===image?.scale?.maximum?'style="background:#7f7f7f" ':'')+'aria-hidden="true"></span><strong>'+name+'</strong> '+esc(rangeText(image))+'<small>'+esc(image?.scale?.basis||'')+'</small></span>').join('')+'<span class="spatial-nodata-key">Transparent cells: no native value</span>';
+    c.root.querySelector('[data-spatial-legend]').innerHTML=images.map(([name,image])=>legendHTML(name,image)).join('')+'<span class="spatial-nodata-key">Transparent cells: no native value</span>';
     const bounds=m.view.bounds,ref=layer(c,m.reference);
     c.root.querySelector('[data-spatial-view-meta]').innerHTML='<span><strong>View CRS</strong> '+esc(m.view.crs)+'</span><span><strong>Bounds</strong> '+bounds.map(value=>esc(fmt(value))).join(', ')+'</span><details><summary>Original source identity</summary><p>'+esc(ref?.title||'')+' · '+identity(ref)+'</p>'+images.map(([name,image])=>'<p>'+esc(name)+': '+(image.source_sha256?'<span class="mono">'+esc(image.source_sha256)+'</span>':'<span class="mono">'+esc(JSON.stringify(image.source_sha256s||{}))+'</span>')+'</p>').join('')+'<p>Display cells use nearest sampling. Inspect reads original native cells and exact source attributes.</p></details>';
     const warnings=[...(frame.warnings||[])];
@@ -415,7 +461,8 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   function pixelHTML(title,pixel){
     if(!pixel)return '<section><h3>'+esc(title)+'</h3><p class="note">No raster selected.</p></section>';
     const row=pixel.layer||{},values=[
-      ['Physical value',pixel.valid?(pixel.value_text??String(pixel.value))+(pixel.units?' '+pixel.units:''):pixel.reason||'No native value at this point'],
+      ...(pixel.category?[['Original land-cover class',pixel.category.label],['Original class code',String(pixel.category.value)]]:[]),
+      [pixel.category?'Stored class value':'Physical value',pixel.valid?(pixel.value_text??String(pixel.value))+(pixel.units?' '+pixel.units:''):pixel.reason||'No native value at this point'],
       ['Original stored value',pixel.valid?(pixel.raw_value_text??String(pixel.raw_value)):'—'],
       ['Native row / column',pixel.row!==undefined&&pixel.row!==null?String(pixel.row)+' / '+String(pixel.column):'—'],
       ['Native coordinate',pixel.coordinate?fmt(pixel.coordinate.x)+', '+fmt(pixel.coordinate.y):'—'],
@@ -752,6 +799,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     current=c;root.innerHTML=shell();
     model.regions||={};
     c.regions=createRegionAnalysis({root,model:model.regions,workspace:c.key,request,alive:()=>alive(c),refreshState,showTask,
+      getSources:()=>({layers:model.catalog?.layers||[],overlays:model.overlays}),
       getSelection:()=>{
         if(c.busy||!validView(model.view)||!model.frame||frameIdentity(model)!==model.renderedKey)throw Error('Wait for the selected native map view to finish rendering.');
         return {primary:clone(model.primary),comparison:clone(model.comparison),view:clone(model.view)};
