@@ -21,6 +21,32 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/geographic_scenario_allocation.py",
+    "model/geographic_scenario_allocation_report.py",
+    "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md",
+    "model/geographic_receiving_context.py",
+    "model/GEOGRAPHIC_RECEIVING_CONTEXT.md",
+    "integration/component_fragments/geographic-receiving-context.json",
+    "model/geographic_headwaters.py",
+    "source/receptor-profiles/utility-focus-20261012.json",
+    "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+    "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+    "source_tools/geographic_matched_control.py",
+    "source_tools/regional_matched_control.py",
+    "source_tools/precipitation_matching.py",
+    "source_tools/headwaters_parameter_course.py",
+    "model/ensembles.py",
+    "model/ensemble_operations.py",
+    "model/ensemble_report.py",
+    "source/simulated_headwaters_20261013/PARAMETER_COURSE.md",
+    "CURRENT_OWNER_DIRECTION.md",
+    "model/scenario_footprint.py",
+    "model/receiving_water_accounting.py",
+    "model/receiving_waters.py",
+    "model/receiving_water_report_source.py",
+    "model/rasters.py",
+    "model/reuse.py",
+    "model/profiles.py",
     "model/source_refresh_report_transfer.py",
     "model/source_refresh_report_source.py",
     "model/source_refresh_receiving.py",
@@ -231,6 +257,32 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/geographic_scenario_allocation.py",
+    "model/geographic_scenario_allocation_report.py",
+    "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md",
+    "model/geographic_receiving_context.py",
+    "model/GEOGRAPHIC_RECEIVING_CONTEXT.md",
+    "integration/component_fragments/geographic-receiving-context.json",
+    "model/geographic_headwaters.py",
+    "source/receptor-profiles/utility-focus-20261012.json",
+    "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+    "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+    "source_tools/geographic_matched_control.py",
+    "source_tools/regional_matched_control.py",
+    "source_tools/precipitation_matching.py",
+    "source_tools/headwaters_parameter_course.py",
+    "model/ensembles.py",
+    "model/ensemble_operations.py",
+    "model/ensemble_report.py",
+    "source/simulated_headwaters_20261013/PARAMETER_COURSE.md",
+    "CURRENT_OWNER_DIRECTION.md",
+    "model/scenario_footprint.py",
+    "model/receiving_water_accounting.py",
+    "model/receiving_waters.py",
+    "model/receiving_water_report_source.py",
+    "model/rasters.py",
+    "model/reuse.py",
+    "model/profiles.py",
     "model/source_refresh_report_transfer.py",
     "model/source_refresh_report_source.py",
     "model/source_refresh_receiving.py",
@@ -756,7 +808,72 @@ def verify_economic_study_dependencies(application, pending):
         assembled_data(application, pending, "model/decision_receive.py")
 
 
+def verify_geographic_allocation_dependencies(application, pending):
+    """Keep the original utility-context allocation and source closure together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    context = source("model/geographic_receiving_context.py")
+    active = any(source(name) is not None for name in (
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_scenario_allocation_report.py"))
+    active = active or (context is not None and b"geographic_scenario_allocation" in context)
+    if not active:
+        return
+    dependencies = (
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_scenario_allocation_report.py",
+        "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md",
+        "model/geographic_receiving_context.py", "model/GEOGRAPHIC_RECEIVING_CONTEXT.md",
+        "integration/component_fragments/geographic-receiving-context.json",
+        "model/common.py", "model/workspace.py", "model/rasters.py",
+        "model/receiving_waters.py", "model/receiving_water_accounting.py",
+        "model/receiving_water_report_source.py", "model/observed_context.py",
+        "model/scenario_footprint.py", "model/scientific_figures.py",
+        "model/scientific_map_figures.py", "model/geographic_headwaters.py",
+        "model/native_versions.py", "model/model_selection.py", "model/reuse.py",
+        "model/spatial_esri.py", "model/profiles.py",
+        "source_tools/geographic_matched_control.py",
+        "source_tools/regional_matched_control.py", "source_tools/precipitation_matching.py",
+        "source_tools/headwaters_parameter_course.py",
+        "model/ensembles.py", "model/ensemble_operations.py", "model/ensemble_report.py",
+        "model/paired_ensemble/__init__.py", "model/paired_ensemble/ensemble_workspace.py",
+        "model/paired_ensemble/designs.py", "model/paired_ensemble/ensemble_store.py",
+        "source/receptor-profiles/utility-focus-20261012.json",
+        "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+        "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+        "CURRENT_OWNER_DIRECTION.md",
+    )
+    for name in dependencies:
+        assembled_data(application, pending, name)
+    if b"geographic_scenario_allocation" not in assembled_data(
+            application, pending, "model/geographic_receiving_context.py"):
+        raise ValueError("Compose allocation into the original Geographic utility context")
+    kernel = assembled_data(application, pending, "model/geographic_scenario_allocation.py")
+    renderer = assembled_data(application, pending, "model/geographic_scenario_allocation_report.py")
+    if (b"def prepare(" not in kernel or b"def inspect(" not in kernel
+            or b"def write(" not in renderer):
+        raise ValueError("Receive the complete original Geographic allocation and report modules")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-receiving-context.json"))
+    family = fragment.get("components", {}).get("geographic-receiving-context", {})
+    needed = {
+        "model/geographic_receiving_context.py",
+        "model/geographic_scenario_allocation.py", "model/geographic_scenario_allocation_report.py",
+        "model/GEOGRAPHIC_SCENARIO_ALLOCATION.md", "model/geographic_headwaters.py",
+        "source/receptor-profiles/utility-focus-20261012.json",
+        "source_tools/geographic_matched_control.py", "source_tools/regional_matched_control.py",
+        "source_tools/precipitation_matching.py", "source_tools/headwaters_parameter_course.py",
+        "model/ensembles.py", "model/ensemble_operations.py", "model/ensemble_report.py",
+    }
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-receiving-context"
+            or not needed.issubset(set(family.get("paths", [])))):
+        raise ValueError("Retain Geographic allocation in its original complete component family")
+
+
 def verify_composition(application, pending):
+    verify_geographic_allocation_dependencies(application, pending)
     verify_received_study_dependencies(application, pending)
     verify_economic_study_dependencies(application, pending)
     for name in REQUIRED:
