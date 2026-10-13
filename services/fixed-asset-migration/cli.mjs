@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import * as engine from './engine.mjs';
 import * as workOrders from './work-orders.mjs';
+import * as assetCrosswalk from './asset-crosswalk.mjs';
 import {sha256Utf8,sha256Bytes} from './sha256.mjs';
 import {inflateRawSync} from 'node:zlib';
 import {createIssuerAnnex} from './issuer-annex.mjs';
@@ -92,6 +93,12 @@ export function main(argv=process.argv.slice(2)){
   if(!result.replayed)replace(workspace,before,engine.exportWorkspace(result.workspace));
   return{state:result.replayed?'REPLAYED':'SAVED',workspace,id:result.workspace.id,revision:result.workspace.revision,receipt:result.receipt};
  });
+ if(command==='crosswalk-save')return locked(workspace,()=>{
+  const before=regular(workspace),ws=engine.importWorkspace(before),request=JSON.parse(regular(absolute(o['--request'],'saved crosswalk request JSON')));
+  if(o['--csv']){need(request.pairs===undefined,'Keep the complete original schedule in --csv or request.pairs, not both.');request.pairs=assetCrosswalk.parseSchedule(ws,regular(absolute(o['--csv'],'complete crosswalk CSV')));}
+  const result=assetCrosswalk.save(ws,request);if(!result.replayed)replace(workspace,before,engine.exportWorkspace(result.workspace));
+  return{state:result.replayed?'REPLAYED':'SAVED',workspace,id:result.workspace.id,revision:result.workspace.revision,receipt:result.receipt,crosswalk:result.crosswalk||null};
+ });
  if(command.startsWith('wo-')&&!['wo-report','wo-inspect'].includes(command))return locked(workspace,()=>{
   const before=regular(workspace),ws=engine.importWorkspace(before),request=JSON.parse(regular(absolute(o['--request'],'saved work-order request JSON'))),action=command.slice(3);
   if(['import','allocate-batch','match-batch','order-match-batch'].includes(action)){need(request.text===undefined,'Keep original CSV bytes in --csv.');const csv=absolute(o['--csv'],'complete original CSV');request.filename=request.filename||path.basename(csv);request.text=regular(csv);}
@@ -99,17 +106,19 @@ export function main(argv=process.argv.slice(2)){
   return{state:result.replayed?'REPLAYED':'SAVED',workspace,id:result.workspace.id,revision:result.workspace.revision,receipt:result.receipt,result:result.workOrderResult};
  });
  const ws=engine.importWorkspace(regular(workspace));
+ if(command==='crosswalk-inspect')return assetCrosswalk.reconcile(ws);
+ if(command==='crosswalk-report'){const r=assetCrosswalk.exportFiles(ws),root=absolute(o['--out'],'crosswalk output directory');for(const f of r.files)publish(path.join(root,f.path),f.text);return{state:'EXPORTED',workspace,revision:ws.revision,ready:r.report.ready,summary:r.report.summary,files:r.files.map(({text,...f})=>f)};}
  if(command==='wo-report'){const report=workOrders.reconcile(ws);output(o['--out'],report);return {state:'RECONCILED',workspace,revision:ws.revision,ready:report.ready,accepted:report.accepted,summary:report.summary};}
  if(command==='wo-inspect')return workOrders.read(ws);
  if(command==='issuer-inspect')return A.assessment(ws);
  if(command==='inspect')return{id:ws.id,title:ws.title,revision:ws.revision,sources:ws.sources.map(({text,rows,...x})=>({...x,rowCount:rows.length})),mappings:ws.mappings,corrections:ws.corrections,financePolicies:ws.financePolicies,financePolicyHistory:ws.financePolicyHistory,supportingFiles:ws.supportingFiles.map(({base64,...f})=>f),financeBasis:engine.financeBasis(ws),operations:ws.operations};
  if(command==='reconcile'){const report=engine.reconcile(ws);output(o['--out'],report);return{state:'RECONCILED',workspace,revision:ws.revision,ready:report.ready,summary:report.summary,report:absolute(o['--out'],'report output')};}
  if(command==='handover'){
-  const root=absolute(o['--out'],'handover directory');let packet=A.handover(ws,workOrders.buildHandover(ws));
+  const root=absolute(o['--out'],'handover directory');let packet=assetCrosswalk.appendHandover(ws,A.handover(ws,workOrders.buildHandover(ws)));
   const codeRoot=path.dirname(fileURLToPath(import.meta.url)),read=name=>regular(path.join(codeRoot,name));
   const applicationSource=readApplicationSource(codeRoot),applicationSourceModule=read('application-source.mjs');
   const sourceSupport=createApplicationSource({sha256Utf8});
-  const data={applicationSource,applicationSourceModule,schema:'tjlabs.fixed-asset-finance-browser.v1',copyId:'exit-'+ws.id+'-'+ws.revision,portable:engine.exportWorkspace(ws),engineSource:read('engine.mjs'),shaSource:read('sha256.mjs'),appSource:read('app.mjs'),issuerSource:read('issuer-annex.mjs'),issuerUISource:read('issuer-ui.mjs'),workOrderSource:read('work-orders.mjs'),workOrderUISource:read('work-orders-ui.mjs')};
+  const data={applicationSource,applicationSourceModule,schema:'tjlabs.fixed-asset-finance-browser.v1',copyId:'exit-'+ws.id+'-'+ws.revision,portable:engine.exportWorkspace(ws),engineSource:read('engine.mjs'),shaSource:read('sha256.mjs'),appSource:read('app.mjs'),issuerSource:read('issuer-annex.mjs'),issuerUISource:read('issuer-ui.mjs'),workOrderSource:read('work-orders.mjs'),workOrderUISource:read('work-orders-ui.mjs'),masterPreparationSource:read('integrations/business-central/prepare-master.mjs'),workOrderPreparationSource:read('integrations/business-central/prepare-work-orders.mjs'),sourcePreparationUISource:read('integrations/business-central/source-preparation-ui.mjs'),assetCrosswalkSource:read('asset-crosswalk.mjs'),assetCrosswalkUISource:read('asset-crosswalk-ui.mjs')};
   sourceSupport.assertRuntime(applicationSource,data);
   const html=read('template.html').replace('__STYLES__',()=>read('styles.css')).replace('__BOOTSTRAP__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
   packet.files=packet.files.filter(f=>f.path!=='MANIFEST.json');packet.files.push({path:'Fixed_Asset_Finance_Workspace.html',type:'text/html;charset=utf-8',text:html,...sha256Utf8(html)});packet.manifest.files=packet.files.map(({text,base64,...f})=>f);const manifestText=JSON.stringify(packet.manifest,null,2)+'\n';packet.files.push({path:'MANIFEST.json',type:'application/json',text:manifestText,...sha256Utf8(manifestText)});

@@ -30,6 +30,12 @@ for(const source of [remap(data.masterPreparationSource),remap(data.workOrderPre
 const [master,orders,ui]=await Promise.all(preparationURLs.map(url=>import(url)));
 extensions={...extensions,sourcePreparation:{prepareMasterCapture:master.prepareMasterCapture,prepareWorkOrderCapture:orders.prepareWorkOrderCapture,sha256Utf8:sha.sha256Utf8},createSourcePreparationPanel:ui.createSourcePreparationPanel};
 }
+if(data.assetCrosswalkSource&&data.assetCrosswalkUISource){
+const source=data.assetCrosswalkSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8} from './sha256.mjs';",'import {sha256Utf8} from '+JSON.stringify(shaURL)+';');
+const urls=[source,data.assetCrosswalkUISource].map(text=>URL.createObjectURL(new Blob([text],{type:'text/javascript'})));preparationURLs.push(...urls);
+const [assetCrosswalk,ui]=await Promise.all(urls.map(url=>import(url)));
+extensions={...extensions,assetCrosswalk,createAssetCrosswalkPanel:ui.createAssetCrosswalkPanel};
+}
 if(data.applicationSourceModule){
 applicationSourceURL=URL.createObjectURL(new Blob([data.applicationSourceModule],{type:'text/javascript'}));
 const source=await import(applicationSourceURL),applicationSource=source.createApplicationSource(sha);
