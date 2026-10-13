@@ -13,7 +13,7 @@ export function mountNativeObservations(host,{request,openMonitoring}={}){
  function controls(){host.setAttribute('aria-busy',String(busy));for(const e of host.querySelectorAll('button,input,select'))e.disabled=busy||e.dataset.unavailable==='true';}
  async function task(fn){if(dead||busy)return;busy=true;controls();try{await fn();}catch(e){if(!dead&&e.name!=='AbortError')message(e.message,true);}finally{busy=false;if(!dead)controls();}}
  function capture(){const id=host.querySelector('[name=source]'),title=host.querySelector('[name=title]');if(id)selection.import_id=id.value;if(title)selection.title=title.value.trim();}
- function changed(){capture();preview=null;saved=null;renderPreview();message('Source or title changed. Inspect this exact selection before retaining it.');}
+ function changed(){capture();preview=null;saved=null;renderPreview();renderSaved();message('Source or title changed. Inspect this exact selection before retaining it.');}
  async function refresh(){const r=await request('catalog');if(dead)return;catalogue=r;}
  function render(){
   if(dead)return;
