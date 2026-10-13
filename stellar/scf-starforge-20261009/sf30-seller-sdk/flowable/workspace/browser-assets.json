@@ -113,6 +113,13 @@
         "event-intake-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/history-browser.mjs",
+      [
+        "history-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
