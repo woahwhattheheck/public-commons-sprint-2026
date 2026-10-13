@@ -37,6 +37,7 @@ from . import calibration_study_transfer as calibration_transfer
 from . import calibration_native_study_transfer as calibration_native
 from . import parameter_study_transfer as parameter_transfer
 from . import parameter_working_transfer as working_transfer
+from . import climate_working_transfer as climate_working_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
@@ -51,7 +52,7 @@ from . import chemistry_study_transfer as chemistry_transfer
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "runs", "robust-decisions",
+ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
               "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
@@ -59,7 +60,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "par
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
               *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *joint_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
               *management_transfer.ROOT_KINDS, *calibration_native.ROOT_KINDS)
-IMMUTABLE_KINDS = ("parameter-working", "sources", "profiles", "scenarios", "observations",
+IMMUTABLE_KINDS = ("parameter-working", "climate-working", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
                    *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS, *terrain_transfer.IMMUTABLE_KINDS,
@@ -85,6 +86,7 @@ LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
     "parameter-studies": "Parameter studies",
     "parameter-working": "Parameter working designs",
+    "climate-working": "Climate forcing working designs",
     "runs": "Native runs", "robust-decisions": "Decision studies",
     "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
     "sources": "Source collections", "grids": "Prepared grids",
@@ -541,6 +543,8 @@ class _Closure:
             pass
         elif working_transfer.visit(self, kind, key, value, reason):
             pass
+        elif climate_working_transfer.visit(self, kind, key, value, reason):
+            pass
         elif parameter_transfer.visit(self, kind, key, value, reason):
             pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
@@ -719,6 +723,7 @@ class _Closure:
             "calibration_studies": calibration_native.receipt(self),
             "joint_parameter_studies": joint_transfer.receipt(self),
             "parameter_working": working_transfer.receipt(self),
+            "climate_working": climate_working_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
@@ -1007,6 +1012,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         }
         if getattr(closure, "parameter_working_records", {}):
             identity["parameter_working"] = working_transfer.receipt(closure)
+        if getattr(closure, "climate_working_records", {}):
+            identity["climate_working"] = climate_working_transfer.receipt(closure)
         if closure.joint_parameter_records:
             identity["joint_parameter_studies"] = joint_transfer.receipt(closure)
         if closure.calibration_native_records:
@@ -1127,6 +1134,7 @@ def verify_received_studies(workspace, *, joint_only=False):
         calibration_native.verify_receipt(closure, receipt["identity"].get("calibration_studies", []))
         parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
         working_transfer.verify_receipt(closure, receipt["identity"].get("parameter_working", []))
+        climate_working_transfer.verify_receipt(closure, receipt["identity"].get("climate_working", []))
         forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
         climate_management_transfer.verify_receipt(closure, receipt["identity"].get("climate_management_records", []))
         management_transfer.verify_receipt(closure, receipt["identity"].get("management_case_studies", []))
@@ -1180,6 +1188,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind == "climate-working":
+            for row in climate_working_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind == "parameter-working":
             for row in working_transfer.catalogue(workspace):
