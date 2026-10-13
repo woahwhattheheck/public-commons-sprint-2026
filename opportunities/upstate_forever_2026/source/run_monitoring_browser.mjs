@@ -10,11 +10,11 @@ const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},workspace:{type:'string'},
  'context-id':{type:'string'},output:{type:'string'},
  resume:{type:'boolean',default:false},video:{type:'boolean',default:false},
- headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},
+ headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE --opening MONITORING_OPENING.json --receiving RECEIVING.json --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--resume]');
+ console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE --opening MONITORING_OPENING.json --receiving RECEIVING.json --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','monitoring-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -55,9 +55,11 @@ async function shot(name){
 }
 function browserRuntime(){
  required(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ const rendererLimit=args['browser-renderer-limit']===undefined?null:Number(args['browser-renderer-limit']);
+ required(rendererLimit===null||(/^[1-9][0-9]*$/.test(args['browser-renderer-limit'])&&Number.isSafeInteger(rendererLimit)&&rendererLimit<=32),'Choose a browser renderer limit between 1 and 32.');
  return{kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
   executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
-  channel:args['browser-channel']||null,headless:!args.headed};
+  channel:args['browser-channel']||null,headless:!args.headed,renderer_process_limit:rendererLimit};
 }
 async function initializeContinuation(){
  browserRuntime();
@@ -337,7 +339,8 @@ async function main(){
  required(capability,'Use the original startup URL containing its capability fragment.');
  browser=await chromium.launch({headless:!args.headed,
   ...(args['browser-channel']?{channel:args['browser-channel']}:{}),
-  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{})});
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{}),
+  ...(args['browser-renderer-limit']?{args:['--renderer-process-limit='+browserRuntime().renderer_process_limit]}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(selection.workspace_key);await openDesk();
