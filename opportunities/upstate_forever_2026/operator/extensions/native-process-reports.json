@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "native-process-reports",
   "title": "Native process reports",
-  "version": "1",
+  "version": "2",
   "order": 42,
   "assets": [
     "native_processes.mjs",
