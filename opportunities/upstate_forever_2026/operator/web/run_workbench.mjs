@@ -238,6 +238,43 @@ export function runDeskComparisons(snapshot, draft, rows = null, index = runDesk
   return groups;
 }
 
+export function runDeskProcessReports(snapshot, draft, rows = null, index = runDeskIndex(snapshot)) {
+  rows ||= runDeskRows(snapshot, draft, [], index);
+  const baseline = index.scenarios.get(draft.baseline_scenario_id);
+  if (!baseline || baseline.kind !== 'baseline') return [];
+  const families = selectedFamilies(rows), groups = [];
+  for (const profileId of draft.profile_ids || []) {
+    for (const [scopeKey, family] of families.get(profileId) || []) {
+      const base = family.find(row => row.scenario.id === baseline.id);
+      if (!base) continue;
+      const alternatives = family.filter(row => row.scenario.id !== baseline.id);
+      const selected = [base, ...alternatives];
+      const stages = selected.map(row => {
+        const completed = {};
+        for (const model of row.models) {
+          const stage = row.run?.stages?.[model] || row.run?.stage_summary?.[model];
+          // Compact state lists retain completion/counts; the destination reads
+          // the original stage registry before accepting the entire selection.
+          const retained = stage?.files ? !!stage.files['watershed_results_' + model] :
+            Number.isInteger(stage?.file_count) && stage.file_count > 0;
+          if (stage?.completed_at && retained) completed[model] = stage.completed_at;
+        }
+        return {row, completed};
+      });
+      const scopes = [base.models, ...base.models.map(model => [model])]
+        .filter((models, position, all) => all.findIndex(value => modelKey(value) === modelKey(models)) === position)
+        .map(models => {
+          const missing = stages.filter(value => !value.row.run || models.some(model => !value.completed[model]));
+          return {models, key: modelKey(models), ready: !missing.length, completed: selected.length - missing.length, missing};
+        });
+      groups.push({key: profileId + ':' + scopeKey, profileId, profile: base.profile, models: base.models,
+        modelKey: scopeKey, baseline: base, alternatives, selected, stages, scopes,
+        runIds: selected.map(row => row.run?.id || null)});
+    }
+  }
+  return groups;
+}
+
 export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskIndex(snapshot)) {
   rows ||= runDeskRows(snapshot, draft, [], index);
   const grid = index.grids.get(draft.grid_id);
@@ -266,7 +303,7 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
   return programmes;
 }
 
-export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, toast}) {
+export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, openDesk, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
@@ -609,6 +646,26 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
           {profile: group.profileId, models: group.modelKey}, busy || hasIssues) +
         '</div></article>').join('') + '</div>';
   }
+  function renderProcessReports(rows) {
+    if (typeof openDesk !== 'function') return '';
+    const groups = runDeskProcessReports(current, draft, rows, currentIndex());
+    return '<section class="section"><header class="section-header"><div><h2>4. Report completed model stages</h2><p>Open the baseline and every other checked scenario in their selected order. A baseline alone is supported.</p></div></header>' +
+      '<div class="section-body"><p class="note">A completed nutrient or sediment stage can be reported while its parent run continues. The process desk checks the original watershed files and producing versions before building the report.</p>' +
+      (groups.length ? groups.map(group => '<article class="rd-comparison"><div><h3>' +
+        escapeHTML(title(group.profile)) + ' · retained ' + escapeHTML(modelLabel(group.models)) + ' runs</h3><p>' +
+        group.selected.length + ' selected run' + (group.selected.length === 1 ? '' : 's') + ' · baseline first</p><ol>' +
+        group.stages.map(({row, completed}) => '<li><strong>' + escapeHTML(title(row.scenario)) + '</strong> · ' +
+          escapeHTML(row.run ? 'parent ' + row.run.state : 'awaiting run preparation') +
+          '<br><small>' + escapeHTML(row.run ? short(row.run.id) + ' · ' : '') +
+          escapeHTML(row.models.map(model => model.toUpperCase() + (completed[model] ? ' completed ' + completed[model] : ' awaiting completed watershed output')).join(' · ')) +
+          '</small></li>').join('') + '</ol><small>All checked alternatives stay in this cohort. Uncheck an unfinished alternative above to deliberately prepare a smaller report.</small></div>' +
+        '<div class="rd-row-actions">' + group.scopes.map(scope => htmlButton('process-report',
+          'Open ' + modelLabel(scope.models) + ' report (' + scope.completed + '/' + group.selected.length + ' ready)',
+          {profile: group.profileId, models: group.modelKey, 'report-models': scope.key, workspace: current.workspace_key},
+          busy || !scope.ready)).join('') + '</div></article>').join('') :
+        '<p class="note">Check an unchanged baseline under a selected profile to prepare a process report. Check its restoration, control or other scenarios to include them in the same original cohort.</p>') +
+      '</div></section>';
+  }
   function paint() {
     if (!host || !current || !draft) return;
     const focused = host.contains(document.activeElement) ? document.activeElement : null;
@@ -676,7 +733,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '</div>' + htmlButton('download-results', 'Download selected native totals', {},
         !selected.some(row => row.models.some(model => modelOutputs[model].some(name => !!row.run?.artifacts?.[name])))) + '</footer></section>' +
       '<section class="section"><header class="section-header"><div><h2>3. Compare and deliver completed pairs</h2><p>Signed comparison outputs use alternative minus baseline. The completed pairs below retain one common profile and grid.</p></div></header>' +
-      '<div class="section-body">' + renderGroups(rows) + '</div></section></div>';
+      '<div class="section-body">' + renderGroups(rows) + '</div></section>' + renderProcessReports(rows) + '</div>';
     for (const [key, left, top] of scroll) {
       const node = [...host.querySelectorAll('[data-rd-scroll]')].find(value => value.dataset.rdScroll === key);
       if (node) { node.scrollLeft = left; node.scrollTop = top; }
@@ -918,6 +975,24 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     if (action === 'record') return openItem('runs', button.dataset.id);
     if (action === 'task') return showTask(button.dataset.id);
     if (action === 'log') return showRunLog(button.dataset.id);
+    if (action === 'process-report') {
+      if (busy) return;
+      if (!host || typeof openDesk !== 'function') throw Error('Open Native runs in the current scientific application.');
+      if (button.dataset.workspace !== workspaceKey || button.dataset.workspace !== getState()?.workspace_key)
+        throw Error('Open this original run cohort in its selected Workspace.');
+      synchronize(getState());
+      const target = current.workspace_key;
+      assertWorkspace(target);
+      const group = runDeskProcessReports(current, draft, currentRows(), currentIndex()).find(row =>
+        row.profileId === button.dataset.profile && row.modelKey === button.dataset.models);
+      const scope = group?.scopes.find(value => value.key === button.dataset.reportModels);
+      if (!group || !scope?.ready || group.runIds.some(id => !idPattern.test(id || '')))
+        throw Error('Keep the original checked cohort and wait for every requested model stage, or deliberately change the checked runs.');
+      return openDesk('native-process-reports', 'createForRuns', {
+        workspace_key: target, run_ids: [...group.runIds], models: [...scope.models],
+        title: 'Native processes · ' + title(group.profile) + ' · ' + modelLabel(scope.models)
+      });
+    }
     if (action === 'comparison-open') return openItem('comparisons', button.dataset.id);
     if (action === 'programme') {
       if (busy) return;
