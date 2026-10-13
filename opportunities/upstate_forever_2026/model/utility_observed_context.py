@@ -206,6 +206,7 @@ def write_packet(directory, files):
         selected[name] = (body, dict(descriptor))
     inventory = {"schema": "upstate.utility-watershed-packet/v1",
                  "path_basis": "archive_root", "open": "watershed-selection-brief.html",
+                 "briefing": "source-context-report-briefing.html" if "source-context-report-briefing.html" in selected else None,
                  "files": {name: descriptor for name, (_, descriptor) in sorted(selected.items())}}
     fd, pending = tempfile.mkstemp(prefix=".utility-watershed-packet-", suffix=".zip", dir=root)
     os.close(fd)
