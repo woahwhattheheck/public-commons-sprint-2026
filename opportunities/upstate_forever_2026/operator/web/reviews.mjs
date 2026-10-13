@@ -218,10 +218,45 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       return '<tr><td class="name-cell"><strong>Response '+(index+1)+' · '+esc(response.reviewer.name)+'</strong><small>'+esc([response.reviewer.role,response.reviewer.organization].filter(Boolean).join(' · '))+'</small><small>Created '+esc(date(response.created_at))+'</small><small>Received '+esc(date(record.imported_at))+'</small></td><td>'+badge(response.disposition)+'</td><td>'+esc(counts)+'</td><td>'+response.corrections.filter(x=>x.state==='open').length+' open / '+response.corrections.filter(x=>x.state==='resolved').length+' resolved</td><td>'+button('response','Inspect changes',record.id)+'</td></tr>';
     }));
   }
+  function rebuildExportControl(taskId,row){
+    if(row.export_status!=='rebuild_from_retained_review'||!row.rebuild)return '';
+    return '<p class="note">'+esc(row.export_message)+'</p>'+button('rebuild-export','Rebuild selected export',taskId);
+  }
+  function exportControls(row,label='Open desk'){
+    if(row.export_status==='error')return '<p class="note">'+esc(row.export_message)+'</p>'+
+      '<button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Inspect export issue</button>';
+    return rebuildExportControl(row.task_id,row)||
+      ((row.desk_url?'<a class="button" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">'+esc(label)+'</a>':'')+
+       '<button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Download package</button>');
+  }
+  async function rebuildExport(taskId){
+    const workspace=current(),serial=++generation;
+    const task=await api(endpoint('/api/task',{id:taskId}));
+    if(workspace!==current()||task.workspace!==workspace)throw Error('The workspace changed. Reopen the original exported review in its received project.');
+    if(serial!==generation)return;
+    const recovery=task._review?.rebuild;
+    if(task._review?.export_status!=='rebuild_from_retained_review'||!recovery||
+      !['customer.review.export','customer.review.handback.export'].includes(recovery.action))
+      throw Error('Reopen this export task to inspect its current local package.');
+    const action=recovery.action,payload=JSON.parse(JSON.stringify(recovery.payload)),engineering=action==='customer.review.handback.export';
+    if(payload.source_export_task_id!==task.id||task.id!==taskId)throw Error('The selected export task changed. Reopen its retained detail.');
+    const selected=engineering?'Engineering edition '+short(payload.handback_id):
+      payload.expected_response_id?'Customer response '+short(payload.expected_response_id):'Initial review before customer responses';
+    openForm('Rebuild the selected export',
+      'Create this original review generation on the current computer from the restored project and its retained source files.',
+      '<div class="review-intro"><h3>'+esc(selected)+'</h3><p>'+esc(task._review.export_message)+'</p>'+
+      '<p>Later replies and engineering editions remain in their original history. This operation creates a new local package for the selection shown here.</p>'+
+      '<details><summary>Original selection</summary><pre class="json-view">'+esc(pretty(payload))+'</pre></details></div>',
+      'Rebuild selected export',()=>{
+        if(workspace!==current())throw Error('The workspace changed. Reopen the export in its received project.');
+        return submitAction(action,payload);
+      });
+  }
+
   function exportsTab(packet){
     return '<p class="note">Each export captures one exact response generation. Open its desk to inspect or continue that version, or download its complete folder.</p>'+
       (packet._exports.length?table(['Exported','Response generation','Files',''],packet._exports.map(row=>
-        '<tr><td>'+esc(date(row.completed_at||row.created_at))+'<small class="mono">'+esc(short(row.package_sha256))+'</small></td><td>'+esc(row.latest_response_id?short(row.latest_response_id):'Initial review')+'</td><td>'+row.members+' files</td><td class="actions-cell"><a class="button" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open desk</a><button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Download package</button></td></tr>')):'<div class="empty"><h3>Export this review</h3><p>The complete desk includes all selected original files and the current response history.</p>'+button('export','Export current review',packet.review.id,'',true)+'</div>');
+        '<tr><td>'+esc(date(row.completed_at||row.created_at))+'<small class="mono">'+esc(short(row.package_sha256))+'</small></td><td>'+esc(row.latest_response_id?short(row.latest_response_id):'Initial review')+'</td><td>'+row.members+' files</td><td class="actions-cell">'+exportControls(row)+'</td></tr>')):'<div class="empty"><h3>Export this review</h3><p>The complete desk includes all selected original files and the current response history.</p>'+button('export','Export current review',packet.review.id,'',true)+'</div>');
   }
 
   // Engineering responses keep their own editions and never modify customer decisions.
@@ -356,7 +391,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       (row.revised_review_id?'<p>Revised selection: '+esc(result.revised?.title||short(row.revised_review_id))+'</p>'+button('open','Open revised review',row.revised_review_id):'<p>Planning edition: choose the actual revised review when the replacement work is ready.</p>')+'</div>'+
       '<h3>Requested changes and engineering response</h3>'+table(['Original request','Disposition and owner','Explanation','Replacement work'],handbackRequestRows(result))+
       '<h3>Engineering response editions</h3>'+table(['Saved','Prepared by','State',''],history.map(item=>'<tr><td>'+esc(date(item.created_at))+'</td><td>'+esc(item.prepared_by?.name||'')+'</td><td>'+badge(item.state)+'</td><td>'+(item.id===row.id?'Current view':button('handback-open','Open edition',item.id))+'</td></tr>'))+
-      '<h3>Exported handbacks</h3>'+(exports.length?table(['Exported','Complete package',''],exports.map(item=>'<tr><td>'+esc(date(item.completed_at||item.created_at))+'</td><td>'+esc(item.members??'')+' files</td><td>'+(item.desk_url?'<a class="button" target="_blank" rel="noopener" href="'+esc(item.desk_url)+'">Open handback desk</a>':'')+'<button type="button" data-action="task-open" data-id="'+esc(item.task_id)+'">Download package</button></td></tr>')):'<p>No exported package for this edition.</p>')+
+      '<h3>Exported handbacks</h3>'+(exports.length?table(['Exported','Complete package',''],exports.map(item=>'<tr><td>'+esc(date(item.completed_at||item.created_at))+'</td><td>'+esc(item.members??'')+' files</td><td>'+exportControls(item,'Open handback desk')+'</td></tr>')):'<p>No exported package for this edition.</p>')+
       (result._downloads?.length?fileList(result._downloads):'')+
       '<details><summary>Complete engineering response</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details></div>',
       {kind:'customer-review-handback',id:row.id});
@@ -395,11 +430,14 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     drawPacket(packet,tab);
   }
   async function exportReview(id){
-    const packet=await read('review',{review_id:id});
+    const workspace=current(),packet=await read('review',{review_id:id});
     openForm('Export complete review desk',
       'Create a portable copy of this selection, its original files and this exact response history.',
       '<div class="review-intro"><h3>'+esc(packet.review.title)+'</h3><p>'+esc(packet.review.purpose)+'</p><p>'+packet.review.artifacts.length+' complete files · '+packet.review.requirements.length+' requirements · '+packet.responses.length+' retained responses</p><p>After export, open the desk here or download and extract its ZIP. Record decisions in the desk and export its response JSON for receiving.</p></div>',
-      'Export review',()=>submitAction('customer.review.export',{review_id:id,expected_response_id:packet.latest_response_id}));
+      'Export review',()=>{
+        if(current()!==workspace)throw Error('The workspace changed. Reopen the original review before exporting.');
+        return submitAction('customer.review.export',{review_id:id,expected_response_id:packet.latest_response_id});
+      });
   }
   async function receiveResponse(id){
     const packet=await read('review',{review_id:id});
@@ -489,12 +527,13 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   function taskActions(task){
     if(task.action==='spatial.review.export'&&task.state==='complete')return mapActions(task.result);
     if(!task._review)return '';
-    const row=task._review;
-    if(row.kind==='engineering-handback'&&row.handback_id)return '<div class="page-actions">'+button('handback-open','Open engineering response',row.handback_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open handback desk</a>':'')+'</div>';
-    return '<div class="page-actions">'+button('open','Open retained review',row.review_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open review desk</a>':'')+'</div>';
+    const row=task._review,rebuild=rebuildExportControl(task.id,row);
+    if(row.kind==='engineering-handback'&&row.handback_id)return '<div class="page-actions">'+button('handback-open','Open engineering response',row.handback_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open handback desk</a>':'')+'</div>'+rebuild;
+    return '<div class="page-actions">'+button('open','Open retained review',row.review_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open review desk</a>':'')+'</div>'+rebuild;
   }
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
+    if(action==='rebuild-export')return rebuildExport(id);
     if(action==='handback-reload'){const form=$('#operation-form');if(!form?._reloadHandbackRevision)throw Error('Reopen the engineering response form.');return form._reloadHandbackRevision();}
     if(action==='handback-new')return newHandback(id,null,node.dataset.responseId||null);
     if(action==='handback-edit')return newHandback(node.dataset.reviewId,id);

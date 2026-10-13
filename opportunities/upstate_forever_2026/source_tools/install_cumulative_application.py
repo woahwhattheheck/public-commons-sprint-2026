@@ -221,12 +221,24 @@ def compose(root, records=None, *, source_root=None):
         ("model/portable.py", experiments["portable_join"]),
     ], "Scenario experiments", records)
     conservation = module(root, "operator/install_conservation.py")
+    registered_conservation = conservation["registered_conservation"](root)
     apply_function(root, [
-        ("operator/server.py", conservation["patch_server"]),
-        ("operator/web/app.mjs", conservation["patch_app"]),
-        ("operator/web/index.html", conservation["patch_index"]),
+        ("operator/server.py", lambda text: conservation["patch_server"](
+            text, registered=registered_conservation)),
+        ("operator/web/app.mjs", lambda text: conservation["patch_app"](
+            text, registered=registered_conservation)),
+        ("operator/web/index.html", lambda text: conservation["patch_index"](
+            text, registered=registered_conservation)),
     ], "Conservation plans", records)
-    if (root / "install_chemistry.py").is_file():
+    if (root / "operator/install_chemistry.py").is_file():
+        chemistry = module(root, "operator/install_chemistry.py")
+        # The staged complete application already holds the byte-verified
+        # chemistry source. source_root above may be a separate Keowee/review family.
+        result = chemistry["install"](root, source_root=root)
+        records.append({"component": "Reach chemistry", "result": result})
+    elif (root / "install_chemistry.py").is_file():
+        # Earlier complete chemistry editions exposed their original transforms
+        # at the root. The maintained root entrypoint is now CLI-only.
         chemistry = module(root, "install_chemistry.py")
         apply_function(root, [
             ("operator/server.py", chemistry["patch_server"]),
@@ -707,7 +719,10 @@ def same_archive_members(current, proposed):
     if names != proposed.namelist():
         return False
     for name in names:
-        if current.getinfo(name).file_size != proposed.getinfo(name).file_size:
+        retained, selected = current.getinfo(name), proposed.getinfo(name)
+        if (retained.file_size != selected.file_size
+                or retained.create_system != selected.create_system
+                or (retained.external_attr >> 16) != (selected.external_attr >> 16)):
             return False
         with current.open(name) as left, proposed.open(name) as right:
             while True:

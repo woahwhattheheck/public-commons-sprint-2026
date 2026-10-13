@@ -334,14 +334,15 @@ class MonitoringWorkspace:
         return list(reversed(records))
 
     def export(self, *, campaign_id: str | None = None, plan_id: str | None = None,
-               format: str = "bundle", expected_revision_id: str | None = None) -> dict:
+               format: str = "bundle", expected_revision_id: str | None = None,
+               context_id: str | None = None) -> dict:
         # Keep the selected campaign, calendar, event history and archive together.
         with held(self.lock, blocking=False):
             return self._export(campaign_id=campaign_id, plan_id=plan_id, format=format,
-                                expected_revision_id=expected_revision_id)
+                                expected_revision_id=expected_revision_id, context_id=context_id)
 
     def _export(self, *, campaign_id=None, plan_id=None, format="bundle",
-                expected_revision_id=None):
+                expected_revision_id=None, context_id=None):
         if bool(campaign_id) == bool(plan_id): raise ContractError("choose exactly one campaign_id or plan_id")
         if format not in {"bundle", "workspace", "html"}: raise ContractError("export format must be bundle, workspace or html")
         campaign = self.campaign(campaign_id) if campaign_id else None
@@ -353,6 +354,14 @@ class MonitoringWorkspace:
         if plan["status"] not in {"optimal", "feasible"}: raise ContractError("export requires a feasible design")
         network = self.get("networks", plan["network_id"])
         self.verify_sources(network)
+        observed_context = None
+        if context_id:
+            from . import monitoring_observed_context as observed
+            observed_context = observed.inspect(self.workspace, context_id)
+            if observed_context.get("plan_id") != plan["id"] or observed_context["network_id"] != network["id"]:
+                raise ContractError("Observed context must match this exact saved plan and network")
+            if campaign and observed_context.get("campaign_revision_id") != campaign["revision"]["id"]:
+                raise ContractError("Observed context must match the exported campaign revision")
         # Native backups must be outside the workspace so old archives never recurse.
         base = self.export_root or (self.root.parent / (self.root.name + "-monitoring-exports")
                 if callable(getattr(self.workspace, "backup", None)) else self.root / "tmp")
@@ -398,6 +407,13 @@ class MonitoringWorkspace:
         for label, binding in network["source_bindings"].items():
             if binding: files.update(export_source(self.workspace, label, binding))
         files["report.html"] = report_html(title, plan, network, visits, events).encode("utf-8")
+        if observed_context:
+            files.update(observed.export_files(self.workspace, context_id, plan_id=plan["id"], network_id=network["id"]))
+            context_html = observed.report_html(observed_context).split("</style>", 1)[1].rsplit("</html>", 1)[0]
+            combined = files["report.html"].decode("utf-8")
+            closing = "</body>" if "</body>" in combined else "</html>"
+            combined = combined.replace(closing, "<section id='observed-context'>" + context_html + "</section>" + closing, 1)
+            files["report.html"] = combined.encode("utf-8")
         files["README.txt"] = ("Monitoring decision and field package\n\n"
             "All source catchment geometry, source station geometry, planning costs, visits and field history are included.\n"
             "This report bundle is for review and exchange. For independently editable receiving, export the original\n"

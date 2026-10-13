@@ -51,7 +51,12 @@ def prepared_studies(workspace, original_studies=None):
     domain, domain_count, domain_problems = _domain_from_catalog(workspace, rows, original_studies)
     bound, features, source_problems = {}, {}, {}
     for key, definition in spec["sources"].items():
-        item = _by_hash(rows, [definition["sha256"]], {definition["kind"]})
+        eligible = rows
+        required_manifest = definition.get("source_manifest_sha256")
+        if required_manifest:
+            eligible = [(collection, entry) for collection, entry in rows
+                        if collection.get("original_manifest", {}).get("sha256") == required_manifest]
+        item = _by_hash(eligible, [definition["sha256"]], {definition["kind"]})
         if item is None:
             continue
         try:
@@ -84,7 +89,7 @@ def prepared_studies(workspace, original_studies=None):
                         name: definition[name] for name in REFERENCE_FIELDS if name in definition}))
         if domain is not None:
             selection["watersheds"].insert(0, domain)
-        choice_key = recipe.get("outfall_choice_source")
+        choice_key = recipe.get("location_choice_source", recipe.get("outfall_choice_source"))
         if choice_key in bound:
             definition = spec["sources"][choice_key]
             item = bound[choice_key]
@@ -93,6 +98,8 @@ def prepared_studies(workspace, original_studies=None):
                 station = props[definition["station_id_field"]]
                 selection["choices"][station] = _ref(item,
                     native_feature_id=props[definition["native_id_field"]], source_feature_index=index)
+        if recipe.get("source_context"):
+            selection["observed_source_context"] = json.loads(json.dumps(recipe["source_context"]))
         roles = {}
         for site in selection["sites"]:
             roles[site["role"]] = roles.get(site["role"], 0) + 1
@@ -101,8 +108,12 @@ def prepared_studies(workspace, original_studies=None):
             "source_summary": {"station_count": len(selection["sites"]), "station_roles": roles,
                 "watershed_count": domain_count,
                 "additional_whole_catchment_sources": len(recipe.get("watershed_sources", [])),
+                "additional_whole_catchment_features": sum(
+                    spec["sources"][key]["expected_features"]
+                    for key in recipe.get("watershed_sources", [])),
                 "observation_table_count": len(selection["observation_tables"]),
-                "selected_outfall_geometry": choice_key,
+                "selected_outfall_geometry": recipe.get("outfall_choice_source"),
+                "selected_coordinate_source": choice_key,
                 "retained_flow_days": sum(site.get("retained_flow_days", 0) for site in selection["sites"]),
                 "retained_stage_days": sum(site.get("retained_stage_days", 0) for site in selection["sites"]),
                 "source_count": len(needed)},

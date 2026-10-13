@@ -139,6 +139,19 @@ def main():
         page.on("console", lambda message: report["console_errors"].append(clean(message.text))
                 if message.type == "error" else None)
 
+        def record_summary_request(request):
+            if request.method != "POST" or urlsplit(request.url).path != "/api/actions":
+                return
+            value = request.post_data_json
+            if (isinstance(value, dict) and value.get("workspace") == workspace
+                    and value.get("action") == "experiment.summarize"
+                    and value.get("payload", {}).get("experiment_id") == args.experiment_id
+                    and value.get("operation_id")):
+                report["summary_operation"] = value
+                persist()
+
+        page.on("request", record_summary_request)
+
         def get(path, **query):
             query.setdefault("workspace", workspace)
             response = context.request.get(
@@ -150,10 +163,22 @@ def main():
 
         def task(key):
             deadline = time.monotonic() + args.task_timeout
+            resumed = False
             while True:
                 value = get("/api/task", id=key)
+                require(value.get("workspace") == workspace
+                        and value.get("action") == "experiment.summarize"
+                        and value.get("payload", {}).get("experiment_id") == args.experiment_id,
+                        "The retained summary task identifies another original operation.")
                 if value.get("state") == "complete":
                     return value
+                if value.get("state") == "interrupted" and not resumed:
+                    response = context.request.post(
+                        origin + "/api/task/resume", data={"id": key},
+                        headers={"Authorization": "Bearer " + capability}, timeout=45000)
+                    require(response.ok, "The original interrupted summary task could not resume.")
+                    resumed = True
+                    continue
                 if value.get("state") in ("failed", "cancelled", "interrupted"):
                     raise ValueError("Original summary operation " + key + ": " +
                                      json.dumps(value.get("error") or value.get("state")))
@@ -169,10 +194,23 @@ def main():
             persist()
 
         def open_current_experiment():
-            button = page.locator('[data-action="experiment-open"][data-id=' +
-                                  json.dumps(args.experiment_id) + "]")
-            expect(button.first).to_be_visible()
-            button.first.click()
+            if page.locator("#detail-dialog[open]").count():
+                page.keyboard.press("Escape")
+            page.locator('[data-view="conservation"]').click()
+            root = page.locator("#conservation-workspace")
+            expect(root).to_be_visible()
+            back = root.locator('[data-action="conservation-close-study"]')
+            if back.count():
+                expect(back).to_be_visible()
+                back.click()
+            opener = root.locator('[data-action="conservation-open-study"][data-study-id=' +
+                                  json.dumps(study_id) + "]")
+            expect(opener).to_be_visible()
+            opener.click()
+            native = root.locator('[data-action="experiment-show"][data-id=' +
+                                  json.dumps(args.experiment_id) + "]").first
+            expect(native).to_be_visible()
+            native.click()
             detail = page.locator("#experiment-detail")
             expect(detail.get_by_role("heading", name=report["title"], exact=True)).to_be_visible()
             expect(page.locator("#experiment-result-tables")).to_be_visible()
@@ -196,39 +234,51 @@ def main():
                     "The retained native experiment is " + str(original.get("state")) +
                     "; continue its existing Run programmes operation, then resume this same receiving directory.")
 
-            scientific_before = get("/api/experiments/summary", experiment_id=args.experiment_id)
-            report["native_summary_before_refresh"] = save_json("native-summary-before-refresh.json", scientific_before)
+            before_record = report.get("native_summary_before_refresh")
+            if before_record:
+                actual = file_record(before_record["path"])
+                require(actual["bytes"] == before_record["bytes"]
+                        and actual["sha256"] == before_record["sha256"],
+                        "The original pre-refresh scientific summary changed.")
+                scientific_before = read_json(before_record["path"])
+            else:
+                scientific_before = get("/api/experiments/summary", experiment_id=args.experiment_id)
+                report["native_summary_before_refresh"] = save_json(
+                    "native-summary-before-refresh.json", scientific_before)
+                persist()
+            require(scientific_before.get("id") == args.experiment_id
+                    and scientific_before.get("state") == "complete",
+                    "Retain the completed original experiment summary before refreshing it.")
 
             page.goto(operator_url, wait_until="domcontentloaded")
             expect(page.locator("#workspace-select")).to_have_value(workspace)
-            page.locator('[data-view="conservation"]').click()
-            expect(page.locator("#conservation-workspace")).to_be_visible()
-            opener = page.locator('[data-action="conservation-open-study"][data-study-id=' +
-                                  json.dumps(study_id) + "]")
-            expect(opener).to_be_visible()
-            opener.click()
-            native = page.locator('[data-action="experiment-show"][data-id=' +
-                                  json.dumps(args.experiment_id) + "]").first
-            expect(native).to_be_visible()
-            native.click()
-            detail = page.locator("#experiment-detail")
-            expect(detail.get_by_role("heading", name=report["title"], exact=True)).to_be_visible()
-            expect(page.locator("#experiment-result-tables")).to_be_visible()
+            detail = open_current_experiment()
             photograph("01-native-experiment.png")
 
             summary_task_id = report["task_ids"].get("summary")
             if not summary_task_id:
-                refresh = detail.locator('[data-action="experiment-report"]').first
-                expect(refresh).to_be_visible()
-                with page.expect_response(lambda response:
-                        urlsplit(response.url).path == "/api/actions"
-                        and response.request.method == "POST") as pending:
-                    refresh.click()
-                response = pending.value
+                original_operation = report.get("summary_operation")
+                if original_operation:
+                    require(original_operation.get("workspace") == workspace
+                            and original_operation.get("action") == "experiment.summarize"
+                            and original_operation.get("payload", {}).get("experiment_id") == args.experiment_id
+                            and original_operation.get("operation_id"),
+                            "The retained summary request identifies another original operation.")
+                    response = context.request.post(
+                        origin + "/api/actions", data=original_operation,
+                        headers={"Authorization": "Bearer " + capability}, timeout=45000)
+                else:
+                    refresh = detail.locator('[data-action="experiment-report"]').first
+                    expect(refresh).to_be_visible()
+                    with page.expect_response(lambda response:
+                            urlsplit(response.url).path == "/api/actions"
+                            and response.request.method == "POST") as pending:
+                        refresh.click()
+                    response = pending.value
                 submitted = response.json()
                 require(response.status == 202 and submitted.get("id")
                         and submitted.get("action") == "experiment.summarize",
-                        "The native report control must queue the original summary action.")
+                        "The native report control must queue or recover the original summary action.")
                 summary_task_id = submitted["id"]
                 report["task_ids"]["summary"] = summary_task_id
                 persist()

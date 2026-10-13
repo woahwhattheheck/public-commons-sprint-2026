@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "monitoring",
   "title": "Monitoring design",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "order": 85,
   "assets": [
     "monitoring.mjs",
     "monitoring-component.mjs",
-    "monitoring.css"
+    "monitoring.css",
+    "monitoring-observed.mjs"
   ],
   "backend": {
     "module": "monitoring_native",
@@ -18,7 +19,9 @@
       "monitoring.campaign.create",
       "monitoring.campaign.revise",
       "monitoring.campaign.event",
-      "monitoring.export"
+      "monitoring.export",
+      "monitoring.context.prepare",
+      "monitoring.context.export"
     ],
     "invoke": {
       "handler": "perform",

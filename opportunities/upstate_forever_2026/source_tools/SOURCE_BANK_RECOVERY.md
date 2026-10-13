@@ -89,7 +89,7 @@ The current source edition has 11 executable-marked members. As with other input
 
 ## Receive the published station assessment source
 
-The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks`, mandatory decoded byte/hash identity, and one complete compressed identity pair: `compressed_bytes`/`compressed_sha256` or `gzip_bytes`/`gzip_sha256`. The carrier may label this representation `base64+gzip` or `gzip+base64`. If both compressed identity pairs are supplied, they must agree. A declared `file_count` must match every decoded member. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
+The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks`, mandatory decoded byte/hash identity, and one complete compressed identity pair: `compressed_bytes`/`compressed_sha256` or `gzip_bytes`/`gzip_sha256`. The carrier may label this representation `base64+gzip`, `gzip+base64` or `base64+gzip+utf8-json`. Chunks may be strings or objects carrying a zero-based `index` and `content_base64`. Object chunks must already be in their complete declared order; mixed representations, missing indices, duplicate indices and reordered chunks are rejected. If both compressed identity pairs are supplied, they must agree. A declared `file_count` must match every decoded member. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
 
 For [the complete maintained revision 2 station assessment edition](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JP4654K):
 

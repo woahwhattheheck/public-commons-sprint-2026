@@ -83,8 +83,8 @@
         "csv_row_granularity": "Utility/HUC12/state; whole-HUC areas and classification counts repeat across state rows",
         "native_receiving_command": {
           "path": "source_tools/receive_utility_source_context.py",
-          "bytes": 7379,
-          "sha256": "6d7505e86e846c4dda7f0a593caac178529598fcb8a710158ff29d5904bfe054",
+          "bytes": 8497,
+          "sha256": "6121aaa5580d20e5224bcd553557d9efaa898300403c8a06a802d39bcd43e913",
           "minimum_python": "3.10",
           "purpose": "Rebuild the retained regional network context and both original utility exports through the maintained Python modules"
         }
