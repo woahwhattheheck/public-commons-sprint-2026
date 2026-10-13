@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "landcover-ledger",
   "title": "Land-cover changes",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "order": 57,
   "assets": [
     "landcover_ledger.mjs",

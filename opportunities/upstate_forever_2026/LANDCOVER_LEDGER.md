@@ -402,3 +402,10 @@ land-cover transitions.
 See [the complete source preparation guide](model/LANDCOVER_REPORT_SOURCE.md) for
 the original Python API and CLI, input membership, portable source bundle and
 scientific interpretation.
+
+
+## Observed multi-year trajectories
+
+The existing operator now includes Multi-year change history beside retained runs and raster-edition comparisons. Select ordered actual source bands and observation years, inspect the original sources, then build the saved timeline on common support across every observation. The original comparison matrices remain present; annual class areas, adjacent transitions, complete observed sequences, returns, final-class retention and forest-internal versus forest-group crossings travel in the same report, GIS archive and Scientific Reports source.
+
+See [model/LANDCOVER_TEMPORAL.md](model/LANDCOVER_TEMPORAL.md) for exact scientific definitions, original-source references and output encodings, and [operator/LANDCOVER_TIMELINE.md](operator/LANDCOVER_TIMELINE.md) for the complete ordinary operator, current owner direction and actual receiving course. Timeline calculations use the original tile checkpoint and preserve existing editions. Missing years remain unobserved; selected year labels never imply a management-event date.
