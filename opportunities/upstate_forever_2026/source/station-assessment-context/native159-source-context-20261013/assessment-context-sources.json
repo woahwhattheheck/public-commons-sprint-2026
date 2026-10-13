@@ -1,0 +1,65 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah: 159 station identities and 192 assessment records",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "huc12_count": 217,
+    "station_count": 159,
+    "assessment_record_count": 192
+  },
+  "entries": [
+    {
+      "id": "upstate-published-station-assessment-context159-20261013",
+      "title": "Published assessment editions joined to 159 native station coordinates",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3017",
+      "vintage": "Published 2024 assessment and 2026-07-28 TMDL status; locations retained 2026-10-13",
+      "kind": "table",
+      "path": "results/station-assessment-context.csv",
+      "sha256": "4ca9e11c10f2da79144622a9aec5bf89f7dadad5d2adbbd4972f7df3aa0d21d9",
+      "role": "STATION_ASSESSMENT_CONTEXT",
+      "station_id_field": "station_id",
+      "record_id_field": "assessment_record_id",
+      "metadata": {
+        "coordinate_reference": "native_crs per row; native_x/native_y preserve original source coordinate strings",
+        "source_editions": [
+          "2024",
+          "2026-07-28"
+        ],
+        "publisher_huc_comparison": "assessment HUC12 versus station publisher HUC12/HUC8",
+        "location_source_counts": {
+          "scdes-bw-monitoring-savannah-native-20261013": 152,
+          "scdes-wqp-additional-eight-20261013": 5,
+          "scdes-wqp-assessment159-additional-two-20261013": 2
+        },
+        "original_normalized_bank_sources": [
+          {
+            "filename": "inputs/303d-2024-pdf-table-normalized.json",
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+            "bytes": 2674649,
+            "role": "complete_normalized_assessment_edition"
+          },
+          {
+            "filename": "inputs/tmdl-attainment-native-20260728.json",
+            "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522",
+            "bytes": 1260570,
+            "role": "complete_normalized_assessment_edition"
+          }
+        ]
+      },
+      "companions": [
+        {
+          "path": "results/station-assessment-context.json",
+          "sha256": "9bce42134d1c9434539c2982eef8f511f9966fd4f1a52150852ae04d2e9bc54a"
+        },
+        {
+          "path": "results/station-assessment-summary.json",
+          "sha256": "51a2f02fa357d409f49150d4ff0916e3022512ef72f522f9377bf5972a8bb5ce"
+        },
+        {
+          "path": "results/OPEN_STATION_ASSESSMENTS.html",
+          "sha256": "90c554509eeea8f99c1762c8ca470aa17a0099807f0fdf11a005c53d39d428cd"
+        }
+      ]
+    }
+  ]
+}

@@ -83,13 +83,13 @@ node source_tools/source_bank_cli.mjs extract cumulative-application.md received
 
 This original cohort contains 586 files and 9,132,400 source bytes. Its `commons.source-map/1` payload is 10,018,711 bytes, SHA-256 `4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8`; the 3,090,920-byte gzip has SHA-256 `ecbcf5601f579f9df775259b146ec75167fc4f0c44fe2025907118e8b239e548`.
 
-A source map stores UTF-8 bodies in `files` and their original descriptors in `file_metadata`. The decoder requires a one-to-one path match, checks every descriptor's required byte length and SHA-256, and accepts only regular source modes `100644` and `100755` when a mode is supplied. Older banks may omit mode; those members have no declared executable flag. The inventory retains each complete descriptor as `declaredMetadata`, including original Git references and source origins. SHA-256 and byte counts are verified against the recovered body; additional provenance fields preserve the publisher's declarations. The cohort's edition, repository, source reference and application prefix remain in the inventory.
+A source map stores UTF-8 bodies or explicitly base64-encoded binary bodies in `files`, with each member's encoding and original descriptors in `file_metadata`. An omitted encoding means UTF-8. Byte counts and SHA-256 always describe the decoded original file. The decoder requires a one-to-one path match, checks every descriptor's required byte length and SHA-256, and accepts only regular source modes `100644` and `100755` when a mode is supplied. Older banks may omit mode; those members have no declared executable flag. The inventory retains each complete descriptor as `declaredMetadata`, including original Git references and source origins. SHA-256 and byte counts are verified against the recovered body; additional provenance fields preserve the publisher's declarations. The cohort's edition, repository, source reference and application prefix remain in the inventory.
 
 The current source edition has 11 executable-marked members. As with other inputs, the extractor writes all recovered files privately with mode 0600; apply the maintained installer after source inspection to perform the normal application installation.
 
 ## Receive the published station assessment source
 
-The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks`, mandatory decoded byte/hash identity, and one complete compressed identity pair: `compressed_bytes`/`compressed_sha256` or `gzip_bytes`/`gzip_sha256`. The carrier may label this representation `base64+gzip` or `gzip+base64`. If both compressed identity pairs are supplied, they must agree. A declared `file_count` must match every decoded member. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
+The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks`, mandatory decoded byte/hash identity, and one complete compressed identity pair: `compressed_bytes`/`compressed_sha256` or `gzip_bytes`/`gzip_sha256`. The carrier may label this representation `base64+gzip`, `gzip+base64` or `base64+gzip+utf8-json`. Chunks may be strings or objects carrying a zero-based `index` and `content_base64`. Object chunks must already be in their complete declared order; mixed representations, missing indices, duplicate indices and reordered chunks are rejected. If both compressed identity pairs are supplied, they must agree. A declared `file_count` must match every decoded member. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
 
 For [the complete maintained revision 2 station assessment edition](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JP4654K):
 
@@ -144,6 +144,16 @@ const restored = codec.decodeSourceBank(packed.gzipBase64, packed.sha256);
 
 Passing an object to `encodeSourceBank` creates a new JSON serialization; passing the original text preserves its byte identity. The high-level decoder verifies source-bank leaf bytes. The low-level encoder encodes supplied data and reports its identities.
 
+## XZ-compressed source banks
+
+The same `inspect` and `extract` commands receive single-stream plain LZMA2 XZ source banks. The retained input SHA-256 identifies the XZ bytes; the inventory also records the decoded payload identity, stream check and block positions. See [XZ source banks](XZ_SOURCE_RECOVERY.md) for exact format support, dictionary/output limits, original upstream sources and the complete receiving commands. ZIP, gzip and the existing provider envelopes retain their current behavior.
+
+## Binary source-map members
+
+Both `source_bank.mjs` and `receive_application_source.py` apply the declared per-member encoding before comparing original byte counts, SHA-256 and any supported original Git identity. Omitted encoding and explicit `utf-8`/`utf8` mean text; `base64` recovers the original binary bytes. The Python source-map receiver accepts its existing plain or gzip source-map carriers; an XZ bank uses the JavaScript inspector/extractor above.
+
+The retained `integration/source_binary_inputs.json` includes the original `source/overlay-metadata/oconee-parcels/body.json.gz` companion: 1,906 bytes, SHA-256 `439a6c21e06b6690babbaade0d40597388cd416e485f5028547c29017a857304`. Its source-map descriptor uses `encoding: "base64"`; the digest describes the original gzip file, not its encoded text. The complete companion therefore travels with the other application source through source-map receiving and application ZIP receiving.
+
 ## Supported contracts
 
 | Input | Supported behavior |
@@ -153,7 +163,8 @@ Passing an object to `encodeSourceBank` creates a new JSON serialization; passin
 | DEFLATE | Stored, fixed-Huffman and dynamic-Huffman blocks; emitted bytes are capped during decompression |
 | gzip | Header extras, names, comments, header CRC, concatenated members, CRC32 and ISIZE verification; output and member-count limits |
 | Source banks | `commons.source-bank/v1`, `upstate.source-files/v1`, `eco-source-text-v1` and legacy `schema: 1`; arrays of descriptors or plain path-to-text mappings |
-| Cumulative source maps | `commons.source-map/1`; UTF-8 `files` mapping plus a matching `file_metadata` mapping with mandatory byte length and SHA-256, optional regular-file mode; complete original descriptors retained |
+| XZ | Single-stream plain LZMA2 source banks; bounded dictionary/output, complete metadata/index checks and None, CRC32, CRC64 or SHA-256 block checks; see the linked XZ guide |
+| Cumulative source maps | `commons.source-map/1`; `files` mapping using UTF-8 by default or `file_metadata[path].encoding: "base64"`, with mandatory original byte length and SHA-256 and optional regular-file mode; complete original descriptors retained |
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
 | Carriers | One supported JSON bank/envelope fence, or one complete cohort of `upstate.application-source-part/v1` gzip+base64 packets |
 | Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities; `commons.gzip-source-bank/v1` with ordered base64 chunks and both original byte/hash pairs |
