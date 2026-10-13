@@ -11,11 +11,11 @@ const {values:args}=parseArgs({options:{
  'to-collection':{type:'string'},mapping:{type:'string'},title:{type:'string'},
  output:{type:'string'},'run-models':{type:'boolean',default:false},
  transfer:{type:'boolean',default:false},video:{type:'boolean',default:false},
- headed:{type:'boolean',default:false},'browser-channel':{type:'string'},
+ headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_source_updates_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY --from-collection ORIGINAL_EDITION --to-collection REPLACEMENT_EDITION [--mapping ORIGINAL_ID_MAP.json] [--title "Study source update"] [--run-models] [--transfer] [--output DIRECTORY] [--video]');
+ console.log('node source/run_source_updates_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY --from-collection ORIGINAL_EDITION --to-collection REPLACEMENT_EDITION [--mapping ORIGINAL_ID_MAP.json] [--title "Study source update"] [--run-models] [--transfer] [--output DIRECTORY] [--video] [--browser-channel NAME | --browser-executable PATH]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','source-updates',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -23,6 +23,12 @@ const journal={schema:'upstate.source-updates-browser/v1',prepared_by:'TokenJunk
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>JSON.stringify(value,(_key,item)=>item&&!Array.isArray(item)&&typeof item==='object'?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 const required=(value,message)=>{if(!value)throw Error(message);};
+function browserRuntime(){
+ required(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ return {kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
+  executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
+  channel:args['browser-channel']||null,headless:!args.headed};
+}
 let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='',selectedPlan=null;
 function redact(value){
  let result=String(value);
@@ -118,6 +124,7 @@ async function receivingArchive(){
  await shot('08-restored-source-update');
 }
 async function main(){
+ journal.browser_runtime=browserRuntime();
  await mkdir(join(output,'exports'),{recursive:true});
  for(const key of ['url-file','workspace','from-collection','to-collection'])required(args[key],'Supply --'+key+' from the original operator and retained source editions.');
  required(args['from-collection']!==args['to-collection'],'Select two different original retained source editions.');
@@ -125,7 +132,9 @@ async function main(){
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original HTTP/HTTPS operator URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
  required(capability,'Choose the original operator startup URL containing its capability fragment.');
- browser=await chromium.launch({headless:!args.headed,...(args['browser-channel']?{channel:args['browser-channel']}:{})});
+ browser=await chromium.launch({headless:!args.headed,
+  ...(args['browser-channel']?{channel:args['browser-channel']}:{ }),
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{ })});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);
  page.on('pageerror',error=>journal.browser_errors.push(redact(error.message)));
