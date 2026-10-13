@@ -55,6 +55,27 @@ received = community_report_handover.receive(
     delivery_id=existing_delivery_id_or_none)
 ```
 
+When the donor Workspace is offline, package its already retained original report ZIP and ID-bearing saved record in an actual receiving Workspace:
+
+```python
+exported = community_report_handover.export_archive(
+    receiving_workspace, original_report_zip, original_saved_report_record,
+    original_project_id=original_project_uuid,
+    report_sha256=original_report_json_sha256)
+```
+
+This route first uses the maintained archived-report receiver to verify the full original inventory and scientific context. It preserves the original record bytes, including its recorded ID, and the complete original ZIP. The destination Workspace retains the handover; the manifest continues to identify the original donor. The resulting file uses the same operator preview, receiving action and scientific composer as an ordinary export.
+
+From the actual application root, the corresponding command is:
+
+```sh
+python -B -m model.community_report_handover \\
+  --workspace ACTUAL_RECEIVING_WORKSPACE pack-archive ORIGINAL_REPORT_ZIP \\
+  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \\
+  --original-project-id ORIGINAL_PROJECT_UUID \\
+  --report-sha256 ORIGINAL_REPORT_JSON_SHA256
+```
+
 The export returns normal Workspace-relative file descriptors. Inspection reads the complete original archive without creating a receiving source. Receiving returns the same `source`, `delivery_selection` and retained-file contract as the original archive intake below; the existing scientific renderer and portable receiving continue from that result.
 
 ## Native course
