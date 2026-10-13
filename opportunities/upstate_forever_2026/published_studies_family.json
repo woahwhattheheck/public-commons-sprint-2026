@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 16208,
-      "sha256": "6ae600c88657c7227f242516890fd41e2637aa166618b553caf47e68327dba1c"
+      "bytes": 16445,
+      "sha256": "263ce8a1dd6f7faa96fb80f17009c95652a95514bec625b4dc93b7be0d09aac8"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -1215,6 +1215,26 @@
       "path": "source_tools/continue_study_report.py",
       "bytes": 27916,
       "sha256": "27a609e1e95f9acd6750accc63d2f3a7fe5e0c509172f3c911a3b72cad504c72"
+    },
+    {
+      "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
+      "bytes": 5164,
+      "sha256": "674a5b62e8ea26f372c7b3354aee458855f01a3c64b057aac988fd279ea666da"
+    },
+    {
+      "path": "source_tools/offline_handover/build_offline_handover.py",
+      "bytes": 10788,
+      "sha256": "966abe3b72846126ae85c7baf824f3ca9d29cc48b6fc506e17772da9da2c80e6"
+    },
+    {
+      "path": "source_tools/offline_handover/offline_handover.html",
+      "bytes": 23314,
+      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
+    },
+    {
+      "path": "source_tools/offline_handover/README.md",
+      "bytes": 6603,
+      "sha256": "d06587c644fe4dfef951eba061c072c047b9cb9d4a98007652b354607be57aa1"
     },
     {
       "path": "source_tools/receive_geographic_study_review.py",
