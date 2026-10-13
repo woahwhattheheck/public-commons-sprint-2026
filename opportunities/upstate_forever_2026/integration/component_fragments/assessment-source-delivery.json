@@ -133,7 +133,17 @@
         "source_tools/source_bank.mjs",
         "source_tools/source_bank_cli.mjs",
         "source_tools/station_assessment_identity.mjs",
-        "source_tools/station_assessment_identity_cli.mjs"
+        "source_tools/station_assessment_identity_cli.mjs",
+        "source/ecoli_utility_context/20261013/original-b91a8dd8/source-manifest.json",
+        "source/ecoli_utility_context/20261013/original-b91a8dd8/build_ecoli_report.mjs",
+        "source/ecoli_utility_context/20261013/original-b91a8dd8/index.html",
+        "results/native-assessment-annual-yields-20261013/native-assessment-microbial-delivery.zip",
+        "integration/original-annual-yields-source-178d-20261013.json",
+        "results/native-assessment-annual-yields-20261013/README.md",
+        "results/native-assessment-annual-yields-20261013/artifacts.json",
+        "results/native-assessment-annual-yields-20261013/annual-reference-yields.json",
+        "results/native-assessment-annual-yields-20261013/annual-reference-yields.csv",
+        "results/native-assessment-annual-yields-20261013/annual-reference-relations.csv"
       ],
       "requires": [
         "assessment-context",
