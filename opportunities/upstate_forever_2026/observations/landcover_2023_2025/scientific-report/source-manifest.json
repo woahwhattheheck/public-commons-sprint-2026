@@ -3,7 +3,7 @@
   "title": "Original 2023–2025 land-cover change — complete watershed domain",
   "entries": [
     {
-      "id": "original-landcover-change-95a2a5a315083612e1131806",
+      "id": "original-landcover-change-d6dd7d3306c830d710b647ca",
       "title": "Original 2023–2025 land-cover change — complete watershed domain",
       "kind": "document",
       "role": "OBSERVED_CONTEXT",
@@ -11,7 +11,7 @@
       "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
       "path": "observed-report.json",
       "bytes": 63806,
-      "sha256": "95a2a5a315083612e11318069a8250a452fa95132a33b6d2972789118b07a359",
+      "sha256": "d6dd7d3306c830d710b647caba53a5e4b8d6d3a1c1656088d04f9d36d9d8cd77",
       "companions": [
         {
           "path": "annual-2023.json",
@@ -85,8 +85,8 @@
         },
         {
           "path": "landcover-change-report.html",
-          "bytes": 310588,
-          "sha256": "6523851a610570964ba6b1c84027a3c7ff852efcd5f764d4f4569dc4afce2287"
+          "bytes": 311107,
+          "sha256": "1f2cfe4cf21865a976f4fff7f415a5f2a0ea00d143fe54f17795e0bbc8d722f0"
         }
       ],
       "description": "Complete original paired annual land-cover source with exact matrix/annual support and all HUC rows.",
