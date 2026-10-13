@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.utility-microbial-sources/v1",
+  "captured_on": "2026-10-13",
+  "operation": "UPSTATE-UTILITY-MICROBIAL-CONTEXT-20261013",
+  "selection": {
+    "characteristic_name": "Escherichia coli",
+    "activity_start_inclusive": "2021-01-01",
+    "activity_end_inclusive": "2025-12-31",
+    "station_discovery_huc8": [
+      "03060101",
+      "03060102"
+    ],
+    "arjws": "Original WGS84 station coordinates inside one of the four original WBD HUC12 polygons selected by retained ToHUC topology",
+    "prwd": "Original publisher HUC8 equals 03060102, the complete original 32-HUC Tugaloo upstream selection"
+  },
+  "sources": [
+    {
+      "path": "raw/stations-original.csv",
+      "bytes": 21317,
+      "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b",
+      "url": "https://www.waterqualitydata.us/data/Station/search?huc=03060101%3B03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/stations-original.geojson",
+      "bytes": 46598,
+      "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9",
+      "url": "https://www.waterqualitydata.us/data/Station/search?huc=03060101%3B03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=geojson",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/arjws-wbd-original.json",
+      "bytes": 183656,
+      "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20IN%20('030601010701'%2C'030601010702'%2C'030601010703'%2C'030601010704')&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype&returnGeometry=true&outSR=4326&orderByFields=huc12&resultRecordCount=100",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-wbd-display.json",
+      "bytes": 59535,
+      "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4/query?f=json&where=huc8%3D%2703060102%27&outFields=objectid%2Chuc8%2Cname%2Careasqkm%2Careaacres%2Cstates&returnGeometry=true&outSR=4326&maxAllowableOffset=0.0001",
+      "role": "Publisher-generalized display geometry"
+    },
+    {
+      "path": "raw/arjws-results-2021-2025-original.csv",
+      "bytes": 68038,
+      "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef",
+      "url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-25084%3B21SC60WQ_WQX-RS-24163%3B21SC60WQ_WQX-SV-111%3B21SC60WQ_WQX-SV-735%3B21SC60WQ_WQX-SV-833&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2021-original.csv",
+      "bytes": 65619,
+      "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2021&startDateHi=12-31-2021&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2022-original.csv",
+      "bytes": 39899,
+      "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2022&startDateHi=12-31-2022&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2023-original.csv",
+      "bytes": 44379,
+      "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2024-original.csv",
+      "bytes": 53715,
+      "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2024&startDateHi=12-31-2024&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/prwd-results-2025-original.csv",
+      "bytes": 73283,
+      "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc",
+      "url": "https://www.waterqualitydata.us/data/Result/search?huc=03060102&characteristicName=Escherichia%20coli&startDateLo=01-01-2025&startDateHi=12-31-2025&mimeType=csv",
+      "role": "Original publisher response"
+    },
+    {
+      "path": "raw/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7",
+      "url": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/utility-focus-profile.json",
+      "role": "Previously published source-linked utility selection"
+    },
+    {
+      "path": "raw/utility-memberships.csv",
+      "bytes": 8731,
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945",
+      "url": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/utility-memberships.csv",
+      "role": "Previously published source-linked utility selection"
+    }
+  ],
+  "further_original_geometry": {
+    "url": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4/query?f=json&where=huc8%3D%2703060102%27&outFields=objectid%2Chuc8%2Cname%2Careasqkm%2Careaacres%2Cstates&returnGeometry=true&outSR=4326",
+    "captured_bytes": 356441,
+    "role": "Complete original HUC8 polygon response, retained alongside this edition's source captures; display response is included in the portable edition"
+  },
+  "methods": {
+    "station_coordinates": "Original Station CSV keeps coordinate datum, collection method and numeric strings. Original WQP GeoJSON supplies map points.",
+    "arjws_membership": "Even-odd point-in-polygon on unchanged publisher-returned EPSG:4326 HUC12 vertices, using original WGS84 Station CSV coordinates; reject boundary and overlapping memberships.",
+    "prwd_membership": "Publisher HUC8 attribute selection. Its 32 original upstream HUC12 identifiers remain in raw/utility-memberships.csv.",
+    "display_geometry": "Original full-resolution four-HUC ARJWS source; publisher-returned Tugaloo HUC8 generalized with maxAllowableOffset=0.0001 degrees only for display.",
+    "numeric_values": "Original finite numeric ResultMeasureValue with no detection-condition label. Original blank fields remain blank.",
+    "censored_values": "Retain original condition, limit type, limit numeric token and limit unit; plot only the limit as a boundary marker.",
+    "temporal_support": "Five complete calendar years requested. Actual sampling dates and station/year/method counts remain explicit.",
+    "source_units": "Original MPN/100mL and MPN/100 ml spelling retained. Plot axis spells the common physical quantity as MPN per 100 mL.",
+    "summaries": "Separate station/year/method/activity type/source-unit groups; min, median and max describe numeric measured records only. Report limits and missing records counted beside them.",
+    "replicate": "One original Quality Control Sample-Field Replicate is retained and selectable; default report filter shows Sample-Routine activities."
+  },
+  "source_references": [
+    "https://www.waterqualitydata.us/webservices_documentation/",
+    "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer",
+    "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
+  ]
+}
