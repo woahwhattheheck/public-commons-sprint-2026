@@ -293,21 +293,22 @@ def import_package(store, source, *, expected_revision=None, actor="", expected_
     if expected_revision is not None:
         _require(type(expected_revision) is int and expected_revision >= 0,
                  "expected_revision must be a nonnegative whole revision.")
-    directory = store._directory(plan["id"], create=True)
-    attachments = _ordinary_directory(directory / "attachments", store.root)
-    incoming = _ordinary_directory(directory / "evidence-imports", store.root)
-    archive_path = incoming / (received["sha256"] + ".zip")
-    with _archive_source(source) as handle:
-        _publish_stream(archive_path, handle, received["bytes"], received["sha256"])
-    # Use the verified retained archive for all writes and preserve source aliases.
-    with zipfile.ZipFile(archive_path, "r") as archive:
-        for value in received["files"].values():
-            descriptor = value["descriptor"]
-            target = store.root / descriptor["source_ref"]
-            _require(target.parent == attachments, "Evidence destination leaves its original plan bank.")
-            with archive.open(descriptor["path"]) as member:
-                _publish_stream(target, member, descriptor["size_bytes"], descriptor["sha256"])
-    _fsync_directory(attachments)
+    # Share the plan lock with complete portable workspace capture.
+    with store._locked(plan["id"], create=True) as directory:
+        attachments = _ordinary_directory(directory / "attachments", store.root)
+        incoming = _ordinary_directory(directory / "evidence-imports", store.root)
+        archive_path = incoming / (received["sha256"] + ".zip")
+        with _archive_source(source) as handle:
+            _publish_stream(archive_path, handle, received["bytes"], received["sha256"])
+        # Use the verified retained archive for all writes and preserve source aliases.
+        with zipfile.ZipFile(archive_path, "r") as archive:
+            for value in received["files"].values():
+                descriptor = value["descriptor"]
+                target = store.root / descriptor["source_ref"]
+                _require(target.parent == attachments, "Evidence destination leaves its original plan bank.")
+                with archive.open(descriptor["path"]) as member:
+                    _publish_stream(target, member, descriptor["size_bytes"], descriptor["sha256"])
+        _fsync_directory(attachments)
     result = store.import_document(plan, expected_revision=expected_revision, actor=actor)
     return dict(result, evidence=dict(
         schema=SCHEMA, files=len(received["files"]), bytes=received["bytes"],
@@ -356,49 +357,51 @@ def export_package(store, plan_id, *, revision=None):
     raw_manifest = canonical_bytes(manifest) + b"\n"
     _require(len(raw_manifest) <= MAX_MANIFEST_BYTES, "The evidence manifest exceeds 1 MiB.")
     archive_path, receipt_path = _export_paths(store, plan)
-    _ordinary_directory(archive_path.parent, store.root)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=".evidence-export-", dir=archive_path.parent)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w+b") as output:
-            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED, allowZip64=False) as archive:
-                _zip_member(archive, "manifest.json", raw_manifest)
-                _zip_member(archive, "plan.json", raw_plan)
-                for name, (path, count, checksum) in sorted(files.items()):
-                    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                    info.create_system = 3
-                    info.external_attr = (stat.S_IFREG | 0o644) << 16
-                    info.compress_type = zipfile.ZIP_STORED
-                    info.file_size = count
-                    actual_hash, actual_count = hashlib.sha256(), 0
-                    with path.open("rb") as original, archive.open(info, "w") as target:
-                        while True:
-                            chunk = original.read(1024 * 1024)
-                            if not chunk:
-                                break
-                            actual_count += len(chunk)
-                            _require(actual_count <= count, "An original attachment changed during export.")
-                            actual_hash.update(chunk)
-                            target.write(chunk)
-                    _require((actual_count, actual_hash.hexdigest()) == (count, checksum),
-                             "An original attachment changed during export.")
-            output.flush()
-            os.fsync(output.fileno())
-            output.seek(0)
-            count, checksum = _fingerprint(output, MAX_ARCHIVE_BYTES)
-            try:
-                os.link(temporary, archive_path)
-            except FileExistsError:
-                _verify_file(archive_path, count, checksum)
-            _fsync_directory(archive_path.parent)
-        receipt = dict(schema=EXPORT_SCHEMA, plan_id=plan["id"], revision=plan["revision"],
-                       document_digest=document_digest(plan), evidence_files=len(records),
-                       reference=archive_path.relative_to(store.root).as_posix(),
-                       bytes=count, sha256=checksum, filename=archive_path.name)
-        _publish(receipt_path, canonical_bytes(receipt) + b"\n")
-        return receipt
-    finally:
-        temporary.unlink(missing_ok=True)
+    # Publish the complete ZIP and its receipt under the same capture lock.
+    with store._locked(plan_id):
+        _ordinary_directory(archive_path.parent, store.root)
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".evidence-export-", dir=archive_path.parent)
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w+b") as output:
+                with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED, allowZip64=False) as archive:
+                    _zip_member(archive, "manifest.json", raw_manifest)
+                    _zip_member(archive, "plan.json", raw_plan)
+                    for name, (path, count, checksum) in sorted(files.items()):
+                        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                        info.create_system = 3
+                        info.external_attr = (stat.S_IFREG | 0o644) << 16
+                        info.compress_type = zipfile.ZIP_STORED
+                        info.file_size = count
+                        actual_hash, actual_count = hashlib.sha256(), 0
+                        with path.open("rb") as original, archive.open(info, "w") as target:
+                            while True:
+                                chunk = original.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                actual_count += len(chunk)
+                                _require(actual_count <= count, "An original attachment changed during export.")
+                                actual_hash.update(chunk)
+                                target.write(chunk)
+                        _require((actual_count, actual_hash.hexdigest()) == (count, checksum),
+                                 "An original attachment changed during export.")
+                output.flush()
+                os.fsync(output.fileno())
+                output.seek(0)
+                count, checksum = _fingerprint(output, MAX_ARCHIVE_BYTES)
+                try:
+                    os.link(temporary, archive_path)
+                except FileExistsError:
+                    _verify_file(archive_path, count, checksum)
+                _fsync_directory(archive_path.parent)
+            receipt = dict(schema=EXPORT_SCHEMA, plan_id=plan["id"], revision=plan["revision"],
+                           document_digest=document_digest(plan), evidence_files=len(records),
+                           reference=archive_path.relative_to(store.root).as_posix(),
+                           bytes=count, sha256=checksum, filename=archive_path.name)
+            _publish(receipt_path, canonical_bytes(receipt) + b"\n")
+            return receipt
+        finally:
+            temporary.unlink(missing_ok=True)
 
 def exported_package(store, plan):
     """Return the original descriptor only after a complete export receipt exists."""
