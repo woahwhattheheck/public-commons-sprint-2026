@@ -237,6 +237,94 @@ def _revision_blocks(revision):
     return blocks
 
 
+def _intervention_import_blocks(imported):
+    """Explain the original received columns without reparsing its saved import."""
+    original = imported.get("source") or {}
+    summary = imported.get("summary") or {}
+    blocks = [
+        "This is the retained intervention CSV intake. Its counts compare the original received rows "
+        "with the plan recorded at intake. Later editor changes and scientific-context revisions are "
+        "described separately by the saved-plan change register.",
+        _table(["Original received file / comparison", "Retained value"], [
+            ["Original filename", original.get("filename")],
+            ["Original media type", original.get("media_type")],
+            ["Original UTF-8 bytes", original.get("bytes")],
+            ["Original file SHA256", original.get("sha256")],
+            ["Community table at intake", imported.get("table_id")],
+            ["Plan used for the intake comparison", imported.get("previous_plan_id")],
+            ["Received programme rows", summary.get("row_count")],
+            ["Original row ordering", summary.get("order_basis")],
+        ]),
+        _table(["Original intake change", "Count", "Original intervention IDs"], [
+            [label, len(summary[key]) if isinstance(summary.get(key), list) else None,
+             summary.get(key)]
+            for label, key in (("Added", "added_ids"), ("Changed", "changed_ids"),
+                               ("Removed", "removed_ids"), ("Unchanged", "unchanged_ids"))
+        ]),
+    ]
+    fields = imported.get("field_provenance") or []
+    if fields:
+        meanings = {
+            "original-column": "Original received column; native field validation",
+            "generated-source-row-id": "Identifier generated from original file SHA256 and record number",
+            "native-default": "Unmapped native field; its original default or unspecified value applies",
+        }
+        blocks.extend([
+            "Column numbers are one-based positions in the unchanged received header. An unmapped "
+            "field uses the native default or an unspecified value. Blank estimates remain unspecified. "
+            "When the received identifier is absent or blank, the retained row identifier is generated "
+            "from that original file identity and record number.",
+            _table(["Plan field", "Original CSV column", "Column number", "Recorded interpretation"], [
+                [row.get("field"), row.get("source_column") or "Unmapped",
+                 row.get("source_column_number") if row.get("source_column_number") is not None
+                 else "Not applicable",
+                 meanings.get(row.get("basis"), row.get("basis"))]
+                for row in fields
+            ]),
+        ])
+    else:
+        blocks.append("This original intake does not record an explicit column mapping. Its unchanged "
+                      "received CSV and original import record remain attached; no later column "
+                      "assignment is inferred.")
+    if imported.get("source_headers"):
+        blocks.append(_table(["Original column number", "Unchanged received heading"], [
+            [number, heading] for number, heading in enumerate(imported["source_headers"], 1)
+        ]))
+    if imported.get("rows"):
+        blocks.extend([
+            "The record number counts received data records. The source line is the starting physical "
+            "CSV line, so quoted multiline records can span more than one line. These identities describe "
+            "the original intake even when a later saved plan edits, removes or reorders an intervention.",
+            _table(["Original data record", "Starting CSV line", "Retained intervention ID"], [
+                [row.get("record"), row.get("source_line"), row.get("id")]
+                for row in imported["rows"]
+            ]),
+        ])
+    normalizations = summary.get("normalized_geographies") or []
+    if normalizations:
+        blocks.extend([
+            "The following original geography identifiers were normalized by the recorded intake against "
+            "the original Community table. The received CSV keeps its unchanged original text.",
+            _table(["Starting CSV line", "Plan field", "Original received identifier", "Saved identifier"], [
+                [row.get("row"), row.get("column"), row.get("original"), row.get("resolved")]
+                for row in normalizations
+            ]),
+        ])
+    if summary.get("derived_columns") or summary.get("additional_columns"):
+        blocks.extend([
+            "Unmapped derived and additional columns stay in the original CSV. They did not replace "
+            "the plan's native context or become intervention fields.",
+            _table(["Original unused column class", "Received headings"], [
+                ["Derived context columns", summary.get("derived_columns")],
+                ["Additional original columns", summary.get("additional_columns")],
+            ]),
+        ])
+    blocks.append("received-interventions.csv and INTERVENTION_IMPORT.json carry the complete original "
+                  "file and intake record. The saved plan and report retain the authored intervention "
+                  "values separately; reading this source does not replay or modify the intake.")
+    return blocks
+
+
 def _sections(payload, report_id, report_sha256):
     plan = payload["plan"]
     source = plan.get("source") or {}
@@ -324,6 +412,10 @@ def _sections(payload, report_id, report_sha256):
             ]),
         ]],
     ]
+    imported = plan.get("intervention_import")
+    if imported:
+        sections.append(["Original intervention intake and field mapping",
+                         _intervention_import_blocks(imported)])
     revision = payload.get("plan_revision")
     if revision:
         sections.insert(1, ["Changes from previous saved Community plan", _revision_blocks(revision)])
