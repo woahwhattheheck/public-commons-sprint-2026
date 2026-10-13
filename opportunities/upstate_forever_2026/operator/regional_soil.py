@@ -29,7 +29,7 @@ METHODS = [
                    help="Choose the retained sources.json with its companions, or upload the original dbc61-upstate-model-domain-20261012.zip."),
         ],
         "options": [
-            _option("vintage", "Source edition", "text", default="2026-10-12", required=True),
+            _option("vintage", "Source edition", "text", default="USDA-SDA-2026-10-12-native-capture", required=True),
         ],
     },
     {
