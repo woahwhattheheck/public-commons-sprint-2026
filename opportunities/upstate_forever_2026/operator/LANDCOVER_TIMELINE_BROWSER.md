@@ -83,3 +83,22 @@ SIGINT or SIGTERM closes only this course's private contexts and its own launche
 complete:true means the operated course finished, with exact original records and downloads reopened. It does not assert that a human has looked at the pixels. The result deliberately retains visual_review: PENDING_PRODUCING_PEER_IMAGE_INSPECTION until the producing peer personally opens every selected desktop/phone image and the actual outgoing report/package. Review readable labels and values, contrast, focus, controls, every map and all customer attachments. Fix actual defects in the original application and repeat only the affected receiving segment before customer delivery.
 
 Preserve the original 52-order Ecosystem work bank and project receivers. This browser continuation adds no fabricated project records, new sender, approval queue or alternate scientific engine.
+
+
+## Adjacent-interval report continuation
+
+The same course now follows the complete original-edition receiving with a separate presentation copy. The new command is:
+
+    python -B -m model.landcover_cli account-report ORIGINAL_RECEIVED_REPORT NEW_INTERVAL_REPORT
+
+ORIGINAL_RECEIVED_REPORT is the directory already received and verified from this case's exact original portable ZIP. NEW_INTERVAL_REPORT must not exist and must be separate from that directory and its ancestors. The command verifies every member against the original export manifest, copies the original data and scientific assets, and derives adjacent-observation accounts in the new directory. The original Workspace edition, export manifest, report HTML/CSV files and portable ZIP remain untouched. The complete ledger.json bytes in the new presentation remain equal to the received original.
+
+The presentation adds timeline-change-accounts.json, timeline-interval-classes.csv, timeline-interval-groups.csv and timeline-report.json, and a new report.html. presentation-source.json records the complete original manifest and its exact identity. The new export manifest selects the presentation files and retained scientific members. To transfer this separate presentation, use the existing pack command against the new directory, then the existing receive command into another fresh destination. This is a presentation edition of an already completed scientific result, never a second raster calculation.
+
+After the original desktop/phone input, map and archive course has finished, landcover_timeline_browser.mjs invokes that create-only command using the same explicit Python runtime. It retains the actual process output and copied-manifest identity before opening the complete new HTML. At 1440 and 390 pixels it operates every original adjacent interval, both original forest-group and deciduous-forest-class accounts, all three gross-gain/gross-loss/net maps, keyboard watershed selection, study totals, exact class/group CSV downloads, complete report-data save and file reopening. It checks the displayed map values against the derived native account, retains the complete original ledger, and compares both downloaded CSVs byte-for-byte with the Python exports.
+
+Net maps use a symmetric signed scale. Brown indicates a net decrease, blue a net increase, pale shading a measured zero and diagonal hatch an unavailable value. The complete numeric map table remains authoritative. Gross gain and loss are separate, nonnegative quantities. A balanced net change can include substantial changes in both directions. Group retention includes movements between codes inside the same original group. Whole-history crossing areas remain separate and must not be summed as disjoint classes.
+
+The original source years define observation intervals, including real gaps. The copy does not estimate event dates, annual rates, uninterrupted persistence, causal effects or ecological benefit. Every interval uses the same all-observation common support. A reporting area with no supported cells retains unavailable account quantities instead of measured zeros. Complete CSVs preserve original reporting identifiers, names and source years. For overlap-safe study totals select the original study-area union.
+
+The added lifecycle retains the same private-context and owned-process rules. An interrupted interval-report destination is preserved and must be reconciled; it is never silently overwritten. Successful source, numerical or byte-receiving checks do not replace producing-peer inspection of the actual added report views and all outgoing attachments.

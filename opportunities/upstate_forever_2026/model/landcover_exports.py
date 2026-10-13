@@ -64,6 +64,111 @@ def _source_edition_rows(report: dict) -> list[dict]:
     return rows
 
 
+def _interval_exports(root: Path, report: dict) -> dict | None:
+    """Retain exact accounts, spreadsheet tables and one reopenable data file."""
+    if report.get("timeline") is None:
+        return None
+    from .landcover_change_accounts import derive_accounts
+    accounts = derive_accounts(report)
+    quantities = ["opening_ha", "retained_ha", "gained_ha", "lost_ha", "closing_ha", "net_ha"]
+    prefix = ["zone_id", "zone_name", "analysis_ha", "covered_ha", "from_year", "to_year", "gap_years"]
+    tables = []
+    for kind, identity in (("classes", ["code", "name"]), ("groups", ["name", "codes"])):
+        records = []
+        for zone in accounts["rows"]:
+            for interval in zone["intervals"]:
+                common = {key: zone[key] for key in prefix[:4]}
+                common.update({key: interval[key] for key in prefix[4:]})
+                for account in interval[kind]:
+                    item = {**common, **{key: account[key] for key in identity + quantities}}
+                    if kind == "groups":
+                        item["codes"] = " ".join(str(code) for code in item["codes"])
+                    records.append(item)
+        filename = "timeline-interval-" + kind + ".csv"
+        _csv(root / filename, prefix + identity + quantities, records)
+        # Preserve csv.writer's complete original bytes, including CRLF, in the
+        # self-contained HTML and the complete editable report-data handover.
+        tables.append({"path": filename, "content": (root / filename).read_bytes().decode("utf-8")})
+    atomic_json(root / "timeline-change-accounts.json", accounts)
+    payload = {"accounts": accounts, "tables": tables}
+    atomic_json(root / "timeline-report.json",
+                {"schema": "upstate.landcover-interval-report/v1", "ledger": report, **payload})
+    return payload
+
+
+def export_interval_copy(source: Path | str, destination: Path | str) -> dict:
+    """Create a separate presentation edition; never rewrite a computed edition."""
+    import shutil
+    import tempfile
+    original, target = Path(source).expanduser().resolve(strict=True), Path(destination).expanduser().resolve()
+    if not original.is_dir() or target.exists() or target.is_symlink():
+        raise LedgerError("Choose an original report directory and a new account-report destination")
+    if target.is_relative_to(original) or original.is_relative_to(target):
+        raise LedgerError("Account-report destination must be separate from the original edition and its ancestors")
+    manifest_path = original / "export-manifest.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise LedgerError("Retain the original export manifest")
+    original_manifest = manifest_path.read_bytes()
+    manifest = json.loads(original_manifest)
+    if manifest.get("schema") != "upstate.landcover-export/1" or not isinstance(manifest.get("files"), list):
+        raise LedgerError("Unsupported original export manifest")
+    declared = {}
+    for item in manifest["files"]:
+        name = item.get("path")
+        if (not isinstance(name, str) or not name or name in (".", "..", "export-manifest.json")
+                or Path(name).name != name or "\\" in name or name in declared
+                or not isinstance(item.get("bytes"), int) or isinstance(item["bytes"], bool)
+                or item["bytes"] < 0):
+            raise LedgerError("Original export member inventory is invalid")
+        member = original / name
+        if (member.is_symlink() or not member.is_file() or member.stat().st_size != item["bytes"]
+                or sha256_file(member) != item.get("sha256")):
+            raise LedgerError("Original export member changed: " + name)
+        declared[name] = item
+    if "ledger.json" not in declared:
+        raise LedgerError("Retain the complete original ledger")
+    report = json.loads((original / "ledger.json").read_bytes())
+    if (report.get("schema") != SCHEMA or report.get("complete") is not True
+            or report.get("signature") != manifest.get("signature") or report.get("timeline") is None):
+        raise LedgerError("Select the complete original observed timeline edition")
+    # Validate the scientific account before creating a new presentation directory.
+    from .landcover_change_accounts import derive_accounts
+    derive_accounts(report)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=".landcover-accounts-", dir=target.parent))
+    try:
+        for name, item in declared.items():
+            shutil.copyfile(original / name, temporary / name)
+            copied = temporary / name
+            if copied.stat().st_size != item["bytes"] or sha256_file(copied) != item["sha256"]:
+                raise LedgerError("Original export changed during receiving: " + name)
+        if manifest_path.read_bytes() != original_manifest:
+            raise LedgerError("Original export manifest changed during receiving")
+        provenance = {"schema": "upstate.landcover-presentation-source/v1",
+                      "ledger_signature": report["signature"],
+                      "original_manifest": manifest,
+                      "original_manifest_bytes": len(original_manifest),
+                      "original_manifest_sha256": __import__("hashlib").sha256(original_manifest).hexdigest(),
+                      "ledger": declared["ledger.json"],
+                      "interpretation": "Separate presentation copy; original scientific edition and member bytes remain unchanged."}
+        atomic_json(temporary / "presentation-source.json", provenance)
+        result = export_report(temporary)
+        if sha256_file(temporary / "ledger.json") != declared["ledger.json"]["sha256"]:
+            raise LedgerError("Presentation export altered the original scientific ledger")
+        target.mkdir()
+        try:
+            for member in temporary.iterdir():
+                member.replace(target / member.name)
+        except BaseException:
+            shutil.rmtree(target)
+            raise
+        return {"schema": "upstate.landcover-interval-copy/v1", "path": str(target),
+                "source": str(original), "signature": report["signature"],
+                "original_ledger": declared["ledger.json"], "manifest": result}
+    finally:
+        shutil.rmtree(temporary, ignore_errors=True)
+
+
 def export_report(output: Path | str) -> dict:
     root = Path(output)
     report = json.loads((root / "ledger.json").read_text(encoding="utf-8"))
@@ -102,10 +207,19 @@ def export_report(output: Path | str) -> dict:
     if report.get("timeline") is not None:
         from .landcover_temporal import export_csv
         export_csv(root, report)
+    interval_payload = _interval_exports(root, report)
     template = Path(__file__).with_name("landcover_report.html").read_text(encoding="utf-8")
     # JSON is parsed as data; escapes prevent external names closing the script.
     payload = json.dumps(report, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-    (root / "report.html").write_text(template.replace("__LEDGER_DATA__", payload), encoding="utf-8")
+    interval_data = json.dumps(interval_payload, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    if template.count("__LEDGER_DATA__") != 1 or template.count("__INTERVAL_DATA__") != 1:
+        raise LedgerError("The complete report template has changed its data placeholders")
+    # Replace all original placeholders in a single pass so source labels cannot
+    # be interpreted as a second template substitution.
+    import re
+    html = re.sub(r"__LEDGER_DATA__|__INTERVAL_DATA__", lambda match:
+                  payload if match.group(0) == "__LEDGER_DATA__" else interval_data, template)
+    (root / "report.html").write_text(html, encoding="utf-8")
     files = sorted([p for p in root.iterdir() if p.is_file() and p.suffix in (".json", ".csv", ".html", ".geojson", ".tif") and p.name not in ("export-manifest.json", "status.json")])
     manifest = {"schema": "upstate.landcover-export/1", "signature": report["signature"],
                 "files": [{"path": p.name, "bytes": p.stat().st_size, "sha256": sha256_file(p)} for p in files]}
