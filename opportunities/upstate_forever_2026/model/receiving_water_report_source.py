@@ -154,19 +154,36 @@ def _retain_study(workspace, directory, plan, analysis):
     return inventory
 
 
+def _source_references(value, location):
+    """Find explicit retained selectors, including original intake/provenance references."""
+    if isinstance(value, dict):
+        if "source_collection_id" in value and "source_id" in value:
+            choice = {name: value[name] for name in ("source_collection_id", "source_id")}
+            if any(not isinstance(item, str) or not item.strip() for item in choice.values()):
+                raise ValueError("Original plan contains an incomplete retained source reference")
+            yield choice, {"location": location, "selection": value}
+        for key, item in value.items():
+            yield from _source_references(item, location + "/" + str(key))
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from _source_references(item, location + "/" + str(index))
+
+
 def _source_views(workspace, plan):
     """Resolve all original views before capture; cold restores may materialize CAS links."""
     selected = {}
-    for identity in plan["identity"]["source_identities"]:
-        choice = {"source_collection_id": identity["source_collection_id"],
-                  "source_id": identity["source_id"]}
+    def resolve(choice):
         key = digest(choice)
         if key not in selected:
             path, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
             collection = workspace._get("sources", choice["source_collection_id"])
             selected[key] = {"choice": choice, "path": Path(path), "entry": entry,
-                             "collection": collection, "identities": []}
-        value = selected[key]
+                             "collection": collection, "identities": [], "references": []}
+        return selected[key]
+    for identity in plan["identity"]["source_identities"]:
+        choice = {"source_collection_id": identity["source_collection_id"],
+                  "source_id": identity["source_id"]}
+        value = resolve(choice)
         entry = value["entry"]
         if (entry["body"]["sha256"] != identity["body_sha256"]
                 or entry["body"]["bytes"] != identity["body_bytes"]):
@@ -180,7 +197,20 @@ def _source_views(workspace, plan):
         if companions != identity.get("companions", []):
             raise ValueError("Saved receiving-water source companions changed")
         value["identities"].append(identity)
+    # Context such as metadata.intake_reference can support a saved designation
+    # without participating in geometry preparation. Retain those originals too.
+    for label, content in (("identity/selection", plan["identity"]["selection"]),
+                           ("receptors", plan["receptors"])):
+        for choice, reference in _source_references(content, label):
+            resolve(choice)["references"].append(reference)
     return selected
+
+
+def _source_entry_identities(views):
+    return [{**value["choice"], "entry_sha256": digest(value["entry"]),
+             "original_manifest_sha256": value["collection"]["original_manifest"]["sha256"],
+             "original_manifest_bytes": value["collection"]["original_manifest"]["bytes"]}
+            for key, value in sorted(views.items())]
 
 
 def _retain_sources(workspace, directory, views):
@@ -216,11 +246,13 @@ def _retain_sources(workspace, directory, views):
         atomic_json(root / "collection.json", collection, immutable=True)
         atomic_json(root / "entry.json", entry, immutable=True)
         atomic_json(root / "plan-source-identities.json", value["identities"], immutable=True)
+        atomic_json(root / "plan-source-references.json", value["references"], immutable=True)
         result.append({**value["choice"], "body_sha256": entry["body"]["sha256"],
                        "entry_path": (root / "entry.json").relative_to(directory).as_posix(),
                        "collection_path": (root / "collection.json").relative_to(directory).as_posix(),
                        "original_manifest_path": (root / "original-manifest.json").relative_to(directory).as_posix(),
                        "identities_path": (root / "plan-source-identities.json").relative_to(directory).as_posix(),
+                       "references_path": (root / "plan-source-references.json").relative_to(directory).as_posix(),
                        "members": members})
     atomic_json(directory / "original-source-index.json", result, immutable=True)
     return result
@@ -232,73 +264,98 @@ def _text(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
 
 
-def _rows(value, prefix=""):
-    """Preserve every original field, array index and numeric value without rounding."""
-    if isinstance(value, dict):
-        for key, item in value.items():
-            yield from _rows(item, (prefix + " / " if prefix else "") + str(key))
-        if not value:
-            yield [prefix, "{}"]
-    elif isinstance(value, list):
-        for index, item in enumerate(value):
-            yield from _rows(item, prefix + " [" + str(index) + "]")
-        if not value:
-            yield [prefix, "[]"]
-    else:
-        yield [prefix, _text(value)]
-
-
 def _table(columns, rows, caption=None):
     return {"kind": "table", "columns": columns,
             "rows": [[_text(value) for value in row] for row in rows],
             "widths": None, "caption": caption}
 
 
-def _plan_sections(plan, analysis):
+def _brief(value, limit=500):
+    """Keep the main dossier readable; complete original values stay in linked records."""
+    text = _text(value)
+    return text if len(text) <= limit else text[:limit].rstrip() + " … (complete value in the saved plan)"
+
+
+def _feature_ids(receptor):
+    values = [str(row["native_feature_id"]) for row in receptor.get("original_features", [])]
+    if len(values) <= 12:
+        return ", ".join(values)
+    return ", ".join(values[:12]) + " …; " + str(len(values)) + " original features (all in the saved plan)"
+
+
+def _geometry_note(receptor):
+    source = receptor["source"]
+    details = []
+    if source.get("geometry_reader"):
+        details.append("Recorded geometry reader: " + _brief(source["geometry_reader"], 360))
+    features = source.get("selected_features", []) + receptor.get("original_features", [])
+    operations = sorted({_text(operation) for feature in features
+                         for operation in feature.get("geometry_operations", [])})
+    if operations:
+        details.append("Explicit recorded geometry operations: " + _brief(operations, 500))
+    return details
+
+
+def _plan_sections(plan, analysis, views):
     blocks = [
-        ("This source reports a saved receiving-water plan and its completed original analysis."
+        ("Saved source geography and designations accompany the completed analysis below."
          if analysis else
-         "This source reports a saved geography and designation plan. It contains no calculated "
-         "pollutant export, flow-path delivery, exposure, intake load or water-quality concentration."),
-        "Relationships retain the original plan method and rationale. A published source polygon, "
-        "an explicit geometric context and a retained HUC12 upstream association have different meanings.",
-        "Contributing areas below are the original projected geometry areas in hectares. They are "
-        "not measured loads, raster support areas or additional flow-path evidence. Individual "
-        "receiving areas can overlap; do not add their areas as an unduplicated total.",
-        _table(["Saved plan property", "Original value"], [
-            ["Plan", plan["id"]], ["Title", plan["title"]],
-            ["State", plan["state"]], ["Created", plan["created_at"]],
-            ["Record SHA256", plan["record_sha256"]],
-            ["Geometry CRS", plan["analysis_crs_name"]],
-            ["Geometry CRS WKT", plan["analysis_crs"]],
-            ["Original geometry method", plan["identity"]["method_version"]],
-            ["Original geometry implementation SHA256", plan["identity"]["implementation_sha256"]],
+         "This dossier describes the saved receiving-water geography, protection context "
+         "and original source designations. Its areas are source-plan geometry values."),
+        "The declared relationship distinguishes a published source polygon, explicit "
+        "geometric context and retained HUC12 upstream association. Each receiving area's "
+        "original rationale and geographic precision remain visible.",
+        "Contribution areas use the saved projected geometry in hectares (" + plan["analysis_crs_name"]
+        + "). Individual areas can overlap; their areas are not an unduplicated total.",
+        _table(["Saved study", "Value"], [
+            ["Title", plan["title"]], ["Created", plan["created_at"]],
+            ["Receiving areas", len(plan["receptors"])],
+            ["Original source entries, including explicit context", len(views)],
+            ["Geographic coordinate reference", plan["analysis_crs_name"]],
+            ["Quantity basis", "Completed original analysis" if analysis else "Source-plan geography"],
         ]),
-        _table(["Receiving area", "Family", "Relationship precision", "Contribution area (ha)"],
+        _table(["Receiving area", "Family", "Geographic relationship", "Contribution area (ha)"],
                [[row["title"], row["family"], row["relationship_precision"],
                  row["contribution_area_ha"]] for row in plan["receptors"]],
-               "Exact retained source-plan values. This table does not deduplicate overlapping areas."),
+               "Original saved areas. Modeled quantities and their valid support, when selected, "
+               "are reported in the original analysis section."),
+        {"kind": "links", "items": [
+            {"title": "Complete saved plan, original features, methods and network",
+             "path": "native/plan/plan.json"},
+            {"title": "Original source inventory and complete member identities",
+             "path": "original-source-index.json"},
+        ]},
     ]
     sections = [["Receiving-water source plan", blocks]]
     for receptor in plan["receptors"]:
-        # Preserve complete new provenance fields as well as the original schema:
-        # native attributes, geometry-reader operations and source-feature identities.
-        context = {key: value for key, value in receptor.items()
-                   if key not in {"original_features", "source"}}
+        relation, source = receptor["relation"], receptor["source"]
+        rows = [
+            ["Original receiving-area ID", receptor["id"]],
+            ["Designation / classification", _brief(receptor.get("classification", {}))],
+            ["Original source", source["title"]],
+            ["Source edition", source["vintage"]],
+            ["Publisher reference", source["uri"]],
+            ["Selected native feature IDs", _feature_ids(receptor)],
+            ["Relationship method", relation["method"]],
+            ["Source rationale", _brief(relation["rationale"], 900)],
+        ]
+        if "buffer_m" in relation:
+            rows.append(["Explicit geometry buffer (m)", relation["buffer_m"]])
+        if "seed_huc_ids" in relation:
+            rows.append(["Selected receiving HUCs", _brief(relation["seed_huc_ids"])])
+            rows.append(["Retained upstream HUC count", len(relation.get("upstream_huc_ids", []))])
         sections.append(["Receiving area: " + receptor["title"], [
             receptor["interpretation"],
-            _table(["Original relationship and designation", "Retained value"], list(_rows(context))),
-            _table(["Original source selection and provenance", "Retained value"],
-                   list(_rows(receptor["source"]))),
-            _table(["Original feature and native field", "Retained value"],
-                   list(_rows(receptor.get("original_features", []))),
-                   "Original feature identifiers, attributes and any explicitly recorded geometry "
-                   "interpretation remain attached to this exact saved plan."),
+            _table(["Source and method", "Retained value"], rows),
+            *_geometry_note(receptor),
         ]])
-    sections.append(["Source-plan selection and original network", [
-        _table(["Original selection", "Retained value"], list(_rows(plan["identity"]["selection"]))),
-        "The complete original network, when selected, remains in native/plan/plan.json. "
-        "No network route or geometry is inferred by this report producer.",
+    sections.append(["Original source register", [
+        _table(["Source", "Edition", "Publisher reference", "Use in saved plan"],
+               [[value["entry"]["title"], value["entry"]["vintage"], value["entry"]["uri"],
+                 "Original geometry selection" if value["identities"] else "Explicit contextual reference"]
+                for key, value in sorted(views.items())],
+               "The complete source bodies, companion metadata, original collection manifests "
+               "and exact source selectors accompany this report."),
     ]])
     return sections
 
@@ -358,6 +415,8 @@ def _verify_originals(workspace, directory, plan, analysis, identity):
     if analysis is not None and read_json(directory / "native" / "analysis" / "analysis.json") != analysis:
         raise ValueError("Retained completed analysis differs from the original Workspace")
     views = _source_views(workspace, plan)
+    if _source_entry_identities(views) != identity["source_entries"]:
+        raise ValueError("Original plan geometry or contextual source identity changed")
     index = read_json(directory / "original-source-index.json")
     if {digest({"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]})
             for row in index} != set(views) or len(index) != len(views):
@@ -367,7 +426,8 @@ def _verify_originals(workspace, directory, plan, analysis, identity):
         value = views[key]
         if (read_json(directory / _member(row["entry_path"])) != value["entry"]
                 or read_json(directory / _member(row["collection_path"])) != value["collection"]
-                or read_json(directory / _member(row["identities_path"])) != value["identities"]):
+                or read_json(directory / _member(row["identities_path"])) != value["identities"]
+                or read_json(directory / _member(row["references_path"])) != value["references"]):
             raise ValueError("Original receiving-water source metadata differs from its capture")
         original = value["collection"]["original_manifest"]
         source = relative_file(workspace.root, original["object"])
@@ -376,10 +436,22 @@ def _verify_originals(workspace, directory, plan, analysis, identity):
             raise ValueError("Original receiving-water source manifest differs from its capture")
 
 
-def _files(directory, *, exclude=()):
-    return [describe_file(directory, path) for path in sorted(directory.rglob("*"))
-            if path.is_file() and not any(part.startswith(".") for part in path.relative_to(directory).parts)
-            and path.relative_to(directory).as_posix() not in exclude]
+def _capture_members(directory, plan, analysis, sources, modules):
+    """Use the exact declared closure, including original dotfiles, never temporary files."""
+    names = {"native/plan/plan.json", "original-source-index.json"}
+    names.update("native/plan/" + _member(item["path"]).as_posix()
+                 for item in plan["files"].values())
+    if analysis is not None:
+        names.update({"native/analysis/analysis.json", "native/receiving-water-delivery.json"})
+        names.update("native/analysis/" + _member(item["path"]).as_posix()
+                     for item in analysis["files"].values())
+    for source in sources:
+        names.update(item["path"] for item in source["members"])
+        names.update(source[name] for name in
+                     ("entry_path", "collection_path", "original_manifest_path",
+                      "identities_path", "references_path"))
+    names.update("implementation/" + name + ".py" for name in modules)
+    return [describe_file(directory, directory / _member(name)) for name in sorted(names)]
 
 
 def prepare(workspace, selection, *, progress=None):
@@ -395,8 +467,12 @@ def prepare(workspace, selection, *, progress=None):
     with held(workspace.root / LOCK, blocking=False):
         plan, analysis = _resolve(workspace, selected, verify=True)
         modules = _implementation(analysis)
+        # Includes explicit contextual source selectors such as intake_reference,
+        # in addition to the sources used by original geometry preparation.
+        views = _source_views(workspace, plan)
         identity = {"edition": EDITION, "workspace_id": workspace.project["id"],
                     "selection": selected, "study": _study_identity(plan, analysis),
+                    "source_entries": _source_entry_identities(views),
                     "capture_implementation": {name: file_digest(path) for name, path in modules.items()}}
         key = digest(identity)
         directory = workspace.root / FOLDER / key
@@ -405,9 +481,7 @@ def prepare(workspace, selection, *, progress=None):
                 progress({"stage": stage, "report_source_id": key})
         if (directory / "report.json").exists():
             return _result(workspace, inspect(workspace, key, verify=True), delivery_id)
-        # Resolve potentially cold source views before retaining original metadata.
         report("verify-original-source-plan")
-        views = _source_views(workspace, plan)
         directory.mkdir(parents=True, exist_ok=True)
         intent_path = directory / "intent.json"
         if intent_path.exists():
@@ -427,29 +501,25 @@ def prepare(workspace, selection, *, progress=None):
                 _copy_file(source, target)
                 if file_digest(target) != identity["capture_implementation"][name]:
                     raise ValueError("Report implementation changed during capture")
-            sections = _plan_sections(plan, analysis)
+            sections = _plan_sections(plan, analysis, views)
             if inventory is not None:
                 from .scientific_report import receiving_sections
                 # Keep the maintained formatter's units, signed changes, fixed
                 # normalization, family deduplication and valid-support tables.
                 sections.extend(receiving_sections({"inventory": inventory}))
-            sections.append(["Retained source and scientific scope", [
-                "This report packages the selected immutable receiving-water records. It does not "
-                "execute a native model, recompute priorities, infer water quality or change the "
-                "original geographic relationship. Original records and all exported members "
-                "remain available alongside the report.",
-                _table(["Capture property", "Retained value"], list(_rows(identity))),
+            sections.append(["Retained scientific study", [
+                "This report preserves the selected immutable study. The linked original records "
+                "carry its complete feature attributes, source selectors, geographic methods and "
+                "capture identities; the accompanying files retain the complete original sources.",
             ]])
             title = selected.get("title") or (analysis["title"] if analysis else plan["title"])
-            companions = _files(directory, exclude=("intent.json", "prepared.json", "report.json",
-                                                    "sources.json", "report-source.json"))
+            companions = _capture_members(directory, plan, analysis, sources, modules)
             source_links = ["native/plan/plan.json", "original-source-index.json"]
             if analysis is not None:
                 source_links += ["native/analysis/analysis.json", "native/receiving-water-delivery.json"]
             source_links += [row["original_manifest_path"] for row in sources]
-            # The complete native geometry, rasters, source files and capture code
-            # are companions; links expose every member, retaining meaningful paths.
-            source_links += [item["path"] for item in companions if item["path"] not in source_links]
+            # Keep the report link list concise. The source index and full retained
+            # archive carry every geometry, raster, native input and capture member.
             from . import observed_context
             recipe = {"schema": observed_context.SCHEMA, "title": title, "edition": EDITION,
                       "report_context_kind": "receiving-water-scientific-study",
@@ -467,8 +537,10 @@ def prepare(workspace, selection, *, progress=None):
                                   "new_native_calculation": False}}
             atomic_json(directory / "sources.json", {"schema": "upstate.sources/v1", "title": title,
                         "captured_at": intent["created_at"], "entries": [entry]}, immutable=True)
+            prepared_files = companions + [describe_file(directory, directory / name)
+                                           for name in ("intent.json", "report-source.json", "sources.json")]
             atomic_json(prepared, {"title": title, "summary": _summary(plan, analysis, sources),
-                                  "files": _files(directory, exclude=("prepared.json", "report.json"))},
+                                  "files": sorted(prepared_files, key=lambda item: item["path"])},
                         immutable=True)
         ready = read_json(prepared)
         # Every interruption resumes from exactly the retained prepared source;
@@ -480,8 +552,9 @@ def prepare(workspace, selection, *, progress=None):
         collection = workspace.import_sources(directory / "sources.json")
         source = {"source_collection_id": collection["id"], "source_id": SOURCE_ID}
         _verify_import(workspace, directory, source)
-        files = [describe_file(workspace.root, directory / item["path"])
-                 for item in _files(directory, exclude=("report.json",))]
+        retained_files = ready["files"] + [describe_file(directory, prepared)]
+        files = [describe_file(workspace.root, directory / _member(item["path"]))
+                 for item in sorted(retained_files, key=lambda item: item["path"])]
         record = {"schema": SCHEMA, "id": key, "state": "complete", "identity": identity,
                   "title": ready["title"], "created_at": intent["created_at"], "selection": selected,
                   "source": source, "summary": ready["summary"], "files": files}
