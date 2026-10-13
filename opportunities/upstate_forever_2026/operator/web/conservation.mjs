@@ -1,4 +1,5 @@
 /** Conservation studies and portfolios within the existing GIS operator. */
+import { renderKeoweePointCriteria } from "./keowee-method-view.mjs";
 const POLLUTANTS = [
   ["nitrogen_export", "Nitrogen"],
   ["phosphorus_export", "Phosphorus"],
@@ -790,42 +791,10 @@ export function attachConservation({
     return reference.source_uri ? link(reference.source_uri, label) : h(label);
   }
   function pointCriteria(candidate) {
-    if (!candidate.point_score) return "";
-    const score = candidate.point_score;
-    const valueText = value => value === null || value === undefined ? "Unresolved" :
-      typeof value === "boolean" ? value ? "Yes" : "No" :
-        typeof value === "object" ? JSON.stringify(value) : String(value);
-    const rows = (items, term = false) => items.map(item => {
-      const group = Array.isArray(item.terms) && item.terms.length;
-      const points = finite(item.points) ? number(item.points) :
-        number(item.known_points) + "–" + number(item.possible_points);
-      return '<tr' + (term ? ' class="cons-criterion-term"' : "") + '><th scope="row">' +
-        h(human(item.id || item.metric)) + (group ? '<span class="cons-metric-note">Combined criterion</span>' : "") +
-        "</th><td>" + (group ? "See contributing terms" : h(valueText(item.value))) +
-        "</td><td>" + points + (finite(item.points) ? "" : '<span class="cons-metric-note">Known–possible points</span>') +
-        "</td><td>" + criterionReference(item.reference) + "</td></tr>" +
-        (group ? rows(item.terms, true) : "");
-    }).join("");
-    const components = Object.values(candidate.score_components || {}).filter(row =>
-      row && typeof row === "object" && row.id);
-    return '<details class="cons-disclosure"><summary>Published point criteria</summary>' +
-      '<dl class="cons-definitions"><dt>Published practice score</dt><dd>' +
-      (finite(score.points) ? number(score.points) + " points" : "Awaiting a complete score and satisfied practice prerequisite") +
-      "</dd><dt>Practice prerequisite</dt><dd>" +
-      (score.prerequisite === true ? "Satisfied" : score.prerequisite === false ? "Absent in the selected source criteria" : "Unresolved") +
-      "</dd><dt>Known–possible contribution</dt><dd>" + number(score.known_points) + "–" +
-      number(score.possible_points) + " points</dd><dt>Category maximum</dt><dd>" +
-      number(score.maximum) + " points</dd></dl>" +
-      (components.length ? '<div class="cons-table-wrap"><table class="cons-table"><thead><tr>' +
-        '<th scope="col">Criterion</th><th scope="col">Retained value</th><th scope="col">Points</th>' +
-        '<th scope="col">Published reference</th></tr></thead><tbody>' + rows(components) +
-        '</tbody></table></div>' : "") +
-      '<details><summary>Complete retained input values</summary><div class="cons-table-wrap">' +
-      '<table class="cons-table"><thead><tr><th scope="col">Input</th><th scope="col">Value</th></tr></thead><tbody>' +
-      Object.entries(score.metric_values || {}).map(([name, value]) =>
-        "<tr><th scope=\"row\">" + h(human(name)) + "</th><td>" + h(valueText(value)) + "</td></tr>").join("") +
-      '</tbody></table></div></details><details><summary>Criterion source references</summary><pre>' +
-      h(JSON.stringify(score.metric_sources || {}, null, 2)) + "</pre></details></details>";
+    return renderKeoweePointCriteria(candidate, {
+      formatNumber: number,
+      originalReference: criterionReference,
+    });
   }
   function studyForm() {
     const ui = memory(), d = ui.draft, native = d.mode === "native_model";
