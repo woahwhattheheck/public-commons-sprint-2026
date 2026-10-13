@@ -478,6 +478,63 @@ def _parameter_course(ws, files, check, case):
             "paired_products": paired_products}
 
 
+def _latest_native_study_source(ws, files, ensemble_id, captured_operation_id):
+    """Check the independent latest pointer without replacing a selected edition."""
+    from model.common import digest, identifier
+    from model.ensemble_study_source import DIRECTORY, SOURCE_ID
+
+    pointer = files.json("ensemble_results/" + ensemble_id + "/latest-scientific-study.json")
+    latest_id = identifier(pointer.get("source_operation_id"))
+    if pointer != {"ensemble_id": ensemble_id, "source_operation_id": latest_id}:
+        raise ValueError("The latest scientific source points to a different native design")
+    if latest_id == captured_operation_id:
+        # The selected operation receives the complete original checks below.
+        return latest_id
+
+    relative = DIRECTORY + "/" + latest_id
+    latest = files.json(relative + "/operation.json")
+    basis = latest.get("selection")
+    if (latest.get("schema") != "upstate.ensemble-study-source/v1"
+            or latest.get("id") != latest_id or not isinstance(basis, dict)
+            or digest(basis) != latest_id
+            or latest.get("workspace_id") != ws.project["id"]
+            or latest.get("ensemble_id") != ensemble_id
+            or basis.get("workspace_id") != ws.project["id"]
+            or basis.get("ensemble_id") != ensemble_id):
+        raise ValueError("The newer retained scientific source has another native identity")
+    source = latest.get("source")
+    if not isinstance(source, dict) or source.get("source_id") != SOURCE_ID:
+        raise ValueError("The newer retained scientific source lacks its original import")
+    collection_id = identifier(source["source_collection_id"])
+    _sources(ws, files, collection_id)
+    collection = ws._get("sources", collection_id)
+    entries = [entry for entry in collection["entries"] if entry["id"] == SOURCE_ID]
+    if len(entries) != 1:
+        raise ValueError("The newer scientific source lacks its unique original entry")
+    files.descriptors(ws.root, latest.get("files", {}))
+    recipe_path = files.file(ws.root, latest["files"]["source_recipe"])
+    if recipe_path != ws.root / relative / "source" / "scientific-report.json":
+        raise ValueError("The newer scientific recipe is outside its original operation")
+    recipe = files.json(recipe_path.relative_to(ws.root).as_posix())
+    entry = entries[0]
+    metadata = entry.get("metadata", {})
+    if (recipe.get("schema") != "upstate.observed-report/v1" or recipe.get("basis") != basis
+            or metadata.get("report_schema") != recipe["schema"]
+            or metadata.get("source_basis") != "saved_native_ensemble"
+            or metadata.get("workspace_id") != ws.project["id"]
+            or metadata.get("ensemble_id") != ensemble_id
+            or metadata.get("report_id") != basis.get("report_id")
+            or metadata.get("source_operation_id") != latest_id
+            or any(entry["body"][name] != latest["files"]["source_recipe"][name]
+                   for name in ("bytes", "sha256"))):
+        raise ValueError("The newer scientific source differs from its retained recipe")
+    for item in recipe["inputs"]:
+        files.file(recipe_path.parent, item)
+    # A later prepared source can be source_ready while its rendering is pending.
+    # It is retained independently; only the chosen report must be complete.
+    return latest_id
+
+
 def _native_study_source(ws, files, check, case, delivery=None, *, report_selection=None):
     """Reopen the report-bound study source from the same captured native course."""
     from model.common import digest, identifier
@@ -503,9 +560,7 @@ def _native_study_source(ws, files, check, case, delivery=None, *, report_select
             or selection.get("workspace_id") != ws.project["id"]
             or operation.get("ensemble_id") != key or selection.get("ensemble_id") != key):
         raise ValueError("Receiving changed the original completed scientific study operation")
-    pointer = files.json("ensemble_results/" + key + "/latest-scientific-study.json")
-    if pointer != {"ensemble_id": key, "source_operation_id": operation_id}:
-        raise ValueError("The captured study points to a different scientific source edition")
+    latest_operation_id = _latest_native_study_source(ws, files, key, operation_id)
     source = operation["source"]
     rendered = operation["report"]
     actual = {
@@ -554,6 +609,8 @@ def _native_study_source(ws, files, check, case, delivery=None, *, report_select
         raise ValueError("The final mapped report does not contain this exact scientific study source")
     return {
         "kind": "native_study_source", **actual,
+        "latest_source_operation_id": latest_operation_id,
+        "selected_source_is_latest": latest_operation_id == operation_id,
         "state": "complete", "delivery_id": delivery["id"] if delivery is not None else None,
         "ordered_report_sources": chosen,
         "retained_source_members": len(recipe["inputs"]),
