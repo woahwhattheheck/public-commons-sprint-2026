@@ -557,6 +557,10 @@ def resume(args):
     if metadata_oids != ["OBJECTID"]:
         raise ValueError("Unexpected publisher native object-ID field")
     huc_mode = bool(getattr(args, "huc_bounds", None))
+    domain_mode = not huc_mode and bool(manifest.get("domain_query_bounds"))
+    exact_mode = huc_mode or domain_mode
+    domain_inventory = None
+    domain_companions = []
     huc_inventory = None
     if huc_mode:
         grid, huc_inventory = load_huc_envelopes(
@@ -576,6 +580,10 @@ def resume(args):
                 ))
         if [bounds(tile["envelope"]) for tile in grid] != expected_grid:
             raise ValueError("Coverage grid must exactly cover the retained model-domain envelope")
+        if domain_mode:
+            from source_tools.nhd_domain_queries import load_domain_query_grid
+            grid, domain_inventory, domain_companions, target = load_domain_query_grid(
+                manifest, retained, args.domain_archive, root)
     record_path = root / "resume-operation.json"
     operation = {
         "schema": "upstate.nhd-original-resume/v1", "operation_id": OPERATION,
@@ -594,7 +602,7 @@ def resume(args):
         relative(root, retained / "inventory-progress.json"), relative(root, record_path),
     ], set()
     for entry in manifest["completed_inventory"]:
-        ids, query, receipts, envelope = original_inventory(root, retained, entry, exact=huc_mode)
+        ids, query, receipts, envelope = original_inventory(root, retained, entry, exact=exact_mode)
         if not (target[0] <= envelope[0] < envelope[2] <= target[2]
                 and target[1] <= envelope[1] < envelope[3] <= target[3]):
             raise ValueError("Retained candidate scope is outside the declared domain envelope")
@@ -622,10 +630,17 @@ def resume(args):
         })
         descriptor["companions"].append(huc_inventory["path"])
         descriptor["companions"].extend(item["path"] for item in huc_inventory.get("received_members", []))
+    elif domain_mode:
+        descriptor["scope"].update({
+            "coverage_mode": "original-domain-clipped-grid",
+            "domain_query_bounds": domain_inventory,
+            "selection": "Complete union of retained broad candidates and exact original-HUC clipped-grid candidates",
+        })
+        descriptor["companions"].extend(domain_companions)
     # Retain completed old tile/HUC inventories before replacing the live capture.
     # This preserves IDs whose geometry was already received from broader queries.
     retained_partial_inventories(root, previous_capture, descriptor, selected, covered,
-                                 exact=huc_mode)
+                                 exact=exact_mode)
     packet = {
         "schema": "upstate.water-context-capture/v1", "operation_id": OPERATION,
         "captured_at": operation["started_at"], "complete_geometry": False,
@@ -677,11 +692,11 @@ def resume(args):
         dump(root / "capture.json", packet)
     descriptor["companions"].append(relative(root, page_progress))
     checkpoint()
-    if huc_mode:
+    if exact_mode:
         scopes = [{"id": tile["id"], "geometry": tile["envelope"]} for tile in grid
                   if not envelope_covered(bounds(tile["envelope"], exact=True), covered)]
         if scopes:
-            tile_root = root / "query-hucs"
+            tile_root = root / ("query-domain-cells" if domain_mode else "query-hucs")
             reader = OriginalSource(tile_root, args.timeout)
             result = capture_layer(
                 reader, "stream_order", summary, hucs, args.chunk, counts_only=True,
@@ -690,14 +705,14 @@ def resume(args):
             current_metadata = json_file(member(tile_root, result["metadata"]))
             for key in ("fields", "hasZ", "hasM", "geometryType", "sourceSpatialReference"):
                 if current_metadata.get(key) != metadata.get(key):
-                    raise ValueError("Publisher native schema changed during HUC acquisition")
+                    raise ValueError("Publisher native schema changed during original-domain acquisition")
             for query in result["queries"]:
                 new_query = {key: relative(root, member(tile_root, value))
                              for key, value in query.items()}
                 count, ids = json_file(member(root, new_query["count"])), json_file(member(root, new_query["ids"]))
                 native = valid_ids(ids.get("objectIds") or [])
                 if count.get("count") != len(native) or ids.get("exceededTransferLimit"):
-                    raise ValueError("Resumed HUC count/ID response differs")
+                    raise ValueError("Resumed original-domain count/ID response differs")
                 selected.update(native)
                 descriptor["queries"].append(new_query)
             descriptor["companions"].extend(
@@ -707,9 +722,13 @@ def resume(args):
                 covered.add(bounds(scope["geometry"], exact=True))
             checkpoint()
         if not all(envelope_covered(bounds(tile["envelope"], exact=True), covered) for tile in grid):
-            raise ValueError("Original HUC12 envelopes are not completely covered by native queries")
-        print(json.dumps({"huc_envelopes": len(grid), "queried_huc_envelopes": len(scopes),
-                          "candidate_ids": len(selected)}), flush=True)
+            raise ValueError("Original domain query envelopes are not completely covered by native queries")
+        progress = {"candidate_ids": len(selected)}
+        if domain_mode:
+            progress.update({"domain_query_cells": len(grid), "queried_domain_cells": len(scopes)})
+        else:
+            progress.update({"huc_envelopes": len(grid), "queried_huc_envelopes": len(scopes)})
+        print(json.dumps(progress), flush=True)
     else:
         for index, tile in enumerate(grid):
             envelope = bounds(tile["envelope"])
@@ -802,7 +821,7 @@ def resume(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--bank", required=True, help="Decoded exact source-bank JSON from F0C8UD4L25S revision2 or later")
+    parser.add_argument("--bank", required=True, help="Decoded original source-bank JSON; revision13+ automatically uses its verified 217-HUC query bounds")
     parser.add_argument("--bank-sha256", required=True)
     parser.add_argument("--domain-archive", required=True)
     parser.add_argument("--huc-bounds", help="Exact original bounds JSON, or completed ECO-GEO metadata/five-file JSON bank; preserves original per-HUC envelopes")
