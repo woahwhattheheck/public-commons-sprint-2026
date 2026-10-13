@@ -823,7 +823,11 @@ export function attachProgrammes(context) {
     if (!task.action?.startsWith('compute.programme.') || !id) return '';
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
       escapeHTML(row ? labelState(row.state) + ' · ' + countLine(row) : 'The original programme retains each native result and its continuation state.') +
-      '</p><button type="button" data-action="programme-open" data-id="' + escapeHTML(id) + '">Open run programme</button></div>';
+      '</p><button type="button" data-action="programme-open" data-id="' + escapeHTML(id) + '">Open run programme</button>'+
+      (task.experiment?.experiment_id?'<button type="button" data-action="experiment-show" data-id="'+
+        escapeHTML(task.experiment.experiment_id)+'">Open experiment results</button>':'')+
+      ((task.programme_report_error||task.experiment?.report_error)?'<p class="error">'+
+        escapeHTML(task.programme_report_error||task.experiment.report_error)+'</p>':'')+'</div>';
   }
   function completionMessage(task) {
     if (task.action !== 'compute.programme.run' && task.action !== 'compute.programme.pair-completion') return '';
