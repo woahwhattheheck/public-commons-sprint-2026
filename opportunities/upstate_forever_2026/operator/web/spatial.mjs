@@ -226,7 +226,38 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     if(target.kind==='deliveries')return row.owner_id===target.id&&row.group==='delivery';
     return row.id===target.id;
   }
+  function applyAtlasTarget(c,target){
+    const value=target.selection;
+    if(target.project_id!==c.model.catalog.project?.id)throw Error('This atlas panel belongs to another scientific project.');
+    if(!value||value.mode!=='single'||!validView(value.view)||!value.primary||
+       value.comparison!==null||!Array.isArray(value.overlays)||!Array.isArray(target.bindings)){
+      throw Error('Open the complete retained atlas panel selection.');
+    }
+    if(value.scale?.mode!=='fixed'||!finite(value.scale.minimum)||!finite(value.scale.maximum)||
+       value.scale.minimum>=value.scale.maximum)throw Error('The atlas panel needs its retained physical display scale.');
+    if(value.overlays.length>(c.model.catalog.limits?.overlays??24))throw Error('The atlas panel exceeds the original spatial overlay capacity.');
+    const choices=[value.reference,value.primary,...value.overlays.map(item=>item.selection)];
+    for(const choice of choices){
+      const row=layer(c,choice),binding=target.bindings.find(item=>selectionKey(item.selection)===selectionKey(choice));
+      if(!row||!binding||row.sha256!==binding.sha256||row.bytes!==binding.bytes||row.kind!==binding.kind){
+        throw Error('Restore the exact native atlas source before opening this panel.');
+      }
+    }
+    if(layer(c,value.primary)?.kind!=='raster'||value.overlays.some(item=>layer(c,item.selection)?.kind!=='vector')){
+      throw Error('The atlas raster and original vector overlays must retain their native layer kinds.');
+    }
+    stopGroup(c,'drawControl');stopGroup(c,'pointControl');
+    Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),
+      comparison:null,mode:'single',view:clone(value.view),scale:clone(value.scale),
+      overlays:clone(value.overlays),markers:[],title:value.title,notes:value.notes,
+      previous_review_id:null,point:null,pendingSave:null,frame:null,swipe:50});
+    c.model.exportOptions.review_id='';
+    c.root.querySelector('[data-spatial-input="title"]').value=value.title;
+    c.root.querySelector('[data-spatial-input="notes"]').value=value.notes;
+    renderExports(c);dirty(c);
+  }
   function applyTarget(c,target){
+    if(target.kind==='atlas-panel')return applyAtlasTarget(c,target);
     const matches=c.model.catalog.layers.filter(row=>targetMatches(row,target));
     if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}
     if(!matches.length)throw Error('This retained item has no spatial layers available yet. Complete its native operation or choose an original source.');
