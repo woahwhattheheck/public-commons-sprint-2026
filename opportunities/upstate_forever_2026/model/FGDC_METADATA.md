@@ -182,6 +182,14 @@ broken links and unreadable tables in the authorized original source. Keep the
 plain industrial layout, real data/workflows and the October 13 14:00 UTC cutoff.
 Delegated product receiving must carry this same inspection requirement.
 
+Every attachment counts: open, view, play or use the final delivered HTML, PDF,
+report, slides, spreadsheet, map, image, video, audio, archive or project as its
+recipient would. Captured-but-unseen screenshots and test summaries do not replace
+that use. If producing video or narrated media, use the available high-quality
+generative media and natural voice/TTS tools, then watch and listen to the final
+export for pronunciation, pacing, timing and audio alignment. Continue actual
+implementation and repairs rather than turning this into a separate review process.
+
 ## Standards and execution evidence
 
 The original standards are:
