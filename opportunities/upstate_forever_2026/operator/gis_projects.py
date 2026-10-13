@@ -102,9 +102,10 @@ class GISProjects:
                            ('layer_id', 'title', 'kind', 'units', 'working_files_changed')} |
                           {'counts': detail.get('counts', {}), 'scope': detail.get('scope', detail.get('method')),
                            'comparison': detail.get('comparison'), 'difference': detail.get('difference'),
-                           'metadata_changed': sorted(key for key in old.keys() | new.keys()
-                                                      if old.get(key) != new.get(key))})
+                           'reason': detail.get('reason') or detail.get('physical_comparison'),
+                           'metadata_changed': row.get('metadata_changed', [])})
         return {'id': record['id'], 'state': record['state'], 'title': record['title'],
+                'created_at': record.get('created_at'),
                 'selection': record['selection'], 'layers': layers, 'downloads': downloads}
 
     def catalogue(self, workspace):
