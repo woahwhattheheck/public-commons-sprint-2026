@@ -1,0 +1,37 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ES-20261012-ASTRA-S1-assessment-portfolio-original",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 13,
+  "source_bytes": 5473793,
+  "banks": [
+    {
+      "name": "assessment-portfolio-original",
+      "original_git_blob": "ca686d2e67f39a38f655f130779b15d462717e98",
+      "original_bytes": 6047681,
+      "original_sha256": "c5014728ba1414fe6130f6952b3077fab34d4331e5ebc36db8829e4721b2af39",
+      "gzip_bytes": 506231,
+      "gzip_sha256": "3187ab856491b3d8a0f30ecbd4489639c1f7ad1467cf92b66747a50b3f8543fb",
+      "parts": [
+        {
+          "git_blob": "85a3a8989a29090b9fcee9012bb1032cdb3648c4",
+          "json_bytes": 533563,
+          "json_sha256": "e997a2cf8269bf3ffb783a786be84c32d5c5f593a963912d0dac080cf1ecb530",
+          "index": 0,
+          "offset": 0,
+          "bytes": 400000,
+          "sha256": "24ae28027a6b49ba448a6136aa55b2a0e4df9a6581436ec9b138d24de48f286d"
+        },
+        {
+          "git_blob": "6957d82f2460ccf0122323ec41fe1ec1e99b9883",
+          "json_bytes": 141876,
+          "json_sha256": "655450e239ae9374b57affd0ca05ee98df7496ed621d72fe938783b9e371cfa0",
+          "index": 1,
+          "offset": 400000,
+          "bytes": 106231,
+          "sha256": "ccfc50a284f7030518ca26b9b1f186ff0bd42c3fe5c01a1a6cb65adc07d0a23b"
+        }
+      ]
+    }
+  ]
+}
