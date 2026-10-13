@@ -64,6 +64,14 @@ def pointer(value, selected):
 
 
 class Receiving:
+    schema = SCHEMA
+    phases = PHASES
+    kinds = CASE_KINDS
+    allowed = ALLOWED
+    domain = "case"
+    catalog_key = "case_entities"
+    records = staticmethod(case_records)
+    meaning = "Supplied original case workflow, retained decisions and portable customer continuation; no tenant write or inferred approval."
     def __init__(self, source_input, out):
         self.out = ordinary_directory(out, create=True)
         need(not (self.out.stat().st_mode & 0o077), "Keep the receiving directory private")
@@ -80,7 +88,7 @@ class Receiving:
         self.stage_receipts = []
         self.raw, self.input = json_file(source_input, INPUT_LIMIT)
         value = self.input
-        need(isinstance(value, dict) and value.get("schema") == SCHEMA, "Select the complete receiving input")
+        need(isinstance(value, dict) and value.get("schema") == self.schema, "Select the complete receiving input")
         self.operation_id = identifier(value.get("operation_id"))
         need(len(self.operation_id) <= 80, "Keep the original receiving ID within 80 characters")
         operation_ids, source_keys = set(), set()
@@ -92,7 +100,7 @@ class Receiving:
                 key, operation_id = identifier(step.get("key")), identifier(step.get("operation_id"))
                 need(key not in keys and operation_id not in operation_ids and len(operation_id) <= 100,
                      "Keep action keys distinct per lane and original operation IDs distinct within 100 characters")
-                need(step.get("operation") in ALLOWED and isinstance(step.get("payload"), dict),
+                need(step.get("operation") in self.allowed and isinstance(step.get("payload"), dict),
                      "Select the actual complete case/source action")
                 keys.add(key)
                 operation_ids.add(operation_id)
@@ -122,7 +130,7 @@ class Receiving:
         need(isinstance(wanted, list) and wanted == source_selection,
              "Select every complete current application body before the original case is opened")
         runtime = Path(sys.executable).resolve()
-        selection = {"schema": SCHEMA + "/selection", "operation_id": self.operation_id,
+        selection = {"schema": self.schema + "/selection", "operation_id": self.operation_id,
                      "input_sha256": self.input_sha, "application": source_selection,
                      "runtime": {"path": str(runtime), "version": sys.version, **file_hash(runtime)}}
         self.put("selection.json", encoded(selection))
@@ -196,7 +204,7 @@ class Receiving:
         need(isinstance(step, dict), "Use a complete original action")
         key = identifier(step.get("key"))
         operation = step.get("operation")
-        need(operation in ALLOWED, "Use one advertised case/source operation")
+        need(operation in self.allowed, "Use one advertised case/source operation")
         operation_id = identifier(step.get("operation_id"))
         actor = step.get("actor", self.input["actor"])
         payload = self.resolve(step.get("payload"))
@@ -265,7 +273,7 @@ class Receiving:
         selected = self.out / "phases" / (name + ".json")
         if selected.exists():
             _, receipt = json_file(selected)
-            need(receipt["schema"] == SCHEMA + "/phase" and receipt["phase"] == name and
+            need(receipt["schema"] == self.schema + "/phase" and receipt["phase"] == name and
                  receipt["input_sha256"] == self.input_sha, "Original completed phase changed")
             for artifact in receipt["artifacts"]:
                 self.verify(artifact)
@@ -273,7 +281,7 @@ class Receiving:
             self.stage_receipts.append(receipt)
             return receipt["result"]
         result = callback()
-        receipt = {"schema":SCHEMA + "/phase", "phase":name, "input_sha256":self.input_sha,
+        receipt = {"schema":self.schema + "/phase", "phase":name, "input_sha256":self.input_sha,
                    "result":result, "artifacts":list(self.artifacts.values())}
         self.put("phases/" + name + ".json", encoded(receipt))
         self.stage_receipts.append(receipt)
@@ -306,15 +314,15 @@ class Receiving:
         revision = workspace.project["revision"]
         prefix = label + "/revision-" + str(revision)
         case_entities = {}
-        for kind in CASE_KINDS:
-            records = list(case_records(workspace, kind))
+        for kind in self.kinds:
+            records = list(self.records(workspace, kind))
             case_entities[kind] = records
             self.put(prefix + "/" + kind + ".json", encoded(records))
             for record in records:
                 for fmt in ("ndjson", "csv"):
                     path = self.out / prefix / (record["id"] + "." + fmt)
                     ordinary_directory(path.parent, create=True)
-                    _publish(workspace.iter_export("case." + kind, record["id"], format=fmt), str(path))
+                    _publish(workspace.iter_export(self.domain + "." + kind, record["id"], format=fmt), str(path))
                     self.remember(path)
         events = list(case_pages(workspace, "events", {}))
         self.put(prefix + "/events.json", encoded(events))
@@ -324,7 +332,7 @@ class Receiving:
         self.put(prefix + "/operations.json", encoded(operations))
         need(workspace.project["revision"] == revision, "The owned catalogue changed during capture")
         result = {"workspace_id":workspace.project["id"], "revision":revision,
-                  "case_entities":case_entities, "events":events, "operations":operations}
+                  self.catalog_key:case_entities, "events":events, "operations":operations}
         self.put(prefix + "/catalog.json", encoded(result))
         return result
 
@@ -339,9 +347,9 @@ class Receiving:
             need(workspace.project["id"] == catalog["workspace_id"] and
                  workspace.project["revision"] >= catalog["revision"],
                  "The original frozen catalogue no longer belongs to this workspace")
-            for kind, records in catalog["case_entities"].items():
+            for kind, records in catalog[self.catalog_key].items():
                 for record in records:
-                    need(workspace.dispatch("case." + kind + ".get", {"id":record["id"]}) == record,
+                    need(workspace.dispatch(self.domain + "." + kind + ".get", {"id":record["id"]}) == record,
                          "A frozen original case edition changed during continuation")
             return catalog
         catalog = self.catalog(workspace, label)
@@ -415,9 +423,9 @@ class Receiving:
 
     def compare_entities(self, original, following, *, exact=False):
         need(original["workspace_id"] == following["workspace_id"], "Portable receiving changed the original project ID")
-        for kind in CASE_KINDS:
-            old = {row["id"]:row for row in original["case_entities"][kind]}
-            new = {row["id"]:row for row in following["case_entities"][kind]}
+        for kind in self.kinds:
+            old = {row["id"]:row for row in original[self.catalog_key][kind]}
+            new = {row["id"]:row for row in following[self.catalog_key][kind]}
             need(not (set(old) - set(new)), "Receiving omitted an original case edition")
             need(all(new[key] == value for key,value in old.items()), "Receiving changed original case evidence")
             if exact:
@@ -465,7 +473,7 @@ class Receiving:
         prefix = "rehearsal-comparison/revision-" + str(revision)
         rows, seen, offset, total = [], set(), 0, None
         while True:
-            page = workspace.dispatch("case.rehearsal.compare", {**selected, "offset":offset, "limit":250})
+            page = workspace.dispatch(self.domain + ".rehearsal.compare", {**selected, "offset":offset, "limit":250})
             current = page.get("total")
             need(isinstance(current, int) and not isinstance(current, bool) and current >= 0 and
                  isinstance(page.get("rows"), list) and page.get("offset") == offset and
@@ -476,7 +484,7 @@ class Receiving:
             need(current == total and len(page["rows"]) <= 250 and offset + len(page["rows"]) <= total,
                  "The original rehearsal comparison population changed")
             for row in page["rows"]:
-                key = canonical([row["kind"], row["key"]])
+                key = canonical([row["kind"], row.get("register"), row["key"]])
                 need(key not in seen, "The original comparison repeated an identity")
                 seen.add(key)
                 rows.append(row)
@@ -499,12 +507,12 @@ class Receiving:
         complete = self.out / "COMPLETE.json"
         if complete.exists():
             _, saved = json_file(complete)
-            need(saved.get("schema") == SCHEMA and saved.get("state") == "COMPLETE" and
+            need(saved.get("schema") == self.schema and saved.get("state") == "COMPLETE" and
                  saved.get("operation_id") == self.operation_id and saved.get("input_sha256") == self.input_sha and
                  saved.get("selection") == self.selection and saved.get("lifetimes") ==
                  {"workspaces":"CLOSED","children":"NONE_CREATED"} and
-                 [phase["phase"] for phase in saved["phases"]] == list(PHASES) and
-                 all(phase.get("schema") == SCHEMA + "/phase" and
+                 [phase["phase"] for phase in saved["phases"]] == list(self.phases) and
+                 all(phase.get("schema") == self.schema + "/phase" and
                      phase.get("input_sha256") == self.input_sha for phase in saved["phases"]),
                  "The completed original operation/source selection differs")
             for artifact in saved["artifacts"]:
@@ -521,19 +529,19 @@ class Receiving:
                 catalog = recorded["catalog"] if index != 5 else recorded["after"]
                 need(workspace.project["revision"] >= catalog["revision"],
                      "A received workspace lost its original recorded revision")
-                for kind, records in catalog["case_entities"].items():
+                for kind, records in catalog[self.catalog_key].items():
                     for record in records:
-                        need(workspace.dispatch("case." + kind + ".get", {"id":record["id"]}) == record,
+                        need(workspace.dispatch(self.domain + "." + kind + ".get", {"id":record["id"]}) == record,
                              "A received workspace changed an original immutable case edition")
             need(all(w.project["id"] == source["id"] for w in (recipient, returned)),
                  "An independently received project identity differs")
             self.close_all()
             return saved
-        first = self.out / "phases" / (PHASES[0] + ".json")
+        first = self.out / "phases" / (self.phases[0] + ".json")
         if not first.exists() and not self.action_receipts:
             need(producer.project["revision"] == source["expected_revision"],
                  "Select the current original case revision before its first intake")
-        self.stage(PHASES[0], lambda: {"project":producer.project, "files":self.stage_files(producer)})
+        self.stage(self.phases[0], lambda: {"project":producer.project, "files":self.stage_files(producer)})
         # The originals remain available after completed first-phase adoption.
         if not self.files:
             for item in self.input.get("source_files", []):
@@ -543,10 +551,10 @@ class Receiving:
                  "Supply the reviewed source, projection, plan, rehearsal, response and cutover actions")
             values = [self.action(producer, step, "producer") for step in self.input["steps"]]
             catalog = self.catalog(producer, "producer-after-actions")
-            need(all(catalog["case_entities"][kind] for kind in CASE_KINDS),
+            need(all(catalog[self.catalog_key][kind] for kind in self.kinds),
                  "The whole receiving claim requires an actual edition in every case register")
             return {"actions":values, "catalog":catalog}
-        original_actions = self.stage(PHASES[1], actions)
+        original_actions = self.stage(self.phases[1], actions)
         self.adopt_actions()
         self.verify_action_history(producer, "producer")
         def reports():
@@ -556,12 +564,12 @@ class Receiving:
             names = build_reports(producer, directory, source_revision=revision,
                                   title=self.input.get("title", "Case migration handover"), note=self.input["authorization"])
             return {"revision":revision, "files":[self.remember(directory / name) for name in names]}
-        self.stage(PHASES[2], reports)
-        producer_delivery = self.stage(PHASES[3], lambda:self.delivery(producer, "producer"))
+        self.stage(self.phases[2], reports)
+        producer_delivery = self.stage(self.phases[3], lambda:self.delivery(producer, "producer"))
         archive = self.out / producer_delivery["archive"]["path"]
         def receive():
             return self.receive(archive, self.out / "customer", "customer-receive")
-        self.stage(PHASES[4], receive)
+        self.stage(self.phases[4], receive)
         customer = self.open(self.out / "customer" / "workspace")
         def customer_actions():
             before = self.frozen_catalog(customer, "customer-baseline.json", "customer-before")
@@ -573,7 +581,7 @@ class Receiving:
             self.compare_entities(before, after)
             comparison = self.comparison(customer)
             return {"before":before, "actions":values, "after":after, "comparison":comparison}
-        customer_result = self.stage(PHASES[5], customer_actions)
+        customer_result = self.stage(self.phases[5], customer_actions)
         self.adopt_actions()
         self.verify_action_history(customer, "producer")
         self.verify_action_history(customer, "customer")
@@ -588,12 +596,12 @@ class Receiving:
             finally:
                 self.close(current)
             return {"before":before, "after":before, "receipt":receipt}
-        if not (self.out / "phases" / (PHASES[6] + ".json")).exists():
-            self.stage(PHASES[6], older_receiving)
+        if not (self.out / "phases" / (self.phases[6] + ".json")).exists():
+            self.stage(self.phases[6], older_receiving)
             customer = self.open(self.out / "customer" / "workspace")
         else:
-            self.stage(PHASES[6], older_receiving)
-        customer_delivery = self.stage(PHASES[7], lambda:self.delivery(customer, "customer"))
+            self.stage(self.phases[6], older_receiving)
+        customer_delivery = self.stage(self.phases[7], lambda:self.delivery(customer, "customer"))
         def return_receive():
             receipt = self.receive(self.out / customer_delivery["archive"]["path"],
                                    self.out / "returned", "return-receive")
@@ -606,7 +614,7 @@ class Receiving:
             finally:
                 self.close(returned)
             return {"receipt":receipt, "catalog":catalog}
-        self.stage(PHASES[8], return_receive)
+        self.stage(self.phases[8], return_receive)
         def replays():
             values = []
             for lane,workspace in (("producer",producer),("customer",customer)):
@@ -622,26 +630,26 @@ class Receiving:
                 need(workspace.project == before, "Original request replay changed the actual later project head")
                 self.verify_action_history(workspace, lane)
             return values
-        self.stage(PHASES[9], replays)
+        self.stage(self.phases[9], replays)
         self.close_all()
-        need([phase["phase"] for phase in self.stage_receipts] == list(PHASES), "Keep all ten ordered original phases")
-        report = {"schema":SCHEMA, "state":"COMPLETE", "operation_id":self.operation_id,
+        need([phase["phase"] for phase in self.stage_receipts] == list(self.phases), "Keep all ten ordered original phases")
+        report = {"schema":self.schema, "state":"COMPLETE", "operation_id":self.operation_id,
                   "input_sha256":self.input_sha, "selection":self.selection, "phases":self.stage_receipts,
                   "actions":self.action_receipts, "artifacts":list(self.artifacts.values()),
                   "lifetimes":{"workspaces":"CLOSED","children":"NONE_CREATED"},
-                  "meaning":"Supplied original case workflow, retained decisions and portable customer continuation; no tenant write or inferred approval."}
+                  "meaning":self.meaning}
         self.put("COMPLETE.json", encoded(report))
         return report
 
 
-def main():
+def main(runner_type=Receiving):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="Complete actual source/case/action selection")
     parser.add_argument("--out", required=True, help="Private original operation directory")
     args = parser.parse_args()
     runner = None
     try:
-        runner = Receiving.__new__(Receiving)
+        runner = runner_type.__new__(runner_type)
         runner.owned = []
         runner.lock = None
         runner.__init__(args.input,args.out)

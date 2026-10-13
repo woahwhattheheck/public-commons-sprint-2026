@@ -136,6 +136,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         write_record_file(workspace, kind, path)
         files.append(path.name)
     files.extend(write_case_reports(workspace, directory, source_revision=source_revision))
+    files.extend(write_register_reports(workspace, directory, source_revision=source_revision))
     review_path = directory / "review.html"
     with PublishedText(review_path) as report:
         report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + cell(title) + "</title><style>" + STYLE + "</style></head><body>")
@@ -144,6 +145,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
             report.write("<p class=\"note\">" + cell(note) + "</p>")
         report.write("<p>This handover retains original inputs, reviewed mapping editions, migration-round selections and the current correction queue. Field results concern the supplied evidence. Review the selected population and coverage before interpreting a count.</p>")
         report.write("<h2>Case and document migration</h2><p><a href=\"case-review.html\">Open the complete selected case policy, relationships, rehearsals, review decisions and cutover record</a>. All original projections/results are included as complete NDJSON and CSV.</p>")
+        report.write("<h2>Register migration</h2><p><a href=\"register-review.html\">Open the complete typed registers, relationship checks, exact financial controls and cutover reviews</a>. Full original rows and findings accompany each selected edition.</p>")
         report.write("<h2>Actions and current correction decisions</h2>")
         table_start(report, "Current correction queue at the selected revision", ("Correction", "State", "Owner", "Finding", "Latest review note"))
         count = 0
@@ -371,4 +373,128 @@ def write_case_reports(workspace, directory, *, source_revision):
     files.append(path.name)
     if workspace.project["revision"] != source_revision:
         raise ValueError("Case report changed from its selected original revision")
+    return files
+
+
+REGISTER_KINDS = ("dataset", "plan", "rehearsal", "review", "cutover")
+REGISTER_PAGE_READS = {"dataset": "register.dataset.rows", "plan": "register.plan.items",
+                       "rehearsal": "register.rehearsal.items"}
+
+
+def register_records(workspace, kind):
+    if kind not in REGISTER_KINDS:
+        raise ValueError("Choose a retained register entity kind")
+    yield from case_pages(workspace, "register.list", {"kind": kind})
+
+
+def iter_register_export(workspace, kind, entity_id, *, format="ndjson"):
+    """Stream the exact full selection and every retained register result under the owner mutex."""
+    from migration_store import MigrationError, identifier
+    if kind not in tuple("register." + item for item in REGISTER_KINDS):
+        raise MigrationError("EXPORT_KIND", "Choose an original register entity")
+    if format not in ("ndjson", "csv"):
+        raise MigrationError("EXPORT_FORMAT", "Choose ndjson or csv")
+    identifier(entity_id)
+    bare = kind.split(".", 1)[1]
+    revision = workspace.project["revision"]
+    descriptor = workspace.dispatch(kind + ".get", {"id": entity_id})
+    if descriptor.get("id") != entity_id:
+        raise MigrationError("REGISTER_EXPORT_ID", "The selected original register identity differs")
+
+    def records():
+        yield {"schema": "commons.register-migration-export/v1", "type": "selection",
+               "workspace_id": workspace.project["id"], "workspace_revision": revision,
+               "kind": kind, "entity_id": entity_id, "record": descriptor}
+        if bare in REGISTER_PAGE_READS:
+            for row in case_pages(workspace, REGISTER_PAGE_READS[bare], {"id": entity_id}):
+                yield {"schema": "commons.register-migration-export/v1", "type": "record",
+                       "kind": kind, "entity_id": entity_id, "record": row}
+
+    if format == "csv":
+        output = io.StringIO(newline="")
+        csv.writer(output, lineterminator="\r\n", quoting=csv.QUOTE_ALL).writerow(
+            ("record_type", "entity_id", "record_id", "finding_kind", "register", "status",
+             "key_json", "scope_id", "identity_namespace", "system", "side",
+             "complete_original_record_json"))
+        yield output.getvalue().encode("utf-8")
+    for wrapped in records():
+        if format == "ndjson":
+            yield (canonical(wrapped) + "\n").encode("utf-8")
+        else:
+            row = wrapped["record"]
+            values = (wrapped["type"], entity_id, row.get("id"), row.get("kind", bare),
+                      row.get("register"), row.get("status", row.get("decision", row.get("disposition"))),
+                      canonical(row.get("key")), row.get("scope_id", descriptor.get("scope_id")),
+                      row.get("identity_namespace", descriptor.get("identity_namespace")),
+                      row.get("system"), row.get("side"), canonical(wrapped))
+            output = io.StringIO(newline="")
+            csv.writer(output, lineterminator="\r\n", quoting=csv.QUOTE_ALL).writerow(
+                [_case_csv_text(value) for value in values[:-1]] + [values[-1]])
+            yield output.getvalue().encode("utf-8")
+    if workspace.project["revision"] != revision:
+        raise MigrationError("REGISTER_EXPORT_REVISION", "Workspace changed during the complete original export")
+
+
+def write_register_reports(workspace, directory, *, source_revision):
+    """Capture all register mappings, policies, comparisons and decisions in the original delivery."""
+    from migration_store import identifier
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Register reports require the selected original revision")
+    directory = Path(directory)
+    files, counts = [], {}
+    for kind in REGISTER_KINDS:
+        target = directory / ("register-" + kind + ".ndjson")
+        count = 0
+        with PublishedText(target) as stream:
+            for record in register_records(workspace, kind):
+                stream.write(canonical(record) + "\n")
+                count += 1
+        files.append(target.name)
+        counts[kind] = count
+    target = directory / "register-review.html"
+    with PublishedText(target) as report:
+        report.write("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Register migration review</title><style>" + STYLE + "</style></head><body>")
+        report.write("<header><p class=\"subtle\">Register migration / Complete operating review</p><h1>Register migration and cutover</h1><p>Workspace <code>" + cell(workspace.project["id"]) + "</code> · Selected revision " + str(source_revision) + "</p></header>")
+        report.write("<p>The selected original records, typed mappings, exact identity definitions, source cutoff, independent target observations, relationship rules and unit-separated financial controls travel together. Each full CSV and NDJSON retains its original descriptor and every occurrence or finding. Original source files and the editable database remain in this same delivery.</p>")
+        table_start(report, "Complete retained editions", ("Kind", "Count", "Catalogue"))
+        for kind in REGISTER_KINDS:
+            table_row(report, (kind, counts[kind], "register-" + kind + ".ndjson"))
+        table_end(report)
+        for kind in REGISTER_KINDS:
+            report.write("<h2>" + cell(kind.capitalize() + " editions") + "</h2>")
+            for record in register_records(workspace, kind):
+                entity_id = identifier(record["id"])
+                value = workspace.dispatch("register." + kind + ".get", {"id": entity_id})
+                report.write("<section><h3>" + cell(value.get("title", entity_id)) + "</h3><p><code>" + cell(entity_id) + "</code></p>")
+                if kind == "dataset":
+                    table_start(report, "Original projected register", ("Register", "System / side", "Scope / namespace", "Occurrences", "Interpretation issues"))
+                    table_row(report, (value.get("register"), str(value.get("system")) + " / " + str(value.get("side")),
+                                       str(value.get("scope_id")) + " / " + str(value.get("identity_namespace")),
+                                       value.get("row_count"), value.get("issue_count")))
+                    table_end(report)
+                elif kind in ("plan", "rehearsal", "cutover"):
+                    table_start(report, "Complete finding population", ("Result", "Count"))
+                    for status, count in (value.get("summary") or {}).get("counts", {}).items():
+                        table_row(report, (status, count))
+                    table_end(report)
+                    report.write(json_detail("Counts by finding type and complete selected summary", value.get("summary", {})))
+                if kind == "review":
+                    report.write("<p>Disposition: " + cell(value.get("disposition")) + " · Reason: " + cell(value.get("reason")) + "</p>")
+                if kind == "cutover":
+                    report.write("<p>Decision: " + cell(value.get("decision")) + " · Acceptance owner: " + cell(value.get("acceptance_owner")) + " · Reason: " + cell(value.get("reason")) + "</p>")
+                report.write(json_detail("Complete original edition, source selection and review basis", value))
+                for extension in ("ndjson", "csv"):
+                    output_path = directory / (entity_id + "." + extension)
+                    with PublishedText(output_path) as output:
+                        for chunk in iter_register_export(workspace, "register." + kind, entity_id, format=extension):
+                            output.write(chunk.decode("utf-8"))
+                    files.append(output_path.name)
+                report.write("<p>Full selected record and every retained row: <a href=\"" + cell(entity_id) + ".ndjson\">NDJSON</a> · <a href=\"" + cell(entity_id) + ".csv\">CSV</a>.</p></section>")
+            if not counts[kind]:
+                report.write("<p>No " + cell(kind) + " edition is retained in this selected workspace.</p>")
+        report.write("<h2>Continue this register migration</h2><p>Open the mounted Register migration section and follow <code>application/REGISTER_OPERATOR.md</code>. Preserve the original mappings, plans and rehearsals; record explicit reviewed successors against the actual selected revision. Every receiving operator uses the same complete database and original source files.</p>")
+        report.write("<p><a href=\"review.html\">Complete migration handover</a> · <a href=\"case-review.html\">Case and document review</a></p></body></html>\n")
+    files.append(target.name)
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Register report changed from its selected original revision")
     return files
