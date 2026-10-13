@@ -10,7 +10,7 @@
   "manifest_self_excluded": true,
   "previous_public_source": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "commit": "6c59b1f6685447cc753852f63200a32424ebaf6a"
+    "commit": "30f911bd938c6495de1249387ec9db761ee70e33"
   },
   "operational_boundary": {
     "live_adoption": false,
@@ -22,9 +22,9 @@
   "files": [
     {
       "path": "AGENTS.md",
-      "bytes": 7593,
-      "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
-      "git_blob": "46be323017be913780d0d2850b7658861744508d"
+      "bytes": 7755,
+      "sha256": "3832682a75e03be05dcf538fec086218fbe227edba11dbc869f156e3443c5458",
+      "git_blob": "5ae0003eeb182d30fc07cb8fbb86a3e621a9becb"
     },
     {
       "path": "commons-publication-policy.cjs",
@@ -202,9 +202,9 @@
     },
     {
       "path": "host/connected_first_contact.cjs",
-      "bytes": 367118,
-      "sha256": "3add54f309b4d24a503ff43b78fa535329f184eaf8328125f5874fcd3d317e10",
-      "git_blob": "e21c74de64c59d2748cdb55ba81f7cb0ca1146f0"
+      "bytes": 368083,
+      "sha256": "089e64d3ad089426825d41a016d2be1b6c2a62ef8763a0a344e13be9a62e3336",
+      "git_blob": "721cb88a75738e78d1f353106d7e5a968f402261"
     },
     {
       "path": "host/connected_github_app_resources.cjs",
@@ -304,9 +304,9 @@
     },
     {
       "path": "ORIGINAL_SESSION_JOURNALS.md",
-      "bytes": 6532,
-      "sha256": "610e2e2b3ca99742a67c591f39e598241f1a4eb460a165c10a3c604a40a5fead",
-      "git_blob": "9366e5f8a55ef3b738afa1dcf582a001ee8fc617"
+      "bytes": 8037,
+      "sha256": "ffaf4610122fc255bbfd2c7a98f7449f24a86b38239dcccf5c46b0f30a12aac6",
+      "git_blob": "1b985dd4e09fcebaf574a8a8720bc6cbc505168b"
     },
     {
       "path": "PRIVATE_CONFIGURATION.template.json",
