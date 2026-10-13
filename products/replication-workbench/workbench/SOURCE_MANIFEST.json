@@ -1,0 +1,353 @@
+{
+  "schema": "tjlabs.sling-source-manifest.v1",
+  "edition": "sling-migration-workshare-20261013-4-owner-closure",
+  "component": "revenue/slingdata_replication_workshare_20261012",
+  "originalSlingCommit": "7641892e24a7023c8012069596698970c7b3e041",
+  "files": [
+    {
+      "path": "cli.mjs",
+      "bytes": 10108,
+      "sha256": "cb131a18ea4c557e6449dfa05d3a2dd67eb949ba79fdc7e1c14800f641184028"
+    },
+    {
+      "path": "core/archive.mjs",
+      "bytes": 35011,
+      "sha256": "dd0c8b841c74d4c852315cbac57ba300e36df5640372745c13d99f23371c0659"
+    },
+    {
+      "path": "core/auth.mjs",
+      "bytes": 2348,
+      "sha256": "c8c2b170621c8245d14b951373d87d4358554b4b56847fd8b3029099097e41eb"
+    },
+    {
+      "path": "core/common.mjs",
+      "bytes": 6541,
+      "sha256": "62690403096ca5f1b74713b4db70e1fbfb88771a9998ff7866e000f7bece1c8f"
+    },
+    {
+      "path": "core/objects.mjs",
+      "bytes": 12481,
+      "sha256": "20f1fedfd33a6539a05142b10c89c7a80e575de5028c4f2253cc170ae39d4692"
+    },
+    {
+      "path": "core/REUSE.json",
+      "bytes": 881,
+      "sha256": "f6d98314fab01df1df181efd004075c447708a062519bea9d7d01a7d4c6bc319"
+    },
+    {
+      "path": "core/store.mjs",
+      "bytes": 9943,
+      "sha256": "9f9ace46e501b184dd476d8e15f7443e7d80686e6e4d9e67dc3931335a1ef125"
+    },
+    {
+      "path": "core/uploads.mjs",
+      "bytes": 5682,
+      "sha256": "96f2293f35a6ba41c95bdf85f2b4dd27cff9aa360acf711aeb2aa182e319f8ad"
+    },
+    {
+      "path": "core/workspace.mjs",
+      "bytes": 44887,
+      "sha256": "1520a37cbef31eab75692e90763a14cbe2a5badabdc90500f48873201b3b5ffe"
+    },
+    {
+      "path": "delivery/render_workshare.py",
+      "bytes": 10792,
+      "sha256": "c11ad282ab9d1d7411bbd63efa1ca32f39dd12f81f048c3ba278adea6f8b8a10"
+    },
+    {
+      "path": "delivery/workshare-input.json",
+      "bytes": 6353,
+      "sha256": "20bc1bc0004cfd2d5d58d6107a9ac20afd2d1970c15e987e66f6fd83c0e98825"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1243,
+      "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec"
+    },
+    {
+      "path": "migration/cli.mjs",
+      "bytes": 9478,
+      "sha256": "598e9a351a072a2e602ff7b797edd26baa0177291582fbf3af8030342789b6bf"
+    },
+    {
+      "path": "migration/common.mjs",
+      "bytes": 4732,
+      "sha256": "6e614bdc3ec439c3646ebf85d72dd61db919d6103564b96e8e1f1cb4950bc69a"
+    },
+    {
+      "path": "migration/compare.mjs",
+      "bytes": 24245,
+      "sha256": "a2a64dd331a79ba5c840a598c0a1d0b49494f1466d9e87eb96f677fc62014a10"
+    },
+    {
+      "path": "migration/downstream.mjs",
+      "bytes": 17136,
+      "sha256": "67519c755b0992943d64a7022cf410672e94a717aa1e98435ebb898ddf1c7e0b"
+    },
+    {
+      "path": "migration/index.mjs",
+      "bytes": 437,
+      "sha256": "9dd45681547260e1a0611cf18dffd6f08a051221b4346a0c8bb9f780c6e96051"
+    },
+    {
+      "path": "migration/intake.mjs",
+      "bytes": 12429,
+      "sha256": "4d9c2bcd2444dc49f51125dfcc88ab0010946c05654bf1043984520935d448bc"
+    },
+    {
+      "path": "migration/OPERATING.md",
+      "bytes": 16770,
+      "sha256": "04c8b77e7c9b857dd7929ebc83ec43a84f2e87d6397c64a55ab0ab091ba3bce8"
+    },
+    {
+      "path": "migration/plan.mjs",
+      "bytes": 19478,
+      "sha256": "b5a65b992553b98bc884b2b77ebc415f23ea3096481d99ee26cbf29df2f0bbe7"
+    },
+    {
+      "path": "migration/SOURCE_REFERENCES.json",
+      "bytes": 5069,
+      "sha256": "2b5d837de9e7fe3f69bfba97af58668db3538aeba2840c99217fbd9db34b5bcd"
+    },
+    {
+      "path": "native/consumer.py",
+      "bytes": 2311,
+      "sha256": "bbb25a18a08835519095e5724a2042ae1e905b160b83bbc06f4bac7416c15cc5"
+    },
+    {
+      "path": "native/install.py",
+      "bytes": 11673,
+      "sha256": "ba82a72e1060d0989a932b68e356c1f2a57120b55fcd2a052363045bb607a61a"
+    },
+    {
+      "path": "native/runtime.mjs",
+      "bytes": 12074,
+      "sha256": "68984e990a09c7b56b92c56deef27d7364fda16fc4c5f5a968969b0c6d45c741"
+    },
+    {
+      "path": "native/sqlite_exports.py",
+      "bytes": 4906,
+      "sha256": "d4d4b925117ac1186e0a451f394764f6bcd9d4fec8a2157a0ddfa8cdacd108b7"
+    },
+    {
+      "path": "native/worker.py",
+      "bytes": 21404,
+      "sha256": "80eef792c6fbb2cf35eb5c730bad70b346e3afe57e2a7cca7d487767e19708da"
+    },
+    {
+      "path": "OPERATOR.md",
+      "bytes": 35425,
+      "sha256": "355a53391b97887620ffd563faba306a01d7479abcdad085eab32ae4c248d6d8"
+    },
+    {
+      "path": "package.json",
+      "bytes": 278,
+      "sha256": "c7809938b2314dd1172d22f725d2a5a678d477032e591b04f9b41d527e5614b9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7387,
+      "sha256": "0b0507dc5994cefe838b836ca92927ff740734210c8206cc1c85002cd357db80"
+    },
+    {
+      "path": "receiving/browser.mjs",
+      "bytes": 50374,
+      "sha256": "788998d72380966c2e29848cbc12c3be26ae0ea6b3edc54aa07e8c11d1af26bf"
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "bytes": 59311,
+      "sha256": "113c8b913f4bfecc989fcc365cb489306ba7ca99297af930d179d28f77581e24"
+    },
+    {
+      "path": "reference/baseline-airbyte-catalogue.json",
+      "bytes": 1977,
+      "sha256": "ea29601d66c5935c115efb2475e441307e573cffa16f88278255f8f9239b0bf1"
+    },
+    {
+      "path": "reference/baseline-bindings.json",
+      "bytes": 1199,
+      "sha256": "13884ddf0848fca42f1d61a3af4fda0ecde88d84ef9f807b02010d63b56a2c45"
+    },
+    {
+      "path": "reference/consumer-edits.json",
+      "bytes": 270,
+      "sha256": "f60215d6be4804e926e6697bb39aedaaad736c38e9d93c06c7310df693b3e1a0"
+    },
+    {
+      "path": "reference/consumer-files.json",
+      "bytes": 274,
+      "sha256": "b0f3c8740e64a45ba4b8b056e54012ff8372ded06417fbe8459d1bf47db5ed71"
+    },
+    {
+      "path": "reference/DERIVATION.json",
+      "bytes": 4035,
+      "sha256": "e012bbd1c286eb9bedf2fee31f6d12bee2602e4c13370fb2318dcbca3de4f220"
+    },
+    {
+      "path": "reference/evolved-airbyte-catalogue.json",
+      "bytes": 2108,
+      "sha256": "5eb7bc86098803302c117587682b36af87df5962408ffa6992e46e769034b87d"
+    },
+    {
+      "path": "reference/evolved-bindings.json",
+      "bytes": 1218,
+      "sha256": "347530f4e7a161f01ed8092811838e48a68d0c0ceab0f88c9af0f1a23a37bedd"
+    },
+    {
+      "path": "reference/original/test1.csv",
+      "bytes": 115474,
+      "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977"
+    },
+    {
+      "path": "reference/original/test1.upsert.csv",
+      "bytes": 1289,
+      "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c"
+    },
+    {
+      "path": "server.mjs",
+      "bytes": 11699,
+      "sha256": "0f63b16390610dd759253aa4ac8a98aa95ef23450e75fe3a3fb46d7544461fdb"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/resource/llm_REPLICATION.md",
+      "bytes": 37859,
+      "sha256": "0abaab164b01c6b7f1ef9a576655480f45bbfbf1c83eff1d0532b89975c5e7e9"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_cli.go",
+      "bytes": 21422,
+      "sha256": "4ad7c48cda8f78e573df69648c2f83ea5612df244da8ed1934f7929a570e1dc7"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_conns.go",
+      "bytes": 12703,
+      "sha256": "a0226849f846df42276cf068ede53d4158e4fa30da8f1e3e602314c83f139d20"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_run.go",
+      "bytes": 30204,
+      "sha256": "d25d5bac135a20dd4da13a409e709c2a49f8a144aae41ddcf339feecd810855e"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_validate.go",
+      "bytes": 4233,
+      "sha256": "93fd9fdf930867fe6c8c15974319d66f2c950ffb5f52e6e54a0df32fba866418"
+    },
+    {
+      "path": "upstream/sling/core/env/env.go",
+      "bytes": 14542,
+      "sha256": "3ea36cba030efe4461adf35d4955133a58b64dc7dca914cc1731b32d138e80ef"
+    },
+    {
+      "path": "upstream/sling/core/sling/config.go",
+      "bytes": 73660,
+      "sha256": "74d18f122025b059e7cd7f7da0b59bee65bb82c944a5a02d7c59f21321deeea0"
+    },
+    {
+      "path": "upstream/sling/core/sling/replication.go",
+      "bytes": 71318,
+      "sha256": "e5ef1e81ce2095e97b39ebb7d82ef2c8bff7fabdc1f3fdaadb8e04577fd6dd35"
+    },
+    {
+      "path": "upstream/sling/core/sling/task_func.go",
+      "bytes": 8869,
+      "sha256": "c6876782a44bee9f5950f1e83b3e456a327689aed1158bd5105a06bf3542baf5"
+    },
+    {
+      "path": "upstream/sling/core/sling/types.go",
+      "bytes": 5914,
+      "sha256": "7cb96d3d0ce5f87599067b629b3633ef6c8d3fdf7a74e65637e196438e249917"
+    },
+    {
+      "path": "upstream/sling/core/sling/validate/dto.go",
+      "bytes": 10400,
+      "sha256": "fc5e246a0e389db79866506831aa0c86788e6b316e6f1aa9af59b710237a8d9a"
+    },
+    {
+      "path": "upstream/sling/go.mod",
+      "bytes": 22513,
+      "sha256": "997aadafdfd4d6cf562f5f9b804d97dc4126878947542bcfd8950fb767433c93"
+    },
+    {
+      "path": "upstream/sling/LICENSE",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "path": "upstream/sling/README.md",
+      "bytes": 14339,
+      "sha256": "96b73898402429c4bff37ba5ad91bbe1ab3a2222514ea9bc0e0b6dc32dbcb635"
+    },
+    {
+      "path": "upstream/sling/SOURCE.json",
+      "bytes": 7275,
+      "sha256": "136f76f4459f3c4e9bb96a7a6fde5a02e63b751f76ea2c2480f94e6eee312d5f"
+    },
+    {
+      "path": "upstream/sling/tests/files/test1.csv",
+      "bytes": 115474,
+      "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977"
+    },
+    {
+      "path": "upstream/sling/tests/files/test1.upsert.csv",
+      "bytes": 1289,
+      "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c"
+    },
+    {
+      "path": "vendor/stellar-expert/exact-json.mjs",
+      "bytes": 2861,
+      "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26"
+    },
+    {
+      "path": "vendor/stellar-expert/LICENSE",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8"
+    },
+    {
+      "path": "vendor/stellar-expert/provider.mjs",
+      "bytes": 10426,
+      "sha256": "109bc181030e9b795cb34a1b7c29d636a78c959f9f47c43735ecba60be613cfc"
+    },
+    {
+      "path": "vendor/stellar-expert/schema.mjs",
+      "bytes": 5972,
+      "sha256": "d34b64253374f9d2f3b74975b458758797ae7c9e5acdf5e23c1226c8d6d7dcef"
+    },
+    {
+      "path": "vendor/stellar-expert/SOURCE.json",
+      "bytes": 1760,
+      "sha256": "73ae9bb25ed2096019a78a00999670ebc418401a262b458cf30bf32a72181549"
+    },
+    {
+      "path": "vendor/stellar-expert/store.mjs",
+      "bytes": 9506,
+      "sha256": "fe12c5dbd3fddfe91b82b6898358375a1d90d3984ad921dfb718d85f71addd38"
+    },
+    {
+      "path": "web/app.mjs",
+      "bytes": 43628,
+      "sha256": "0e9afde2bfa3016361da9f1a26d380312c441da55daf3a6b7bdb0c5c37f42fdc"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 3151,
+      "sha256": "33bab166662afbce620846bb39f08b1194cb73a5bf6e72b405c0ec74db35678e"
+    },
+    {
+      "path": "web/sha256.mjs",
+      "bytes": 18439,
+      "sha256": "a6c62003f40d52c7401838cbf2473539fbb8414647d3aeec51159789b93241ff"
+    },
+    {
+      "path": "web/style.css",
+      "bytes": 9600,
+      "sha256": "416d6d74a3c6e95c0a925de1dc34ef275026f8e986b32026c78729d6a5492189"
+    },
+    {
+      "path": "WORKSHARE.md",
+      "bytes": 6652,
+      "sha256": "8c3027ced40bfec3ba8d0257ef6d167e6e81681d20cc9d87163ba83d1aad56a7"
+    }
+  ]
+}

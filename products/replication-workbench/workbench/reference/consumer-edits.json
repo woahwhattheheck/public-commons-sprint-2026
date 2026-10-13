@@ -1,0 +1,9 @@
+[
+  {
+    "path": "report.sql",
+    "find": "\"main\".\"test1\"",
+    "replace": "\"main\".\"test1_parallel\"",
+    "expectedOccurrences": 1,
+    "reason": "Select the independently compared parallel target while retaining the exact source preimage for rollback."
+  }
+]

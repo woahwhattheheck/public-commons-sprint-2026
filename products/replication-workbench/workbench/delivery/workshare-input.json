@@ -1,0 +1,123 @@
+{
+  "schema": "tjlabs.sling-workshare.v1",
+  "edition": "2026-10-13",
+  "title": "Sling migration implementation workshare",
+  "brand": "TokenJunkieLabs",
+  "partner": "SlingData",
+  "proposition": "A customer-owned migration workspace that retains the original configuration, runs the original Sling engine, compares every selected business row, and carries the reviewed cutover into a complete receiving handoff.",
+  "commercial": {
+    "currency": "USD",
+    "fee": 9600,
+    "durationBusinessDays": 15,
+    "deposit": 4800,
+    "acceptancePayment": 4800,
+    "proposalValidThrough": "2026-10-27",
+    "state": "proposed",
+    "clockStart": "The engagement starts when the scope is accepted, the first milestone is paid, and the agreed configuration, source/target access and named reviewer are available.",
+    "acceptanceWindowBusinessDays": 3,
+    "correctionCycles": 1
+  },
+  "scope": {
+    "connections": 1,
+    "selectedTables": 5,
+    "connectorPairs": 1,
+    "consumerCutovers": 1,
+    "downstreamTextFiles": 5,
+    "comparisonRounds": [
+      "baseline",
+      "incremental"
+    ],
+    "maxRowsPerRound": 250000,
+    "maxExportBytesPerRound": 536870912,
+    "connectorSelection": "One agreed source/target database connector pair supported by the selected Sling release; the customer-specific complete typed-export adapter is included in the paid implementation.",
+    "referenceAdapter": "The included runnable reference uses the original CSV sources and distinct SQLite source/parallel databases. Other connector execution adapters are an engagement deliverable.",
+    "excluded": [
+      "Airbyte CDC/history reconstruction or SCD2 emulation",
+      "Undeclared custom transformation rewrites or unsupported connector development",
+      "Production scheduling, ongoing hosting, warehouse consumption and third-party subscription fees",
+      "Destructive replacement of an existing production dataset"
+    ]
+  },
+  "phases": [
+    {
+      "id": "intake",
+      "days": 3,
+      "title": "Configuration and migration contract",
+      "deliverable": "Retain the original configuration and source metadata; select tables, namespaces, keys, cursor and explicit type mappings; agree the parallel destination and acceptance."
+    },
+    {
+      "id": "baseline",
+      "days": 4,
+      "title": "Native baseline and connector adaptation",
+      "deliverable": "Configure the original Sling binary on the customer-owned host, implement the selected typed export adapter, execute the complete baseline and retain all native outputs."
+    },
+    {
+      "id": "incremental",
+      "days": 4,
+      "title": "Change edition and full comparison",
+      "deliverable": "Apply the agreed incremental/source-schema change and compare every selected business cell, duplicate multiplicity, key and type; document every unresolved difference."
+    },
+    {
+      "id": "cutover",
+      "days": 2,
+      "title": "Consumer switch and rollback",
+      "deliverable": "Switch one agreed consumer to the accepted parallel edition, observe its actual results, restore the retained prior selection, then adopt the reviewed final selection."
+    },
+    {
+      "id": "delivery",
+      "days": 2,
+      "title": "Receiving and operating handoff",
+      "deliverable": "Transfer editable source, configuration, native outputs, decisions and full history; reopen the same named packages on a fresh private workspace and complete one consolidated correction cycle."
+    }
+  ],
+  "acceptance": [
+    "The selected original configuration and executable/archive identities are retained with the agreed connector bindings.",
+    "Both baseline and incremental comparisons cover all selected rows and cells, including multiplicity; schema and primary-key checks pass and the original native commands exit successfully.",
+    "The selected plan and comparison identities match the cutover; the actual consumer reads the accepted edition and rollback restores the recorded prior edition.",
+    "The receiving workspace preserves source bytes, native attempts, decisions, complete history and the named handoff bytes; the customer can operate and edit the delivered application."
+  ],
+  "responsibilities": {
+    "tjlabs": "Own implementation, selected connector/export adaptation, original native execution and recovery, full comparison, consumer transition, operating guide and complete receiving package.",
+    "partner": "Provide the chosen connection/configuration, permitted source and parallel target access, an owned execution host, representative change input, the consumer owner and one consolidated review.",
+    "costs": "The proposed fee covers implementation effort. Customer-owned compute, storage, network and database/warehouse consumption remain customer operating costs; no hosted service subscription is included."
+  },
+  "reference": {
+    "engine": "Sling",
+    "version": "1.6.5",
+    "commit": "7641892e24a7023c8012069596698970c7b3e041",
+    "archiveBytes": 121317497,
+    "archiveSha256": "e4e386c7d4429b33a213c146594be0bf6efa38f4732035dd67e307616fcb9c66",
+    "baselineRows": 1000,
+    "incrementalSourceRows": 14,
+    "updates": 12,
+    "inserts": 2,
+    "expectedFinalRows": 1002,
+    "meaning": "Counts describe the complete selected original reference and its derived expectation. Actual run completion is stated only when the accompanying customer result is present."
+  },
+  "sources": [
+    {
+      "id": "migration-need",
+      "url": "https://slingdata.io/articles/migrating-from-airbyte-to-sling/",
+      "retrievedAt": "2026-10-13",
+      "claim": "SlingData publishes a migration path from Airbyte that includes destination review and downstream transition."
+    },
+    {
+      "id": "product",
+      "url": "https://slingdata.io/",
+      "retrievedAt": "2026-10-13",
+      "claim": "Sling provides the native replication engine used by this workshare."
+    },
+    {
+      "id": "installation",
+      "url": "https://docs.slingdata.io/sling-cli/getting-started",
+      "retrievedAt": "2026-10-13",
+      "claim": "Official installation and connection documentation define the native operating entry points."
+    },
+    {
+      "id": "contact",
+      "url": "https://slingdata.io/contact/",
+      "retrievedAt": "2026-10-13",
+      "claim": "The official company contact form accepts a full name, email and inquiry message."
+    }
+  ]
+}
