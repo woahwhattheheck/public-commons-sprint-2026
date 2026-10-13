@@ -284,8 +284,11 @@ def main(argv=None):
         desk = page.locator(".wd")
         expect(desk).to_be_visible()
         expect(navigation).to_have_attribute("aria-current", "page")
-        existing = next((r for r in catalog["selections"] if r["id"] == native["selection_id"]), None)
-        require(existing, "The selected Workspace does not contain the completed native receiving revision.")
+        retained_id = (prepared_delivery or {}).get("overlays", {}).get(
+            "high_quality_waters", {}).get("selection_id") or native["selection_id"]
+        existing = next((r for r in catalog["selections"] if r["id"] == retained_id), None)
+        require(existing, "The selected Workspace does not contain its supplied native receiving revision.")
+        report["receiving_selection_id"] = retained_id
         original_source = existing["source"]
         source = next((r for r in catalog["sources"]
                        if r["source_collection_id"] == original_source["source_collection_id"]
