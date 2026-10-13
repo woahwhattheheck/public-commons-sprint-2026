@@ -1,0 +1,745 @@
+{
+  "schema": "jsonsupport.report-desk-operated-example.v1",
+  "description": "The actual complete desk engine operating authored preparation data from its original public agency profile. Remote conversion is not part of this operation.",
+  "events": [
+    {
+      "request": {
+        "id": "authored-report-operation-1",
+        "expected_revision": 0,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "input": {
+          "config": {
+            "report_name": "Agency source handover — preparation example",
+            "client": "TJL-authored preparation",
+            "source_system": "Original public agency profile",
+            "existing_process": "Not measured; this is an authored working example.",
+            "operator": "Preparation operator",
+            "recipient": "",
+            "route": "api",
+            "cadence": "Not agreed",
+            "requests_per_month": null,
+            "existing_minutes": null,
+            "pilot_minutes": null,
+            "maintenance_minutes": null,
+            "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+            "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+          },
+          "source": {
+            "format": "json",
+            "text": "{\n  \"records\": [\n    {\n      \"agency\": {\n        \"name\": \"SmoothWork\",\n        \"domain\": \"smoothwork.ai\"\n      },\n      \"contact\": \"mailto:hello@smoothwork.ai\",\n      \"reference\": \"00017\",\n      \"source\": \"https://smoothwork.ai/custom-api-integration-services/\",\n      \"checked\": \"2026-10-13\",\n      \"metadata\": {\n        \"kind\": \"public company research\"\n      }\n    }\n  ]\n}",
+            "records_pointer": "/records"
+          },
+          "columns": [
+            {
+              "name": "Agency",
+              "pointer": "/agency/name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Domain",
+              "pointer": "/agency/domain",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Reference",
+              "pointer": "/reference",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Checked",
+              "pointer": "/checked",
+              "type": "date",
+              "required": true
+            },
+            {
+              "name": "Context",
+              "pointer": "/metadata",
+              "type": "json",
+              "required": true
+            }
+          ]
+        }
+      },
+      "result_revision": 1
+    },
+    {
+      "request": {
+        "id": "authored-report-operation-2",
+        "expected_revision": 1,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "handover",
+        "input": {
+          "title": "Original public-profile preparation"
+        }
+      },
+      "result_revision": 2
+    },
+    {
+      "request": {
+        "id": "authored-report-operation-3",
+        "expected_revision": 2,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "input": {
+          "config": {
+            "report_name": "Agency source handover — preparation example",
+            "client": "TJL-authored preparation",
+            "source_system": "Original public agency profile",
+            "existing_process": "Not measured; this is an authored working example.",
+            "operator": "Preparation operator",
+            "recipient": "",
+            "route": "api",
+            "cadence": "Not agreed",
+            "requests_per_month": null,
+            "existing_minutes": null,
+            "pilot_minutes": null,
+            "maintenance_minutes": null,
+            "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+            "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+          },
+          "source": {
+            "format": "json",
+            "text": "{\n  \"records\": [\n    {\n      \"agency\": {\n        \"name\": \"SmoothWork\",\n        \"domain\": \"smoothwork.ai\"\n      },\n      \"contact\": \"mailto:hello@smoothwork.ai\",\n      \"reference\": \"00017\",\n      \"source\": \"https://smoothwork.ai/custom-api-integration-services/\",\n      \"checked\": \"2026-10-13\",\n      \"metadata\": {\n        \"kind\": \"public company research\"\n      }\n    }\n  ]\n}",
+            "records_pointer": "/records"
+          },
+          "columns": [
+            {
+              "name": "Agency",
+              "pointer": "/agency/name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Domain",
+              "pointer": "/agency/domain",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Reference",
+              "pointer": "/reference",
+              "type": "number",
+              "required": true
+            },
+            {
+              "name": "Checked",
+              "pointer": "/checked",
+              "type": "date",
+              "required": true
+            },
+            {
+              "name": "Context",
+              "pointer": "/metadata",
+              "type": "json",
+              "required": true
+            }
+          ]
+        }
+      },
+      "result_revision": 3
+    },
+    {
+      "request": {
+        "id": "authored-report-operation-4",
+        "expected_revision": 3,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "input": {
+          "config": {
+            "report_name": "Agency source handover — preparation example",
+            "client": "TJL-authored preparation",
+            "source_system": "Original public agency profile",
+            "existing_process": "Not measured; this is an authored working example.",
+            "operator": "Preparation operator",
+            "recipient": "",
+            "route": "api",
+            "cadence": "Not agreed",
+            "requests_per_month": null,
+            "existing_minutes": null,
+            "pilot_minutes": null,
+            "maintenance_minutes": null,
+            "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+            "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+          },
+          "source": {
+            "format": "jsonl",
+            "text": "{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00017\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}\n{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00018\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}",
+            "records_pointer": ""
+          },
+          "columns": [
+            {
+              "name": "Agency",
+              "pointer": "/agency/name",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Domain",
+              "pointer": "/agency/domain",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Reference",
+              "pointer": "/reference",
+              "type": "text",
+              "required": true
+            },
+            {
+              "name": "Checked",
+              "pointer": "/checked",
+              "type": "date",
+              "required": true
+            },
+            {
+              "name": "Context",
+              "pointer": "/metadata",
+              "type": "json",
+              "required": true
+            }
+          ]
+        }
+      },
+      "result_revision": 4
+    },
+    {
+      "request": {
+        "id": "authored-report-operation-5",
+        "expected_revision": 4,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "record-run",
+        "input": {
+          "status": "needs-work",
+          "output_name": "local-prepared-records.csv",
+          "output_rows": 2,
+          "minutes": null,
+          "notes": "Actual application preparation only: public research was mapped and exported locally. No remote JSON Support conversion was invoked; obtain an actual returned workbook before accepting that step.",
+          "returned_json": ""
+        }
+      },
+      "result_revision": 5
+    },
+    {
+      "request": {
+        "id": "authored-report-operation-6",
+        "expected_revision": 5,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "handover",
+        "input": {
+          "title": "Two-row JSONL preparation"
+        }
+      },
+      "result_revision": 6
+    }
+  ],
+  "working": {
+    "version": "jsonsupport.report-handover.v1",
+    "revision": 6,
+    "seed": {
+      "edition": "sample",
+      "title": "JSON Support — free agency report desk",
+      "pack_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013",
+      "edition_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:sample-01",
+      "leads": [
+        {
+          "id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+          "pack_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "SmoothWork",
+            "company_domain": "smoothwork.ai",
+            "company_url": "https://smoothwork.ai/",
+            "buyer_key": "company:smoothwork.ai",
+            "person": "Milan, Automation and Airtable consultant",
+            "source_url": "https://smoothwork.ai/custom-api-integration-services/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "SmoothWork explicitly offers API integrations that collect data and build reports, alongside code and no-code workflows, Airtable implementations and ongoing support. Its own n8n guide covers authenticated HTTP requests and JSON responses.",
+            "fit": "Offer a short comparison for one existing API-to-spreadsheet report: post an approved small JSON response to JSON Support, receive the XLSX and compare column expansion, dates, numbers and file handoff with SmoothWork's current implementation. For recurring client delivery, compare the Pro inbound webhook's emailed workbook with the existing n8n or scripted delivery step. Keep data preparation and client-specific business logic in SmoothWork's existing workflow.",
+            "contact_url": "mailto:hello@smoothwork.ai",
+            "contact_instructions": "Published business email hello@smoothwork.ai; +36 30 367 9742. The service page names Milan as its automation and Airtable consultant and lists 1053 Budapest, Ferenciek Square 2.",
+            "geography": "Budapest, Hungary; remote clients across markets",
+            "budget": "",
+            "opening_message": "Your API integration service already covers collecting data and building reports, and your n8n guide walks through authenticated JSON requests. Would a small JSON-to-XLSX comparison be useful for a client workflow where the last step is delivering a spreadsheet? We can compare it with the component you already use.",
+            "source_status": "unconfirmed",
+            "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification.",
+            "tags": [
+              "automation-integration",
+              "spreadsheet-reporting",
+              "role:sample"
+            ],
+            "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete source-qualified potential partner profile; retain current workflow and public business contact. https://smoothwork.ai/custom-api-integration-services/ | https://smoothwork.ai/connect_to_any_apis_in_n8n/"
+          },
+          "sha256": "0d737489b7fffe355bdb25bf0512c85e93ec21f30e063a1bacd71782d46d47e7",
+          "updated_at": "2026-10-13T08:08:00.000Z",
+          "history": []
+        }
+      ],
+      "product_sources": [
+        {
+          "url": "https://www.jsonsupport.com/developers.html",
+          "supports": "Authenticated conversion/reverse endpoints, Pro inbound webhook, published current usage and price."
+        },
+        {
+          "url": "https://www.jsonsupport.com/contact.html",
+          "supports": "Published company business contact supportgdl@jsonsupport.com."
+        },
+        {
+          "url": "https://www.jsonsupport.com/",
+          "supports": "Browser-local conversion, nested records and JSON/JSONL/CSV input."
+        },
+        {
+          "url": "https://www.firstusers.tech/startups/json-support",
+          "supports": "Founder Jonathan Augustin and August30,2026 product introduction seeking early adopters."
+        }
+      ]
+    },
+    "seed_sha256": "6be8d56f5342f737c3facf8fb01caf90b1fe694e7402ea33294cee9ec94fc3ff",
+    "projects": {
+      "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork": {
+        "revision": 3,
+        "config": {
+          "report_name": "Agency source handover — preparation example",
+          "client": "TJL-authored preparation",
+          "source_system": "Original public agency profile",
+          "existing_process": "Not measured; this is an authored working example.",
+          "operator": "Preparation operator",
+          "recipient": "",
+          "route": "api",
+          "cadence": "Not agreed",
+          "requests_per_month": null,
+          "existing_minutes": null,
+          "pilot_minutes": null,
+          "maintenance_minutes": null,
+          "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+          "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+        },
+        "source": {
+          "format": "jsonl",
+          "text": "{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00017\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}\n{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00018\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}",
+          "records_pointer": ""
+        },
+        "columns": [
+          {
+            "name": "Agency",
+            "pointer": "/agency/name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Domain",
+            "pointer": "/agency/domain",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Reference",
+            "pointer": "/reference",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "Checked",
+            "pointer": "/checked",
+            "type": "date",
+            "required": true
+          },
+          {
+            "name": "Context",
+            "pointer": "/metadata",
+            "type": "json",
+            "required": true
+          }
+        ],
+        "runs": [
+          {
+            "id": "authored-report-operation-5",
+            "at": "2026-10-13T14:40:04.000Z",
+            "contract_sha256": "a413d6fab9b65028ade49a0d093b84120973abd31d7b16d710e677e2a5f2e90c",
+            "status": "needs-work",
+            "output_name": "local-prepared-records.csv",
+            "output_rows": 2,
+            "minutes": null,
+            "notes": "Actual application preparation only: public research was mapped and exported locally. No remote JSON Support conversion was invoked; obtain an actual returned workbook before accepting that step.",
+            "returned_json": ""
+          }
+        ],
+        "handovers": [
+          {
+            "id": "authored-report-operation-2",
+            "at": "2026-10-13T14:40:01.000Z",
+            "title": "Original public-profile preparation",
+            "contract_sha256": "542725945a95a492969f5c5695818ddd206c29a30de8b8d2c9e1110c25e327af",
+            "proposal": {
+              "config": {
+                "report_name": "Agency source handover — preparation example",
+                "client": "TJL-authored preparation",
+                "source_system": "Original public agency profile",
+                "existing_process": "Not measured; this is an authored working example.",
+                "operator": "Preparation operator",
+                "recipient": "",
+                "route": "api",
+                "cadence": "Not agreed",
+                "requests_per_month": null,
+                "existing_minutes": null,
+                "pilot_minutes": null,
+                "maintenance_minutes": null,
+                "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+                "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+              },
+              "source": {
+                "format": "json",
+                "text": "{\n  \"records\": [\n    {\n      \"agency\": {\n        \"name\": \"SmoothWork\",\n        \"domain\": \"smoothwork.ai\"\n      },\n      \"contact\": \"mailto:hello@smoothwork.ai\",\n      \"reference\": \"00017\",\n      \"source\": \"https://smoothwork.ai/custom-api-integration-services/\",\n      \"checked\": \"2026-10-13\",\n      \"metadata\": {\n        \"kind\": \"public company research\"\n      }\n    }\n  ]\n}",
+                "records_pointer": "/records"
+              },
+              "columns": [
+                {
+                  "name": "Agency",
+                  "pointer": "/agency/name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Domain",
+                  "pointer": "/agency/domain",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Reference",
+                  "pointer": "/reference",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Checked",
+                  "pointer": "/checked",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "name": "Context",
+                  "pointer": "/metadata",
+                  "type": "json",
+                  "required": true
+                }
+              ]
+            },
+            "rows": [
+              {
+                "Agency": "SmoothWork",
+                "Domain": "smoothwork.ai",
+                "Reference": "00017",
+                "Checked": "2026-10-13",
+                "Context": "{\"kind\":\"public company research\"}"
+              }
+            ]
+          },
+          {
+            "id": "authored-report-operation-6",
+            "at": "2026-10-13T14:40:05.000Z",
+            "title": "Two-row JSONL preparation",
+            "contract_sha256": "a413d6fab9b65028ade49a0d093b84120973abd31d7b16d710e677e2a5f2e90c",
+            "proposal": {
+              "config": {
+                "report_name": "Agency source handover — preparation example",
+                "client": "TJL-authored preparation",
+                "source_system": "Original public agency profile",
+                "existing_process": "Not measured; this is an authored working example.",
+                "operator": "Preparation operator",
+                "recipient": "",
+                "route": "api",
+                "cadence": "Not agreed",
+                "requests_per_month": null,
+                "existing_minutes": null,
+                "pilot_minutes": null,
+                "maintenance_minutes": null,
+                "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+                "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+              },
+              "source": {
+                "format": "jsonl",
+                "text": "{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00017\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}\n{\"agency\":{\"name\":\"SmoothWork\",\"domain\":\"smoothwork.ai\"},\"contact\":\"mailto:hello@smoothwork.ai\",\"reference\":\"00018\",\"source\":\"https://smoothwork.ai/custom-api-integration-services/\",\"checked\":\"2026-10-13\",\"metadata\":{\"kind\":\"public company research\"}}",
+                "records_pointer": ""
+              },
+              "columns": [
+                {
+                  "name": "Agency",
+                  "pointer": "/agency/name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Domain",
+                  "pointer": "/agency/domain",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Reference",
+                  "pointer": "/reference",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Checked",
+                  "pointer": "/checked",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "name": "Context",
+                  "pointer": "/metadata",
+                  "type": "json",
+                  "required": true
+                }
+              ]
+            },
+            "rows": [
+              {
+                "Agency": "SmoothWork",
+                "Domain": "smoothwork.ai",
+                "Reference": "00017",
+                "Checked": "2026-10-13",
+                "Context": "{\"kind\":\"public company research\"}"
+              },
+              {
+                "Agency": "SmoothWork",
+                "Domain": "smoothwork.ai",
+                "Reference": "00018",
+                "Checked": "2026-10-13",
+                "Context": "{\"kind\":\"public company research\"}"
+              }
+            ]
+          }
+        ],
+        "history": [
+          {
+            "revision": 0,
+            "at": "2026-10-13T14:40:00.000Z",
+            "proposal": {
+              "config": {
+                "report_name": "",
+                "client": "",
+                "source_system": "",
+                "existing_process": "",
+                "operator": "",
+                "recipient": "",
+                "route": "browser",
+                "cadence": "",
+                "requests_per_month": null,
+                "existing_minutes": null,
+                "pilot_minutes": null,
+                "maintenance_minutes": null,
+                "data_notes": "",
+                "delivery_notes": ""
+              },
+              "source": {
+                "format": "json",
+                "text": "",
+                "records_pointer": ""
+              },
+              "columns": []
+            }
+          },
+          {
+            "revision": 1,
+            "at": "2026-10-13T14:40:02.000Z",
+            "proposal": {
+              "config": {
+                "report_name": "Agency source handover — preparation example",
+                "client": "TJL-authored preparation",
+                "source_system": "Original public agency profile",
+                "existing_process": "Not measured; this is an authored working example.",
+                "operator": "Preparation operator",
+                "recipient": "",
+                "route": "api",
+                "cadence": "Not agreed",
+                "requests_per_month": null,
+                "existing_minutes": null,
+                "pilot_minutes": null,
+                "maintenance_minutes": null,
+                "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+                "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+              },
+              "source": {
+                "format": "json",
+                "text": "{\n  \"records\": [\n    {\n      \"agency\": {\n        \"name\": \"SmoothWork\",\n        \"domain\": \"smoothwork.ai\"\n      },\n      \"contact\": \"mailto:hello@smoothwork.ai\",\n      \"reference\": \"00017\",\n      \"source\": \"https://smoothwork.ai/custom-api-integration-services/\",\n      \"checked\": \"2026-10-13\",\n      \"metadata\": {\n        \"kind\": \"public company research\"\n      }\n    }\n  ]\n}",
+                "records_pointer": "/records"
+              },
+              "columns": [
+                {
+                  "name": "Agency",
+                  "pointer": "/agency/name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Domain",
+                  "pointer": "/agency/domain",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Reference",
+                  "pointer": "/reference",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Checked",
+                  "pointer": "/checked",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "name": "Context",
+                  "pointer": "/metadata",
+                  "type": "json",
+                  "required": true
+                }
+              ]
+            }
+          },
+          {
+            "revision": 2,
+            "at": "2026-10-13T14:40:03.000Z",
+            "proposal": {
+              "config": {
+                "report_name": "Agency source handover — preparation example",
+                "client": "TJL-authored preparation",
+                "source_system": "Original public agency profile",
+                "existing_process": "Not measured; this is an authored working example.",
+                "operator": "Preparation operator",
+                "recipient": "",
+                "route": "api",
+                "cadence": "Not agreed",
+                "requests_per_month": null,
+                "existing_minutes": null,
+                "pilot_minutes": null,
+                "maintenance_minutes": null,
+                "data_notes": "Only the original published business profile is used. No client data or vendor request was sent.",
+                "delivery_notes": "Prepared request and local CSV; actual remote conversion remains unrecorded."
+              },
+              "source": {
+                "format": "json",
+                "text": "{\n  \"records\": [\n    {\n      \"agency\": {\n        \"name\": \"SmoothWork\",\n        \"domain\": \"smoothwork.ai\"\n      },\n      \"contact\": \"mailto:hello@smoothwork.ai\",\n      \"reference\": \"00017\",\n      \"source\": \"https://smoothwork.ai/custom-api-integration-services/\",\n      \"checked\": \"2026-10-13\",\n      \"metadata\": {\n        \"kind\": \"public company research\"\n      }\n    }\n  ]\n}",
+                "records_pointer": "/records"
+              },
+              "columns": [
+                {
+                  "name": "Agency",
+                  "pointer": "/agency/name",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Domain",
+                  "pointer": "/agency/domain",
+                  "type": "text",
+                  "required": true
+                },
+                {
+                  "name": "Reference",
+                  "pointer": "/reference",
+                  "type": "number",
+                  "required": true
+                },
+                {
+                  "name": "Checked",
+                  "pointer": "/checked",
+                  "type": "date",
+                  "required": true
+                },
+                {
+                  "name": "Context",
+                  "pointer": "/metadata",
+                  "type": "json",
+                  "required": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "events": [
+      {
+        "id": "authored-report-operation-1",
+        "sequence": 1,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "at": "2026-10-13T14:40:00.000Z",
+        "request_sha256": "bd13d1459e4b876801e49455c0c862862e83f1e6b016266a889c216cae0966e4",
+        "project_revision": 1
+      },
+      {
+        "id": "authored-report-operation-2",
+        "sequence": 2,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "handover",
+        "at": "2026-10-13T14:40:01.000Z",
+        "request_sha256": "775080581a84337b3b7dcd1974f49a0015a307885f126060738ff388ee8d71b6",
+        "project_revision": 1
+      },
+      {
+        "id": "authored-report-operation-3",
+        "sequence": 3,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "at": "2026-10-13T14:40:02.000Z",
+        "request_sha256": "d6e0913530fd68e4a7a1cee758dafc4e4f1a83a2d0e72ddeb3ed885469c98e39",
+        "project_revision": 2
+      },
+      {
+        "id": "authored-report-operation-4",
+        "sequence": 4,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "save",
+        "at": "2026-10-13T14:40:03.000Z",
+        "request_sha256": "dc0ce3aa514a832021524f38448b46299ebd3dbc4da4bd724303021bde17793c",
+        "project_revision": 3
+      },
+      {
+        "id": "authored-report-operation-5",
+        "sequence": 5,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "record-run",
+        "at": "2026-10-13T14:40:04.000Z",
+        "request_sha256": "a43915e232047367eea22ec57a5d319cb8f6958d1d03754e587191e30212fd28",
+        "project_revision": 3
+      },
+      {
+        "id": "authored-report-operation-6",
+        "sequence": 6,
+        "lead_id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:smoothwork",
+        "kind": "handover",
+        "at": "2026-10-13T14:40:05.000Z",
+        "request_sha256": "aaa427ff38a3545114316b2db96bdc36b296e7e1a166c0d240f4c1f85fde5f4f",
+        "project_revision": 3
+      }
+    ]
+  },
+  "prepared_request": "{\n  \"data\": [\n    {\n      \"Agency\": \"SmoothWork\",\n      \"Domain\": \"smoothwork.ai\",\n      \"Reference\": \"00017\",\n      \"Checked\": \"2026-10-13\",\n      \"Context\": \"{\\\"kind\\\":\\\"public company research\\\"}\"\n    }\n  ]\n}\n",
+  "preview_csv": "\"Agency\",\"Domain\",\"Reference\",\"Checked\",\"Context\"\r\n\"SmoothWork\",\"smoothwork.ai\",\"00017\",\"2026-10-13\",\"{\"\"kind\"\":\"\"public company research\"\"}\"\r\n",
+  "local_comparison": {
+    "expected_rows": 2,
+    "returned_rows": 2,
+    "changed_rows": 0,
+    "equal": true,
+    "differences": [],
+    "contract_sha256": "a413d6fab9b65028ade49a0d093b84120973abd31d7b16d710e677e2a5f2e90c"
+  },
+  "stale_write_refused": true,
+  "working_reopened_equal": true,
+  "original_request_replayed_equal": true,
+  "handovers": 2
+}

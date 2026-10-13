@@ -1,0 +1,186 @@
+{
+  "schema": "jsonsupport.report-desk-complete-delivery.v1",
+  "case": "C0BTTA66TK3/1791877916.462569",
+  "working_record_sha256": "a999a765c99875f6ac2621fe84947c50d85a0878a4dfb535d2974058312666cc",
+  "companies": 6,
+  "original_editions": 2,
+  "customer_files": 18,
+  "customer_packages": 4,
+  "original_values_preserved": true,
+  "received_equal": true,
+  "apps": {
+    "sample": {
+      "bytes": 205401,
+      "sha256": "024af537b1ac22bfd63a8a8f558186c3f71c79013a97eb2c52807df3a52b915b",
+      "sourceFiles": 9,
+      "seed_sha256": "6be8d56f5342f737c3facf8fb01caf90b1fe694e7402ea33294cee9ec94fc3ff"
+    },
+    "paid": {
+      "bytes": 231890,
+      "sha256": "6fec6e898c802103a2cbdce66e237d1e00822f002651ec8a8a06ea2ff90aed2a",
+      "sourceFiles": 9,
+      "seed_sha256": "6957f227324a1a94436112f7614d3fca8ad6a91b9d70119575cfccce23437efb"
+    }
+  },
+  "package_ids": {
+    "sample": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:sample-report-desk-package-02",
+    "paid": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013:paid-report-desk-package-02"
+  },
+  "archives": {
+    "sample": {
+      "bytes": 387218,
+      "sha256": "43ec53161441091b140298afc040c36a9cd046fc614da6370b7cac01242feb31",
+      "files": [
+        {
+          "name": "instructions/README.txt",
+          "bytes": 751,
+          "sha256": "b805903e64a797fc0928ca541ebab5dd1b6a795702c43615b9103e4ca5d95492"
+        },
+        {
+          "name": "profiles/sample.json",
+          "bytes": 2733,
+          "sha256": "6a7a91f3c2bb50cbd2806f48f77ffc773588dc4d62aeb80fa5aed4c9ee36d2a3"
+        },
+        {
+          "name": "profiles/sample.html",
+          "bytes": 5905,
+          "sha256": "610aa85fb3ffc4799e791185275869572e824d3a243527f0839bd3e1c0232d42"
+        },
+        {
+          "name": "profiles/sample.csv",
+          "bytes": 2283,
+          "sha256": "85f88b0dcbf1885e1893c5c71a7176485cec0257aac3869d5f68da0be6589040"
+        },
+        {
+          "name": "report-desk-README.txt",
+          "bytes": 6152,
+          "sha256": "403116e438e5fc9d3a93c824f26ac04390a25cfb145b2a13dfc836fdfa7e5e03"
+        },
+        {
+          "name": "rebuild.cjs",
+          "bytes": 3197,
+          "sha256": "8247a76ad55d00abb2fa3216e4739e41a73309e056b733921a2f124c01ee0405"
+        },
+        {
+          "name": "conversion-adapter.mjs",
+          "bytes": 21063,
+          "sha256": "7ab848392b49eba564a56b079ce3c95fdf3df875d23f894cd18a722bb98ae33c"
+        },
+        {
+          "name": "CONVERSION-ADAPTER.md",
+          "bytes": 9269,
+          "sha256": "af53a01893d0aa03a2fae84fec551e9c0826b3ecdb890f0c78d566957605250b"
+        },
+        {
+          "name": "conversion-return-contract.json",
+          "bytes": 2086,
+          "sha256": "5ebc37ed8f2ad7b02c0c6581f0f4df0c6a262f755481ba762ed47bbeda9a47ff"
+        },
+        {
+          "name": "report-sample/app.html",
+          "bytes": 205401,
+          "sha256": "024af537b1ac22bfd63a8a8f558186c3f71c79013a97eb2c52807df3a52b915b"
+        },
+        {
+          "name": "report-sample/application-source.json",
+          "bytes": 121976,
+          "sha256": "0bf02e4b7003a851c4adc6fa1d594d0389c636d639a3dc88209466625ae3d70f"
+        },
+        {
+          "name": "report-sample/working.json",
+          "bytes": 4920,
+          "sha256": "f5d4cf46a44425a819c4cdb9c86f91c34b954f2d87fbe1794c638aaadfc1e885"
+        }
+      ]
+    },
+    "paid": {
+      "bytes": 468387,
+      "sha256": "eec137ed7892e5cc74a46fd50f2bef34add50ed79b85955d6cd12bbd9531df7e",
+      "files": [
+        {
+          "name": "instructions/README.txt",
+          "bytes": 751,
+          "sha256": "b805903e64a797fc0928ca541ebab5dd1b6a795702c43615b9103e4ca5d95492"
+        },
+        {
+          "name": "profiles/paid.json",
+          "bytes": 10399,
+          "sha256": "d93fa4698002c4b4bacf8ee0288b312e660fc8e5db17004b4878a63810d2f028"
+        },
+        {
+          "name": "profiles/paid.html",
+          "bytes": 16462,
+          "sha256": "9327ed34e4b7f92cee1e8ae22fd313fda38ecf3b7cc377068d796c7a44b38b1f"
+        },
+        {
+          "name": "profiles/paid.csv",
+          "bytes": 9595,
+          "sha256": "9d7f624f910dcc3ffc93dc78c9b65b67640214dd8224517075fec9720083a4d1"
+        },
+        {
+          "name": "report-desk-README.txt",
+          "bytes": 6152,
+          "sha256": "403116e438e5fc9d3a93c824f26ac04390a25cfb145b2a13dfc836fdfa7e5e03"
+        },
+        {
+          "name": "rebuild.cjs",
+          "bytes": 3197,
+          "sha256": "8247a76ad55d00abb2fa3216e4739e41a73309e056b733921a2f124c01ee0405"
+        },
+        {
+          "name": "conversion-adapter.mjs",
+          "bytes": 21063,
+          "sha256": "7ab848392b49eba564a56b079ce3c95fdf3df875d23f894cd18a722bb98ae33c"
+        },
+        {
+          "name": "CONVERSION-ADAPTER.md",
+          "bytes": 9269,
+          "sha256": "af53a01893d0aa03a2fae84fec551e9c0826b3ecdb890f0c78d566957605250b"
+        },
+        {
+          "name": "conversion-return-contract.json",
+          "bytes": 2086,
+          "sha256": "5ebc37ed8f2ad7b02c0c6581f0f4df0c6a262f755481ba762ed47bbeda9a47ff"
+        },
+        {
+          "name": "report-paid/app.html",
+          "bytes": 231890,
+          "sha256": "6fec6e898c802103a2cbdce66e237d1e00822f002651ec8a8a06ea2ff90aed2a"
+        },
+        {
+          "name": "report-paid/application-source.json",
+          "bytes": 137079,
+          "sha256": "93064f07d4ab39ec71260d8da2c6a15ec4d78494ac1a122b690769acf8daf650"
+        },
+        {
+          "name": "report-paid/working.json",
+          "bytes": 18986,
+          "sha256": "9b1891d8d9469baab890891f21111aad5b348e04e27f4d1304985bb3df41cf89"
+        }
+      ]
+    }
+  },
+  "views": {
+    "combined": {
+      "name": "JSON-Support-report-complete-packages.html",
+      "bytes": 350224,
+      "sha256": "41963144ef6dcba51cdb152fcd825aa4b938168d1ae16d0443ef9083afe62850"
+    },
+    "sample": {
+      "name": "JSON-Support-report-sample-complete-package.html",
+      "bytes": 176990,
+      "sha256": "a2e827fd95d86f7e1fc826167b9975f7a4a086a33d012045faabd0639281cc45"
+    },
+    "paid": {
+      "name": "JSON-Support-report-paid-complete-package.html",
+      "bytes": 193178,
+      "sha256": "5c750947ee7f3f3d90e46cf585497e2809c8264b678bbbf44f7ebac1d0f39fe8"
+    }
+  },
+  "actual_model_operations": {
+    "sample": 6,
+    "paid": 6
+  },
+  "browser_operation": "Complete original course prepared; actual accepting host and producing-peer view are retained in the existing shared receiving operation.",
+  "original_sender": "Existing draft r5981375986039599293 / queue402 is preserved."
+}

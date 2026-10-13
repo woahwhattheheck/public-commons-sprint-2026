@@ -1,0 +1,36 @@
+{
+  "schema": "json-support.conversion-return-contract/v1",
+  "artifact": "operation.json",
+  "produced_by": "conversion-adapter.mjs",
+  "contract_url": "https://www.jsonsupport.com/developers.html",
+  "states": {
+    "preparing": "Owned fresh directory; original/request writes underway",
+    "prepared": "Original and request saved, no attempt recorded",
+    "requesting": "One request is about to be or has been issued; interrupted state requires reconciliation",
+    "succeeded": "Exact output saved and final metadata committed",
+    "failed": "Known error or local preparation failure; inspect actual HTTP/phase",
+    "uncertain": "Provider may have processed; no automatic retry"
+  },
+  "fields": {
+    "schema": "json-support.conversion-return/v1",
+    "operation_id": "unique local UUID",
+    "direction": "to-xlsx|to-json",
+    "created_at": "UTC",
+    "completed_at": "UTC|null",
+    "input": "filename, original_filename, bytes, sha256, media_type, rows_if_known",
+    "request": "fixed endpoint,POST,exact request body metadata,attempts0or1,started_at",
+    "response": "HTTP status,ok,received_at,allowlisted redacted headers|null",
+    "output": "exact filename,bytes,sha256,media_type,structural validation|null",
+    "failure": "code,message,automatic_retry:false,provider_may_have_processed,response_body metadata|null",
+    "local_limits": "timeout_ms,input_bytes,response_bytes"
+  },
+  "desk_receiving": {
+    "required_status": "succeeded",
+    "original_files": "Preserve all original-input/request/output/operation bytes",
+    "output_validation": "Match selected filename/bytes/SHA256 before parsing",
+    "json_input": "Use exact returned envelope.data as existing desk intake; preserve the whole envelope and operation ID",
+    "review": "Existing report identity, header mapping, corrections and accepted revision remain authoritative",
+    "failed_operation": "Keep source/status/failure with report operation history; never promote an error body into data",
+    "credentials": "Environment-only key; never retain headers or a secret in the workspace"
+  }
+}
