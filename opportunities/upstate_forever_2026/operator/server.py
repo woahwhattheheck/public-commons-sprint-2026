@@ -313,7 +313,8 @@ class Operator:
         if action == "run.prepare":
             return ws.prepare_run(value)
         if action == "run.start":
-            return ws.run(required(value, "run_id"))
+            from ecsa_runs.upstate import invoke_original_run
+            return invoke_original_run(self, task, ws, required(value, "run_id"))
         if action == "run.compare":
             return ws.compare_runs(value["run_ids"])
         if action == "observation.import":

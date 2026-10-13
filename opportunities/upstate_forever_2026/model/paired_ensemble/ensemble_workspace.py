@@ -63,12 +63,17 @@ class EnsembleWorkspace:
                 raise ValueError('Duplicate native run pair')
             seen_pairs.add(pair_key)
             profile = self.workspace._get('profiles', profile_id)
+            required_models = {'sdr' if pollutant == 'sediment_export' else 'ndr'
+                               for pollutant in pollutants}
+            missing_models = sorted(required_models - set(profile))
+            if missing_models:
+                raise ValueError('Original profile lacks selected model parameters: ' + ', '.join(missing_models))
             profile_refs.append({'profile_id': profile_id, 'title': profile.get('title'),
                                  'references': profile.get('references'),
                                  'table_summary': profile.get('table_summary'),
                                  'source_collection_id': profile.get('source_collection_id'),
                                  'biophysical_source_id': profile.get('biophysical_source_id'),
-                                 'ndr': profile['ndr'], 'sdr': profile['sdr'],
+                                 **{name: profile[name] for name in ('ndr', 'sdr') if name in profile},
                                  'scientific_status': profile.get('scientific_status', 'unspecified in original profile')})
             member = {'id': pair_key, 'profile_id': profile_id,
                       'baseline_run_id': before['id'], 'alternative_run_id': after['id'],

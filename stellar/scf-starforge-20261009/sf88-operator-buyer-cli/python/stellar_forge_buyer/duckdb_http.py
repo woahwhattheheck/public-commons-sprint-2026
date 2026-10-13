@@ -409,7 +409,7 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
             if self.command in {"GET", "HEAD"}:
                 selected = timescale_intake_http.asset(url.path) or reconciliation_http.asset(url.path)
                 if selected is not None and (not url.query or url.path in {
-                        "/reconciliation", "/reconciliation/", "/timescale-intake", "/timescale-intake/"}):
+                        "/reconciliation", "/reconciliation/", "/reconciliation/carry-forward", "/carry-forward", "/timescale-intake", "/timescale-intake/"}):
                     payload, mime = selected
                     return self._reply(200, payload, mime)
             capabilities = self.headers.get_all("X-DuckDB-Capability", [])

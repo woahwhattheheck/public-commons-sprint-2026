@@ -2,6 +2,14 @@
 
 These commands prepare the original public inputs for the same `model.workspace.Workspace` used by the operator. Run them from the product root with the equipped GIS interpreter. They retain original response bytes, request URLs, response metadata and SHA256s; completed exact responses are reused after interruption.
 
+## Streamed downloads and original-object reuse
+
+Use [Streamed original-source capacity](STORAGE_RESOURCES.md) when continuing a large retained source on a shared Linux worker. The receiver distinguishes disk-backed streams from memory-backed appends, accounts for the effective cgroup memory limit and clean reclaimable file cache, and records the next range's actual storage and buffer requirements.
+
+The original NLCD continuation is `source_tools/continue_original_capture.py`. Select the existing operation root and its retained application with `--root` and `--application`; the original capture engine, archive identity and range validators remain pinned. The guide includes the receiving command and one focused local check.
+
+Repeated Workspace intake now verifies an existing content-addressed original before allocating a temporary copy. New objects are flushed and published exclusively, so concurrent intake reuses the same verified content without replacing a completed object.
+
 ## Retain and prepare the selected rasters
 
 The DEM command uses the selected original 30 m land-cover grid and the actual complete upstream model-domain geometry. It requests disjoint Float32 elevation tiles through the USGS 3DEP ImageServer's documented unrendered data path, then assembles their exact pixels. The explicit context buffer must match the later Workspace grid selection.

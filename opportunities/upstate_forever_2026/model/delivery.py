@@ -9,11 +9,13 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import cartography, portable, rasters
+from . import cartography, map_atlas, portable, rasters
+from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
+DELIVERY_FORMAT_VERSION = "native-grid-metadata-2"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -193,6 +195,10 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
 
 def build(workspace, selection):
     selection = dict(selection)
+    map_atlas.settings(selection.get("map_settings"))
+    report_link = bind_report(workspace, selection)
+    if report_link is not None:
+        selection["source_report_sha256"] = report_link["report_sha256"]
     review_ids = selection.get("spatial_review_ids", [])
     export_ids = selection.get("spatial_export_ids", [])
     if not isinstance(review_ids, list) or not isinstance(export_ids, list):
@@ -245,7 +251,9 @@ def build(workspace, selection):
     cells = _grid_measurements(grid)
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
     key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
-                  "map_renderer": cartography.MAP_RENDERER_VERSION})
+                  "map_renderer": cartography.MAP_RENDERER_VERSION,
+                  "delivery_format": DELIVERY_FORMAT_VERSION,
+                  "map_atlas": map_atlas.ATLAS_VERSION})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"
@@ -262,6 +270,9 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            if report_link is not None:
+                retain_report(workspace, directory, state, report_link)
+                atomic_json(state_path, state)
             for review in reviews:
                 name = "spatial_review_" + review["id"]
                 if name not in state["files"]:
@@ -431,10 +442,8 @@ def build(workspace, selection):
                     future_maps.setdefault(family, []).append(map_key)
             footer = ("Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
+            atlas_pages = []
             for map_key, (panels, selected_overlays) in all_specs.items():
-                if map_key in state["maps"]:
-                    verify_file(directory, state["maps"][map_key])
-                    continue
                 family = next((f for f in MAP_IDS if map_key == f or map_key.startswith(f + "-")), map_key)
                 subtitle = "Current selected source editions and biophysical profile."
                 if map_key.startswith(("future_sediment_loss-", "future_nutrient_runoff-")):
@@ -450,12 +459,12 @@ def build(workspace, selection):
                         subtitle = "Upstream-connected source HUC12s inside the reporting area; original whole-basin priority scale."
                 elif selected_overlays:
                     subtitle = " · ".join(o["label"] for o in selected_overlays)
-                target = directory / "maps" / (map_key + ".pdf")
-                cartography.map_pdf(target, cartography.TITLES[family], panels,
-                    overlays=selected_overlays, boundary=boundary, crs=crs, subtitle=subtitle,
-                    footer=footer, dpi=settings.get("dpi", 220))
-                state["maps"][map_key] = describe_file(directory, target)
-                atomic_json(state_path, state)
+                atlas_pages.append({"key": map_key, "family": family,
+                    "title": cartography.TITLES[family], "panels": panels,
+                    "overlays": selected_overlays, "subtitle": subtitle})
+            map_atlas.write(directory, atlas_pages, workspace=workspace, selection=selection,
+                grid=grid, boundary=boundary, crs=crs, footer=footer,
+                state=state, state_path=state_path)
             maps = {family: state["maps"][family]["path"] for family in all_specs if family in MAP_IDS}
             for family, map_keys in future_maps.items():
                 # The first explicit scenario is the principal family map; every additional scenario remains an extra map.
@@ -573,7 +582,10 @@ def build(workspace, selection):
                 manifest["rasters"][name] = {"path": state["files"][name]["path"],
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
             manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
-                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_")))
+                                             if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_",
+                                                                 "map_atlas", "source_report_")))
+            if report_link is not None:
+                manifest["source_report"] = report_link
             audit_manifest = directory / "delivery.json"
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
@@ -583,13 +595,26 @@ def build(workspace, selection):
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             package_root = directory / "package"
-            if package_root.exists() and (package_root / "package.json").is_file():
-                module.verify(package_root)
-                package = read_json(package_root / "package.json")
-            else:
-                if package_root.exists():
-                    # Original failed capture stays intact for receiving diagnosis.
-                    package_root = directory / ("package-" + now().replace(":", "").replace("+", "_"))
+            package = None
+            current_manifest = describe_file(directory, audit_manifest)
+            suffix = 0
+            while package_root.exists():
+                if (package_root / "package.json").is_file():
+                    previous_package = read_json(package_root / "package.json")
+                    captured_manifest = next(item for item in previous_package["artifacts"]
+                                             if item["path"] == previous_package["manifestPath"])
+                    if (previous_package.get("auditStatus") == "TECHNICAL_PRECHECK_PASS"
+                            and not previous_package.get("missing")
+                            and all(captured_manifest[name] == current_manifest[name]
+                                    for name in ("bytes", "sha256"))):
+                        module.verify(package_root)
+                        package = previous_package
+                        break
+                # Keep prior captures and reuse a matching current-manifest sibling.
+                suffix += 1
+                label = "package-" + current_manifest["sha256"]
+                package_root = directory / (label if suffix == 1 else label + "-" + str(suffix))
+            if package is None:
                 code = module.pack(audit_manifest, package_root)
                 if code:
                     raise ValueError("Original delivery audit requires correction; inspect " + str(package_root / "audit.json"))

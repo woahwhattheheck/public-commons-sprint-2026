@@ -140,6 +140,7 @@ export function attachScenarioReports(context) {
       [...rows].sort((a,b)=>text(b.created_at).localeCompare(text(a.created_at))).map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.id))+'</small></td><td>'+number(row.zones)+' zones · '+number(row.runs)+' runs</td><td>'+esc((row.pollutants||[]).map(x=>labels[x]||x).join(', '))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+button('open','Open','data-report-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>';
   };
   async function refresh() {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
     const key=currentWorkspace();if(!key){message('Open a scientific project to view watershed reports.');return;}
     if(workspaceKey!==key){remember();workspaceKey=key;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;completed=new Set();lastTaskSignature='';sourceGeneration++;pendingDraft=readRemembered();lastSubmission=pendingDraft?.lastSubmission||null;scaffold();}
@@ -320,21 +321,27 @@ export function attachScenarioReports(context) {
       message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
       return;
     }
-    await openExtension('map-atlas','create',{selection:release.selection});
+    await openExtension('map-atlas','create',{workspace_key:key,selection:release.selection});
   }
   async function openLinkedRelease(id) {
     assertWorkspace();
     if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this release.');
-    return openExtension('map-atlas','open',id);
+    return openExtension('map-atlas','open',id,{workspace_key:workspaceKey});
   }
-  async function open(id) {
+  async function open(id,options={}) {
     if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an existing saved watershed report.');
-    const key=currentWorkspace();
+    const key=options?.workspace_key||currentWorkspace();
+    if(key!==currentWorkspace())throw Error('Open this saved report in its original project.');
     if(!key)throw Error('Open the project containing this watershed report.');
     const requested={workspace:key,report_id:id};
     if((disposed||!root)&&typeof navigate!=='function')throw Error('Open Watershed reports, then select this saved report.');
     pendingOpen=requested;
-    if(typeof navigate==='function')await navigate('scenario-reports');
+    try {
+      if(typeof navigate==='function')await navigate('scenario-reports');
+    } catch(error) {
+      if(pendingOpen===requested)pendingOpen=null;
+      throw error;
+    }
     if(currentWorkspace()!==key){
       if(pendingOpen===requested)pendingOpen=null;
       throw Error('The selected project changed. Open the report in its original project.');
@@ -366,6 +373,7 @@ export function attachScenarioReports(context) {
     } catch(error){if(!disposed&&key===currentWorkspace()&&selectedReport===id)message(error.message,true);}
   }
   function observe(state=getState()) {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
     if(state?.workspace_key!==workspaceKey){refresh();return;}
     const tasks=(state.tasks||[]).filter(task=>task.action==='scenario.decision.build'&&task.workspace===workspaceKey);
@@ -382,11 +390,13 @@ export function attachScenarioReports(context) {
     if(changed&&catalog)refresh();
   }
   function detach() {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     remember();disposed=true;requestGeneration++;sourceGeneration++;events?.abort();events=null;
     if(root){root.classList.remove('scenario-report-workbench');root.replaceChildren();}
     root=null;workspaceKey=null;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;lastTaskSignature='';
   }
   function mount(element) {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(root===element&&!disposed&&workspaceKey===currentWorkspace()){observe();return {detach,update:observe,refresh,open};}
     detach();root=element;disposed=false;events=new AbortController();scaffold();
     root.addEventListener('click',event=>{
