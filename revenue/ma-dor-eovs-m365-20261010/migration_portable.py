@@ -39,48 +39,58 @@ FINANCIAL_APPLICATION_FILES = GRANT_APPLICATION_FILES + (
     "financial_domain.py", "financial_workspace.py", "financial_receiving.py", "FINANCIAL_REPORTING.md",
     "public/financial.html", "public/financial.js", "public/financial.css",
 )
-APPLICATION_PROFILE = "commons.migration-workbench-application/v3"
-APPLICATION_FILES = FINANCIAL_APPLICATION_FILES + (
+PROPERTY_APPLICATION_PROFILE = "commons.migration-workbench-application/v3"
+PROPERTY_APPLICATION_FILES = FINANCIAL_APPLICATION_FILES + (
     "property_domain.py", "property_workspace.py", "property_receiving.py", "PROPERTY_CONTINUITY.md",
     "public/property.html", "public/property.js", "public/property.css", "property_reference_example.py",
+)
+REGISTER_APPLICATION_PROFILE = "commons.migration-workbench-application/v4"
+REGISTER_APPLICATION_FILES = PROPERTY_APPLICATION_FILES + (
+    "migration_registers.py", "public/migration-registers.js", "REGISTER_MIGRATION.md",
+    "REGISTER_OPERATOR.md", "register_receiving.py", "REGISTER_RECEIVING.md",
+    "register_reference_example.py", "register_browser_receiving.py", "register_browser_receiving.mjs",
+)
+APPLICATION_PROFILE = "commons.migration-workbench-application/v5"
+APPLICATION_FILES = REGISTER_APPLICATION_FILES + (
+    "crf_domain.py", "crf_workspace.py", "crf_workbook.py", "crf_receiving.py", "CRF_REPORTING.md",
+    "public/crf.html", "public/crf.js", "public/crf.css",
+)
+APPLICATION_EDITIONS = (
+    (None, LEGACY_APPLICATION_FILES),
+    (CASE_APPLICATION_PROFILE, CASE_APPLICATION_FILES),
+    (GRANT_APPLICATION_PROFILE, GRANT_APPLICATION_FILES),
+    (FINANCIAL_APPLICATION_PROFILE, FINANCIAL_APPLICATION_FILES),
+    (PROPERTY_APPLICATION_PROFILE, PROPERTY_APPLICATION_FILES),
+    (REGISTER_APPLICATION_PROFILE, REGISTER_APPLICATION_FILES),
+    (APPLICATION_PROFILE, APPLICATION_FILES),
 )
 BLOCK = 1024 * 1024
 
 
+def application_roster(profile):
+    for selected, roster in APPLICATION_EDITIONS:
+        if profile == selected:
+            return roster
+    raise ValueError("Unsupported application source profile")
+
+
 def application_selection(entries, *, profile=None):
-    """Keep old complete deliveries executable without rewriting their source edition."""
+    """Accept only one complete original source edition, preserving historical profiles."""
     names = [entry.get("path") for entry in entries]
     if len(names) != len(set(names)):
         raise ValueError("Frozen application inventory repeats a path")
-    actual = set(names)
-    legacy = {"application/" + name for name in LEGACY_APPLICATION_FILES}
-    current = {"application/" + name for name in APPLICATION_FILES}
-    cases = {"application/" + name for name in CASE_APPLICATION_FILES}
-    grants = {"application/" + name for name in GRANT_APPLICATION_FILES}
-    financial = {"application/" + name for name in FINANCIAL_APPLICATION_FILES}
-    if profile == FINANCIAL_APPLICATION_PROFILE and actual == financial:
-        return FINANCIAL_APPLICATION_PROFILE
-    if profile == APPLICATION_PROFILE and actual == current:
-        return APPLICATION_PROFILE
-    if profile == GRANT_APPLICATION_PROFILE and actual == grants:
-        return GRANT_APPLICATION_PROFILE
-    if profile == CASE_APPLICATION_PROFILE and actual == cases:
-        return CASE_APPLICATION_PROFILE
-    if profile is None and actual == legacy:
-        return None
-    raise ValueError("Frozen application inventory/profile is not one complete supported edition")
+    if set(names) != {"application/" + name for name in application_roster(profile)}:
+        raise ValueError("Frozen application inventory/profile is not one complete supported edition")
+    return profile
 
 
 def captured_application_selection(entries):
-    # A prepare started before this extension keeps its original complete roster.
-    # New prepares always freeze APPLICATION_FILES before their reservation.
+    # A preparation already in progress keeps its complete original application edition.
     names = {entry.get("path") for entry in entries}
-    profile = (APPLICATION_PROFILE if names == {"application/" + name for name in APPLICATION_FILES} else
-               FINANCIAL_APPLICATION_PROFILE if names == {"application/" + name for name in FINANCIAL_APPLICATION_FILES} else
-               GRANT_APPLICATION_PROFILE if names == {"application/" + name for name in GRANT_APPLICATION_FILES} else
-               CASE_APPLICATION_PROFILE if names == {"application/" + name for name in CASE_APPLICATION_FILES} else None)
-    return application_selection(entries, profile=profile)
-
+    for profile, roster in APPLICATION_EDITIONS:
+        if names == {"application/" + name for name in roster}:
+            return application_selection(entries, profile=profile)
+    raise ValueError("Frozen capture is not one complete supported application edition")
 
 
 def digest(path):
@@ -219,12 +229,7 @@ def _manifest_from_archive(archive):
     if not isinstance(entries, list) or not entries:
         raise ValueError("Delivery contains no complete file inventory")
     profile = value.get("application_profile")
-    roster = (APPLICATION_FILES if profile == APPLICATION_PROFILE else
-              FINANCIAL_APPLICATION_FILES if profile == FINANCIAL_APPLICATION_PROFILE else
-              GRANT_APPLICATION_FILES if profile == GRANT_APPLICATION_PROFILE else
-              CASE_APPLICATION_FILES if profile == CASE_APPLICATION_PROFILE else LEGACY_APPLICATION_FILES)
-    if profile not in (None, CASE_APPLICATION_PROFILE, GRANT_APPLICATION_PROFILE, FINANCIAL_APPLICATION_PROFILE, APPLICATION_PROFILE):
-        raise ValueError("Unsupported application source profile")
+    roster = application_roster(profile)
     expected = {"delivery.json"}
     for entry in entries:
         if not isinstance(entry, dict):

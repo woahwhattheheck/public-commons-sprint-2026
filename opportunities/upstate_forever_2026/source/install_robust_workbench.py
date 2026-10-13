@@ -21,6 +21,7 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/report_changes_review.py",
     "model/report_review_study_receiving.py",
     "model/study_receiving.py",
     "operator/study_receiving.py",
@@ -185,6 +186,7 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/report_changes_review.py",
     "model/report_review_study_receiving.py",
     "model/study_receiving.py",
     "operator/study_receiving.py",
@@ -710,6 +712,10 @@ def verify_composition(application, pending):
                            "model/reviews.py", "model/scientific_report_editions.py",
                            "model/scientific_report_review.py"):
             assembled_data(application, pending, dependency)
+        if b"report_changes_review" in review_receiver:
+            for dependency in ("model/report_changes_review.py", "model/report_changes.py",
+                               "model/report_changes_study_transfer.py"):
+                assembled_data(application, pending, dependency)
         if b"def continue_selected_review(" in review_receiver:
             if transfer is None or b"customer_review_study_transfer" not in transfer:
                 raise ValueError("Receive the original Customer review Study transfer before its selected receiver")
@@ -746,6 +752,18 @@ def verify_composition(application, pending):
             if (b"workspace/conservation-design/editor/projects.sqlite" not in databases
                     or b"frozen_databases" not in portable):
                 raise ValueError("Receive original frozen editor-database support before selected editor receiving")
+    comparison_consumers = []
+    for name in ("model/customer_review_study_transfer.py", "operator/report_changes.py"):
+        data = pending.get(name)
+        if data is None:
+            data = read_existing(application, name)
+        if data is not None:
+            comparison_consumers.append(data)
+    if any(b"report_changes_review" in data for data in comparison_consumers):
+        for dependency in ("model/report_changes_review.py", "model/report_changes.py",
+                           "model/scientific_report_review.py", "model/reviews.py",
+                           "model/workspace.py"):
+            assembled_data(application, pending, dependency)
     if transfer is not None and b"report_changes_study_transfer" in transfer:
         for dependency in (
                 "model/report_changes_study_transfer.py", "model/report_changes.py",

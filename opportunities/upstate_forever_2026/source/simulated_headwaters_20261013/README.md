@@ -61,6 +61,8 @@ Both selected-Study and whole-project continuation use `portable.resume_restore`
 
 At the actual receiving boundary, open and LOOK at the populated desktop and 390-pixel product, the saved maps, every outgoing PDF/HTML/CSV and archive attachment. Operate important controls, downloads, save/reopen and the editable handover; retain the actual images and original generated files beside the same operation. A recovered completion record establishes receiving identity, while those original product operations establish the usable handover required by the owner.
 
+A saved scientific report keeps its captured `source_operation_id` even after the same ensemble prepares another source edition. Cold receiving verifies that selected immutable operation, original report signatures, native inputs and all retained files. It separately verifies the archived latest-source pointer and its own operation, imported collection, recipe and companions; a newer source that is still awaiting rendering remains a separate retained edition. Receiving never rewrites the pointer to make an older selection appear current. Its source result reports both `source_operation_id` and `latest_source_operation_id`, plus `selected_source_is_latest`, so the exact selected report and later editable context are explicit.
+
 The receiver starts a fresh isolated interpreter from the restored application and opens its selected completed runs, delivery, both source-bound map reviews, field closeout, original parameter-study selection and customer review. Its source files, reports, native rasters, implementation history and ensemble products travel in the maintained whole-project package. Keep the complete original customer package directory, recorded in `demo-receiving.json` under `customer_review_packages.directory`, beside that project archive. The restored application receives both original review packages into an independent output directory, retaining the six teaching identities and the current native Worklist. [SIMULATED_CUSTOMER_REVIEW.md](../../docs/SIMULATED_CUSTOMER_REVIEW.md) describes the three phases and exact receive command.
 
 The owner-directed build interval ends **13 October 2026 at 14:00 UTC / 10:00 Eastern**. The executing owner preserves completed work and the current saved stage at that cutoff.
@@ -87,3 +89,12 @@ The native source writer emits compressed GeoTIFFs, GeoPackages, the complete bi
 
 - [InVEST 3.20 NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
 - [InVEST 3.20 SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html)
+
+
+## Reopen the original QC comparison after continuing the received plan
+
+The full-project receiving continuation preserves legitimate edits made to the received field plan. The saved original QC comparison still identifies the same before/after review reports, original selection, source collection, comparison result and complete journals. Its `current_revision` field describes the currently open plan; it is not the revision of either frozen review.
+
+Both immediate and isolated cold receiving compare every original QC comparison field except that live `current_revision`. They continue to run the maintained comparison inspector, verify all original retained descriptors and the exact scientific source binding, and retain the receiver’s actual current revision in the returned inspection. A later saved plan note therefore remains usable on retry without changing or re-rendering either original QC review. Changes to the original comparison, source, browser selection or immutable review records still fail their existing checks.
+
+Use the same completed demonstration and original archive/destination for this continuation. In the existing recipient browser course, save the intended plan edit, reopen the original QC comparison and its before/after review downloads, then continue the same archive receiving command. View the actual desktop and390px output and verify that the edit remains present alongside the original scientific comparison. Keep the complete current `CURRENT_OWNER_DIRECTION.md` brief and the original modeled-versus-measured labels with that handover.

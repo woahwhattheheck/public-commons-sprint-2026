@@ -34,11 +34,19 @@ export function sourceRejections(w,id){
 /** Install only compatibility reads; parsing, reviews, eligibility and old receive stay native. */
 export function installLargeFileReads(Type){
  if(Type.prototype.largeFileReadVersion)return;
- const originalSource=Type.prototype.source,originalPortable=Type.prototype.portable;
+ const originalSource=Type.prototype.source,originalPortable=Type.prototype.portable,originalDocument=Type.prototype.portableDocument;
  Type.prototype.source=function(id){const value=originalSource.call(this,id);if(this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_chunks'").get()&&this.db.prepare('SELECT 1 FROM source_chunks WHERE import_id=? LIMIT 1').get(id)){
    value.content=Buffer.concat([...sourceChunks(this,value)]).toString('utf8');value.rejected=JSON.stringify(sourceRejections(this,id));}return value;};
- Type.prototype.portable=function(){const value=originalPortable.call(this);for(const source of value.tables.imports){const hydrated=this.source(source.id);source.content=hydrated.content;source.rejected=hydrated.rejected;}return value;};
- Object.defineProperty(Type.prototype,'largeFileReadVersion',{value:1});
+ const hydrate=function(value){for(const source of value.tables.imports){const hydrated=this.source(source.id);source.content=hydrated.content;source.rejected=hydrated.rejected;}return value;};
+ if(typeof originalDocument==='function'){
+  // Both portable() and fullSnapshot() call this inside the original read transaction.
+  // Preserve every original source and rejection in the same reviewed revision.
+  Type.prototype.portableDocument=function(){return hydrate.call(this,originalDocument.call(this));};
+ }else{
+  // Retain the standalone pre-snapshot engine's original whole-document interface.
+  Type.prototype.portable=function(){return hydrate.call(this,originalPortable.call(this));};
+ }
+ Object.defineProperty(Type.prototype,'largeFileReadVersion',{value:2});
 }
 export function beginIntake(w,input){
  if(!['wqp','stations','portable'].includes(input.kind))throw new InputError('Large file kind must be wqp, stations or portable');

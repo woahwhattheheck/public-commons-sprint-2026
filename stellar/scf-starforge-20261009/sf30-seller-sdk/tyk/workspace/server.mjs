@@ -61,7 +61,7 @@ export async function startTykWorkspaceServer({
   const declared=JSON.parse(await readFile(new URL('./browser-assets.json',import.meta.url),'utf8'));
   need(declared.schema==='stellar-forge.browser-assets.v1' && declared.root==='./' &&
     Array.isArray(declared.routes),'TYK_BROWSER_ASSETS_INVALID');
-  const allowed=new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/style.css','style.css'],['/actions.mjs','actions.mjs']]);
+  const allowed=new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/style.css','style.css'],['/actions.mjs','actions.mjs'],['/commissioning-browser.mjs','commissioning-browser.mjs'],['/browser-request-store.mjs','browser-request-store.mjs']]);
   const assets=new Map();
   for(const [route,[filename,type]] of declared.routes) {
     need(allowed.get(route)===filename && !assets.has(route),'TYK_BROWSER_ASSETS_INVALID');

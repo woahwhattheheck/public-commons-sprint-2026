@@ -1,17 +1,17 @@
 {
   "format": "upper-savannah-measurements-large-file-source/v1",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "files": [
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 18160,
-      "sha256": "c2ed11ce53d5ce09bd1e36e0d8bac04834057c8e14058d490eaa1fc402aaab52",
+      "bytes": 19422,
+      "sha256": "fb554651ad45f041c174fee974b9350db65e4bcabf4e9a43e093691a05c76992",
       "role": "addition"
     },
     {
       "path": "install_measurement_large_files.py",
       "bytes": 12223,
-      "sha256": "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
+      "sha256": "9250d830320c70f88bcfc09ca5441981366c48046bb62e221d7ef0d00abebcfd",
       "role": "addition"
     },
     {
@@ -28,8 +28,8 @@
     },
     {
       "path": "measurement_workspace/chemistry.py",
-      "bytes": 34236,
-      "sha256": "b1ca7aa1df11ebdb2a8f498ba448064bcb35192f6bc5b2b34447297bb523673a",
+      "bytes": 40609,
+      "sha256": "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef",
       "role": "native"
     },
     {
@@ -88,8 +88,8 @@
     },
     {
       "path": "measurement_workspace/engine/large_intake.mjs",
-      "bytes": 18948,
-      "sha256": "b90a3fdd248ee079b50593d6f3543376f222b178f8d0e94c06148e1867254eb7",
+      "bytes": 19455,
+      "sha256": "34e7518208949bba903b7fac72e93c61f01c95c42a393be8b6e265c917e0d706",
       "role": "addition"
     },
     {
@@ -197,8 +197,8 @@
     {
       "path": "measurement_workspace/web/chemistry.mjs",
       "role": "native",
-      "bytes": 34962,
-      "sha256": "b53448e5c62827bf4c8f58b5f0cb237d9ee6bf86f48d7a871100c7286003edb5"
+      "bytes": 35156,
+      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7"

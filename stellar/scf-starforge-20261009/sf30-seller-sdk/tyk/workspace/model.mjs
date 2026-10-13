@@ -1,4 +1,5 @@
 // MIT. Complete native Tyk portfolio, migration review and original-request recovery.
+import { createTykCommissioningMethods } from './commissioning-model.mjs';
 import { randomUUID } from 'node:crypto';
 import { normalizeTykConnection, planTykRequest, createTykTransport, inspectTykDefinition,
   reconcileTykRequest, responseTykApiIds, prepareTykDefinition, readTykMigrationDefinitions } from '../native.mjs';
@@ -8,7 +9,7 @@ import { need, digest, now } from '../../../distribution/runtime-workspace/stora
 import { exportTykDelivery, inspectTykDelivery, adoptTykDelivery, stageTykDelivery, ensureTykDeliveryFile } from './delivery.mjs';
 
 const TERMINAL_PHASES = new Set(['COMPLETED', 'PREPARE_FAILED', 'STALE', 'INTERRUPTED']);
-const READABLE = new Set(['view', 'listRecords', 'getRecord', 'readDefinition', 'readSource', 'adaptDefinition', 'readReview', 'deliveryFile', 'sourceFile']);
+const READABLE = new Set(['view', 'listRecords', 'getRecord', 'readDefinition', 'readSource', 'adaptDefinition', 'readReview', 'readCommissioning', 'deliveryFile', 'sourceFile']);
 function errorInfo(error) {
   return {
     code: typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,120}$/.test(error.code) ? error.code : 'TYK_OPERATION_FAILED',
@@ -466,6 +467,7 @@ export async function openTykWorkspace({
       'Execute the exact request shown in this saved review.', 409);
     if (record.value.phase !== 'PREPARED') return record;
     need(record.revision === input.expectedRevision, 'TYK_RECORD_CONFLICT', 'Refresh the saved review.', 409);
+    await commissioning.validateCommissioningDispatch(record);
     const connection = await sameConfiguration(record), plan = await store.getJSON(record.value.plan);
     const selection = await store.getJSON(record.value.selection);
     need(planTykRequest(connection, selection).sha256 === plan.sha256, 'TYK_NATIVE_PLAN_CHANGED');
@@ -545,7 +547,9 @@ export async function openTykWorkspace({
       mediaType: input.reference.mediaType ?? 'application/octet-stream',
       filename: 'tyk-source-' + input.reference.sha256 + '.source' };
   }
-  const methods = { view, listRecords, getRecord, readDefinition, readSource, adaptDefinition, readReview, saveConnection, capture,
+  const commissioning = createTykCommissioningMethods({store,lookupConnection,replay,initial,getRecord,prepareRollout,capture});
+  const {validateCommissioningDispatch,...commissioningActions}=commissioning;
+  const methods = { ...commissioningActions, view, listRecords, getRecord, readDefinition, readSource, adaptDefinition, readReview, saveConnection, capture,
     importCapture, createCohort, prepareRollout, dispatchRollout, reconcileRollout, exportWorkspace,
     inspectDelivery, adoptDelivery, deliveryFile, sourceFile };
   async function close() {

@@ -144,7 +144,7 @@ def parser():
     resume.add_argument("--reason", required=True)
     _envelope_parser(resume)
     export = commands.add_parser("export", help="Stream complete retained rows/findings or a reviewed principal map")
-    export.add_argument("kind", choices=("source","reconciliation","mapping","case.dataset","case.plan","case.rehearsal","case.review","case.cutover","finance.dataset","finance.definition","finance.run","finance.reconciliation","finance.review","finance.control","finance.release","property.contract","property.dataset","property.edition","property.reconciliation","property.review","property.control","property.release"))
+    export.add_argument("kind", choices=("source","reconciliation","mapping","case.dataset","case.plan","case.rehearsal","case.review","case.cutover","register.dataset","register.plan","register.rehearsal","register.review","register.cutover","finance.dataset","finance.definition","finance.run","finance.reconciliation","finance.review","finance.control","finance.release","property.contract","property.dataset","property.edition","property.reconciliation","property.review","property.control","property.release","crf.contract","crf.dataset","crf.edition","crf.comparison","crf.review","crf.workbook_binding","crf.workbook_output","crf.workbook_return"))
     export.add_argument("id")
     export.add_argument("--format", choices=("ndjson","csv"), default="ndjson")
     export.add_argument("--out", required=True, help="Create-only output file, or - for binary stdout")
@@ -176,6 +176,26 @@ def parser():
     case_create = case_commands.add_parser("create", help="Invoke an exact reviewed case mutation through the original operation")
     case_create.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
     case_create.add_argument("--payload", required=True, help="Whole JSON object including the original operation envelope")
+    register = commands.add_parser("register", help="Typed register mappings, relationships, exact controls and cutover review")
+    register_commands = register.add_subparsers(dest="register_command", required=True)
+    register_commands.add_parser("schema", help="Exact installed register field/action contract")
+    register_list = register_commands.add_parser("list", help="One original register catalogue page")
+    register_list.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    register_list.add_argument("--offset", type=int, default=0)
+    register_list.add_argument("--limit", type=int, default=100)
+    register_get = register_commands.add_parser("get", help="Complete immutable register edition")
+    register_get.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    register_get.add_argument("id")
+    register_preview = register_commands.add_parser("preview", help="Read-only explicit typed projection")
+    register_preview.add_argument("--payload", required=True)
+    register_create = register_commands.add_parser("create", help="Create one exact reviewed register edition")
+    register_create.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    register_create.add_argument("--payload", required=True, help="Complete JSON with the original operation envelope")
+    register_compare = register_commands.add_parser("compare", help="One page of the complete two-rehearsal comparison")
+    register_compare.add_argument("before_id")
+    register_compare.add_argument("after_id")
+    register_compare.add_argument("--offset", type=int, default=0)
+    register_compare.add_argument("--limit", type=int, default=100)
     report = commands.add_parser("report", help="Publish a complete read-only review and all original record exports")
     report.add_argument("--out", required=True, help="Original selected ordinary report directory")
     report.add_argument("--expected-revision", type=int, required=True)
@@ -250,6 +270,20 @@ def main(argv=None):
                         result = workspace.dispatch("case.dataset.preview", _read_request(args.payload))
                     else:
                         result = workspace.dispatch("case." + args.kind + ".create", _read_request(args.payload))
+                elif args.command == "register":
+                    if args.register_command == "schema":
+                        result = workspace.dispatch("register.schema", {})
+                    elif args.register_command == "list":
+                        result = workspace.dispatch("register.list", {"kind":args.kind, "offset":args.offset, "limit":args.limit})
+                    elif args.register_command == "get":
+                        result = workspace.dispatch("register." + args.kind + ".get", {"id":args.id})
+                    elif args.register_command == "preview":
+                        result = workspace.dispatch("register.dataset.preview", _read_request(args.payload))
+                    elif args.register_command == "compare":
+                        result = workspace.dispatch("register.rehearsal.compare", {"before_id":args.before_id,
+                            "after_id":args.after_id, "offset":args.offset, "limit":args.limit})
+                    else:
+                        result = workspace.dispatch("register." + args.kind + ".create", _read_request(args.payload))
                 elif args.command == "report":
                     from migration_reports import build_reports
                     from migration_portable import ordinary_directory, file_description, publish_bytes, canonical as portable_json

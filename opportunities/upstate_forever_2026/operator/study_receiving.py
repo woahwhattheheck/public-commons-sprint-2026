@@ -49,5 +49,7 @@ def read(operator, workspace_key, operation, value):
     ensemble_receiving.decorate(operator, workspace_key, result)
     import observed_landcover_receiving
     observed_landcover_receiving.decorate(operator, workspace_key, result)
+    import received_published_reviews
+    received_published_reviews.decorate(operator, workspace_key, result)
     result["workspace_key"] = workspace_key
     return result

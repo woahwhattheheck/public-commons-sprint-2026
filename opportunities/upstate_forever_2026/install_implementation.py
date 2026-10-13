@@ -19,6 +19,15 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/web/economic_received_comparisons.mjs",
+    "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "operator/ECONOMIC_COMPARISON_REPORT.md",
+    "model/economic_comparison_source.py",
+    "model/economic_comparison_study_transfer.py",
+    "operator/economic_comparison_source.py",
+    "operator/extensions/economic-comparison-source.json",
+    "operator/web/economic_comparison_source.mjs",
+    "integration/component_fragments/economic-comparison-source.json",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
     "operator/economic_comparison.py",

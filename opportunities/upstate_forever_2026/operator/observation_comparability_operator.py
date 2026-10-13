@@ -7,11 +7,33 @@ ACTIONS = {"observation.comparability.save"}
 def _downloads(operator, workspace_key, edition):
     workspace = operator.ws(workspace_key)
     from model.common import verify_file
-    visible = {"comparable-period-source.zip", "source/index.html", "source/comparability.json",
+    visible = {"source/figures/index.html", "source/figures/paired-period-data.json",
+               "source/figures/paired-period-data.csv", "source/figures/paired-period-figures.json",
+               "comparable-period-source.zip", "source/index.html", "source/comparability.json",
                "source/comparisons.csv", "source/monthly-support.csv", "source/activity-measurements.csv",
                "source/model-sources.json", "source/OBSERVATION_COMPARABILITY.md"}
     return [operator._ticket(workspace_key, verify_file(workspace.root, row), row, name)
-            for name, row in edition["files"].items() if name in visible]
+            for name, row in edition["files"].items() if name in visible or
+            (name.startswith("source/figures/paired-interval-") and name.endswith(".svg"))]
+
+
+def _figures(operator, workspace_key, edition):
+    from model.common import read_json, verify_file
+    workspace = operator.ws(workspace_key)
+    spec = edition["files"].get("source/figures/paired-period-figures.json")
+    if spec is None:
+        return []
+    value = read_json(verify_file(workspace.root, spec))
+    if value.get("schema") != "upstate.scientific-figure-spec/v1":
+        raise ValueError("Retain the original paired-period figure specification")
+    output = []
+    for figure in value["figures"]:
+        name = "source/figures/" + figure["id"] + ".svg"
+        row = edition["files"][name]
+        ticket = operator._ticket(workspace_key, verify_file(workspace.root, row), row, figure["title"])
+        output.append({**ticket, "title": figure["title"], "caption": figure["caption"],
+                       "series_id": figure["series_id"], "selection": figure["selection"]})
+    return output
 
 
 def invoke(operator, workspace_key, action, payload):
@@ -29,6 +51,7 @@ def read(operator, workspace_key, operation, payload):
     if operation == "edition":
         result = comparisons.inspect(workspace, payload["id"])
         result["_downloads"] = _downloads(operator, workspace_key, result["edition"])
+        result["_figures"] = _figures(operator, workspace_key, result["edition"])
         return result
     raise ValueError("Choose an original comparable-period reader")
 

@@ -184,7 +184,7 @@ def _cold_check(received, expected):
 def complete(workspace, operations, output, *, application=None, selection=None,
              title=None, contact=None):
     """Publish/reopen one ordered report and its original selected Study archive."""
-    from model.common import atomic_json, describe_file, digest, held, read_json, verify_file
+    from model.common import atomic_json, describe_file, digest, held, read_json
     from model import portable, scientific_report_editions as reports, study_transfer
     application = Path(application or Path(__file__).resolve().parents[1]).resolve(strict=True)
     output = _external(output, application, workspace)
@@ -255,12 +255,18 @@ def complete(workspace, operations, output, *, application=None, selection=None,
         checkpoint("selected-study-restore", selected_study={
             "id": transferred["id"], **describe_file(directory, archive)})
         if not received.exists():
-            portable.restore(archive, received)
+            receiving_result = portable.restore(archive, received)
         else:
-            # Resume after native restore's atomic completion without replacing
-            # a previously received application or any original source member.
-            for name, item in inspected["manifest"]["members"].items():
-                verify_file(received, {**item, "path": name})
+            # Native receiving may register its completed output in the received
+            # Workspace. Reconcile the original completion rather than compare
+            # that editable state to the archive's pre-receiving bytes.
+            receiving_result = portable.resume_restore(
+                archive, received, expected_archive_sha256=transferred["sha256"])
+        if (receiving_result.get("identity") != "MATCH"
+                or receiving_result.get("archive_sha256") != transferred["sha256"]
+                or receiving_result.get("project") != workspace.project):
+            raise ValueError("Native receiving returned a different assessment archive")
+        checkpoint("selected-study-restored", native_receiving=receiving_result)
         archived_helper = received / "application" / "source_tools" / "assessment_report_receiving.py"
         if not archived_helper.is_file():
             raise ValueError("The selected application archive lacks its assessment report receiver")

@@ -280,6 +280,459 @@ def receive_operator(args, original_url, origin, token, journal):
                 return target.read_bytes()
 
 
+            def receive_comparison_report(comparison_result):
+                """Use the maintained source composer and Study controls for this saved comparison."""
+                comparison_id = comparison_result["id"]
+                timeout = args.task_timeout_seconds * 1000
+                source_action = "economic.comparison.report-source.import"
+
+                def queue_control(action, control):
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/actions"
+                                              and response.request.method == "POST"
+                                              and json.loads(response.request.post_data or "{}").get("action") == action) as pending:
+                        control.click()
+                    response = pending.value
+                    check_response(response, "Original " + action + " request")
+                    original = json.loads(response.request.post_data)
+                    accepted = response.json()
+                    accepted = accepted.get("task", accepted)
+                    task = wait_task(accepted, action, refresh_economics=False)
+                    require(task["id"] == accepted["id"] and task["workspace"] == workspace
+                            and task["action"] == action and task["operation_id"] == original["operation_id"]
+                            and task["payload"] == original["payload"],
+                            "A completed report or Study task differs from its original request")
+                    return task, original
+
+                def checked_download(control, path, expected=None):
+                    with page.expect_download() as received:
+                        control.click()
+                    item = received.value
+                    require(not item.failure(), "The original report or Study download failed")
+                    item.save_as(str(path))
+                    require(path.stat().st_size > 0, "The original download is empty")
+                    if expected:
+                        if expected.get("bytes") is not None:
+                            require(path.stat().st_size == expected["bytes"], "The original download size changed")
+                        if expected.get("sha256"):
+                            require(digest(path) == expected["sha256"], "The original download SHA256 changed")
+                    return descriptor(path, output)
+
+                with journal.stage("register_original_comparison_scientific_source") as step:
+                    page.locator('[data-econ="compare-editions"]').first.click()
+                    comparison_dialog = page.locator("dialog.economic-comparison")
+                    comparison_dialog.wait_for(state="visible")
+                    saved = comparison_dialog.locator('[data-ec-action="saved"][data-id="' + comparison_id + '"]').first
+                    saved.wait_for(state="visible")
+                    page.wait_for_function(
+                        "(id) => Array.from(document.querySelectorAll('dialog.economic-comparison [data-ec-action=saved]'))"
+                        ".some(node => node.dataset.id===id && !node.disabled)", arg=comparison_id)
+                    saved.click()
+                    comparison_dialog.locator('[data-ec-action="scientific-source"]').click()
+                    source_dialog = page.locator("dialog.economic-comparison-source")
+                    source_dialog.wait_for(state="visible")
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/economic-comparison/report-source-preview"
+                                              and response.request.method == "POST") as pending:
+                        source_dialog.locator('[data-ecs-action="preview"]').click()
+                    check_response(pending.value, "Preview the exact comparison scientific source")
+                    source_preview = pending.value.json()
+                    require(source_preview["workspace_key"] == workspace
+                            and source_preview["comparison_id"] == comparison_id
+                            and source_preview["first"]["id"] == comparison_result["input"]["first_edition_id"]
+                            and source_preview["second"]["id"] == comparison_result["input"]["second_edition_id"]
+                            and not source_preview["delivery_selection_supplied"],
+                            "The scientific source preview differs from the two actual original editions")
+                    capture("22-comparison-scientific-source-preview.png")
+                    task, original = queue_control(source_action, source_dialog.locator('[data-ecs-action="apply"]'))
+                    require(original["payload"] == {
+                                "comparison_id": comparison_id,
+                                "expected_source_key": source_preview["source_key"],
+                                "expected_operation_id": source_preview["operation_id"]},
+                            "The source request differs from the reviewed producer identity")
+                    receipt = task["result"]
+                    require(receipt["comparison_id"] == comparison_id
+                            and receipt["source_key"] == source_preview["source_key"]
+                            and receipt["operation_id"] == source_preview["operation_id"]
+                            and receipt["state"] == "imported" and receipt["source_role"] == "OBSERVED_CONTEXT",
+                            "The source registration changed its original comparison identity")
+                    replay = context.request.post(origin + "/api/actions",
+                                                  headers={"Authorization": "Bearer " + token},
+                                                  data=original, max_redirects=0)
+                    check_response(replay, "Rejoin original comparison source request")
+                    replay_value = replay.json()
+                    require(replay_value.get("task", replay_value)["id"] == task["id"],
+                            "The source request replay created another task")
+                    pair = {"source_collection_id": receipt["source_collection_id"],
+                            "source_id": receipt["source_id"]}
+                    require(pair in receipt["delivery_selection"]["observed_context_sources"],
+                            "The registered source pair is absent from its original report selection")
+                    (output / "comparison-scientific-source.json").write_text(
+                        json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+                    source_dialog.locator('[data-ecs-action="open-report"][data-mode="replace"]').wait_for(state="visible")
+                    page.wait_for_function(
+                        "() => !document.querySelector('[data-ecs-action=open-report][data-mode=replace]')?.disabled",
+                        timeout=timeout)
+                    with page.expect_download() as recovered:
+                        source_dialog.locator('[data-ecs-action="recovery-download"]').click()
+                    require(not recovered.value.failure(), "The original source recovery file did not download")
+                    recovered.value.save_as(str(output / "comparison-source-recovery.json"))
+                    step.update(comparison_id=comparison_id, source_key=receipt["source_key"],
+                                source_operation_id=receipt["operation_id"], task_id=task["id"], source_pair=pair)
+                    record["economic_comparison_report"] = {
+                        "comparison_id": comparison_id, "source_key": receipt["source_key"],
+                        "source_operation_id": receipt["operation_id"], "source_task_id": task["id"],
+                        "source_pair": pair}
+                    journal.save()
+
+                with journal.stage("render_original_comparison_in_scientific_reports") as step:
+                    source_dialog.locator('[data-ecs-action="open-report"][data-mode="replace"]').click()
+                    composer = page.locator(".scientific-report-editions")
+                    composer.wait_for(state="visible")
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/source-reports/scientific-preview"
+                                              and response.request.method == "POST") as pending:
+                        composer.locator('[data-scientific-report-action="preview"]').click()
+                    check_response(pending.value, "Preview original comparison report source")
+                    report_preview = pending.value.json()
+                    report_body = json.loads(pending.value.request.post_data)
+                    require(report_body["sources"] == [pair]
+                            and [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
+                                 for row in report_preview["sources"]] == [pair],
+                            "Replace mode did not select exactly the registered original comparison source")
+                    require(report_preview["workspace_key"] == workspace,
+                            "The report preview belongs to another Workspace")
+                    capture("23-comparison-scientific-report-preview.png")
+                    render_task = None
+                    if report_preview.get("existing"):
+                        composer.locator('[data-scientific-report-action="render"]').click()
+                    else:
+                        render_task, render_original = queue_control(
+                            "source-reports.render", composer.locator('[data-scientific-report-action="render"]'))
+                        require(render_original["payload"] == {**report_body, "preview_id": report_preview["id"]},
+                                "The report task changed the exact reviewed ordered source selection")
+                        close_details()
+                        composer.locator('[data-scientific-report-action="refresh"]').click()
+                        composer.locator('[data-scientific-report-action="open"][data-id="' + report_preview["id"] + '"]').click()
+                    detail = composer.locator('[data-scientific-report-detail]')
+                    detail.wait_for(state="visible")
+                    report = get("/api/source-reports/scientific-edition", workspace=workspace, id=report_preview["id"])
+                    require(report["workspace_key"] == workspace and report["edition"]["id"] == report_preview["id"]
+                            and report["edition"]["state"] == "complete",
+                            "The completed scientific report differs from its original preview")
+                    selection = report["edition"]["render_identity"]["selection"]
+                    selected_sources = selection.get("observed_context_sources") or [selection["source_roles"]["OBSERVED_CONTEXT"]]
+                    require(selected_sources == [pair], "The rendered report changed its exact ordered source selection")
+                    report_iframe = detail.locator("iframe").first
+                    report_iframe.wait_for(state="visible")
+                    detail.frame_locator("iframe").first.locator("body").wait_for(state="visible")
+                    capture("24-comparison-scientific-report-desktop.png")
+                    page.set_viewport_size({"width": 390, "height": 844})
+                    capture("25-comparison-scientific-report-narrow.png")
+                    page.set_viewport_size({"width": 1440, "height": 1000})
+                    report_files = []
+                    for item in report["files"]:
+                        require(isinstance(item.get("path"), str), "A report file needs its original path")
+                        url = item["url"] + ("&" if "?" in item["url"] else "?") + "download=1"
+                        link = composer.locator('[data-scientific-report-files] a[download][href="' + url + '"]')
+                        relative = PurePosixPath(item["path"])
+                        require(not relative.is_absolute() and "\\" not in item["path"]
+                                and all(part not in {"", ".", ".."} for part in item["path"].split("/")),
+                                "The native report file needs its original canonical relative path")
+                        destination = output / "comparison-scientific-report" / relative
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        received = checked_download(link, destination, item)
+                        received["original_path"] = item["path"]
+                        received["original_role"] = item.get("role")
+                        report_files.append(received)
+                    html = next((row for row in report_files if row["original_role"] == "report_html"), None)
+                    require(html is not None, "The complete native scientific report has no HTML file")
+                    outgoing = context.new_page(viewport={"width": 1440, "height": 1000})
+                    outgoing.goto((output / html["path"]).as_uri(), wait_until="load")
+                    outgoing.screenshot(path=str(output / "26-received-scientific-report-desktop.png"), full_page=True)
+                    outgoing.set_viewport_size({"width": 390, "height": 844})
+                    outgoing.screenshot(path=str(output / "27-received-scientific-report-narrow.png"), full_page=True)
+                    outgoing.set_viewport_size({"width": 1440, "height": 1000})
+                    outgoing.pdf(path=str(output / "comparison-scientific-report-browser.pdf"),
+                                 format="A4", prefer_css_page_size=True, print_background=True)
+                    outgoing.close()
+                    export_task, export_original = queue_control(
+                        "source-reports.export", composer.locator('[data-scientific-report-action="export"]'))
+                    require(export_original["payload"] == {"id": report["edition"]["id"]},
+                            "The report archive task selected another edition")
+                    close_details()
+                    composer.locator('[data-scientific-report-action="refresh"]').click()
+                    archive_link = detail.get_by_role("link", name="Download report ZIP", exact=True)
+                    archive_link.wait_for(state="visible")
+                    report = get("/api/source-reports/scientific-edition", workspace=workspace, id=report["edition"]["id"])
+                    report_zip = output / "complete-comparison-scientific-report.zip"
+                    report_archive = checked_download(archive_link, report_zip, report.get("archive"))
+                    with zipfile.ZipFile(report_zip) as archive:
+                        require(archive.testzip() is None, "The completed report archive has a damaged original member")
+                        require(any(name.lower().endswith(".html") for name in archive.namelist()),
+                                "The complete report archive lost its readable report")
+                    (output / "comparison-scientific-report-edition.json").write_text(
+                        json.dumps(report, indent=2) + "\n", encoding="utf-8")
+                    step.update(report_id=report["edition"]["id"],
+                                render_task_id=render_task["id"] if render_task else None,
+                                export_task_id=export_task["id"], files=report_files, archive=report_archive)
+                    record["economic_comparison_report"].update(
+                        report_id=report["edition"]["id"], report_files=report_files, report_archive=report_archive)
+                    journal.save()
+
+                with journal.stage("transfer_original_comparison_report_study") as step:
+                    composer.locator('[data-scientific-report-action="transfer"]').click()
+                    study = page.locator(".study-transfer")
+                    study.wait_for(state="visible")
+                    with page.expect_response(lambda response:
+                                              urlsplit(response.url).path == "/api/study-transfer/preview"
+                                              and response.request.method == "POST") as pending:
+                        study.locator('[data-study-action="preview"]').click()
+                    check_response(pending.value, "Preview the exact scientific-report Study")
+                    study_preview = pending.value.json()
+                    study_body = json.loads(pending.value.request.post_data)
+                    root = {"kind": "scientific-report-editions", "id": report["edition"]["id"]}
+                    require(root in study_body["selection"]["roots"],
+                            "The actual Study selection omitted the saved scientific report")
+                    require(any(row["id"] == root["id"] for row in study_preview.get("scientific_report_editions", [])),
+                            "The Study preview did not retain the original complete scientific report")
+                    capture("28-comparison-report-study-preview.png")
+                    study_task, study_original = queue_control("study.export", study.locator('[data-study-action="export"]'))
+                    require(study_original["payload"] == {
+                                **study_body["selection"], "preview_token": study_preview["preview_token"]},
+                            "The Study export differs from its reviewed roots or exact preview token")
+                    close_details()
+                    task_button = study.locator('[data-study-action="task"][data-study-task="' + study_task["id"] + '"]')
+                    task_button.wait_for(state="visible", timeout=timeout)
+                    download_link = study.locator(".st-export").filter(has=task_button).locator("a.st-download")
+                    download_link.wait_for(state="visible", timeout=timeout)
+                    tickets = study_task.get("_downloads") or []
+                    require(tickets, "The original Study export returned no complete download")
+                    study_zip = output / "comparison-scientific-study.zip"
+                    study_file = checked_download(download_link, study_zip, tickets[0])
+                    application_root = Path(__file__).resolve().parent.parent
+                    if str(application_root) not in sys.path:
+                        sys.path.insert(0, str(application_root))
+                    from model.study_transfer import inspect_transfer_archive
+                    inspected = inspect_transfer_archive(study_zip, verify=True)
+                    archive_manifest, study_receipt = inspected["manifest"], inspected["study"]
+                    members = archive_manifest["members"]
+                    require(archive_manifest["schema"] == "upstate.scientific-workspace-archive/v1"
+                            and study_receipt["schema"] == "upstate.study-transfer/v1"
+                            and study_receipt["id"] == study_task["result"]["id"],
+                            "The received Study differs from its original export identity")
+                    require(study_receipt["identity"]["selection"]["roots"] == study_body["selection"]["roots"],
+                            "The received Study changed the reviewed original roots")
+                    retained_report = next(
+                        (row for row in study_receipt["identity"]["scientific_report_editions"]
+                         if row["id"] == report["edition"]["id"]), None)
+                    require(retained_report is not None and retained_report["source_choices"] == [pair],
+                            "The received Study lost the original comparison report source")
+                    for item in retained_report["members"]:
+                        member = members.get("workspace/" + item["path"])
+                        require(member and member["bytes"] == item["bytes"]
+                                and member["sha256"] == item["sha256"],
+                                "The received Study changed an original scientific report member")
+                    require(retained_report["sources"]
+                            and all(row.get("body_sha256") for row in retained_report["sources"]),
+                            "The received report lacks original typed source body identities")
+                    capture("29-comparison-report-study-export.png")
+                    (output / "comparison-study-task.json").write_text(
+                        json.dumps(study_task, indent=2) + "\n", encoding="utf-8")
+                    step.update(study_id=study_task["result"]["id"], task_id=study_task["id"],
+                                selection=study_body["selection"], archive=study_file, member_count=len(members))
+                    record["economic_comparison_report"].update(
+                        study_id=study_task["result"]["id"], study_task_id=study_task["id"],
+                        study_selection=study_body["selection"], study_archive=study_file,
+                        product_view_status="captured_for_producer_review",
+                        visual_artifacts=[
+                            "22-comparison-scientific-source-preview.png",
+                            "23-comparison-scientific-report-preview.png",
+                            "24-comparison-scientific-report-desktop.png",
+                            "25-comparison-scientific-report-narrow.png",
+                            "26-received-scientific-report-desktop.png",
+                            "27-received-scientific-report-narrow.png",
+                            "28-comparison-report-study-preview.png",
+                            "29-comparison-report-study-export.png"])
+                    journal.save()
+
+
+                with journal.stage("cold_restore_comparison_study_and_reopen_editable_history") as step:
+                    original_workspace = workspace
+                    received_workspace = None
+                    try:
+                        study.locator('[data-action="restore"]').click()
+                        page.locator('#form-dialog input[name="restore_file"]').set_input_files(str(study_zip))
+                        restore_task, restore_original = queue_control("workspace.restore", page.locator("#form-submit"))
+                        restored = restore_task["result"]
+                        received_workspace = restored["workspace_key"]
+                        require(restored["identity"] == "MATCH" and received_workspace != original_workspace
+                                and restored["archive_sha256"] == digest(study_zip),
+                                "The cold Study receiver did not create the exact original project in a fresh directory")
+                        require(restored["project"]["id"] == archive_manifest["project"]["id"],
+                                "The cold restored Study changed its original project identity")
+                        close_details()
+                        page.locator('[data-action="refresh"]').first.click()
+                        page.wait_for_function(
+                            "(key) => Array.from(document.querySelectorAll('#workspace-select option'))"
+                            ".some(option => option.value===key)", arg=received_workspace, timeout=timeout)
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/state"
+                                                  and parse_qs(urlsplit(response.url).query).get("workspace") == [received_workspace]):
+                            page.locator("#workspace-select").select_option(received_workspace)
+                        page.locator('[data-view="study-transfer"]').click()
+                        received_study = page.locator('.study-transfer [data-received-action="open"][data-id="' +
+                                                       study_task["result"]["id"] + '"]')
+                        received_study.wait_for(state="visible", timeout=timeout)
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/study-transfer/received-detail"
+                                                  and parse_qs(urlsplit(response.url).query).get("study_id") == [study_task["result"]["id"]]
+                                                  and parse_qs(urlsplit(response.url).query).get("workspace") == [received_workspace]) as received_response:
+                            received_study.click()
+                        check_response(received_response.value, "Open original cold received Study")
+                        received_detail = received_response.value.json()
+                        require(received_detail["workspace_key"] == received_workspace
+                                and received_detail["id"] == study_task["result"]["id"]
+                                and received_detail["project"]["id"] == archive_manifest["project"]["id"],
+                                "The received Study view substituted a different original project")
+                        source_rows = received_detail.get("economic_comparison_sources") or []
+                        source_index = next((i for i, row in enumerate(source_rows)
+                                             if row.get("native_origin", {}).get("comparison_id") == comparison_id
+                                             and row.get("source_collection_id") == pair["source_collection_id"]
+                                             and row.get("source_id") == pair["source_id"]), None)
+                        require(source_index is not None, "The cold received Study omitted its exact Economic comparison source")
+                        source_row = source_rows[source_index]
+                        require(source_row["relationship"] == "same_project"
+                                and source_row["native_comparison"]["id"] == comparison_id,
+                                "The original saved comparison was not restored as native editable history")
+                        capture("30-cold-received-comparison-study.png")
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/economic-comparison/detail"
+                                                  and parse_qs(urlsplit(response.url).query).get("id") == [comparison_id]
+                                                  and parse_qs(urlsplit(response.url).query).get("workspace") == [received_workspace]) as reopened:
+                            page.locator('[data-received-action="economic-comparison-open"]'
+                                         '[data-economic-comparison-source="' + str(source_index) + '"]').click()
+                        check_response(reopened.value, "Open exact saved comparison from received Study")
+                        received_comparison = reopened.value.json()
+                        require(received_comparison["workspace_key"] == received_workspace
+                                and received_comparison["comparison"] == comparison_result["comparison"]
+                                and received_comparison["input"] == comparison_result["input"],
+                                "The cold received comparison changed either original edition or its complete values")
+                        received_dialog = page.locator("dialog.economic-comparison")
+                        received_dialog.wait_for(state="visible")
+                        received_dialog.get_by_role("link", name="Open complete comparison report", exact=True).wait_for(
+                            state="visible")
+                        capture("31-cold-received-economic-comparison-desktop.png")
+                        page.set_viewport_size({"width": 390, "height": 844})
+                        capture("32-cold-received-economic-comparison-narrow.png")
+                        page.set_viewport_size({"width": 1440, "height": 1000})
+                        received_dialog.locator('[data-ec-action="close"]').click()
+                        availability = source_row.get("native_source_availability") or []
+                        editable = next((row for row in availability if row.get("state") == "available"
+                                         and row.get("new_cost_edition_available") is True
+                                         and row.get("verified_source_paths")), None)
+                        editable_preview = None
+                        if editable is not None:
+                            edition_id = editable["edition_id"]
+                            with page.expect_response(lambda response:
+                                                      urlsplit(response.url).path == "/api/economic-desk/edition"
+                                                      and parse_qs(urlsplit(response.url).query).get("edition_id") == [edition_id]) as retained:
+                                page.locator('[data-econ="edit-edition"][data-id="' + edition_id + '"]').click()
+                            check_response(retained.value, "Reopen retained original Economic input for editing")
+                            original_input = retained.value.json()["input"]
+                            page.wait_for_function(
+                                "(zone) => document.querySelector('[data-zone]')?.value===zone"
+                                " && !document.querySelector('[data-econ=preview]')?.disabled",
+                                arg=original_input["zone_id"], timeout=timeout)
+                            notes = page.locator('[data-field="notes"]')
+                            original_notes = notes.input_value()
+                            notes.fill(original_notes + "\nCold received Study editable input review.")
+                            with page.expect_response(lambda response:
+                                                      urlsplit(response.url).path == "/api/economic-desk/preview"
+                                                      and response.request.method == "POST") as edited:
+                                page.locator('[data-econ="preview"]').click()
+                            check_response(edited.value, "Preview editable original Economic input in cold received Study")
+                            edited_input = json.loads(edited.value.request.post_data)
+                            require(all(edited_input.get(name) == original_input.get(name)
+                                        for name in ("report_id", "report_sha256", "zone_id")),
+                                    "Editing received notes changed the original physical source binding")
+                            original_costs = {row["run_id"]: row for row in original_input["selection"]["costs"]}
+                            edited_costs = {row["run_id"]: row for row in edited_input["selection"]["costs"]}
+                            require(set(original_costs) == set(edited_costs),
+                                    "Editing received notes changed the original costed scenario cohort")
+                            for run_id, old_cost in original_costs.items():
+                                new_cost = edited_costs[run_id]
+                                require(all(new_cost.get(name) == old_cost.get(name)
+                                            for name in ("currency", "capital", "annual_operating", "horizon_years",
+                                                         "discount_rate", "source")),
+                                        "Editing received notes changed an original estimate or its source")
+                                require(all(new_cost.get("scope", {}).get(name) == value
+                                            for name, value in old_cost.get("scope", {}).items()),
+                                        "Editing received notes changed the original estimate footprint")
+                                require(all(new_cost.get(name) == value for name, value in old_cost.items()
+                                            if name not in {"note", "scope_note", "scope"}),
+                                        "Editing received notes lost retained original cost metadata")
+                            editable_preview = {"edition_id": edition_id,
+                                                "source_identity_preserved": True,
+                                                "original_costs_preserved": True,
+                                                "new_edition_created": False}
+                            capture("33-cold-received-editable-economic-input.png")
+                        page.locator('[data-view="study-transfer"]').click()
+                        page.locator('[data-received-action="open"][data-id="' + study_task["result"]["id"] + '"]').click()
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/source-reports/scientific-catalog"):
+                            page.locator('[data-received-action="economic-comparison-report"]'
+                                         '[data-economic-comparison-source="' + str(source_index) + '"]').click()
+                        with page.expect_response(lambda response:
+                                                  urlsplit(response.url).path == "/api/source-reports/scientific-preview"
+                                                  and response.request.method == "POST") as received_preview:
+                            page.locator('[data-scientific-report-action="preview"]').click()
+                        check_response(received_preview.value, "Preview original report from cold received Study")
+                        received_report_preview = received_preview.value.json()
+                        require(received_report_preview["workspace_key"] == received_workspace
+                                and [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
+                                     for row in received_report_preview["sources"]] == [pair],
+                                "The received Study report opened a different original source pair")
+                        received_report = get("/api/source-reports/scientific-edition", workspace=received_workspace,
+                                              id=report["edition"]["id"])
+                        page.locator('[data-scientific-report-action="open"][data-id="' +
+                                     report["edition"]["id"] + '"]').click()
+                        page.locator('[data-scientific-report-detail]').wait_for(state="visible")
+                        page.locator('[data-scientific-report-detail]').frame_locator("iframe").first.locator("body").wait_for(
+                            state="visible")
+                        capture("34-cold-received-original-scientific-report.png")
+                        require(received_report["edition"]["render_identity"] == report["edition"]["render_identity"],
+                                "The cold received scientific report changed its original rendered identity")
+                        (output / "cold-received-comparison-study.json").write_text(
+                            json.dumps({"restore": restored, "received_study": received_detail,
+                                        "comparison": received_comparison, "report": received_report,
+                                        "editable_preview": editable_preview}, indent=2) + "\n", encoding="utf-8")
+                        step.update(receiving_workspace_key=received_workspace, original_project_id=restored["project"]["id"],
+                                    restore_task_id=restore_task["id"], restored_identity="MATCH",
+                                    comparison_reopened=True, original_report_reopened=True,
+                                    native_source_availability=availability, editable_preview=editable_preview)
+                        record["economic_comparison_report"].update(
+                            receiving_workspace_key=received_workspace, restore_task_id=restore_task["id"],
+                            restored_identity="MATCH", received_comparison_reopened=True,
+                            received_scientific_report_reopened=True,
+                            native_source_availability=availability, editable_preview=editable_preview)
+                        record["economic_comparison_report"]["visual_artifacts"].extend([
+                            "30-cold-received-comparison-study.png",
+                            "31-cold-received-economic-comparison-desktop.png",
+                            "32-cold-received-economic-comparison-narrow.png",
+                            "34-cold-received-original-scientific-report.png"])
+                        if editable_preview:
+                            record["economic_comparison_report"]["visual_artifacts"].append(
+                                "33-cold-received-editable-economic-input.png")
+                        journal.save()
+                    finally:
+                        if received_workspace and page.locator("#workspace-select").input_value() != original_workspace:
+                            close_details()
+                            with page.expect_response(lambda response:
+                                                      urlsplit(response.url).path == "/api/state"
+                                                      and parse_qs(urlsplit(response.url).query).get("workspace") == [original_workspace]):
+                                page.locator("#workspace-select").select_option(original_workspace)
+
             def receive_saved_comparison(first_edition, second_edition):
                 """Operate the maintained comparison using two actual completed editions."""
                 action = "economic.comparison.build"
@@ -532,6 +985,8 @@ def receive_operator(args, original_url, origin, token, journal):
                             "20-typed-economic-comparison.png",
                             "21-reopened-saved-economic-comparison.png"])
                     journal.save()
+                if args.comparison_report:
+                    receive_comparison_report(fresh)
 
 
             def receive_cost_review(plan, candidate, source_edition):
@@ -1210,6 +1665,8 @@ def parser():
     result.add_argument("--cost-candidate-id", help="Select this original economic candidate in --cost-plan-id; required when matching candidates are ambiguous")
     result.add_argument("--compare-editions", action="store_true",
                         help="With --cost-review, compare its actual original Economic edition and completed reviewed successor through the saved comparison UI and complete package")
+    result.add_argument("--comparison-report", action="store_true",
+                        help="With --compare-editions, register its original scientific source, render and receive the native report, then export the actual Study selection")
     result.add_argument("--notes", default="Reviewed in the original operator receiving walkthrough.")
     result.add_argument("--browser-executable")
     result.add_argument("--timeout-seconds", type=float, default=30)
@@ -1223,6 +1680,8 @@ def main(argv=None):
     started = time.perf_counter()
     try:
         require(args.timeout_seconds > 0 and args.task_timeout_seconds > 0, "Use positive browser and queue timeouts")
+        require(not args.comparison_report or args.compare_editions,
+                "--comparison-report requires the original --compare-editions course")
         require(not args.compare_editions or args.cost_review,
                 "--compare-editions requires the original --cost-review journey")
         require(not args.cost_plan_id or args.cost_review,
@@ -1286,6 +1745,8 @@ def main(argv=None):
             result["implementation"] = record["implementation"]
         if record.get("economic_comparison"):
             result["economic_comparison"] = record["economic_comparison"]
+        if record.get("economic_comparison_report"):
+            result["economic_comparison_report"] = record["economic_comparison_report"]
         print(json.dumps(journal.clean(result), indent=2), flush=True)
         return code
     except Exception as error:

@@ -6,6 +6,7 @@ import { resolve, join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { startTykWorkspaceServer } from './workspace/server.mjs';
 import { TykWorkspaceHttpClient } from './workspace/http-client.mjs';
+import { runTykCommissioningJourney } from './commissioning-native-journey.mjs';
 import { normalizeTykConnection, readTykMigrationDefinitions } from './native.mjs';
 
 const SCHEMA='stellar-forge.tyk-native-journey.v1';
@@ -78,6 +79,12 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
   });
   need(new Set(declarations.map(item=>item.id)).size===declarations.length,'Use distinct native target aliases.');
   publicUrl(config.gateway.publicBaseUrl);
+  if(scope==='all'){
+    publicUrl(config.dashboard.publicBaseUrl);
+    need(Number.isInteger(config.dashboard.commissioningApiCount??12)&&
+      (config.dashboard.commissioningApiCount??12)>=2&&(config.dashboard.commissioningApiCount??12)<=20,
+      'Select two to twenty actual native commissioning APIs.');
+  }
   const root=resolve(outputDirectory);await privateDirectory(root);await privateDirectory(join(root,'downloads'));
   const statePath=join(root,'journey.json'),inputSha256=sha(configBytes);
   let state;
@@ -346,6 +353,9 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       need(replay.id===promoted.record.id&&state.nativeRequests.length===writes,'Saved migration replay contacted the native target again.');
       return {cohort:saved,dryRun,staged,overridden,promoted,direct,final};
     });
+    const commissioning=scope==='all'?await runTykCommissioningJourney({
+      config,initial,targets,root,call,current,rollout,capture,cohort,definition,retainReview,
+      freeze,step,requestId,apiId,prefix,cloneClassic,preciseJson,sender,fetch}):null;
     await step(receivingName('complete-native-history-export-and-cold-receiving'),async()=>{
       const firstInput=await freeze(receivingKey('first-export'),{requestId:requestId(receivingKey('first-export')),label:'Complete native Tyk receiving'});
       const first=await call('exportWorkspace',firstInput);
@@ -391,6 +401,92 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       need(firstReplay.sha256===adopted.sha256,'Receiving a later edition changed the original receiving receipt.');
       return {first:ref(first),download:local,receiving:ref(adopted),second:ref(second),laterDownload:laterFile,
         laterReceiving:ref(laterReceived),coldOriginalArchive:receivedBytes,firstReplay:ref(firstReplay)};
+    });
+    if(commissioning&&config.chromiumExecutablePath)await step('commissioning-customer-browser-and-original-downloads',async()=>{
+      const {chromium}=await import(config.playwrightModulePath?pathToFileURL(resolve(config.playwrightModulePath)).href:'playwright');
+      browser=await chromium.launch({headless:true,executablePath:resolve(config.chromiumExecutablePath),
+        args:['--no-sandbox','--disable-dev-shm-usage']});
+      const page=await browser.newPage({viewport:{width:1440,height:1080},acceptDownloads:true}),pageErrors=[],screenshots=[],downloads=[];
+      page.on('pageerror',error=>pageErrors.push(String(error.message??error)));
+      const idle=()=>page.locator('main[aria-busy="false"]').waitFor();
+      const screen=async name=>{const path=join(root,'downloads',name+'.png');await page.screenshot({path,fullPage:true});
+        screenshots.push(await hashFile(path));};
+      const download=async(name,filename)=>{
+        const pending=page.waitForEvent('download');await page.getByRole('button',{name,exact:true}).click();
+        const original=await pending,path=join(root,'downloads',filename);await original.saveAs(path);
+        const file=await hashFile(path);downloads.push(file);return {file,bytes:await readFile(path)};
+      };
+      await page.goto(sender.host.url,{waitUntil:'networkidle'});await idle();
+      await page.locator('[data-tab="commissioning"]').click();
+      await screen('commissioning-saved-list-wide');
+      let row;
+      for(;;){
+        row=page.locator('#commissioning-list tbody tr').filter({hasText:config.operation+' complete cohort commissioning'});
+        if(await row.count())break;
+        const next=page.locator('#commissioning-pages').getByRole('button',{name:'Next',exact:true});
+        need(await next.count()&&await next.isEnabled(),'Find the original saved complete commissioning record.');await next.click();await idle();
+      }
+      need(await row.count()===1,'Select exactly the original commissioning record.');
+      await row.getByRole('button',{name:'Open',exact:true}).click();await idle();
+      const panel=page.locator('#commissioning-current');
+      need((await panel.innerText()).includes(commissioning.id)&&(await panel.innerText()).includes('7 of 7 steps'),
+        'Render the original complete cohort progress.');
+      await panel.getByRole('button',{name:'Refresh saved progress',exact:true}).click();await idle();
+      const plan=await download('Download complete operating plan','commissioning-browser-operating-plan.json');
+      const native=await call('readCommissioning',{id:commissioning.id});
+      need(JSON.stringify(JSON.parse(plan.bytes))===JSON.stringify(native.plan),'Browser downloads the whole original OperatingPlan history.');
+      const received=await download('Download complete commissioning record','commissioning-browser-record.json');
+      const receivedValue=JSON.parse(received.bytes);
+      need(receivedValue.record.sha256===native.record.sha256&&receivedValue.progress.steps.every(step=>step.complete),
+        'Browser downloads the complete original commissioning record and native outcomes.');
+      const first=native.finalObservation.apis[0];
+      await page.locator('#commissioning-final-sources tbody tr').filter({hasText:first.apiId})
+        .getByRole('button',{name:'Open complete source',exact:true}).click();await idle();
+      const source=await download('Download original definition','commissioning-browser-native-definition.json');
+      need(source.file.sha256===first.sha256,'Browser native source download preserves every original byte.');
+      await page.locator('#commissioning-source').getByRole('button',{name:'Close source',exact:true}).click();
+      await screen('commissioning-complete-wide');
+      await page.setViewportSize({width:390,height:844});await panel.scrollIntoViewIfNeeded();
+      await screen('commissioning-complete-narrow');
+      await page.setViewportSize({width:1440,height:1080});
+      const conversion=page.locator('#commissioning-step-table tbody tr').filter({hasText:'Native conversion'});
+      await conversion.getByRole('button',{name:'Open native review',exact:true}).click();await idle();
+      need(await page.locator('.definition-review').count(),'Open the same original complete native field review.');
+      await page.getByRole('button',{name:'Return to cohort commissioning',exact:true}).click();await idle();
+      await panel.getByRole('button',{name:'Open complete workspace handover',exact:true}).click();
+      need(await page.locator('#handover').isVisible(),'Return through the original complete workspace handover surface.');
+      need(!pageErrors.length,'The complete commissioning browser reported errors: '+pageErrors.join('; '));
+      await browser.close();browser=null;
+      return {record:ref(native.record),screenshots,downloads,pageErrors,rendered:true,
+        visualReview:{state:'REQUIRES_PRODUCING_OWNER_INSPECTION',
+          instruction:'Open and LOOK at these exact wide and narrow screenshots and every delivered attachment; operate the exact outgoing product and repair visible defects before calling it ready.'}};
+    });
+    if(commissioning)await step('complete-commissioning-history-export-and-cold-receiving',async()=>{
+      const second=await call('exportWorkspace',await freeze('commissioning:final-export',{
+        requestId:requestId('commissioning:final-export'),label:'Complete native cohort commissioning and original Tyk history'}));
+      const laterDownload=await sender.client.downloadDelivery(second.id,join(root,'downloads','commissioning-final.ndjson'),
+        {expectedSha256:second.value.file.sha256,expectedBytes:second.value.file.bytes});
+      if(!receiver)receiver=await openHost('receiver');
+      const inspected=await receiver.client.inspectFile(laterDownload.path,{requestId:requestId('commissioning:final-inspect'),
+        label:'Complete original cohort commissioning',expectedSha256:laterDownload.sha256});
+      const adopt=await freeze('commissioning:final-adopt',{requestId:requestId('commissioning:final-adopt'),
+        id:inspected.id,expectedRevision:inspected.revision,manifestSha256:inspected.value.manifestSha256});
+      const adopted=await receiver.client.action('adoptDelivery',adopt);need(adopted.value.state==='ADOPTED','Receive the complete native commissioning history.');
+      await closeHost(receiver);receiver=await openHost('receiver');
+      const reopened=await receiver.client.action('adoptDelivery',adopt);
+      need(reopened.sha256===adopted.sha256,'Retain the same original final receiving identity after cold reopen.');
+      const cold=await receiver.client.action('readCommissioning',{id:commissioning.id});
+      need(cold.record.sha256===commissioning.record.sha256&&cold.record.revision===commissioning.record.revision&&
+        cold.progress.state==='COMPLETE'&&cold.progress.steps.every(row=>row.complete)&&
+        cold.record.value.manuscript.sha256===commissioning.manuscript.sha256&&
+        cold.finalObservation.apis.length===commissioning.apiIds.length,
+        'Cold customer receiving must retain every source, native outcome and complete OperatingPlan history.');
+      for(const item of [commissioning.conversion,commissioning.staging,commissioning.promotion]){
+        const native=await receiver.client.action('getRecord',{kind:'rollout',id:item.record.id,revision:item.record.revision});
+        need(native.sha256===item.record.sha256&&native.value.planSha256,'Receive the exact original bound rollout revision.');
+      }
+      return {second:ref(second),laterDownload,laterReceiving:ref(reopened),commissioning:ref(cold.record),
+        manuscript:cold.record.value.manuscript,steps:cold.progress.summary.completed,apis:cold.progress.summary.apis};
     });
     if(config.chromiumExecutablePath){
       await step(receivingName('current-customer-browser-receiving'),async()=>{
@@ -469,7 +565,7 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
       });
     }
     const final=await call('view');
-    const sourcePaths=['native.mjs','native-journey.mjs','workspace/model.mjs','workspace/store.mjs',
+    const sourcePaths=['native.mjs','native-journey.mjs','commissioning-native-journey.mjs','workspace/commissioning.mjs','workspace/commissioning-model.mjs','workspace/commissioning-browser.mjs','workspace/model.mjs','workspace/store.mjs',
       'workspace/delivery.mjs','workspace/server.mjs','workspace/actions.mjs','workspace/http-client.mjs','workspace/review.mjs'];
     const source=[];
     for(const path of sourcePaths){const bytes=await readFile(new URL('./'+path,import.meta.url));source.push({path,bytes:bytes.length,sha256:sha(bytes)});}
@@ -482,7 +578,7 @@ export async function runTykNativeJourney(configPath,outputDirectory,{fetch=glob
     state.state='PASSED';state.completedAt=new Date().toISOString();state.source=source;
     state.completedScopes??={};state.completedScopes[scope]={completedAt:state.completedAt,inputSha256};
     state.summary={scope,executedTargets:selectedKinds,gatewayVersion:config.gateway.installedVersion,
-      ...(scope==='all'?{dashboardVersion:config.dashboard.installedVersion,dashboardApiIds:[apiId('dashboard-stage'),apiId('dashboard-direct')]}:{}),
+      ...(scope==='all'?{dashboardVersion:config.dashboard.installedVersion,dashboardApiIds:[apiId('dashboard-stage'),apiId('dashboard-direct')],commissioning:{id:commissioning.id,apiIds:commissioning.apiIds,progress:commissioning.progress}}:{}),
       gatewayApiId:lossId,generatedOpenApiId:imported.generatedId,
       originalWorkspaceId:final.workspaceId,records:final.counts,nativeRequests:state.nativeRequests.length,
       phases:Object.keys(state.steps),completeFieldReviews:Object.keys(state.reviews??{}).length,originalResponseLoss:state.lostResponse?.actualResponse};

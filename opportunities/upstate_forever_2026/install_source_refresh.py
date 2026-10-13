@@ -127,7 +127,8 @@ KNOWN_RELEASES = {
         "915587db87612a08b9a7c72e61c0c23b8f6e74f47a4f5d9dd00ddfa86a5bc7e2",
         "68de10652357116be30f68648666b0dace95c57d748cc48c03d9a4d5eafa836d",
         "4eb5077fc8d2f3ff2ac7c03ddee80b6a7cd430067dfd402ac00824e0c3527632",
-        "332c27845dcaab3d33057f32a59db0beafbe2e1307de380e51e2987447439635"
+        "332c27845dcaab3d33057f32a59db0beafbe2e1307de380e51e2987447439635",
+        "496f51a9ae16c9baccd10f3158c4936b55ac5969b9283043aec00550ffa19757"
     ],
     "source/landcover-change/METHOD.md": [
         "38939f8077422e6210b8d2f31739962fc3160a9a65cbfe031f0e3c914d17931c"
@@ -148,7 +149,8 @@ KNOWN_RELEASES = {
         "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
         "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
         "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
-        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579"
+        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579",
+        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c"
     ],
     "operator/extensions/source-updates.json": [
         "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5",
@@ -175,7 +177,8 @@ KNOWN_RELEASES = {
         "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
         "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
         "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
-        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579"
+        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579",
+        "f1d0039af54c066eabc57103efd55e7eea9c6444bce443569d2e7e3b01ab893c"
     ],
     "model/source_refresh_compat.py": [
         "cf775aa3c318ab2f9ae7b1432faa932f57303f754f44d0cc6cc50ce939932de4"
@@ -211,10 +214,14 @@ KNOWN_RELEASES = {
     "source/run_source_updates_browser.mjs": [
         "6ffef03aa727a72914bf9675dc901c672c21c90e3ecf1250b3268dee27a27ea8",
         "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728",
-        "b02a987d3fe10b223c5f16dc4992aca7dd4660a4d517e3e7f943bc9ed70d12b5"
+        "b02a987d3fe10b223c5f16dc4992aca7dd4660a4d517e3e7f943bc9ed70d12b5",
+        "7075a3f001ab280bffed8be5cc4822029856f25136c4d5c631f98d47ecdca9a1"
     ],
     "model/source_refresh_receiving.py": [
         "83e88d5c6ca62843716a4cba3cfa3272060b9a815f98b10396ba7ed5ab575d8c"
+    ],
+    "docs/source-refresh-scientific-report.md": [
+        "cb9b2a9388dc6bb3dd5bd00a8644e2e140709cd140149fb9045c5f218057a345"
     ]
 }
 STATE_SCHEMA = "upstate.source-refresh-install/v2"

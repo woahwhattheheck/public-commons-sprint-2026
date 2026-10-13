@@ -23,7 +23,7 @@ The full JSON input is bounded to 16 MiB. It contains:
 - authorization: the actual authority and original case/workstream reference.
 - actor: the recorded actual operator.
 - title: optional actual handover title.
-- application: the exact ordered APPLICATION_FILES list, each entry with path, bytes and lowercase SHA-256 of the installed complete source. Include every one of the current 21 files.
+- application: the exact ordered APPLICATION_FILES list, each entry with path, bytes and lowercase SHA-256 of the installed complete source. Include every one of the current 56 files. An already admitted programme retains its original complete source selection.
 - workspace: path, actual original project id and expected_revision. The revision is checked before the first original phase.
 - source_files: complete selected original file receipts. Each entry has unique key, absolute path, filename, bytes and SHA-256.
 - steps: the complete actual producer source/mapping/plan/rehearsal/review/cutover action sequence.
@@ -91,3 +91,8 @@ The operation directory contains original-input.json, selection.json, original s
 Read reports/case-review.html under the actual selected revision directory. CSV and NDJSON retain all actual occurrences, including ambiguous/missing/unexpected records. Review/cutover evidence and decisions are full immutable descriptors. The complete ZIPs include original SQLite/object/application contents. Browser form drafts are separately exported by the browser working-file panel; a native SQLite archive does not claim to capture an unsubmitted browser form.
 
 The actual run receipt identifies its selected original sources and outcome. Retain COMPLETE.json separately from source-review or packaging evidence.
+
+
+## Outgoing product inspection
+
+The complete owner-directed rendered-product instruction is retained in [OPERATING_WORKBENCH.md](OPERATING_WORKBENCH.md#standing-lab-rule-inspect-the-rendered-product-before-presenting-it). Read and apply it before presenting the exact outgoing application or its attachments; open the actual product, operate its controls, view its rendered results and reopen its downloads. Include the instruction in delegated operating assignments.

@@ -538,11 +538,12 @@ def _html(document, original, revision):
                            for item in document["history"])
     return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Engineering handback</title><style>
-body{font:15px/1.5 system-ui,sans-serif;color:#202020;background:#fff;margin:32px;max-width:1500px}
+*{box-sizing:border-box}body{font:15px/1.5 system-ui,sans-serif;color:#202020;background:#fff;margin:32px;max-width:1500px;overflow-wrap:anywhere}
 h1,h2{line-height:1.2}a{color:inherit;text-decoration:underline}nav{display:flex;gap:24px;flex-wrap:wrap}
 table{border-collapse:collapse;width:100%;margin-top:16px}th,td{border:1px solid #bbb;text-align:left;vertical-align:top;padding:12px}
-th{background:#eee}td p{white-space:pre-wrap}code,small{overflow-wrap:anywhere}li{margin:10px 0}
-@media print{body{margin:12px;font-size:10pt}thead{display:table-header-group}tr{break-inside:avoid}}
+th{background:#eee;overflow-wrap:normal}td p{white-space:pre-wrap}code,small{overflow-wrap:anywhere}li{margin:10px 0}
+.table-wrap{max-width:100%;overflow-x:auto}@media(max-width:620px){body{margin:16px}.table-wrap table{min-width:900px}.table-wrap th,.table-wrap td{min-width:140px}}
+@media print{body{margin:12px;font-size:10pt}.table-wrap{overflow:visible}.table-wrap table,.table-wrap th,.table-wrap td{min-width:0}thead{display:table-header-group}tr{break-inside:avoid}}
 </style><h1>Engineering handback</h1><p>""" + esc(original["review"]["title"]) + """</p><p>Prepared by """ + esc(row["prepared_by"]["name"]) + \
         " · " + esc(row["prepared_by"]["organization"]) + " · " + esc(row["created_at"]) + \
         "</p><p>" + esc(row["summary"]) + "</p><p>These are engineering dispositions of the retained customer requests. " + \
@@ -550,9 +551,9 @@ th{background:#eee}td p{white-space:pre-wrap}code,small{overflow-wrap:anywhere}l
         '<a href="' + esc(links[(row["review_id"], row["response_id"])]) + '">Original customer response and files</a>' + \
         '<a href="' + esc(links[(row["revised_review_id"], row["revised_response_id"])]) + '">Revised review and replacement files</a>' + \
         '<a href="request-resolutions.csv">Complete resolutions CSV</a><a href="handback.json">Complete engineering history JSON</a></nav>' + \
-        "<h2>Requested changes and engineering treatment</h2><table><thead><tr><th>Original request</th><th>Disposition</th>" + \
+        "<h2>Requested changes and engineering treatment</h2><div class='table-wrap' tabindex='0' role='region' aria-label='Engineering treatment'><table><thead><tr><th>Original request</th><th>Disposition</th>" + \
         "<th>Assigned engineer</th><th>Resolution or deferral</th><th>Selected replacement work</th></tr></thead><tbody>" + \
-        "".join(items) + "</tbody></table><h2>Engineering editions</h2><ol>" + history_rows + "</ol></html>"
+        "".join(items) + "</tbody></table></div><h2>Engineering editions</h2><ol>" + history_rows + "</ol></html>"
 
 
 def _export_result(directory, inspected):
