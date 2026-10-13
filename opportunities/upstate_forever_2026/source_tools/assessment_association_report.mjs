@@ -261,14 +261,29 @@ export function renderAssociationReport(result) {
   const r=result.records, s=result.summary;
   const hucCell = context => '<code>' + esc(context.huc12 || "HUC12 unreported") + '</code><br>' + esc(context.name) +
     '<br><span class="muted">' + esc(context.priority_states.length ? "FY26 priority: " + context.priority_states.join(", ") : context.domain_status === "selected_domain" ? "No FY26 priority state row" : context.domain_status.replaceAll("_"," ")) + '</span>';
-  const recordLink = row => '<a href="#record-' + r.indexOf(row) + '">' + esc(row.site) + '</a>';
+  const recordPositions = new Map(r.map((row, index) => [key(row), index]));
+  const recordLink = row => {
+    const index = recordPositions.get(key(row));
+    if (index === undefined) fail("Report row is absent from its original source edition");
+    return '<a href="#record-' + index + '">' + esc(row.site) + '</a>';
+  };
   const comparisons = table(["Publisher relationship","Assessment records"],Object.entries(s.recordComparisons).map(([label,count])=>[esc(label.replaceAll("_"," ")),esc(count)]));
   const differences = table(["Station / assessment edition","Assessment publisher HUC12","Station publisher HUC12","Cause / support","Priority relationship"],
     result.differences.map(row=>[recordLink(row)+"<br>"+esc(row.source_vintage),hucCell(row.assessment_programme),
       hucCell(row.station_programme),esc((row.cause_label || row.cause_raw)+" / "+row.use_support.replaceAll("_"," ")),esc(row.priority_relation.replaceAll("_"," "))]));
-  const coarser = table(["Station","Assessment edition / HUC12","Station publisher HUC8","Selected HUC12s sharing that HUC8"],
-    result.coarser_station_memberships.map(row=>[recordLink(row),esc(row.source_vintage)+"<br><code>"+esc(row.huc12)+"</code>",
-      "<code>"+esc(row.station_publisher_huc8 || "Not reported")+"</code>",esc(row.station_huc8_domain_huc12s.join("; "))]));
+  const coarser = table(["Station / original cause and support","Assessment edition / HUC12","Station publisher HUC8","Selected watershed lookup"],
+    result.coarser_station_memberships.map(row=>[
+      recordLink(row)+"<br>"+esc(row.cause_label || row.cause_raw || "Cause not reported")+
+        '<br><span class="muted">'+esc(row.use || "Use not reported")+" · "+
+        esc(String(row.use_support || "support_not_reported").replaceAll("_"," "))+"</span>",
+      esc(row.source_vintage)+"<br><code>"+esc(row.huc12)+"</code>",
+      "<code>"+esc(row.station_publisher_huc8 || "Not reported")+"</code>",
+      row.station_huc8_domain_huc12s.length ?
+        "<details><summary>"+esc(row.station_huc8_domain_huc12s.length)+" selected watershed IDs</summary>"+
+        "<p>Watersheds sharing the reported HUC8; station membership is unresolved at HUC12.</p><ul>"+
+        row.station_huc8_domain_huc12s.map(huc=>"<li><code>"+esc(huc)+"</code></li>").join("")+"</ul></details>" :
+        "No selected watershed shares this reported HUC8"
+    ]));
   const editions = table(["Original assessment edition","Records / distinct sites","Assessment HUC: priority records / sites",
     "Station exact HUC12: priority records / sites","Station HUC12 unreported records"],s.assessment_editions.map(e=>[
     esc(e.source_id)+"<br>"+esc(e.vintage),esc(e.records+" / "+e.stations),
