@@ -15,6 +15,10 @@ export function pmtilesCommerceTools(tool){
   const original={buyer:id,purchaseRequestId:id};
   const range={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:250}};
   return [
+    row('output_workbench','Read the current published map, configured merchant/buyer aliases and paginated original output, purchase, lifecycle and package requests. Reopen one exact request to recover its same original arguments.',
+      scoped({section:{type:'string',enum:['summary','sources','offers','purchases','operations','packages','request']},
+        kind:{type:'string',enum:['offer','purchase','operation','package']},requestId:id,after:text,
+        limit:{type:'integer',minimum:1,maximum:50}}),['workspace']),
     row('output_status','Read the original SF82 selection/runtime, this workspace’s paid releases and host-selected runtime profiles.',scoped({}),['workspace']),
     row('output_request','Read the exact retained paid-output lifecycle request and its first completed result after an interrupted client reply.',request({}),['workspace','requestId']),
     row('output_prepare','Retain selected currently published map resources or an original completed operations package as a priced immutable merchant output. The original release, files, full SHA, fixed chunks, price and complete-download cost stay bound to requestId.',

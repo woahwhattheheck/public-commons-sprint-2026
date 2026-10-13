@@ -4,28 +4,28 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 17677,
-      "sha256": "15f8942a58710c143e20d1d3cc47a06a6e6e1a589ed4d6b23ee8cc2ed85af4e7"
+      "bytes": 18410,
+      "sha256": "d26ec75243ac872e62ee546173a41caaecb66dff931714eb2138a940e86a01cf"
     },
     "operator/Guided_Journey_Integration.json": {
-      "bytes": 9348,
-      "sha256": "0bf4a32ee13f604711545658cdb7b42b67d15a8f1e9a5a03e7a6ce7f0a6482d0"
+      "bytes": 11712,
+      "sha256": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b"
     },
     "operator/extensions/guided-journey.json": {
-      "bytes": 1284,
-      "sha256": "301e7f2672c63d6f709a5d86e43dba83a8bf9f2735831a7ee12fcf23f6ebaba9"
+      "bytes": 1382,
+      "sha256": "081005d323f5c521227f030fbaa5795d2b965591b3c0a071e7ac361df939644d"
     },
     "operator/web/journey.mjs": {
-      "bytes": 55378,
-      "sha256": "901b2ea83d98ddd19eb950cad9ce427092bbff2252d5ce83977e818fbf2811d8"
+      "bytes": 65167,
+      "sha256": "6597690150bd4ebedb43a94469d404bd7ce9fc73acfc721d6b7ef6644ae9995e"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 14494,
-      "sha256": "c89ef53a45316b74bd692d4dc130843d648170c2901b177357cf7bcbb185ff77"
+      "bytes": 23569,
+      "sha256": "734f536b425dd264657e5fbeb6427fb960d2f1ae9a43db672ef2d84b1fc6dd4e"
     }
   },
   "source_context": {
@@ -34,6 +34,16 @@
     "application_carrier_sha256": "49d32e6b7f5c3a764054076c65059cc6856f33d7b7cef5d6408adbd0de7d5c67",
     "extension_composition_blob": "1890ae3e0f2287a5661205fd149fa6cbbb1a4bf6",
     "extension_composition_sha256": "9505048ab330032f08d5073ecf4b3bd696bad0b38b2f61805e68155abd43de15",
-    "public_application_head": "b376331722f7780cf12e7f17c498f69a0ae28946"
+    "public_application_head": "b376331722f7780cf12e7f17c498f69a0ae28946",
+    "operator_composition_base": "1c6052e62b27e8bf16f0fa4841338972765a83f2",
+    "operator_composition": "ECO13-CLOUD-INTEGRATION current-host adoption",
+    "authored_source_carrier": "F0C8JE0BTC3",
+    "current_host_continuation": "D406 current-host continuation based on 7956a4acb2e567a5d7a445a7c0898095cd3e1400; preserves registered desks and completed native stage predicate",
+    "regional_saved_view": "Regional selections, native project save and retained browser view composition",
+    "project_continuity_handoff": {
+      "operation_id": "ES-9960",
+      "source_head": "b1e87539dcf820b7617fa9d6cae66e0395c1d3c6",
+      "route": "Saved guided view → complete project → receiving workspace → original task resumption"
+    }
   }
 }

@@ -1,4 +1,4 @@
-"""Ordered seven-family map atlas from the existing delivery's native map panels."""
+"""Ordered native-study or regional map atlas from retained native panels."""
 from __future__ import annotations
 
 import csv
@@ -8,9 +8,9 @@ from pathlib import Path
 import textwrap
 
 from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
-from . import cartography
+from . import cartography, native_study
 
-ATLAS_VERSION = "seven-family-atlas/v2"
+ATLAS_VERSION = "native-and-regional-atlas/v5"
 PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
          "a3": (420 / 25.4, 297 / 25.4)}
 INDEX_ROWS = 14
@@ -45,7 +45,7 @@ def settings(value=None):
         raise ValueError("Map display percentile must be at most 100")
     titles = value.get("family_titles", {})
     if not isinstance(titles, dict) or set(titles) - set(MAP_IDS):
-        raise ValueError("Family titles must use the seven original map-family identifiers")
+        raise ValueError("Family titles must use the original map-family identifiers")
     return {
         "paper": paper, "dpi": int(dpi), "display_percentile": percentile,
         "title": _text(value.get("title"), "Atlas title", 140),
@@ -59,31 +59,73 @@ def settings(value=None):
 def bind_water_selections(workspace, selection):
     """Retain complete saved-designation identity before constructing a release."""
     bindings = {}
-    for role, choice in selection.get("overlays", {}).items():
+    overlays = selection.get("overlays", {})
+    for role, choice in overlays.items():
         if not isinstance(choice, dict):
             raise ValueError("Each atlas overlay must name its original source")
         selection_id = choice.get("selection_id")
+        inferred = False
         if not selection_id:
-            continue
+            if choice.get("where"):
+                continue
+            _, entry = workspace.source_file(choice.get("source_collection_id"),
+                                             choice.get("source_id"))
+            scope = entry.get("scope") or {}
+            selection_id = scope.get("selection_id")
+            if not selection_id:
+                continue
+            inferred = True
         from .water_designations import get
         saved = get(workspace, selection_id)
         expected = saved["delivery_overlay"]
+        if inferred:
+            original = saved["source"]
+            source_matches = (
+                entry.get("kind") == "vector" and
+                choice.get("source_collection_id") == expected["source_collection_id"] and
+                choice.get("source_id") == expected["source_id"] and
+                (choice.get("layer") or entry.get("layer")) == expected["layer"] and
+                entry.get("layer") == expected["layer"] and
+                entry.get("body", {}).get("sha256") == saved["files"]["geopackage"]["sha256"] and
+                scope.get("source_collection_id") == original["source_collection_id"] and
+                scope.get("source_id") == original["source_id"] and
+                scope.get("original_source_sha256") == original["sha256"] and
+                scope.get("selected_features") == saved["summary"]["selected_features"]
+            )
+            contradictory = any(
+                key in choice and choice[key] != value
+                for key, value in expected.items() if key != "layer"
+            )
+            if not source_matches or contradictory or role != saved["purpose"]:
+                raise ValueError("Retained designation source " + str(selection_id) +
+                                 " differs from its saved source, edition or purpose; apply that saved designation again")
+            choice = {**choice, **expected}
+            overlays[role] = choice
         if (role != saved["purpose"] or
                 any(choice.get(key) != value for key, value in expected.items()) or
                 choice.get("where")):
-            raise ValueError("Saved water designation " + selection_id +
+            raise ValueError("Saved water designation " + str(selection_id) +
                              " differs from the selected source or field filter; apply that saved designation again")
         bindings[role] = {key: saved[key] for key in (
             "id", "title", "purpose", "selection", "source", "summary",
             "rule_reference", "delivery_overlay", "files")}
-        bindings[role]["workspace_path"] = "water-designations/" + selection_id
+        bindings[role]["workspace_path"] = "water-designations/" + str(selection_id)
+    source_roles = selection.setdefault("source_roles", {})
+    if not isinstance(source_roles, dict):
+        raise ValueError("Delivery source roles must be an object")
+    for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
+                       ("drinking_water", "SOURCE_WATER_PROTECTION_AREAS"),
+                       ("protected_lands", "PROTECTED_LANDS_OVERLAY")):
+        if name in overlays:
+            source_roles[role] = dict(overlays[name])
+        else:
+            source_roles.pop(role, None)
     return bindings
-
 
 def _sheet(plt, options, title, page_number, page_count):
     fig = plt.figure(figsize=PAPER[options["paper"]])
     fig.text(.07, .945, title, fontsize=16, weight="semibold", va="top")
-    fig.text(.07, .045, "Upper Savannah Scientific Workbench", fontsize=7, color="#444444")
+    fig.text(.07, .045, "Scientific Workbench", fontsize=7, color="#444444")
     fig.text(.93, .045, str(page_number) + " / " + str(page_count),
              fontsize=7, ha="right", color="#444444")
     return fig
@@ -100,10 +142,12 @@ def _intro(pdf, plt, options, rows, *, title, selection, grid, footer, page_coun
         fig.text(.07, .80, _wrap(title, 64), fontsize=21, va="top")
         if options["subtitle"]:
             fig.text(.07, .65, _wrap(options["subtitle"], 110), fontsize=10, va="top")
-        fig.text(.07, .54, "Seven map families  ·  " + str(len(rows)) + " map sheets",
+        families = len({row["family"] for row in rows})
+        fig.text(.07, .54, str(families) + " map families  ·  " + str(len(rows)) + " map sheets",
                  fontsize=11, va="top")
         contact = selection["contact"]
-        fig.text(.07, .48, _wrap(contact["name"] + " · " + contact["organization"], 110),
+        contact_label = " · ".join(contact[key] for key in ("name", "organization") if contact.get(key))
+        fig.text(.07, .48, _wrap(contact_label or "Original study sources and methods retained in the report", 110),
                  fontsize=9, va="top")
         fig.text(.07, .44, contact["email"], fontsize=9, va="top")
         methodology = (
@@ -130,7 +174,7 @@ def _intro(pdf, plt, options, rows, *, title, selection, grid, footer, page_coun
             fig.text(.93, .86, "PAGE", fontsize=8, color="#555555", ha="right")
             for i, row in enumerate(chunk):
                 y = .81 - i * .050
-                heading = str(MAP_IDS.index(row["family"]) + 1) + ". " + row["title"]
+                heading = str(list(dict.fromkeys(item["family"] for item in rows)).index(row["family"]) + 1) + ". " + row["title"]
                 # The complete subtitle and identifiers are retained in the index files.
                 if row["scenario_run_id"]:
                     heading += " · " + row["scenario_run_id"][:12]
@@ -205,8 +249,11 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
     pages = list(pages)
     if not pages or len({page["key"] for page in pages}) != len(pages):
         raise ValueError("Atlas map keys must be nonempty and distinct")
-    if {page["family"] for page in pages} != set(MAP_IDS):
-        raise ValueError("The complete atlas must include all seven original map families")
+    present = {page["family"] for page in pages}
+    study_mode = native_study.mode(selection) == "native_study"
+    required = set(native_study.MAP_FAMILIES) if study_mode else set(MAP_IDS)
+    if not required <= present or present - set(MAP_IDS):
+        raise ValueError("The atlas must include every map family for the explicit delivery mode")
     order = {family: i for i, family in enumerate(MAP_IDS)}
     pages.sort(key=lambda page: order[page["family"]])  # preserve selected scenario order
 
@@ -236,8 +283,9 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
     try:
         with PdfPages(pending, metadata={
             "Title": title, "Author": selection["contact"]["organization"],
-            "Subject": options["subtitle"] or "Seven-family watershed map atlas",
-            "Creator": "Upper Savannah Scientific Workbench",
+            "Subject": options["subtitle"] or ("Original native-study map atlas" if study_mode
+                                             else "Seven-family watershed map atlas"),
+            "Creator": "Scientific Workbench",
         }) as pdf:
             _intro(pdf, plt, options, rows, title=title, selection=selection,
                    grid=grid, footer=footer, page_count=total)
@@ -272,11 +320,14 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
             "source_report_id": selection.get("source_report_id"),
             "source_report_sha256": selection.get("source_report_sha256"),
             "source_report": state.get("source_report"),
+            "delivery_mode": native_study.mode(selection),
+            "native_study": state.get("native_study"),
             "source_roles": selection.get("source_roles", {}),
             "overlays": selection.get("overlays", {}), "water_designations": water_links,
             "receptor_spec": selection.get("receptor_spec"),
             "receptor_profile_source": selection.get("receptor_profile_source"),
             "resolved_receptor_network": state.get("receptor_inventory", {}).get("network_source"),
+            "receiving_waters": state.get("receiving_waters"),
             "rendered_overlay_sources": [
                 {"map_key": row["map_key"], "overlays": row["overlays"]} for row in rows
             ],
@@ -284,6 +335,8 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
         atlas = {
             "schema": "upstate.map-atlas/v1", "version": ATLAS_VERSION,
             "delivery_id": state["id"], "title": title, "settings": options,
+            "delivery_mode": native_study.mode(selection),
+            "map_families": [family for family in MAP_IDS if family in present],
             "pages": rows, "map_count": len(rows), "page_count": total,
             "baseline_run_id": selection["baseline_run_id"],
             "scenario_run_ids": list(selection["scenario_run_ids"]),

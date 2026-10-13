@@ -18,6 +18,45 @@ const safeUrl = value => {
   } catch (_) { return null; }
 };
 
+const rfpFocusHuc12s = Object.freeze(['030601010703', '030601010704', '030601020502', '030601020507']);
+
+export function rfpFocusWatersheds(rows) {
+  const available = new Set(list(rows).map(row => row.huc12));
+  return rfpFocusHuc12s.every(huc => available.has(huc)) ? [...rfpFocusHuc12s] : [];
+}
+
+
+export function utilityWatershedChoicesHtml(choices, busy = false) {
+  if (!list(choices).length) return '';
+  return '<section class="wc-coverage"><h2>Utility contributing watersheds</h2>' +
+    '<p class="wc-note">Choose a utility to save its original focus anchors and distinct upstream model-domain HUC12s. ' +
+    'Whole-HUC planning footprints, published intake-protection polygons and native reporting masks keep separate boundaries.</p>' +
+    list(choices).map(choice => {
+      const summary = choice.summary || {};
+      const status = choice.available ? '<dl class="wc-facts"><div><dt>Whole HUC12s</dt><dd>' +
+        esc(number(summary.huc_count)) + '</dd></div><div><dt>NRCS whole-HUC area</dt><dd>' +
+        esc(number(summary.area_acres, 2)) + ' acres</dd></div><div><dt>Original state–HUC rows</dt><dd>' +
+        esc(number(summary.state_row_count)) + '</dd></div><div><dt>Outside SC jurisdiction</dt><dd>' +
+        esc(number(summary.outside_south_carolina_huc_count)) + ' HUC12s</dd></div><div><dt>Selected SC source features</dt><dd>' +
+        esc(number(summary.selected_classification_count)) + '</dd></div></dl>' +
+        '<div class="wc-table-scroll"><table><caption>Original NRCS high-priority programme designations</caption>' +
+        '<thead><tr><th scope="col">System type</th><th scope="col">State–HUC rows</th><th scope="col">Designated state-portion acres</th></tr></thead><tbody>' +
+        list(choice.programme_designations).map(row => '<tr><th scope="row">' + esc(row.system_type) +
+          '</th><td>' + esc(number(row.state_row_count)) + '</td><td>' + esc(number(row.state_portion_acres, 2)) +
+          (row.missing_area_count ? ' · ' + esc(number(row.missing_area_count)) + ' missing source areas' : '') + '</td></tr>').join('') +
+        '</tbody></table></div>' : '<p class="wc-note">' + esc(choice.reason) + '</p>';
+      return '<section><h3>' + esc(choice.title || choice.utility_id) + '</h3>' + status +
+        '<p class="wc-note">Ground, Surface and Both retain the original programme labels. Feature counts use publisher HUC attributes; the SCDES jurisdiction is South Carolina.</p>' +
+        '<button type="button" data-wc-utility="' + esc(choice.key) + '"' +
+        (busy || !choice.available ? ' disabled' : '') + '>Save and export ' + esc(choice.utility_id) + ' contributing watersheds</button>' +
+        '<details><summary>Original profile and membership</summary><pre>' +
+        esc(pretty({anchor_huc12s:choice.anchor_huc12s, huc12s:choice.huc12s,
+          known_external_upstream_huc12s:choice.known_external_upstream_huc12s,
+          profile_source:choice.profile_source,reference:choice.reference,area_basis:choice.area_basis})) +
+        '</pre></details></section>';
+    }).join('') + '</section>';
+}
+
 export function filterWatersheds(rows, filters = {}) {
   const needle = String(filters.search || '').trim().toLocaleLowerCase();
   return list(rows).filter(row =>
@@ -30,13 +69,74 @@ export function filterWatersheds(rows, filters = {}) {
   );
 }
 
+function watershedHucLink(huc12, domain) {
+  const key = String(huc12 ?? '');
+  return domain.has(key)
+    ? '<button type="button" data-wc-huc="' + esc(key) + '">' + esc(key) + '</button>'
+    : '<span>' + esc(key) + ' · outside model domain</span>';
+}
+
+export function watershedDownstreamHtml(row, domainHuc12s = []) {
+  const domain = new Set(domainHuc12s);
+  if (row.downstream_huc12) return watershedHucLink(row.downstream_huc12, domain);
+  const state = row.network?.downstream_state;
+  if (state === 'terminal') return 'Terminal outlet in the original network';
+  if (state === 'unknown') return 'Unknown in the original downstream record';
+  if (state === 'missing_native_record') return 'No original network row for this watershed';
+  return 'Original drainage network is not attached to this report';
+}
+
+export function watershedNetworkHtml(row, domainHuc12s = []) {
+  const network = row.network;
+  if (!network) return '';
+  const domain = new Set(domainHuc12s);
+  const hucList = values => list(values).map(key => watershedHucLink(key, domain)).join(' · ');
+  const upstream = list(network.known_upstream_domain_huc12s);
+  const path = list(network.downstream_huc12s);
+  const external = list(network.known_external_upstream_huc12s);
+  const pathStates = {
+    terminal: 'Terminal outlet',
+    unknown: 'Unknown downstream attribute',
+    missing_native_record: 'Original network row unavailable',
+    exits_supplied_network: 'Leaves the supplied original network',
+    cycle_in_source: 'Cycle in the original downstream records',
+  };
+  return '<section class="wc-coverage"><h3>Original drainage network</h3>' +
+    '<p class="wc-note">Known upstream totals count distinct connected model watersheds and exclude this watershed. Areas use the published watershed records.</p>' +
+    '<dl class="wc-facts"><div><dt>Known upstream model watersheds</dt><dd>' +
+    esc(number(network.known_upstream_domain_huc_count)) +
+    '</dd></div><div><dt>Upstream NRCS priority watersheds</dt><dd>' +
+    esc(number(network.known_upstream_priority_huc_count)) +
+    '</dd></div><div><dt>Known upstream area</dt><dd>' +
+    esc(number(network.known_upstream_area_acres, 2)) + ' acres' +
+    (network.known_upstream_area_huc_count === undefined ? '' :
+      ' / ' + esc(number(network.known_upstream_area_huc_count)) + ' area records') +
+    '</dd></div><div><dt>Upstream selected-class records</dt><dd>' +
+    esc(number(network.known_upstream_selected_classification_count)) +
+    '</dd></div><div><dt>Downstream path</dt><dd>' +
+    esc(pathStates[network.downstream_path_status] || human(network.downstream_path_status)) +
+    '</dd></div><div><dt>Original outgoing records</dt><dd>' +
+    (network.outgoing_records_complete_for_model_domain === true
+      ? 'All model watersheds have an original outgoing value'
+      : 'Some model watersheds have missing or unknown outgoing values') +
+    '</dd></div></dl>' +
+    (path.length ? '<details><summary>Original downstream path</summary><p>' + hucList(path) + '</p></details>' : '') +
+    (upstream.length ? '<details><summary>Known upstream model watersheds (' + esc(number(upstream.length)) +
+      ')</summary><p>' + hucList(upstream) + '</p></details>' : '') +
+    (external.length ? '<details><summary>Additional upstream records outside the model domain (' +
+      esc(number(external.length)) + ')</summary><p>' + hucList(external) + '</p></details>' : '') +
+    '</section>';
+}
+
 export function createWatershedContextDesk(host) {
   const document = host.document || globalThis.document;
   let root = null, listeners = null, epoch = 0, workspace = null;
   let catalog = null, saved = null, selectedId = '', focusHuc = '';
   let savedExport = null, selectedExportId = '', selectedHucs = [], selectionRequest = 0, catalogRequest = 0;
   let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0;
+  let sourceChoice = 0, networkChoice = '';
   let filters = emptyFilters();
+  const receivingTasks = new Map();
   const currentWorkspace = () => host.getState()?.workspace_key ?? host.getWorkspace?.() ?? null;
   const rows = () => list(saved?.report?.hucs);
   const filtered = () => {
@@ -75,6 +175,8 @@ export function createWatershedContextDesk(host) {
     selectionRequest += 1;
     reportRequest += 1;
     lastTaskSignature = '';
+    sourceChoice = 0;
+    networkChoice = '';
     errorText = '';
     try {
       const stored = globalThis.sessionStorage?.getItem('upstate-watershed-context:' + workspace) || '';
@@ -128,7 +230,8 @@ export function createWatershedContextDesk(host) {
     if (!tasks.length) return '';
     return '<section class="wc-task-list" aria-label="Regional operations">' + tasks.map(task =>
       '<button type="button" data-wc-task="' + esc(task.id) + '">' +
-      esc(task.action === 'watershed.context.export' ? 'Export watershed selection' : 'Build regional context') +
+      esc(task.action === 'watershed.context.export' ? 'Export watershed selection' :
+        task.action === 'watershed.context.receive' ? 'Receive completed regional run' : 'Build regional context') +
       ' · ' + esc(human(task.state)) + '</button>').join('') + '</section>';
   }
   function sourceHtml() {
@@ -136,9 +239,10 @@ export function createWatershedContextDesk(host) {
     if (!choices.length) return '<p class="wc-note">Register the regional source edition in Prepare study inputs to build a watershed report.</p>';
     return '<div class="wc-source-form">' + field('Regional source edition',
       '<select name="wc-source">' + choices.map((source, index) =>
-        option(index, source.title || source.member_path, 0)).join('') + '</select>') +
+        option(index, source.title || source.member_path, sourceChoice)).join('') + '</select>') +
+      field('Original HUC12 / ToHUC network', '<select name="wc-network">' + option('', 'Use the source edition’s retained network', networkChoice) + list(catalog?.networks).map((network, index) => option(index, network.title, networkChoice)).join('') + '</select>') +
       '<button type="button" data-wc-build' + (busy ? ' disabled' : '') + '>Build regional context</button>' +
-      '<p class="wc-note">Use the retained watershed context and complete classification query from the same original source edition.</p></div>';
+      '<p class="wc-note">Use the retained watershed context and complete classification query from the same original source edition. A selected native network is copied with its exact original bytes into this saved report.</p></div>';
   }
   function reportSelector() {
     const reports = list(catalog?.reports);
@@ -167,6 +271,8 @@ export function createWatershedContextDesk(host) {
       '<p>' + esc(number(selectedHucs.length)) +
       (selectedHucs.length === 1 ? ' watershed is' : ' watersheds are') +
       ' retained in this selection. Additional table filters refine the view; these downloads contain the complete saved selection.</p>' +
+      (savedExport.files?.['watershed-selection-brief.html']
+        ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
       downloadsHtml(savedExport._downloads) +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
       esc(pretty({huc12s:selectedHucs, report_id:savedExport.report_id,
@@ -185,8 +291,54 @@ export function createWatershedContextDesk(host) {
     if (extra && extra.count === 0 && list(extra.huc8).length)
       text += ' HUC8 areas ' + extra.huc8.join(', ') + ' returned zero records for the selected classes.';
     return '<section class="wc-coverage"><h2>Source coverage</h2><p>' + esc(text) +
-      '</p><p class="wc-note">Selected source classes: ' + esc(list(coverage.selected_classes).join(', ') || 'See retained query') + '. Reach counts use the publisher’s HUC12 attributes. The receiving-water workflow calculates geometric intersections and upstream contributing areas from the original drainage network.</p>' +
+      '</p><p class="wc-note">Selected source classes: ' + esc(list(coverage.selected_classes).join(', ') || 'See retained query') + '. Source-feature counts use the publisher’s HUC12 attributes. The receiving-water workflow calculates geometric intersections and upstream contributing areas from the original drainage network.</p>' +
       '<details><summary>Classification query and source scope</summary><pre>' + esc(pretty(coverage)) + '</pre></details></section>';
+  }
+  function networkHtml(report) {
+    const network = report?.network || {};
+    if (network.status === 'not_supplied' || !network.status) return '<section class="wc-coverage"><h2>Native watershed network</h2><p>Select the original HUC12 / ToHUC network when building the regional context to open upstream and downstream watershed relationships.</p></section>';
+    return '<section class="wc-coverage"><h2>Native watershed network</h2><p>' + esc(human(network.status)) + ' · ' + esc(number(network.model_domain_native_row_count)) + ' model watersheds in ' + esc(number(network.input_row_count)) + ' original network records.</p><div class="wc-metrics">' +
+      metric(number(list(network.domain_exit_edges).length), 'Links leaving the model domain') +
+      metric(number(list(network.cycles).length), 'Cycles in the original source') +
+      metric(number(list(network.missing_model_domain_huc12s).length), 'Model watersheds missing from the network') +
+      '</div><p class="wc-note">' + esc(network.interpretation || '') + '</p><details><summary>Original network scope and domain exits</summary><pre>' + esc(pretty(network)) + '</pre></details></section>';
+  }
+  function completedConnectivityHtml() {
+    const graph = saved?.connectivity;
+    if (!graph || graph.source_context_id !== saved?.id) return '';
+    const exits = list(graph.distinct_domain_exit_catchments);
+    return '<section class="wc-coverage"><h2>Completed original connectivity analysis</h2>' +
+      '<p>' + esc(graph.method) + '</p><div class="wc-metrics">' +
+      metric(number(graph.domain_huc_count), 'Retained domain watersheds') +
+      metric(number(graph.headwater_huc_count), 'Domain headwater watersheds') +
+      metric(number(graph.native_source_record_count), 'Original network records') +
+      metric(number(exits.length), 'Distinct domain exit catchments') +
+      '</div><div class="wc-table-scroll"><table><thead><tr><th>Domain exit</th>' +
+      '<th>Downstream watershed</th><th>Watersheds</th><th>Distinct acres</th>' +
+      '<th>Priority watersheds</th><th>South Carolina selected-class records</th></tr></thead><tbody>' +
+      exits.map(exit => '<tr><th scope="row">' + watershedHucLink(exit.from, new Set(rows().map(row => row.huc12))) +
+        '</th><td>' + esc(exit.to) + '</td><td>' + esc(number(exit.huc_count)) +
+        '</td><td>' + esc(number(exit.area_acres, 2)) + '</td><td>' +
+        esc(number(exit.priority_huc_count)) + '</td><td>' +
+        esc(number(exit.selected_classifications)) + '</td></tr>').join('') +
+      '</tbody></table></div><p class="wc-note">The full connectivity report, all watershed rows, ' +
+      'original source summary and source manifest are included in this saved report’s downloads. ' +
+      'Exit catchments are disjoint; upstream memberships of different focal watersheds may overlap.</p></section>';
+  }
+  function upstreamHtml(row) {
+    const network = row.network;
+    if (!network) return '';
+    const upstream = list(network.known_upstream_domain_huc12s);
+    const downstream = list(network.downstream_domain_huc12s);
+    return watershedNetworkHtml(row, rows().map(item => item.huc12)) +
+      '<div class="wc-actions"><button type="button" data-wc-network-export="upstream"' +
+      (upstream.length && !busy ? '' : ' disabled') + '>Export upstream watersheds</button>' +
+      '<button type="button" data-wc-network-export="downstream"' +
+      (downstream.length && !busy ? '' : ' disabled') +
+      '>Export downstream model watersheds</button></div>';
+  }
+  function downstreamHtml(row) {
+    return watershedDownstreamHtml(row, rows().map(item => item.huc12));
   }
   function filtersHtml() {
     const all = rows();
@@ -211,7 +363,10 @@ export function createWatershedContextDesk(host) {
     const all = rows();
     root.innerHTML = '<div class="wc-desk"><header class="wc-heading"><div><p class="wc-eyebrow">UPPER SAVANNAH WATERSHED WORKSPACE</p>' +
       '<h1>Regional watershed context</h1><p>Review watershed coverage, drinking-water priorities, and the original classified-water records across the full model domain.</p></div>' +
-      '<div class="wc-actions"><button type="button" data-wc-refresh>Refresh reports</button><button type="button" data-wc-receiving>Open receiving waters</button></div></header>' +
+      '<div class="wc-actions"><button type="button" data-wc-refresh>Refresh reports</button>' +
+      '<button type="button" data-wc-receive' + (busy ? ' disabled' : '') + '>Receive completed run</button>' +
+      '<input type="file" name="wc-completed-run" accept=".zip,application/zip" hidden>' +
+      '<button type="button" data-wc-receiving>Open receiving waters</button></div></header>' +
       '<p data-wc-status class="wc-status" aria-live="polite"' + (errorText ? '' : ' hidden') + '>' + esc(errorText) + '</p>' +
       '<div data-wc-tasks>' + taskHtml() + '</div>' +
       '<section class="wc-report-controls">' + reportSelector() + selectionSelector() +
@@ -220,13 +375,16 @@ export function createWatershedContextDesk(host) {
         metric(number(all.length), 'Model watersheds') +
         metric(number(sum(all, 'area_km2'), 1), 'Unique watershed area · km²') +
         metric(number(all.filter(row => row.priority).length), 'NRCS priority watersheds') +
-        metric(number(sum(all, 'selected_classification_count')), 'Selected-class reach records') +
-        '</section>' + coverageHtml(report) +
+        metric(number(sum(all, 'selected_classification_count')), 'Selected-class source features') +
+        '</section>' + coverageHtml(report) + completedConnectivityHtml() + networkHtml(report) +
+        utilityWatershedChoicesHtml(saved._utility_selections, busy) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
-        '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button></div></header>' +
+        '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
+        (rfpFocusWatersheds(all).length ? '<button type="button" data-wc-export-rfp>Export four RFP anchor watersheds</button>' : '') +
+        '</div></header>' +
         filtersHtml() + '<p data-wc-count class="wc-note" aria-live="polite"></p>' +
         '<div class="wc-table-scroll"><table><thead><tr>' +
-        ['Watershed', 'HUC8 / states', 'Area km²', 'NRCS priority', 'Selected reaches', 'Source classes', 'Coverage', ''].map(label => '<th scope="col">' + esc(label) + '</th>').join('') +
+        ['Watershed', 'HUC8 / states', 'Area km²', 'NRCS priority', 'Selected source features', 'Source classes', 'Coverage', ''].map(label => '<th scope="col">' + esc(label) + '</th>').join('') +
         '</tr></thead><tbody data-wc-rows></tbody></table></div></section>' +
         '<section data-wc-detail class="wc-detail" tabindex="-1" aria-label="Watershed detail"></section>' +
         selectionDownloads() + '<section class="wc-downloads"><h2>Regional report and original sources</h2>' +
@@ -258,6 +416,8 @@ export function createWatershedContextDesk(host) {
       esc(row.name || row.huc12) + '">Details</button></td></tr>'
     ).join('') : '<tr><td colspan="8" class="wc-empty-cell">No watersheds match these filters.</td></tr>';
     root.querySelector('[data-wc-export]').disabled = busy || matching.length === 0;
+    const focusExport = root.querySelector('[data-wc-export-rfp]');
+    if (focusExport) focusExport.disabled = busy || rfpFocusWatersheds(rows()).length === 0;
   }
   function sourceReferences(references) {
     return list(references).map(reference => {
@@ -290,22 +450,20 @@ export function createWatershedContextDesk(host) {
       '</dd></div><div><dt>Watershed area</dt><dd>' + esc(number(row.area_km2, 2)) + ' km² / ' + esc(number(row.area_acres, 1)) +
       ' acres</dd></div><div><dt>Model role</dt><dd>' + esc(human(row.role || 'model_domain')) +
       '</dd></div><div><dt>NRCS priority</dt><dd>' + esc(row.priority ? 'Priority in ' + list(row.priority_states).join(', ') : 'No priority flag in these source rows') +
-      '</dd></div><div><dt>Downstream watershed</dt><dd>' + (row.downstream_huc12 ?
-        '<button type="button" data-wc-huc="' + esc(row.downstream_huc12) + '">' + esc(row.downstream_huc12) + '</button>' :
-        'No original downstream attribute supplied') +
-      '</dd></div><div><dt>Reach assignment</dt><dd>' + esc(human(row.classification_assignment || 'publisher_huc12_attribute')) +
+      '</dd></div><div><dt>Downstream watershed</dt><dd>' + downstreamHtml(row) +
+      '</dd></div><div><dt>Source-feature assignment</dt><dd>' + esc(human(row.classification_assignment || 'publisher_huc12_attribute')) +
       '</dd></div></dl>' +
       '<div class="wc-detail-grid"><section><h3>Priority reasons</h3>' +
       (reasons.length ? '<ul>' + reasons.map(reason => '<li>' + esc(typeof reason === 'string' ? reason : pretty(reason)) + '</li>').join('') + '</ul>' :
         '<p class="wc-note">The source contains no priority reason for this watershed.</p>') +
       '<h3>Original state area records</h3><p class="wc-note">The regional total counts each watershed once. State rows retain their original area values.</p><dl class="wc-class-counts">' + Object.entries(stateAreas).map(([state, acres]) => '<div><dt>' + esc(state) + '</dt><dd>' + esc(number(acres, 1)) + ' acres</dd></div>').join('') + '</dl></section>' +
       '<section><h3>Classified-water source</h3><p>' + esc(number(row.selected_classification_count)) +
-      ' selected-class reach records · ' + esc(human(row.classification_coverage)) + '</p>' +
+      ' selected-class source features · ' + esc(human(row.classification_coverage)) + '</p>' +
       '<dl class="wc-class-counts">' + Object.entries(classCounts).map(([key, count]) =>
         '<div><dt>' + esc(key) + '</dt><dd>' + esc(number(count)) + '</dd></div>').join('') +
       '</dl><p class="wc-note">Jurisdiction: ' + esc(human(row.classification_scope)) + '. Source classes: ' +
       esc(list(row.selected_classes).join(', ') || 'No selected class records') + '.</p></section></div>' +
-      '<details><summary>Original NRCS state rows</summary><pre>' + esc(pretty(row.nrcs_state_rows || [])) + '</pre></details>' +
+      upstreamHtml(row) + '<details><summary>Original NRCS state rows</summary><pre>' + esc(pretty(row.nrcs_state_rows || [])) + '</pre></details>' +
       '<details><summary>Original watershed and source references</summary><ul class="wc-source-references">' +
       sourceReferences(row.source_references) + '</ul><pre>' + esc(pretty(row)) + '</pre></details>';
   }
@@ -317,7 +475,10 @@ export function createWatershedContextDesk(host) {
     saved = result;
     selectedId = result.id;
     errorText = '';
-    if (!rows().some(row => row.huc12 === focusHuc)) focusHuc = '';
+    if (!rows().some(row => row.huc12 === focusHuc)) {
+      const original = list(result.selection?.huc12s || result.report?.selection?.huc12s);
+      focusHuc = original.find(huc => rows().some(row => row.huc12 === huc)) || '';
+    }
     remember();
     render();
     return result;
@@ -348,6 +509,19 @@ export function createWatershedContextDesk(host) {
     render();
   }
   async function refresh() {
+    const pending = receivingTasks.get(workspace);
+    const completed = list(host.getState()?.tasks).find(task =>
+      task.id === pending && task.action === 'watershed.context.receive' &&
+      task.state === 'complete' && task.result?.id);
+    if (completed) {
+      selectedId = completed.result.id;
+      clearSelection();
+      focusHuc = '';
+      filters = emptyFilters();
+      selectionRequest += 1;
+      receivingTasks.delete(workspace);
+      remember();
+    }
     const version = epoch, key = workspace, request = ++catalogRequest, selectionToken = selectionRequest;
     try {
       const result = await read('catalog');
@@ -366,12 +540,38 @@ export function createWatershedContextDesk(host) {
       }
     } catch (error) { if (guard(version, key)) fail(error); }
   }
+  async function receive(file) {
+    if (!file || busy) return;
+    const key = workspace;
+    if (!key || currentWorkspace() !== key)
+      throw new Error('Choose the project receiving this regional run.');
+    busy = true;
+    if (root) render();
+    try {
+      const uploaded = await host.uploadFile(file);
+      if (currentWorkspace() !== key)
+        throw new Error('The selected project changed. Choose the receiving project and archive again.');
+      const task = await host.submitAction('watershed.context.receive', {upload_id:uploaded.id});
+      receivingTasks.set(key, task.id);
+      await host.refresh?.({force:true});
+      if (root && workspace === key) await refresh();
+    } finally {
+      busy = false;
+      if (root) render();
+    }
+  }
   async function build() {
     if (busy) return;
     const source = selectedSource();
     if (!source) throw new Error('Choose a registered regional source edition.');
     const selection = {...source};
     delete selection.title;
+    const networkIndex = root?.querySelector('[name="wc-network"]')?.value;
+    if (networkIndex !== undefined && networkIndex !== '') {
+      const selectedNetwork = catalog?.networks?.[Number(networkIndex)];
+      if (!selectedNetwork) throw new Error('Refresh the catalogue and choose the original network.');
+      selection.network = {...selectedNetwork};
+    }
     busy = true;
     const button = root?.querySelector('[data-wc-build]');
     if (button) button.disabled = true;
@@ -381,16 +581,17 @@ export function createWatershedContextDesk(host) {
       if (root) await refresh();
     } finally { busy = false; if (root) { const node = root.querySelector('[data-wc-build]'); if (node) node.disabled = false; renderRows(); } }
   }
-  async function exportRows(huc12s) {
+  async function exportRows(huc12s, utilityKey = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
     busy = true;
-    renderRows();
+    render();
     try {
-      await host.submitAction('watershed.context.export', {report_id:saved.id, huc12s});
+      await host.submitAction('watershed.context.export', {report_id:saved.id, huc12s,
+        ...(utilityKey ? {utility_key:utilityKey} : {})});
       await host.refresh?.({force:true});
       if (root) await refresh();
-    } finally { busy = false; if (root) renderRows(); }
+    } finally { busy = false; if (root) render(); }
   }
   async function click(event) {
     const button = event.target.closest('button');
@@ -398,6 +599,10 @@ export function createWatershedContextDesk(host) {
     try {
       if (button.hasAttribute('data-wc-refresh')) return refresh();
       if (button.hasAttribute('data-wc-build')) return await build();
+      if (button.hasAttribute('data-wc-receive')) {
+        if (!busy) root.querySelector('[name="wc-completed-run"]')?.click();
+        return;
+      }
       if (button.hasAttribute('data-wc-receiving')) return await host.navigate?.('receiving-waters');
       if (button.hasAttribute('data-wc-clear')) {
         selectionRequest += 1;
@@ -408,8 +613,19 @@ export function createWatershedContextDesk(host) {
         render();
         return;
       }
+      if (button.dataset.wcUtility) {
+        const choice = list(saved?._utility_selections).find(row => row.key === button.dataset.wcUtility);
+        if (!choice?.available) throw new Error('Choose an available utility footprint from the original profile.');
+        return await exportRows(choice.huc12s, choice.key);
+      }
       if (button.hasAttribute('data-wc-export')) return await exportRows(filtered().map(row => row.huc12));
+      if (button.hasAttribute('data-wc-export-rfp')) return await exportRows(rfpFocusWatersheds(rows()));
       if (button.dataset.wcExportOne) return await exportRows([button.dataset.wcExportOne]);
+      if (button.dataset.wcNetworkExport) {
+        const network = rows().find(row => row.huc12 === focusHuc)?.network;
+        const selected = button.dataset.wcNetworkExport === 'upstream' ? network?.known_upstream_domain_huc12s : network?.downstream_domain_huc12s;
+        return await exportRows(list(selected));
+      }
       if (button.dataset.wcTask) return host.showTask?.(button.dataset.wcTask);
       if (button.dataset.wcHuc) {
         if (!rows().some(row => row.huc12 === button.dataset.wcHuc))
@@ -431,6 +647,14 @@ export function createWatershedContextDesk(host) {
     const name = event.target.name;
     if (!name?.startsWith('wc-')) return;
     const key = name.slice(3);
+    if (key === 'completed-run') {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      receive(file).catch(fail);
+      return;
+    }
+    if (key === 'source') { sourceChoice = Number(event.target.value); return; }
+    if (key === 'network') { networkChoice = event.target.value; return; }
     if (key in filters) { filters[key] = event.target.value; remember(); renderRows(); }
     else if (key === 'selection') {
       if (event.target.value) loadExport(event.target.value).catch(fail);
@@ -498,5 +722,10 @@ export function createWatershedContextDesk(host) {
     remember();
     render();
   }
-  return {mount, update, detach, refresh, openWatershed};
+  async function openSelection(exportId) {
+    if (!root) throw new Error('Open Regional watersheds before selecting its retained export.');
+    await loadExport(exportId);
+    if (root) root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest'});
+  }
+  return {mount, update, detach, refresh, openWatershed, openSelection};
 }

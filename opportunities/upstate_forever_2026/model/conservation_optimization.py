@@ -601,7 +601,8 @@ def _independent_quantities(rows, ids, request):
             "unknown_units": sum(x is None for x in values),
             "unit": (chosen[0]["objective_units"][axis] if chosen else
                      CONTEXT_UNITS[axis] if request["objective"]["kind"] == "source-context" else
-                     conservation.POLLUTANTS[axis][2] + ("/reporting_ha" if request["objective"]["basis"] == "per-reporting-hectare" else "")),
+                     ("points" if request["objective"]["kind"] == "published-method" else conservation.POLLUTANTS[axis][2]) +
+                     ("/reporting_ha" if request["objective"]["basis"] == "per-reporting-hectare" else "")),
             "availability": "selected_input" if axis in request["available_axes"] else "unavailable_input",
         }
     return result
@@ -853,9 +854,48 @@ def get_analysis(workspace, study_id, analysis_id):
     return {"state": state, "analysis": analysis}
 
 
-def save(workspace, selection):
-    """Save the actual optimizer selection through the original conservation plan."""
-    analysis = preview(workspace, selection)
+def _retained_preview(workspace, selection, original):
+    """Validate one completed original task result before persisting its choice."""
+    if not isinstance(original, dict):
+        raise ValueError("Choose a completed original portfolio preview")
+    analysis = deepcopy(original)
+    key = analysis.pop("id", None)
+    if (analysis.get("schema") != SCHEMA or analysis.get("version") != VERSION
+            or not isinstance(key, str) or digest(analysis) != key):
+        raise ValueError("The original portfolio preview content differs")
+    analysis["id"] = key
+    study = conservation.inspect(
+        workspace, identifier(selection.get("study_id")), include_candidates=False)
+    if study["state"] != "complete":
+        raise ValueError("The original conservation inventory must be complete")
+    original_input = analysis.get("input", {})
+    if (original_input.get("study_id") != study["id"]
+            or original_input.get("selection") != study["selection"]
+            or original_input.get("candidate_inventory") != study["files"]["candidates"]
+            or original_input.get("geometry_inventory") != study["files"]["geometries"]):
+        raise ValueError("Reopen the portfolio preview with its original study and inventories")
+    verify_file(workspace.root, study["files"]["candidates"])
+    verify_file(workspace.root, study["files"]["geometries"])
+    # The completed task already owns the normalized request. Re-normalizing
+    # its floating-point weights can change their final bits and the saved choice.
+    if selection != analysis.get("request"):
+        raise ValueError("The saved decision must use the original preview's objectives and constraints")
+    original_candidates = read_json(
+        verify_file(workspace.root, study["files"]["candidates"]))["candidates"]
+    original_ids = {row["id"] for row in original_candidates}
+    selected = analysis.get("selected_ids")
+    if (not isinstance(selected, list)
+            or any(not isinstance(key, str) for key in selected)
+            or len(selected) != len(set(selected))
+            or not set(selected) <= original_ids):
+        raise ValueError("The preview selection must retain original inventory unit IDs")
+    return analysis
+
+
+def save(workspace, selection, *, retained_analysis=None):
+    """Save a new optimization or the exact selection from an original preview."""
+    analysis = (preview(workspace, selection) if retained_analysis is None
+                else _retained_preview(workspace, selection, retained_analysis))
     if not analysis["selected_ids"]:
         raise ValueError("No positive feasible selection remains under the explicit objectives and constraints")
     record = _retain(workspace, analysis)

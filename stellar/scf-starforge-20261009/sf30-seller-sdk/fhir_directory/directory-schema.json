@@ -2490,6 +2490,742 @@
         "id"
       ],
       "additionalProperties": false
+    },
+    "operating_return_prepare": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "incoming": {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "stellar-forge.operating-plan.v1"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            },
+            "createdAt": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+            },
+            "origin": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revisions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "customer": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "period": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "owner": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 1000
+                  },
+                  "receiving": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 32000
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "instruction": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "inputs": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "expectedResult": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "owner": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 300
+                        },
+                        "due": {
+                          "type": "string",
+                          "maxLength": 10
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "planned",
+                            "in-progress",
+                            "completed",
+                            "skipped"
+                          ]
+                        },
+                        "recordedResult": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 32000
+                        },
+                        "argv": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 32000
+                          },
+                          "maxItems": 256
+                        },
+                        "selection": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "package": {
+                                  "type": "object"
+                                },
+                                "capturedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 0,
+                                      "maxLength": 32000
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "item": {
+                                  "type": "object"
+                                },
+                                "sources": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "runtimeGroups": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "package",
+                                "capturedAt",
+                                "item",
+                                "sources",
+                                "runtimeGroups"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "instruction",
+                        "inputs",
+                        "expectedResult",
+                        "owner",
+                        "due",
+                        "status",
+                        "recordedResult",
+                        "argv",
+                        "selection"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 1000
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "savedAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+                  }
+                },
+                "required": [
+                  "title",
+                  "customer",
+                  "purpose",
+                  "period",
+                  "owner",
+                  "receiving",
+                  "notes",
+                  "steps",
+                  "revision",
+                  "savedAt"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "schema",
+            "id",
+            "createdAt",
+            "origin",
+            "revisions"
+          ],
+          "additionalProperties": false
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        },
+        "createdAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "incoming",
+        "id",
+        "createdAt",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_revise": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "updates": {
+          "type": "object",
+          "properties": {
+            "reviewer": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1000
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 32000
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "decisions": {
+          "type": "array",
+          "maxItems": 20000,
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "decision": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "take": {
+                        "type": "string",
+                        "enum": [
+                          "current",
+                          "incoming",
+                          "base",
+                          "custom"
+                        ]
+                      },
+                      "value": {},
+                      "note": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 32000
+                      }
+                    },
+                    "required": [
+                      "take"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "key",
+              "decision"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_complete": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "savedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,3})?Z$"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "savedAt",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_apply": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "expectedRecordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "expectedRecordId",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_receive": {
+      "type": "object",
+      "properties": {
+        "currentRecordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "review": {
+          "type": "object"
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "currentRecordId",
+        "review",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_export": {
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "html",
+            "plan"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "note": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32000
+        }
+      },
+      "required": [
+        "recordId",
+        "format",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "operating_return_rows": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 250,
+          "default": 50
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "plan-field",
+            "step-field",
+            "step-presence",
+            "step-context",
+            "step-command",
+            "step-progress",
+            "step-order"
+          ]
+        },
+        "conflict": {
+          "type": "boolean"
+        },
+        "unresolved": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "correction_prepare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "editionId",
+        "actor",
+        "edits"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "editionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        },
+        "predecessorId": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          ]
+        },
+        "edits": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceId",
+              "recordId",
+              "rowSha256",
+              "resourceSha256",
+              "memberSha256",
+              "action",
+              "reason"
+            ],
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "recordId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "rowSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "resourceSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "memberSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "json-set",
+                  "json-remove",
+                  "csv-cell",
+                  "csv-row"
+                ]
+              },
+              "pointer": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "valueJson": {
+                "type": "string",
+                "maxLength": 16777216
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 16777216
+              },
+              "cells": {
+                "type": "array",
+                "maxItems": 65536,
+                "items": {
+                  "type": "string",
+                  "maxLength": 16777216
+                }
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 65536,
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "correction_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "correction_apply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previewId",
+        "expectedEditionId",
+        "actor"
+      ],
+      "properties": {
+        "previewId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "expectedEditionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        }
+      }
+    },
+    "correction_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correctionId",
+        "actor"
+      ],
+      "properties": {
+        "correctionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        }
+      }
     }
   },
   "actions": [
@@ -2642,6 +3378,76 @@
       "path": "/api/directory/operating-plans/export",
       "method": "POST",
       "label": "Retain a complete editable or readable procedure in the existing export store"
+    },
+    {
+      "id": "operating-return-prepare",
+      "input": "operating_return_prepare",
+      "python": "prepare_directory_operating_return",
+      "path": "/api/directory/operating-returns/prepare",
+      "method": "POST"
+    },
+    {
+      "id": "operating-return-revise",
+      "input": "operating_return_revise",
+      "python": "revise_directory_operating_return",
+      "path": "/api/directory/operating-returns/revise",
+      "method": "POST"
+    },
+    {
+      "id": "operating-return-complete",
+      "input": "operating_return_complete",
+      "python": "complete_directory_operating_return",
+      "path": "/api/directory/operating-returns/complete",
+      "method": "POST"
+    },
+    {
+      "id": "operating-return-apply",
+      "input": "operating_return_apply",
+      "python": "apply_directory_operating_return",
+      "path": "/api/directory/operating-returns/apply",
+      "method": "POST"
+    },
+    {
+      "id": "operating-return-receive",
+      "input": "operating_return_receive",
+      "python": "receive_directory_operating_return",
+      "path": "/api/directory/operating-returns/receive",
+      "method": "POST"
+    },
+    {
+      "id": "operating-return-export",
+      "input": "operating_return_export",
+      "python": "export_directory_operating_return",
+      "path": "/api/directory/operating-returns/export",
+      "method": "POST"
+    },
+    {
+      "id": "correction-prepare",
+      "input": "correction_prepare",
+      "python": "prepare_directory_correction",
+      "path": "/api/directory/corrections/prepare",
+      "method": "POST"
+    },
+    {
+      "id": "correction-preview",
+      "input": "correction_preview",
+      "python": "preview_directory_correction",
+      "path": "/api/directory/corrections/preview",
+      "method": "POST"
+    },
+    {
+      "id": "correction-apply",
+      "input": "correction_apply",
+      "python": "apply_directory_correction",
+      "path": "/api/directory/corrections/apply",
+      "method": "POST"
+    },
+    {
+      "id": "correction-export",
+      "input": "correction_export",
+      "python": "export_directory_correction",
+      "path": "/api/directory/corrections/export",
+      "method": "POST"
     }
   ],
   "limits": {
@@ -2678,7 +3484,11 @@
     "conformanceAssessments",
     "conformanceReviews",
     "conformanceComparisons",
-    "operatingPlans"
+    "operatingPlans",
+    "operatingPlanReturns",
+    "correctionPlans",
+    "correctionPreviews",
+    "corrections"
   ],
   "mutableKinds": [
     "acquisitions",
@@ -2706,8 +3516,13 @@
     "The unchanged OperatingPlan model owns complete history validation, historical drafts, saved revisions, explicit copies and exact prefix-history receiving.",
     "Prepared and saved procedure records are immutable. Only saved records participate in the per-plan head chain; a reviewed preparation retains its exact accepted input and original source basis.",
     "Procedure editing and export do not execute commands, acquire provider data, reserve services or send messages.",
-    "Complete editable receiving includes every procedure history, native basis, original catalogue and accepted input; receiver-local import receipts retain their original Directory semantics."
+    "Complete editable receiving includes every procedure history, native basis, original catalogue and accepted input; receiver-local import receipts retain their original Directory semantics.",
+    "Corrections bind ordered edits to exact original HSDS row, resource and member hashes; JSON numeric tokens and CSV physical cell positions remain source-native.",
+    "A preview creates complete derived sources, a separate candidate edition and its comparison. Explicit acceptance retains that exact candidate without replacing a mutable head or changing original provider data.",
+    "Complete correction plan inputs, before/after changes, source lineage and native review graph travel with complete editable workspace receiving."
   ],
   "conformanceCatalogueFile": "directory-conformance-schema.json",
-  "operatingPlansCatalogueFile": "directory-operating-plans-schema.json"
+  "operatingPlansCatalogueFile": "directory-operating-plans-schema.json",
+  "operatingReturnsCatalogueFile": "directory-operating-returns-schema.json",
+  "correctionsCatalogueFile": "directory-corrections-schema.json"
 }

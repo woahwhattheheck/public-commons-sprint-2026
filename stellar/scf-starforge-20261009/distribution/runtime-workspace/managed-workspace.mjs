@@ -3,6 +3,7 @@ import { mkdir, readdir, lstat, realpath } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { managedResult } from './managed-result.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 import { validateApplicationProviderBinding } from './application-providers.mjs';
 import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-runtime/application-lifecycle.mjs';
@@ -10,7 +11,7 @@ import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
-  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease } from './storage.mjs';
+  plain, need, digest, json, canonical, now, workerAlive, processIdentity, operationLease, runtimeWorkspaceError } from './storage.mjs';
 
 export const managedOperationFields = Object.freeze({
   'managed-adopt': ['homeId', 'reviewId'],
@@ -25,7 +26,7 @@ const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');
 const operationPath = (root, id) => join(root, 'operations', operationId(id));
 const hashValue = value => digest(json(canonical(value)));
-const asError = error => ({ code: error.code ?? 'MANAGED_HOME_ERROR', message: String(error.message ?? error).slice(0, 2000) });
+const asError = error => runtimeWorkspaceError(error, 'MANAGED_HOME_ERROR');
 const same = (left, right) => hashValue(left) === hashValue(right);
 const binding = value => Object.fromEntries(['directory', 'installationId', 'profileId', 'profileSha256',
   'lockSha256', 'sourceCommit', 'sourceManifestSha256'].map(key => [key, value[key]]));
@@ -391,9 +392,9 @@ export async function recoverManagedOperation(root, id) {
     if (commandResult && state.phase !== 'SUCCEEDED') {
       await saveJSON(join(directory, 'state.json'), { ...state, phase: 'SUCCEEDED', completedAt: commandResult.completedAt,
         updatedAt: now(), result: commandResult, recoveredFrom: state.phase }, true);
-      return { operationId: id, phase: 'SUCCEEDED', result: commandResult, reopened: true };
+      return { operationId: id, phase: 'SUCCEEDED', ...managedResult({ phase: 'SUCCEEDED', result: commandResult }, commandResult), reopened: true };
     }
-    if (state.phase === 'SUCCEEDED') return { operationId: id, phase: state.phase, reopened: true };
+    if (state.phase === 'SUCCEEDED') return { operationId: id, phase: state.phase, ...managedResult(state, commandResult), reopened: true };
     need(!await workerAlive(state), 'RUNTIME_WORKSPACE_OPERATION_RUNNING');
     if (request.operation === 'managed-run' && await readJSON(join(directory, 'command-launch.json'), true)) {
       if (await managedCommandAlive(state))
@@ -405,7 +406,7 @@ export async function recoverManagedOperation(root, id) {
           'The launch record has no retained process identity. Original output and host status supply its operating outcome.' };
       await saveJSON(join(directory, 'state.json'), { ...state, phase: 'SUCCEEDED', completedAt: now(),
         updatedAt: now(), result, recoveredFrom: state.phase }, true);
-      return { operationId: id, phase: 'SUCCEEDED', reconciled: true, result };
+      return { operationId: id, phase: 'SUCCEEDED', reconciled: true, ...managedResult({ phase: 'SUCCEEDED', result }) };
     }
     // These original operations are idempotent or use a retained source/selection/file guard.
     const attempt = (state.attempt ?? 1) + 1;

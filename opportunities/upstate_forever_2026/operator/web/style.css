@@ -81,3 +81,15 @@
 
 /* Printable artifacts use the existing neutral review and download controls. */
 .spatial-export-format{display:grid;grid-template-columns:1fr 1fr;gap:10px}.spatial-export-section [data-spatial-export-controls]>.primary{width:100%;margin-top:4px}.spatial-export-section [data-spatial-export-status]{margin:12px 0;line-height:1.5}.spatial-export-section [data-spatial-exports]{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.spatial-export-section select{min-width:0}.spatial-export-section .spatial-review-list li>div{min-width:0}
+
+/* Original source-table categories use the exact discrete map swatches. */
+.spatial-ramp-constant{background:#7f7f7f}
+.spatial-category-legend{border-top:1px solid var(--line,#d4d4d4);padding:10px 0}
+.spatial-category-legend>.note{margin:5px 0}
+.spatial-category-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px 16px;list-style:none;padding:0;margin:8px 0}
+.spatial-category-list li{display:flex;gap:7px;align-items:flex-start;font-size:12px;line-height:1.4}
+.spatial-category-swatch{width:18px;height:18px;flex:none}
+.spatial-category-list b{display:inline-block;min-width:24px;font-variant-numeric:tabular-nums}
+.spatial-category-sources{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.spatial-category-sources ul{padding-left:18px}
+.spatial-category-sources li{margin:7px 0}

@@ -32,6 +32,7 @@ The selection schema is `upstate.parcel-criteria-selection/v1`. Supply exactly o
   "study_id": "actual retained conservation study ID",
   "sources": {},
   "settings": {
+    "spatial_criteria_basis": "whole_original_parcel",
     "adjacency_m": 0,
     "waterway_buffer_m": 30.48,
     "land_cover_basis": "whole_parcel",
@@ -60,7 +61,8 @@ The result includes:
 | coverage | Actual parcel count and known, unknown, true, false or level counts for each criterion |
 | selected_sources | Original source identity, URI, vintage, body hashes, source selection and capture context |
 | geometry_context / geometry_context_sha256 | Exact original parcel and reporting geography binding |
-| population_statistics | The actual complete stream-length population and retained threshold |
+| spatial_criteria_basis / metric_geometry | Actual source-criterion geometry and the independent basis of each metric |
+| population_statistics | The actual complete stream-length population, geometry basis and retained threshold |
 | files | JSON table, CSV, GeoPackage, source selection, method definitions and import manifest |
 | score_selection | Reusable table binding and published method ID; the practice is selected in the study |
 | available_bindings.headwater_stream | Explicit raw stream-order binding for the first-order protection variant |
@@ -126,13 +128,13 @@ The active target-class source is complete for the retained 217-HUC query: its 1
 
 Protected-land overlap is computed against the original full parcel. The default already_protected criterion requires complete coverage by the selected protected inventory; an explicit protected_fraction_threshold can select a different recorded threshold. The raw observed protected fraction is always retained when the source is present. Protected adjacency uses exact original contact at zero metres, or the explicitly selected metric distance.
 
-The parcel-size threshold is therefore evaluated against the actual parcel size, while reporting-area quantities remain separately readable.
+The parcel-size threshold is evaluated against the full original parcel. New spatial source criteria also default to that full parcel through spatial_criteria_basis=whole_original_parcel. Select reporting_parcel explicitly for a reporting-boundary adaptation. Land-cover and floodplain-development bases remain independent choices. The generated table, source scope, CSV, GeoPackage and point report retain the actual criterion basis alongside the original full and reporting areas.
 
 ### Stream length, headwaters and classified water
 
 The default stream-length selection is original NHD ftype 460. Surface-water adjacency/buffers also include ftype 336 and the selected original waterbody polygons. Other flowline feature types remain outside those explicit selections. In-parcel line geometries are unioned before length measurement so repeated spatial overlap does not inflate the criterion.
 
-The complete study stream-length mean is computed from positive original line lengths among the selected reporting parcels. The saved population records its units, positive count, complete count and arithmetic mean. A complete zero length receives false for “above mean.” The published Appendix's study-specific mean is not imported as a threshold for this different study.
+The complete study stream-length mean is computed from positive original line lengths among the selected parcels under the same saved spatial_criteria_basis. The saved population records its units, positive count, complete count and arithmetic mean. A complete zero length receives false for “above mean.” The published Appendix's study-specific mean is not imported as a threshold for this different study.
 
 NHD Flowline MapServer/6 does not carry the stream-order field. The builder reads the separate original NHDPlus HR network source's streamorde field. Zero, absent and invalid values remain separately observable; positive integer orders are retained. The canonical headwater_stream criterion uses [1,2]. The raw complete stream_orders field supports the source's first-order protection variant through the existing point-engine stream_order binding.
 
@@ -158,7 +160,7 @@ NWI criteria use the actual original type values:
 
 The source can expose qualified names such as Wetlands.ATTRIBUTE. The field resolver accepts an unambiguous original suffix while preserving actual field/value evidence. The terminal original lowercase special modifiers b, d, f, h, m, r, s and x identify modified wetlands under the selected source method.
 
-Hydric-soil acreage is the unioned original selected hydric polygon area within the reporting parcel. The input should already represent the selected original hydric classification; the builder does not substitute an unrelated soil attribute.
+Hydric-soil acreage is the unioned original selected hydric polygon area inside the declared spatial_criteria_basis; the current default is the full original parcel. The input should already represent the selected original hydric classification; the builder does not substitute an unrelated soil attribute.
 
 The selected one-percent floodplain geometry determines floodplain presence. With the default whole_parcel development basis, a parcel with any selected developed cover receives the developed condition. The undeveloped condition means that no developed cover occurs under the complete selected land-cover support. An explicit floodplain_intersection adaptation restricts development analysis to that footprint and is retained in the table.
 
@@ -237,3 +239,44 @@ The exact original source and model definitions are available to the operator's 
 4. [USFWS NWI original layer metadata](https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/0?f=pjson) and [official wetlands map-code diagram](https://www.fws.gov/sites/default/files/documents/wetlands-and-deepwater-map-code-diagram.pdf).
 5. [MRLC NLCD class definitions](https://www.mrlc.gov/data/legends/national-land-cover-database-class-legend-and-description) and [Annual NLCD legend](https://www.mrlc.gov/data/legends/annual-nlcd-land-cover-legend).
 6. [SC DES active classified-reach source](https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2) and the retained original source editions selected by this workspace.
+
+## Freshwater physical-domain source editions
+
+The maintained water-context intake publishes the freshwater class scope
+explicitly under `metadata.parcel_criteria`. Its generic
+`WATER_CLASSIFICATION` role is accepted for the `classifications` criterion only
+when the original entry also declares `metadata.classification: "FW"`.
+The complete physical-domain edition with its retained coverage binding has
+priority over the publisher-HUC-only freshwater variant. The source profile
+excludes freshwater-only roles/metadata from the high-quality class matcher,
+even though those source families share the same official layer URI.
+
+A coverage source stored in the same source edition may omit
+`source_collection_id` from `metadata.criteria_coverage.source`. The resolver
+fills the actual containing collection ID after import. An explicit original
+cross-collection binding is preserved. The original domain source, HUC12 field
+and exact selected HUC IDs remain in the coverage selection.
+
+The ordinary water-context importer also returns a complete explicit override:
+
+~~~python
+bindings = bind_workspace(workspace, source_edition)
+criterion_source = bindings["parcel_criteria_sources"]["classifications"]
+selection["sources"]["classifications"] = criterion_source
+~~~
+
+Continue the existing `parcel_criteria.prepare` workflow with that selection.
+It retains the existing positive/negative/unknown calculation for the selected
+regulatory classification inventory: positive native FW intersections remain
+positive; no matching retained FW feature inside complete captured geometry can
+be negative; absence beyond that geometry remains unknown. The source is the
+SCDES classification inventory. Its negative result does not establish absence
+of ecological freshwater in another state's missing inventory.
+
+The actual criteria are `stream_fw_with_listed_impairment` and
+`stream_fw_without_listed_impairment`. Per-row JSON evidence records requested
+classes, selected class scope, source filter, reference, meaning and the
+classification result. The exported table also preserves the complete original
+source/coverage bindings and native body hashes. A broader freshwater criterion
+requires its own geographic inventory coverage and keeps cross-state missing
+inventory unknown. Original criterion definitions and scoring are unchanged.

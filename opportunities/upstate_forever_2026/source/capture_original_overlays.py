@@ -392,7 +392,17 @@ def native_geometry_parameters(metadata, source_sr):
     return {"outSR": json.dumps(source_sr, sort_keys=True, separators=(",", ":"))}
 
 
+def source_where(spec):
+    """Retain the publisher's exact feature predicate as part of source selection."""
+    value = spec.get("where", "1=1")
+    if not isinstance(value, str) or not value.strip() or "\0" in value:
+        raise ValueError("Use a nonempty original ArcGIS feature selection")
+    return value
+
+
 def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root=None):
+    where = source_where(spec)
+    selected_parameters = {"where": where} if where != "1=1" else {}
     folder = root / identity
     folder.mkdir(parents=True, exist_ok=True)
     responses = OriginalResponses(folder / "responses", retry_failed=retry_failed)
@@ -408,7 +418,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
     selections, selected = [], set()
     for mask in masks[spec["scope"]]:
         geometry = {**mask["geometry"], "spatialReference": mask["spatial_reference"]}
-        parameters = {"where": "1=1", "geometry": json.dumps(geometry, separators=(",", ":")),
+        parameters = {"where": where, "geometry": json.dumps(geometry, separators=(",", ":")),
                       "geometryType": "esriGeometryPolygon", "inSR": json.dumps(mask["spatial_reference"]),
                       "spatialRel": "esriSpatialRelIntersects"}
         count, count_receipt = responses.query("count-" + mask["id"], spec["url"],
@@ -423,7 +433,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
         selected.update(ids)
     ids = sorted(selected)
     exact_write(folder / "selection.json", encode({"native_object_id_field": field,
-                "scope": spec["scope"], "source_spatial_reference": source_sr,
+                "scope": spec["scope"], "source_spatial_reference": source_sr, **selected_parameters,
                 "selections": selections, "unique_count": len(ids), "object_ids": ids}))
     page_size = min(spec["page_size"], int(metadata.get("maxRecordCount") or spec["page_size"]))
     if page_size < 1:
@@ -438,7 +448,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
             label += "-native-" + digest(encode(geometry_parameters))[:12]
         value, receipt = responses.query(label, spec["url"], {"objectIds": ",".join(map(str, batch)),
             "outFields": "*", "returnGeometry": "true", "returnTrueCurves": "true",
-            "returnZ": "true", "returnM": "true", **geometry_parameters})
+            "returnZ": "true", "returnM": "true", **geometry_parameters, **selected_parameters})
         if value.get("exceededTransferLimit"):
             if len(batch) == 1:
                 raise ValueError("Original provider truncates one exact feature")
@@ -464,7 +474,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
             result, linear_receipt = responses.query(linear_label, spec["url"], {
                 "objectIds": ",".join(map(str, curve_ids)), "outFields": "*",
                 "returnGeometry": "true", "returnTrueCurves": "false", "returnZ": "true", "returnM": "true",
-                **geometry_parameters})
+                **geometry_parameters, **selected_parameters})
             if result.get("exceededTransferLimit"):
                 raise ValueError("Exact provider-linear curve response truncated")
             if not equivalent_sr(result.get("spatialReference") or source_sr, page_sr):
@@ -497,7 +507,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
             files.append({"path": item.relative_to(root).as_posix(), "bytes": len(body), "sha256": digest(body)})
     result = {"id": identity, "title": spec["title"], "role": spec["role"],
               "uri": spec["url"], "kind": "vector", "source_crs": source_sr,
-              "id_field": field, "feature_count": len(ids), "scope": spec["scope"],
+              "id_field": field, "feature_count": len(ids), "scope": spec["scope"], **selected_parameters,
               "source_name": metadata.get("name"),
               "source_description": metadata.get("description", ""),
               "source_copyright": metadata.get("copyrightText", ""),

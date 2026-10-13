@@ -125,7 +125,24 @@ class EnsembleWorkspace:
         from .ensemble_report import export_reports
         spec = self.bind(selection)
         control = self.root / 'controls' / (digest(selection) + '.json')
+        settings = {
+            'memory_mb': selection.get('memory_mb', 256),
+            'tile_size': selection.get('tile_size', 256),
+            'max_open_datasets': selection.get('max_open_datasets', 48),
+        }
+        recorded = set()
+        def retain_settings(key):
+            key = identifier(key)
+            if key in recorded:
+                return
+            atomic(self.root / key / 'execution-settings.json', {
+                'schema': 'upstate.ensemble-execution-settings/v1',
+                'ensemble_id': key, **settings, 'updated_at': now(),
+            })
+            recorded.add(key)
         def progress(value):
+            if value.get('id'):
+                retain_settings(value['id'])
             atomic(control, {**value, 'updated_at': now()})
             if on_progress:
                 on_progress(value)
@@ -135,6 +152,8 @@ class EnsembleWorkspace:
                          max_open_datasets=selection.get('max_open_datasets', 48),
                          on_progress=progress,
                          should_cancel=lambda: control.with_suffix('.cancel.json').exists())
+        if not result.get('reused'):
+            retain_settings(result['id'])
         if result['state'] == 'complete':
             reports = export_reports(result['directory'])
             result['reports'] = reports
@@ -167,6 +186,64 @@ class EnsembleWorkspace:
             raise ValueError('Ensemble selection changed')
         reports = self.root / key / 'reports.json'
         return {**result, 'reports': read(reports) if reports.exists() else {}}
+
+    def execution_settings(self, key):
+        """Recover execution controls independently of scientific identity.
+
+        Older editions retain the chosen memory and actual tile edge in
+        execution.json. Newer calls also retain handle and requested-edge
+        controls once the original kernel has accepted the invocation.
+        """
+        import math
+        key = identifier(key)
+        directory = self.root / key
+        original_path = directory / 'execution.json'
+        original = read(original_path) if original_path.is_file() else {}
+        saved_path = directory / 'execution-settings.json'
+        saved = read(saved_path) if saved_path.is_file() else {}
+        if saved and (saved.get('schema') != 'upstate.ensemble-execution-settings/v1'
+                      or saved.get('ensemble_id') != key):
+            raise ValueError('Retained execution settings belong to another ensemble')
+        settings = {
+            'memory_mb': saved.get('memory_mb', original.get('memory_mb', 256)),
+            'tile_size': saved.get('tile_size', original.get('tile_edge', 256)),
+            'max_open_datasets': saved.get('max_open_datasets', 48),
+        }
+        memory, edge, handles = (settings['memory_mb'], settings['tile_size'],
+                                 settings['max_open_datasets'])
+        if (isinstance(memory, bool) or not isinstance(memory, (int, float))
+                or not math.isfinite(memory) or memory <= 0):
+            raise ValueError('Retain a positive tile-array memory budget')
+        if isinstance(edge, bool) or not isinstance(edge, int) or not 1 <= edge <= 2048:
+            raise ValueError('Retain a tile edge from 1 to 2048 pixels')
+        if isinstance(handles, bool) or not isinstance(handles, int) or handles < 2:
+            raise ValueError('Retain at least two open raster handles')
+        return settings
+
+    def retained_selection(self, key):
+        """Recover the original native pairs and their accepted run controls."""
+        result = self.describe(identifier(key))
+        stored = result['selection']
+        if stored.get('input_kind') != 'original Workspace native run artifacts':
+            raise ValueError('Choose an analysis bound to original Workspace native runs')
+        pairs = [{
+            'profile_id': identifier(row['profile_id']),
+            'baseline_run_id': identifier(row['baseline_run_id']),
+            'alternative_run_id': identifier(row['alternative_run_id']),
+            'scenario_id': identifier(row['scenario_id']),
+        } for row in stored['members']]
+        for pair in pairs:
+            for side in ('baseline_run_id', 'alternative_run_id'):
+                self.workspace.inspect_run(pair[side])
+        return {
+            'title': stored['title'], 'purpose': stored['purpose'],
+            'input_description': stored['input_description'], 'pairs': pairs,
+            'pollutants': stored['pollutants'], 'quantiles': stored['quantiles'],
+            'support': stored['support'],
+            'planned_member_count': stored['planned_member_count'],
+            'improvement_thresholds': stored['improvement_thresholds'],
+            **self.execution_settings(key),
+        }
 
     def portable(self, key, destination, *, include_inputs=False):
         from .ensemble_portable import export_project

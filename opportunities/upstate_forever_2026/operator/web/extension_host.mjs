@@ -122,7 +122,8 @@ export function createExtensionHost(host) {
         if (!entry) return null;
         return entry.controller || {create: value => openExtension('programmes', 'create', value)};
       },
-      openExtension: (id, method, ...args) => openExtension(id, method, ...args)
+      openExtension: (id, method, ...args) => openExtension(id, method, ...args),
+      openDesk: (id, method, ...args) => openDesk(id, method, ...args)
     };
     return capabilities;
   }
@@ -146,6 +147,7 @@ export function createExtensionHost(host) {
       if (typeof method !== 'string' || !member.test(method)) throw new Error('Lifecycle entries must name controller methods.');
     }
     if (client.dispatch && !member.test(client.dispatch)) throw new Error('Action dispatch must name a controller method.');
+    if (client.task_actions && !member.test(client.task_actions)) throw new Error('Task actions must name a controller method.');
     for (const prefix of client.action_prefixes || []) {
       if (typeof prefix !== 'string' || !/^[a-z][a-z0-9-]*-$/.test(prefix)) {
         throw new Error('Global action prefixes must be explicit names ending with a hyphen.');
@@ -162,6 +164,7 @@ export function createExtensionHost(host) {
     if (missing.length) throw new Error('The existing operator must supply: ' + missing.join(', ') + '.');
     return {
       id: raw.id, title: raw.title || raw.id, version: raw.version,
+      actions: new Set((Array.isArray(raw.actions) ? raw.actions : []).filter(action => typeof action === 'string')),
       client, controller:null, promise:null, mounted:false, updatedState:null
     };
   }
@@ -234,7 +237,8 @@ export function createExtensionHost(host) {
         selection.workspace !== workspaceKey(lastState)) return;
     entry.mounted = true;
     entry.updatedState = lastState;
-    call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]);
+    selection.ready = Promise.resolve(call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]));
+    return selection.ready;
   }
 
   function begin(entry, selection) {
@@ -243,10 +247,11 @@ export function createExtensionHost(host) {
       return;
     }
     status(selection.node, entry.client.view.title || entry.title, 'Opening workspace tools…');
-    controller(entry).then(
+    selection.ready = controller(entry).then(
       () => mountEntry(entry, selection),
       error => showFailure(entry, selection, error)
     );
+    selection.ready.catch(() => {});
   }
 
   async function load() {
@@ -363,6 +368,37 @@ export function createExtensionHost(host) {
     return true;
   }
 
+  /** Open retained results from an original queued operation, loading only its owning desk. */
+  async function taskActions(task) {
+    if (!task || destroyed) return '';
+    const selectedWorkspace = workspaceKey(host.getState());
+    if (task.workspace && task.workspace !== selectedWorkspace) return '';
+    let entry = [...entries.values()].find(candidate => candidate.actions.has(task.action));
+    // Backend-only optimization tasks retain the original Conservation links.
+    // Reuse that authored controller without claiming another provider's actions.
+    if (!entry?.client.task_actions && task._conservation &&
+        String(task.action || '').startsWith('conservation.')) {
+      entry = entries.get('conservation');
+    }
+    const method = entry?.client.task_actions;
+    if (!method) return '';
+    try {
+      const instance = await controller(entry);
+      if (destroyed || workspaceKey(host.getState()) !== selectedWorkspace) return '';
+      if (typeof instance[method] !== 'function') throw new Error('The desk cannot open its retained task results.');
+      const markup = await instance[method](task);
+      if (destroyed || workspaceKey(host.getState()) !== selectedWorkspace) return '';
+      if (markup !== undefined && markup !== null && typeof markup !== 'string') {
+        throw new Error('Task result controls must return authored markup.');
+      }
+      clearIssue(entry, 'task-actions');
+      return markup || '';
+    } catch (error) {
+      report(entry, 'task-actions', error);
+      return '';
+    }
+  }
+
   /** Optional cross-desk capability, for example openExtension('programmes','create',{selection}). */
   async function openExtension(id, method, ...args) {
     const entry = entries.get(id);
@@ -371,6 +407,26 @@ export function createExtensionHost(host) {
     const instance = await controller(entry);
     if (destroyed || workspaceKey(host.getState()) !== selectedWorkspace) throw new Error('The selected workspace changed while opening this desk.');
     if (typeof instance[method] !== 'function') throw new Error('The requested desk method is unavailable.');
+    return instance[method](...args);
+  }
+
+  /** Open a visible desk only after its original asynchronous mount has finished. */
+  async function openDesk(id, method, ...args) {
+    const entry = entries.get(id);
+    if (!entry || !member.test(method || '')) throw new Error('Choose a registered scientific desk and opening method.');
+    const selectedWorkspace = workspaceKey(host.getState());
+    await host.navigate(entry.client.view.id);
+    const selectedView = active;
+    const instance = await controller(entry);
+    if (destroyed || !selectedView || active !== selectedView || selectedView.entry !== entry ||
+        selectedView.workspace !== selectedWorkspace || workspaceKey(host.getState()) !== selectedWorkspace) {
+      throw new Error('The selected workspace or desk changed while opening this scientific record.');
+    }
+    await selectedView.ready;
+    if (destroyed || active !== selectedView || !entry.mounted || workspaceKey(host.getState()) !== selectedWorkspace) {
+      throw new Error('Reopen the selected scientific desk in its original workspace.');
+    }
+    if (typeof instance[method] !== 'function') throw new Error('The selected desk cannot open this retained record.');
     return instance[method](...args);
   }
 
@@ -395,7 +451,7 @@ export function createExtensionHost(host) {
   }
 
   return {
-    load, render, update, dispatch, detach, destroy, openExtension,
+    load, render, update, dispatch, detach, destroy, openExtension, openDesk, taskActions,
     title: view => {
       const entry = views.get(view);
       return entry ? entry.client.view.title || entry.title : null;

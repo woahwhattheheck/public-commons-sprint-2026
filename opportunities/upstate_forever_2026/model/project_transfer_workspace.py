@@ -4,6 +4,7 @@ TokenJunkieLabs. This module imports the maintained native modules only when a
 native action is explicitly requested; standalone transport remains stdlib-only.
 """
 from __future__ import annotations
+from contextlib import nullcontext
 from pathlib import Path
 import time
 from .project_transfer import (TransferStore, TransferError, _atomic, canonical,
@@ -22,8 +23,13 @@ class NativeProjectTransfer:
         self.archives.mkdir(exist_ok=True)
 
     def capture(self, operation_id: str, *, include_intermediates=True,
-                include_deliveries=True, chunk_bytes=4 * 1024**2, progress=None, cancel=None):
-        """Freeze with the ORIGINAL backup before indexing. Same task ID replays."""
+                include_deliveries=True, chunk_bytes=4 * 1024**2, progress=None, cancel=None,
+                backup_context=None):
+        """Freeze with the ORIGINAL backup before indexing. Same task ID replays.
+
+        An optional context saves operator selections under their existing lock
+        only for a new native archive. Replay reuses the already frozen edition.
+        """
         from . import portable
         if not isinstance(operation_id, str) or not operation_id:
             raise TransferError("Capture requires its original operation ID")
@@ -52,8 +58,9 @@ class NativeProjectTransfer:
             else:
                 if progress:
                     progress({"phase": "native_backup", "meaning": "Freezing the original complete project"})
-                portable.backup(self.workspace, archive, include_intermediates=include_intermediates,
-                                include_deliveries=include_deliveries)
+                with backup_context() if backup_context is not None else nullcontext():
+                    portable.backup(self.workspace, archive, include_intermediates=include_intermediates,
+                                    include_deliveries=include_deliveries)
             record.update(state="indexing", archive=str(archive))
             _atomic(record_path, canonical(record) + b"\n", replace=True)
             snapshot = self.store.capture_archive(archive, chunk_bytes=chunk_bytes, progress=progress, cancel=cancel)

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "watershed-context",
   "title": "Regional watershed context",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "order": 55,
   "assets": [
     "watershed_context.mjs",
@@ -20,7 +20,8 @@
     },
     "actions": [
       "watershed.context.analyze",
-      "watershed.context.export"
+      "watershed.context.export",
+      "watershed.context.receive"
     ],
     "invoke": {
       "handler": "invoke",
@@ -123,7 +124,8 @@
       "toast",
       "navigate",
       "showTask",
-      "fileList"
+      "fileList",
+      "uploadFile"
     ],
     "styles": [
       "/web/watershed_context.css"

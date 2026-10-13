@@ -1,0 +1,164 @@
+{
+"Results":{
+"Message":"Success",
+"SourceId":"SC0035700",
+"EPASystem":"ICP",
+"RegistryId":"110002234779",
+"Statute":"CWA",
+"CWPName":"PENDLETON-CLEMSON REG WWTF",
+"CWPStreet":"865 WOODBURN RD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"296702014",
+"CWPPermitStatusDesc":"Admin Continued",
+"CWPMajorMinorStatusFlag":"M",
+"CWPPermitTypeDesc":"NPDES Individual Permit",
+"CWPCurrentSNCStatus":null,
+"CWPComplianceTracking":"On",
+"StartDate":"01/01/2023",
+"EndDate":"12/31/2023",
+"LinkedPermits":[
+{
+"SourceId":"SCR003641",
+"CWPName":"PENDLETON-CLEMSON REG WWTF",
+"CWPStreet":"865 WOODBURN RD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"296702014",
+"CWPPermitStatusDesc":"Effective",
+"CWPMajorMinorStatusFlag":"N",
+"CWPPermitTypeDesc":"General Permit Covered Facility",
+"CWPCurrentSNCStatus":null
+}
+,{
+"SourceId":"SCL035700",
+"CWPName":"PENDLETON-CLEMSON REG. WWTF",
+"CWPStreet":"865 WOODBURN RD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"29670",
+"CWPPermitStatusDesc":"Effective",
+"CWPMajorMinorStatusFlag":"N",
+"CWPPermitTypeDesc":"Associated Permit Record",
+"CWPCurrentSNCStatus":null
+}
+,{
+"SourceId":"SCR10ZFNY",
+"CWPName":"PENDLETON CLEMSON WWTP IMPROVEMENTS",
+"CWPStreet":"865 WOODBURN ROAD",
+"CWPCity":"PENDLETON",
+"CWPState":"SC",
+"CWPZip":"29670",
+"CWPPermitStatusDesc":"Effective",
+"CWPMajorMinorStatusFlag":"N",
+"CWPPermitTypeDesc":"General Permit Covered Facility",
+"CWPCurrentSNCStatus":null
+}
+],
+"PermFeatures":[
+{
+"PermFeatureNmbr":"001",
+"PermFeatureTypeCode":"EXO",
+"PermFeatureTypeDesc":"External Outfall",
+"Parameters":[
+{
+"ParameterCode":"00181",
+"ParameterDesc":"Oxygen demand, ultimate",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00300",
+"ParameterDesc":"Oxygen, dissolved [DO]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00310",
+"ParameterDesc":"BOD, 5-day, 20 deg. C",
+"MaxVioStatus":"Significant/Category I Noncompliance",
+"CurrentVioStatus":"Significant/Category I Noncompliance"
+}
+,{
+"ParameterCode":"00400",
+"ParameterDesc":"pH",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00530",
+"ParameterDesc":"Solids, total suspended",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00600",
+"ParameterDesc":"Nitrogen, total [as N]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"00610",
+"ParameterDesc":"Nitrogen, ammonia total [as N]",
+"MaxVioStatus":"Significant/Category I Noncompliance",
+"CurrentVioStatus":"Significant/Category I Noncompliance"
+}
+,{
+"ParameterCode":"00665",
+"ParameterDesc":"Phosphorus, total [as P]",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"50050",
+"ParameterDesc":"Flow, in conduit or thru treatment plant",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"50060",
+"ParameterDesc":"Chlorine, total residual",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"51040",
+"ParameterDesc":"E. coli",
+"MaxVioStatus":"Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"81010",
+"ParameterDesc":"BOD, 5-day, percent removal",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"81011",
+"ParameterDesc":"Solids, suspended percent removal",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"TAA3B",
+"ParameterDesc":"LC50 Static 48Hr Acute Ceriodaphnia dubia",
+"MaxVioStatus":null,
+"CurrentVioStatus":null
+}
+,{
+"ParameterCode":"TCP3B",
+"ParameterDesc":"%Effect Static Renewal 7 Day Chronic Ceriodaphnia dubia",
+"MaxVioStatus":"No Violation Identified",
+"CurrentVioStatus":"No Violation Identified"
+}
+,{
+"ParameterCode":"TRP3B",
+"ParameterDesc":"IC25 Static Renewal 7 Day Chronic Ceriodaphnia dubia",
+"MaxVioStatus":null,
+"CurrentVioStatus":null
+}
+]
+}
+]
+}
+}

@@ -59,13 +59,15 @@ verify_plan(received)
 comparison=build_comparison(received)
 assert len({r['original_scenario_job'] for r in comparison['rows']})==8
 assert all(r['execution_engine']=='SOFTWARE-FIXTURE-NOT-INVEST' for r in comparison['rows'])
-assert len(list(received.rglob('.original-run-metadata')))==24
+retained_state=read_json(received/'state.json')
+hidden_paths={j['native_storage']['path']+'/.original-run-metadata' for j in retained_state['jobs'].values()}
+assert all((received/p).read_text()=='Retained original hidden file\n' for p in hidden_paths)
 # Original output directories and input files remain byte-identical.
 assert original_files=={p.relative_to(source).as_posix():file_hash(p) for p in source.rglob('*') if p.is_file()}
 export=export_workspace(received,root/'adopted.zip')
 receive=receive_workspace(root/'adopted.zip',root/'independent')
 assert build_comparison(root/'independent')==comparison
-assert len(list((root/'independent').rglob('.original-run-metadata')))==24
+assert all((root/'independent'/p).read_text()=='Retained original hidden file\n' for p in hidden_paths)
 try:
     run_workspace(received)
 except ScenarioError as exc:
@@ -105,7 +107,7 @@ summary={'kind':'original-experiment-software-intake','native_invest_executed':F
          'original_parent_jobs':len(records),'native_result_selections':24,
          'matched_metric_rows':80,'portable_files':export['files'],
          'original_sender_unchanged':True,'original_job_keys_retained':True,
-         'hidden_native_files_retained':24,'duplicate_execution_prevented':True,
+         'hidden_native_files_retained':len(hidden_paths),'hidden_native_result_selections':24,'duplicate_execution_prevented':True,
          'elapsed_seconds':round(time.monotonic()-t0,3)}
 atomic_json(root/'intake-summary.json',summary)
 print(__import__('json').dumps(summary,indent=2))

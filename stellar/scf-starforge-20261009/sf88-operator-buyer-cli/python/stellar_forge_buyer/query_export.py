@@ -325,6 +325,16 @@ class QueryExport:
     def manifest(self):
         return deepcopy(self._manifest)
 
+    @property
+    def manifest_bytes(self):
+        """Return the exact retained manifest for an independently pinned handover."""
+        return bytes(self._raw)
+
+    def encoded_rows(self):
+        """Yield original SQLite scalar encodings through the verified row reader."""
+        for row in self.rows():
+            yield {name: _encode(value) for name, value in row.items()}
+
     @contextmanager
     def open(self, name):
         record = self._manifest["outputs"].get(name)

@@ -181,3 +181,15 @@
 @media print {
   .receptor-workbench [data-rc-authoring] { display: none; }
 }
+
+/* Original upstream areas in the maintained native scenario form. */
+.rc-intervention-row{min-width:0;border:1px solid #bbb;padding:14px;margin:12px 0}
+.rc-intervention-row legend{font-weight:600;padding:0 5px}
+.rc-intervention-row textarea{min-height:76px}
+
+.rc-programme-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:18px 0}
+.rc-programme-choices fieldset{border:1px solid #b8b8b8;padding:14px;min-width:0}
+.rc-programme-choices legend{font-weight:600;padding:0 6px}
+.rc-programme-choices .rc-choice{display:flex;align-items:flex-start;gap:9px;margin:10px 0}
+.rc-programme-choices .rc-choice input{width:auto;margin-top:4px;flex:none}
+.rc-programme-choices small{display:block;color:#555}

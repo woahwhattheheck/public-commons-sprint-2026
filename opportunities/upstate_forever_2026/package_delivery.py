@@ -12,11 +12,11 @@ from pathlib import Path, PurePosixPath
 import stat
 import sys
 
-from delivery_snapshot import capture_delivery, fingerprint, relative_path, verify_capture
+from delivery_snapshot import (DEFAULT_LIMITS, MAX_INDEX_BYTES, MAX_MANIFEST_BYTES,
+                               capture_delivery, capture_limits, fingerprint,
+                               relative_path, verify_capture)
 from handoff_view import render_handoff
 
-MAX_MANIFEST_BYTES = 1_048_576
-MAX_INDEX_BYTES = 8 * 1_048_576
 HERE = Path(__file__).resolve().parent
 
 
@@ -71,9 +71,14 @@ def original_ids(filename, name):
     return values
 
 
-def collect_references(data):
-    require(isinstance(data, dict) and data.get('schema') == 'upstate-ec-sdc-2026/delivery-v1',
-            'Expected the original upstate-ec-sdc-2026/delivery-v1 manifest')
+def collect_references(data, *, limits=None):
+    limits = capture_limits(limits)
+    require(isinstance(data, dict) and data.get('schema') in (
+            'upstate-ec-sdc-2026/delivery-v1', 'commons.native-study-delivery/v1'),
+            'Choose an original regional RFP or explicit native-study delivery manifest')
+    study = data['schema'] == 'commons.native-study-delivery/v1'
+    if study:
+        require(data.get('delivery_mode') == 'native_study', 'Declare native_study delivery mode')
     rasters = data.get('rasters') if isinstance(data.get('rasters'), dict) else {}
     maps = data.get('maps') if isinstance(data.get('maps'), dict) else {}
     references = []
@@ -85,14 +90,24 @@ def collect_references(data):
         references.append({'role': 'metadata.' + key, 'path': entry.get('fgdc_xml')})
         if isinstance(entry.get('path'), str) and entry['path']:
             raster_paths.append(entry['path'])
-    for key in dict.fromkeys((*original_ids('audit.py', 'MAPS'), *maps.keys())):
+    required_maps = (original_ids('audit.py', 'MAPS') if not study else (
+        'future_sediment_loss', 'future_nutrient_runoff', 'current_nutrient_export',
+        'current_sediment_export', 'combined_pollutant_export'))
+    for key in dict.fromkeys((*required_maps, *maps.keys())):
         require(isinstance(key, str) and len(key) <= 200, 'Map IDs must be bounded strings')
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
+    if 'grid' in data:
+        grid = data['grid']
+        require(isinstance(grid, dict) and grid.get('schema') == 'upstate.retained-grid/v1',
+                'Expected the original retained grid declaration')
+        references.append({'role': 'model.grid', 'path': grid.get('record')})
     assets = data.get('project_assets', [])
-    require(isinstance(assets, list) and len(assets) <= 200 and
+    require(isinstance(assets, list) and (limits['max_references'] is None
+            or len(assets) <= limits['max_references']) and
             all(isinstance(path, str) and path for path in assets),
-            'project_assets must be an explicit list of at most 200 relative file paths')
+            'project_assets must be explicit relative paths within max_references=' +
+            str(limits['max_references']))
     references.extend({'role': 'project_asset', 'path': path} for path in assets)
     return references, raster_paths
 
@@ -127,7 +142,8 @@ def unavailable(detail):
             'boundary': 'The original technical audit did not complete; no technical pass or scientific acceptance is inferred.'}
 
 
-def run_original_audit(captured_manifest, index, raster_paths):
+def run_original_audit(captured_manifest, index, raster_paths, *, limits=None):
+    limits = capture_limits(limits)
     # A local XML/VRT file named .tif must not cause GDAL to resolve remote data.
     # The original audit already requires GTiff; check its container before open.
     captured = {entry['path'] for entry in index['artifacts']}
@@ -139,11 +155,13 @@ def run_original_audit(captured_manifest, index, raster_paths):
         if signature not in (b'II*\x00', b'MM\x00*', b'II+\x00', b'MM\x00+'):
             return unavailable('A declared raster lacks a TIFF/BigTIFF container signature; correct the source artifact before native audit.')
     try:
-        spec = importlib.util.spec_from_file_location('upstate_original_audit', HERE / 'audit.py')
+        audit_name = ('native_study_audit.py' if index.get('schema')
+                      == 'commons.native-study-package/v1' else 'audit.py')
+        spec = importlib.util.spec_from_file_location('upstate_selected_delivery_audit', HERE / audit_name)
         require(spec is not None and spec.loader is not None, 'Original audit module cannot be loaded')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        result = module.inspect(captured_manifest)
+        result = module.inspect(captured_manifest, max_manifest_bytes=limits['max_manifest_bytes'])
         require(isinstance(result, dict) and result.get('status') in ('FAIL', 'TECHNICAL_PRECHECK_PASS'),
                 'Original audit returned an unsupported result')
         return result
@@ -163,31 +181,56 @@ def json_bytes(value):
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + '\n').encode('utf-8')
 
 
-def pack(manifest_path, output):
-    raw = read_regular(manifest_path, MAX_MANIFEST_BYTES)
+def write_json_new(path, value, maximum):
+    """Stream a new metadata member within its selected byte budget."""
+    encoder = json.JSONEncoder(ensure_ascii=False, indent=2,
+                               sort_keys=True, allow_nan=False)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        size = 0
+        for chunk in encoder.iterencode(value):
+            raw = chunk.encode('utf-8')
+            size += len(raw)
+            require(size + 1 <= maximum,
+                    'Package metadata exceeds max_index_bytes=' + str(maximum))
+            stream.write(raw)
+        stream.write(b'\n')
+
+
+def pack(manifest_path, output, *, limits=None):
+    limits = capture_limits(limits)
+    raw = read_regular(manifest_path, limits['max_manifest_bytes'])
     data = parse_json(raw)
-    references, raster_paths = collect_references(data)
+    references, raster_paths = collect_references(data, limits=limits)
     # Validate declared names before probing only their known companion names.
     for reference in references:
         if reference['path'] is not None:
             relative_path(reference['path'])
     source_root = manifest_path.absolute().parent.resolve(strict=True)
     companions = companion_state(source_root, raster_paths)
-    index = capture_delivery(manifest_path, output, references, raw)
+    index = capture_delivery(manifest_path, output, references, raw, limits=limits)
     included = {entry['path'].removeprefix('delivery/') for entry in index['artifacts']}
     for relative in sorted(companions - included):
         index['missing'].append({'roles': ['raster_companion'], 'path': 'delivery/' + relative,
                                  'reason': 'Companion exists beside a declared source raster but was not listed. Add it explicitly to project_assets and capture again.'})
     captured_manifest = output / index['manifestPath']
-    audit = run_original_audit(captured_manifest, index, raster_paths)
+    audit = run_original_audit(captured_manifest, index, raster_paths, limits=limits)
     require(companion_state(source_root, raster_paths) == companions,
             'Raster companion presence changed during packaging; choose a fresh capture')
     audit_raw = json_bytes(audit)
+    require(len(audit_raw) <= limits['max_index_bytes'] and
+            (limits['max_file_bytes'] is None or len(audit_raw) <= limits['max_file_bytes']),
+            'Generated audit exceeds the selected metadata/member byte budget')
+    require(limits['max_total_bytes'] is None or
+            sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
+            <= limits['max_total_bytes'],
+            'Captured source and audit exceed the selected total byte budget')
     write_new(output / 'audit.json', audit_raw)
     index['artifacts'].append({'roles': ['technical-audit'], 'path': 'audit.json',
                                'bytes': len(audit_raw), 'sha256': hashlib.sha256(audit_raw).hexdigest()})
     index['auditStatus'] = audit['status']
-    index['humanReview'] = 'PENDING_QUALIFIED_PRIME'
+    native_study = index.get('schema') == 'commons.native-study-package/v1'
+    index['humanReview'] = ('SCIENTIFIC_INTERPRETATION' if native_study else 'PENDING_QUALIFIED_PRIME')
     index['projectReferences'] = 'RELATIVE_LAYOUT_PRESERVED; application-internal absolute paths and undeclared dependencies remain operator review'
     index['companionCoverage'] = 'Known GeoTIFF masks, overviews and georeferencing companion names checked; not a full GIS dependency graph'
     if audit['status'] == 'AUDIT_UNAVAILABLE':
@@ -197,13 +240,13 @@ def pack(manifest_path, output):
         index['disposition'] = 'PACKAGED_FOR_REMEDIATION'
         code = 2
     else:
-        index['disposition'] = 'PACKAGED_HUMAN_REVIEW_REQUIRED'
+        index['disposition'] = ('PACKAGED_NATIVE_STUDY' if native_study else 'PACKAGED_HUMAN_REVIEW_REQUIRED')
         code = 0
     index['packageSha256'] = fingerprint(index)
-    verify_capture(output, index)
+    verify_capture(output, index, limits=limits)
     # Write the inventory after all artifact bytes are stable. The navigator is
     # a derivative of the inventory/audit and is outside their fingerprint.
-    write_new(output / 'package.json', json_bytes(index))
+    write_json_new(output / 'package.json', index, limits['max_index_bytes'])
     write_new(output / 'index.html', render_handoff(index, audit).encode('utf-8'))
     print(json.dumps({'disposition': index['disposition'], 'package': str(output),
                       'packageSha256': index['packageSha256'], 'capturedFiles': len(index['artifacts']),
@@ -212,9 +255,10 @@ def pack(manifest_path, output):
     return code
 
 
-def verify(output):
-    index = parse_json(read_regular(output / 'package.json', MAX_INDEX_BYTES))
-    verify_capture(output, index)
+def verify(output, *, limits=None):
+    limits = capture_limits(limits)
+    index = parse_json(read_regular(output / 'package.json', limits['max_index_bytes']))
+    verify_capture(output, index, limits=limits)
     print(json.dumps({'integrity': 'MATCH', 'packageSha256': index['packageSha256'],
                       'auditStatus': index.get('auditStatus', 'UNKNOWN'),
                       'humanReview': index.get('humanReview', 'UNKNOWN'),
@@ -230,9 +274,16 @@ def main():
     create.add_argument('output', type=Path)
     check = sub.add_parser('verify', help='Check listed file bytes and inventory fingerprint')
     check.add_argument('output', type=Path)
+    for command in (create, check):
+        for key, default in DEFAULT_LIMITS.items():
+            command.add_argument('--' + key.replace('_', '-'), type=int, default=default,
+                                 help='Optional positive integer; default %(default)s' +
+                                      (' references' if key == 'max_references' else ' bytes'))
     args = parser.parse_args()
     try:
-        return pack(args.manifest, args.output) if args.command == 'pack' else verify(args.output)
+        limits = {key: getattr(args, key) for key in DEFAULT_LIMITS}
+        return (pack(args.manifest, args.output, limits=limits) if args.command == 'pack'
+                else verify(args.output, limits=limits))
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, RecursionError) as error:
         print(json.dumps({'status': 'ERROR', 'detail': str(error),
                           'partialOutput': 'If a new output directory was created, retain it for inspection and choose a fresh path after repair.'}), file=sys.stderr)

@@ -25,7 +25,8 @@ def received_transfer(path, artifact, *, source_url, maximum_bytes):
         raise ValueError("The original transfer lacks its completed source and upload receipt")
     source = receipt.get("source", {})
     count, sha = receipt.get("bytes"), receipt.get("sha256")
-    if (type(count) is not int or not 0 < count <= maximum_bytes
+    if (not isinstance(source, dict)
+            or type(count) is not int or not 0 < count <= maximum_bytes
             or not isinstance(sha, str) or not re.fullmatch(r"[a-f0-9]{64}", sha)
             or source.get("url") != source_url or source.get("bytes") != count
             or value.get("source") != source or body.get("complete") is not True
@@ -34,19 +35,33 @@ def received_transfer(path, artifact, *, source_url, maximum_bytes):
             or not _matches(artifact, {"bytes": count, "sha256": sha})):
         raise ValueError("The received source bytes differ from the original completed transfer")
     upload = receipt.get("upload_receipt", {})
-    if (upload.get("ok") is not True or not 200 <= upload.get("http_status", 0) < 300
+    if (not isinstance(upload, dict) or upload.get("ok") is not True
+            or type(upload.get("http_status")) is not int
+            or not 200 <= upload["http_status"] < 300
             or upload.get("bytes_uploaded") != count
             or upload.get("acknowledged_bytes") not in (None, count)):
         raise ValueError("The original archive upload acknowledgment is incomplete")
     file_id = receipt.get("file_id")
     readback = receipt.get("readback", {})
-    completed = receipt.get("provider_completion", {})
+    completed = receipt.get("provider_completion")
     destination = value.get("destination", {})
+    provider_completed = (
+        isinstance(completed, dict) and completed.get("ok") is True
+        and isinstance(completed.get("files"), list)
+        and any(isinstance(row, dict) and row.get("id") == file_id
+                for row in completed["files"]))
+    # A completed readback recovery can retain a null provider response when
+    # the original finalization journal was interrupted. Keep that original
+    # record unchanged; the full byte/upload/readback checks still apply.
+    # An explicit unsuccessful provider response is not a recovery record.
+    recovered_completion = (
+        "provider_completion" in receipt and completed is None
+        and isinstance(receipt.get("completed_at"), str)
+        and bool(receipt["completed_at"].strip()))
     if (not isinstance(file_id, str) or not re.fullmatch(r"F[A-Z0-9]+", file_id)
             or value.get("file_id") != file_id
-            or completed.get("ok") is not True
-            or not any(isinstance(row, dict) and row.get("id") == file_id
-                       for row in completed.get("files", []))
+            or not (provider_completed or recovered_completion)
+            or not isinstance(readback, dict) or not isinstance(destination, dict)
             or readback.get("ok") is not True or readback.get("file_id") != file_id
             or not isinstance(readback.get("message_ts"), str)
             or not re.fullmatch(r"[0-9]+\.[0-9]{1,6}", readback["message_ts"])

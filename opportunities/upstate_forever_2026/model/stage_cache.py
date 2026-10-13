@@ -7,7 +7,7 @@ import platform
 from pathlib import Path
 import sys
 from .common import (atomic_json, describe_file, digest, file_digest, held,
-                     identifier, now, read_json)
+                     identifier, now, read_json, verify_file)
 from .model_selection import run_models
 from .reuse import (copy_verified, dataset_companions, destination_file,
                     native_companions, verify_stage)
@@ -132,6 +132,48 @@ def _native_member(directory, model, relative):
     return destination_file(directory, relative)
 
 
+def _adopt_candidate_file(source_root, descriptor, directory, adopted, *, path=None,
+                          transfer=None):
+    """Track new or replaced inodes, including a late fsync failure."""
+    relative = descriptor["path"] if path is None else path
+    target = destination_file(directory, relative)
+    before = target.stat() if target.exists() else None
+    try:
+        return copy_verified(source_root, descriptor, directory, path=path,
+                             transfer=transfer, replace_mismatch=True)
+    finally:
+        try:
+            current = target.lstat()
+        except FileNotFoundError:
+            current = None
+        # An exact retained file keeps its pre-existing inode and is not ours
+        # to remove if another member of this donor candidate fails later.
+        if current is not None and (before is None or
+                (current.st_dev, current.st_ino) != (before.st_dev, before.st_ino)):
+            adopted[relative] = (target, current.st_dev, current.st_ino)
+
+
+def _discard_candidate(adopted):
+    """Remove only this failed attempt's still-owned destination inodes."""
+    for target, device, inode in reversed(tuple(adopted.values())):
+        try:
+            current = target.lstat()
+            if (current.st_dev, current.st_ino) == (device, inode):
+                target.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _discard_unselected_companions(directory, model, files, expected_paths):
+    """Remove sidecars left by an interrupted older, differently encoded donor."""
+    for item in files.values():
+        path = _native_member(directory, model, item["path"])
+        for companion in dataset_companions(path):
+            relative = companion.relative_to(directory).as_posix()
+            if relative not in expected_paths:
+                _native_member(directory, model, relative).unlink()
+
+
 def _candidate_indexes(workspace, model, selected, requested_arguments):
     keys = [selected["id"]]
     if "n_workers" in requested_arguments:
@@ -148,26 +190,39 @@ def _candidate_indexes(workspace, model, selected, requested_arguments):
             yield key, path
 
 
-def recover(workspace, run_id, model, selected, directory, requested_arguments):
+def recover(workspace, run_id, model, selected, directory, requested_arguments,
+            *, source_run_ids=(), matcher=None):
     """Copy a complete matching stage, retaining its original source provenance.
 
     Every output body is verified during its independent transfer. Interrupted
     transfers retain complete matching files and can continue with the same or
-    another available source. Historical stages require their recorded input
-    signature; they are never re-keyed from today's input files.
+    another available source. Indexed stages require their recorded signature.
+    Explicit source runs may also match actual scientific inputs through the
+    receiving runtime; their original signature and comparison are retained.
     """
     selected = _scientific_signature(selected)
     if selected["selection"]["model"] != model:
         raise ValueError("Native stage request selects another model")
     run_id = identifier(run_id)
+    if not isinstance(source_run_ids, (list, tuple)):
+        raise ValueError("Select original source run IDs as a list or tuple")
+    explicit = tuple(dict.fromkeys(identifier(value) for value in source_run_ids))
+    candidates = [(None, workspace.root / "runs" / value / "run.json", value)
+                  for value in explicit]
+    candidates.extend((index_key, path, None) for index_key, path in
+                      _candidate_indexes(workspace, model, selected, requested_arguments))
     observations, seen = [], set()
-    for index_key, path in _candidate_indexes(workspace, model, selected, requested_arguments):
+    for index_key, path, explicit_id in candidates:
+        adopted, phase = {}, "validation"
         try:
-            record = read_json(path)
-            if (record.get("schema") != "upstate.native-stage-cache/v1"
-                    or record.get("id") != index_key or record.get("model") != model):
-                raise ValueError("Native reuse index differs")
-            original_id = identifier(record["run_id"])
+            if explicit_id is None:
+                record = read_json(path)
+                if (record.get("schema") != "upstate.native-stage-cache/v1"
+                        or record.get("id") != index_key or record.get("model") != model):
+                    raise ValueError("Native reuse index differs")
+                original_id = identifier(record["run_id"])
+            else:
+                original_id = explicit_id
             if original_id == run_id or original_id in seen:
                 continue
             seen.add(original_id)
@@ -175,9 +230,35 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments):
             if model not in run_models(original):
                 raise ValueError("Original run did not select this native model")
             stage = original["stages"][model]
-            if _scientific_signature(stage["input_signature"]) != selected:
-                raise ValueError("Original stage inputs differ")
             old_directory = workspace.root / "runs" / original_id
+            original_signature = stage.get("input_signature")
+            original_selection = (_scientific_signature(original_signature)
+                                  if original_signature else None)
+            equivalence = None
+            if original_selection != selected:
+                if explicit_id is None or matcher is None:
+                    raise ValueError("Original stage inputs differ")
+                if matcher.target_run_id != run_id:
+                    raise ValueError("Native input matcher belongs to another target run")
+                target_runtime = getattr(matcher, "target_runtime", None)
+                requested = selected["selection"]
+                if (not target_runtime or
+                        target_runtime.get("version") != requested["invest_version"] or
+                        target_runtime.get("environment") != requested["environment"] or
+                        any(target_runtime.get("modules", {}).get(dependency) != module
+                            for dependency, module in requested["modules"].items())):
+                    raise ValueError("Bind the matcher to the actual receiving native runtime")
+                # Scientific matching may ignore container bytes and unused
+                # table columns, never an original native flag or output suffix.
+                original_arguments = read_json(verify_file(old_directory, stage["arguments"]))
+                original_values = {key: value for key, value in original_arguments.items()
+                                   if key not in ("workspace_dir", "n_workers") + INPUT_PATHS[model]}
+                if original_values != requested["arguments"]:
+                    raise ValueError("Original native arguments differ")
+                equivalence = matcher.compare(original_id, model)
+                if not equivalence["matches"]:
+                    raise ValueError("Original stage inputs differ: " +
+                                     "; ".join(equivalence["differences"]))
             # Descriptor arguments are small; large outputs are hashed exactly
             # as they are copied or cloned below, rather than in a second pass.
             verify_stage(old_directory, stage, outputs=False)
@@ -201,18 +282,19 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments):
             _check_destinations(directory, output_files + [original_arguments])
             transfer = {"files": 0, "bytes": 0, "methods": {}}
             reuse_started = now()
+            phase = "copy"
             copied = {}
             for item in output_files:
                 if item["path"] not in copied:
-                    copied[item["path"]] = copy_verified(
-                        old_directory, item, directory, transfer=transfer,
-                        replace_mismatch=True)
+                    copied[item["path"]] = _adopt_candidate_file(
+                        old_directory, item, directory, adopted, transfer=transfer)
             files = {name: dict(item) for name, item in stage["files"].items()}
             copied_companions = [dict(item) for item in companions]
-            source_arguments = copy_verified(
-                old_directory, stage["arguments"], directory,
-                path=original_arguments["path"], transfer=transfer,
-                replace_mismatch=True)
+            source_arguments = _adopt_candidate_file(
+                old_directory, stage["arguments"], directory, adopted,
+                path=original_arguments["path"], transfer=transfer)
+            _discard_unselected_companions(directory, model, files,
+                                          {item["path"] for item in output_files})
             for target in directories:
                 target.mkdir(parents=True, exist_ok=True)
             request_path = directory / (model + "-arguments.json")
@@ -230,15 +312,18 @@ def recover(workspace, run_id, model, selected, directory, requested_arguments):
                     "run_id": original_id, "model": model,
                     "stage_started_at": stage.get("started_at"),
                     "stage_completed_at": stage["completed_at"],
-                    "input_signature": stage["input_signature"]["id"],
+                    "input_signature": (original_signature or {}).get("id"),
                     "requested_input_signature": selected["id"],
                     "original_arguments": stage["arguments"],
+                    "original_input_signature": original_signature,
+                    "input_equivalence": equivalence,
                     "previous_reuse": stage.get("reused_from"),
                 },
             }
             return result, observations
         except (OSError, ValueError, KeyError, TypeError) as exc:
+            _discard_candidate(adopted)
             observations.append({"index": path.relative_to(workspace.root).as_posix(),
-                                 "reason": str(exc)})
+                                 "phase": phase, "reason": str(exc)})
             continue
     return None, observations

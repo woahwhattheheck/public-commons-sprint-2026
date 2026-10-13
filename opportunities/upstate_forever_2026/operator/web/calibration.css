@@ -53,3 +53,22 @@
 .calibration-plots{grid-template-columns:repeat(3,1fr)}
 .calibration-scatter{break-inside:avoid}
 }
+
+.calibration-gap-plot{margin:16px 0;overflow:auto}
+.calibration-gap-plot figcaption{font-weight:650;margin:8px 0}
+.calibration-gap-plot svg{display:block;width:100%;min-width:680px;height:auto}
+.calibration-gap-plot text{fill:#444;font:12px system-ui,sans-serif}
+.calibration-gap-plot p{font-size:13px;line-height:1.5;color:#555}
+.calibration-gap-range{stroke:#333;stroke-width:2;fill:none}
+.calibration-gap-zero{stroke:#111;stroke-width:1.2;stroke-dasharray:5 4}
+@media print{.calibration-gap-plot svg{min-width:0}}
+
+/* Original-catchment atlas: grayscale scientific source pages. */
+.calibration-map-atlas{display:grid;grid-template-columns:minmax(0,1fr);gap:1.5rem;padding:1rem}
+.calibration-map-page{margin:0;border:1px solid #c7c7c7;background:#fff}
+.calibration-map-page img{display:block;width:100%;height:auto;max-height:90vh;object-fit:contain}
+.calibration-map-page figcaption{padding:.7rem 1rem;border-top:1px solid #d5d5d5;color:#444;font-size:.85rem}
+.calibration-selected-row{background:#ededed}
+@media print{.calibration-map-page{break-inside:avoid}.calibration-map-page img{max-height:none}}
+
+.calibration-review-frame{display:block;width:100%;height:72vh;min-height:480px;border:1px solid var(--line,#bbb);background:#fff}.calibration-review-notes{white-space:pre-wrap}

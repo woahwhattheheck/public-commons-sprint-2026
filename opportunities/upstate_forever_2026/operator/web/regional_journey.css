@@ -1,0 +1,11 @@
+.operating-journey .journey-regional {display:grid;gap:1rem;margin:0 0 1.5rem;}
+.operating-journey .journey-regional-section {padding:1rem;border:1px solid #c9cdd0;background:#f7f8f8;border-radius:3px;}
+.operating-journey .journey-regional-section h3 {margin:0 0 .65rem;color:#252a2e;font-size:1.05rem;}
+.operating-journey .journey-regional-section label {display:grid;gap:.35rem;}
+.operating-journey .journey-regional-section select {width:100%;min-width:0;}
+.operating-journey .journey-regional-section .journey-fields {grid-template-columns:repeat(2,minmax(0,1fr));}
+.operating-journey .journey-regional-section .journey-facts dd {overflow-wrap:anywhere;white-space:normal;}
+.operating-journey .journey-regional-section .page-actions {margin:.8rem 0;flex-wrap:wrap;}
+.operating-journey .journey-regional-section .journey-import {margin:.5rem 0 1rem;padding:.7rem;background:#fff;border:1px solid #d9dcde;}
+@media(max-width:720px){.operating-journey .journey-regional-section .journey-fields {grid-template-columns:1fr;}}
+@media print{.operating-journey .journey-regional-section .page-actions,.operating-journey .journey-regional-section .journey-import {display:none;}}

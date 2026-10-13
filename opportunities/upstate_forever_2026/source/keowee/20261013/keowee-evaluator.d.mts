@@ -6,7 +6,27 @@ export type Scalar = string | number | boolean | null;
 export type FieldId = "already_protected" | "cwa_mean" | "stream_orders" | "stream_classes" | "fw_stream_has_impairment" | "sensitive_buffer_acres" | "forested_sensitive_buffer_present" | "wetland_classes" | "hydric_soil_acres" | "floodplain_intersects" | "developed_land_present" | "source_water_protection_area_intersects" | "stream_length_miles" | "watershed_mean_stream_length_miles" | "adjacent_protected_land" | "parcel_area_acres" | "bacterial_impairment_relation" | "agricultural_fraction" | "agricultural_land_adjacent_to_stream" | "agricultural_land_contains_impoundment" | "known_logging_operation" | "nitrogen_export_mean" | "phosphorus_export_mean" | "sediment_export_mean" | "nitrogen_export_class" | "phosphorus_export_class" | "sediment_export_class" | "unpermitted_agricultural_source" | "permitted_agricultural_source" | "unpermitted_stormwater_source" | "permitted_stormwater_source" | "modified_wetland_present" | "historic_wetland_present" | "dam_present" | "sensitive_buffer_intersects" | "adjacent_drinking_water_reservoir_or_intake" | "adjacent_other_waterway" | "private_boat_ramp_present" | "private_dock_present" | "high_traffic_pet_business_present" | "public_land_open_to_people" | "home_sewer_distance_ft" | "home_surface_water_distance_ft" | "oldest_residence_year_built" | "septic_soil_class" | "septic_soil_limitation_rating";
 export type CriterionId = "protection_cwa" | "protection_stream_order" | "protection_stream_class" | "protection_sensitive_buffer" | "forested_sensitive_buffer_present" | "protection_wetland_class" | "protection_hydric_soils" | "protection_floodplain" | "source_water_protection_area_intersects" | "protection_stream_length" | "adjacent_protected_land" | "protection_parcel_size" | "bacterial_impairment" | "agricultural_cover_share" | "agricultural_water_connection" | "developed_land_present" | "known_logging_operation" | "nitrogen_export" | "phosphorus_export" | "sediment_export" | "unpermitted_agricultural_source" | "permitted_agricultural_source" | "unpermitted_stormwater_source" | "permitted_stormwater_source" | "modified_wetland_present" | "historic_wetland_present" | "dam_present" | "sensitive_buffer_intersects" | "restoration_stream_order" | "waterway_adjacency" | "floodplain_intersects" | "private_boat_ramp_present" | "private_dock_present" | "high_traffic_pet_business_present" | "public_land_open_to_people";
 export type CategoryId = "land_protection" | "agricultural_bmp" | "wetland_restoration" | "riparian_restoration" | "voluntary_dam_removal" | "shoreline_management" | "stormwater_bmp" | "pet_waste";
+/** Closed numeric source bounds; supported by numeric-bin criteria. */
+export interface ClosedNumericInterval<U extends string = string> {
+  lower: number;
+  upper: number;
+  closed: true;
+  unit: U;
+  method: string;
+  reference: string;
+  area_basis?: "whole_original_parcel" | "reporting_parcel" | string;
+  structural_only?: boolean;
+  source_geometry_sha256?: string;
+  /** Original source coverage, geometry and method metadata remain intact. */
+  [key: string]: unknown;
+}
 export interface ObservationMetadata {
+  source_uri?: string;
+  source_sha256?: string;
+  source_binding?: Record<string, unknown>;
+  numeric_interval_source?: string;
+  original_numeric_interval?: Record<string, unknown>;
+  spatial_scope?: {area_basis?: string | null; meaning: string; bound_applies_to: string};
   source_collection_id?: string;
   source_entry_id?: string;
   original_fields?: string[];
@@ -26,7 +46,8 @@ export interface ObservationMetadata {
 }
 export type Observation<T, U extends string | null = null> =
   ObservationMetadata & {value: T | null} &
-  (U extends string ? {unit: U} : {unit?: null});
+  (U extends string ? {unit: U} : {unit?: null}) &
+  (T extends number ? {interval?: ClosedNumericInterval<U extends string ? U : string>} : {interval?: never});
 export interface Observations {
   /** Already protected parcel Source: Existing parks, preserves, water-utility land and conservation easements. */
   already_protected?: Observation<boolean>;
@@ -137,10 +158,21 @@ export interface CriterionResult {
   maximum: number;
   status: "resolved" | "multiple_possible_scores";
   max_points: number;
-  observations: Array<ObservationMetadata & {field: FieldId; value: unknown; unit?: string | null}>;
+  observations: Array<ObservationMetadata & {field: FieldId; value: unknown; unit?: string | null; interval?: ClosedNumericInterval}>;
   references: Reference[];
   issues: Issue[];
-  classification?: {mode: "literal_published_bins" | "retained_original_class"; labels: string[]};
+  classification?: {
+    mode: "literal_published_bins" | "retained_original_class" | "literal_published_bins_over_closed_interval";
+    labels: string[];
+    state?: "bounded_interval";
+    matched_classes?: string[];
+    classes?: string[];
+    score_options?: number[];
+    attainable_states?: Array<"scored" | "ambiguous" | "unclassified">;
+    value_interval?: ClosedNumericInterval;
+  };
+  value_interval?: ClosedNumericInterval;
+  points_determined_by_interval?: boolean;
   source_interpretation?: string;
   source_variants?: Array<{name: string; possible_points: number[]}>;
 }

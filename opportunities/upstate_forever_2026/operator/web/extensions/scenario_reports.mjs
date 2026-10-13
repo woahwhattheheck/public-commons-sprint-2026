@@ -1,5 +1,5 @@
 /* Native watershed-report generation and receiving controls for the maintained operator. */
-export const VERSION = '2026-10-13.2';
+export const VERSION = '2026-10-13.3';
 export const FOCUS_HUCS = ['030601010703','030601010704','030601020507','030601020502'];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const text = value => String(value ?? '');
@@ -70,6 +70,17 @@ export function selectionFromDraft(catalog,draft) {
     result.zones.push(selection);
   }
   return result;
+}
+
+export function economicReleaseSelection(release, editionId='') {
+  const selection={...release.selection};
+  if (!editionId) return selection;
+  const edition=(release.economic_editions||[]).find(item=>item.id===editionId);
+  if (!edition || !/^[0-9a-f]{64}$/.test(edition.id) ||
+      !/^[0-9a-f]{64}$/.test(edition.edition_sha256||'')) {
+    throw Error('Reopen this report and choose an available completed economic edition.');
+  }
+  return {...selection,economic_edition_id:edition.id,economic_edition_sha256:edition.edition_sha256};
 }
 
 export function attachScenarioReports(context) {
@@ -324,12 +335,17 @@ export function attachScenarioReports(context) {
     const release=value||{ready:false,issues:[],releases:[]};
     const issues=release.issues||[];
     const choices=release.remaining_choices||[];
-    const rows=release.releases||[];
+    const rows=release.releases||[],editions=release.economic_editions||[];
     return '<section class="sr-release" aria-label="Map releases from this report"><h4>Map release</h4>'+
       '<p>Use this saved reference and every alternative for the map atlas. The original report, annual totals, comparison tables and watershed geometry travel with the release.</p>'+
       (issues.length?'<ul>'+issues.map(item=>'<li>'+esc(item.message)+'</li>').join(''):'')+
+      (release.ready?'<label>Delivery mode<select name="release_delivery_mode">'+option('regional_rfp','Regional RFP · seven map families')+option('native_study','Original native study · retain original grid and domain')+'</select></label>':'')+
+      (release.ready&&editions.length?'<label>Economic decision edition<select name="release_economic_edition">'+
+        option('','Physical report and maps')+editions.map(item=>option(item.id,item.title+' / '+item.zone_title+' / '+item.costed_count+' costed alternatives')).join('')+
+        '</select></label><p class="sr-note">Include this completed edition’s selected-zone costs, budgets, physical response and original decision package in the client report.</p>':'')+
+      ((release.economic_issues||[]).length?'<p class="sr-note">'+esc(release.economic_issues.map(item=>item.message).join(' '))+'</p>':'')+
       (release.ready?'<div class="sr-actions">'+button('map-release','Build map release','data-report-id="'+esc(selectedReport)+'"')+'</div>':'')+
-      (release.ready&&choices.length?'<p class="sr-note">Complete the remaining choices in the atlas builder: '+esc(choices.join('; '))+'.</p>':'')+
+      (release.ready&&choices.length?'<p class="sr-note">The atlas builder applies the selected delivery mode. Regional RFP choices include: '+esc(choices.join('; '))+'.</p>':'')+
       (rows.length?'<h5>Saved map releases</h5><div class="sr-table-scroll"><table><thead><tr><th>Release</th><th>State</th><th>Saved</th><th></th></tr></thead><tbody>'+
         rows.map(row=>'<tr><td>'+esc(row.title)+'<small>'+esc(short(row.id))+'</small></td><td>'+esc(row.state)+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+
           button('open-release','Open release','data-release-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+
@@ -339,6 +355,7 @@ export function attachScenarioReports(context) {
     assertWorkspace();
     if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this report selection.');
     const key=workspaceKey;
+    const economicEditionId=val('release_economic_edition'),deliveryMode=val('release_delivery_mode')||'regional_rfp';
     message('Opening the map release for this saved report…');
     const release=await call('/api/scenario-reports/release',{report_id:id});
     if(disposed||key!==currentWorkspace()||selectedReport!==id)return;
@@ -348,7 +365,9 @@ export function attachScenarioReports(context) {
       message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
       return;
     }
-    await openExtension('map-atlas','create',{workspace_key:key,selection:release.selection});
+    const selection={...economicReleaseSelection(release,economicEditionId),delivery_mode:deliveryMode};
+    if(deliveryMode==='native_study')selection.native_study={title:selection.title||'Original native watershed study',purpose:'Interpret the retained baseline and land-cover alternatives on their original study grid and reporting domain.',reference:''};
+    await openExtension('map-atlas','create',{workspace_key:key,selection});
   }
   async function openLinkedRelease(id) {
     assertWorkspace();

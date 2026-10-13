@@ -1,0 +1,241 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah complete 217-HUC context and original received outputs",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "huc12_count": 217,
+    "huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "huc8": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ]
+  },
+  "notes": [
+    "Retains the seven-file original full-domain source edition from F0C8RTULRB3, including its unchanged sources.json.",
+    "Adds the exact later classification coverage and the seven completed outputs plus run record from F0C9JNBA7EU.",
+    "The maintained load_source_edition reads the original context and coverage basenames directly. Received output reports are retained companions and are not model source_files.",
+    "The original native result is watershed-4592eb077b7164d59ba4. Its two-input run has no native-network.json.",
+    "Adds the unchanged 303-record native WBD ToHUC response and its exact-byte publisher provenance for a separate current network analysis. Original completed report identities and files remain unchanged."
+  ],
+  "entries": [
+    {
+      "id": "nrcs-fy26-upper-savannah-domain217-20261013",
+      "title": "NRCS FY26 state-specific source-water priorities: actual 217-HUC domain",
+      "kind": "table",
+      "role": "SOURCE_WATER_PRIORITY_CONTEXT",
+      "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+      "vintage": "FY26; original public source capture 2026-10-12; exact domain join 2026-10-13",
+      "path": "nrcs-domain-fy26.csv",
+      "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+      "units": {
+        "st_ac": "acres of the state portion",
+        "huc12_ac": "acres of the whole HUC"
+      },
+      "companions": [
+        {
+          "path": "domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+        },
+        {
+          "path": "source-context-run.json",
+          "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388"
+        }
+      ],
+      "derivation": {
+        "input_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+        "operation": "Exact HUC12 membership filter, preserving complete state-HUC rows",
+        "implementation_sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+      }
+    },
+    {
+      "id": "upper-savannah-water-context-domain217-20261013",
+      "title": "Upper Savannah 217-HUC joined source-water context",
+      "kind": "document",
+      "role": "SOURCE_WATER_CONTEXT",
+      "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+      "vintage": "2026-10-13 full-domain source-core execution",
+      "path": "full-domain-water-context.json",
+      "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566",
+      "companions": [
+        {
+          "path": "classified-full-domain-query.json",
+          "sha256": "448e20074d6b136be60d5f03bbbf5f0c9c36530c74c78a9294d4089d97357cef",
+          "bytes": 8603
+        },
+        {
+          "path": "classified-reaches.csv",
+          "sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18"
+        },
+        {
+          "path": "domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "bytes": 3256
+        },
+        {
+          "path": "native-network-source.json",
+          "sha256": "79550f219c3c4b422be8fab9e63f46a07616fca5e52b26dac9afc3a235ce5dbc"
+        },
+        {
+          "path": "native-network.json",
+          "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac"
+        },
+        {
+          "path": "nrcs-domain-fy26.csv",
+          "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+          "bytes": 24474
+        },
+        {
+          "path": "original-source-README.md",
+          "bytes": 5136,
+          "sha256": "5816c98667bd4f44635e22cb5e1bb8a5587c297d12e2b8dd4619d947def1d271"
+        },
+        {
+          "path": "original-sources.json",
+          "bytes": 2782,
+          "sha256": "3923e7bf5577982712141d5664b07c044b94dbc962efb63d308aac1e5538bee3"
+        },
+        {
+          "path": "received/watershed-context-20261013/eco-watershed13-received.zip",
+          "sha256": "716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5"
+        },
+        {
+          "path": "received/watershed-context-20261013/original-source/model/watershed_context_cli.py",
+          "sha256": "8390515a940f6d2cde24cc0705ad7f8688142eecfc2fa3d7bb0fc6e18e840de4"
+        },
+        {
+          "path": "received/watershed-context-20261013/original-source/model/WATERSHED_CONTEXT.md",
+          "sha256": "2e5be4ac1a9dac4ab2697894b38788cd34fc6ea3df5be4c9b586603330707fd4"
+        },
+        {
+          "path": "received/watershed-context-20261013/original-source/model/watershed_context.py",
+          "sha256": "3ef89ad3e237fb0f13b7ba410cbc347d9dcb38bf99209290c27067cbd89c5571"
+        },
+        {
+          "path": "received/watershed-context-20261013/run-receipt.json",
+          "bytes": 4794,
+          "sha256": "ccbb064d6b4e390b880efec6898d03f049bf82f54c332063f07b250e5ea7f43f"
+        },
+        {
+          "path": "received/watershed-context-20261013/selected-watersheds.csv",
+          "bytes": 1003,
+          "sha256": "9a35e4d9cdd68c1e230210b121cc622927a9920ef42d6fcc20f49a99506595cf"
+        },
+        {
+          "path": "received/watershed-context-20261013/selected-watersheds.json",
+          "bytes": 17316,
+          "sha256": "bb5c1000da55c71e6a25ce2711d2445592b3315484f1371cd0dac926ae7b3909"
+        },
+        {
+          "path": "received/watershed-context-20261013/source-receipt.json",
+          "sha256": "a706be2e47ae2faa7f397009eae3198a78ddd3c768443ec6ec7cc33b064b7811"
+        },
+        {
+          "path": "received/watershed-context-20261013/stderr.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "received/watershed-context-20261013/stdout.json",
+          "sha256": "803d3963e538907e5b9e4a72ecd05d6dd35284dfdd03f92299f06f47cfa234cb"
+        },
+        {
+          "path": "received/watershed-context-20261013/watershed-context.json",
+          "bytes": 470519,
+          "sha256": "54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34"
+        },
+        {
+          "path": "received/watershed-context-20261013/watershed-huc8s.csv",
+          "bytes": 1573,
+          "sha256": "9b8f27fa12c37e147f61315cc0bc528d53d05fc437c76a02543702123b5db989"
+        },
+        {
+          "path": "received/watershed-context-20261013/watershed-hucs.csv",
+          "bytes": 83474,
+          "sha256": "7f63e89b1c8c683b6fc03b4a5834a898f07e6840576f1290600c81943e9e9c81"
+        },
+        {
+          "path": "received/watershed-context-20261013/watershed-report.md",
+          "bytes": 6583,
+          "sha256": "e60ede577fa26a85f29b1a26d7b123c9107f8b3c24038f81cfd8c504b05e6a25"
+        },
+        {
+          "path": "received/watershed-context-20261013/watershed-states.csv",
+          "bytes": 611,
+          "sha256": "ba29c12cf299866e14ea085ed44fd8e91b7dbbb57b567d820e4862975a25357d"
+        },
+        {
+          "path": "scdes-domain217-source-coverage.json",
+          "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb",
+          "bytes": 7043
+        },
+        {
+          "path": "scdes-huc8-03060104-to-07-target-class-count.json",
+          "sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c"
+        },
+        {
+          "path": "scdes-original-domain217-classified-objectids.json",
+          "sha256": "f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab"
+        },
+        {
+          "path": "source-context-run.json",
+          "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388",
+          "bytes": 6868
+        }
+      ],
+      "metadata": {
+        "received_result_id": "watershed-4592eb077b7164d59ba4",
+        "received_output_directory": "received/watershed-context-20261013",
+        "original_manifest_file": "original-sources.json",
+        "original_manifest_sha256": "3923e7bf5577982712141d5664b07c044b94dbc962efb63d308aac1e5538bee3",
+        "original_archive_file_id": "F0C9JNBA7EU",
+        "original_archive_bytes": 121182,
+        "original_archive_sha256": "716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5",
+        "loader": "source_tools.prepare_watershed_context.load_source_edition"
+      },
+      "native_network_reference": {
+        "schema": "upstate.native-network-source/v1",
+        "source_uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+        "source_member": "native-network.json",
+        "body_bytes": 71787,
+        "body_sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+        "original_source_member": "usgs-wbd-savannah-original-topology-20261013.json",
+        "source_capture": {
+          "source_id": "usgs-wbd-savannah-original-topology-20261013",
+          "captured_at": "2026-10-13",
+          "vintage": "2026-10-13",
+          "native_record_count": 303,
+          "model_domain_huc12_count": 217,
+          "original_domain_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "original_manifest": {
+            "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/source-manifest.json",
+            "bytes": 4380,
+            "sha256": "9e5850fe03a402776673c1227091b92d058b902af9ca722b3bea19b851724612"
+          }
+        },
+        "retained_source": {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "commit": "b66b2a2f5ad5617ef4118ffd0240414b420040df",
+          "blob": "2329bb919837ca0e44135734a3069e72d85b8e8f",
+          "path": "opportunities/upstate_forever_2026/source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json"
+        },
+        "interpretation": "The native network file preserves the original publisher response bytes and attributes. This separate origin companion binds its source URI and exact identity. Reporting/upstream area roles remain those explicitly supplied by original role companions.",
+        "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+        "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+        "bytes": 71787
+      }
+    }
+  ],
+  "derivation": {
+    "operation_id": "ECO-WATERSHED13-20261013",
+    "original_manifest": {
+      "path": "original-sources.json",
+      "bytes": 2782,
+      "sha256": "3923e7bf5577982712141d5664b07c044b94dbc962efb63d308aac1e5538bee3"
+    },
+    "method": "Retain the complete received source edition and union its exact scientific source companions; preserve original completed results separately from new network analysis."
+  }
+}

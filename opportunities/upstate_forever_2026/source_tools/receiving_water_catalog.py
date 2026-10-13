@@ -82,10 +82,10 @@ FIELD_ALIASES = {
     "classification": ("H2OCLASS", "CLASS", "CLASSIFICATION", "WATER_CLASS", "WATER_CLASSIFICATION"),
     "name": ("NAME", "WATERBODY", "WATERBODY_NAME", "WATER_NAME", "H2ONAME", "HYDNAME",
              "PWS_NAME", "PWSNAME", "SYSTEM_NAME", "SYSNAME", "FACILITY_NAME", "INTAKE_NAME"),
-    "description": ("DESCRIPTION", "DESCRIPT", "WATERBODY_DESCRIPTION", "H2ODESC", "WATER_DESC", "REACH_DESCRIPTION"),
-    "status": ("STATUS", "ACTIVITY_STATUS", "PWS_STATUS", "SYSTEM_STATUS", "INTAKE_STATUS"),
-    "system_id": ("PWSID", "PWS_ID", "PWS_NUMBER", "SYSTEM_ID", "PWSSYSID"),
-    "intake_id": ("INTAKE_ID", "INTAKEID", "SOURCE_ID", "SRC_ID"),
+    "description": ("DESCRIPTION", "DESCRIPT", "WATERBODY_DESCRIPTION", "H2ODESC", "WATER_DESC", "REACH_DESCRIPTION", "DESC_"),
+    "status": ("STATUS", "ACTIVITY_STATUS", "PWS_STATUS", "SYSTEM_STATUS", "INTAKE_STATUS", "INTAKESTAT"),
+    "system_id": ("PWSID", "PWS_ID", "PWS_NUMBER", "SYSTEM_ID", "PWSSYSID", "PWSNO", "SYSTEM"),
+    "intake_id": ("INTAKE_ID", "INTAKEID", "SOURCE_ID", "SRC_ID", "INTAKE"),
 }
 _REF_KEYS = ("source_collection_id", "source_id", "layer", "where", "feature_ids")
 
@@ -248,21 +248,141 @@ def _source_ref(ref):
     return {key: deepcopy(ref[key]) for key in _REF_KEYS if key in ref}
 
 
+def _json_payload(path):
+    import gzip
+    raw = Path(path).read_bytes()
+    if raw.startswith(b"\x1f\x8b"):
+        raw = gzip.decompress(raw)
+    return json.loads(raw.decode("utf-8-sig"))
+
+
+def _retained_json(workspace, body):
+    """Read a verified Workspace object, independent of native view layout."""
+    from model.common import verify_file
+    if not isinstance(body, dict) or not body.get("object"):
+        raise ValueError("Metadata must refer to a retained Workspace object.")
+    path = verify_file(workspace.root, {**body, "path": body["object"]})
+    return _json_payload(path)
+
+
+def _companion_metadata(workspace, selection, entry):
+    companions = entry.get("companions") or []
+    selected_path = selection.get("layer_metadata_companion")
+    if selected_path is not None and (not isinstance(selected_path, str) or not selected_path):
+        raise ValueError("layer_metadata_companion must be an exact retained source_path.")
+    if not companions:
+        if selected_path is not None:
+            raise ValueError("This source has no retained metadata companions.")
+        return {}, {}
+    source = _source_ref(selection["source"])
+    collections = [item for item in workspace.sources()
+                   if item.get("id") == source["source_collection_id"]]
+    if len(collections) != 1:
+        raise ValueError("The original source collection could not be resolved uniquely.")
+    manifest_body = collections[0].get("original_manifest")
+    manifest = _retained_json(workspace, manifest_body)
+    originals = [item for item in manifest.get("entries", [])
+                 if item.get("id") == source["source_id"]]
+    if len(originals) != 1:
+        raise ValueError("The retained original manifest must contain this exact source ID once.")
+    declared = {}
+    for item in originals[0].get("companions", []):
+        path = item.get("path")
+        if path in declared:
+            raise ValueError(f"Original manifest repeats companion path {path!r}.")
+        declared[path] = item
+    candidates = []
+    exact_matches = 0
+    source_layer = _service_layer(entry.get("uri"))
+    for body in companions:
+        source_path = body.get("source_path")
+        if selected_path is not None and source_path != selected_path:
+            continue
+        if selected_path is not None:
+            exact_matches += 1
+        declaration = declared.get(source_path)
+        if declaration is None:
+            raise ValueError(f"Companion {source_path!r} is absent from the original manifest.")
+        # GeoPackage sidecars and unrelated binary companions need no JSON read.
+        if selected_path is None and not re.search(r"\.json(?:\.gz)?$", str(source_path), re.I):
+            continue
+        try:
+            metadata = _retained_json(workspace, body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            if selected_path is not None:
+                raise ValueError(f"Selected metadata companion {source_path!r} is not JSON.") from None
+            continue
+        if not isinstance(metadata, dict):
+            if selected_path is not None:
+                raise ValueError("Selected metadata companion must contain an object.")
+            continue
+        dictionary = metadata.get("schema") == "upstate.water-source-dictionary/v1"
+        part = metadata.get("sources", {}).get("scdes", {}) if dictionary else {}
+        metadata_uri = part.get("layer_url") if dictionary else declaration.get("uri")
+        metadata_layer = _service_layer(metadata_uri)
+        is_layer = (isinstance(metadata.get("fields"), list)
+                    and bool(metadata.get("geometryType"))
+                    and "features" not in metadata and not metadata.get("error"))
+        is_dictionary = dictionary and isinstance(part.get("field_metadata"), list)
+        mismatch = bool(metadata_layer and source_layer and metadata_layer != source_layer)
+        layer_number = re.search(r"/(?:mapserver|featureserver)/(\d+)$", source_layer or "")
+        if is_layer and layer_number and metadata.get("id") is not None:
+            mismatch = mismatch or str(metadata["id"]) != layer_number.group(1)
+        if mismatch or not (is_layer or is_dictionary):
+            if selected_path is not None:
+                raise ValueError("Selected metadata companion is not the original metadata for this source layer.")
+            continue
+        # Auto-binding a dictionary needs its explicit original layer URL.
+        if is_dictionary and selected_path is None and metadata_layer != source_layer:
+            continue
+        provenance = {
+            "source": source,
+            "companion": deepcopy(body),
+            "original_manifest": deepcopy(manifest_body),
+            "declared_companion": deepcopy(declaration),
+            "uri": metadata_uri,
+            "association": "original_manifest_companion",
+        }
+        candidates.append((0 if is_layer else 1, body["sha256"], metadata, provenance))
+    if selected_path is not None and exact_matches != 1:
+        raise ValueError(f"layer_metadata_companion matched {exact_matches} retained entries; expected one.")
+    if not candidates:
+        return {}, {}
+    # Prefer the original ArcGIS layer object over a derived source dictionary.
+    best_rank = min(item[0] for item in candidates)
+    unique = {}
+    for item in sorted(candidates, key=lambda item: str(item[3]["companion"].get("source_path"))):
+        if item[0] == best_rank:
+            unique.setdefault(item[1], item)
+    if len(unique) != 1:
+        paths = [item[3]["companion"]["source_path"] for item in unique.values()]
+        raise ValueError(f"Multiple original metadata companions {paths}; choose layer_metadata_companion.")
+    _, _, metadata, provenance = next(iter(unique.values()))
+    return metadata, provenance
+
+
 def _entry_metadata(workspace, selection, entry):
-    metadata = deepcopy(selection.get("layer_metadata") or (entry.get("metadata") or {}).get("layer_metadata") or {})
     metadata_provenance = {}
     reference = selection.get("layer_metadata_source")
+    companion = selection.get("layer_metadata_companion")
+    if reference and companion is not None:
+        raise ValueError("Choose layer_metadata_source or layer_metadata_companion, not both.")
     if reference:
         ref = _source_ref(reference)
         path, original = workspace.source_file(ref["source_collection_id"], ref["source_id"])
-        import gzip
-        opener = gzip.open if str(path).endswith(".gz") else open
-        with opener(path, "rt", encoding="utf-8") as stream:
-            metadata = json.load(stream)
+        metadata = _json_payload(path)
         metadata_provenance = {
             "source": ref, "source_body": deepcopy(original.get("body", {})),
             "uri": original.get("uri"), "vintage": original.get("vintage"),
         }
+    elif companion is not None:
+        metadata, metadata_provenance = _companion_metadata(workspace, selection, entry)
+    elif "layer_metadata" in selection:
+        metadata = deepcopy(selection["layer_metadata"])
+    elif (entry.get("metadata") or {}).get("layer_metadata"):
+        metadata = deepcopy(entry["metadata"]["layer_metadata"])
+    else:
+        metadata, metadata_provenance = _companion_metadata(workspace, selection, entry)
     if not isinstance(metadata, dict) or metadata.get("error"):
         raise ValueError("Layer metadata must be the successful ArcGIS metadata object.")
     if metadata.get("schema") == "upstate.water-source-dictionary/v1":
@@ -270,6 +390,9 @@ def _entry_metadata(workspace, selection, entry):
         part = original_dictionary.get("sources", {}).get("scdes", {})
         if not isinstance(part.get("field_metadata"), list):
             raise ValueError("Source dictionary has no original sources.scdes.field_metadata.")
+        if (part.get("layer_url") and _service_layer(entry.get("uri"))
+                and _service_layer(part["layer_url"]) != _service_layer(entry.get("uri"))):
+            raise ValueError("Source dictionary describes a different original service layer.")
         metadata_provenance.update({
             "dictionary_schema": original_dictionary["schema"],
             "dictionary_sha256": _sha(original_dictionary),
@@ -605,37 +728,41 @@ def compile_catalog(workspace, request):
 
 
 def inspect_sources(workspace, selectors=None):
-    """Inspect registered source candidates without guessing a class or vintage."""
-    from model import rasters
+    """Inspect the same exact source selection and metadata used by compilation."""
     candidates = []
-    all_sources = []
-    for collection in workspace.sources():
-        for entry in collection.get("entries", []):
-            all_sources.append((collection, entry))
+    all_sources = [(collection, entry) for collection in workspace.sources()
+                   for entry in collection.get("entries", [])]
     for profile_id, profile in PROFILES.items():
-        matched = []
-        for collection, entry in all_sources:
-            if _service_layer(entry.get("uri")) == _service_layer(profile["service_url"]):
-                matched.append((collection, entry))
+        selections = []
         explicit = (selectors or {}).get(profile_id)
-        if explicit:
-            source = _source_ref(explicit)
-            path, entry = workspace.source_file(source["source_collection_id"], source["source_id"])
-            matched = [({"id": source["source_collection_id"]}, entry)]
-        for collection, entry in matched:
-            source = {"source_collection_id": collection["id"], "source_id": entry["id"]}
-            if entry.get("layer") is not None:
-                source["layer"] = entry["layer"]
-            path, verified = workspace.source_file(collection["id"], entry["id"])
-            rows, crs = rasters.vector_geometry(path, layer=entry.get("layer"), target_crs="EPSG:4326")
-            metadata = (entry.get("metadata") or {}).get("layer_metadata") or {}
+        if explicit is not None:
+            if not isinstance(explicit, dict):
+                raise ValueError("Each profile selector must be a source reference or source selection.")
+            selections = [deepcopy(explicit) if "source" in explicit else {"source": deepcopy(explicit)}]
+        else:
+            for collection, entry in all_sources:
+                if _service_layer(entry.get("uri")) != _service_layer(profile["service_url"]):
+                    continue
+                source = {"source_collection_id": collection["id"], "source_id": entry["id"]}
+                if entry.get("layer") is not None:
+                    source["layer"] = entry["layer"]
+                selections.append({"source": source})
+        for selection in selections:
+            source, entry, rows, crs, metadata, metadata_provenance = _read_source(workspace, selection)
+            supplied = selection.get("field_map", {})
+            if not isinstance(supplied, dict):
+                raise ValueError("field_map must be an object of exact source field names.")
             fields = {}
-            for role in FIELD_ALIASES:
+            entry_fields = {"object_id": "object_id_field", "classification": "classification_field",
+                            "name": "name_field", "description": "description_field"}
+            for role in ("object_id", *FIELD_ALIASES):
+                explicit_field = supplied.get(role, entry.get(entry_fields.get(role, "")))
                 try:
-                    fields[role] = _resolve_field(role, entry.get({"classification": "classification_field", "name": "name_field", "description": "description_field"}.get(role, "")), metadata, rows, required=role == "classification" and profile["kind"] == "classified_water")
+                    fields[role] = _resolve_field(
+                        role, explicit_field, metadata, rows,
+                        required=role == "classification" and profile["kind"] == "classified_water")
                 except ValueError as exc:
                     fields[role] = {"needs_explicit_field": str(exc)}
-            fields["object_id"] = _resolve_field("object_id", entry.get("object_id_field"), metadata, rows)
             class_field = fields.get("classification")
             counts = Counter()
             if isinstance(class_field, str):
@@ -644,19 +771,25 @@ def inspect_sources(workspace, selectors=None):
                     label, _ = _domain_value(metadata, class_field, raw)
                     counts[str(label)] += 1
             candidates.append({
-                "profile": profile_id, "source": source, "title": verified.get("title"),
-                "uri": verified.get("uri"), "vintage": verified.get("vintage"),
-                "body": deepcopy(verified.get("body", {})), "rows": len(rows),
+                "profile": profile_id, "source": source, "title": entry.get("title"),
+                "uri": entry.get("uri"), "vintage": entry.get("vintage"),
+                "body": deepcopy(entry.get("body", {})), "rows": len(rows),
                 "field_names": _field_names(metadata, rows), "field_resolution": fields,
                 "class_values": dict(sorted(counts.items())), "geometry_crs": str(crs),
-                "geometry_types": dict(sorted(Counter(row["geometry"].geom_type for row in rows if row.get("geometry") is not None).items())),
+                "layer_metadata": metadata, "metadata_provenance": metadata_provenance,
+                "metadata_companions": [
+                    {"source_path": item.get("source_path"), "sha256": item.get("sha256"),
+                     "bytes": item.get("bytes")} for item in entry.get("companions", [])
+                ],
+                "geometry_types": dict(sorted(Counter(
+                    row["geometry"].geom_type for row in rows if row.get("geometry") is not None).items())),
             })
     return {"schema": "upstate.receiving-water-source-inventory/1",
             "profiles": deepcopy(PROFILES), "candidates": candidates}
 
-
 def write_catalog(compiled, output_dir):
     """Write full reusable artifacts and a machine-readable byte manifest."""
+    from model.common import atomic_bytes
     directory = Path(output_dir)
     directory.mkdir(parents=True, exist_ok=True)
     bodies = {
@@ -693,11 +826,10 @@ def write_catalog(compiled, output_dir):
         path = directory / name
         if path.exists() and path.read_bytes() != body:
             raise FileExistsError(f"Existing artifact differs: {path}; choose a new output directory.")
+    # Publish each complete body atomically, with the completion manifest last.
+    # A stopped writer leaves missing files which an exact replay can complete.
     for name, body in bodies.items():
-        path = directory / name
-        if not path.exists():
-            with path.open("xb") as stream:
-                stream.write(body)
+        atomic_bytes(directory / name, body, immutable=True)
     return {"directory": str(directory.resolve()), **manifest}
 
 
@@ -715,22 +847,22 @@ def main(argv=None):
                                 help="Prepare the selected vintage's spatial plan in the same workspace")
     args = parser.parse_args(argv)
     from model.workspace import Workspace
-    workspace = Workspace(args.workspace)
+    workspace = Workspace(args.workspace, create=False)
 
     if args.command == "inspect":
-        selectors = json.loads(Path(args.selectors).read_text(encoding="utf-8")) if args.selectors else None
+        selectors = _json_payload(Path(args.selectors)) if args.selectors else None
         result = inspect_sources(workspace, selectors)
         target = Path(args.output)
         target.parent.mkdir(parents=True, exist_ok=True)
         body = _canonical(result) + b"\n"
         if target.exists() and target.read_bytes() != body:
             raise FileExistsError(f"Source inventory already exists with different bytes: {target}")
-        if not target.exists():
-            target.write_bytes(body)
+        from model.common import atomic_bytes
+        atomic_bytes(target, body, immutable=True)
         print(json.dumps({"inventory": str(target.resolve()), "candidates": len(result["candidates"])}))
         return 0
 
-    request = json.loads(Path(args.request).read_text(encoding="utf-8"))
+    request = _json_payload(Path(args.request))
     compiled = compile_catalog(workspace, request)
     result = write_catalog(compiled, args.output_dir)
     if args.prepare:

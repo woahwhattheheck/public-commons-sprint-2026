@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, digest,
-                     file_digest, held, now, read_json, verify_file)
+                     file_digest, held, identifier, now, read_json, verify_file)
 from . import rasters
 from .model_selection import (models, run_models, required_roles, required_outputs, run_scope,
                               validate_completed_run, common_comparison_outputs)
@@ -40,7 +40,7 @@ def runtime(selection=None):
     return {name: loaded[name] for name in active}, source
 
 
-def execute_run(workspace, key):
+def execute_run(workspace, key, *, reuse_source_run_ids=None):
     directory = workspace.root / "runs" / key
     with held(directory / ".run.lock", blocking=False):
         # Read after acquiring the lock so a completed or resumed operation is
@@ -59,6 +59,17 @@ def execute_run(workspace, key):
             previous_level = root_logger.level
             handler = None
             try:
+                execution.phase("reuse_selection")
+                retained_sources = (state.get("reuse_source_run_ids", ())
+                                    if reuse_source_run_ids is None else reuse_source_run_ids)
+                if not isinstance(retained_sources, (list, tuple)):
+                    raise ValueError("Select original source run IDs as a list or tuple")
+                retained_sources = tuple(dict.fromkeys(identifier(value) for value in retained_sources))
+                if key in retained_sources:
+                    raise ValueError("Reuse source runs must differ from the receiving run")
+                if reuse_source_run_ids is not None:
+                    state["reuse_source_run_ids"] = list(retained_sources)
+                    execution.save()
                 execution.phase("log")
                 handler = logging.FileHandler(directory / "native.log", encoding="utf-8")
                 handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
@@ -85,6 +96,7 @@ def execute_run(workspace, key):
                 # directly; loading or executing InVEST again is unnecessary.
                 modules = {}
                 arguments = {}
+                input_matcher = None
                 runtime_source = previous_runtime
                 if unfinished or unfinished_outputs:
                     execution.phase("grid")
@@ -127,6 +139,10 @@ def execute_run(workspace, key):
                             execution.save()
                         verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
                     arguments = build_native_arguments(unfinished, profile, paths, table, lulc)
+                    if retained_sources:
+                        from .native_equivalence import NativeInputMatcher
+                        input_matcher = NativeInputMatcher(
+                            workspace, key, target_lulc=lulc, target_runtime=runtime_source)
                 for name, module in modules.items():
                     args = {**arguments[name], "workspace_dir": str(directory / name)}
                     execution.phase("stage_identity", model=name)
@@ -134,7 +150,9 @@ def execute_run(workspace, key):
                     execution.phase("waiting_stage", model=name)
                     with execution_slot(workspace, selected):
                         execution.phase("stage_reuse", model=name)
-                        reused, rejected = recover(workspace, key, name, selected, directory, args)
+                        reused, rejected = recover(
+                            workspace, key, name, selected, directory, args,
+                            source_run_ids=retained_sources, matcher=input_matcher)
                         if rejected:
                             state.setdefault("reuse_observations", {})[name] = rejected
                         if reused is not None:

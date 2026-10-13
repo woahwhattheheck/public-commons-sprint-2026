@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.native-network-source/v1",
+  "source_uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+  "source_member": "native-network.json",
+  "body_bytes": 71787,
+  "body_sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+  "original_source_member": "usgs-wbd-savannah-original-topology-20261013.json",
+  "source_capture": {
+    "source_id": "usgs-wbd-savannah-original-topology-20261013",
+    "captured_at": "2026-10-13",
+    "vintage": "2026-10-13",
+    "native_record_count": 303,
+    "model_domain_huc12_count": 217,
+    "original_domain_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "original_manifest": {
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/b66b2a2f5ad5617ef4118ffd0240414b420040df/opportunities/upstate_forever_2026/source/receptor-topology/20261013/source-manifest.json",
+      "bytes": 4380,
+      "sha256": "9e5850fe03a402776673c1227091b92d058b902af9ca722b3bea19b851724612"
+    }
+  },
+  "retained_source": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "b66b2a2f5ad5617ef4118ffd0240414b420040df",
+    "blob": "2329bb919837ca0e44135734a3069e72d85b8e8f",
+    "path": "opportunities/upstate_forever_2026/source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json"
+  },
+  "interpretation": "The native network file preserves the original publisher response bytes and attributes. This separate origin companion binds its source URI and exact identity. Reporting/upstream area roles remain those explicitly supplied by original role companions."
+}

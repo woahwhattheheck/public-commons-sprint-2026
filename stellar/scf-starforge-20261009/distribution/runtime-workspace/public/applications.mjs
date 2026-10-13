@@ -19,6 +19,14 @@ const button = (text, action) => {
 const query = (path, value) => path + '?' + new URLSearchParams(value);
 const readable = text => String(text ?? '').replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
   .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+function outcomeText(result, source = null) {
+  if (!result) return source ? 'Original outcome is null · Receipt: ' + source : 'Original operation retained.';
+  const label = result.state ?? result.operation ?? 'Retained result';
+  const exit = result.exitCode !== null && result.exitCode !== undefined ? ', exit ' + result.exitCode : '';
+  const recovered = result.operation === 'original-command' &&
+    ['RECONCILED', 'OUTCOME_UNAVAILABLE'].includes(result.state) ? ' · Original exit outcome is unavailable.' : '';
+  return 'Original outcome: ' + label + exit + recovered + (source ? ' · Receipt: ' + source : '');
+}
 function facts(rows) {
   const node = element('dl', undefined, 'paths');
   for (const [label, value] of rows) {
@@ -483,7 +491,9 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     title.textContent = app.label; phase.textContent = app.phase;
     actions.hidden = Boolean(app.error);
     if (app.error) {
-      details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
+      details.replaceChildren(element('p', app.error.message));
+      if (app.error.flock) details.append(element('pre', JSON.stringify(app.error.flock, null, 2)));
+      outputPanel.hidden = true; historyRows.replaceChildren();
       relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
     }
     const connected = app.connectionReady ?? Boolean(app.release);
@@ -497,6 +507,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     ]));
     if (!connected && app.adoption?.state?.error?.message)
       details.append(element('p', app.adoption.state.error.message, 'note'));
+    if (app.adoption?.state?.error?.flock)
+      details.append(element('pre', JSON.stringify(app.adoption.state.error.flock, null, 2)));
     const current = app.current, active = Boolean(current?.active), unsettled = ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(current?.phase);
     reviewStart.disabled = !connected || active || unsettled;
     stop.disabled = !current || !active && !unsettled;
@@ -574,9 +586,21 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         actions.append(button('Open output', () => { navigationVersion++; selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
         row.append(element('h3', run.command + ' · ' + run.phase),
           element('p', run.id + ' · ' + run.createdAt),
-          element('p', run.result?.state ? 'Original outcome: ' + run.result.state + (run.result.exitCode !== null && run.result.exitCode !== undefined ? ', exit ' + run.result.exitCode : '') :
+          element('p', run.result || run.resultSource ? outcomeText(run.result, run.resultSource) :
             run.active ? 'The original worker lease is held.' : 'Original operation retained.'),
-          actions); return row;
+          actions);
+        if (run.result || run.resultSource) {
+          const receipt = element('details'); receipt.append(element('summary', 'Complete retained outcome'),
+            element('pre', JSON.stringify({ result: run.result, resultSource: run.resultSource ?? null,
+              commandResult: run.commandResult ?? null }, null, 2)));
+          row.append(receipt);
+        }
+        if (run.state?.error?.flock || run.result?.error?.flock) {
+          const diagnostic = element('details'); diagnostic.append(element('summary', 'Original lock process diagnostics'),
+            element('pre', JSON.stringify(run.state?.error?.flock ?? run.result.error.flock, null, 2)));
+          row.append(diagnostic);
+        }
+        return row;
       }));
     }
     if (!selectedRun || !pageRuns.some(run => run.id === selectedRun)) selectedRun = pageRuns[0]?.id ?? null;
@@ -595,6 +619,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     if (bottom) output.scrollTop = output.scrollHeight;
     outputDescription.textContent = id + ' · ' + response.output.totalBytes + ' retained output bytes' +
       (response.output.offset ? ' · showing the last ' + (response.output.totalBytes - response.output.offset) + ' bytes' : '');
+    const outcome = run.terminal ? response.managedOutcome : response;
+    if (outcome?.result || outcome?.resultSource) outputDescription.textContent += ' · ' + outcomeText(outcome.result, outcome.resultSource);
     await workbookResults.update(app, run, response);
     if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     inputForm.hidden = !run.terminal;
@@ -606,6 +632,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       const receipt = pending && response.inputs.find(item => item.inputId === pending.inputId);
       if (receipt && receipt.state !== 'QUEUED') saveSaved('terminal-input', null);
       if (response.result) inputStatus.prepend(element('p', 'This terminal has ended. Its input and output belong to this original operation.', 'note'));
+      else if (!response.active && (response.managedOutcome?.result || response.managedOutcome?.resultSource))
+        inputStatus.prepend(element('p', outcomeText(response.managedOutcome.result, response.managedOutcome.resultSource), 'note'));
     }
   }
   async function terminalSend(text) {

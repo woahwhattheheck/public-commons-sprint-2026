@@ -184,6 +184,63 @@ separately maintained USGS seasonal-load/archive compiler and original observati
 methods when producing those annual N/P/sediment reference quantities. This daily-flow
 capture remains an ordinary contextual source edition, with units and timing intact.
 
+## Completed regional observations available in the application
+
+The sprint has already captured a complete original-data edition under
+`observations/observed_hydrology_20261013/`. Use its existing
+`model-sources.json` to receive those observations into the project Workspace.
+Its 88 files retain 69 original agency responses, the executed processing source,
+derived tables, original station geometry and native source companions. The source
+bank is [Upper Savannah observed hydrology](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2).
+
+| Retained product | Actual coverage |
+| --- | --- |
+| `derived/daily_flow.csv` | 33,459 original daily means at 16 gauges, 2020-01-01 through 2025-12-31 |
+| `derived/calendar_year_flow.csv` | 96 gauge-year records; 88 complete calendar years |
+| `derived/calendar_month_flow.csv` | 1,152 gauge-month records with original coverage |
+| `derived/monitoring_stations_nad83.geojson` | 67 original station points, NAD83 / EPSG:4269 |
+| `derived/eighteenmile_gage_whole_catchments.geojson` | Original full-resolution upstream whole catchments, EPSG:4326; splitCatchment=false |
+| `derived/coverage.json` and `inputs.json` | Exact methods, qualifier definitions, periods, original URLs and response identities |
+
+The companion `observations/eighteenmile_2023/model-sources.json` imports the
+maintained cumulative 44-file study edition. It includes 920 original WQP result
+rows in 225 activity groups, the original report context and the source owner's
+same-date and antecedent-flow calculations. Its
+`wqp/study_flow_dates.csv` preserves sixteen original laboratory dates, with
+separate CHLA and microcystin sampling calendars and preceding three- and seven-day
+flow windows. The complete source bank is
+[Eighteenmile 2023 monitoring](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JNNS1BP).
+
+The existing `assessment/operate_assessment_maps.py` receives both manifests
+through repeated `--context-manifest` arguments. It imports the original tables
+and vector sources into the same Workspace, includes intersecting context vectors
+in the maintained SpatialReview families, and uses the existing map exporter.
+Select the actual application root, existing populated Workspace and original
+domain manifest used by that receiving operation. Preserve the relative directory
+structure so every manifest companion resolves to its verified original file.
+
+These completed discharge responses use legacy USGS NWIS / WaterML JSON. Their
+retained `hydrology_core.mjs` and `rebuild_hydrology.mjs` already parse and
+rebuild them. This Python receiver captures the separately maintained USGS OGC
+FeatureCollection format. Reuse each original source edition with its matching
+processor and manifest.
+
+For the Eighteenmile gauge USGS-02186702, the existing annual table reports 365
+approved daily means in 2023, mean discharge 68.420547945 ft³/s, annual volume
+61,099,554.3868 m³ and runoff depth 485.404729 mm over the original USGS drainage
+area of 48.6 square miles. The published lake-study interval, April 5 through
+October 17, has 196 approved days and mean discharge 63.523979592 ft³/s. These
+different observation windows stay explicit in calibration and reporting.
+
+Daily flow supports hydrologic context and complete-period volume. Annual
+nitrogen, phosphorus or sediment calibration must additionally match the actual
+pollutant quantity, concentration or measured-load method, upstream contributing
+geometry and observation period. A lake sampling point and an upstream stream gauge
+retain their own locations and spatial support. Keep the original nutrient
+fractions, analytical methods, qualifiers and censoring with those comparisons.
+The station's containing HUC12 is a spatial index; the original gauge drainage area
+and whole-catchment geometry describe the flow's contributing basin.
+
 ## Source-native continuation
 
 The command prints a series_complete JSON event after each original series is

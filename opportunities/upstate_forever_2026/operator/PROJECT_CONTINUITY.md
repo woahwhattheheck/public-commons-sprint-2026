@@ -12,16 +12,37 @@ Use this route when moving work to another computer, taking a complete recovery 
 
 | Step | Work in the application | Result |
 | --- | --- | --- |
-| 1 | Open the intended workspace and choose **Project continuity**. | Saved transfers and any previously received work appear for this project. |
+| 1 | Open the intended workspace. In Guided journey, choose **Save view and transfer project**, or open Project continuity directly. | The current guided analysis and notes are saved before the handoff; saved transfers and previously received work appear for this project. |
 | 2 | Choose **Create complete project**. | The application reads the original task history and identifies unfinished work that needs retained uploads or source previews. |
 | 3 | Give the transfer a useful title and select the operations to carry. Keep native intermediate files selected when model stages need to continue. | The archive selection describes the actual project and chosen operation history. |
 | 4 | Choose **Create project** and open its transfer operation. | The original archive operation saves the complete scientific workspace, original application source, transfer guide and outstanding input bytes. |
 | 5 | Download the complete scientific-workspace ZIP from the completed operation. | One original package carries the project and its selected work. |
 | 6 | In the receiving application, choose **Receive a project** and select that ZIP. | The original restore operation creates a new workspace and verifies its archived members. The transfer service restores uploads and source previews and reconciles retained native results. |
-| 7 | Switch to the workspace identified in the receiving result. Open **Project continuity** and inspect the received transfer. | Original request identities, task states, attempt history and required inputs remain visible. Complete native outputs reopen from the restored scientific workspace. |
+| 7 | Choose **Open received project** in the completed receiving operation row and inspect the received transfer. Use **Save or continue the selected analysis** to open its guide. | Original request identities, task states, attempt history and required inputs remain visible. Complete native outputs reopen from the restored scientific workspace. |
 | 8 | Choose **Resume unfinished work**, review the selected operations, and continue them. | The original action queue executes the retained selections. A native run or comparison already completed before a lost response is reused. |
 
 The task panel remains the place to follow progress and open outputs. When a transfer operation resumes after a lost response, its existing archive is reused through the original backup operation. The original task identity keeps the request attached to the same selection.
+
+## Saved view, close and reopen
+
+The complete-project form identifies the saved analysis and notes it will carry.
+Use **Save or continue the selected analysis** to edit them in the existing
+guide, then **Save view and transfer project** to save and return. The plan and
+submitted request retain the saved journey and revision alongside the selected
+task history. Command-line captures retain the current saved view when their
+original transfer record is first created.
+
+Both transport routes save that frozen view under the existing session lock
+while making the original native archive. A changed view in another browser
+produces the existing revision conflict before the archive is created. Refresh,
+review the intended view and create a new transfer selection. Resuming a
+capture whose original archive is already complete reuses that archive and
+keeps any newer local notes untouched.
+
+After receiving, open the separate workspace and inspect its history. Close
+the operator normally and reopen it with that same receiving workspace and
+operator-state directory. Completed results and the saved guide reopen;
+**Resume unfinished work** explicitly queues the selected retained operations.
 
 ## What travels with the project
 
@@ -139,7 +160,7 @@ Each receiving part is an ordinary retained native operation. Repeat the `receiv
 
 ### Installation alongside the maintained transport
 
-The original incremental source is published at [commit a4be1cce327bbf648d5a2652df2c49c929800d5a](https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/a4be1cce327bbf648d5a2652df2c49c929800d5a), including `model/project_transfer.py`, `model/project_transfer_workspace.py` and `operator/project_transfer.py`. Its original installer binds `operator.project_transfers` to the original action dispatcher. The continuity service uses that installed instance and does not replace those transport modules.
+The original incremental source is published at [commit a4be1cce327bbf648d5a2652df2c49c929800d5a](https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/a4be1cce327bbf648d5a2652df2c49c929800d5a), including `model/project_transfer.py`, `model/project_transfer_workspace.py` and `operator/project_transfer.py`. The maintained `project-transfer.json` descriptor owns those actions and its provider exposes the same instance through `operator.project_transfers`. The continuity service uses that instance. Current registered hosts use this single descriptor path; the standalone legacy installer is for older hosts.
 
 Copy these seven continuity files at their supplied paths. For an earlier ES-9960 revision, first preserve or remove the exact superseded continuity copies of `operator/project_transfer.py` and `operator/project_transfer_cli.py` from that older source map; the former path belongs to the maintained transport adapter in the combined application. The current continuity descriptor binds `extension_modules.project_continuity`, and its browser asset is `project_continuity.mjs`. The source map lists the precise superseded paths and body hashes so the cumulative installer can migrate only those known copies.
 
