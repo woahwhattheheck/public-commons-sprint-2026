@@ -320,6 +320,9 @@ FIELD_ASSIGNMENT_PREVIOUS_SHA256 = {
 }
 
 CURRENT_DIRECTION_PREVIOUS_SHA256 = {
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "753d62209e498f402dc62fd657bbe5caca853c190be47074845b7a4ffe0b5662",
+    "operator/CHEMISTRY_OPERATOR.md": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a",
+    "operator/install_chemistry.py": "378dd5acc709fae2488663bcd8c4f381da0cacc8e8fd0a662620e579ed89cdb5",
     "source/CHEMISTRY_COMPOUND_RECEIVING.md": "206ddf19ce47cdd83d606bef0e59f7756711c5bcd21649fec3ab1a739d25f119",
     "source/chemistry-report-receiving/README.md": "dd100a3e8c4b99fb0ab105076654160c53c347c94349b166c1a98e9a38e4601e",
     "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -333,9 +336,7 @@ CURRENT_DIRECTION_PREVIOUS_SHA256 = {
     "source/monitoring-field-study/INSTALLATION.md": "5c101eea446c487f4ad46efdeb9ffbd38d9bf2c20f825d5422b19b03b484b03c",
     "source/monitoring-field-study/README.md": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507",
     "source/monitoring_field_assignment/RECEIVING.md": "65b4d54becc54bf7f6f168190e15c0485067a03260838ad999c0606988449e1b",
-    "source_tools/receive_monitoring_field_assignment_browser.mjs": "baa62ff972c7d07c64a54896c04228ba5046ab536030481043a3c64a2769d6ef",
-    "operator/install_chemistry.py": "378dd5acc709fae2488663bcd8c4f381da0cacc8e8fd0a662620e579ed89cdb5",
-    "integration/reach_chemistry/COMPOUND_SOURCE.json": "753d62209e498f402dc62fd657bbe5caca853c190be47074845b7a4ffe0b5662"
+    "source_tools/receive_monitoring_field_assignment_browser.mjs": "baa62ff972c7d07c64a54896c04228ba5046ab536030481043a3c64a2769d6ef"
 }
 
 SHARED_IMPLEMENTATION_FILES = ("model/implementation.py", "model/implementation_schema.py", "model/portable_implementation.py")

@@ -179,8 +179,8 @@
     },
     {
       "path": "operator/CHEMISTRY_OPERATOR.md",
-      "bytes": 24586,
-      "sha256": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a"
+      "bytes": 24662,
+      "sha256": "5991538b6aa82c1f02beca1ffb310e7b1e6473988ef6ed8025562ff070577e94"
     },
     {
       "path": "CHEMISTRY.md",
@@ -199,8 +199,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 38303,
-      "sha256": "4dd11dca7dc980204dcb2c4055f4bc6655358aad6f521b826689be6fab0ee139"
+      "bytes": 38409,
+      "sha256": "83bfb1e3bc8448a812d11c277e510e3f468fd178107d703df317acb98022a861"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
