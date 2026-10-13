@@ -69,7 +69,10 @@ Observation catalogue rows retain the original metadata, ID and exact
 `row_count`; their full `rows` stay available from the ordinary observation
 item and model APIs. Native run rows retain selection, runtime, state, artifacts
 and the existing `stage_summary` fields: original stage names,
-started/completed/reuse timestamps and actual file counts. Compact internal stage
+started/completed/reuse timestamps, actual file counts, and each completed stage's
+original runtime provenance. Stage runtime remains the execution authority when a
+partially completed run resumes under a later runtime; no version is inferred from
+its requested model selection. Compact internal stage
 presence is retained until the programme catalogue has checked the original native
 scope. The browser receives the same stage summary as before.
 
