@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 
 from preserve_delivery import atomic_json
@@ -23,6 +24,8 @@ DRIVER_SHA256 = "2a0b3bf4af4eb278b987cb404fde97dfac5b56835474b0c109a935b06554dbd
 CORE_SHA256 = "f5643bf116141787d5412e8e444c12d7a18ea59415cca1d5302b55cc7725ede4"
 INPUT_SHA256 = "4020b1ee82e66b7b25886159248c92b7a1ee5006bc7fc71f698844e61a8924b9"
 INPUT_BYTES = 65289
+IMPLEMENTATION_SHA256 = "9e805a59afa79d1be1d3e351e2109b298a3dd1337d53438010b2e39adaa85d9b"
+IMPLEMENTATION_BYTES = 65135
 
 
 def read(path):
@@ -118,6 +121,62 @@ def retain_execution_binding(root, original, current):
     return receipt
 
 
+def retained_source_copy(target, data):
+    target = Path(target)
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    expected = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    if target.exists():
+        actual = identity(target)
+        if any(actual[key] != expected[key] for key in expected):
+            raise ValueError("A retained receiving implementation changed: " + str(target))
+        return actual
+    with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".source-", delete=False) as handle:
+        temporary = Path(handle.name)
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            actual = identity(target)
+            if any(actual[key] != expected[key] for key in expected):
+                raise ValueError("The receiving source publication differs.")
+        descriptor = os.open(target.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return identity(target)
+
+
+def prepare_receiving_implementation(root, original_driver, source_ref):
+    supplied = Path(__file__).resolve().with_name("workbook_receiving.mjs")
+    body = supplied.read_bytes()
+    if len(body) != IMPLEMENTATION_BYTES or hashlib.sha256(body).hexdigest() != IMPLEMENTATION_SHA256:
+        raise ValueError("Keep the complete selected workbook custody implementation.")
+    original_body = Path(original_driver["path"]).read_bytes()
+    if hashlib.sha256(original_body).hexdigest() != DRIVER_SHA256:
+        raise ValueError("Keep the exact original workbook driver as the preserved predecessor.")
+    directory = root / "conapi-workbook-receiving-source" / IMPLEMENTATION_SHA256
+    executed = retained_source_copy(directory / "workbook_receiving.mjs", body)
+    predecessor = retained_source_copy(directory / "original_receive_review_workbook.mjs", original_body)
+    receipt = {"schema": "commons.conapi-workbook-implementation-selection.v1",
+               "operation": OPERATION, "originalSourceRef": source_ref,
+               "originalDriver": original_driver, "retainedOriginalDriver": predecessor,
+               "implementation": executed,
+               "scope": "same original product; host-local inspection images and clean outgoing archive"}
+    selection_path = directory / "implementation.json"
+    if selection_path.exists():
+        if read(selection_path) != receipt:
+            raise ValueError("The retained workbook implementation selection changed.")
+    else:
+        atomic_json(selection_path, receipt)
+    return receipt
+
+
 def run_workbook_following(*, root, node, original_input, programme, source_root,
                            run_native, emit, output_directory=None):
     """Run one full native workbook leg before the original owner's final save."""
@@ -205,18 +264,30 @@ def run_workbook_following(*, root, node, original_input, programme, source_root
     emit({"stage": "conapi_workbook_original_joined", "operation": OPERATION,
           "source_ref": source_ref, "original_programme": programme["id"],
           "output": str(output), "execution_binding": execution_binding})
-    command = [str(node), str(source_root / DRIVER),
+    implementation = prepare_receiving_implementation(root, driver, source_ref)
+    emit({"stage": "conapi_workbook_execution_source", "operation": OPERATION,
+          "original_source_ref": source_ref, "implementation": implementation})
+    command = [str(node), implementation["implementation"]["path"],
                "--out", str(output), "--source-commit", source_ref,
                "--input", original["path"], "--core-sha256", CORE_SHA256,
                "--python", str(python), "--browser", str(browser),
                "--node-modules", str(node_modules), "--operation-id", OPERATION]
-    returned = run_native(command)
+    environment_key = "CONAPI_WORKBOOK_ORIGINAL_SOURCE_DIRECTORY"
+    previous_environment = os.environ.get(environment_key)
+    os.environ[environment_key] = str(source_root / PRODUCT)
+    try:
+        returned = run_native(command)
+    finally:
+        if previous_environment is None:
+            os.environ.pop(environment_key, None)
+        else:
+            os.environ[environment_key] = previous_environment
     if returned["returncode"] != 0:
         raise RuntimeError("The retained workbook continuation requires its original resume; see " +
                            returned["stderr"])
     # The maintained driver reopens completed state, checks every retained
     # member and returns the same complete package on an ordinary retry.
-    result = read(output / "COMPLETE.json")
+    result = read(output / "DELIVERY_COMPLETE.json")
     expected_source = {
         "operationId": OPERATION,
         "input": {"bytes": INPUT_BYTES, "sha256": INPUT_SHA256,
@@ -228,14 +299,14 @@ def run_workbook_following(*, root, node, original_input, programme, source_root
             or result.get("operationId") != OPERATION or result.get("status") != "COMPLETE"
             or result.get("source") != expected_source):
         raise ValueError("The completed workbook receipt belongs to another selection.")
-    package = identity(output / "Supplier_Workbook_Receiving.zip")
+    package = identity(output / "Supplier_Workbook_Delivery.zip")
     recorded = result.get("package", {})
     if any(recorded.get(key) != package[key] for key in ("path", "bytes", "sha256")):
         raise ValueError("The complete workbook package differs from its original native receipt.")
     completed = {"state": "COMPLETE", "operation": OPERATION,
                  "selection": original_selection, "executionBinding": execution_binding,
-                 "native": returned, "result": result,
-                 "report": identity(output / "COMPLETE.json"), "package": package}
+                 "native": returned, "result": result, "implementation": implementation,
+                 "report": identity(output / "DELIVERY_COMPLETE.json"), "package": package}
     atomic_json(root / "Conapi_Workbook_Following_Result.json", completed)
     emit({"stage": "conapi_workbook_complete", "operation": OPERATION,
           "source_ref": source_ref, "package": package})
