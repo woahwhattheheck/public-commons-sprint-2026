@@ -12,6 +12,7 @@ from source_tools.watershed_source_entry import capture_source_entry, retain_sou
 from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
 from model import utility_observed_context as observed_model
+from model import watershed_observation_context as evidence_model
 from model import watershed_briefing as briefing_model
 from model import utility_monitoring
 from model.watershed_brief import (
@@ -309,6 +310,7 @@ class WatershedContextActions:
             **record, "report": report,
             "_utility_selections": self._utility_choices(report)[0],
             "_observed_context": observed_model.catalog(Path(__file__).resolve().parents[1]),
+            "_evidence_profiles": evidence_model.catalog(Path(__file__).resolve().parents[1]),
             "_downloads": self._downloads(
                 workspace, directory, record, "operator-report.json", "Regional watershed source manifest",
             ),
@@ -594,6 +596,9 @@ class WatershedContextActions:
         ws = self.operator.ws(task["workspace"])
         value = task.get("payload") or {}
         directory, record, report = self._report(ws, value)
+        include_evidence = value.get("include_evidence", False)
+        if not isinstance(include_evidence, bool):
+            raise ValueError("Choose whether this export includes original observations")
         chosen = value.get("huc12s")
         utility, utility_body = None, None
         if value.get("utility_key"):
@@ -616,6 +621,11 @@ class WatershedContextActions:
             report, selected, report_sha,
             Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013",
         )
+        evidence_context, evidence_bodies = (evidence_model.load_for_selection(
+            Path(__file__).resolve().parents[1], selection, value.get("evidence_profile_sha256"))
+            if include_evidence else (None, {}))
+        if evidence_context is not None:
+            selection["landcover_observation_context"] = evidence_context
         supporting_references = self._supporting_source_references(record)
         if utility is not None:
             selection["utility_selection"] = utility
@@ -637,6 +647,8 @@ class WatershedContextActions:
             identity["utility_selection_sha256"] = utility["key"]
         if observed_context is not None:
             identity["observed_context_sha256"] = digest(observed_context)
+        if evidence_context is not None:
+            identity["landcover_observation_context_sha256"] = digest(evidence_context)
         if supporting_references:
             identity["brief_source_sha256"] = _hash(json.dumps(
                 supporting_references, sort_keys=True, separators=(",", ":"),
@@ -672,6 +684,8 @@ class WatershedContextActions:
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
             observed_files = (observed_model.retain(target, observed_context, observed_bodies)
                               if observed_context is not None else {})
+            evidence_files = (evidence_model.retain(target, evidence_context, evidence_bodies)
+                              if evidence_context is not None else {})
             brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
@@ -692,6 +706,9 @@ class WatershedContextActions:
             result["files"].update(brief_files)
             result["files"].update(briefing_model.write(target, selection))
             result["files"].update(observed_files)
+            result["files"].update(evidence_files)
+            if evidence_context is not None:
+                result["landcover_observation_context"] = evidence_model.compact(evidence_context)
             if observed_context is not None:
                 result["observed_context"] = {
                     "source": observed_context["source"],

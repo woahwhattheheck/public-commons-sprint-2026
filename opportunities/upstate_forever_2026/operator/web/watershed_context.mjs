@@ -136,15 +136,83 @@ export function watershedNetworkHtml(row, domainHuc12s = []) {
     '</section>';
 }
 
+
+export function watershedEvidenceChoice(value) {
+  return value && value.schema === 'upstate.watershed-observation-choice/v1' &&
+    /^[a-f0-9]{64}$/.test(String(value.sha256 || '')) &&
+    list(value.source_years).length === 2 &&
+    list(value.source_years).every(year => Number.isInteger(year))
+      ? value : null;
+}
+
+export function watershedEvidenceChoiceHtml(value, included = true, busy = false) {
+  const choice = watershedEvidenceChoice(value);
+  if (!choice) return '<section class="wc-coverage"><h2>Observed land cover and station context</h2>' +
+    '<p class="wc-note">This application does not currently have the source edition for this optional section. ' +
+    'The planning selection and its existing source files remain available to export.</p></section>';
+  return '<section class="wc-coverage"><h2>Observed land cover and station context</h2>' +
+    '<label><input type="checkbox" name="wc-include-evidence"' + (included ? ' checked' : '') +
+    (busy ? ' disabled' : '') + '> Include the retained observed evidence in the next selection export</label>' +
+    '<p class="wc-note">Annual land-cover classifications ' + esc(choice.source_years.join(' → ')) +
+    '; ' + esc(choice.assessment_edition) + '. The source covers ' + esc(number(choice.watershed_count)) +
+    ' watersheds. The export joins only its selected HUC12s and, when available, their distinct contributing union.</p>' +
+    '<p class="wc-note">Station and gauge counts describe local point membership. Original upstream basins carry ' +
+    'drainage coverage. Developed classes include vegetated open space; class changes retain their source meaning.</p>' +
+    '<details><summary>Selected evidence source</summary><dl class="wc-facts"><div><dt>Edition</dt><dd>' +
+    esc(choice.edition) + '</dd></div><div><dt>Geography</dt><dd>' + esc(choice.geography) +
+    '</dd></div></dl><p class="wc-note">Manifest SHA-256: <code>' + esc(choice.sha256) +
+    '</code></p></details></section>';
+}
+
+export function watershedEvidenceContextHtml(context) {
+  if (!context || !context.source || !context.selected) return '';
+  const source = context.source;
+  const scopeHtml = (scope, heading) => {
+    if (!scope || !scope.summary) return '';
+    const summary = scope.summary;
+    return '<section><h4>' + esc(heading) + '</h4><dl class="wc-facts">' +
+      '<div><dt>Distinct HUC12s</dt><dd>' + esc(number(summary.watershed_count)) + '</dd></div>' +
+      '<div><dt>Land-cover support</dt><dd>' + esc(number(summary.area_ha, 2)) + ' ha</dd></div>' +
+      '<div><dt>Changed annual class</dt><dd>' + esc(number(summary.changed_area_ha, 2)) + ' ha / ' +
+      esc(number(summary.changed_percent, 3)) + '%</dd></div>' +
+      '<div><dt>Original assessment station identities</dt><dd>' + esc(number(summary.assessment_station_count)) + '</dd></div>' +
+      '<div><dt>Local observed-flow gauge identities</dt><dd>' + esc(number(summary.local_observed_flow_gauge_count)) + '</dd></div></dl>' +
+      (list(scope.groups).length ? '<div class="wc-table-scroll"><table><caption>' + esc(heading) +
+        ' · original land-cover group areas, hectares</caption><thead><tr>' +
+        ['Group', '2023 area', '2025 area', 'Gross gain', 'Gross loss', 'Net change'].map(label =>
+          '<th scope="col">' + esc(label) + '</th>').join('') + '</tr></thead><tbody>' +
+        list(scope.groups).map(row => '<tr><th scope="row">' + esc(human(row.group)) + '</th>' +
+          ['area_2023_ha','area_2025_ha','gross_gain_ha','gross_loss_ha','net_change_ha'].map(name =>
+            '<td class="wc-number">' + esc(number(row[name], 2)) + '</td>').join('') + '</tr>').join('') +
+        '</tbody></table></div>' : '') +
+      '<details><summary>Exact retained HUC12 membership</summary><p>' +
+      list(scope.huc12s).map(esc).join(' · ') + '</p></details></section>';
+  };
+  return '<section class="wc-coverage" data-wc-saved-evidence><h3>Saved observed evidence</h3>' +
+    '<p>' + esc(source.title || 'Observed land cover and original station context') + ' · ' +
+    esc(list(source.source_years).join(' → ')) + ' · ' + esc(source.assessment_edition) + '</p>' +
+    '<p class="wc-note">These values come from this saved selection. Whole-HUC land-cover support uses original native-cell centre inclusion. ' +
+    'Local station membership retains the dated source; it does not describe all upstream monitoring coverage.</p>' +
+    scopeHtml(context.selected, 'Selected watersheds') +
+    scopeHtml(context.contributing_union, 'Distinct contributing-watershed union') +
+    '<p class="wc-note">Gross gains and losses count crossings between groups; within-group class changes stay in the original matrices. ' +
+    'The complete selected profiles, original location rows and source files are retained in the downloads below.</p>' +
+    '<details><summary>Saved evidence source identity</summary><p class="wc-note">Manifest SHA-256: <code>' +
+    esc(source.manifest_sha256) + '</code></p></details></section>';
+}
+
 export function createWatershedContextDesk(host) {
   const document = host.document || globalThis.document;
   let root = null, listeners = null, epoch = 0, workspace = null;
   let catalog = null, saved = null, selectedId = '', focusHuc = '';
   let savedExport = null, selectedExportId = '', selectedHucs = [], selectionRequest = 0, catalogRequest = 0;
   let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0;
-  let sourceChoice = 0, networkChoice = '', includeMicrobial = true;
+  let sourceChoice = 0, networkChoice = '', includeMicrobial = true, includeEvidence = null;
   let filters = emptyFilters();
   const receivingTasks = new Map();
+  const exportingTasks = new Map();
+  const evidenceChoice = () => watershedEvidenceChoice(saved?._evidence_profiles);
+  const evidenceIncluded = () => Boolean(evidenceChoice()) && includeEvidence !== false;
   const currentWorkspace = () => host.getState()?.workspace_key ?? host.getWorkspace?.() ?? null;
   const rows = () => list(saved?.report?.hucs);
   const filtered = () => {
@@ -163,6 +231,7 @@ export function createWatershedContextDesk(host) {
     try {
       globalThis.sessionStorage?.setItem('upstate-watershed-context:' + workspace, JSON.stringify({
         report_id:selectedId, export_id:selectedExportId, focus_huc:focusHuc, filters,
+        include_evidence:includeEvidence, export_task_id:exportingTasks.get(workspace) || null,
       }));
     } catch (_) {}
   }
@@ -185,6 +254,7 @@ export function createWatershedContextDesk(host) {
     lastTaskSignature = '';
     sourceChoice = 0;
     networkChoice = '';
+    includeEvidence = null;
     errorText = '';
     try {
       const stored = globalThis.sessionStorage?.getItem('upstate-watershed-context:' + workspace) || '';
@@ -193,6 +263,9 @@ export function createWatershedContextDesk(host) {
         selectedId = typeof previous.report_id === 'string' ? previous.report_id : '';
         selectedExportId = typeof previous.export_id === 'string' ? previous.export_id : '';
         focusHuc = typeof previous.focus_huc === 'string' ? previous.focus_huc : '';
+        if (typeof previous.include_evidence === 'boolean') includeEvidence = previous.include_evidence;
+        if (typeof previous.export_task_id === 'string' && previous.export_task_id)
+          exportingTasks.set(workspace, previous.export_task_id);
         for (const name of Object.keys(filters)) {
           if (typeof previous.filters?.[name] === 'string') filters[name] = previous.filters[name];
         }
@@ -303,6 +376,7 @@ export function createWatershedContextDesk(host) {
       ' retained in this selection. Additional table filters refine the view; these downloads contain the complete saved selection.</p>' +
       (savedExport.files?.['watershed-selection-brief.html']
         ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
+      watershedEvidenceContextHtml(savedExport.landcover_observation_context) +
       downloadsHtml(savedExport._downloads) + utilityMonitoringHtml() +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
       esc(pretty({huc12s:selectedHucs, report_id:savedExport.report_id,
@@ -407,6 +481,7 @@ export function createWatershedContextDesk(host) {
         metric(number(all.filter(row => row.priority).length), 'NRCS priority watersheds') +
         metric(number(sum(all, 'selected_classification_count')), 'Selected-class source features') +
         '</section>' + coverageHtml(report) + completedConnectivityHtml() + networkHtml(report) +
+        watershedEvidenceChoiceHtml(saved._evidence_profiles, evidenceIncluded(), busy) +
         utilityWatershedChoicesHtml(saved._utility_selections, busy, saved._observed_context) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
         '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
@@ -552,12 +627,24 @@ export function createWatershedContextDesk(host) {
       receivingTasks.delete(workspace);
       remember();
     }
+    const pendingExport = exportingTasks.get(workspace);
+    const completedExport = list(host.getState()?.tasks).find(task =>
+      task.id === pendingExport && task.action === 'watershed.context.export' &&
+      task.state === 'complete' && task.result?.id);
     const version = epoch, key = workspace, request = ++catalogRequest, selectionToken = selectionRequest;
     try {
       const result = await read('catalog');
       if (!guard(version, key) || request !== catalogRequest) return;
       catalog = result;
       if (selectionToken !== selectionRequest) { render(); return; }
+      if (completedExport) {
+        await loadExport(completedExport.result.id, version);
+        if (guard(version, key) && selectedExportId === completedExport.result.id) {
+          exportingTasks.delete(key);
+          remember();
+        }
+        return;
+      }
       const reports = list(catalog.reports);
       const retained = list(catalog.exports).find(record => record.id === selectedExportId &&
         reports.some(report => report.id === record.report_id));
@@ -614,14 +701,21 @@ export function createWatershedContextDesk(host) {
   async function exportRows(huc12s, utilityKey = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
+    const key = workspace, version = epoch, reportId = saved.id;
+    const choice = evidenceChoice(), include = evidenceIncluded();
+    const payload = {report_id:reportId, huc12s:[...huc12s], include_evidence:include,
+      ...(include ? {evidence_profile_sha256:choice.sha256} : {}),
+      ...(utilityKey ? {utility_key:utilityKey} : {})};
     busy = true;
     render();
     try {
-      await host.submitAction('watershed.context.export', {report_id:saved.id, huc12s,
-        ...(utilityKey ? {utility_key:utilityKey} : {})});
+      if (currentWorkspace() !== key) throw new Error('Return to the selected regional project before exporting.');
+      const task = await host.submitAction('watershed.context.export', payload);
+      exportingTasks.set(key, task.id);
+      if (workspace === key) remember();
       await host.refresh?.({force:true});
-      if (root) await refresh();
-    } finally { busy = false; if (root) render(); }
+      if (guard(version, key)) await refresh();
+    } finally { busy = false; if (guard(version, key)) render(); }
   }
   async function click(event) {
     const button = event.target.closest('button');
@@ -720,6 +814,7 @@ export function createWatershedContextDesk(host) {
       receive(file).catch(fail);
       return;
     }
+    if (key === 'include-evidence') { includeEvidence = event.target.checked; remember(); return; }
     if (key === 'monitoring-stations') { includeMicrobial = event.target.checked; return; }
     if (key === 'source') { sourceChoice = Number(event.target.value); return; }
     if (key === 'network') { networkChoice = event.target.value; return; }
