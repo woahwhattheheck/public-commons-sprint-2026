@@ -318,3 +318,7 @@ Primary sources were checked on 2026-10-12. The mapping's time basis retains the
 
 The seven-row example uses the original retained four-page USGS capture bundled with this project. Preparing a handover from that capture requires no repeat provider acquisition, wallet operation or paid request.
 
+
+## Existing DSS6 watersheds
+
+Use the **Watershed migration** tab when the source is an existing HEC watershed with DSS6 files and model or extract-list references. It retains the complete directory and reviews those references before native conversion. [WATERSHED.md](WATERSHED.md) covers the complete migration and portable receiving workflow; [WATERSHED_PROCESS.md](WATERSHED_PROCESS.md) covers ownership of the installed native launcher.
