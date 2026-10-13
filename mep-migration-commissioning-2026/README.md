@@ -43,11 +43,11 @@ The output directory must not already exist. The builder preserves source files 
 
 ## Exact source and mapping behaviour
 
-CSV mapping uses trimmed, unique headers while retaining the original headers and full source bytes. Quoted newlines and CRLF are preserved. JSON intake selects an explicit object path to a flat array. Its lossless reader keeps every numeric token as an exact string, including identifiers larger than a safe JavaScript integer and long decimals. Exponent-to-decimal transformations require explicit translations. It rejects duplicate JSON object keys instead of discarding a value.
+Original browser intake reads exact ArrayBuffer bytes, decodes UTF-8 with fatal errors and BOM preservation, and compares the full re-encoded bytes before acceptance. CSV mapping uses trimmed, unique headers while retaining the original headers and full source bytes. Quoted newlines and CRLF are preserved. JSON intake selects an explicit object path to a flat array. Its lossless reader keeps every numeric token as an exact string, including identifiers larger than a safe JavaScript integer and long decimals. Exponent-to-decimal transformations require explicit translations. It rejects duplicate JSON object keys instead of discarding a value.
 
 Dates and datetimes are explicit; datetime values require a timezone. Decimal/integer mapped amounts remain strings. No monetary calculation, accounting posting, automatic name merge or target API request is performed.
 
-Reviews bind the workspace revision, source and mapping. Exact repeated commits return their original saved edition. A subsequent correction preserves the old source, record revision, frozen handover and target result. Acceptance totals distinguish an older accepted revision from the current record.
+Reviews bind the workspace revision, source and mapping. Exact repeated commits return their original saved edition. A subsequent correction preserves the old source, record revision, frozen handover and target result. A partial result on an older delivery retains its full historical snapshot without replacing a newer explicitly observed correction for untouched records. Acceptance totals distinguish an older accepted revision from the current record.
 
 Source files are limited to 8 MiB and 10,000 rows each; the complete editable handover is limited to 64 MiB. The original source and history are carried together. The byte hash detects changes to the package; it is not an external identity signature.
 
