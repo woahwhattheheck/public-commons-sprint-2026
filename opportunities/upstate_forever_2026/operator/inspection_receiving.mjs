@@ -13,6 +13,7 @@ if(!['http:','https:'].includes(incoming.protocol))throw Error('Use the original
 const auth=new URLSearchParams(incoming.hash.slice(1)),token=auth.get('token')||process.env.UPSTATE_OPERATOR_TOKEN;
 if(!token)throw Error('Use the private original operator URL or its existing token environment binding.');
 const origin=incoming.origin,base=new URL('/',origin);base.hash=new URLSearchParams({token}).toString();
+const privateMessage=value=>String(value).replaceAll(token,'[private access token]').replaceAll(encodeURIComponent(token),'[private access token]');
 const require=createRequire(import.meta.url),{chromium}=require(path.resolve(args.playwright));
 const {scientificRecord}=await import(pathToFileURL(path.resolve(args.module||path.join(path.dirname(new URL(import.meta.url).pathname),'web/scientific_inspection.mjs'))));
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -38,7 +39,7 @@ try{
  browser=await chromium.launch({headless:true,executablePath:path.resolve(args.chromium),args:['--no-sandbox','--disable-dev-shm-usage']});
  context=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900}});
  await context.route('**/api/**',async route=>{if(!['GET','HEAD'].includes(route.request().method())&&!(route.request().method()==='POST'&&new URL(route.request().url()).pathname==='/api/session')){result.blocked_mutations.push({method:route.request().method(),path:new URL(route.request().url()).pathname});return route.abort('blockedbyclient');}return route.continue();});
- page=await context.newPage();page.on('pageerror',error=>result.errors.push({kind:'pageerror',message:error.message}));
+ page=await context.newPage();page.on('pageerror',error=>result.errors.push({kind:'pageerror',message:privateMessage(error.message)}));
  await page.goto(base.href,{waitUntil:'domcontentloaded'});
  await page.locator('#workspace-select option[value="'+args.workspace+'"]').waitFor({state:'attached'});
  await page.locator('#workspace-select').selectOption(args.workspace);
@@ -105,5 +106,5 @@ try{
  assert.deepStrictEqual(result.blocked_mutations,[],'Inspection must not attempt an application mutation.');
  if(result.errors.length)throw Error('The original operator emitted browser errors; review retained details before completion.');
  result.state='OPERATED_AWAITING_VISUAL_INSPECTION';result.ended_at=new Date().toISOString();
-}catch(error){result.state='INCOMPLETE';result.errors.push({kind:'receiving',message:error.stack||error.message||String(error)});process.exitCode=1;}
+}catch(error){result.state='INCOMPLETE';result.errors.push({kind:'receiving',message:privateMessage(error.stack||error.message||String(error))});process.exitCode=1;}
 finally{if(context)await context.close().catch(()=>{});if(browser)await browser.close().catch(()=>{});await write('receiving-result.json',result);console.log(JSON.stringify({state:result.state,directory:attempt,records:result.records.length,screens:result.screens.length,errors:result.errors}));}
