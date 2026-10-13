@@ -98,7 +98,7 @@ export function startDesk(example=null){
  function renderVendorPrepared(prepared){
   const node=section("#vendor-results","Prepared proposal edition"),review=prepared.review;node.append(e("p",review.submissionComplete?"All required proposal content is complete. Inspect the actual outgoing documents before presenting this edition.":"Continue the incomplete fields below. The editable proposal and internal review remain downloadable.","muted"));
   if(review.quality.needs.length||review.quality.warnings.length){const list=e("ul");for(const item of [...review.quality.needs,...review.quality.warnings])list.append(e("li",item));node.append(list);}
-  if(review.submissionIssues.length&&review.quality.needs.length===0&&review.quality.warnings.length===0){const list=e("ul");for(const item of review.submissionIssues)list.append(e("li",item));node.append(list);}
+  const remainingIssues=review.submissionIssues.filter(item=>![...review.quality.needs,...review.quality.warnings].includes(item));if(remainingIssues.length){const list=e("ul");for(const item of remainingIssues)list.append(e("li",item));node.append(e("h3","Submission evidence"),list);}
   node.append(table(["Complete file","Bytes","Download"],prepared.files.map(file=>[file.name,file.bytes.length,button(file.name,()=>download(file.name,file.bytes,file.media_type))])));
   const preview=e("details"),summary=e("summary","Read the complete internal proposal"),pre=e("pre",review.internalMarkdown);preview.append(summary,pre);node.append(preview);
   const original=vendorReview;
