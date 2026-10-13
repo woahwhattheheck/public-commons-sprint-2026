@@ -183,3 +183,79 @@ The quantity contract was read directly from the official 3.20.0 model source an
 - [Original SDR 3.20.0 implementation](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/sdr/sdr.py), Git blob `0cac27add172011df367ff8026427dbbdbcda5b2`.
 
 The models describe average annual landscape processes. The existing observed-flow, measured chemistry and reported point-discharge sources can accompany these results through the ordered scientific-report selection, preserving each source's physical quantity and date basis.
+
+
+## Native process figures from retained results
+
+The same producer can retain monochrome scientific figures for the selected original
+watersheds. Add `"include_figures": true` to the existing process selection; the
+baseline remains the first `run_ids` entry and `models` still selects completed
+native stages. This explicit presentation choice is part of the immutable report
+identity. Omitted or false keeps the existing table/source workflow.
+
+```json
+{
+  "schema": "upstate.native-process-selection/v1",
+  "title": "Retained watershed nutrient processes and scenario support",
+  "run_ids": ["ACTUAL_BASELINE_RUN_ID", "ACTUAL_ALTERNATIVE_RUN_ID"],
+  "models": ["ndr"],
+  "include_figures": true
+}
+```
+
+Use the same `build SELECTION.json` command. Figure-enabled selections use the
+installed ReportLab renderer to retain SVG; `--no-render` still skips the final
+PDF/HTML report, but the explicitly requested SVG figures require ReportLab.
+Leave `include_figures` off for the existing source-only GIS workflow when
+ReportLab is not installed. The original native models are never executed by this
+report command.
+
+For NDR, the figures show original watershed nitrogen and phosphorus load and
+export, derived watershed retention, and nitrogen's original surface/subsurface
+pathways. All masses remain kg/year. Retention is load minus export for the
+whole native watershed; the figures do not locate a pixel retention service.
+
+For SDR, the figures show native USLE soil loss, stream export and deposition,
+then avoided erosion and avoided export, in metric tonnes/year. Separate point
+markers preserve these distinct quantities. The figures do not stack them or
+claim they form a closed mass budget.
+
+When alternatives are selected, each original watershed also receives export
+change and valid-area support panels. Whole-watershed mass differences and
+paired-common-cell differences have separate markers. The support panels show
+baseline valid area, alternative valid area and their actual intersection, in
+hectares, independently for nitrogen, phosphorus and sediment. Negative export
+change means a modeled reduction relative to the selected baseline. A lower
+total on a smaller valid area must be read alongside those support panels.
+
+Cases are labeled R0, R1 and onward in the supplied order; R0 is the baseline.
+Every figure caption and numeric specification retains the complete original
+run IDs. Case order is categorical, so markers are not joined by trend lines.
+At most eight cases share one figure; larger selections continue onto additional
+figures with every case retained. Missing or nonfinite original scalar values
+remain absent points. A panel with no finite original quantities is recorded
+in `omitted_panels`, with its watershed, cases and reason.
+
+The report retains:
+
+- `figures/specification.json`: complete original numeric figure specification,
+  including each point's exact packet path, bytes, SHA256, JSON pointer, native
+  model, quantity and watershed identity.
+- `figures/*.svg`: native vector drawings from the existing
+  `scientific_figures.panel_drawings` implementation. Accessible SVG metadata
+  retains the figure title, caption and complete numeric source specification.
+- `figures/rendering.json`: renderer source identity, ReportLab version,
+  complete SVG descriptors and figure/panel counts.
+- The same original packet, raster, vector, profile, parameter and source
+  companions as the table-backed report.
+
+Completed SVGs are verified and reused under the existing report operation lock.
+Per-figure checkpoints allow a resumed build to continue after the last completed
+drawing. Only an unfinished, uncheckpointed drawing may be regenerated.
+
+The imported `source_choice` includes the figure specification and original SVG
+companions. The existing ordered observed-report collector places them in
+scientific and client delivery using the maintained figure interface. The
+standalone PDF/HTML uses the same source specifications and SVG identities.
+The existing `attach` command works for both figure-enabled and table-only
+report editions.
