@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-5"
+DELIVERY_FORMAT_VERSION = "native-grid-analysis-economic-report-6"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -675,13 +675,14 @@ def build(workspace, selection):
                    ("report", "report_html", "report_markdown", "report_data")}}
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
-            atlas_browser.write(directory, state, manifest)
-            atomic_json(state_path, state)
             analysis_delivery.extend_assets(manifest, state)
             for report_name in ("report_html", "report_markdown", "report_data"):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
+            # The browser snapshots the final captured members, including reports and analyses.
+            atlas_browser.write(directory, state, manifest)
+            atomic_json(state_path, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
