@@ -119,11 +119,21 @@ export function attachObservationComparability(host){
     if(c.yearA===null)field('yearA').value='';
   }
   async function refresh(){
-    const w=workspace,g=epoch,ticket=++catalogRead,c=context(w);
+    const w=workspace,g=epoch,ticket=++catalogRead,c=context(w),sourceIntent=contentRead,edit=c.edit;
     const result=await api(endpoint('/api/observation-comparability/catalog',{workspace:w}));
     if(!alive(w,g)||ticket!==catalogRead)return;
     catalog=result;
-    if(!list(catalog.sources).some(row=>key(row.choice)===c.source))c.source='';
+    if(!list(catalog.sources).some(row=>key(row.choice)===c.source)){
+      if(sourceIntent===contentRead&&edit===c.edit)c.source='';
+      else if(c.source){
+        // This catalogue predates a newer exact source/edition selection.
+        // Retain that selection; native inputs still verifies its full bytes.
+        catalog={...catalog,sources:[...list(catalog.sources),{
+          choice:JSON.parse(c.source),title:loaded?.presentation?.title||'Current original cohort',
+          vintage:'Selected source',
+        }]};
+      }
+    }
     field('source').innerHTML=option('','Choose an original source',c.source)+list(catalog.sources).map(row=>option(key(row.choice),row.title+' · '+row.vintage,c.source)).join('');
     field('edition').innerHTML=option('','Choose a saved comparison',c.lastOpened)+list(catalog.selections).map(row=>option(row.id,row.title+' · '+row.selection.year_a+' → '+row.selection.year_b,c.lastOpened)).join('');
     persist(w);
