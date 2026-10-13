@@ -34,6 +34,7 @@ const stopped=new Set(['failed','interrupted','cancelled']);
 const output=resolve(args.output||'.');
 let browser,context,page,lease,privateURL='',origin='',token='',fieldwork,state,journey,attempt,activeExport=null;
 let baselinePlan,baselineQC=[],baselineActions=[],journalReady=false;
+const presentationQC=new Map(),presentationActions=new Map();
 let borrowedDrafts=null,borrowedPageURL=null,borrowedViewport=null,primaryFailure=null,recordingContext=null;
 function redact(value){
  let result=String(value);
@@ -64,6 +65,98 @@ async function retain(name,bytes,kind,extra={}){
  const path=join(attempt,name);await immutable(path,bytes);
  const row={path:relative(output,path),bytes:bytes.length,sha256:sha(bytes),kind,...extra};
  journey.artifacts.push(row);await journal();return{...row,absolute:path};
+}
+async function privatePath(relativePath){
+ const parts=relativePath.split('/');check(parts[0]==='private'&&parts.every(p=>p&&p!=='.'&&p!=='..'),'Use the original private recovery directory.');
+ let cursor=output;
+ for(const part of parts.slice(0,-1)){cursor=join(cursor,part);await mkdir(cursor,{recursive:false,mode:0o700}).catch(e=>{if(e.code!=='EEXIST')throw e;});const info=await lstat(cursor);check(info.isDirectory()&&!info.isSymbolicLink(),'Private recovery directory became an alias.');}
+ const path=join(output,...parts);const info=await lstat(path).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+ check(!info||(info.isFile()&&!info.isSymbolicLink()),'Private recovery member is not an ordinary file.');
+ return path;
+}
+async function retainPrivate(name,bytes,kind){
+ const relativePath='private/'+basename(attempt)+'/'+name,path=await privatePath(relativePath);
+ await immutable(path,bytes);const descriptor={path:relativePath,bytes:bytes.length,sha256:sha(bytes),kind};
+ journey.private_files=journey.private_files||[];
+ const prior=journey.private_files.find(r=>r.path===relativePath);
+ if(prior)equal(prior,descriptor,'The original private recovery descriptor changed.');else journey.private_files.push(descriptor);
+ await journal();return descriptor;
+}
+function validRecordingContext(value){
+ check(value.schema==='upstate.sample-qc-recording-context/v1'&&value.input_sha256===sha(canonical(state.input)),'The saved recording context belongs to another original course.');
+ validateDrafts(value.drafts);
+ check(['restored','restore_required'].includes(value.status),'The original recording recovery state is invalid.');
+ return value;
+}
+async function migratePrivateDrafts(){
+ const named={
+  'previous-recording-context.json':'previous-recording-context',
+  'before-draft-recovery.json':'browser-drafts-before-original-recovery',
+  'borrowed-qc-browser-drafts.json':'original-recording-context-drafts'
+ };
+ const kinds=new Set(Object.values(named)),known=new Map(),candidates=new Set();
+ const pending=/\.pending-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+ function identify(relativePath){
+  const parts=relativePath.split('/'),name=parts.at(-1),base=name.replace(pending,'');
+  if(parts.length===1&&base==='recording-context.json')return{kind:'recording-context',pending:base!==name,context:true};
+  check(parts.length===2&&/^attempt-[0-9]+$/.test(parts[0])&&Object.hasOwn(named,base),'An old draft recovery member has an unknown identity.');
+  return{kind:named[base],pending:base!==name,context:base==='previous-recording-context.json'};
+ }
+ function addDescriptor(row){
+  check(hex(row.sha256)&&Number.isSafeInteger(row.bytes)&&row.bytes>=0,'The old draft recovery descriptor is incomplete.');
+  const source=row.path.startsWith('private/')?row.path.slice(8):row.path,identity=identify(source);
+  check(row.kind===identity.kind,'The original draft recovery kind differs.');
+  const prior=known.get(source);if(prior)equal({...prior,path:source},{...row,path:source},'The original draft recovery descriptors differ.');
+  known.set(source,{...row,path:source});candidates.add(source);
+ }
+ for(const row of journey.artifacts||[])if(kinds.has(row.kind))addDescriptor(row);
+ for(const row of journey.private_files||[])if(kinds.has(row.kind)||row.kind==='recording-context')addDescriptor(row);
+ async function scan(base){
+  const info=await lstat(base).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+  if(!info)return;check(info.isDirectory()&&!info.isSymbolicLink(),'The original recovery directory became an alias.');
+  for(const name of await readdir(base)){
+   if(name==='recording-context.json'||name.startsWith('recording-context.json.pending-')){
+    identify(name);candidates.add(name);continue;
+   }
+   if(!/^attempt-[0-9]+$/.test(name))continue;
+   const directory=join(base,name),entry=await lstat(directory);
+   check(entry.isDirectory()&&!entry.isSymbolicLink(),'The original draft attempt directory became an alias.');
+   for(const leaf of await readdir(directory)){
+    if(Object.keys(named).some(n=>leaf===n||leaf.startsWith(n+'.pending-'))){
+     identify(name+'/'+leaf);candidates.add(name+'/'+leaf);
+    }
+   }
+  }
+ }
+ await scan(output);await scan(join(output,'private'));
+ const migrated=[];
+ for(const relativePath of [...candidates].sort()){
+  const identity=identify(relativePath),source=join(output,relativePath),target=await privatePath('private/'+relativePath);
+  const sourceInfo=await lstat(source).catch(e=>{if(e.code==='ENOENT')return null;throw e;});
+  check(!sourceInfo||(sourceInfo.isFile()&&!sourceInfo.isSymbolicLink()),'The old draft recovery member became an alias.');
+  const raw=sourceInfo?await readFile(source):await readFile(target),prior=known.get(relativePath);
+  if(prior)check(raw.length===prior.bytes&&sha(raw)===prior.sha256,'The retained original draft bytes changed.');
+  try{
+   const value=JSON.parse(raw.toString('utf8'));
+   if(identity.context)validRecordingContext(value);else validateDrafts(value);
+  }catch(error){
+   // A new private atomic write can stop midway. It is already excluded from
+   // public delivery; keep its unjournaled bytes without treating it as a snapshot.
+   if(!sourceInfo&&!prior&&identity.pending)continue;
+   throw error;
+  }
+  // Includes committed-but-unjournaled files and exact old temporary members.
+  // The held course lease and original input/scope are checked before touching them.
+  await immutable(target,raw);
+  if(sourceInfo){await unlink(source);await syncDirectory(dirname(source));}
+  // The live context is mutable; its immutable predecessors/pending writes are retained separately.
+  if(relativePath!=='recording-context.json')migrated.push({
+   ...(prior||{}),path:'private/'+relativePath,bytes:raw.length,sha256:sha(raw),kind:identity.kind
+  });
+ }
+ journey.artifacts=(journey.artifacts||[]).filter(row=>!kinds.has(row.kind));
+ const privateRows=(journey.private_files||[]).filter(row=>!kinds.has(row.kind)&&row.kind!=='recording-context');
+ journey.private_files=[...privateRows,...migrated];await journal();
 }
 async function shot(name,locator=null,stopping=false){
  if(!stopping)await checkpoint();
@@ -130,13 +223,14 @@ async function initialize(){
  const old=await optional(join(output,'journey.json'));
  journey=old?JSON.parse(old):{schema:'upstate.sample-qc-browser/v1',created_at:now(),input,steps:[],artifacts:[],attempts:[],browser_errors:[]};
  check(journey.schema==='upstate.sample-qc-browser/v1','The existing course journal is invalid.');
+ equal(journey.input,input,'The retained course journal belongs to another original input.');
  const used=(await readdir(output)).map(name=>/^attempt-([0-9]+)$/.exec(name)).filter(Boolean).map(m=>Number(m[1]));
  const index=Math.max(journey.attempts.length,0,...used)+1;check(Number.isSafeInteger(index),'The attempt index is invalid.');attempt=join(output,'attempt-'+String(index).padStart(3,'0'));
  await mkdir(attempt,{mode:0o700});journey.attempts.push({number:index,started_at:now(),previous_status:journey.status||null,previous_driver:journey.driver||null});
  journey.status='running';journey.browser_errors=[];delete journey.error;delete journey.finished_at;
  journey.visual_review={status:'producer_inspection_required',instruction:'Open the actual PNGs and outgoing rendered reports, operate the important controls and independently reopened downloads, and repair concrete defects before calling the product ready.'};
  journey.driver={path:'source/implementation/run_sample_qc_browser.mjs',sha256:sha(await readFile(fileURLToPath(import.meta.url))),node:process.version};
- journalReady=true;await journal();
+ journalReady=true;await migratePrivateDrafts();await journal();
 }
 async function responseJSON(response,label){
  check(response.ok(),label+' returned HTTP '+response.status());
@@ -221,6 +315,27 @@ async function loadOriginal(){
   check(r.plan_id===reference.plan_id&&r.report_id===reference.report_id&&r.action_report_id===reference.action_report_id&&r.revision===reference.revision,'The original reviewer edition changed.');
   equal(r.receipt,reference.receipt,'The original corrective-action receipt changed.');
   baselineActions.push(r);
+ }
+ if(fieldwork.presentation){
+  const selected=fieldwork.presentation;
+  check(selected.schema==='upstate.field-report-presentation/v1'&&hex(selected.presentation_id)&&selected.field_operation_id===fieldwork.operation_id&&selected.project_id===fieldwork.original_project_id&&selected.plan_id===fieldwork.plan_id,'The readable presentation belongs to another original field case.');
+  check(Array.isArray(selected.reports)&&selected.reports.length===5,'Retain all five selected original presentation pairs.');
+  const unique=new Set();
+  for(const pair of selected.reports){
+   check(['qc','actions'].includes(pair.kind)&&hex(pair.original_report_id)&&hex(pair.presentation_report_id)&&pair.original_report_id!==pair.presentation_report_id&&hex(pair.renderer_sha256),'The original presentation pair is incomplete.');
+   const key=pair.kind+':'+pair.original_report_id;check(!unique.has(key),'Select each original presentation once.');unique.add(key);
+   const isQC=pair.kind==='qc',original=(isQC?baselineQC:baselineActions).find(r=>(isQC?r.report_id:r.action_report_id)===pair.original_report_id);
+   check(original&&pair.plan_id===fieldwork.plan_id&&pair.revision===original.revision,'The presentation source is outside this original field chapter.');
+   equal(original.files,pair.original_files,'The frozen original report inventory changed.');
+   const rendered=await qc(isQC?'inspect':'actions-inspect',isQC?{report_id:pair.presentation_report_id}:{action_report_id:pair.presentation_report_id});
+   check(rendered.plan_id===original.plan_id&&rendered.revision===original.revision&&(isQC?rendered.report_id:rendered.action_report_id)===pair.presentation_report_id,'The selected presentation identity changed.');
+   equal(rendered.files,pair.presentation_files,'The selected presentation report inventory changed.');
+   equal(isQC?rendered.review:rendered.action_review,isQC?original.review:original.action_review,'A readable presentation changed the original numerical review or decisions.');
+   if(!isQC){check(rendered.report_id===original.report_id,'Keep the original action-to-QC relationship.');equal(rendered.receipt,original.receipt,'The original action receipt changed.');}
+   (isQC?presentationQC:presentationActions).set(pair.original_report_id,rendered);
+  }
+  check(presentationQC.size===2&&presentationActions.size===3,'Retain both QC and all three action presentation editions.');
+  await retain('native-presentation.json',jsonBytes(selected),'original-field-presentation-selection');
  }
  const source={plan_sha256:sha(canonical(baselinePlan)),qc:baselineQC.map(r=>({id:r.report_id,review_sha256:sha(canonical(r.review))})),
   actions:baselineActions.map(r=>({id:r.action_report_id,action_review_sha256:sha(canonical(r.action_review)),receipt_sha256:sha(canonical(r.receipt))}))};
@@ -331,7 +446,13 @@ async function viewQC(index,{exports=true,suffix=''}={}){
  await page.setViewportSize({width:390,height:844});
  await shot(label+'-qc-narrow',page.locator('.iw-qc [data-qc="result-json"]'));
  await page.setViewportSize({width:1440,height:1000});
- if(exports){const task=await exportTask('qc-'+reference.report_id,'.iw-qc [data-qc="archive"]','implementation.qc.export',{plan_id:fieldwork.plan_id,report_id:reference.report_id});await taskFiles(task,label+'-qc');await openQC();await readReview(reference);}
+ const display=presentationQC.get(reference.report_id)||reference;
+ if(display!==reference){
+  await readReview(display);await shot(label+'-readable-qc',page.locator('.iw-qc [data-qc="result-json"]'));
+  await page.setViewportSize({width:390,height:844});await shot(label+'-readable-qc-narrow',page.locator('.iw-qc [data-qc="result-json"]'));await page.setViewportSize({width:1440,height:1000});
+ }
+ if(exports){const task=await exportTask('qc-'+display.report_id,'.iw-qc [data-qc="archive"]','implementation.qc.export',{plan_id:fieldwork.plan_id,report_id:display.report_id});await taskFiles(task,label+(display!==reference?'-readable-qc':'-qc'));await openQC();}
+ if(display!==reference||exports)await readReview(reference);
  await follow(reference);
  const current=await qc('actions',{report_id:reference.report_id});
  for(const group of current.groups||[]){
@@ -343,8 +464,14 @@ async function viewQC(index,{exports=true,suffix=''}={}){
   const action=actions[i],name=label+'-decisions-'+(i+1);
   await readAction(action);await shot(name,page.locator('.iw-qc [data-qc="follow-archive"]'));
   await page.setViewportSize({width:390,height:844});await shot(name+'-narrow',page.locator('.iw-qc [data-qc="follow-archive"]'));await page.setViewportSize({width:1440,height:1000});
-  if(exports){const task=await exportTask('actions-'+action.action_report_id,'.iw-qc [data-qc="follow-archive"]','implementation.qc.actions.export',{plan_id:fieldwork.plan_id,action_report_id:action.action_report_id});
-   await taskFiles(task,name);await openQC();await readReview(reference);await follow(reference);}
+  const presentation=presentationActions.get(action.action_report_id)||action;
+  if(presentation!==action){
+   await readAction(presentation);await shot(name+'-readable',page.locator('.iw-qc [data-qc="follow-archive"]'));
+   await page.setViewportSize({width:390,height:844});await shot(name+'-readable-narrow',page.locator('.iw-qc [data-qc="follow-archive"]'));await page.setViewportSize({width:1440,height:1000});
+  }
+  if(exports){const task=await exportTask('actions-'+presentation.action_report_id,'.iw-qc [data-qc="follow-archive"]','implementation.qc.actions.export',{plan_id:fieldwork.plan_id,action_report_id:presentation.action_report_id});
+   await taskFiles(task,name+(presentation!==action?'-readable':''));await openQC();await readReview(reference);await follow(reference);}
+
  }
  await page.locator('.iw-qc [data-qc="follow-plan"]').click();await waitUI();
  await page.locator('[data-impl="tab"][data-tab="tasks"]').waitFor();
@@ -354,7 +481,7 @@ async function viewQC(index,{exports=true,suffix=''}={}){
   const text=await row.innerText();check(text.includes(task.title)&&text.includes(task.status.replaceAll('_',' ')),'The original task title/status is missing from its native row.');
  }
  await shot(label+'-corrective-tasks');
- await step('Opened original saved QC, decisions and current field tasks',{report_id:reference.report_id,action_report_ids:actions.map(r=>r.action_report_id),fresh_browser:!exports});
+ await step('Opened original saved QC, decisions and current field tasks',{report_id:reference.report_id,action_report_ids:actions.map(r=>r.action_report_id),presentation_report_id:display.report_id,presentation_action_report_ids:actions.map(r=>(presentationActions.get(r.action_report_id)||r).action_report_id),fresh_browser:!exports});
 }
 async function draftAndError(){
  await openQC();
@@ -455,21 +582,20 @@ async function putDrafts(saved){
  equal(await readDrafts(),saved,'The original QC browser drafts did not restore exactly.');
 }
 async function persistRecordingContext(){
- await atomic(join(output,'recording-context.json'),jsonBytes(recordingContext));
+ await atomic(await privatePath('private/recording-context.json'),jsonBytes(recordingContext));
 }
 async function preserveBorrowedDrafts(){
  if(!borrowed)return;
  borrowedPageURL=borrowed.url();borrowedViewport=borrowed.viewportSize();const selected=new URL(borrowedPageURL);
  check(selected.origin===origin,'The recorded page belongs to another original operator.');
  check(!options.context||options.context===borrowed.context(),'Use the original recording page and its matching context.');
- const previous=await optional(join(output,'recording-context.json'));
+ const previous=await optional(await privatePath('private/recording-context.json'));
  if(previous){
-  const retained=JSON.parse(previous);
-  check(retained.schema==='upstate.sample-qc-recording-context/v1'&&retained.input_sha256===sha(canonical(state.input)),'The saved recording context belongs to another original course.');
-  validateDrafts(retained.drafts);await retain('previous-recording-context.json',previous,'previous-recording-context');
+  const retained=validRecordingContext(JSON.parse(previous));
+  await retainPrivate('previous-recording-context.json',previous,'previous-recording-context');
   if(retained.status==='restore_required'){
    // Keep any later browser edits before restoring this original interrupted course.
-   await retain('before-draft-recovery.json',jsonBytes(await readDrafts()),'browser-drafts-before-original-recovery');
+   await retainPrivate('before-draft-recovery.json',jsonBytes(await readDrafts()),'browser-drafts-before-original-recovery');
    await putDrafts(retained.drafts);
    retained.status='restored';retained.restored_at=now();recordingContext=retained;await persistRecordingContext();
    await step('Restored original recording drafts from interrupted same course');
@@ -477,9 +603,12 @@ async function preserveBorrowedDrafts(){
  }
  if(await borrowed.locator('.iw-qc').count())await borrowed.locator('.iw-qc [data-qc="close"]').click();
  borrowedDrafts=await readDrafts();validateDrafts(borrowedDrafts);
- await retain('borrowed-qc-browser-drafts.json',jsonBytes(borrowedDrafts),'original-recording-context-drafts');
+ await retainPrivate('borrowed-qc-browser-drafts.json',jsonBytes(borrowedDrafts),'original-recording-context-drafts');
  recordingContext={schema:'upstate.sample-qc-recording-context/v1',input_sha256:sha(canonical(state.input)),captured_at:now(),status:'restore_required',viewport:borrowedViewport,drafts:borrowedDrafts};
  await persistRecordingContext();
+ // Keep private analyst drafts out of both screenshots and the parent's recording.
+ // The durable restore_required snapshot commits before this first storage change.
+ await putDrafts({prefixes:draftPrefixes(),entries:[]});
 }
 async function restoreBorrowedDrafts(){
  if(!borrowed||!borrowedDrafts)return;
@@ -516,6 +645,7 @@ async function main(){
  journey.status='course_complete';journey.finished_at=now();await step('Completed original field/QC browser course',{native_export_tasks:Object.values(state.requests).map(v=>v.task_id),producer_pixel_inspection:'required'});
  return{status:journey.status,directory:output,operation_id:fieldwork.operation_id,plan_id:fieldwork.plan_id,
   qc_report_ids:baselineQC.map(r=>r.report_id),action_report_ids:baselineActions.map(r=>r.action_report_id),
+  presentation_id:fieldwork.presentation?.presentation_id||null,presentation_qc_report_ids:baselineQC.map(r=>(presentationQC.get(r.report_id)||r).report_id),presentation_action_report_ids:baselineActions.map(r=>(presentationActions.get(r.action_report_id)||r).action_report_id),
   task_ids:Object.values(state.requests).map(r=>r.task_id),screenshots:journey.artifacts.filter(r=>r.kind==='actual-browser-screenshot'),
   artifacts:journey.artifacts,visual_review:journey.visual_review};
 }
