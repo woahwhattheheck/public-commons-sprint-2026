@@ -49,6 +49,11 @@ METHOD = {
          "help": "Optional original point source_collection_id/source_id selectors, with layer, part and exact where values. These remain distinct from utility protection polygons."},
         {"name": "utility_label", "label": "Utility focus description", "type": "text", "required": True},
         {"name": "seed", "label": "Deterministic simulated field seed", "type": "integer", "default": 20261013, "min": 0, "max": 4294967295},
+        {"name": "matching_method", "label": "Control matching method", "type": "text",
+         "choices": [{"value": "", "label": "Original legacy selection"}, {"value": "greedy", "label": "Greedy"}, {"value": "exact_monge", "label": "Exact Monge"}],
+         "help": "Blank preserves the original selection. An explicit method belongs to a new scientific edition; the native producer validates its exact method and byte budget."},
+        {"name": "max_working_bytes", "label": "Matching working-memory budget (bytes)", "type": "integer", "min": 1, "max": 9007199254740991,
+         "help": "Optional positive integer bytes with an explicit method. The native default is 1073741824; the exact four-anchor preset declares 2147483648."},
         {"name": "corridor_width_m", "label": "Corridor buffer on each side (m)", "type": "number", "default": 90, "min": 0,
          "help": "Positive per-side buffer: 90 m means a nominal 180 m total corridor. The prepared source retains the exact assumption and changed-cell footprint."},
     ],
@@ -110,6 +115,18 @@ def selection(payload):
             width = float(width)
         except ValueError as error:
             raise ValueError("The corridor width must be numeric") from error
+    matching = {}
+    if options.get("matching_method") not in (None, ""):
+        if options["matching_method"] not in ("greedy", "exact_monge"):
+            raise ValueError("Choose greedy or exact_monge, or leave the original selection blank")
+        matching["matching_method"] = options["matching_method"]
+    if options.get("max_working_bytes") not in (None, ""):
+        budget = options["max_working_bytes"]
+        if isinstance(budget, str) and budget.isdigit():
+            budget = int(budget)
+        if type(budget) is not int or not 0 < budget <= 9007199254740991:
+            raise ValueError("Matching memory must be a positive exactly representable integer byte count")
+        matching["max_working_bytes"] = budget
     return native.normalize({
         "schema": native.SCHEMA, "title": payload.get("title", ""),
         "question": options.get("question", ""), "reporting_huc12s": hucs,
@@ -120,7 +137,7 @@ def selection(payload):
         "utility_focus": [_selector(inputs.get("utility_focus"), options, "utility"), *additional],
         "utility_label": options.get("utility_label", ""),
         "intakes": _object_text(options.get("intakes", "[]"), "Original intake point selections", list),
-        "seed": seed, "corridor_width_m": width,
+        "seed": seed, "corridor_width_m": width, **matching,
     })
 
 
@@ -300,6 +317,8 @@ class GeographyPreparation(SourcePreparation):
                          ["Reporting HUCs", len(geo["reporting_huc12s"])], ["Upstream HUCs", len(geo["upstream_huc12s"])],
                          ["Model domain (ha)", areas["model_domain"]], ["SC reporting area (ha)", areas["reporting_area"]],
                          ["Utility/reporting intersection (ha)", areas["utility_reporting_intersection"]],
+                         ["Declared matching method", prepared["selection"].get("matching_method", "Original legacy selection")],
+                         ["Declared matching budget (bytes)", prepared["selection"].get("max_working_bytes", "Original legacy selection")],
                          ["Changed cells", inputs.get("changed_cells")], ["Prepared native runs", 1 + len(prepared["alternative_run_ids"])]],
                 "details": {"Original geographic sources and support": geo, "Input quantities and control": inputs,
                             "Complete authored selection": prepared["selection"],

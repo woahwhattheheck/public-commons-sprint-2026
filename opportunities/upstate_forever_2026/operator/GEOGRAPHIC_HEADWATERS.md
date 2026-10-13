@@ -30,6 +30,10 @@ Combined editions reuse the existing source composer and CAS objects. Full Works
 - Native sources use original source_collection_id/source_id, optional layer/part and exact typed where equality.
 - Scientific source values and scope are defined by the native producer; this adapter does not reinterpret geometry or calculate loads.
 
+## Explicit matching editions
+
+The optional Control matching method selects greedy or exact_monge. Leaving it blank preserves the legacy native selection without adding either matching field. A positive integer max_working_bytes can be entered with an explicit method; a budget alone follows the native producer's validation error. The native explicit-method default is 1073741824 bytes, and the separately named exact four-anchor preset declares 2147483648 bytes. Preview, prepared summary and reopening preserve the actual declared method and budget. Installation does not change any admitted case or silently switch its matching method. Use the current6A4E exact-method producer at the existing source adoption boundary.
+
 ## Complete application assembly
 
 The additive integration/component_fragments/geographic-operator.json declares this full operator family and its original native source dependencies. The maintained application assembler composes it with the current catalogue and other fragments, so full export/restore retains the provider, manifest, client, stylesheet and guide together. Keep all current fragments and their original native dependencies in the same source edition.
