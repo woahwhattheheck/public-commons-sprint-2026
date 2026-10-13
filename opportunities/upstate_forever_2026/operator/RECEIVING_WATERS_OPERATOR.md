@@ -522,6 +522,30 @@ The maintained browser course operates the real pair selectors, original availab
 Open and LOOK at every resulting desktop/narrow screenshot, operate the outgoing controls, inspect both complete downloaded files and the original reports/maps/archive/reopened project, and fix observed defects. The result record documents source execution and saved artifacts; the producing peer's actual viewing remains part of completion under the full owner instruction below.
 
 
+
+### Receive the completed geographic utility context
+
+The geographic producer's Receiving integration saves its own original `upstate.geographic-receiving-context/v1` context. Use that document directly, together with its actual Workspace, rather than constructing a public-water-preparation receipt for it:
+
+```sh
+ACTUAL_PYTHON -B operator/receiving_water_operate.py \
+  --geographic-context ACTUAL_GEOGRAPHIC_RECEIVING_CONTEXT_JSON \
+  --workspace ACTUAL_GEOGRAPHIC_WORKSPACE \
+  --relationship published_protection \
+  --output-dir NEW_OUTPUT_OUTSIDE_WORKSPACE \
+  --node ACTUAL_NODE \
+  --node-modules ACTUAL_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM
+```
+
+
+The default relationship is `published_protection`; choose `upstream_huc` to inspect the separately declared original HUC associations. The command checks the exact provided context against its retained Workspace record through the maintained geographic inspector, validates the original project/plan and cohort, and selects exactly one reporting and one model-domain analysis for that relationship. It derives their original IDs and operates the existing quantity-support comparison, maps, exports and browser-context reopening. Explicit analysis IDs, if supplied, must match those saved choices.
+
+The geographic context remains its original schema and identity in the operation result. Its preparation, original model cohort and source relationships stay attached. Parameter-ensemble members are a separate profile cohort and are not inserted into this scenario comparison. The command consumes completed saved analyses; the geographic producer and original native process retain model execution. Add `--editable-selection` for the existing editable-plan/analysis/Study course on the same saved records.
+
+Keep the full upstream catchments and original published protection polygons distinct from their quantity-support intersections. The current owner brief is `CURRENT_OWNER_DIRECTION.md`, version2026-10-13.3; the existing native producer/caller and14:00UTC cutoff remain unchanged.
+
+
 <!-- bryce-rendered-product-inspection:begin -->
 ## Standing lab rule: inspect the rendered product before presenting it
 
