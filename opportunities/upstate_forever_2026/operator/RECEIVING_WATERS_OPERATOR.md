@@ -486,6 +486,42 @@ For a source refresh, open **Receiving source impact**, choose the saved Source 
 The source producer and receiving worker inspect the exact outgoing screens and attachments described by the standing rule below. Return real command results and opened artifact locations to the same operation so the responsible source owner can repair a concrete failure directly.
 
 
+
+## Compare reporting and model-domain quantities
+
+Open a complete Receiving analysis and choose **Compare quantity supports**. The comparison uses two complete original analyses of the same source plan and model cohort. One retains the reporting support; the other retains the full model domain. The view verifies the original project, saved plan body, complete grid, captured model selections and exact model-artifact descriptors before pairing results. A run whose model stages have advanced must use the matching retained artifact edition in both analyses.
+
+If the other support has not been analyzed, **Prepare the other support** opens the normal analysis form with the original selection copied and only quantity scope/title changed. Review the selection and save through the original task queue. This reads the retained completed model runs; it does not launch another native NDR/SDR solve. Preserve the original intake or published-area plan. The original source geometry remains whole; the analysis intersects it with the selected domain.
+
+The comparison keeps individual receptors, deduplicated family unions and explicit accounting partitions separate. It matches by original subject kind and ID. Search and page the same pair, select nitrogen, phosphorus or sediment, and choose baseline or an original alternative run. Each scope shows its own physical area, selected cells, valid or paired cells and coverage. A missing quantity, absent area or zero-valid-cell support remains unavailable.
+
+For an alternative, the table shows the saved baseline and alternative sums on their common valid cells and the original signed change. It never subtracts independently masked physical totals. Reporting mass-per-pixel artifacts retain their stored Float32 values; full-domain quantities use the retained native rates and original pixel area. Their precision and valid support can differ, so the interface does not calculate domain-minus-reporting mass or subtract scope-specific priority scores. Changes in method/implementation are shown explicitly. These are annual land exports reaching streams within selected support, not modeled delivery through a reservoir or to an intake.
+
+**Download complete comparison JSON** retains both analysis IDs and record hashes, original plan/grid/cohort identities, source quantity descriptors, calculation methods and every original subject's physical metrics. **Download all physical quantities CSV** produces a row for each subject, scope, quantity and original run, including independent physical totals and paired scenario totals/changes. Downloads include the full comparison while a search or page is active. Text fields that could execute as spreadsheet formulas are escaped in the CSV; numeric values remain numeric.
+
+The pair is remembered per Workspace for reopening. Change the two analysis selectors and click **Apply analysis pair** before downloading the new selection. Loading, incompatible cohort and empty-search states are explicit; delayed responses cannot replace a different selected pair or Workspace. Open either original analysis from a result row to inspect its maps, source methods and original downloadable files.
+
+### Run the existing native comparison course
+
+Use the existing original Receiving operator course with its actual preparation result, primary analysis and the complete other-support analysis:
+
+```sh
+ACTUAL_PYTHON -B operator/receiving_water_operate.py \
+  --preparation ACTUAL_PUBLIC_WATER_PREPARATION_JSON \
+  --analysis-id ORIGINAL_COMPLETE_ANALYSIS_ID \
+  --scope-analysis-id ORIGINAL_OTHER_SUPPORT_ANALYSIS_ID \
+  --output-dir NEW_OUTPUT_OUTSIDE_WORKSPACE \
+  --node ACTUAL_NODE \
+  --node-modules ACTUAL_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM
+```
+
+
+The maintained browser course operates the real pair selectors, original available quantities and scenarios, empty search, complete JSON/CSV downloads, desktop/narrow layout and a fresh browser-context reopen. Its identity includes both original analysis IDs and the actual comparison source. Add `--editable-selection` to include the existing edit/save/plan-comparison/Study transfer course on the same original project. Original map-save/export/reopen work remains part of the invocation.
+
+Open and LOOK at every resulting desktop/narrow screenshot, operate the outgoing controls, inspect both complete downloaded files and the original reports/maps/archive/reopened project, and fix observed defects. The result record documents source execution and saved artifacts; the producing peer's actual viewing remains part of completion under the full owner instruction below.
+
+
 <!-- bryce-rendered-product-inspection:begin -->
 ## Standing lab rule: inspect the rendered product before presenting it
 
