@@ -59,6 +59,11 @@
       "source": "run_tweak_receiving.mjs",
       "path": "operations/lead-case-handoff-20261012/working-tools/run_tweak_receiving.mjs",
       "sha256": "1b07740f46d1a2aab9630f69f4fdcf8cf5b37eb8a86ba6ed22bd2ef9058d9a90"
+    },
+    {
+      "source": "run_treelance_receiving.mjs",
+      "path": "operations/lead-case-handoff-20261012/working-tools/run_treelance_receiving.mjs",
+      "sha256": "27fc90b784e7e2d61e75e7d0f20540b89ef3d1e0ad9cf0d302e409fce8fae928"
     }
   ],
   "customers": [
@@ -82,6 +87,13 @@
       "record": "tweak-working-record.json",
       "module": "run_tweak_receiving.mjs",
       "export_name": "runTweakReceiving"
+    },
+    {
+      "id": "treelance-launch-outcome",
+      "directory": "treelance",
+      "record": "treelance-working-record.json",
+      "module": "run_treelance_receiving.mjs",
+      "export_name": "runTreelanceReceiving"
     }
   ]
 }
