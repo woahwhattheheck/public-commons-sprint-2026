@@ -64,7 +64,17 @@ FILES = [
     "source/monitoring-chemistry-study/reporting.py",
     "source/monitoring-chemistry-study/run_compound_native.py",
     "source/monitoring-chemistry-study/study.html",
-    "integration/component_fragments/monitoring-chemistry-study.json"
+    "integration/component_fragments/monitoring-chemistry-study.json",
+    "source/monitoring-field-study/source/build_field_page.py",
+    "source/monitoring-field-study/source/build_field_support.py",
+    "source/monitoring-field-study/source/field_planning.html",
+    "source/monitoring-field-study/source/make_field_brief.py",
+    "source/monitoring-field-study/source/receive_field_support.py",
+    "source/monitoring-field-study/README.md",
+    "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
+    "source/monitoring-field-study/source-manifest.json",
+    "integration/component_fragments/monitoring-field-study.json",
+    "source/monitoring-field-study/INSTALLATION.md"
 ]
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
@@ -222,6 +232,12 @@ SHARED_MONITORING_FILES = [
     "model/monitoring_sources.py"
 ]
 
+FIELD_STUDY_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "502aed32b9cdcf893216f7fd2f32f25cfec5332e2019f07b19772301331ede20",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "6329ec1f617597d3fd98ae6c1f290ea1911acce1233c1d94335dfe61ff011c67",
+    "source/monitoring-field-study/source/make_field_brief.py": "9538361e9dd98514a9a97e481903a979a865f984f52341bb7b1dcd04a13c21a3"
+}
+
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -358,7 +374,8 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
-                     RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name)}):
+                     RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"
