@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.10.2",
+  "version": "2.10.3",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "51547c7efed1315308158528328390bf8d90bb8b",
@@ -143,8 +143,13 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 110391,
-      "sha256": "bee00c2688832cd15fe0d5626f258e0e49c06272564ac9660cace3c590bf5e45"
+      "bytes": 110852,
+      "sha256": "292654847da1c78352dc552abfcc6c59944be9c02c6b7e08b1a8644c6da422fa"
+    },
+    {
+      "path": "measurement_workspace/PUBLISHED_STUDY_EDITIONS.md",
+      "bytes": 6022,
+      "sha256": "1b3fe5091b40714e8204d527a38d234fe492ceda9a5abeb5bec4dc0e0fcbe149"
     },
     {
       "path": "measurement_workspace/RL18151_OBSERVATIONS.md",
@@ -3363,6 +3368,12 @@
         "component_fragment": "integration/component_fragments/scientific-source-preview.json",
         "scope": "Shared verified original-member renderer/controller reused by the existing Scientific source reader; no Published study registration or original source mutation."
       }
+    },
+    "primary_study_root": {
+      "implementation": "measurement_workspace/published_studies.py",
+      "guide": "measurement_workspace/PUBLISHED_STUDY_EDITIONS.md",
+      "scope": "Unique complete-companion primary root; original nested study metadata retained and included in immutable edition identity.",
+      "historical_original_source_members": 73
     }
   }
 }
