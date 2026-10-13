@@ -69,7 +69,8 @@
     "keowee-regional-review-setup",
     "observed-station-studies",
     "gauge-support",
-    "observed-context"
+    "observed-context",
+    "monitoring-report"
   ],
   "components": {
     "core": {
@@ -158,7 +159,13 @@
     "calibration": {
       "title": "calibration",
       "paths": [
+        "operator/CALIBRATION_DESIGN.md",
+        "operator/calibration_design_patch.json",
         "operator/extensions/calibration.json",
+        "operator/install_calibration_design.py",
+        "operator/web/calibration.mjs",
+        "operator/web/calibration_design.mjs",
+        "source/calibration-design/upper-savannah-reference-support.json",
         "source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md",
         "source/hydrology-huc05-07-20261013/README.md",
         "source/hydrology-huc05-07-20261013/calibration-inputs.json",
@@ -3196,6 +3203,21 @@
         "report_manifest": "observed_hydrology_context.sources.json",
         "report_manifest_sha256": "ebb5f63c95b77d7c5bfa32786871f70a93893d19b4fac7e4c96a74a38ba0c2d4"
       }
+    },
+    "monitoring-report": {
+      "title": "Retained Monitoring designs and campaign revisions in ordered scientific reports",
+      "paths": [
+        "model/MONITORING_REPORT_SOURCE.md",
+        "model/monitoring_report_cli.py",
+        "model/monitoring_report_source.py",
+        "operator/extensions/monitoring-report.json",
+        "operator/monitoring_report_native.py",
+        "operator/web/monitoring-report.mjs"
+      ],
+      "requires": [
+        "monitoring",
+        "observed-context"
+      ]
     }
   }
 }
