@@ -4,9 +4,17 @@ This installation carries the original measured-observation engine, source colle
 
 The complete original 23-file core was recovered from PR 3713. Its original normalization, full source-record retention, SQLite revisions and collection transfer remain owned by the Measurements engine. The current atomic snapshot route reads one complete selected revision for a binding. The bridge preserves every accepted/excluded record, original station/time/unit/basis and explicit mapping into an existing physical model.
 
+## Owner's primary demonstration scope
+
+Canonical owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, retained at source commit `e7325cdf`. The complete brief is included in this source bank as `CURRENT_OWNER_DIRECTION.md`.
+
+The owner's October 13 direction for this Upper Savannah RFP keeps the main demonstration on its actual geographic and source shapes: a 30 m grid, the upstream model domain distinguished from the South Carolina reporting mask and utility focus, clearly identified realistic simulated inputs, and native InVEST NDR/SDR baseline, restoration and matched-control cases. Present annual nitrogen and phosphorus reaching streams in kg/year and sediment in tonnes/year, with differences, maps, reports, editable parameters and source editions, export and cold reopening. Retain the actual elapsed operation history and show the production workshare.
+
+Tim remains the scientific lead and retains scientific direction, review and the client relationship. This Measurements-to-Chemistry course is a complementary workflow in the same connected product. Its 36-record authored reference demonstrates source custody, reviewed binding and editable receiving; it does not replace the regional InVEST demonstration or recast authored observations as regional field data. Existing regional execution owners continue their current operation.
+
 ## Existing application
 
-Use the complete registered Upper Savannah application and its normal scientific Workspace. The application must already contain the maintained Chemistry compound/interval engine (PR 3724 or a compatible newer edition), its native queue/provider and original source/Workspace APIs. The earlier complete Chemistry bank is `deliverables/eco13-chemistry-compound-upgrade-20261013`; its original installer can establish that dependency on an older receiving copy.
+Use the complete registered Upper Savannah application and its normal scientific Workspace. The application must already contain the maintained Chemistry compound/interval engine (PR 3724 or a compatible newer edition), its native queue/provider and original source/Workspace APIs. The included native course also uses the existing saved Chemistry reports, typed scientific-source producer and Scientific Reports edition composer; the installer checks those original dependencies before writing. The earlier complete Chemistry bank is `deliverables/eco13-chemistry-compound-upgrade-20261013`; its original installer can establish that dependency on an older receiving copy.
 
 The Measurements engine needs **Node 22.16 or newer** with its original built-in SQLite support. Use the receiving host's normal Node installation. No independent browser-facing service or replacement task queue is introduced: the existing Python provider owns its original internal Node process and authenticated operator routing.
 

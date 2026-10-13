@@ -16,6 +16,9 @@ import subprocess
 import sys
 import traceback
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 
 def fingerprint(path):
     value = Path(path)
@@ -412,9 +415,12 @@ def main(argv=None):
     parser.add_argument("--domain-layer")
     parser.add_argument("--output", required=True)
     parser.add_argument("--node", default="node")
+    from source_tools.assessment_report_receiving import add_arguments, continue_operation
+    add_arguments(parser)
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(perform(args), ensure_ascii=False, indent=2, allow_nan=False))
+        result = continue_operation(args, perform(args))
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         return 0
     except Exception:
         traceback.print_exc()

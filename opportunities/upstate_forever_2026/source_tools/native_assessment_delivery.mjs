@@ -1,5 +1,6 @@
 // Deliver completed native assessment geography through the existing report workflow.
 import { createArchiveCodec } from "./archive_codec.mjs";
+import { buildAnnualReferenceMaps } from "./annual_reference_maps.mjs";
 import { buildAssociationReport } from "./assessment_association_report.mjs";
 import { zipReportFiles } from "./assessment_association_package.mjs";
 import { annualReferenceInterpretation } from "./native_assessment_reviewer.mjs";
@@ -412,11 +413,12 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   const annualSources=retainAnnualSources(annualSourceFiles);
   const annualYields=annualReferenceInterpretation(annual);
   verifyAnnualTargetSources(annualYields,annualSources);
+  const annualMaps=buildAnnualReferenceMaps({annual,annualSourceText:text(retained.files["annual-reference-assessment-summary.json"]),originalFiles:annualSources});
   if ((microbialFiles === undefined) !== (microbialOriginalFiles === undefined))
     throw Error("Retain both the measured source edition and its complete original provenance.");
   const microbial=microbialFiles===undefined?null:retainMicrobialSources(microbialFiles,microbialOriginalFiles,context);
   const report=buildAssociationReport({...assessmentInputs,geography:text(retained.files["assessment-native-huc-context.json"]),
-    nativeAnnualContext:text(retained.files["annual-reference-assessment-summary.json"]),
+    nativeAnnualContext:text(retained.files["annual-reference-assessment-summary.json"]),nativeAnnualMaps:annualMaps,
     ...(microbial?{nativeMicrobialContext:microbial.files["microbial-assessment-overlap.json"],
       nativeMicrobialObservations:microbial.files["microbial-assessment-observations.csv"]}:{})});
   const files={};
@@ -441,19 +443,40 @@ export function composeNativeAssessmentDelivery({nativeFiles, assessmentInputs, 
   const yieldPosition=sections.findIndex(section=>section[0]==="Complete native results, original records and existing application use");
   if(yieldPosition<0)throw Error("Retain the current native report source section.");
   sections.splice(yieldPosition,0,...annualYieldSections(annualYields));
+  const mapSvg=identity("association/annual-reference-basins.svg",annualMaps.files["annual-reference-basins.svg"]);
+  const componentSvg=identity("association/annual-reference-original-components.svg",annualMaps.files["annual-reference-original-components.svg"]);
+  const mapIndex=sections.findIndex(row=>row[0]==="Annual-reference catchments and assessment coverage");
+  if(mapIndex<0)throw Error("Retain the original annual catchment section.");
+  sections.splice(mapIndex,0,["Five original annual-reference basin footprints",[
+    {kind:"figure",...mapSvg,title:"Whole-basin support for eleven original annual targets",
+      alt:"Five original annual-reference catchments with their original NLDI reference reaches, COMIDs and whole-basin areas.",
+      caption:"All selected original polygon vertices are retained. The three tributaries are mutually disjoint and lie within both downstream Savannah basins; Jackson is nested in Cohens. EPSG:3857 is used only to display the geometry. Whole-basin yields continue to use the original EPSG:5070 areas; overlapping basin totals are not independent regional parts.",spec:annualMaps.figure},
+    {kind:"links",items:[
+      {title:"Full interactive map and original source tables",path:"association/OPEN_ASSESSMENT_ASSOCIATIONS.html"},
+      {title:"Selected original basin components",path:"association/annual-reference-selected-basins.geojson"},
+      {title:"Every original basin component, including exclusions",path:"association/annual-reference-original-components.geojson"},
+      {title:"Display projection and exact original geometry bindings",path:"association/annual-reference-basin-map.json"}]},
+  ]]);
+  sections.splice(sections.length-1,0,["Original basin component selection",[
+    "The retained original component review selected Jackson component 0 and Cohens components 0 and 1. Their separate remote Virginia triangles remain in the original source bank and are displayed as excluded outlines. The small local Cohens component remains selected. This presentation does not change the original source geometry, area or annual target.",
+    {kind:"figure",...componentSvg,title:"Selected footprints and retained excluded source components",
+      alt:"The selected Savannah basin components and the excluded remote original components retained for source inspection.",
+      caption:"Filled polygons are selected original reference components. Outline-only remote components remain downloadable original source geometry and carry no reference load allocation. Web Mercator coordinates and grid distances are display quantities, not replacement basin areas or ground-distance estimates.",spec:annualMaps.componentFigure},
+  ]]);
   if (microbial) {
     sections.splice(3,0,...microbialScientificSections(microbial.bound.coverage,NATIVE_SOURCE_DIRECTORY+"/"));
     sections[sections.length-1][1][0]="Import the included 17-entry source manifest to retain four original native vector/table entries, seven original station/assessment entries, four original measured microbial entries, the interactive assessment report and this scientific report recipe. Existing Spatial Review opens the original-point layers; Annual load observations retains the target/catchment intake and calibration actions.";
   }
   const reportId="native-assessment-observed-"+RESULT_HASHES["assessment-native-huc-context.json"].slice(0,20)+
-    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"")+"-annual-yields-v1";
+    (microbial?"-microbial-"+microbial.bound.source.context_sha256.slice(0,12):"")+"-annual-yields-basin-maps-v1";
   const inputs=Object.entries(files).map(([path,body])=>identity(path,body));
   const recipe={schema:"upstate.observed-report/v1",title:microbial?"Physical assessment coverage, measured E. coli and annual references":"Physical assessment coverage, utility selection and annual references",
-    edition:microbial?"original-native-assessment-microbial-context-20261013-v2-annual-yields":"original-native-assessment-context-20261013-v2-annual-yields",vintage:"2026-10-13",
+    edition:microbial?"original-native-assessment-microbial-context-20261013-v3-annual-basin-maps":"original-native-assessment-context-20261013-v3-annual-basin-maps",vintage:"2026-10-13",
     interpretation_kind:"completed_native_geography_and_original_assessment_context",
     inputs,sections,source_links:[nativePath("README.md"),nativePath("sources.json"),nativePath("assessment-native-huc-context.json"),
       nativePath("annual-reference-assessment-summary.json"),"association/sources.json","association/OPEN_ASSESSMENT_ASSOCIATIONS.html",
-      "association/annual-reference-yields.csv","association/annual-reference-yields.json","association/annual-reference-relations.csv"]};
+      "association/annual-reference-yields.csv","association/annual-reference-yields.json","association/annual-reference-relations.csv",
+      ...Object.keys(annualMaps.files).map(path=>"association/"+path)]};
   if (microbial) {
     recipe.measured_source_context=microbial.bound.source;
     recipe.source_links.push(nativePath("microbial-assessment-sources.json"),nativePath("MICROBIAL_COVERAGE.md"),

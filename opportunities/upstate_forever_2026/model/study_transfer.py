@@ -168,7 +168,7 @@ def _record_path(kind, key):
 class _Closure:
     def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True,
                  implementation_lineage=True, customer_review_lineage=True,
-                 report_source_keys=None):
+                 report_source_keys=None, implementation_source_keys=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -193,6 +193,8 @@ class _Closure:
         self.customer_review_records = {}
         self.customer_review_lineage_enabled = customer_review_lineage
         self.implementation_lineage_enabled = implementation_lineage
+        self.implementation_source_keys = (None if implementation_source_keys is None
+                                           else frozenset(implementation_source_keys))
         self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
@@ -642,7 +644,9 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
-    for relative in chemistry_transfer.lock_paths(closure):
+    from . import source_refresh_report_transfer
+    for relative in (*chemistry_transfer.lock_paths(closure),
+                     *source_refresh_report_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -984,6 +988,8 @@ def verify_received_studies(workspace):
                            report_lineage="scientific_report_sources" in receipt["identity"],
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
+                           implementation_source_keys={(row["source_collection_id"], row["source_id"])
+                                                       for row in receipt["identity"].get("implementation_report_sources", [])},
                            report_source_keys={(row["source_collection_id"], row["source_id"])
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))

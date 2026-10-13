@@ -9,9 +9,13 @@
     "worldbank-product": "products/worldbank/cli.mjs"
   },
   "commandDescriptions": {
-    "worldbank-product": "Open the World Bank workspace, analyze an original handover, or receive the complete installed product."
+    "worldbank-product": "Prepare a customer commissioning procedure, open the World Bank workspace, analyze an original handover, or receive the complete installed product."
   },
   "exports": {
-    "./products/worldbank": "./source/products/worldbank/cli.mjs"
+    "./products/worldbank": "./source/products/worldbank/cli.mjs",
+    "./products/worldbank/commissioning-plan": {
+      "types": "./source/products/worldbank/commissioning-plan.d.mts",
+      "import": "./source/products/worldbank/commissioning-plan.mjs"
+    }
   }
 }

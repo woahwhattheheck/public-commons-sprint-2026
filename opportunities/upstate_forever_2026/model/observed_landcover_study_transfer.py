@@ -205,6 +205,8 @@ def _local(closure, entry, origin, recipe, members, report, binding, roster):
                  and choices == [original],
                  "Editable selected watershed input differs from the captured original")
         required.add(collection_id)
+        from .observed_landcover_local_copy import include_input
+        include_input(closure, original)
     for collection_id in sorted(required):
         closure.need("sources", collection_id, "Original selected-watershed analysis or report collection")
     # The existing closure records every member and detects directory changes.

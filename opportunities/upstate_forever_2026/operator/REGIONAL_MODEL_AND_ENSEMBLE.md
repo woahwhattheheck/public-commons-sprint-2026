@@ -1449,3 +1449,15 @@ the physical tables and figures, and download and reopen the HTML, CSV and
 scientific report. The existing run and report actions remain available when the
 operator deliberately starts further analysis. Detailed opening and installation
 instructions are in [Native study receiving](../model/NATIVE_STUDY_RECEIVING.md).
+
+## 25. Carry the original jurisdiction assessments into a saved report and Study
+
+The North Carolina final-2022 and Georgia approved-2024 source family retains 90 complete original and maintained source members. The same Workspace can import the jurisdiction tables, attach their original reach geography and publish them in one ordered scientific report. The source receivers preserve distinct reach identities, assessment parameters, designated uses, original categories and the actual Upper Savannah geographic selection.
+
+Use [State assessment source receiving](../integration/STATE_ASSESSMENT_SOURCE_RECEIVING.md) for the complete original source layout, native geometry input and source-import commands. Once either or both original operations are complete, continue their saved operation records with [Assessment report receiving](../source_tools/ASSESSMENT_REPORT_RECEIVING.md). Its maintained helper reads the actual imported source IDs and reuses the Scientific Reports publisher, report-file export and selected Study transfer.
+
+The original source receivers accept `--report` to continue immediately after their native source import. For already completed imports, run `python -B -m source_tools.assessment_report_receiving` from the installed application, with the existing application, Workspace, output directory and each original `--operation` JSON. Repeating `--operation` sets the jurisdiction order. An existing `--selection` retains its ordered source choices and appends these sources once. The full command and exact output fields are in the receiving guide.
+
+Keep the same receiving directory after interruption. The saved report edition, original report-file ZIP, selected Study and independent reopening have separate retained phases. The cold reopening uses the application carried by that selected Study. Open the resulting report and restored operator, follow the source geography and use the actual report and archive downloads. View the outgoing PDF pages, maps, HTML and original attachments at their intended presentation size. Repair visible or operational defects in the maintained product before delivery.
+
+The entire Georgia publisher Savannah basin and the actual Upper Savannah intersection remain separate quantities. Original assessment categories and parameter measurements retain their source meaning and units alongside the model's physical outputs. The complete family is listed as `jurisdiction_assessment_receiving` in the receiving inventory.

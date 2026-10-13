@@ -10,6 +10,21 @@ and Python Analysis reports, workbooks and portable workspace. Original country
 and indicator metadata, response pages, null values, numeric tokens, review
 revisions and source hashes travel with the edition.
 
+## Commission the customer procedure
+
+Create an editable Operating Plan from the customer's agreed source selections,
+review policy, calculations, workbook and receiving criteria:
+
+~~~sh
+starforge worldbank-product commissioning example --out ./customer-brief.json
+# Edit the complete brief for the actual customer before creating its plan.
+starforge worldbank-product commissioning create --brief ./customer-brief.json --out ./customer-plan.json
+~~~
+
+The [commissioning guide](COMMISSIONING.md) carries that exact brief and selected
+supporting files through the original Operating Plans editor, saved revisions,
+result files and customer receiving. Preparing a plan performs no source query.
+
 ## Start working
 
 Build the committed product with --selection worldbank, install its original

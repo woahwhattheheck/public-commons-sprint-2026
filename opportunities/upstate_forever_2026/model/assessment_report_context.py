@@ -9,11 +9,11 @@ from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
 
-from . import assessment_context, observed_context
+from . import assessment_context, observed_context, assessment_map_context
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 SCHEMA = "upstate.assessment-report-context/v1"
 RECIPE = "assessment-report.json"
 MANIFEST = "assessment-report.sources.json"
@@ -159,7 +159,7 @@ def _ordered_groups(result, selection):
                       default=len(rank)))
 
 
-def _sections(context, parcel=None):
+def _sections(context, parcel=None, map_context=None):
     result, summary = context["result"], context["summary"]
     groups = _ordered_groups(result, context["selection"])
     editions = []
@@ -232,6 +232,31 @@ def _sections(context, parcel=None):
             "or CSV row remain in the complete linked JSON and CSV.",
         ]],
     ]
+    if map_context is not None:
+        map_source = map_context["source"]
+        blocks = [map_context["message"],
+            "Compared original source: " + str(map_source["title"] or map_source["source_id"]) +
+            " (" + map_source["native_crs"] + "). The retained original body is included directly "
+            "with its file hash; complete original source companions also remain in the station package.",
+            str(map_context["selected_polygon_count"]) + " saved selected polygons; " +
+            str(map_source["feature_count"]) + " original source polygons. " +
+            str(map_context["differing_assessment_record_count"]) + " original records have differing "
+            "resolved relationships; " + str(map_context["unresolved_assessment_record_count"]) +
+            " have an unresolved comparison. Unresolved locations are not represented as geographic differences."]
+        if map_context["status"] == "ready":
+            blocks.extend([
+                "The overview uses light-gray source polygons and black selected-context outlines. "
+                "Each difference map shows at most six original station/polygon relationships: "
+                "gray publisher polygons and black station-membership outlines. Numbered labels are "
+                "polygon label anchors, not station coordinates. These maps use the existing native "
+                "vector renderer without reprojection or simplification.",
+                "Original projected grid metres and grid north are displayed. Map shading shows "
+                "source and relationship roles; it is not a water-quality, concentration or priority scale.",
+                _links([(figure["title"], figure["path"]) for figure in map_context["figures"]])])
+        blocks.append(_links([
+            ("Complete native map provenance and every original differing record", assessment_map_context.METADATA),
+            ("Unchanged native watershed source", map_source["file"]["path"])]))
+        sections.insert(3, ["Source-native assessment watershed maps", blocks])
     if parcel is not None:
         result_parcel = parcel["result"]
         sections.append(["Original parcel geographic associations — " + parcel["title"], [
@@ -317,6 +342,7 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
             raise ValueError("Choose a retained assessment parcel association")
         originals["parcels"] = _saved_members(workspace, parcel, parcels=True)
     identity = {"version": VERSION, "report_loader_edition": observed_context.EDITION,
+        "map_implementation": assessment_map_context.implementation(),
         "workspace_id": workspace.project["id"], "context_id": context["id"],
         "parcel_id": parcel["id"] if parcel else None,
         "members": {group: [item for unused, item in sorted(members.values(),
@@ -331,6 +357,10 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
                 target = directory / group / _relative(name)
                 _copy(path, target, item)
                 inputs.append(describe_file(directory, target))
+        map_context = assessment_map_context.prepare(workspace, context, directory)
+        map_inputs = [*map_context["files"],
+                      describe_file(directory, directory / assessment_map_context.METADATA)]
+        inputs.extend(map_inputs)
         recipe = {"schema": observed_context.SCHEMA, "title": parcel["title"] if parcel else context["title"],
             "edition": "assessment-geographic-context-report-" + VERSION,
             "report_context_kind": "assessment_geographic_context",
@@ -339,13 +369,20 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
             "parcel_received_from": parcel.get("received_from") if parcel else None,
             "original_selection": context["selection"], "assessment_groups": context["result"]["assessment_groups"],
             "original_source_references": assessment_context._source_references(context["result"]),
-            "inputs": inputs, "sections": _sections(context, parcel),
+            "inputs": inputs, "sections": _sections(context, parcel, map_context),
             "source_links": ["context/context.json", "context/assessment-context.zip",
                 "context/original-station-geography.zip", "context/context.geojson",
                 "context/OPEN_ASSESSMENT_CONTEXT.html", "context/package.json"] +
                 (["parcels/parcel-context.zip", "parcels/parcel-context.json",
                   "parcels/OPEN_PARCEL_CONTEXT.html"] if parcel else []),
-            "figures": []}
+            "figures": [{"id": figure["id"], "path": figure["path"]} for figure in map_context["figures"]],
+            "assessment_map": {key: map_context[key] for key in ("version", "status", "source",
+                "selected_polygon_count", "differing_assessment_record_count",
+                "unresolved_assessment_record_count", "difference_relationship_count")}}
+        if map_context.get("figure_spec"):
+            recipe["figure_spec"] = map_context["figure_spec"]
+        recipe["source_links"].extend([assessment_map_context.METADATA,
+            map_context["source"]["file"]["path"], *[figure["path"] for figure in map_context["figures"]]])
         atomic_json(directory / RECIPE, recipe, immutable=True)
         source_id = "assessment-context-report-" + operation_id[:20]
         manifest = {"schema": "upstate.sources/v1", "title": recipe["title"],
@@ -360,18 +397,21 @@ def prepare(workspace, context_id, *, parcel_id=None, import_source=True, delive
                 "metadata": {"report_schema": observed_context.SCHEMA,
                     "report_context_kind": "assessment_geographic_context",
                     "context_id": context["id"], "parcel_id": parcel["id"] if parcel else None,
-                    "original_source_references": recipe["original_source_references"]},
+                    "original_source_references": recipe["original_source_references"],
+                    "assessment_map": recipe["assessment_map"]},
                 "companions": inputs}]}
         atomic_json(directory / MANIFEST, manifest, immutable=True)
         result = {"schema": SCHEMA, "version": VERSION, "operation_id": operation_id,
             "workspace_id": workspace.project["id"], "context_id": context["id"],
             "parcel_id": parcel["id"] if parcel else None, "title": recipe["title"],
+            "assessment_map": recipe["assessment_map"],
             "summary": context["summary"], "member_count": len(inputs) + 1,
             "source_id": source_id, "manifest": describe_file(workspace.root, directory / MANIFEST),
             "recipe": describe_file(workspace.root, directory / RECIPE),
             "files": [describe_file(workspace.root, directory / name) for name in
                 (MANIFEST, RECIPE, "context/assessment-context.zip")] +
-                ([describe_file(workspace.root, directory / "parcels/parcel-context.zip")] if parcel else [])}
+                ([describe_file(workspace.root, directory / "parcels/parcel-context.zip")] if parcel else []) +
+                [describe_file(workspace.root, directory / item["path"]) for item in map_inputs]}
         if import_source:
             collection = workspace.import_sources(directory / MANIFEST)
             source = {"source_collection_id": collection["id"], "source_id": source_id}

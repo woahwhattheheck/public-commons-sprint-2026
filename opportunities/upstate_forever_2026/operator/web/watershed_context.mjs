@@ -280,19 +280,25 @@ export function createWatershedContextDesk(host) {
   let catalog = null, saved = null, selectedId = '', focusHuc = '';
   let sourceReview = null, sourceReviewRequest = 0;
   let savedExport = null, selectedExportId = '', selectedHucs = [], selectionRequest = 0, catalogRequest = 0;
-  let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0;
+  let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0, selectionLoading = 0;
   let sourceChoice = 0, networkChoice = '', includeMicrobial = true, includeEvidence = null;
   let filters = emptyFilters();
   let includeMap = null, mapPicked = null, mapTheme = 'changed_class_percent';
   let mapData = null, mapDataKey = '', mapLoadingKey = '', mapRequest = 0;
   let mapInstance = null, mapElement = null, mapInstanceKey = '', mapScale = null;
+  let mapReviewFit = null;
   let mapScope = {selected:new Set(),contributing:new Set(),external:new Set(),networkAvailable:false};
   const mapGeometryCache = new Map();
   const receivingTasks = new Map();
   const exportingTasks = new Map();
   const evidenceChoice = () => watershedEvidenceChoice(saved?._evidence_profiles);
   const evidenceIncluded = () => Boolean(evidenceChoice()) && includeEvidence !== false;
-  const currentWorkspace = () => host.getState()?.workspace_key ?? host.getWorkspace?.() ?? null;
+  const currentWorkspace = () => typeof host.getWorkspace === 'function'
+    ? host.getWorkspace() : host.getState()?.workspace_key ?? null;
+  const currentState = () => {
+    const state = host.getState();
+    return state?.workspace_key === workspace && workspace === currentWorkspace() ? state : null;
+  };
   const rows = () => list(saved?.report?.hucs);
   const filtered = () => {
     const matching = filterWatersheds(rows(), filters);
@@ -307,6 +313,31 @@ export function createWatershedContextDesk(host) {
 
   const mapChoice = () => watershedMapChoice(savedExport?.watershed_map_context?.source) || watershedMapChoice(saved?._map_source);
   const mapIncluded = () => Boolean(mapChoice()) && includeMap !== false;
+  const mapToken = () => {
+    const choice = mapChoice();
+    return choice && selectedId ? JSON.stringify([workspace, selectedId,
+      savedExport?.watershed_map_context ? savedExport.id : '', choice.sha256]) : '';
+  };
+  const mapReady = () => guard(epoch, workspace) && !selectionLoading &&
+    Boolean(mapData) && mapDataKey === mapToken();
+  function invalidateMap() {
+    mapRequest += 1; mapData = null; mapDataKey = ''; mapLoadingKey = ''; mapScale = null;
+    mapScope = {selected:new Set(),contributing:new Set(),external:new Set(),networkAvailable:false};
+    destroyMap();
+  }
+  function syncMapChoice() {
+    const token = mapToken();
+    if (!token || (mapDataKey && mapDataKey !== token) || (mapLoadingKey && mapLoadingKey !== token))
+      invalidateMap();
+  }
+  function beginSelectionRead(request, changing) {
+    if (!changing) return;
+    selectionLoading = request;
+    invalidateMap();
+    updateMap();
+    const status = root?.querySelector('[data-wc-map-status]');
+    if (status) status.textContent = 'Opening the selected regional report and geographic source…';
+  }
   const mapChosen = () => mapPicked === null ? filtered().map(row => row.huc12) : mapPicked;
   function destroyMap() {
     mapInstance?.destroy();
@@ -344,12 +375,25 @@ export function createWatershedContextDesk(host) {
     return scope;
   }
   function updateMap() {
-    if (!root || !mapData) return;
+    if (!root) return;
+    if (!mapReady()) {
+      mapScope = {selected:new Set(),contributing:new Set(),external:new Set(),networkAvailable:false};
+      for (const selector of ['[data-wc-map-export]', '[data-wc-map-fit]']) {
+        const button = root.querySelector(selector); if (button) button.disabled = true;
+      }
+      for (const selector of ['[data-wc-map-scope]', '[data-wc-map-scale]', '[data-wc-map-method]']) {
+        const node = root.querySelector(selector); if (node) node.textContent = '';
+      }
+      return;
+    }
     mapScope = currentMapScope();
     mapScale = mapTheme ? watershedMapScale(mapData.geojson.features, mapTheme) : null;
     mapInstance?.update({featureStyle:mapStyle, featureLabel:mapLabel});
     const scopeNode = root.querySelector('[data-wc-map-scope]');
-    if (scopeNode) scopeNode.textContent = (mapPicked === null ? 'Matching table selection' : 'Picked on map') +
+    const reviewPicked = mapPicked !== null && sourceReview &&
+      [...mapPicked].sort().join('|') === [...sourceReview.document.selection.huc12s].sort().join('|');
+    if (scopeNode) scopeNode.textContent = (reviewPicked ? 'Reviewed source selection' :
+      mapPicked === null ? 'Matching table selection' : 'Picked on map') +
       ' · ' + number(mapScope.selected.size) + ' selected HUC12s · ' +
       (mapScope.networkAvailable ? number(mapScope.contributing.size) + ' distinct HUC12s in the selected and upstream union' :
         'original upstream network unavailable for part of this selection') +
@@ -377,8 +421,8 @@ export function createWatershedContextDesk(host) {
   }
   function mountMap() {
     const target = root?.querySelector('[data-wc-map-host]');
-    if (!target || !mapData) return;
-    const identity = String(workspace) + ':' + selectedId + ':' + mapData.source.sha256;
+    if (!target || !mapReady()) return;
+    const identity = mapDataKey;
     if (!mapInstance || mapInstanceKey !== identity) {
       destroyMap();
       mapElement = document.createElement('div');
@@ -393,6 +437,7 @@ export function createWatershedContextDesk(host) {
         featureStyle:mapStyle,featureLabel:mapLabel,
         featureSourceLabel:feature=>'Original HUC12 '+String(feature.properties?.huc12??feature.id)+' · EPSG:3857 · retained source attributes',
         onSelect(feature) {
+          if (!mapReady()) return;
           const id = String(feature.properties?.huc12 ?? feature.id ?? '');
           if (!rows().some(row => row.huc12 === id)) return;
           const picked = new Set(mapPicked || []);
@@ -413,6 +458,11 @@ export function createWatershedContextDesk(host) {
     const source = root.querySelector('[data-wc-map-source]');
     if (source) source.textContent = pretty(mapData.source);
     updateMap();
+    if (mapReviewFit?.identity === identity &&
+        mapReviewFit.huc12s.join('|') === (mapPicked || []).join('|')) {
+      mapInstance.fit(feature => mapScope.contributing.has(String(feature.properties?.huc12 ?? feature.id)));
+      mapReviewFit = null;
+    }
   }
   async function geometrySource(ticket, choice, key) {
     if (!ticket || ticket.sha256 !== choice.geometry_sha256 || !Number.isInteger(ticket.bytes) || ticket.bytes <= 0)
@@ -443,23 +493,26 @@ export function createWatershedContextDesk(host) {
     return mapGeometryCache.get(cacheKey);
   }
   async function loadMap() {
+    syncMapChoice();
     const choice = mapChoice();
-    if (!choice || !root) return;
+    if (!choice || !guard(epoch, workspace) || selectionLoading) return;
     const key = workspace, version = epoch, reportId = selectedId;
     const mapExportId = savedExport?.watershed_map_context ? savedExport.id : '';
-    const token = String(key) + ':' + reportId + ':' + mapExportId + ':' + choice.sha256;
-    if (mapData && mapDataKey === token) { mountMap(); return; }
+    const token = mapToken();
+    if (mapReady()) { mountMap(); return; }
     if (mapLoadingKey === token) return;
     const request = ++mapRequest; mapLoadingKey = token;
+    const current = () => guard(version,key) && request === mapRequest &&
+      !selectionLoading && token === mapToken();
     try {
       const result = await read('map', {report_id:reportId,map_source_sha256:choice.sha256,...(mapExportId ? {export_id:mapExportId} : {})});
-      if (!guard(version,key) || request !== mapRequest || reportId !== selectedId) return;
+      if (!current()) return;
       if (result.schema !== 'upstate.watershed-map/v1' || result.report_id !== reportId ||
           result.source?.sha256 !== choice.sha256 || result.source_crs !== choice.source_crs ||
           result.source_fingerprint !== saved.source_fingerprint)
         throw new Error('The map response belongs to different regional source bytes.');
       const geojson = await geometrySource(result.geometry, choice, key);
-      if (!guard(version,key) || request !== mapRequest || reportId !== selectedId) return;
+      if (!current()) return;
       const ids = geojson.features.map(feature => String(feature.properties?.huc12 ?? feature.id ?? ''));
       const domain = new Set(rows().map(row => row.huc12));
       if (ids.length !== choice.feature_count || new Set(ids).size !== ids.length ||
@@ -468,7 +521,7 @@ export function createWatershedContextDesk(host) {
       mapData = {...result,geojson}; mapDataKey = token;
       mountMap();
     } catch (error) {
-      if (guard(version,key) && request === mapRequest) {
+      if (current()) {
         const status = root.querySelector('[data-wc-map-status]');
         if (status) {status.textContent=error.message;status.setAttribute('role','alert');}
       }
@@ -486,6 +539,8 @@ export function createWatershedContextDesk(host) {
     } catch (_) {}
   }
   function clearSelection(resetMapSelection = true) {
+    selectionLoading = 0;
+    if (savedExport) invalidateMap();
     savedExport = null;
     selectedExportId = '';
     selectedHucs = [];
@@ -494,6 +549,7 @@ export function createWatershedContextDesk(host) {
   function resetForWorkspace(key) {
     if (workspace === key) return;
     workspace = key;
+    busy = false; selectionLoading = 0;
     sourceReview = null;
     sourceReviewRequest += 1;
     catalog = null;
@@ -508,7 +564,7 @@ export function createWatershedContextDesk(host) {
     sourceChoice = 0;
     networkChoice = '';
     includeEvidence = null;
-    includeMap = null; mapPicked = null; mapTheme = 'changed_class_percent';
+    includeMap = null; mapPicked = null; mapTheme = 'changed_class_percent'; mapReviewFit = null;
     mapRequest += 1; mapData = null; mapDataKey = ''; mapLoadingKey = ''; destroyMap();
     errorText = '';
     try {
@@ -535,6 +591,7 @@ export function createWatershedContextDesk(host) {
     return path + '?' + query.toString();
   }
   async function read(operation, params = {}) {
+    if (!guard(epoch, workspace)) throw new Error('Open Regional watersheds in the selected project.');
     return host.api(url('/api/watershed-context/' + operation, params));
   }
   function fail(error) {
@@ -549,7 +606,10 @@ export function createWatershedContextDesk(host) {
     }
     host.toast?.(errorText);
   }
-  function guard(version, key) { return Boolean(root) && version === epoch && key === currentWorkspace(); }
+  function guard(version, key) {
+    return Boolean(root) && Boolean(key) && version === epoch &&
+      workspace === key && key === currentWorkspace();
+  }
   function downloadsHtml(downloads) {
     if (typeof host.fileList === 'function') return host.fileList(downloads || []);
     return list(downloads).map(file => {
@@ -563,7 +623,7 @@ export function createWatershedContextDesk(host) {
       .map(task => task.id + ':' + task.state).join('|');
   }
   function taskHtml() {
-    const tasks = list(host.getState()?.tasks).filter(task =>
+    const tasks = list(currentState()?.tasks).filter(task =>
       task.action?.startsWith('watershed.context.') &&
       ['queued', 'running', 'failed', 'interrupted'].includes(task.state));
     if (!tasks.length) return '';
@@ -574,6 +634,12 @@ export function createWatershedContextDesk(host) {
         task.action === 'watershed.context.monitoring' ? 'Prepare utility monitoring' : 'Build regional context') +
       ' · ' + esc(human(task.state)) + '</button>').join('') + '</section>';
   }
+  const discussionFields = [
+    ['project','Project and intended decision'],['reviewer','Scientific reviewer and decision owner'],
+    ['geography','Utility focus and geographic scope'],['sourceareas','Source-water protection inputs'],
+    ['modelchoices','Grid, reporting mask and model profile'],['alternatives','Baseline and alternatives'],
+    ['receiving','Review formats and receiving operator'],['firstresult','First useful setup review'],
+  ];
   function sourceReviewHtml() {
     const review = sourceReview?.document;
     const selected = review?.selection;
@@ -590,25 +656,88 @@ export function createWatershedContextDesk(host) {
         (selected.filters?.state ? ' · state ' + esc(selected.filters.state) : '') +
         (selected.filters?.search ? ' · search “' + esc(selected.filters.search) + '”' : '') +
         '. Discussion text travels with this saved source report; prepared prompts keep their own label.</p>' +
-        '<details><summary>Reviewed membership and discussion text</summary><pre>' +
-        esc(pretty({selection:selected, discussion:review.discussion})) + '</pre></details>' +
+        '<details><summary>Reviewed original membership</summary><pre>' +
+        esc(pretty(selected)) + '</pre></details>' +
+        (sourceReview.sourceExportId ? '<p class="wc-note">Reopened saved review ' +
+          esc(sourceReview.sourceExportId) + '. Amendments save a new report edition with this predecessor retained.</p>' : '') +
+        '<details><summary>Amend the discussion text</summary><div class="wc-source-form">' +
+        discussionFields.map(([key,label]) => field(label,
+          '<textarea name="wc-review-field-' + key + '" rows="3" maxlength="20000"' + (busy ? ' disabled' : '') +
+          '>' + esc(review.discussion?.[key] || '') + '</textarea>')).join('') +
+        '</div><p class="wc-note">The original source and geography remain bound to this review. Change its geographic selection in the source explorer and import that downloaded review.</p></details>' +
+        (mapChoice() ? '<button type="button" data-wc-review-map' + (busy || !saved ? ' disabled' : '') +
+          '>Show reviewed watersheds on the original map</button> ' : '') +
         '<button type="button" data-wc-review-export' + (busy || !saved ? ' disabled' : '') +
         '>Save reviewed selection and reports</button> <button type="button" data-wc-review-clear>Clear review</button>' : '') +
       (!saved ? '<p class="wc-note">Open or build the original regional report to continue this review.</p>' : '') + '</section>';
+  }
+  function sourceReviewDocument(text) {
+    if (typeof text !== 'string' || new TextEncoder().encode(text).length > 256 * 1024)
+      throw new Error('Keep the complete source review within 256 KiB.');
+    const document = JSON.parse(text), selection = document?.selection;
+    if (document?.schema !== 'upstate.watershed-source-review/v1' ||
+        !Array.isArray(selection?.huc12s) || !selection.huc12s.length ||
+        selection.huc12s.some(id => typeof id !== 'string' || !/^\d{12}$/.test(id)) ||
+        new Set(selection.huc12s).size !== selection.huc12s.length)
+      throw new Error('Choose the original source explorer selection JSON with distinct HUC12s.');
+    if (!document.discussion || typeof document.discussion !== 'object' ||
+        discussionFields.some(([key]) => typeof document.discussion[key] !== 'string' ||
+          document.discussion[key].length > 20000))
+      throw new Error('The source review must retain all eight discussion fields as text of at most 20,000 characters.');
+    return document;
   }
   async function receiveSourceReview(file) {
     if (!file || busy) return;
     const key = workspace, version = epoch, request = ++sourceReviewRequest;
     if (!key || currentWorkspace() !== key) throw new Error('Choose the receiving project.');
     if (file.size > 256 * 1024) throw new Error('Choose the source explorer JSON selection, up to 256 KiB.');
-    const text = await file.text(), document = JSON.parse(text);
+    let text;
+    try { text = await file.text(); }
+    catch (error) {
+      if (!guard(version,key) || request !== sourceReviewRequest) return;
+      throw error;
+    }
     if (!guard(version, key) || currentWorkspace() !== key || request !== sourceReviewRequest) return;
-    if (document?.schema !== 'upstate.watershed-source-review/v1' ||
-        !Array.isArray(document.selection?.huc12s) || !document.selection.huc12s.length)
-      throw new Error('Choose the original source explorer selection JSON.');
-    sourceReview = {text, document};
+    const document = sourceReviewDocument(text);
+    sourceReview = {text, document, sourceExportId:null, modified:false};
     errorText = '';
     render();
+  }
+  async function reopenSavedReview() {
+    if (busy || selectionLoading || !savedExport?.source_review) return;
+    const key = workspace, version = epoch, request = ++sourceReviewRequest, exportId = savedExport.id;
+    const reportToken = reportRequest, selectionToken = selectionRequest;
+    const current = () => guard(version,key) && request === sourceReviewRequest &&
+      !selectionLoading && reportToken === reportRequest && selectionToken === selectionRequest &&
+      selectedExportId === exportId;
+    let result;
+    try { result = await read('export', {export_id:exportId,include_source_review:true}); }
+    catch (error) {
+      if (!current()) return;
+      throw error;
+    }
+    if (!current()) return;
+    if (result.id !== exportId || typeof result._source_review_text !== 'string')
+      throw new Error('Reopen the saved original review from its retained export.');
+    const text = result._source_review_text, document = sourceReviewDocument(text);
+    sourceReview = {text,document,sourceExportId:exportId,modified:false};
+    errorText = ''; render();
+    root?.querySelector('[data-wc-review-export]')?.scrollIntoView({block:'nearest'});
+  }
+  async function previewSourceReview() {
+    if (!sourceReview || !saved) throw new Error('Open the regional report and its source review.');
+    if (!guard(epoch,workspace) || selectionLoading) throw new Error('Wait for the selected regional report to finish opening.');
+    if (!mapChoice()) throw new Error('Choose the regional report’s original watershed map source.');
+    const chosen = list(sourceReview.document.selection.huc12s);
+    const available = new Set(rows().map(row => row.huc12));
+    if (!chosen.length || chosen.some(id => !available.has(id)))
+      throw new Error('Open the original regional report containing every reviewed watershed.');
+    mapPicked=[...chosen].sort();
+    focusHuc=sourceReview.document.selection.focused_huc12 || chosen[0];
+    mapReviewFit = {identity:mapToken(),
+      huc12s:[...mapPicked]};
+    remember();render();
+    root?.querySelector('[data-wc-map-host]')?.scrollIntoView({block:'nearest'});
   }
   function sourceHtml() {
     const choices = list(catalog?.sources);
@@ -671,7 +800,9 @@ export function createWatershedContextDesk(host) {
       (savedExport.files?.['watershed-selection-brief.html']
         ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
       (savedExport.source_review ? '<p class="wc-note">This report retains the reviewed explorer selection and discussion text. ' +
-        'USGS source areas and the native report’s NRCS area fields are identified separately; the original review JSON and three exact geographic sources are included in the packet.</p>' : '') +
+        'USGS source areas and the native report’s NRCS area fields are identified separately; the original review JSON and three exact geographic sources are included in the packet.</p>' +
+        '<button type="button" data-wc-review-reopen' + (busy ? ' disabled' : '') +
+        '>Reopen this saved review for amendment</button>' : '') +
       watershedEvidenceContextHtml(savedExport.landcover_observation_context) +
       downloadsHtml(savedExport._downloads) + utilityMonitoringHtml() +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
@@ -758,7 +889,8 @@ export function createWatershedContextDesk(host) {
       '</div>';
   }
   function render() {
-    if (!root) return;
+    if (!guard(epoch, workspace)) return;
+    syncMapChoice();
     const report = saved?.report;
     const all = rows();
     root.innerHTML = '<div class="wc-desk"><header class="wc-heading"><div><p class="wc-eyebrow">UPPER SAVANNAH WATERSHED WORKSPACE</p>' +
@@ -818,9 +950,9 @@ export function createWatershedContextDesk(host) {
       '</td><td><button type="button" data-wc-huc="' + esc(row.huc12) + '" aria-label="Open ' +
       esc(row.name || row.huc12) + '">Details</button></td></tr>'
     ).join('') : '<tr><td colspan="8" class="wc-empty-cell">No watersheds match these filters.</td></tr>';
-    root.querySelector('[data-wc-export]').disabled = busy || matching.length === 0;
+    root.querySelector('[data-wc-export]').disabled = busy || Boolean(selectionLoading) || matching.length === 0;
     const focusExport = root.querySelector('[data-wc-export-rfp]');
-    if (focusExport) focusExport.disabled = busy || rfpFocusWatersheds(rows()).length === 0;
+    if (focusExport) focusExport.disabled = busy || Boolean(selectionLoading) || rfpFocusWatersheds(rows()).length === 0;
     updateMap();
   }
   function sourceReferences(references) {
@@ -873,52 +1005,79 @@ export function createWatershedContextDesk(host) {
   }
   async function loadReport(id, version = epoch) {
     const key = workspace, request = ++reportRequest;
-    const result = await read('report', {report_id:id});
-    if (!guard(version, key) || request !== reportRequest) return;
-    if (savedExport && savedExport.report_id !== result.id) clearSelection();
-    if (selectedId !== result.id) { mapPicked = null; mapRequest += 1; mapData = null; mapDataKey = ''; }
-    saved = result;
-    selectedId = result.id;
-    errorText = '';
-    if (!rows().some(row => row.huc12 === focusHuc)) {
-      const original = list(result.selection?.huc12s || result.report?.selection?.huc12s);
-      focusHuc = original.find(huc => rows().some(row => row.huc12 === huc)) || '';
+    if (!guard(version,key)) return;
+    beginSelectionRead(request, id !== selectedId || !saved);
+    try {
+      const result = await read('report', {report_id:id});
+      if (!guard(version, key) || request !== reportRequest) return;
+      if (savedExport && savedExport.report_id !== result.id) clearSelection();
+      if (selectedId !== result.id) { mapPicked = null; invalidateMap(); }
+      saved = result;
+      selectedId = result.id;
+      selectionLoading = 0;
+      errorText = '';
+      if (!rows().some(row => row.huc12 === focusHuc)) {
+        const original = list(result.selection?.huc12s || result.report?.selection?.huc12s);
+        focusHuc = original.find(huc => rows().some(row => row.huc12 === huc)) || '';
+      }
+      remember();
+      render();
+      return result;
+    } finally {
+      if (selectionLoading === request) {
+        selectionLoading = 0;
+        if (guard(version,key)) render();
+      }
     }
-    remember();
-    render();
-    return result;
   }
   async function loadExport(id, version = epoch, preserveFilters = false) {
     const key = workspace, request = ++selectionRequest, reportToken = ++reportRequest;
-    const result = await read('export', {export_id:id});
-    if (!guard(version, key) || request !== selectionRequest || reportToken !== reportRequest) return;
-    const loaded = await read('report', {report_id:result.report_id});
-    if (!guard(version, key) || request !== selectionRequest || reportToken !== reportRequest) return;
-    if (loaded.id !== result.report_id ||
-        loaded.files?.['watershed-context.json']?.sha256 !== result.report_sha256)
-      throw new Error('The saved selection belongs to different regional report bytes.');
-    const chosen = list(result.huc12s);
-    const available = new Set(list(loaded.report?.hucs).map(row => row.huc12));
-    if (!chosen.length || chosen.some(huc => typeof huc !== 'string' || !available.has(huc)))
-      throw new Error('The saved selection contains an unavailable watershed.');
-    saved = loaded;
-    selectedId = loaded.id;
-    savedExport = result;
-    selectedExportId = result.id;
-    selectedHucs = [...new Set(chosen)].sort();
-    if (!preserveFilters) { filters = emptyFilters(); focusHuc = ''; mapPicked = null; }
-    if (!available.has(focusHuc) || !selectedHucs.includes(focusHuc))
-      focusHuc = selectedHucs.length === 1 ? selectedHucs[0] : '';
-    errorText = '';
-    remember();
-    render();
+    if (!guard(version,key)) return;
+    beginSelectionRead(reportToken, id !== selectedExportId || !savedExport);
+    try {
+      const result = await read('export', {export_id:id});
+      if (!guard(version, key) || request !== selectionRequest || reportToken !== reportRequest) return;
+      const loaded = await read('report', {report_id:result.report_id});
+      if (!guard(version, key) || request !== selectionRequest || reportToken !== reportRequest) return;
+      if (loaded.id !== result.report_id ||
+          loaded.files?.['watershed-context.json']?.sha256 !== result.report_sha256)
+        throw new Error('The saved selection belongs to different regional report bytes.');
+      const chosen = list(result.huc12s);
+      const available = new Set(list(loaded.report?.hucs).map(row => row.huc12));
+      if (!chosen.length || chosen.some(huc => typeof huc !== 'string' || !available.has(huc)))
+        throw new Error('The saved selection contains an unavailable watershed.');
+      saved = loaded;
+      selectedId = loaded.id;
+      savedExport = result;
+      selectedExportId = result.id;
+      selectedHucs = [...new Set(chosen)].sort();
+      if (!preserveFilters) { filters = emptyFilters(); focusHuc = ''; mapPicked = null; }
+      if (!available.has(focusHuc) || !selectedHucs.includes(focusHuc))
+        focusHuc = selectedHucs.length === 1 ? selectedHucs[0] : '';
+      selectionLoading = 0;
+      errorText = '';
+      remember();
+      render();
+      return result;
+    } finally {
+      if (selectionLoading === reportToken) {
+        selectionLoading = 0;
+        if (guard(version,key)) render();
+      }
+    }
   }
   async function refresh() {
+    if (!guard(epoch, workspace)) return;
     const pending = receivingTasks.get(workspace);
-    const completed = list(host.getState()?.tasks).find(task =>
+    const completed = list(currentState()?.tasks).find(task =>
       task.id === pending && task.action === 'watershed.context.receive' &&
       task.state === 'complete' && task.result?.id);
-    if (completed) {
+    if (completed && selectionLoading) {
+      // Keep the completed report in the catalogue and task history, without
+      // replacing the selection the user is currently opening on a later refresh.
+      receivingTasks.delete(workspace);
+    }
+    if (completed && !selectionLoading) {
       selectedId = completed.result.id;
       clearSelection();
       focusHuc = '';
@@ -928,14 +1087,20 @@ export function createWatershedContextDesk(host) {
       remember();
     }
     const pendingExport = exportingTasks.get(workspace);
-    const completedExport = list(host.getState()?.tasks).find(task =>
+    let completedExport = list(currentState()?.tasks).find(task =>
       task.id === pendingExport && task.action === 'watershed.context.export' &&
       task.state === 'complete' && task.result?.id);
+    if (completedExport && selectionLoading) {
+      exportingTasks.delete(workspace);
+      completedExport = null;
+      remember();
+    }
     const version = epoch, key = workspace, request = ++catalogRequest, selectionToken = selectionRequest;
     try {
       const result = await read('catalog');
       if (!guard(version, key) || request !== catalogRequest) return;
       catalog = result;
+      if (selectionLoading) return;
       if (selectionToken !== selectionRequest) { render(); return; }
       if (completedExport) {
         await loadExport(completedExport.result.id, version);
@@ -959,26 +1124,27 @@ export function createWatershedContextDesk(host) {
   }
   async function receive(file) {
     if (!file || busy) return;
-    const key = workspace;
-    if (!key || currentWorkspace() !== key)
-      throw new Error('Choose the project receiving this regional run.');
+    const key = workspace, version = epoch;
+    if (!guard(version,key)) throw new Error('Choose the project receiving this regional run.');
     busy = true;
-    if (root) render();
+    render();
     try {
       const uploaded = await host.uploadFile(file);
-      if (currentWorkspace() !== key)
-        throw new Error('The selected project changed. Choose the receiving project and archive again.');
+      if (!guard(version,key))
+        throw new Error('The selected project or desk changed. Choose the receiving project and archive again.');
       const task = await host.submitAction('watershed.context.receive', {upload_id:uploaded.id});
       receivingTasks.set(key, task.id);
+      if (!guard(version,key)) return;
       await host.refresh?.({force:true});
-      if (root && workspace === key) await refresh();
+      if (guard(version,key)) await refresh();
     } finally {
-      busy = false;
-      if (root) render();
+      if (guard(version,key)) { busy = false; render(); }
     }
   }
   async function build() {
     if (busy) return;
+    const key = workspace, version = epoch;
+    if (!guard(version,key)) throw new Error('Choose the project for this regional source edition.');
     const source = selectedSource();
     if (!source) throw new Error('Choose a registered regional source edition.');
     const selection = {...source};
@@ -994,19 +1160,30 @@ export function createWatershedContextDesk(host) {
     if (button) button.disabled = true;
     try {
       await host.submitAction('watershed.context.analyze', {selection, title:'Regional watershed context'});
+      if (!guard(version,key)) return;
       await host.refresh?.({force:true});
-      if (root) await refresh();
-    } finally { busy = false; if (root) { const node = root.querySelector('[data-wc-build]'); if (node) node.disabled = false; renderRows(); } }
+      if (guard(version,key)) await refresh();
+    } finally {
+      if (guard(version,key)) {
+        busy = false;
+        const node = root.querySelector('[data-wc-build]'); if (node) node.disabled = false;
+        renderRows();
+      }
+    }
   }
-  async function exportRows(huc12s, utilityKey = null, sourceReviewText = null) {
+  async function exportRows(huc12s, utilityKey = null, sourceReviewText = null, reviewParentId = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
+    if (sourceReviewText !== null) sourceReviewDocument(sourceReviewText);
     const key = workspace, version = epoch, reportId = saved.id;
+    if (!guard(version,key)) throw new Error('Return to the selected regional project before exporting.');
+    if (selectionLoading) throw new Error('Wait for the selected regional report to finish opening.');
     const choice = evidenceChoice(), include = evidenceIncluded();
     const payload = {report_id:reportId, huc12s:[...huc12s], include_evidence:include,
       ...(include ? {evidence_profile_sha256:choice.sha256} : {}),
       ...(utilityKey ? {utility_key:utilityKey} : {}),
       ...(sourceReviewText !== null ? {source_review_text:sourceReviewText} : {}),
+      ...(reviewParentId ? {source_review_parent_export_id:reviewParentId} : {}),
       include_map:mapIncluded(),
       ...(mapIncluded() ? {map_source_sha256:mapChoice().sha256,
         ...(savedExport?.watershed_map_context ? {map_export_id:savedExport.id} : {})} : {})};
@@ -1016,19 +1193,27 @@ export function createWatershedContextDesk(host) {
       if (currentWorkspace() !== key) throw new Error('Return to the selected regional project before exporting.');
       const task = await host.submitAction('watershed.context.export', payload);
       exportingTasks.set(key, task.id);
-      if (workspace === key) remember();
+      if (!guard(version,key)) return;
+      remember();
       await host.refresh?.({force:true});
       if (guard(version, key)) await refresh();
-    } finally { busy = false; if (guard(version, key)) render(); }
+    } finally { if (guard(version, key)) { busy = false; render(); } }
   }
   async function click(event) {
     const button = event.target.closest('button');
     if (!button || !root?.contains(button)) return;
+    const key = workspace, version = epoch;
+    if (!guard(version,key)) return;
     try {
       if (button.hasAttribute('data-wc-map-table')) {mapPicked=null;remember();updateMap();return;}
       if (button.hasAttribute('data-wc-map-clear')) {mapPicked=[];remember();updateMap();return;}
       if (button.hasAttribute('data-wc-map-fit')) {mapInstance?.fit(feature=>mapScope.contributing.has(String(feature.properties?.huc12??feature.id)));return;}
-      if (button.hasAttribute('data-wc-map-export')) return await exportRows([...mapScope.selected].sort());
+      if (button.hasAttribute('data-wc-map-export')) {
+        if (!mapReady()) throw new Error('Wait for this selection’s geographic source to finish opening.');
+        return await exportRows([...mapScope.selected].sort());
+      }
+      if (button.hasAttribute('data-wc-review-reopen')) return await reopenSavedReview();
+      if (button.hasAttribute('data-wc-review-map')) return await previewSourceReview();
       if (button.hasAttribute('data-wc-review-choose')) {
         if (!busy) root.querySelector('[name="wc-source-review"]')?.click();
         return;
@@ -1038,11 +1223,13 @@ export function createWatershedContextDesk(host) {
       }
       if (button.hasAttribute('data-wc-review-export')) {
         if (!sourceReview) throw new Error('Choose the source review JSON.');
-        return await exportRows(sourceReview.document.selection.huc12s, null, sourceReview.text);
+        return await exportRows(sourceReview.document.selection.huc12s, null, sourceReview.text,
+          sourceReview.modified ? sourceReview.sourceExportId : null);
       }
       if (button.hasAttribute('data-wc-monitoring-prepare')) {
         if (busy) return;
         const key = workspace, sourceExport = savedExport?.id, version = epoch;
+        if (selectionLoading) throw new Error('Wait for the selected utility report to finish opening.');
         if (!sourceExport || !savedExport?.utility_selection)
           throw new Error('Open a saved original utility selection.');
         busy = true; render();
@@ -1050,9 +1237,10 @@ export function createWatershedContextDesk(host) {
           if (currentWorkspace() !== key) throw new Error('Return to the selected utility project.');
           await host.submitAction('watershed.context.monitoring', {
             export_id:sourceExport, include_microbial:includeMicrobial});
+          if (!guard(version,key)) return;
           await host.refresh?.({force:true});
           if (guard(version, key)) await refresh();
-        } finally { busy = false; if (guard(version, key)) render(); }
+        } finally { if (guard(version, key)) { busy = false; render(); } }
         return;
       }
       if (button.dataset.wcMonitoringOpen) {
@@ -1121,22 +1309,34 @@ export function createWatershedContextDesk(host) {
         root.querySelector('[data-wc-detail]')?.focus({preventScroll:true});
         root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest', behavior:'smooth'});
       }
-    } catch (error) { fail(error); }
+    } catch (error) { if (guard(version,key)) fail(error); }
   }
   function input(event) {
+    const workspaceKey = workspace, version = epoch;
+    if (!guard(version,workspaceKey)) return;
+    const onError = error => { if (guard(version,workspaceKey)) fail(error); };
     const name = event.target.name;
     if (!name?.startsWith('wc-')) return;
     const key = name.slice(3);
+    if (key.startsWith('review-field-')) {
+      if (!sourceReview || busy) return;
+      const field = key.slice('review-field-'.length);
+      if (!discussionFields.some(row => row[0] === field)) return;
+      sourceReview.document.discussion[field] = event.target.value;
+      sourceReview.text = JSON.stringify(sourceReview.document,null,2) + '\n';
+      sourceReview.modified = true;
+      return;
+    }
     if (key === 'source-review') {
       const file = event.target.files?.[0];
       event.target.value = '';
-      receiveSourceReview(file).catch(fail);
+      receiveSourceReview(file).catch(onError);
       return;
     }
     if (key === 'completed-run') {
       const file = event.target.files?.[0];
       event.target.value = '';
-      receive(file).catch(fail);
+      receive(file).catch(onError);
       return;
     }
     if (key === 'include-evidence') { includeEvidence = event.target.checked; remember(); return; }
@@ -1147,7 +1347,7 @@ export function createWatershedContextDesk(host) {
     if (key === 'network') { networkChoice = event.target.value; return; }
     if (key in filters) { filters[key] = event.target.value; remember(); renderRows(); }
     else if (key === 'selection') {
-      if (event.target.value) loadExport(event.target.value).catch(fail);
+      if (event.target.value) loadExport(event.target.value).catch(onError);
       else {
         selectionRequest += 1;
         reportRequest += 1;
@@ -1161,12 +1361,12 @@ export function createWatershedContextDesk(host) {
       clearSelection();
       focusHuc = '';
       filters = emptyFilters();
-      loadReport(event.target.value).catch(fail);
+      loadReport(event.target.value).catch(onError);
     }
   }
   async function mount(node, state = host.getState()) {
     detach();
-    resetForWorkspace(state?.workspace_key ?? currentWorkspace());
+    resetForWorkspace(currentWorkspace());
     root = node;
     listeners = new AbortController();
     root.addEventListener('click', click, {signal:listeners.signal});
@@ -1176,6 +1376,7 @@ export function createWatershedContextDesk(host) {
     await refresh();
   }
   function update(state = host.getState()) {
+    if (state?.workspace_key !== currentWorkspace()) return;
     if (state?.workspace_key !== workspace) {
       if (root) detach();
       resetForWorkspace(state?.workspace_key);
@@ -1194,15 +1395,21 @@ export function createWatershedContextDesk(host) {
     epoch += 1;
     listeners?.abort();
     listeners = null;
-    mapRequest += 1; mapLoadingKey = ''; destroyMap();
+    busy = false; selectionLoading = 0;
+    mapRequest += 1; mapLoadingKey = ''; mapReviewFit = null; destroyMap();
     root = null;
   }
   async function openWatershed(huc12, reportId = selectedId) {
+    const key = currentWorkspace();
+    if (!key) throw new Error('Choose the regional project before opening a watershed.');
     await host.navigate?.('watershed-context');
+    const version = epoch;
+    if (!guard(version,key)) return;
     if (reportId && reportId !== selectedId) {
       selectionRequest += 1;
       clearSelection();
-      await loadReport(reportId);
+      const loaded = await loadReport(reportId, version);
+      if (!loaded || !guard(version,key)) return;
     }
     focusHuc = String(huc12);
     if (selectedExportId && !selectedHucs.includes(focusHuc)) {
@@ -1214,9 +1421,10 @@ export function createWatershedContextDesk(host) {
     render();
   }
   async function openSelection(exportId) {
-    if (!root) throw new Error('Open Regional watersheds before selecting its retained export.');
-    await loadExport(exportId);
-    if (root) root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest'});
+    const key = workspace, version = epoch;
+    if (!guard(version,key)) throw new Error('Open Regional watersheds before selecting its retained export.');
+    const result = await loadExport(exportId, version);
+    if (result && guard(version,key)) root.querySelector('[data-wc-detail]')?.scrollIntoView({block:'nearest'});
   }
   return {mount, update, detach, refresh, openWatershed, openSelection};
 }

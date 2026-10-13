@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path, PurePosixPath
 
-from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, now, read_json
+from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, now, read_json, verify_file
 from source_tools.watershed_source_entry import capture_source_entry, retain_source_entry
 from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
@@ -278,6 +278,26 @@ class WatershedContextActions:
             raise ValueError("This saved selection does not contain the original polygon map")
         return map_model.load_retained(export_directory, context, source_sha256), context
 
+    def _saved_source_review(self, ws, export_id):
+        export_id = identifier(export_id)
+        directory = ws.root / "watershed-context-exports" / export_id
+        metadata_body = (directory / "export.json").read_bytes()
+        result = json.loads(metadata_body)
+        if (result.get("id") != export_id
+                or result.get("schema") != "upstate.watershed-context-export/v1"
+                or not isinstance(result.get("source_review"), dict)):
+            raise ValueError("Choose a saved watershed selection containing an original source review.")
+        _, parent, _ = self._report(ws, {"report_id": result["report_id"]})
+        if parent["files"]["watershed-context.json"]["sha256"] != result["report_sha256"]:
+            raise ValueError("The saved review belongs to different original regional report bytes.")
+        descriptor = result["files"]["source-explorer-review.json"]
+        path = verify_file(directory, descriptor)
+        body = path.read_bytes()
+        if (len(body) > 256 * 1024 or _hash(body) != result.get("source_review_sha256")
+                or _hash(body) != result["source_review"]["original_file_sha256"]):
+            raise ValueError("The saved source review differs from its retained byte identity.")
+        return directory, result, body.decode("utf-8"), metadata_body
+
     def _source_explorer(self, workspace):
         """Link the fixed installed source edition through its registered file route."""
         application = Path(__file__).resolve().parents[1]
@@ -353,7 +373,11 @@ class WatershedContextActions:
             _, parent, _ = self._report(ws, {"report_id": result["report_id"]})
             if parent["files"]["watershed-context.json"]["sha256"] != result["report_sha256"]:
                 raise ValueError("The saved selection belongs to different parent report bytes.")
-            return {**result, "_downloads": self._downloads(
+            source_review = {}
+            if value.get("include_source_review"):
+                _, _, text, _ = self._saved_source_review(ws, key)
+                source_review = {"_source_review_text": text}
+            return {**result, **source_review, "_downloads": self._downloads(
                 workspace, directory, result, "export.json", "Watershed selection and source manifest",
             )}
         directory, record, report = self._report(ws, value)
@@ -708,6 +732,33 @@ class WatershedContextActions:
                 raise ValueError("The requested utility differs from the reviewed selection")
             if reviewed_utility is not None:
                 value["utility_key"] = reviewed_utility["key"]
+        review_parent, review_parent_files = None, {}
+        if value.get("source_review_parent_export_id") is not None:
+            if review is None:
+                raise ValueError("Supply the amended original review with its saved predecessor.")
+            parent_directory, parent_export, parent_text, parent_metadata = self._saved_source_review(
+                ws, value["source_review_parent_export_id"])
+            if (parent_export["report_id"] != record["id"]
+                    or parent_export["report_sha256"] != record["files"]["watershed-context.json"]["sha256"]):
+                raise ValueError("Reopen the predecessor's original regional report before amending its review.")
+            if json.loads(parent_text)["sources"] != json.loads(review_text)["sources"]:
+                raise ValueError("The amendment and its predecessor must retain the same original geographic source text.")
+            if parent_text != review_text:
+                parent_key = parent_export["id"]
+                review_parent = {
+                    "export_id": parent_key,
+                    "source_review_sha256": parent_export["source_review_sha256"],
+                    "report_id": parent_export["report_id"],
+                    "report_sha256": parent_export["report_sha256"],
+                    "meaning": "A new review edition derived from this retained original source review.",
+                }
+                for name, descriptor in parent_export["files"].items():
+                    if name.startswith("source-review-history/"):
+                        original = verify_file(parent_directory, descriptor)
+                        review_parent_files[name] = original.read_bytes()
+                review_parent_files["source-review-history/" + parent_key + "/source-explorer-review.json"] = parent_text.encode("utf-8")
+                review_parent_files["source-review-history/" + parent_key + "/export.json"] = parent_metadata
+                review["previous_review"] = review_parent
         utility, utility_body = None, None
         if value.get("utility_key"):
             choices, profile_bodies = self._utility_choices(report)
@@ -769,6 +820,12 @@ class WatershedContextActions:
         if review is not None:
             identity["source_review_sha256"] = review["original_file_sha256"]
             identity["source_review_version"] = watershed_source_review.VERSION
+            if review_parent is not None:
+                identity["source_review_parent"] = review_parent
+                identity["source_review_history"] = {
+                    name: {"bytes": len(body), "sha256": _hash(body)}
+                    for name, body in sorted(review_parent_files.items())
+                }
         if utility is not None:
             identity["utility_selection_sha256"] = utility["key"]
         if observed_context is not None:
@@ -837,6 +894,10 @@ class WatershedContextActions:
                 result["source_review"] = review
                 result["files"].update(watershed_source_review.retain(
                     target, review_text, review, review_bodies))
+                for name, body in sorted(review_parent_files.items()):
+                    destination = target / _source_member(name)
+                    atomic_bytes(destination, body, immutable=True)
+                    result["files"][name] = describe_file(target, destination)
             result["files"].update(brief_files)
             result["files"].update(briefing_model.write(target, selection))
             result["files"].update(observed_files)

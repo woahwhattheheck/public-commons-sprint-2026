@@ -38,6 +38,7 @@ The left navigation covers the complete workflow:
 | Workspace | Inspect retained sources, review workload, installed schemas and profiles. |
 | Source documents | Import complete original XML bytes and see each source's current revision. |
 | Inspect and correct | Browse entities, exact fields, local references, time series, validation, and the complete XML. Stage an atomic group of corrections or replace a complete document. |
+| Colleague corrections | Compare a complete colleague return with the original and current project, choose native corrections and returned reviews, and save one complete corrected edition. |
 | Compare revisions | Compare full field values and reference changes between two retained revisions of one source. |
 | Saved editions | Save and reopen a complete workspace selection with its source revisions and related work. |
 | Review work | Assign and maintain reviews tied to one source revision and, optionally, one entity. |
@@ -180,6 +181,10 @@ Choose the intended kind, select an edition where applicable, add a note, and pr
 To receive a case, select its complete exported workspace or application package. Review the original file's byte count and hash, add a receiving note, and choose **Receive complete case**. The native workspace receives the whole case in one transaction with distinct local identities and returns the received source, edition, review, and link counts together with the original-to-received source identity map and complete package SHA256.
 
 Large receiving packages use the same complete original request recovery as small XML imports. Their full bytes are retained in the browser's transactional request store before transmission.
+
+## Return a colleague's complete corrections
+
+Use **Colleague corrections** to send a complete editable project, open the colleague's full returned workspace/application ZIP, compare the original sent/current/returned revisions, and select the accepted native values and returned reviews. The original workspace validates and applies all selected sources in one retained mutation, keeps the complete returned project, and saves an edition. The complete operating, recovery and client workflow is in [CORRECTIONS.md](CORRECTIONS.md).
 
 ## Recover the original request
 
@@ -341,3 +346,36 @@ Use the same application, operation directory and complete input JSON after an i
 A native analysis whose retained metadata permits runtime recovery can continue after the actual reported condition is repaired. Add `--resume-analysis REPAIR_LABEL` to record that continuation against the same analysis ID and immutable original inputs. A deliberate application correction uses `--adopt-source`; the driver retains both complete source generations in the same case.
 
 The final case contains the original input files, source cohorts, all three native workspaces, full request and response files, browser recovery records, source models, projection, consumer result, observed weather, native outputs and complete exported application/workspaces. Each captured archive includes a complete member manifest and is reopened to verify every member's bytes and SHA256. The original operation's `-latest-archive.json` pointer identifies the complete retained archive beside the case directory. Preserve that archive with the operating deliverables.
+
+
+## Complete offline recipient review and native acceptance
+
+Use [AUDIT_RECIPIENT_REVIEW.md](AUDIT_RECIPIENT_REVIEW.md) for the following
+recipient course on this original Audit workspace. The complete application
+includes the standalone recipient editor, source-bound manuscript, all authored
+editions and the original-byte return packer. A recipient can inspect retained
+source revisions, save and reopen unfinished review fields, then return the
+whole original archive and complete manuscript.
+
+The author prepares that standalone delivery from an existing native
+workspace/application export:
+
+    python3 audit_recipient_review.py prepare --archive /absolute/original-application.zip --out /absolute/recipient
+
+The recipient opens Audit_Recipient_Review.html and retains every accompanying
+file. Native acceptance is explicit: run the helper's preview command against
+the same existing author workspace, inspect the full review proposals, then
+apply using that saved preview and the same original acceptance journal. The
+unchanged native review.save operation remains authoritative. Existing review
+head conflicts remain visible; complete accepted requests replay without a
+second review.
+
+AUDIT_RECIPIENT_RECEIVING.py operates the complete following course with an
+explicit review plan, actual original workspace/export and installed browser.
+It retains the source, complete recipient files and exact native requests,
+exports the full application, independently receives/reopens it through the
+original engine, and saves the resulting project. Current commissioning and
+native analysis stay with their original owner. Follow the full outgoing
+product/all-attachment rule above and in the recipient guide: producing peers
+must personally LOOK at actual renders and use the delivered attachments.
+Source publication is distinct from native and rendered completion.

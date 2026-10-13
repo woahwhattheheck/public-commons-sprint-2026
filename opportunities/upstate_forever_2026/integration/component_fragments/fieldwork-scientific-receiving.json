@@ -161,12 +161,15 @@
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
+        "docs/PARAMETER_SCIENTIFIC_REPORTS.md",
         "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md",
         "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
         "install_native_supervision.py",
         "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
+        "model/parameter_report_source.py",
         "model/parameter_result_query.py",
+        "model/parameter_scientific_figures.py",
         "model/parameter_views.py",
         "model/record_catalog.py",
         "operator/NATIVE_JOBS.md",
@@ -175,7 +178,9 @@
         "source_tools/receive_parameter_studies.py"
       ],
       "requires": [
-        "project-transfer"
+        "project-transfer",
+        "ensembles",
+        "scientific-report-editions"
       ]
     },
     "project-transfer": {
@@ -272,6 +277,7 @@
         "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PARAMETER_RESULT_QUERIES.md",
+        "docs/PARAMETER_SCIENTIFIC_REPORTS.md",
         "docs/PROGRAMME_CASE_CONSOLE.md",
         "docs/PROGRAMME_LARGE_DESIGNS.md",
         "docs/UTILITY_MONITORING_COMPARISONS.md",
@@ -279,7 +285,9 @@
         "install_native_supervision.py",
         "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
+        "model/parameter_report_source.py",
         "model/parameter_result_query.py",
+        "model/parameter_scientific_figures.py",
         "model/parameter_views.py",
         "model/programme_case_status.py",
         "model/programme_views.py",
@@ -345,6 +353,8 @@
     "utility_source_snapshot": "027d9fe7295609f10c33a125f21681a96579dfa0",
     "parameter_case_browsing": "6d064f826c624363c4268576be945ee434ae8724",
     "parameter_installed_result_console": "c0c76a776ab80b5a52f515fdccebc0f98c7611db",
-    "utility_source_review": "85441320d77b99465d7b4f82947d01bbc0180206"
+    "utility_source_review": "85441320d77b99465d7b4f82947d01bbc0180206",
+    "parameter_scientific_reports": "97fdd7ab82676b8ca1c52bd311186c541eb94d44",
+    "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f"
   }
 }

@@ -16,3 +16,11 @@
 .study-transfer .st-received-landcover .st-actions{display:none}
 .study-transfer .st-received-landcover .st-table-scroll{max-height:none;overflow:visible}
 }
+
+.st-received-landcover .st-local-copy{border-top:1px solid #c8c8c8;margin-top:1rem;padding-top:1rem;min-width:0}
+.st-received-landcover .st-local-copy label{display:grid;gap:.35rem;min-width:0;max-width:100%}
+.st-received-landcover .st-local-copy input{box-sizing:border-box;width:100%;max-width:42rem;min-width:0;padding:.5rem;border:1px solid #777;background:#fff;color:#222}
+.st-received-landcover .st-local-copies ul{list-style:none;padding:0}
+.st-received-landcover .st-local-copies li{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;padding:.5rem 0;border-bottom:1px solid #ddd}
+.st-received-landcover .st-local-copies li>span{flex:1 1 16rem;min-width:0;overflow-wrap:anywhere}
+.st-received-landcover .st-local-copies li small{display:block}

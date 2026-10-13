@@ -52,7 +52,7 @@ let teamPerson=null,connectionEpoch=0;
 let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'overview',poll=null,refreshing=false,refreshQueued=false;
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
-let formRevision=0,navigationRevision=0,workspaceRevision=0;
+let formRevision=0,navigationRevision=0,workspaceRevision=0,interactionRevision=0;
 let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
@@ -117,7 +117,7 @@ async function openSavedScientificReport(selection){
 async function openSavedCustomerReview(selection){
  return openRetainedBuiltIn(selection,'customer-reviews',value=>customerReviews.openForStudy(value));
 }
-const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
+const community=attachCommunity({getState:()=>state,getOpeningContext:()=>({workspaceRevision,connectionEpoch,formRevision,navigationRevision,interactionRevision,detail_kind:detailContext?.kind,detail_id:detailContext?.id}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,openSavedScientificReport,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport});
 const deliveryInspection=attachDeliveryInspection({getState:()=>state,api,endpoint,openItem,toast,
@@ -632,7 +632,21 @@ function bindCollection(name,targets,chosenValues={}){
  const update=()=>{const collection=node.value;for(const [target,kind] of targets){const el=form.elements.namedItem(target);if(el)setOptions(el,sourceRows(collection,kind),chosenValues[target]??el.value);}chosenValues={};};
  node.addEventListener('change',update);update();
 }
+function renderOriginalSourcePreview(preview){
+ $('#source-preview').innerHTML='<h3 class="subheading">'+esc(preview.title)+'</h3><p class="note">'+preview.entries.length+' original sources · manifest <span class="mono">'+esc(short(preview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],preview.entries.map(x=>'<tr><td>'+esc(sourceDisplayTitle(x))+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
+ $('#form-submit').textContent='Import this source edition';
+ $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
+}
 function sourceForm(options={}){
+ const included=options.includedArchive||null;
+ if(included&&(included.workspace_key!==workspace||!included.archive||
+  !/^[0-9a-f]{64}$/.test(included.archive_id||'')||
+  !/^[0-9a-f]{64}$/.test(included.archive.sha256||'')||
+  !Number.isSafeInteger(included.archive.bytes)||included.archive.bytes<0||
+  included.preview?.kind!=='archive'||!/^[0-9a-f]{64}$/.test(included.preview.id||'')||
+  included.preview.archive_sha256!==included.archive.sha256||
+  included.preview.upload_id!==included.archive.id||!Array.isArray(included.preview.entries)))
+  throw Error('Preview the included source archive again in the current Workspace.');
  sourcePreview=null;
  const registered=[...(state.registered_sources||[])];
  if(options.registeredManifest&&!registered.some(row=>row.id===options.registeredManifest.id))
@@ -640,9 +654,11 @@ function sourceForm(options={}){
  if(options.registeredId&&!registered.some(row=>row.id===options.registeredId))
   throw Error('Refresh and choose an available registered source edition.');
  openForm('Import original source data','Preview the original metadata and file selection, then retain the edition in the native workspace.',
- '<div class="form-grid">'+field('Source selection',select('source_mode',[...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
+ '<div class="form-grid">'+field('Source selection',select('source_mode',[...(included?[['included','Included source archive']]:[]),...(registered.length?[['registered','Registered source manifest']]:[]),['archive','Source archive (ZIP)'],['file','Single original table or file']],included?'included':options.mode==='archive'?'archive':options.mode==='registered'&&registered.length?'registered':registered.length?'registered':'archive'))+
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
+  if(included&&val('source_mode')==='included'&&included.workspace_key!==workspace)
+   throw Error('Preview the included archive again in the current Workspace.');
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
   const context=formContext,generation=context.sourcePreviewGeneration,selectedWorkspace=workspace;
   const currentDraft=()=>{if(formContext!==context||workspace!==selectedWorkspace||context.sourcePreviewGeneration!==generation)throw Error('The source selection changed while it was being checked. Preview the current selection again.');};
@@ -661,14 +677,20 @@ function sourceForm(options={}){
   }
   const preview=await api('/api/source-preview',{method:'POST',body:data});
   currentDraft();sourcePreview=preview;
-  $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(sourceDisplayTitle(x))+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
-  $('#form-submit').textContent='Import this source edition';
-  $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
+  renderOriginalSourcePreview(sourcePreview);
  },()=>{
   const renderSource=()=>{
    formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
+   if(mode==='included'){
+    if(!included||included.workspace_key!==workspace)throw Error('Preview the included archive in the current Workspace.');
+    $('#source-selection-body').innerHTML='<h3 class="subheading">'+esc(included.archive.filename)+'</h3>'+
+     '<p class="note">Included source archive · '+included.archive.bytes.toLocaleString()+' bytes. The original ZIP has been retained for this preview; no source edition has been imported yet.</p>'+
+     '<dl><dt>Archive SHA256</dt><dd class="mono">'+esc(included.archive.sha256)+'</dd>'+
+     '<dt>Original import manifest</dt><dd class="mono">'+esc(included.preview.manifest_member)+'</dd></dl>';
+    sourcePreview=included.preview;renderOriginalSourcePreview(sourcePreview);return;
+   }
    $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources']),options.registeredId||registered[0]?.id),'',true):
     '<div class="form-grid">'+field(mode==='archive'?'Original source ZIP':'Original source file',input('source_file','file','','required '+(mode==='archive'?'accept=".zip"':'')),'Files are uploaded as their original bytes.',true)+
     (mode==='archive'?field('Manifest entry, when the ZIP has several manifests',input('manifest_member','text',options.manifestMember||''),'Optional. Use the exact original relative path.',true):
@@ -813,11 +835,36 @@ async function gridForm(id){
   return submitAction('grid.prepare',selection);
  },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();bindGridResolution(original);});
 }
+function scenarioMaskSources(collection){
+ return sourceRows(collection,'vector|raster').map(row=>[row.id,
+  (row.id==='GURA_NLCD'?sourceDisplayTitle(row):row.title||row.name||short(row.id))+
+  (row.kind==='raster'?' · Binary raster mask':' · Polygon mask')]);
+}
+function scenarioMaskSource(collection,id){
+ return sourceRows(collection,'vector|raster').find(row=>row.id===id);
+}
+function updatePatchMask(node,collection,enabled=true){
+ const source=scenarioMaskSource(collection,val('mask_source',node)),raster=source?.kind==='raster';
+ for(const section of $$('[data-patch-vector]',node)){
+  section.hidden=raster;
+  for(const control of $$('input,select,textarea,button',section))control.disabled=!enabled||raster;
+ }
+ const note=$('[data-patch-mask-note]',node);
+ note.textContent=raster?
+  'Binary raster: band 1 must match the selected native grid exactly and contain only valid 0/1 values. Cells equal to 1 select the change; zero and mask NoData are excluded. Native preparation checks the original raster.':
+  source?'Polygon mask: cells are selected by the original pixel-centre rule. Optional layer and exact field selections apply to this vector source.':
+  'Choose an original polygon source or an aligned binary raster mask.';
+}
 function patchRow(collection,row={}){
+ const present=value=>value!==null&&typeof value==='object'?Object.keys(value).length>0:Boolean(value);
+ if(scenarioMaskSource(collection,row.mask_source_id)?.kind==='raster'&&(present(row.layer)||present(row.where)))
+  throw Error('This saved raster-mask patch contains a layer or attribute selection. Raster masks use band 1; correct the original scenario selection before revising it.');
  return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
- field('Original polygon mask',select('mask_source',sourceRows(collection,'vector'),row.mask_source_id))+field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a source with one layer.')+
+ field('Original polygon or binary raster mask',select('mask_source',scenarioMaskSources(collection),row.mask_source_id))+
+ '<p class="note full" data-patch-mask-note role="status"></p>'+
+ field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a vector source with one layer.').replace('<label','<label data-patch-vector')+
  field('Original land-cover codes',input('from_codes','text',(row.from_codes||[]).join(', '),'required'),'Separate the exact integer codes with commas.')+field('Replacement land-cover code',input('to_code','number',row.to_code??'','required step="1"'))+
- field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where)+'</div></fieldset>';
+ field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where).replace('<fieldset','<fieldset data-patch-vector')+'</div></fieldset>';
 }
 async function scenarioForm(id){
  requireSources();const current=formOpening('scenario.save');
@@ -826,7 +873,7 @@ async function scenarioForm(id){
  catch(error){if(current())throw error;return;}
  if(!current())return;
  const collection=collectionDefault(row);
- openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define explicit changes using original polygon masks and land-cover codes. The model records the scenario separately from the source data.',
+ openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define ordered changes using original polygon or aligned binary raster masks and land-cover codes. The model records the scenario separately from the source data.',
  '<div class="form-grid">'+field('Scenario title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Scenario type',select('kind',[['baseline','Unchanged source baseline'],['landcover','Explicit land-cover changes']],row?.kind||'baseline'))+
  field('Original source edition',select('collection',sources(),collection))+field('Scenario reason',area('reason',row?.reason||'','required'),'',true)+
  '<div class="full" id="scenario-patches"><div id="patch-list">'+(row?.patches||[]).map(x=>patchRow(collection,x)).join('')+'</div>'+button('patch-add','Add land-cover change','','small')+'</div></div>',
@@ -837,14 +884,29 @@ async function scenarioForm(id){
    if(!codes.length||codes.some(x=>!x||!Number.isSafeInteger(Number(x))))throw Error('Enter the exact original integer land-cover codes.');
    const to=num('to_code',node);if(!Number.isSafeInteger(to))throw Error('The replacement land-cover code must be an integer.');
    const patch={mask_source_id:val('mask_source',node),from_codes:codes.map(Number),to_code:to,reason:val('patch_reason',node)};
-   const layer=val('mask_layer',node).trim(),where=readFilter('patch',node);if(layer)patch.layer=layer;if(where)patch.where=where;patches.push(patch);
+   const source=scenarioMaskSource(val('collection'),patch.mask_source_id);
+   if(!source)throw Error('Choose an original polygon or binary raster mask from this source edition.');
+   if(source.kind==='vector'){
+    const layer=val('mask_layer',node).trim(),where=readFilter('patch',node);if(layer)patch.layer=layer;if(where)patch.where=where;
+   }
+   patches.push(patch);
   }
   if(kind==='landcover'&&!patches.length)throw Error('Add at least one actual land-cover change.');
   return submitAction('scenario.save',{title:val('title'),kind,source_collection_id:val('collection'),reason:val('reason'),patches});
  },()=>{
-  const update=()=>{const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;for(const el of $$('input,select,textarea', $('#scenario-patches')))el.disabled=!visible;};
+  const update=()=>{
+   const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;
+   for(const el of $$('input,select,textarea,button', $('#scenario-patches')))el.disabled=!visible;
+   for(const node of $$('[data-patch]',form))updatePatchMask(node,val('collection'),visible);
+  };
   form.elements.namedItem('kind').addEventListener('change',update);
-  form.elements.namedItem('collection').addEventListener('change',()=>{for(const el of $$('[name="mask_source"]',form))setOptions(el,sourceRows(val('collection'),'vector'));});
+  form.elements.namedItem('collection').addEventListener('change',()=>{
+   for(const el of $$('[name="mask_source"]',form))setOptions(el,scenarioMaskSources(val('collection')));
+   update();
+  });
+  $('#patch-list').addEventListener('change',event=>{
+   if(event.target.name==='mask_source')updatePatchMask(event.target.closest('[data-patch]'),val('collection'),val('kind')==='landcover');
+  });
   update();
  });
 }
@@ -1135,9 +1197,11 @@ function retainedDeliveryCohort(selection,baseline,alternatives){
  return [...original];
 }
 function formOpening(action){
- const request=++formOpeningRequest,ticket=admissionContext(action,null);
+ const request=++formOpeningRequest,ticket=admissionContext(action,null),interaction=interactionRevision;
  const context=formContext,formOpen=formDialog.open,detailOpen=detailDialog.open;
- return ()=>request===formOpeningRequest&&currentAdmission(ticket)&&
+ const detailKind=detailContext?.kind,detailId=detailContext?.id;
+ return ()=>request===formOpeningRequest&&currentAdmission(ticket,{details:false})&&interactionRevision===interaction&&
+  detailContext?.kind===detailKind&&detailContext?.id===detailId&&
   formContext===context&&formDialog.open===formOpen&&detailDialog.open===detailOpen;
 }
 async function deliveryForm(id,initialSelection){
@@ -1286,6 +1350,7 @@ async function selectWorkspace(id){
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
 async function dispatch(button){
+ interactionRevision++;
  const action=button.dataset.action,id=button.dataset.id;
  if(action?.startsWith('native-job-'))return nativeJobs.dispatch(button);
  if(await extensions.dispatch(button))return;
@@ -1359,7 +1424,7 @@ async function dispatch(button){
  if(action==='runtime')return runtimeDialog();
  if(action==='filter-add'){button.closest('[data-filter]').querySelector('[data-filter-rows]').insertAdjacentHTML('beforeend',filterRow());return;}
  if(action==='parameter-add'){$('#parameter-rows').insertAdjacentHTML('beforeend',parameterRow());return;}
- if(action==='patch-add'){$('#patch-list').insertAdjacentHTML('beforeend',patchRow(val('collection')));return;}
+ if(action==='patch-add'){const list=$('#patch-list');list.insertAdjacentHTML('beforeend',patchRow(val('collection')));updatePatchMask(list.lastElementChild,val('collection'),val('kind')==='landcover');return;}
  if(action==='row-remove'){button.closest('[data-filter-row],[data-parameter-row],[data-patch]').remove();return;}
  if(action==='inspect-form-vector')return inspectFormVector(button);
 }

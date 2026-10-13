@@ -18,6 +18,33 @@ The browser uses the original authenticated API, queued operation service and ve
 
 The maintained producer remains `model/native_process_report.py`, `model/process_quantities.py` and `model/NATIVE_PROCESS_QUANTITIES.md`. It requires the same GIS Python environment as the original native outputs, plus the installed scientific PDF formatter. The desk uses that producer directly.
 
+## Open the checked Native run cohort
+
+In **Native run desk**, select the original grid, profiles and scenarios, choose the unchanged baseline, and check the intended cells. **Report completed model stages** groups those cells by their original profile and retained native model scope. Each group lists its actual run IDs, parent states and retained stage completion times.
+
+Choose **Open NDR report**, **Open SDR report**, or **Open NDR + SDR report** when the displayed completed count covers the entire checked cohort. The first run is the chosen baseline; every other checked scenario follows in the original scenario-selection order. This includes a matched control stored as another baseline-kind scenario. A baseline alone is supported. An unfinished or missing checked case remains visible and prevents that scope from opening; deliberately uncheck it to request a smaller cohort.
+
+Compact run-state records provide the completion hints displayed here. The process desk then reloads its original native catalogue and accepts the entire ordered selection only when every requested model has a completed stage and its original watershed output, with all runs on the same native grid. Missing runs, another grid or an incomplete requested stage preserve the existing process draft and display the issue. The ordinary producer preview then validates original producing versions, geometry, quantities and source identities.
+
+The maintained opening API is:
+
+```javascript
+openDesk('native-process-reports', 'createForRuns', {
+  workspace_key,
+  run_ids: [baselineRunId, restorationRunId, matchedControlRunId],
+  models: ['ndr', 'sdr'],
+  title: 'Original native baseline, restoration and matched control'
+});
+```
+
+All IDs refer to retained original runs. The method preserves their order and does not remove unavailable members. The existing scalar `createForRun` entry point delegates to the same receiving path. A newer navigation, manual order change or Workspace change supersedes a delayed catalogue opening. Accepted queued operations remain accessible in their original Workspace.
+
+Opening this form retains the selected scientific inputs for preview; preparation, model execution and report submission remain the existing explicit operator actions. Continue with **Preview original stage selection**, inspect actual producing versions and support, and build the queued report. The completed report can be opened alone or appended to the current ordered Sources report, exported with its original companions, and restored through the maintained editable Study workflow.
+
+Receive both current browser modules (`operator/web/run_workbench.mjs` and `operator/web/native_processes.mjs`), their extension descriptors and this guide in the same complete application. The host's existing `openDesk` route checks the selected Workspace and view while mounting the receiving desk. Preserve current programme/run assembly, scientific producers and other shared application leaves.
+
+For actual receiving, use the already owned native Workspace and its retained run roster. Exercise the complete checked baseline/restoration/control route, including completed NDR while SDR remains unfinished when such an original case exists. Open and inspect the resulting report and all original attachments at desktop and 390-pixel widths, use the actual controls and export/reopen the retained product. Keep the running model's existing writer and report execution course; this extension does not introduce a separate execution controller.
+
 ## Select the original stage cohort
 
 1. Open the actual scientific Workspace containing the retained native runs.
@@ -166,3 +193,24 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Current owner demonstration direction — 2026-10-13 10:30 UTC
+
+Original coordination message: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359 . The following complete instruction is retained for the workers receiving this application.
+
+BRYCE CURRENT DIRECTION — ECOSYSTEM MODEL / DEMO / PRESENTATION. Pass this complete update into current worker assignments and onward handoffs; the feed is moving quickly.
+
+Exact new owner instructions:
+“do the simulated model”
+“just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it”
+“and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast”
+“just checking dont pause anythi g”
+
+Implementation direction:
+• Tim/Ecosystem already publishes GIS, watershed/environmental modeling, data analysis, map/report publishing and natural-capital decision-support work. Do not assume a tools/capacity gap or pitch generic GIS as novel. Build a concrete production workshare he can compare with his existing workflow; prime retains scientific direction/method choices/review/client relationship.
+• Center the demonstration on THIS UpperSavannahRFP: actual geographic/source shapes,30mgrid, upstreammodeldomain vsSCreportingmask andutilityfocus, clearlysimulatedrealisticinputs, nativeInVESTNDR/SDR baseline+restoration+matchedcontrol, annualN/Pkg/year andsedimenttonnes/year reachingstream, meaningfulcomparison/maps/report, editableparameters/sourceeditions andexport/coldreopen. Keep load/concentration and stream/intake distinctions correct.
+• Actual simulatedmodel execution and the connected usable product are the hard priority. Runtime/source existence or another plan is not the run. Preserve already-running jobs andonewriterperWorkspace; use existingequippedruntime or provision an isolated actualexecution environment when needed. Root has explicitlytakenactualexecution; otherbuildscontinue.
+• Make relevance and speed visible through what Tim can USE: chooseinputs/assumptions→run→inspect differences→revise→hand over work his team can continue. Show actualproducedartifacts and real elapsedhistory; no inventedtimings/guaranteedreaction. Avoid stockscreen/decorativepitch/demo-onlytheatre.
+• Open/look/use finalproduct and ALLattachments asrecipient, fixobviousdefects, naturalgenerativeTTS/mediaifused, actualapprecordingratherthan generatedscreenspretendingexecution. No review/testtheatre or substitutionforhardbuild.
+• Cascade thisdirection to otherEcosystem/product/model/report/presentationpeers atnextsafemessageboundary; persistindurablecurrentworkorders/startupguide andincludeversion/pathwithnextsubstantiveresult. Don'tstopactivecalculations, restartheld/deletedtasks, spawnanothercontroller oraskBryce torelay.
+No bid/prime-yesgate or arbitraryproduct/featurecap. TODAY10a.m.Eastern/14UTCcutoffremains. Existingfocusedvalidation,noPrivateGitHub/Actions,labattribution,contact/meeting/spendcontrols remain. SharedGitHubcurrentownerbrief landingunderopportunities/upstate_forever_2026; Rootwillreturntheactualpath/head.

@@ -43,6 +43,17 @@
 </div>
 <p class="muted">Model runs use the original NDR and SDR engine and its full contributing domain. The Operations panel retains the active request and recovery controls.</p>
 </section>
+<section aria-labelledby="report-source-heading">
+<header><div><p class="step">03 · SCIENTIFIC REPORT</p><h2 id="report-source-heading">Explain a completed source update</h2></div></header>
+<p>Prepare a report source from the selected completed update. The original scientific report composer can combine it with other saved analyses, send the resulting edition for customer review and retain an editable Study.</p>
+<div class="form-grid">
+<label>Report source title<input id="report-source-title" maxlength="300" autocomplete="off"></label>
+<label class="wide-label">Scientific reason for this update<textarea id="report-source-rationale" rows="4" maxlength="20000"></textarea></label>
+<label class="wide-label">Preparation notes<textarea id="report-source-notes" rows="3" maxlength="20000"></textarea></label>
+</div>
+<div class="actions"><button type="button" id="prepare-report-source" disabled>Prepare scientific report source</button><button type="button" id="receiving-source-impact" hidden>Inspect receiving-water impact</button></div>
+<div id="report-sources"><p class="empty">Choose a completed saved update.</p></div>
+</section>
 <section aria-labelledby="change-title">
 <header><div><p class="step">03 · LAND-COVER CHANGE</p><h2 id="change-title">Measure the change between two years</h2></div></header>
 <p>Use the original classified Annual NLCD rasters. A direct comparison measures the full interval between the selected years.</p>

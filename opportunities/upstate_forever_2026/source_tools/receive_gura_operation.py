@@ -132,14 +132,16 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path,
                         help="Existing scientific Workspace; default: OPERATION/workspace")
     parser.add_argument("--inputs", type=Path,
-                        help="Original NDR.zip and SDR.zip directory; default: OPERATION/inputs")
+                        help="Original ZIP directory; uses OPERATION/inputs when present, otherwise retained Workspace inputs")
     parser.add_argument("--deadline-utc", type=deadline,
                         help="Stop this attempt at an explicit UTC instant and preserve its saved cases")
     args = parser.parse_args(argv)
     app = args.application.resolve(strict=True)
     root = args.operation.resolve()
     workspace = (args.workspace or root / "workspace").resolve()
-    inputs = (args.inputs or root / "inputs").resolve()
+    default_inputs = root / "inputs"
+    inputs = (args.inputs.resolve(strict=True) if args.inputs is not None else
+              default_inputs.resolve() if default_inputs.is_dir() else None)
     if root.is_relative_to(workspace):
         raise ValueError("Keep the operation directory outside the scientific Workspace; the suite archive must be external")
     root.mkdir(parents=True, exist_ok=True)
@@ -149,12 +151,14 @@ def main(argv=None):
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         state = json.loads(state_path.read_text()) if state_path.exists() else {
             "schema": "commons.gura-complete-operation/v1", "created_at": utc(),
-            "application": str(app), "workspace": str(workspace), "inputs": str(inputs),
+            "application": str(app), "workspace": str(workspace),
+            "inputs": str(inputs) if inputs is not None else None,
             "python": sys.executable, "phases": {}}
         if state.get("schema") != "commons.gura-complete-operation/v1" or not isinstance(state.get("phases"), dict):
             raise ValueError("The operation directory contains a different receiving manifest")
         for key, value in {"application": str(app), "workspace": str(workspace),
-                           "inputs": str(inputs), "python": sys.executable}.items():
+                           "inputs": str(inputs) if inputs is not None else None,
+                           "python": sys.executable}.items():
             if state[key] != value:
                 raise ValueError("Resume the same operation target: " + key)
         env = dict(os.environ)
@@ -168,8 +172,9 @@ def main(argv=None):
         temporary = root / "tmp"
         temporary.mkdir(exist_ok=True)
         env["TMPDIR"] = str(temporary)
-        common = ["--application", str(app), "--workspace", str(workspace),
-                  "--inputs", str(inputs)]
+        common = ["--application", str(app), "--workspace", str(workspace)]
+        if inputs is not None:
+            common += ["--inputs", str(inputs)]
         phases = [
             ("original-reference", "receive_gura_native.py",
              common + ["--models", "ndr", "sdr", "--mode", "both"]),
@@ -179,7 +184,9 @@ def main(argv=None):
         ]
         continuation = [sys.executable, "-B", str(Path(__file__).resolve()),
                         "--application", str(app), "--operation", str(root),
-                        "--workspace", str(workspace), "--inputs", str(inputs)]
+                        "--workspace", str(workspace)]
+        if inputs is not None:
+            continuation += ["--inputs", str(inputs)]
         if args.deadline_utc is not None:
             continuation += ["--deadline-utc", args.deadline_utc.isoformat()]
         state.pop("interruption", None)

@@ -1,24 +1,26 @@
-# Complete Chemistry compound and interval upgrade
+# Complete Chemistry compound, interval and scientific report upgrade
 
-This bank carries the full maintained Chemistry 0.3.0 component merged in PR3724, together with the complete native receiving course. It is intended for the existing regional application's retained scientific Workspace. The original guarded installer remains the only application writer.
+This bank carries the full maintained Chemistry 0.3.0 component, explicit prepared-report selection, v1/v2 Study-source receiving and current workspace-aware operator, together with the complete native and browser receiving courses. It is intended for the existing regional application's retained scientific Workspace. The original guarded installer remains the only application writer.
 
 ## Included source
 
-The two source parts contain **40 complete UTF-8 files / 438,449 source bytes**:
+The 4 source parts contain **43 complete UTF-8 files / 895,314 source bytes**:
 
 - All **38** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
-- The complete native receiving script and its guide. These two files are staged for direct execution and need not be copied into the running application.
+- The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files are staged beside the complete component.
 - The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 37 other installed paths in the maintained 0.3 source edition.
 
-The separate bootstrap directory contains the complete unchanged original application source assembler and its matching component reader from the same source edition. The stager verifies both complete bodies, loads them together as a private Python package, and delegates source decoding and publication to those original modules. Its imports do not depend on an assembler or component reader installed in the base application. Every source part and every complete member is verified before the first staged source file is published.
+The separate bootstrap directory contains the complete unchanged original application source assembler, matching component reader and its required component-fragment helper from the same source edition. The stager verifies all three complete bodies, loads the fragment helper before the component reader and assembler as a private Python package, and delegates source decoding and publication to those original modules. Its imports do not depend on an assembler or component reader installed in the base application. Every source part and every complete member is verified before the first staged source file is published.
 
 The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
-Native source pin: `71f0c79e10f13d420d753e5b4df17cc126140e83` (PR3724). The receiving course extends original pin `5a8c02a05f2c45c758d361c44c624479bfa157b4`; its current script/guide Git blob identities appear in `manifest.json`. The 38 installed scientific component bodies remain those of the native source pin.
+Native source pin: `326f0593b158251b03c371ed1a993de6e885b3a8`, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
 
 ## Existing application and project
 
 Use the existing complete Upper Savannah application with its original Workspace, extension registry, Scientific Reports and Study-transfer components. The installer verifies the eleven original shared dependencies and preserves their current bodies, composing only the original maintained Chemistry Study-transfer joins. The bank does not replace the global server, scientific composer, portability implementation, model sources or other installed families.
+
+The existing Scientific Reports composer must export `SCIENTIFIC_REPORT_SOURCE_SELECTION = 'replace-v1'`, introduced in `c8d54543bcdb07e01ff9153807fe6738a0fb5361`. The stager checks this exact capability before writing source. Use its maintained successor in the receiver's original cumulative application, preserving subsequent briefing and notes changes. The Chemistry installer keeps that shared composer intact.
 
 The scientific Python environment needs NumPy, SciPy, ReportLab and the full application's existing transfer dependencies. Complete transfer requires its maintained `model.portable.resume_restore` API, checked before native course effects. Preserve the current shared portable implementation; this frozen Chemistry component does not replace it. Use the same environment that opens the current regional Workspace.
 
@@ -85,6 +87,27 @@ See the complete staged `source/CHEMISTRY_COMPOUND_RECEIVING.md` for the exact s
 `OUTPUT/receiving.json` is the durable operation journal and completion summary. The same directory retains the original inputs, exact derived observations and requests, native scientific preview, saved scientific IDs, editable received project, complete Workspace archive and independently received application/Workspace.
 
 The current Chemistry desk can reopen every returned case/run/report ID. Its scientific sources use the existing ordered-source report composer. `cold-receiving.json` and its stdout/stderr retain the actual delivered-application opening; `cold-receiving-request.json` preserves that exact request. The frozen bank supplies complete source; the actual receiving journal supplies the operation's resulting native IDs and files.
+
+## Open, combine and receive actual saved reports
+
+The maintained Chemistry interface now offers **Open this report only** and **Add to current report** explicitly. Replacement opens exactly the selected prepared source and title; addition retains the existing ordered draft. The original Study resolver preserves the exact v1 or v2 Chemistry source producer and its native case/run/report lineage.
+
+The complete existing browser course is staged at `source/chemistry-report-receiving/browser.mjs`. It operates the actual four archived analyses, report/source controls, ordered Scientific Reports rendering, original downloads and selected Study restore. Use the existing accepting browser owner, current private operator URL and its actual registered Workspace key:
+
+```sh
+node "$STAGE/source/chemistry-report-receiving/browser.mjs" --write-example "$OUTPUT/browser-selection.json"
+```
+
+Set the actual `workspace_key` in that selection. The original project/case/run identities are already supplied; retain them for the archived authored reference analyses. Then continue the same receiving operation:
+
+```sh
+node "$STAGE/source/chemistry-report-receiving/browser.mjs" \
+  --config "$OUTPUT/browser-selection.json" --output "$OUTPUT/browser" \
+  --url-file /actual/private/operator-url.txt \
+  --playwright /actual/installed/playwright/index.mjs
+```
+
+Use `CHROMIUM_EXECUTABLE` only for the receiver's existing browser runtime when needed. The browser course uses its original request journal and task recovery; repeat the same configuration and output after interruption. The native numerical course can run in the already accepted Python operation while the existing browser owner continues the interactive course. Read the complete staged `source/chemistry-report-receiving/README.md` for exact controls, source provenance and retained output paths.
 
 ## Rendered-product inspection before presentation
 

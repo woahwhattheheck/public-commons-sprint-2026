@@ -162,6 +162,42 @@ def verify_receipt(closure, captured):
     return {"comparisons": len(captured), "identity": "MATCH"}
 
 
+
+def receiving_summary(identity):
+    rows = identity.get("report_comparisons", [])
+    return {"report_comparison_count": len(rows),
+            "report_comparison_change_count": sum(row["change_count"] for row in rows)}
+
+
+def augment_receiving(closure, retained, result):
+    """Open captured pairs through their original complete comparison records."""
+    captured = retained["identity"].get("report_comparisons", [])
+    verify_receipt(closure, captured)
+    available = {row["id"]: row for row in receipt(closure)}
+    result["report_comparisons"] = []
+    for original in captured:
+        row = deepcopy(available[identifier(original["id"])])
+        row["archive_captured"] = original.get("archive") is not None
+        row["edition_links"] = []
+        prefix = KIND + "/" + row["id"] + "/"
+        comparison = closure.read(prefix + "comparison.json")
+        row["tables"] = deepcopy(comparison["tables"])
+        for side in ("left", "right"):
+            fingerprint = row["identity"][side]
+            key = identifier(fingerprint["edition_id"])
+            node = closure.nodes.get(("scientific-report-editions", key))
+            if node is None or fingerprint["project_id"] != closure.workspace.project["id"]:
+                raise ValueError("The received comparison lost its original local report edition.")
+            frozen = closure.read(prefix + side + "/edition.json")
+            html = frozen["files"].get("report_html")
+            row["edition_links"].append({
+                "side": side, "id": key, "project_id": fingerprint["project_id"],
+                "title": node.get("title", key[:12]),
+                "file_count": len(fingerprint["members"]),
+                "report_html_path": html["path"] if html is not None else None,
+            })
+        result["report_comparisons"].append(row)
+
 def catalogue(workspace, kind=KIND):
     if kind != KIND:
         return []
