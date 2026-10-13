@@ -43,3 +43,19 @@ The existing Published studies extension registers:
 A request uses `source_collection_id`, `source_id`, `selection_json` and an optional `title`. The upload is limited to 8 MiB. Preview is read-only; preparation uses the same accepted operation identity on retries. Completed operations cannot replace a study or review the user opened while the task was running.
 
 Deploy the complete selected-activity component together with its compiler and original-record selector. For the complete report workflow, install the existing scientific-report-editions family alongside assessment-source-delivery, or use the complete current application. The assessment-source-delivery component retains the measured report and original sources; Published studies supplies the study store, saved review and prepared scientific source.
+
+## Receive the complete outgoing version
+
+Use the installed application's Python runtime to run the retained example against an existing Workspace and the complete original `native-selection-input/sources.json`:
+
+```bash
+python3 examples/selected-microbial-activities-20261013/receive.py \
+  --workspace /path/to/existing-workspace \
+  --source-manifest /path/to/native-selection-input/sources.json \
+  --selection examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json \
+  --output /path/to/selected-study-receiving
+```
+
+The same output directory resumes the same request. It retains the imported study, saved-review export, reopened study, scientific-source identity, original report preview and completed report edition. `receiving.json` gives the actual scientific PDF, HTML and structured-data paths.
+
+Open and operate this exact outgoing application. Inspect the populated seven-activity table at desktop/screenshare and narrow/mobile sizes, along with empty, loading and error states. Save the selected study and review, prepare the scientific source, and exercise both composer choices: **Add to current report** preserves an existing calendar source in order; **Open this report only** selects just this review. Download and reopen the exported files, extract the complete study/review archives and open their contained report and working study. Open the final PDF and HTML and look at the actual rendered pages, source labels, tables and qualifier descriptions. The producing peer must inspect the returned screenshots or render locally and repair any unreadable, clipped or broken output before using that outgoing version with a prospect. Retain the existing receiving Workspace and operation while making corrections.
