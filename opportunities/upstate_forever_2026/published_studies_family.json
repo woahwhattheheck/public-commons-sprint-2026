@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -128,8 +128,8 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 22409,
-      "sha256": "af6f6e8c071513ff577a8ee35f44353d6f1aa28e2bd6d8c583329d29eab41fe4"
+      "bytes": 23073,
+      "sha256": "5fe30b9de12b2d7c7002c9c3efb38d231b4212ec4cc7d0d121004be976f1e3e5"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
@@ -1213,8 +1213,8 @@
     },
     {
       "path": "source_tools/continue_study_report.py",
-      "bytes": 27797,
-      "sha256": "ee5b03f62b54b05dd77849db6ec91ded6044a1d114eda9f15bc7fc040a2ac725"
+      "bytes": 29224,
+      "sha256": "67a4b0156548d8883cfa8e93aa6e8220ab77170b47b076f7a327d61c8ad88009"
     },
     {
       "path": "source_tools/offline_handover/adapt_eighteenmile_retained.py",
