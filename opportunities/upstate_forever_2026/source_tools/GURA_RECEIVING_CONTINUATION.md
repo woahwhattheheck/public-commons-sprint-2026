@@ -230,3 +230,10 @@ progress callback and uses the programme's inexpensive status path during native
 process observation. Reopening completed native outputs uses the GIS/reporting
 runtime; the original coordinator checks the pinned InVEST runtime when native
 calculation is needed.
+
+The current shared `_native_selection` interface remains available. Fresh intake
+passes an omitted expected resolution through to the receiver, which reads the
+actual original raster; `--expected-resolution-m` is an optional check. Context
+remains independently selectable and permits zero. A partial intake reuses its
+saved grid's resolution and context, and source updates reuse an already saved
+programme whose scientific source matches before registering another edition.

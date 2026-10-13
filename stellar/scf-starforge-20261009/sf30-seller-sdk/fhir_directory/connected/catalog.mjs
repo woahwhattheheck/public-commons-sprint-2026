@@ -9,6 +9,7 @@ export const directoryNativeContract=JSON.parse(readFileSync(new URL('../directo
 export const directorySourceContract=JSON.parse(readFileSync(new URL('../directory-source-schema.json',import.meta.url),'utf8'));
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
+export const directoryOperatingReturnsContract=JSON.parse(readFileSync(new URL('../directory-operating-returns-schema.json',import.meta.url),'utf8'));
 export const directoryForeignKeyQueries=Object.freeze([
   {
     "key": "conformance_foreign_keys",
@@ -125,7 +126,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds,'operatingPlans'
+  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns'
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -232,6 +233,16 @@ const added=[
     recordId:hash('Exact saved conformance record ID.'),
     fileKind:str('Select a file declared in this record’s files map.',{enum:directoryConformanceContract.fileKinds})
   },['collection','recordId','fileKind']),
+  ...['review','comparison','input'].map(kind=>tool('directory_operating_return_'+kind,
+    'Read the complete original returned-procedure '+kind+' with both saved histories and exact decisions.',
+    {recordId:hash('Original immutable operatingPlanReturns record ID.')},['recordId'])),
+  tool('directory_operating_return_rows','Read each complete original returned-procedure change with explicit choices, coupled work/results and contiguous paging.',{
+    recordId:hash('Original immutable return record ID.'),...directoryOperatingReturnsContract.inputSchemas.operating_return_rows.properties
+  },['recordId']),
+  tool('directory_operating_return_file','Retain the entire original return review, comparison or accepted input without truncation.',{
+    recordId:hash('Original immutable return record ID.'),
+    fileKind:str('Exact original retained return file.',{enum:directoryOperatingReturnsContract.fileKinds})
+  },['recordId','fileKind']),
   tool('directory_operating_catalog','Read the complete original command registration catalogue used by the selected Directory product.'),
   ...['document','draft','input','basis'].map(kind=>tool('directory_operating_'+kind,
     {document:'Read every saved revision of the complete original OperatingPlan.',

@@ -314,6 +314,8 @@ class Workspace:
     def prepare_run(self, selection):
         profile = self._get("profiles", selection["profile_id"])
         scenario = self._get("scenarios", selection["scenario_id"])
+        from .scenario_footprint import validate_destination_codes
+        validate_destination_codes(profile, scenario)
         grid = self.get_grid(selection["grid_id"])
         selection, active = normalize_selection(selection, default=grid_models(grid))
         if not set(active).issubset(grid_models(grid)):
