@@ -1,0 +1,59 @@
+{
+  "format": "upper-savannah-offline-review-source/v1",
+  "version": "1.0.0",
+  "files": [
+    {
+      "path": "MEASUREMENT_OFFLINE_REVIEWS.md",
+      "bytes": 7622,
+      "sha256": "a23f6b392bc7bc00fbcfe372b25ebe7e5ac1e8f5d93f814325869dfb774efedf",
+      "gitBlob": "5d7e4e6a02a204b08a58ca67e71002b3d94e98ee"
+    },
+    {
+      "path": "install_measurement_offline_review.py",
+      "bytes": 3436,
+      "sha256": "31607711362a1645e6fd985e9a978c0d85d329000fe64b03fad9f30149dd83da",
+      "gitBlob": "000ca467ee65ab5f042f82b701da8c7559b1eadb"
+    },
+    {
+      "path": "integration/component_fragments/measurement-offline-review.json",
+      "bytes": 836,
+      "sha256": "e04d1370d8d7b3f34abc78e57477bff65454a3738650c1ceb167ff1833e68af4",
+      "gitBlob": "d8b54d10ee8d1d88aca9cb3d2fc4ae824253acc3"
+    },
+    {
+      "path": "measurement_workspace/engine/offline_review.mjs",
+      "bytes": 18811,
+      "sha256": "da27f0fe2c14cd4f26994a6c0c4a36f958d7bb72a04574734fcc68fe9e9ea435",
+      "gitBlob": "b2431ab729449e2d93735e6770602086c47bc418"
+    },
+    {
+      "path": "measurement_workspace/engine/offline_review_cli.mjs",
+      "bytes": 1853,
+      "sha256": "d25c84a1d3abe817976ff8fe15f234eb1e1aaecb7dbeb6a82c24549d7f009325",
+      "gitBlob": "25847a8e9d17ced9593971fed0bf0eddda3def24"
+    },
+    {
+      "path": "measurement_workspace/web/offline_review.html",
+      "bytes": 27332,
+      "sha256": "78631fee7386737af39e6b5aa086fe57e59bfeec5c8a00f25736d8ed90ac7f51",
+      "gitBlob": "58b96c20f70109957af06eeee87e2d132c92566b"
+    }
+  ],
+  "dependencySource": {
+    "title": "Upper_Savannah_Measurements_1.2.0_Complete_Source.zip",
+    "bytes": 165535,
+    "sha256": "29e9100f210c38682891656e225acf7242e56c4bc952650aad0117d9ef7380a7",
+    "members": 55
+  },
+  "nativeWrites": [
+    "MeasurementWorkspace.receive",
+    "receiveCollection",
+    "MeasurementWorkspace.review",
+    "publishCollection"
+  ],
+  "ownerDirection": {
+    "path": "CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.3",
+    "gitBlob": "8cd1c1f3d371a2fb75471813844e31f489aa8272"
+  }
+}
