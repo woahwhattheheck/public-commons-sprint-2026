@@ -1,0 +1,38 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "component-source-collection",
+  "components": {
+    "component-source-collection": {
+      "title": "Complete selected application source collection",
+      "paths": [
+        "source_tools/component_source_collection.py",
+        "source_tools/COMPONENT_SOURCE_COLLECTION.md",
+        "source_tools/vendor/source_closure/application_source_closure.py",
+        "source_tools/vendor/source_closure/application_source_bridge.cjs",
+        "source_tools/vendor/source_closure/APPLICATION_SOURCE_CLOSURE.md",
+        "source_tools/vendor/source_closure/examples/application-source-self.json",
+        "source_tools/vendor/source_closure/connected_javascript_source_closure.cjs",
+        "source_tools/vendor/source_closure/source_closure_cli.cjs",
+        "source_tools/vendor/source_closure/JAVASCRIPT_SOURCE_CLOSURE.md",
+        "source_tools/vendor/source_closure/examples/source-closure-self.json",
+        "source_tools/vendor/source_closure/vendor/acorn-source-closure/acorn.cjs",
+        "source_tools/vendor/source_closure/vendor/acorn-source-closure/SOURCE.json",
+        "source_tools/vendor/source_closure/vendor/acorn-source-closure/LICENSE",
+        "source_tools/vendor/source_closure/python_source_closure.py",
+        "source_tools/vendor/source_closure/PYTHON_SOURCE_CLOSURE.md",
+        "source_tools/vendor/source_closure/examples/python-source-closure-self.json",
+        "source_tools/examples/component-source-self.json",
+        "source_tools/application_assembly.py",
+        "source_tools/application_components.py",
+        "source_tools/component_fragments.py"
+      ],
+      "requires": [],
+      "import_roots": [
+        "source_tools",
+        "source_tools/vendor/source_closure"
+      ]
+    }
+  },
+  "required_components": [],
+  "source_reference": "ECO-ASSEMBLY-SOURCE-COLLECTION-4593-20261013"
+}
