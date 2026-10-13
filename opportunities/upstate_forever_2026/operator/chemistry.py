@@ -20,6 +20,12 @@ class ChemistryOperations:
             if result.get('schema') == 'upstate.chemistry-run/v1':
                 for item in files.get('artifacts', []):
                     item['path'] = 'chemistry-runs/' + result['id'] + '/' + item['path']
+            # The original exporter returns one retained artifact descriptor.
+            # Present it through the host's existing artifact collection so the
+            # native file registrar exposes the editable ZIP without changing
+            # the original exported result or archive identity.
+            if 'artifact' in files:
+                files.setdefault('artifacts', []).append(files['artifact'])
             result['_downloads'] = self.operator._files(workspace, files, ws.root)
         return result
     def read(self, workspace, operation, payload):
