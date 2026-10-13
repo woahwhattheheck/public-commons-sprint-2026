@@ -19,8 +19,11 @@ def perform(operator, task):
     workspace = operator.ws(task["workspace"])
     if action in {"monitoring.export", "monitoring.context.export"}:
         return export_task(operator, workspace, task)
-    return invoke(workspace, action.removeprefix("monitoring."), task["payload"],
-                  export_root=operator.root / "outputs" / "monitoring")
+    result = invoke(workspace, action.removeprefix("monitoring."), task["payload"],
+                    export_root=operator.root / "outputs" / "monitoring")
+    if action == "monitoring.campaign.fieldwork":
+        result["workspace_key"] = task["workspace"]
+    return result
 
 
 def export_task(operator, workspace, task):
@@ -65,6 +68,20 @@ def read(operator, workspace_key, action, payload):
 
 
 def decorate_task(operator, task):
+    if task.get("action") == "monitoring.campaign.fieldwork" and task.get("state") == "complete":
+        public = deepcopy(task)
+        result = public["result"]
+        workspace = operator.ws(task["workspace"])
+        attachment = result["attachment"]
+        path = (workspace.root / attachment["reference"]).resolve(strict=True)
+        allowed = (workspace.root / "implementation" / "plans" / result["plan_id"] / "attachments").resolve()
+        if (not path.is_relative_to(allowed) or path.stat().st_size != attachment["size_bytes"]
+                or file_sha256(path) != attachment["sha256"]):
+            raise ValueError("The saved fieldwork source packet changed")
+        public["_downloads"] = [operator._ticket(task["workspace"], path,
+            {"bytes": attachment["size_bytes"], "sha256": attachment["sha256"]}, attachment["label"])]
+        public["_item"] = {"kind": "implementation_plans", "id": result["plan_id"]}
+        return public
     if task.get("action") not in {"monitoring.export", "monitoring.context.export"} or task.get("state") != "complete": return task
     result = task.get("result", {})
     target = Path(result["path"]).resolve(strict=True)
