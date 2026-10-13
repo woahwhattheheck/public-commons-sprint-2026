@@ -474,15 +474,92 @@ class Reference:
                                 prefix + "PASSWORD": self.private[key]})
         return environment
 
-def stop_owned(child):
-    if child is None or child.poll() is not None:
-        return None if child is None else child.returncode
-    child.terminate()
+def close_owned(child):
+    """Reap this lifetime's child and retain every attempted shutdown outcome."""
+    outcome = {"owned": child is not None, "runningBefore": None,
+               "terminateRequested": False, "forceKill": False,
+               "reaped": False, "exit": None, "errors": [], "acceptedNormal": False}
+    if child is None:
+        return outcome
+
+    def failed(step, error):
+        outcome["errors"].append({"step": step, "type": type(error).__name__,
+                                  "message": str(error)[:2000]})
+
     try:
-        return child.wait(timeout=30)
-    except subprocess.TimeoutExpired:
-        child.kill()
-        return child.wait(timeout=10)
+        prior = child.poll()
+        outcome["runningBefore"] = prior is None
+        if prior is not None:
+            outcome["exit"], outcome["reaped"] = prior, True
+            return outcome
+    except BaseException as error:
+        failed("poll", error)
+    # Even a poll/terminate failure must not skip a reap attempt or the other child.
+    try:
+        child.terminate()
+        outcome["terminateRequested"] = True
+    except BaseException as error:
+        failed("terminate", error)
+    try:
+        outcome["exit"] = child.wait(timeout=30)
+        outcome["reaped"] = True
+    except subprocess.TimeoutExpired as error:
+        failed("wait-after-terminate", error)
+        outcome["forceKill"] = True
+        try:
+            child.kill()
+        except BaseException as error:
+            failed("kill", error)
+        try:
+            outcome["exit"] = child.wait(timeout=10)
+            outcome["reaped"] = True
+        except BaseException as error:
+            failed("wait-after-kill", error)
+    except BaseException as error:
+        failed("wait-after-terminate", error)
+        # A failed wait is not evidence of closure. Keep trying this owned child.
+        outcome["forceKill"] = True
+        try:
+            child.kill()
+        except BaseException as error:
+            failed("kill", error)
+        try:
+            outcome["exit"] = child.wait(timeout=10)
+            outcome["reaped"] = True
+        except BaseException as error:
+            failed("wait-after-kill", error)
+    outcome["acceptedNormal"] = accepted_database_close(outcome)
+    return outcome
+
+def accepted_database_close(outcome):
+    """Normal closure requires this owner's terminate and its received exit."""
+    return (isinstance(outcome, dict) and outcome.get("owned") is True
+            and outcome.get("runningBefore") is True
+            and outcome.get("terminateRequested") is True
+            and outcome.get("forceKill") is False and outcome.get("reaped") is True
+            and type(outcome.get("exit")) is int
+            and outcome["exit"] in (0, -signal.SIGTERM) and outcome.get("errors") == [])
+
+def completed_fixture(result):
+    """Admit only a complete original programme and actual normal owned closure."""
+    if not (isinstance(result, dict) and result.get("completed") is True
+            and result.get("sourceUnchanged") is True and result.get("programmeExit") == 0
+            and not result.get("error") and not result.get("interrupted")
+            and not result.get("resultPersistenceErrors") and result.get("closedAt")):
+        return False
+    cleanup = result.get("cleanup", {})
+    database, programme = cleanup.get("database"), cleanup.get("programme")
+    if not (accepted_database_close(database) and database.get("acceptedNormal") is True
+            and result.get("databaseExit") == database["exit"]
+            and isinstance(programme, dict) and programme.get("errors") == []):
+        return False
+    if programme.get("owned") is True:
+        return (programme.get("reaped") is True and type(programme.get("exit")) is int
+                and programme["exit"] == result["programmeExit"] == 0)
+    reused = result.get("reusedProgramme")
+    return (programme.get("owned") is False and programme.get("exit") is None
+            and isinstance(reused, dict) and bool(reused.get("operationId"))
+            and isinstance(reused.get("resultIdentity"), dict))
 
 def main():
     global ROOT
@@ -543,8 +620,7 @@ def main():
         observer_state = current_observer_operation(observer) if observer is not None else None
         if observer is not None and observer_state["status"] == "complete" and (root / "fixture-result.json").exists():
             stored, _, _ = checked_json(root / "fixture-result.json", private=True)
-            if (stored.get("schema") == "altinity.reference-result.v1" and stored.get("completed") is True
-                    and stored.get("programmeExit") == 0 and stored.get("closedAt")
+            if (stored.get("schema") == "altinity.reference-result.v1" and completed_fixture(stored)
                     and stored.get("fixture") == str(root) and same_identity(stored.get("binary", {}), fingerprint)
                     and stored.get("native", {}).get("version") == VERSION
                     and stored.get("native", {}).get("sourceRows") == 3):
@@ -567,8 +643,13 @@ def main():
                 "request": {"path": str(observer["descriptor_path"]), **observer["descriptor_identity"]},
                 "attempt": str(observer["attempt"]), "fixtureSource": observer["self_identity"],
                 "baselineManifest": observer["baseline_identity"], "observerManifest": observer["observer_identity"]}
+        original_handlers = {}
         for signum in [signal.SIGINT, signal.SIGTERM]:
+            original_handlers[signum] = signal.getsignal(signum)
             signal.signal(signum, lambda _signum, _frame: (_ for _ in ()).throw(KeyboardInterrupt()))
+        primary_error = None
+        return_code = 1
+        persistence_errors = []
         try:
             with (root / "native.log").open("ab", buffering=0) as log:
                 os.chmod(root / "native.log", 0o600)
@@ -597,28 +678,76 @@ def main():
                     programme = subprocess.Popen(actual, env=reference.environment(), cwd=str(ROOT.parent), pass_fds=(lifetime.fileno(),))
                     result["programmeExit"] = programme.wait()
                 check(reference.rows() == EXPECTED, "The receiving programme changed its original source")
-                result["completed"] = result["programmeExit"] == 0
-                return result["programmeExit"]
+                result["sourceUnchanged"] = True
+                return_code = result["programmeExit"]
         except KeyboardInterrupt:
             result["interrupted"] = True
-            return 130
+            return_code = 130
         except Exception as error:
+            primary_error = error
             result["error"] = {"type": type(error).__name__, "message": str(error)[:2000]}
-            raise
         finally:
-            result["programmeExit"] = stop_owned(programme) if programme is not None and programme.poll() is None else (
-                programme.returncode if programme is not None else result.get("programmeExit"))
-            result["databaseExit"] = stop_owned(database)
-            result["closedAt"] = worker.now()
-            # The attempt gets its complete final result before the public fixture
-            # pointer. A crash at either boundary preserves the original attempt.
-            if observer is not None:
-                worker.save(observer["attempt"] / "result.json", {
-                    "schema": "altinity.source-observer-fixture-result.v1",
-                    "request": observer["attempt_request"], "result": result}, True)
-            worker.save(root / "fixture-result.json", result)
-            print(json.dumps({"fixture": str(root), "completed": result["completed"],
-                              "programmeExit": result["programmeExit"], "databaseExit": result["databaseExit"]}))
+            # Repeated signals during closeout are retained; they cannot abandon
+            # the other owned child or skip publication of the actual outcome.
+            def cleanup_signal(signum, _frame):
+                result.setdefault("cleanupSignals", []).append(signum)
+                result["interrupted"] = True
+                result["completed"] = False
+            for signum in original_handlers:
+                signal.signal(signum, cleanup_signal)
+            try:
+                cleanup = {}
+                for label, child in (("programme", programme), ("database", database)):
+                    try:
+                        cleanup[label] = close_owned(child)
+                    except BaseException as error:
+                        # Preserve an unexpected cleanup implementation failure and
+                        # still attempt the independently owned next child.
+                        cleanup[label] = {"owned": child is not None, "runningBefore": None,
+                            "terminateRequested": False, "forceKill": False, "reaped": False,
+                            "exit": None, "acceptedNormal": False,
+                            "errors": [{"step": "close-owned", "type": type(error).__name__,
+                                        "message": str(error)[:2000]}]}
+                result["cleanup"] = cleanup
+                if programme is not None:
+                    result["programmeExit"] = cleanup["programme"]["exit"]
+                else:
+                    result.setdefault("programmeExit", None)
+                result["databaseExit"] = cleanup["database"]["exit"]
+                result["closedAt"] = worker.now()
+                result["completed"] = True
+                result["completed"] = completed_fixture(result)
+                # Keep the complete attempt before its fixture pointer. Each save
+                # is attempted independently even after another save fails.
+                targets = []
+                if observer is not None:
+                    targets.append(("observer-attempt", observer["attempt"] / "result.json", True))
+                targets.append(("fixture-result", root / "fixture-result.json", False))
+                for label, path, immutable in targets:
+                    try:
+                        value = ({"schema": "altinity.source-observer-fixture-result.v1",
+                                  "request": observer["attempt_request"], "result": result}
+                                 if label == "observer-attempt" else result)
+                        worker.save(path, value, immutable)
+                    except BaseException as error:
+                        persistence_errors.append({"step": label, "type": type(error).__name__,
+                                                   "message": str(error)[:2000]})
+                        result["resultPersistenceErrors"] = list(persistence_errors)
+                        result["completed"] = False
+                print(json.dumps({"fixture": str(root), "completed": result["completed"],
+                                  "programmeExit": result["programmeExit"], "databaseExit": result["databaseExit"],
+                                  "cleanup": cleanup, "interrupted": result.get("interrupted", False),
+                                  "resultPersistenceErrors": persistence_errors}))
+            finally:
+                for signum, handler in original_handlers.items():
+                    signal.signal(signum, handler)
+        if primary_error is not None:
+            raise primary_error
+        if persistence_errors:
+            raise RuntimeError("Original fixture outcome publication failed; retain its attempt and fixture directory")
+        if result.get("interrupted"):
+            return 130
+        return return_code if return_code != 0 else (0 if completed_fixture(result) else 1)
 
 if __name__ == "__main__":
     try:

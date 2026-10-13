@@ -4,7 +4,7 @@
   "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
   "prefix": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/",
   "installedDirectory": "workbench",
-  "edition": "clickhouse-acceptance-20261013-original-observer",
+  "edition": "clickhouse-acceptance-20261013-original-observer-closeout",
   "origin": {
     "repository": "woahwhattheheck/commons",
     "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
@@ -234,6 +234,40 @@
         "bytes": 8732,
         "sha256": "42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f",
         "gitBlob": "092c2e3c74a6c0bd3114da8e34a9f0278aeea9cd"
+      }
+    },
+    {
+      "path": "reference/fixture.py",
+      "reason": "Attempt each owned child shutdown independently, retain primary and cleanup outcomes, and admit completion only after actual normal database closure.",
+      "source": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791906659618609?thread_ts=1791881096.663589",
+      "original": {
+        "path": "reference/fixture.py",
+        "bytes": 38603,
+        "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a",
+        "gitBlob": "82115bde880fe2c925e1747a5d318bf901c4eeaf"
+      },
+      "selected": {
+        "path": "reference/fixture.py",
+        "bytes": 45223,
+        "sha256": "5f03b1a38b22600bed0a0975d1362bb51e3582f02d9b319bf3b69e62e19434b4",
+        "gitBlob": "7bfced0020153acc6c63efc058b25223ebe456a5"
+      }
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "reason": "Bind the complete owned-child closeout correction while preserving every original and observer source predecessor.",
+      "source": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791906659618609?thread_ts=1791881096.663589",
+      "original": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f",
+        "gitBlob": "092c2e3c74a6c0bd3114da8e34a9f0278aeea9cd"
+      },
+      "selected": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "01d3622dcc9a923c7b5123475896e3f0be496c62d8c4791ba63d2926913a2006",
+        "gitBlob": "90d5cc2b7f5973a09151949429780cc90817b0de"
       }
     }
   ],
@@ -504,9 +538,9 @@
     },
     {
       "path": "reference/fixture.py",
-      "bytes": 38603,
-      "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a",
-      "gitBlob": "82115bde880fe2c925e1747a5d318bf901c4eeaf"
+      "bytes": 45223,
+      "sha256": "5f03b1a38b22600bed0a0975d1362bb51e3582f02d9b319bf3b69e62e19434b4",
+      "gitBlob": "7bfced0020153acc6c63efc058b25223ebe456a5"
     },
     {
       "path": "reference/seed.sql",
@@ -559,8 +593,8 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 8732,
-      "sha256": "42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f",
-      "gitBlob": "092c2e3c74a6c0bd3114da8e34a9f0278aeea9cd"
+      "sha256": "01d3622dcc9a923c7b5123475896e3f0be496c62d8c4791ba63d2926913a2006",
+      "gitBlob": "90d5cc2b7f5973a09151949429780cc90817b0de"
     }
   ]
 }
