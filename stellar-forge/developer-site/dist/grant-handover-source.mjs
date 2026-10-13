@@ -4,7 +4,7 @@ import {verifyIssuerProgrammes,issuerContextSection} from './grant-issuer-source
 import {selectedIssuerContext} from './grant-issuer-core.mjs';
 // MIT. Exact original files and prepared output inside the existing submission draft.
 import {
-  ANSWERS, REQUIREMENTS, OFFICIAL, SCHEMA, ENVELOPE, MAX_BYTES, makeSource, validateDraft,
+  ANSWERS, REQUIREMENTS, OFFICIAL, SCHEMA, ENVELOPE, MAX_BYTES, makeSource, validateDraft, validateDraftShape,
   validateSource, retainVersion, receiveSource, outputText, applicationOutput, fieldStatus, formSourceReview,
 } from './grant-submission-core.mjs';
 import {verifyPlanningSource} from './grant-plan-source.mjs';
@@ -380,7 +380,13 @@ export function comparePrepared(draft,id) {
     meaning:'Exact comparison to the retained prepared output. Later edits and later observations do not revise that frozen edition.'};
 }
 export async function verifyHandover(draft,{planningOptions={}}={}) {
-  validateDraft(draft);validateHandover(draft);
+  validateDraft(draft);
+  return verifyHandoverContents(draft,{planningOptions});
+}
+// Complete original source/history verification for a bounded working envelope.
+// Native entry points above retain the original 16 MiB validateDraft gate.
+export async function verifyHandoverContents(draft,{planningOptions={}}={}) {
+  validateDraftShape(draft);validateHandover(draft);
   await verifyProductSourceImports(draft,contentHash);
   for(const source of draft.sources)await verifyOriginalApplication(source);
   for(const source of draft.planSources||[])await verifyPlanningSource(source,planningOptions);

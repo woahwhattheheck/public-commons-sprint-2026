@@ -148,7 +148,7 @@ export function recordRequirementReview(draft,id,input,at=new Date().toISOString
   result.reviews[result.reviews.findIndex(row=>row.id===id)]=review;
   return validateDraft(result);
 }
-export function validateDraft(input){
+export function validateDraftShape(input){
   need(input&&typeof input==='object'&&input.schema===SCHEMA,'Open a complete SCF submission draft.');
   for(const key of ['id','title','folder'])string(input[key],'Draft '+key);
   need(input.id.length>0,'Retain the draft identity.');iso(input.createdAt,'Creation date');iso(input.updatedAt,'Update date');
@@ -161,6 +161,10 @@ export function validateDraft(input){
   }
   validateHandover(input);
   validateProductSourceAuthoring(input);
+  return input;
+}
+export function validateDraft(input){
+  validateDraftShape(input);
   need(measureText(JSON.stringify(input)).utf8Bytes<=MAX_BYTES,'This draft exceeds 16 MiB. The current editor remains open. Copy any oversized unsaved answer text, then reduce the unsaved addition before saving.');
   return input;
 }
