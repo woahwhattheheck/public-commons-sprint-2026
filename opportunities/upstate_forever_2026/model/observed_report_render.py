@@ -19,6 +19,8 @@ FOOTER = "Original source records and selected scientific report editions"
 def _rendering_paths():
     paths = {"model/observed_report_render.py": Path(__file__),
              "model/scientific_report.py": Path(scientific_report.__file__),
+             "model/scientific_report_odt.py": Path(scientific_report.__file__).with_name("scientific_report_odt.py"),
+             "model/scientific_report_workbook.py": Path(scientific_report.__file__).with_name("scientific_report_workbook.py"),
              "model/scientific_figures.py": Path(scientific_report.__file__).with_name("scientific_figures.py"),
              "model/observed_context.py": Path(observed_context.__file__)}
     # Bind every installed optional drawing implementation used by new previews.
