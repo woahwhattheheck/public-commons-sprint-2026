@@ -78,6 +78,7 @@ const asArray = value => Array.isArray(value) ? value : [];
 const obj = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const safe = value => asString(value).replace(/\\/g,'\\\\').replace(/([`*_[\]<>])/g,'\\$1').replace(/[\u0000-\u001f]/g,' ').replace(/\|/g,'\\|');
 const section = (label, value) => `**${label}:** ${value ? safe(value) : 'NOT PROVIDED'}\n`;
+const privateCustody = value => /\binternal\s*:|(?:notion-file-block|file-upload):\/\/|https?:\/\/(?:[a-z0-9-]+\.)*(?:slack\.com|chatgpt\.com|notion\.com|notion\.so|mail\.google\.com)(?:[/:?#]|$)/i.test(value);
 const money = cents => Number.isSafeInteger(cents) && cents > 0 && cents <= 100000000 ? `$${(cents/100).toFixed(2)}` : 'NOT PROVIDED';
 function check(doc){
 const needs = [];
@@ -133,6 +134,14 @@ function render(doc,quality,{audience='internal'}={}){
   if(!['internal','submission'].includes(audience))throw Error('Unknown proposal audience');
   if(audience==='submission'&&(quality.needs.length||quality.warnings.length))throw Error('Complete required proposal fields before rendering submission edition');
   const a=obj(doc.applicant),c=obj(doc.contact),q=obj(doc.qualifications),s=obj(doc.supportServices),att=obj(doc.attestations);
+  const evidenceFor=(value,originalKey,publicKey,label)=>{
+    const item=obj(value);
+    const selected=audience==='submission'?(asString(item[publicKey])||asString(item[originalKey])):asString(item[originalKey]);
+    if(audience==='submission'&&(!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(selected)||privateCustody(selected))){
+      throw Error(label+': provide an outward HTTPS evidence reference; retain private custody in '+originalKey);
+    }
+    return safe(selected);
+  };
   const lines=[
     '# OTF Rapid Response Fund 2026 | Vendor submission working draft',
     '',
@@ -143,7 +152,7 @@ function render(doc,quality,{audience='internal'}={}){
     '## 1. Applicant, technical expertise and personnel',
     section('Applicant',a.name),section('Organization or individual background',a.description),section('Reply owner',c.replyOwner),section('Contact',c.email),
     section('Policy / contracting point of contact',a.policyContact),
-    ...asArray(doc.team).map((m,i)=>`- ${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${safe(obj(m).cvEvidence)})`),
+    ...asArray(doc.team).map((m,i)=>`- ${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${evidenceFor(m,'cvEvidence','cvPublicEvidence',`team[${i}].cvPublicEvidence`)})`),
     '',
     '## 2. Primary requested services and loaded hourly rates',
     ...asArray(doc.services).map((x,i)=>`- ${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${safe(obj(x).offering)}. Method: ${safe(obj(x).method)}`),
@@ -162,7 +171,7 @@ function render(doc,quality,{audience='internal'}={}){
     ...Object.entries(REQUIRED_QUALIFICATIONS).map(([k,label])=>section(label,q[k])),
     '',
     '## 5. Examples of prior technical work',
-    ...asArray(doc.workExamples).map((x,i)=>`- ${i+1}. **${safe(obj(x).title)}**: ${safe(obj(x).work)}. Evidence/custody: ${safe(obj(x).evidence)}. Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`),
+    ...asArray(doc.workExamples).map((x,i)=>`- ${i+1}. **${safe(obj(x).title)}**: ${safe(obj(x).work)}. ${audience==='submission'?'Evidence':'Evidence/custody'}: ${evidenceFor(x,'evidence','publicEvidence',`workExamples[${i}].publicEvidence`)}.${audience==='internal'?` Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`:''}`),
     '',
     '## 6. Language proficiencies other than English',section('Languages (use "none" when accurate)',doc.languagesOtherThanEnglish),
     '',
@@ -190,7 +199,7 @@ function render(doc,quality,{audience='internal'}={}){
     for(let i=0;i<body.length;i++){
       body[i]=body[i].replace('## 9. Appendix A and eligibility certification (human owner only)','## 9. Appendix A and eligibility certification')
         .replace(/Human attested TRUE/g,'Confirmed').replace(/Human attested/g,'Confirmed');
-      if(body[i].includes('internal:'))throw Error('Submission edition contains an internal custody reference; provide its publishable attachment or URL');
+      if(privateCustody(body[i]))throw Error('Submission edition contains a private workspace or custody reference; select outward source text and evidence');
     }
     return body.join('\n').trimEnd()+'\n';
   }
@@ -372,7 +381,8 @@ function lookup(opened,id){const c=opened.state.cases.find(x=>x.id===id);if(!c)t
 function originalLeaf(d){return "original-"+d.name.replace(/[<>:"\/\\|?*\u0000-\u001f]/g,"_").replace(/[. ]+$/g,"");}
 function sourceLinks(opened,ids,prefix="../",standalone=false){return '<ul>'+[...new Set(ids)].map(id=>{const d=opened.ledger.documents.find(x=>x.id===id);const href=standalone?"data:"+d.media_type+";base64,"+d.content_base64:prefix+"sources/"+d.id+"/"+encodeURIComponent(originalLeaf(d));return '<li><a href="'+href+'"'+(standalone?' download="'+html(d.name)+'"':'')+'>'+html(d.name)+'</a> · '+d.bytes+' bytes · '+html(d.sha256)+'</li>';}).join('')+'</ul>';}
 function collectIds(v,out=new Set()){if(Array.isArray(v)){for(const x of v)collectIds(x,out);}else if(v&&typeof v==="object"){for(const [k,val] of Object.entries(v)){if(k==="source_ids")for(const id of val)out.add(id);else collectIds(val,out);}}return [...out];}
-async function invoiceHTML(input,caseId,invoiceId,{standalone=false,includeHistory=false}={}){const o=await readLedger(input),c=lookup(o,caseId),v=c.invoices.find(x=>x.id===invoiceId);if(!v)throw new Error("Invoice not found");const a=o.state.award;
+async function invoiceHTML(input,caseId,invoiceId,options={}){return invoiceFrom(await readLedger(input),caseId,invoiceId,options);}
+function invoiceFrom(o,caseId,invoiceId,{standalone=false,includeHistory=false}={}){const c=lookup(o,caseId),v=c.invoices.find(x=>x.id===invoiceId);if(!v)throw new Error("Invoice not found");const a=o.state.award;
  const invoiceOperation=o.ledger.operations.find(x=>x.type==="invoice.prepare"&&x.input.id===invoiceId);const status=!includeHistory?"Original prepared invoice":v.voided?"Voided":v.payments.reduce((n,p)=>n+money(p.amount),0)===v.total_cents?"Paid":v.payments.length?"Part paid":v.submissions.length?"Submission recorded":"Prepared";
  return page("Invoice "+v.number,def([["Status",status],["Provider",a.provider],["Contract",v.contract_id],["Case",c.label+" / "+c.id],["Beneficiary",c.beneficiary_alias],["Prepared",v.prepared_at],["Currency","USD"],["Total",dollars(v.total_cents)]])+
  '<h2>Approved casework</h2>'+table(["Kind","Entry / scope","Minutes","Loaded rate","Amount","Approved plan"],v.lines.map(l=>[l.kind,l.entry_id+" / "+(l.task_id??l.expense_id),l.minutes??"—",l.rate??"At cost",dollars(l.amount_cents),l.plan_id]))+
@@ -382,7 +392,8 @@ async function invoiceHTML(input,caseId,invoiceId,{standalone=false,includeHisto
  '<p class="muted">Workbook '+html(o.ledger.id)+' · '+html(invoiceOperation.sha256)+'</p>');
 }
 function entryStatus(c,kind,row){if(row.voided)return "Voided original";if(!row.billable)return "Excluded";const ids=kind==="time"?"time_ids":"expense_ids";if(c.closed?.[kind==="time"?"writeoff_time_ids":"writeoff_expense_ids"].includes(row.id))return "Written off";return c.invoices.some(i=>!i.voided&&i[ids].includes(row.id))?"Invoiced":"Eligible, uninvoiced";}
-async function caseHTML(input,caseId,{standalone=false}={}){const o=await readLedger(input),c=lookup(o,caseId),view=o.view.cases.find(x=>x.id===caseId);
+async function caseHTML(input,caseId,options={}){return caseFrom(await readLedger(input),caseId,options);}
+function caseFrom(o,caseId,{standalone=false}={}){const c=lookup(o,caseId),view=o.view.cases.find(x=>x.id===caseId);
  return page(c.label,def([["Case",c.id],["Beneficiary alias",c.beneficiary_alias],["Service",c.service],["Status",view.status],["Approved plan",view.plan_id??"Awaiting written approval"],["Invoiced USD",view.invoice_total],["Paid USD",view.paid],["Outstanding USD",view.outstanding]])+
  '<h2>Need and intended outcome</h2><p>'+html(c.need)+'</p><p>'+html(c.objectives)+'</p>'+
  '<h2>Scope and written approvals</h2>'+c.plans.map(p=>'<h3>'+html(p.id)+'</h3><p>'+html(p.scope)+'</p>'+table(["Task","Work","Deliverable"],p.tasks.map(t=>[t.id,t.title,t.deliverable]))+table(["Labor task","Category","Approved minutes"],p.labor.map(x=>[x.task_id,x.role_id,x.minutes]))+table(["Direct cost","Description","USD ceiling","Basis"],p.expenses.map(x=>[x.id,x.description,x.ceiling,x.procurement]))+'<p>'+html(c.approvals.find(x=>x.plan_id===p.id)?.approved_at??"Proposed; no written approval recorded")+'</p>').join('')+
@@ -394,7 +405,8 @@ async function caseHTML(input,caseId,{standalone=false}={}){const o=await readLe
  '<h2>Original case documents</h2>'+sourceLinks(o,collectIds(c),"../",standalone)+
  '<p class="muted">The complete original workbook preserves excluded records, source bytes, all requested/approved scope editions and original invoice selections.</p>');
 }
-async function workspaceHTML(input,{standalone=false}={}){const o=await readLedger(input);
+async function workspaceHTML(input,options={}){return workspaceFrom(await readLedger(input),options);}
+function workspaceFrom(o,{standalone=false}={}){
  return page(o.ledger.title,def([["Workbook",o.ledger.id],["Contract",o.state.award?.contract_id??"Award not recorded"],["Provider",o.state.award?.provider??"—"],["Retained operations",o.ledger.operations.length],["Original documents",o.ledger.documents.length],["Committed USD",o.view.allocation.total],["Unallocated USD",o.view.allocation.unallocated]])+
  '<h2>Cases</h2><ul>'+o.view.cases.map(c=>'<li>'+(standalone?html(c.label):'<a href="cases/case-'+encodeURIComponent(c.id)+'.html">'+html(c.label)+'</a>')+' · '+html(c.status)+' · invoiced USD '+c.invoice_total+' · outstanding USD '+c.outstanding+'</li>').join('')+'</ul>'+
  '<h2>Contract provisions</h2>'+table(["Clause","Applicability","Scope","Recorded determination"],o.state.provisions.map(p=>[p.clause,p.applicability,p.case_id??"Contract",p.determination]))+
@@ -402,13 +414,14 @@ async function workspaceHTML(input,{standalone=false}={}){const o=await readLedg
  '<h2>Editable original</h2><p>'+(standalone?'Save the complete editable JSON or handover ZIP from the original workbench.':'<a href="workbook.json">Download and reopen the complete workbook</a>')+'</p><p>'+html(o.ledger.sha256)+'</p>');
 }
 function csv(rows){return rows.map(row=>row.map(v=>{let s=String(v??"");if(/^[=+@\t\r]/.test(s)||(/^-/ .test(s)&&!/^-\d/.test(s)))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(",")).join("\r\n")+"\r\n";}
-async function invoiceCSV(input,caseId,invoiceId){const o=await readLedger(input),c=lookup(o,caseId),i=c.invoices.find(x=>x.id===invoiceId);if(!i)throw new Error("Invoice not found");return csv([["invoice","contract","case","kind","entry","task","minutes","rate_usd","amount_usd","approved_plan"],...i.lines.map(l=>[i.number,i.contract_id,c.id,l.kind,l.entry_id,l.task_id??l.expense_id,l.minutes??"",l.rate??"",dollars(l.amount_cents),l.plan_id])]);}
+async function invoiceCSV(input,caseId,invoiceId){return invoiceCsvFrom(await readLedger(input),caseId,invoiceId);}
+function invoiceCsvFrom(o,caseId,invoiceId){const c=lookup(o,caseId),i=c.invoices.find(x=>x.id===invoiceId);if(!i)throw new Error("Invoice not found");return csv([["invoice","contract","case","kind","entry","task","minutes","rate_usd","amount_usd","approved_plan"],...i.lines.map(l=>[i.number,i.contract_id,c.id,l.kind,l.entry_id,l.task_id??l.expense_id,l.minutes??"",l.rate??"",dollars(l.amount_cents),l.plan_id])]);}
 const crcTable=Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
 function crc(bytes){let c=0xffffffff;for(const b of bytes)c=crcTable[(c^b)&255]^(c>>>8);return(c^0xffffffff)>>>0;}
 function number(bytes,at,n,count){for(let i=0;i<count;i++)bytes[at+i]=(n>>>(8*i))&255;}
 function zipStore(entries){const chunks=[],central=[];let offset=0,total=0;const names=new Set();for(const e of entries){if(!e.name||e.name.startsWith("/")||e.name.split("/").some(p=>!p||p==="."||p==="..")||names.has(e.name))throw new Error("Invalid archive path");names.add(e.name);const name=enc.encode(e.name),data=typeof e.data==="string"?enc.encode(e.data):e.data;if(name.length>65535||data.length>0xffffffff)throw new Error("ZIP member too large");const h=new Uint8Array(30+name.length),hash=crc(data);number(h,0,0x04034b50,4);number(h,4,20,2);number(h,6,0x0800,2);number(h,12,33,2);number(h,14,hash,4);number(h,18,data.length,4);number(h,22,data.length,4);number(h,26,name.length,2);h.set(name,30);chunks.push(h,data);const c=new Uint8Array(46+name.length);number(c,0,0x02014b50,4);number(c,4,788,2);number(c,6,20,2);number(c,8,0x0800,2);number(c,14,33,2);number(c,16,hash,4);number(c,20,data.length,4);number(c,24,data.length,4);number(c,28,name.length,2);number(c,38,(0o100600<<16)>>>0,4);number(c,42,offset,4);c.set(name,46);central.push(c);offset+=h.length+data.length;}const cs=central.reduce((n,x)=>n+x.length,0);if(entries.length>65535||offset+cs>0xffffffff)throw new Error("ZIP64 is required for this archive");const tail=new Uint8Array(22);number(tail,0,0x06054b50,4);number(tail,8,entries.length,2);number(tail,10,entries.length,2);number(tail,12,cs,4);number(tail,16,offset,4);const out=new Uint8Array(offset+cs+22);for(const c of [...chunks,...central,tail]){out.set(c,total);total+=c.length;}return out;}
-async function handoverEntries(input){const o=await readLedger(input),entries=[{name:"workbook.json",data:ledgerText(o.ledger)},{name:"index.html",data:await workspaceHTML(o.ledger)}];
- for(const c of o.state.cases){entries.push({name:"cases/case-"+c.id+".html",data:await caseHTML(o.ledger,c.id)});for(const i of c.invoices){entries.push({name:"cases/invoices/invoice-"+i.id+".html",data:await invoiceHTML(o.ledger,c.id,i.id)});entries.push({name:"cases/invoices/invoice-"+i.id+".csv",data:await invoiceCSV(o.ledger,c.id,i.id)});}}
+async function handoverEntries(input){const o=await readLedger(input),entries=[{name:"workbook.json",data:ledgerText(o.ledger)},{name:"index.html",data:workspaceFrom(o)}];
+ for(const c of o.state.cases){entries.push({name:"cases/case-"+c.id+".html",data:caseFrom(o,c.id)});for(const i of c.invoices){entries.push({name:"cases/invoices/invoice-"+i.id+".html",data:invoiceFrom(o,c.id,i.id)});entries.push({name:"cases/invoices/invoice-"+i.id+".csv",data:invoiceCsvFrom(o,c.id,i.id)});}}
  for(const d of o.ledger.documents)entries.push({name:"sources/"+d.id+"/"+originalLeaf(d),data:sourceBytes(d)});
  const inventory=[];for(const e of entries){const b=typeof e.data==="string"?enc.encode(e.data):e.data;inventory.push({path:e.name,bytes:b.length,sha256:await digestBytes(b)});}entries.push({name:"manifest.json",data:JSON.stringify({schema:"commons.otf-case-handover.v1",workbook_id:o.ledger.id,workbook_sha256:o.ledger.sha256,files:inventory},null,2)+"\n"});return entries;}
 async function handoverZIP(input){return zipStore(await handoverEntries(input));}
