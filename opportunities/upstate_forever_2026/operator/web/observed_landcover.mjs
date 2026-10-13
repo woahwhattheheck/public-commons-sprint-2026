@@ -134,9 +134,13 @@ export function attachObservedLandcover(host){
       priorOpened=opened,priorPreview=preview;
     const result=await api(endpoint('/api/observed-landcover/catalog',{workspace:w}));
     if(!alive(w,g)||ticket!==catalogRead)return false;
-    catalog=result;
-    if(!rows(result.sources).some(row=>choiceKey(row)===c.draft.source))c.draft.source='';
-    field('source').innerHTML=options(rows(result.sources).map(row=>({value:choiceKey(row),label:row.title+' · '+row.analysis_sha256.slice(0,12)})),c.draft.source,'Choose original source');
+    const selected=c.draft.source,retained=rows(catalog?.sources).find(row=>choiceKey(row)===selected);
+    const preserveEditedSource=c.edit!==edit&&selected&&!rows(result.sources).some(row=>choiceKey(row)===selected);
+    catalog=preserveEditedSource&&retained?{...result,sources:[...rows(result.sources),retained]}:result;
+    if(c.edit===edit&&!rows(result.sources).some(row=>choiceKey(row)===selected))c.draft.source='';
+    const sourceOptions=rows(catalog.sources).map(row=>({value:choiceKey(row),label:row.title+' · '+row.analysis_sha256.slice(0,12)}));
+    if(preserveEditedSource&&!retained)sourceOptions.push({value:selected,label:'Current selection · refresh to verify source'});
+    field('source').innerHTML=options(sourceOptions,c.draft.source,'Choose original source');
     field('edition').innerHTML=options(rows(result.selections).map(row=>({value:row.id,label:row.title+' · '+row.huc12s.length+' HUCs'})),c.lastOpened,'Choose saved comparison');
     find('[data-lc-action="import"]').disabled=!result.published_source_available;
     persist(w);
