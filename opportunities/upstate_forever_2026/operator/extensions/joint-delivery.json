@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "joint-delivery",
+  "title": "Joint delivery planning",
+  "version": "1.0.0",
+  "order": 77,
+  "requires_actions": [
+    "customer.review.create",
+    "customer.review.export"
+  ],
+  "assets": [
+    "joint_delivery.mjs",
+    "joint_delivery.css"
+  ],
+  "backend": {
+    "module": "joint_delivery",
+    "factory": {
+      "handler": "JointDelivery",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "joint-delivery.create"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/joint-delivery/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/joint-delivery/evidence",
+        "operation": "evidence",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/joint-delivery/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/joint-delivery/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/joint_delivery.mjs",
+    "factory": "attachJointDelivery",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh",
+      "openSavedCustomerReview"
+    ],
+    "styles": [
+      "/web/joint_delivery.css"
+    ],
+    "view": {
+      "id": "joint-delivery",
+      "title": "Joint delivery planning",
+      "after": "milestone-handoff"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

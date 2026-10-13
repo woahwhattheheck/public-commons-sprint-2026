@@ -1,0 +1,29 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "joint-delivery",
+  "components": {
+    "joint-delivery": {
+      "title": "Complete joint delivery allocations and prime inputs on original Customer reviews",
+      "paths": [
+        "model/joint_delivery.py",
+        "operator/joint_delivery.py",
+        "source/joint-delivery/20261013/profile.json",
+        "operator/web/joint_delivery.mjs",
+        "operator/web/joint_delivery.css",
+        "operator/extensions/joint-delivery.json",
+        "source_tools/receive_joint_delivery.py",
+        "source_tools/receive_joint_delivery_browser.mjs",
+        "JOINT_DELIVERY.md",
+        "integration/component_fragments/joint-delivery.json"
+      ],
+      "requires": [
+        "core",
+        "study-transfer",
+        "project-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "joint-delivery"
+  ]
+}
