@@ -117,3 +117,19 @@ python -B complete_external_source.py ORIGINAL_CARRIER.md \
 ```
 
 Each selected member must already have an exact original identity and source URI in the carrier. An already embedded member is reused. The command does not replace the selected original application or its scientific Workspace. It can also publish `--source-map` and `--zip` outputs for the same completed edition.
+
+## Complete native source capacity and experiment installation
+
+Use the matched source composer, carrier codec, standalone receiver and maintained Python assembler from the same current application. The JavaScript source member accounting and gzip decoder, and receive_application_source.py, accept up to 512 MiB (536,870,912 bytes) and 10,000 source members. Receive source_tools/application_assembly.py with the same MAX_BYTES value when continuing a large complete application; keep its current component catalogue and source-family capture implementation. Original encoded payload sizes, decoded source sizes, file modes, hashes and predecessor declarations are still checked.
+
+The carrier remains the complete selected source. Use its existing numbered parts when the delivery surface needs multiple documents, then receive all parts in their original order. A source-size ceiling is separate from a provider's per-document limit. The maintained codec retains its original gzip framing and complete decoded byte identity.
+
+The experiment installer recognizes the actual Handler.do_GET static asset comparison through Python's syntax tree. It adds experiments.mjs and experiments.css only to that comparison's original leftmost literal file set, preserving nested extension unions and every unrelated statement. UTF-8 column offsets are converted to character offsets before replacement. An already-present pair is reused; an unsupported registry remains an explicit source-composition error.
+
+These changes adopt the original completed native application's installer and transport bodies. Continue the existing source assembly and original Workspace/model/report operation after receiving them. The complete current application remains the base, with each changed source leaf bound to its actual predecessor.
+
+## Observe the outgoing application and attachments
+
+Before presenting the assembled app, demo, report or any attachment, the producing peer must open and normally use the exact outgoing version, view its rendered screens or real screenshots, and operate the important controls. Inspect the actual presentation width and relevant narrow width, populated/loading/empty/error states, downloads and reopened files. Open the delivered HTML, report/PDF pages, maps, archives and editable projects as the recipient would; play final audio/video. Fix concrete presentation and interaction defects as part of delivery. Source inspection, tests, HTTP success and captured screenshots that were never viewed do not replace this observation.
+
+Apply the complete current [owner instruction](../AGENTS.md) to local, cloud and delegated workers. Use plain industrial presentation; keep the real scientific workflows and original data. For video narration, use available high-quality generative voice/TTS and listen to the final export. Keep this focused on improving and shipping the product, with the existing sprint cutoff and owner controls.

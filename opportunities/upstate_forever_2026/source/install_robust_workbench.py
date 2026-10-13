@@ -21,6 +21,13 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "integration/scientific_report_capture_patch.json",
+    "model/scientific_report_capture.py",
+    "model/scientific_report_editions.py",
+    "operator/extensions/source-reports.json",
+    "operator/web/source_reports.mjs",
+    "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+    "integration/component_fragments/scientific-report-capture.json",
     "model/report_changes_study_transfer.py",
     "model/REPORT_CHANGES_STUDY_TRANSFER.md",
     "integration/component_fragments/report-changes-study-transfer.json",
@@ -143,6 +150,13 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "integration/scientific_report_capture_patch.json",
+    "model/scientific_report_capture.py",
+    "model/scientific_report_editions.py",
+    "operator/extensions/source-reports.json",
+    "operator/web/source_reports.mjs",
+    "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+    "integration/component_fragments/scientific-report-capture.json",
     "model/report_changes_study_transfer.py",
     "model/REPORT_CHANGES_STUDY_TRANSFER.md",
     "integration/component_fragments/report-changes-study-transfer.json",
@@ -597,6 +611,22 @@ def verify_composition(application, pending):
         monitoring_report = read_existing(application, "model/monitoring_report_source.py")
     if monitoring_report is not None:
         assembled_data(application, pending, "model/monitoring_comparison_report.py")
+    saved_editions = pending.get("model/scientific_report_editions.py")
+    if saved_editions is None:
+        saved_editions = read_existing(application, "model/scientific_report_editions.py")
+    report_provider = pending.get("operator/source_report_editions.py")
+    if report_provider is None:
+        report_provider = read_existing(application, "operator/source_report_editions.py")
+    if any(source is not None and b"scientific_report_capture" in source
+           for source in (saved_editions, report_provider)):
+        for dependency in (
+                "model/scientific_report_capture.py", "model/scientific_report_editions.py",
+                "model/observed_report_render.py", "model/observed_context.py", "model/common.py",
+                "operator/source_report_editions.py", "operator/extensions/source-reports.json",
+                "operator/web/source_report_editions.mjs", "operator/web/source_reports.mjs",
+                "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+                "integration/component_fragments/scientific-report-capture.json"):
+            assembled_data(application, pending, dependency)
     server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
     client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
     if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:

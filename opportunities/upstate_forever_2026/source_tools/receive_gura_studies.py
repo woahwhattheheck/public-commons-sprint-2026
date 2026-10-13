@@ -32,6 +32,14 @@ PURPOSE = (
 )
 
 
+class ReceiverInterrupted(RuntimeError):
+    """Carry a nested original receiver's observed process exit unchanged."""
+    def __init__(self, code, command):
+        super().__init__("Original Gura receiver interrupted: " + str(code))
+        self.native_failure = {"kind": "gura_receiver_interrupted",
+                               "return_code": code, "command": list(command)}
+
+
 def axes_for(scope):
     active = SCOPES[scope]
     result = []
@@ -464,9 +472,11 @@ def main(argv=None):
                 if args.isolate_native_cases:
                     # The original reference receiver owns its separate .driver
                     # lease. It does not reacquire this suite's native batch lease.
-                    code = subprocess.call(
-                        [sys.executable, "-B", str(Path(receiver.__file__)), *original_args],
+                    original_command = [sys.executable, "-B", str(Path(receiver.__file__)), *original_args]
+                    code = subprocess.call(original_command,
                         cwd=application, env=dict(os.environ), pass_fds=custody_fds)
+                    if code < 0 or code in (130, 137, 143):
+                        raise ReceiverInterrupted(code, original_command)
                 else:
                     code = receiver.main(original_args)
                 if code:
@@ -633,9 +643,10 @@ def main(argv=None):
                        failed_study_keys=failures, completed_at=now() if complete else None)
             return 0 if complete else 1
         except Exception as error:
+            interrupted = process_interrupted(error) or isinstance(error, ReceiverInterrupted)
             try:
-                checkpoint("interrupted" if process_interrupted(error) else "error",
-                           state="partial" if process_interrupted(error) else "error", error={
+                checkpoint("interrupted" if interrupted else "error",
+                           state="partial" if interrupted else "error", error={
                     **(getattr(error, "native_failure", None) or {}),
                     "type": type(error).__name__, "message": str(error),
                     "traceback": traceback.format_exc()})
@@ -643,7 +654,9 @@ def main(argv=None):
                 if not storage_exhausted(error):
                     raise
             logging.exception("Gura parameter suite stopped at its actual operation")
-            return 1
+            # Preserve the interrupted cohort boundary for its original supervisor.
+            # The saved native_failure retains the exact child code and source IDs.
+            return 130 if interrupted else 1
 
 
 if __name__ == "__main__":

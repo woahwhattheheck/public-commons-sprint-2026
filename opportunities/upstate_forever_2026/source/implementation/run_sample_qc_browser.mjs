@@ -107,10 +107,26 @@ async function initialize(){
  const input={...(options.fieldwork?{fieldwork_input:'native-document'}:{}),fieldwork_sha256:sha(raw),workspace_key:args.workspace,operator_origin_sha256:sha(origin),operation_id:fieldwork.operation_id,
   project_id:fieldwork.original_project_id,plan_id:fieldwork.plan_id,qc_reports:fieldwork.qc_reports.map(r=>r.report_id),action_reports:fieldwork.action_reports.map(r=>r.action_report_id)};
  const previous=await optional(join(output,'request-state.json'));
- if(args.resume){check(previous,'The original output has no durable request state.');state=JSON.parse(previous);check(state.schema==='upstate.sample-qc-browser-requests/v1','Choose the original field course.');equal(state.input,input,'Resume the same input bytes, operator origin and workspace, or use a new output directory.');}
- else{check(!previous,'Choose a new output directory.');state={schema:'upstate.sample-qc-browser-requests/v1',input,created_at:now(),requests:{},baseline:null};}
+ if(previous){
+  check(args.resume,'Choose a new output directory or resume the original course.');
+  state=JSON.parse(previous);check(state.schema==='upstate.sample-qc-browser-requests/v1','Choose the original field course.');
+  equal(state.input,input,'Resume the same input bytes, operator origin and workspace, or use a new output directory.');
+ }else{
+  // No browser or native request can run before this first journal commits.
+  // Recover only an interrupted initialization while retaining its original bytes.
+  for(const name of await readdir(output)){
+   check(name==='.course-lock'||name==='native-input.json'||
+     /^(?:native-input|request-state)\.json\.pending-[0-9a-f-]{36}$/.test(name),
+     'The original output has committed course data but no request state; retain it for recovery.');
+   const entry=await lstat(join(output,name));
+   check(entry.isFile()&&!entry.isSymbolicLink(),'An interrupted initialization member is not a regular file.');
+  }
+  const original=await optional(join(output,'native-input.json'));
+  if(original)check(original.equals(raw),'The interrupted initialization belongs to another original field input.');
+  state={schema:'upstate.sample-qc-browser-requests/v1',input,created_at:now(),requests:{},baseline:null};
+ }
  check(state.requests&&typeof state.requests==='object'&&!Array.isArray(state.requests),'The retained native request index is invalid.');
- await immutable(join(output,'native-input.json'),raw);await persist();
+ await persist();await immutable(join(output,'native-input.json'),raw);
  const old=await optional(join(output,'journey.json'));
  journey=old?JSON.parse(old):{schema:'upstate.sample-qc-browser/v1',created_at:now(),input,steps:[],artifacts:[],attempts:[],browser_errors:[]};
  check(journey.schema==='upstate.sample-qc-browser/v1','The existing course journal is invalid.');

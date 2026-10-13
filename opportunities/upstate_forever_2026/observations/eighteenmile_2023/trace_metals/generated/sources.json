@@ -8,13 +8,13 @@
       "kind": "document",
       "role": "OBSERVED_CONTEXT",
       "path": "report.json",
-      "sha256": "2a37c63c1fab43c7324d066866c94f41c83a545c40d113180358cb5208bb7f54",
+      "sha256": "a3f182e568354141027504498346f032de6e870678905705934457a9d8cfc3e1",
       "uri": "urn:upstate:eighteenmile-trace-metals:061bcd7ad5d40ced49cb5ab787a6a23864ec3312889a11dc2b7c1d2fee2c29fe",
       "vintage": "Original 2023 observations; retained source edition 2026-10-13",
       "companions": [
         {
           "path": "README.md",
-          "sha256": "0d24fc223e5238549348dd4af64dfe7318c9ff3866e20658e397333b00f5fe2b"
+          "sha256": "80f368ff6aca01aa29be20b9ff8b7eec6c117a5cc9a2b011037536333d06fb7b"
         },
         {
           "path": "analysis_core.mjs",
@@ -29,12 +29,8 @@
           "sha256": "4cb8299aaff8f54ba320e3048b034ccb5f345b75bd4197da6e1c413dde15a312"
         },
         {
-          "path": "explorer.html",
-          "sha256": "21f925946d0d10cea1e4dd3edbc9e46164fbba81f098f7346d51a071aad42ed6"
-        },
-        {
           "path": "explorer.mjs",
-          "sha256": "b94616491fad90d560501d8889c178adc2e566b50bb16ad61ceafce6a5b4ebe4"
+          "sha256": "7aff2700f83bf41497314af5addf8b30ad5f2ec1ba85d191239f5285391c87a6"
         },
         {
           "path": "explorer_template.mjs",
@@ -89,8 +85,12 @@
           "sha256": "f9b8ec464b3c0e0a3bc8f1ac7571b83c474d07523fa90dc9f17dda16531d81a3"
         },
         {
+          "path": "report.html",
+          "sha256": "a2ade2e31306e9f253404ad69b284d50a16ee47e48d77ce37228d671734dfa81"
+        },
+        {
           "path": "report_core.mjs",
-          "sha256": "440760a23f1c286f810a276609034a85b03e773d389491a3ed13602f870c099f"
+          "sha256": "17cb51f6936373943f8e028475a865f563f2958bc63b61dab496b59c53864d05"
         },
         {
           "path": "same-activity-context.csv",

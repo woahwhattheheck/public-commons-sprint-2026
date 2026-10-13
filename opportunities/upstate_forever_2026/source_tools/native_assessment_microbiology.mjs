@@ -318,6 +318,7 @@ export const MICROBIAL_ORIGINAL_FILES=Object.freeze([
   },
   {
     "path": "source/ecoli_utility_context/20261013/source-manifest.json",
+    "application_path": "source/ecoli_utility_context/20261013/original-b91a8dd8/source-manifest.json",
     "bytes": 23194,
     "sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
   },
@@ -463,11 +464,13 @@ export const MICROBIAL_ORIGINAL_FILES=Object.freeze([
   },
   {
     "path": "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+    "application_path": "source/ecoli_utility_context/20261013/original-b91a8dd8/build_ecoli_report.mjs",
     "bytes": 45810,
     "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
   },
   {
     "path": "source/ecoli_utility_context/20261013/index.html",
+    "application_path": "source/ecoli_utility_context/20261013/original-b91a8dd8/index.html",
     "bytes": 568315,
     "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
   },

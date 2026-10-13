@@ -1047,8 +1047,15 @@ class Operator:
         if task["action"] == "spatial.review.export" and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], "spatial_exports", result["id"])["_downloads"]
         if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):
-            task["_item"] = {"kind": "parameter-studies", "id": result["id"]}
-            task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]
+            if task["action"] == "parameter-study.source.prepare":
+                task["_item"] = {"kind": "parameter-studies", "id": result["experiment_id"]}
+                prepared = self.parameter_studies.read(task["workspace"], "scientific-source",
+                    {"source_id": result["id"]})
+                task["result"] = {**result, **prepared}
+                task["_downloads"] = prepared.get("downloads", [])
+            else:
+                task["_item"] = {"kind": "parameter-studies", "id": result["id"]}
+                task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]
         community_actions = {"community.table.import": "community_tables",
                              "community.plan.save": "community_plans",
                              "community.report.build": "community_reports"}
@@ -1234,7 +1241,7 @@ class Handler(BaseHTTPRequestHandler):
                                                      "run_id", "attempt_id", "stream", "log_offset",
                                                      "expected_attempt_id", "history_offset", "range_offset",
                                                      "range_limit", "expected_artifact_sha256",
-                                                     "case_filter", "query")}))
+                                                     "case_filter", "query", "source_id")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],

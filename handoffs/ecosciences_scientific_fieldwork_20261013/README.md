@@ -26,10 +26,10 @@ This writes the verified 57 files under `scientific-fieldwork-source/source/`, t
 
 The actual completed native application is `/mnt/data/ecosciences/field12/complete-received/application` and its Workspace is the sibling `workspace` directory. The original project is `dc92b8b9-6eda-4362-b12d-3cf2ef6c9007`.
 
-Continue the saved laboratory plan `eighteenmile-2023-original-lake-samples`, revision 2. Its separate completed station/visit plan `eighteenmile-site-visit-6dff67f757e190f4`, revision 3, remains in the Workspace. Use an owned operation name and an owned continuation Workspace where there are simultaneous writers.
+Continue the saved laboratory plan `eighteenmile-2023-original-lake-samples`, revision 2. Its separate completed station/visit plan `eighteenmile-site-visit-6dff67f757e190f4`, revision 3, remains in the Workspace. Use an absolute operation directory outside the application and Workspace, and an owned continuation Workspace where there are simultaneous writers.
 
 ```bash
-python -B APPLICATION/source_tools/receive_scientific_fieldwork.py --workspace WORKSPACE --operation ESEXP-2319-original-course --plan-id eighteenmile-2023-original-lake-samples --revision 2 --as-of 2026-10-13
+python -B APPLICATION/source_tools/receive_scientific_fieldwork.py --workspace WORKSPACE --operation /mnt/data/ecosciences/scientific-fieldwork-2319 --plan-id eighteenmile-2023-original-lake-samples --revision 2 --as-of 2026-10-13
 ```
 
 When continuing a selected existing scientific edition, also pass `--sources ORIGINAL_SCIENTIFIC_EDITION/selection.json`. The course accepts its original selection wrapper and complete source selection.

@@ -38,7 +38,7 @@ const defs = obj => '<dl class="definition">'+Object.entries(obj).map(([k,v])=>'
 const button = (action,label,extra='',style='') => '<button type="button" class="'+esc(style)+'" data-action="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
 const viewLabels={'parameter-studies':'Parameter studies',portfolios:'Conservation portfolios',conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
-const actionLabels={'community.report.handover.export':'Export Community source handover','community.report.handover.receive':'Receive Community report source','scenario.footprint.preview':'Preview native scenario inputs','source-reports.review':'Prepare saved scientific report review','conservation.report.source.prepare':'Prepare Conservation scientific report source','compute.programme.interaction':'Use conservation study','compute.programme.attach-interaction':'Attach conservation attribution','compute.programme.sync-interaction':'Reconcile conservation attribution','parameter-study.prepare':'Prepare parameter study','parameter-study.run':'Run parameter study','parameter-study.summarize':'Summarize parameter study','portfolio.inventory.build':'Build native planning inventory','portfolio.preview':'Analyze conservation choices','portfolio.save':'Save conservation portfolio','portfolio.scenario.prepare':'Prepare portfolio scenario','portfolio.run.prepare':'Prepare portfolio model run','portfolio.run.start':'Run portfolio native models','portfolio.report.build':'Build portfolio report','portfolio.decision.build':'Build portfolio economic comparison','conservation.catalog.export':'Export complete candidate rows','conservation.catalog.plan.save':'Save retained candidate plan','conservation.catalog.select':'Retain candidate selection','conservation.catalog.prepare':'Prepare candidate search','conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','community.report.source.prepare':'Prepare Community scientific report source','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
+const actionLabels={'community.report.handover.export':'Export Community source handover','community.report.handover.receive':'Receive Community report source','scenario.footprint.preview':'Preview native scenario inputs','source-reports.review':'Prepare saved scientific report review','conservation.report.source.prepare':'Prepare Conservation scientific report source','compute.programme.interaction':'Use conservation study','compute.programme.attach-interaction':'Attach conservation attribution','compute.programme.sync-interaction':'Reconcile conservation attribution','parameter-study.source.prepare':'Prepare Parameter scientific source','parameter-study.prepare':'Prepare parameter study','parameter-study.run':'Run parameter study','parameter-study.summarize':'Summarize parameter study','portfolio.inventory.build':'Build native planning inventory','portfolio.preview':'Analyze conservation choices','portfolio.save':'Save conservation portfolio','portfolio.scenario.prepare':'Prepare portfolio scenario','portfolio.run.prepare':'Prepare portfolio model run','portfolio.run.start':'Run portfolio native models','portfolio.report.build':'Build portfolio report','portfolio.decision.build':'Build portfolio economic comparison','conservation.catalog.export':'Export complete candidate rows','conservation.catalog.plan.save':'Save retained candidate plan','conservation.catalog.select':'Retain candidate selection','conservation.catalog.prepare':'Prepare candidate search','conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','community.report.source.prepare':'Prepare Community scientific report source','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
 Object.assign(actionLabels,{"workspace.snapshot":"Create complete project","workspace.receive":"Receive complete project","workspace.recovery.resume":"Resume received work","project.transfer.capture":"Create incremental project","project.transfer.capture-study":"Capture completed study","project.transfer.accept":"Receive project manifest","project.transfer.receive":"Receive project part","project.transfer.parts":"Prepare requested project parts","project.transfer.archive":"Build complete project archive","project.transfer.restore":"Restore incremental project","project.transfer.report":"Export project inventory","project.transfer.inspect":"Inspect received project","project.transfer.diff":"Compare project editions"});
 const mapFamilies=['future_sediment_loss','future_nutrient_runoff','critical_drinking_water','high_quality_waters','current_nutrient_export','current_sediment_export','combined_pollutant_export'];
 Object.assign(actionLabels,{"conservation.sources.capture":"Acquire soil and floodplain sources","conservation.optimization.preview":"Preview conservation portfolio","conservation.optimization.save":"Save optimized conservation portfolio","conservation.optimization.export":"Export conservation decision packet"});
@@ -53,7 +53,7 @@ let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'o
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
 let formRevision=0,navigationRevision=0,workspaceRevision=0;
-let deliveryFormRequest=0;
+let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 
@@ -87,15 +87,38 @@ async function rehearsalOpenControl(control){
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
-const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args)});
+const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args),openScientificReport});
 async function openScientificReport(selection){
  if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
  detailDialog.close();detailContext=null;
  navigate('sources');
  return sourceReports.openForSources(selection,$('#content'));
 }
+async function openRetainedBuiltIn(selection,target,open){
+ if(selection?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection?.id||''))
+  throw Error('Open the saved report or review in its original Workspace.');
+ const request={workspace,workspaceRevision,connectionEpoch};
+ const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch;
+ if(!admitted())return null;
+ detailDialog.close();detailContext=null;
+ const navigation=navigate(target),targetNavigation=navigationRevision;
+ await navigation;
+ if(!admitted()||view!==target||navigationRevision!==targetNavigation)return null;
+ const container=$('#content'),anchor=container?.firstChild;
+ const isCurrent=()=>admitted()&&view===target&&navigationRevision===targetNavigation&&
+  container?.isConnected&&$('#content')===container&&container.firstChild===anchor;
+ if(!isCurrent())return null;
+ try{return await open({...selection,isCurrent},container);}
+ catch(error){if(!isCurrent())return null;toast(error.message||String(error));throw error;}
+}
+async function openSavedScientificReport(selection){
+ return openRetainedBuiltIn(selection,'sources',(value,container)=>sourceReports.openForStudy(value,container));
+}
+async function openSavedCustomerReview(selection){
+ return openRetainedBuiltIn(selection,'customer-reviews',value=>customerReviews.openForStudy(value));
+}
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
-const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
+const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,openSavedScientificReport,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport});
 const deliveryInspection=attachDeliveryInspection({getState:()=>state,api,endpoint,openItem,toast,
  openExtension:(...args)=>extensions.openExtension(...args),
@@ -108,7 +131,7 @@ const journeyForm=async open=>{await open();return {operation_id:formContext?.op
 const extensions=createExtensionHost({
  openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
- openScientificReport,
+ openScientificReport,openSavedScientificReport,openSavedCustomerReview,
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,sourceForm,
@@ -697,7 +720,12 @@ function nativeOutputCell(row,model,artifact){
 }
 
 async function profileForm(id){
- requireSources();const row=id?await api(endpoint('/api/item',{kind:'profiles',id})):null,collection=collectionDefault(row);
+ requireSources();const current=formOpening('profile.save');
+ let row;
+ try{row=id?await api(endpoint('/api/item',{kind:'profiles',id})):null;}
+ catch(error){if(current())throw error;return;}
+ if(!current())return;
+ const collection=collectionDefault(row);
  const parameter=(group,key,label,note='',attrs='')=>field(label,input(group+'_'+key,'number',row?.[group]?.[key]??'','required step="any" '+attrs),note);
  openForm(row?'Revise parameter profile':'New parameter profile','Select the original biophysical table, the native models to calculate and their published parameters. Each saved revision retains the complete original table and its own identity.',
  '<div class="form-grid">'+field('Profile title',input('title','text',row?.title?row.title+' · revision':'','required'),'',true)+
@@ -754,7 +782,12 @@ function bindGridResolution(original){
  readReference();
 }
 async function gridForm(id){
- requireSources();const original=id?await api(endpoint('/api/item',{kind:'grids',id})):null,row=original?.spec,collection=collectionDefault(row);
+ requireSources();const current=formOpening('grid.prepare');
+ let original;
+ try{original=id?await api(endpoint('/api/item',{kind:'grids',id})):null;}
+ catch(error){if(current())throw error;return;}
+ if(!current())return;
+ const row=original?.spec,collection=collectionDefault(row);
  const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
  const canReuse=original?.state==='complete',originalResolution=original?.grid?.resolution_m??row?.resolution_m??30;
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
@@ -787,7 +820,12 @@ function patchRow(collection,row={}){
  field('Reason for this change',area('patch_reason',row.reason||'','required'),'',true)+filterEditor('patch',row.where)+'</div></fieldset>';
 }
 async function scenarioForm(id){
- requireSources();const row=id?await api(endpoint('/api/item',{kind:'scenarios',id})):null,collection=collectionDefault(row);
+ requireSources();const current=formOpening('scenario.save');
+ let row;
+ try{row=id?await api(endpoint('/api/item',{kind:'scenarios',id})):null;}
+ catch(error){if(current())throw error;return;}
+ if(!current())return;
+ const collection=collectionDefault(row);
  openForm(row?'Revise land-cover scenario':'New land-cover scenario','Keep an unchanged baseline or define explicit changes using original polygon masks and land-cover codes. The model records the scenario separately from the source data.',
  '<div class="form-grid">'+field('Scenario title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Scenario type',select('kind',[['baseline','Unchanged source baseline'],['landcover','Explicit land-cover changes']],row?.kind||'baseline'))+
  field('Original source edition',select('collection',sources(),collection))+field('Scenario reason',area('reason',row?.reason||'','required'),'',true)+
@@ -871,9 +909,11 @@ function completedModelOrigins(row){
   table(['Model','Original run','Grid','Parameters','Inputs',''],rows);
 }
 async function completedModelsForm(id){
- const selectedWorkspace=workspace;
- const target=await api(endpoint('/api/item',{kind:'runs',id}));
- if(workspace!==selectedWorkspace)return;
+ const current=formOpening('run.start');
+ let target;
+ try{target=await api(endpoint('/api/item',{kind:'runs',id}));}
+ catch(error){if(current())throw error;return;}
+ if(!current())return;
  if(!['prepared','failed'].includes(target.state)||nativeModels(target.selection).length!==2)
   throw Error('Choose a prepared combined NDR and SDR run.');
  const candidates={ndr:completedModelSources(target,'ndr'),sdr:completedModelSources(target,'sdr')};
@@ -1094,14 +1134,14 @@ function retainedDeliveryCohort(selection,baseline,alternatives){
   throw Error('Keep the attached analysis’s original baseline and alternatives. Start a separate delivery to choose another native cohort.');
  return [...original];
 }
-function deliveryOpening(){
- const request=++deliveryFormRequest,ticket=admissionContext('delivery.build',null);
+function formOpening(action){
+ const request=++formOpeningRequest,ticket=admissionContext(action,null);
  const context=formContext,formOpen=formDialog.open,detailOpen=detailDialog.open;
- return ()=>request===deliveryFormRequest&&currentAdmission(ticket)&&
+ return ()=>request===formOpeningRequest&&currentAdmission(ticket)&&
   formContext===context&&formDialog.open===formOpen&&detailDialog.open===detailOpen;
 }
 async function deliveryForm(id,initialSelection){
- requireSources();const current=deliveryOpening();
+ requireSources();const current=formOpening('delivery.build');
  let saved;
  try{saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null;}
  catch(error){if(current())throw error;return;}
@@ -1294,7 +1334,7 @@ async function dispatch(button){
  if(action==='run-compare')return compareForm();
  if(action==='run-compare-selection'){detailDialog.close();detailContext=null;return compareForm({baseline_run_id:id});}
  if(action==='comparison-delivery'){
-  const current=deliveryOpening();
+  const current=formOpening('delivery.build');
   let comparison;
   try{comparison=await api(endpoint('/api/item',{kind:'comparisons',id}));}
   catch(error){if(current())throw error;return;}

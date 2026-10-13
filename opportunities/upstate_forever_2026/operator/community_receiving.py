@@ -40,6 +40,7 @@ def browser(args, application, receipt, output, mode, attempt):
         "chromium": str(args.chromium.resolve()), "python": sys.executable,
         "resume_failed_tasks": args.resume_failed_tasks, "source_revision": args.source_revision,
         "context": json.loads(args.context.read_text()) if args.context else {},
+        "mapped_plan": args.mapped_plan, "mapped_report": args.mapped_report,
     })
     try:
         return run_command([str(args.node), str(application / "operator/community_receiving.mjs"),
@@ -53,6 +54,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--workspace", type=Path)
     parser.add_argument("--source-revision", required=True)
+    parser.add_argument("--mapped-plan", help="Existing original plan to receive through explicit remapped CSV columns")
+    parser.add_argument("--mapped-report", help="Existing original report of --mapped-plan; its intervention values are preserved")
     parser.add_argument("--context", type=Path,
                         help="Existing original source/grid/run/delivery selection for this same workspace")
     parser.add_argument("--node", required=True, type=Path)
@@ -62,6 +65,12 @@ def main():
     parser.add_argument("--resume-failed-tasks", action="store_true",
                         help="Resume the same retained task after its concrete source/input repair")
     args = parser.parse_args()
+    mapping_course = bool(args.mapped_plan or args.mapped_report)
+    if mapping_course:
+        args.mapped_plan = identifier(args.mapped_plan)
+        args.mapped_report = identifier(args.mapped_report)
+        if args.workspace is None:
+            raise ValueError("Select the existing original Community Workspace for mapped intake")
     for runtime in (args.node, args.chromium, args.node_modules / "playwright/index.mjs"):
         if not runtime.is_file():
             raise ValueError("Select the installed receiving runtime: " + str(runtime))
@@ -76,13 +85,24 @@ def main():
     if not manifest.is_file():
         raise ValueError("Select the complete original Communities application and source")
     workspace_path = (args.workspace or output / "workspace").resolve()
-    workspace = Workspace(workspace_path, create=True,
+    workspace = Workspace(workspace_path, create=not mapping_course,
                           title="Upper Savannah utility and community work program")
-    result_path = output / "community-receiving-result.json"
+    if mapping_course:
+        from model import communities
+        original_plan = communities.get_plan(workspace, args.mapped_plan)
+        original_report = workspace._get(communities.REPORT_KIND, args.mapped_report)
+        if original_report["plan_id"] != original_plan["id"]:
+            raise ValueError("Choose the original saved report of the selected Community plan")
+        verify_plan_context(workspace, original_plan)
+    browser_stem = "community-mapping-browser" if mapping_course else "community-browser"
+    result_path = output / ("community-mapping-receiving-result.json" if mapping_course else "community-receiving-result.json")
     with held(output / ".community-receiving.lock", blocking=False):
         previous = json.loads(result_path.read_text()) if result_path.exists() else None
         if previous and previous["workspace_id"] != workspace.project["id"]:
             raise ValueError("The retained receiving belongs to another original workspace")
+        mapping_selection = {"plan_id": args.mapped_plan, "report_id": args.mapped_report} if mapping_course else None
+        if previous and previous.get("mapping_selection") != mapping_selection:
+            raise ValueError("Continue the same original mapped Community plan and report")
         attempts = list(previous.get("attempts", [])) if previous else []
         attempt_number = max((row["number"] for row in attempts), default=0) + 1
         attempt = output / ("attempt-" + str(attempt_number).zfill(3))
@@ -96,14 +116,14 @@ def main():
         result = {"schema": "upstate.community-receiving/v1", "complete": False,
                   "source_revision": args.source_revision, "workspace_id": workspace.project["id"],
                   "workspace_path": str(workspace.root), "source_manifest": record(manifest),
-                  "attempts": attempts}
+                  "attempts": attempts, "mapping_selection": mapping_selection}
         atomic(result_path, result)
         server = None
         original_thread = None
         reopened = None
         try:
-            progress_path = output / "browser/community-browser-progress.json"
-            browser_result_path = output / "browser/community-browser-result.json"
+            progress_path = output / "browser" / (browser_stem + "-progress.json")
+            browser_result_path = output / "browser" / (browser_stem + "-result.json")
             stage = json.loads(progress_path.read_text()) if progress_path.exists() else {}
             continue_delivered = (
                 stage.get("project_id") == workspace.project["id"]
@@ -168,6 +188,20 @@ def main():
             initial_plan = selected("community_plans", operated["initial_plan"])
             revised_plan = selected("community_plans", operated["revised_plan"])
             report = selected("community_reports", operated["report"])
+            if mapping_course:
+                if initial_plan["id"] != args.mapped_plan or initial_plan != original_plan:
+                    raise ValueError("The received mapped course changed its original saved plan")
+                for name in ("table_id", "title", "purpose", "selection", "context", "interventions", "cost_summary", "notes"):
+                    if revised_plan[name] != initial_plan[name]:
+                        raise ValueError("The mapped intake changed original plan data: " + name)
+                imported = revised_plan["intervention_import"]
+                if (report["format_version"] < 7 or imported["column_mapping"] != stage["mapping_input"]["column_mapping"]
+                        or imported["source"]["text"] != stage["mapping_input"]["text"]
+                        or imported["source"]["sha256"] != stage["mapping_input"]["sha256"]):
+                    raise ValueError("The delivered mapped report lost its original CSV or source-column provenance")
+                from model.common import verify_file
+                if verify_file(Workspace(received_workspace).root, report["files"]["received-interventions.csv"]).read_bytes() != imported["source"]["text"].encode("utf-8"):
+                    raise ValueError("The cold receiving report changed the exact mapped original CSV")
             if (initial_plan["table_id"] != table["id"] or revised_plan["table_id"] != table["id"]
                     or revised_plan["previous_plan_id"] != initial_plan["id"]
                     or report["table_id"] != table["id"] or report["plan_id"] != revised_plan["id"]):
@@ -192,7 +226,7 @@ def main():
                 original_totals=expected_totals, community_table_id=table["id"],
                 source_collection_id=stage["source"]["collection_id"],
                 original_plan_ids=[initial_plan["id"], revised_plan["id"]],
-                original_report_ids=[report["id"]],
+                original_report_ids=([args.mapped_report, report["id"]] if mapping_course else [report["id"]]),
                 received=received, workspace_archive=archive,
                 browser_result=record(browser_result_path), browser_progress=record(progress_path),
                 delivered_cli=record(cli_log))
@@ -204,7 +238,7 @@ def main():
         except BaseException as error:
             attempts[-1]["complete"] = False
             result["error"] = {"type": type(error).__name__, "message": str(error)}
-            for name in ("community-browser-result.json", "community-browser-progress.json"):
+            for name in (browser_stem + "-result.json", browser_stem + "-progress.json"):
                 path = output / "browser" / name
                 if path.exists():
                     result[name.removesuffix(".json").replace("-", "_")] = record(path)

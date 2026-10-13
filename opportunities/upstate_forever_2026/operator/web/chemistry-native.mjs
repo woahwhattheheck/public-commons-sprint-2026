@@ -4,7 +4,7 @@ import {attachChemistry} from './chemistry.mjs';
 const workspaceKey = value => value?.workspace_key ?? value?.workspace ?? value?.data?.workspace_key;
 export function attachNativeChemistry(host) {
   const desks = new Map();
-  let active = null;
+  let active = null, activation = 0;
   function currentKey() {
     const key = workspaceKey(host.getState());
     if (!key) throw Error('Open an original scientific workspace.');
@@ -20,14 +20,16 @@ export function attachNativeChemistry(host) {
       return snapshot;
     };
     const controller = attachChemistry({
-      ...host, getState: state,
+      ...host, getState: state, getChemistryContext: () => activation,
       endpoint: (path, values = {}) => path + '?' + new URLSearchParams({...values, workspace: key}),
       showTask: async id => {
         if (workspaceKey(host.getState()) === key) return host.showTask(id);
       }
     });
     async function dispatchButton(button) {
+      const requestedActivation = activation;
       await ready;
+      if (requestedActivation !== activation || active !== entry || !panel.isConnected) return;
       if (workspaceKey(host.getState()) !== key) throw Error('Reopen the original workspace for this Chemistry action.');
       if (button.dataset.workspace && button.dataset.workspace !== key) throw Error('This Chemistry action belongs to another workspace.');
       if (busy) return;
@@ -70,7 +72,9 @@ export function attachNativeChemistry(host) {
     return entry;
   }
   function mount(root) {
-    const entry = desk(currentKey());
+    const key = currentKey(), previous = desks.get(key);
+    if (active !== previous || previous?.panel.parentNode !== root) activation++;
+    const entry = desk(key);
     active = entry;
     if (entry.panel.parentNode !== root) root.replaceChildren(entry.panel);
     return entry.update();
@@ -79,6 +83,7 @@ export function attachNativeChemistry(host) {
     if (active && active === desks.get(currentKey())) return active.update();
   }
   function detach() {
+    activation++;
     active?.panel.remove();
     active = null;
   }

@@ -28,10 +28,10 @@ export function attachReceivingWaterReport(context){
     const reports=rows(),pageSize=50,max=Math.max(0,Math.ceil(reports.length/pageSize)-1);
     page=Math.min(page,max);
     const visible=reports.slice(page*pageSize,(page+1)*pageSize);
-    let html='<section class="water-section"><header><h2>Scientific report sources</h2><p>Publish an original source plan or a completed analysis through the existing scientific report. Source plans retain receiving areas, designations and contribution methods; analysis sources also retain their saved modeled exports and comparison support.</p></header>';
+    let html='<section class="water-section"><header><h2>Scientific report sources</h2><p>Publish an original source plan or a completed analysis through the existing scientific report. Source plans retain receiving areas, designations and contribution methods; analysis sources also retain their saved modeled exports and comparison support.</p><p>Open this report only replaces the composer’s source selection with this saved source. Add to current report keeps the current sources and adds this source once.</p></header>';
     if(!reports.length)return html+'<p class="water-empty">Open a saved source plan or completed analysis and choose Prepare scientific report source.</p></section>';
     html+='<div class="water-table-scroll"><table><thead><tr><th scope="col">Retained source</th><th scope="col">Selection</th><th scope="col">Prepared</th><th scope="col">Actions</th></tr></thead><tbody>'+
-      visible.map(row=>'<tr><td><strong>'+esc(title(row))+'</strong><small>'+esc(row.id)+'</small></td><td>'+esc(selectionLabel(row))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'')+'</td><td class="water-row-actions">'+button('open','Inspect source',row.id)+button('use','Use in scientific report',row.id)+'</td></tr>').join('')+'</tbody></table></div>';
+      visible.map(row=>'<tr><td><strong>'+esc(title(row))+'</strong><small>'+esc(row.id)+'</small></td><td>'+esc(selectionLabel(row))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'')+'</td><td class="water-row-actions">'+button('open','Inspect source',row.id)+button('use','Open this report only',row.id)+button('add','Add to current report',row.id)+'</td></tr>').join('')+'</tbody></table></div>';
     if(reports.length>pageSize)html+='<p>Sources '+(page*pageSize+1)+'–'+Math.min(reports.length,(page+1)*pageSize)+' of '+reports.length+'</p><div class="water-actions">'+(page?button('previous','Previous sources'):'')+(page<max?button('next','Next sources'):'')+'</div>';
     return html+'</section>';
   }
@@ -70,7 +70,7 @@ export function attachReceivingWaterReport(context){
     const selected=value.selection||{};
     const body='<p>'+esc(selectionLabel(value))+': <code>'+esc(selected.analysis_id||selected.plan_id||'')+'</code></p>'+
       '<p>Source collection: <code>'+esc(value.source?.source_collection_id||'')+'</code><br>Source entry: <code>'+esc(value.source?.source_id||'')+'</code></p>'+
-      '<div class="water-actions">'+button('use','Use in scientific report',id)+(typeof openDelivery==='function'?button('mapped','Open mapped report form',id):'')+'</div>'+
+      '<div class="water-actions">'+button('use','Open this report only',id)+button('add','Add to current report',id)+(typeof openDelivery==='function'?button('mapped','Open mapped report form',id):'')+'</div>'+
       '<details><summary>Original report selection and source summary</summary><pre class="json-view">'+esc(JSON.stringify({selection:selected,summary:value.summary},null,2))+'</pre></details>'+
       '<h3>Retained report and original sources</h3>'+fileList(value._downloads||[]);
     return detail(title(value),body,{kind:'receiving-water-report',id});
@@ -91,24 +91,26 @@ export function attachReceivingWaterReport(context){
         return openDelivery(clone(value.delivery_selection));
       });
   }
-  async function use(id){
+  async function use(id,selectionMode='replace'){
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose whether to open this report only or add it to the current report.');
     if(typeof openScientificReport!=='function')throw Error('Receive the maintained scientific report composer.');
     const key=workspace(),version=generation,sequence=++request,value=await read(id);
     if(!current(key,version,sequence))return;
     if(value.id!==id||value.workspace_key!==key||!value.source)
       throw Error('The retained source belongs to another selection.');
-    return openScientificReport({workspace_key:key,sources:[clone(value.source)],title:value.title});
+    return openScientificReport({workspace_key:key,sources:[clone(value.source)],title:value.title,selection_mode:selectionMode});
   }
   function taskActions(task){
     const result=task?._receiving_water_report;
     if(!validId(result?.id))return '';
-    return '<div class="water-actions">'+button('open','Inspect receiving-water source',result.id)+button('use','Use in scientific report',result.id)+'</div>';
+    return '<div class="water-actions">'+button('open','Inspect receiving-water source',result.id)+button('use','Open this report only',result.id)+button('add','Add to current report',result.id)+'</div>';
   }
   async function dispatch(control){
     const action=control.dataset.action,id=control.dataset.id;
     if(action==='water-report-new')return create(control.dataset.kind,id);
     if(action==='water-report-open')return inspect(id);
-    if(action==='water-report-use')return use(id);
+    if(action==='water-report-use')return use(id,'replace');
+    if(action==='water-report-add')return use(id,'append');
     if(action==='water-report-mapped')return mapped(id);
     if(action==='water-report-previous'||action==='water-report-next'){
       page=Math.max(0,page+(action==='water-report-next'?1:-1));

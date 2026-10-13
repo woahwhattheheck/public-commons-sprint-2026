@@ -121,7 +121,12 @@ def catalog(workspace):
         for entry in collection["entries"]:
             body = entry.get("body", {})
             hashes = {row.get("sha256") for row in entry.get("companions", [])}
-            if (entry.get("kind") == "document"
+            metadata = entry.get("metadata", {})
+            retained_primary = (isinstance(metadata, dict)
+                and isinstance(metadata.get("original_report_source_id"), str)
+                and bool(metadata["original_report_source_id"]))
+            if ((entry.get("role") == "WATER_QUALITY_ASSOCIATION_REPORT" or retained_primary)
+                    and entry.get("kind") == "document"
                     and body.get("filename", "").lower().endswith((".html", ".htm"))
                     and {CONTEXT_SHA, OBSERVATIONS_SHA} <= hashes):
                 sources.append({"source_collection_id": collection["id"],
@@ -285,6 +290,24 @@ def _retain_report(workspace, entry, files):
                      "source_scope": "Complete original report; original full-source panels remain unchanged"}}
 
 
+def _report_companion_entries(entry):
+    """Preserve document companions without reinterpreting display coordinates."""
+    members = [{key: entry[key] for key in ("path", "bytes", "sha256")},
+               *entry["companions"]]
+    result = []
+    for member in entry["companions"]:
+        if not member["path"].lower().endswith((".html", ".htm", ".geojson")):
+            continue
+        result.append({
+            "id": "selected-microbial-report-companion-" + _sha(member["path"].encode("utf-8"))[:20],
+            "kind": "document", "title": "Original report companion — " + PurePosixPath(member["path"]).name,
+            "uri": "urn:sha256:" + member["sha256"], "vintage": entry["vintage"],
+            **member, "companions": [row for row in members if row["path"] != member["path"]],
+            "metadata": {"source_scope": "Original retained report companion; display geometry keeps its original source role"},
+        })
+    return result
+
+
 def _retain_context(workspace, by_path, files):
     """Keep complete original temporal/report source trees with their relative links."""
     names = [name for name in by_path if name.startswith((
@@ -411,6 +434,7 @@ def prepare(workspace, store, payload, *, operation_id=None):
     manifest = _json(files["model-sources.json"])
     manifest["title"] = title.strip()
     manifest["entries"].append(retained_report_entry)
+    manifest["entries"].extend(_report_companion_entries(retained_report_entry))
     manifest["entries"].extend(_retain_context(workspace, by_path, files))
     selection_companions = [_descriptor(name, files[name]) for name in
         (source_observations.SELECTION_INDEX, "review/selection-binding.json",
