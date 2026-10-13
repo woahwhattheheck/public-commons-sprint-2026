@@ -77,7 +77,7 @@ function render(){
 function choose(next){selection=normalizeTraceSelection(study,next);selectionRevision++;render();}
 for(const [id,key] of [["station","station"],["analyte","analyte"],["condition","status"],["month","month"],["plot-metal","plot"]])$(id).addEventListener("change",event=>{const next={...selection,[key]:event.target.value};if(key==="analyte"&&next.analyte!=="all")next.plot=next.analyte;choose(next);});
 $("search").addEventListener("input",event=>choose({...selection,search:event.target.value}));
-$("reset").addEventListener("click",()=>{choose(defaultTraceSelection);say("Showing all153 original metal results.");});
+$("reset").addEventListener("click",()=>{choose(defaultTraceSelection);say("Showing all 153 original metal results.");});
 document.addEventListener("click",event=>{
  const r=event.target.closest("[data-record]");if(r){inspect(r.dataset.record);return;}
  const metal=event.target.closest("[data-metal]");if(metal){choose({...selection,analyte:metal.dataset.metal,plot:metal.dataset.metal});return;}

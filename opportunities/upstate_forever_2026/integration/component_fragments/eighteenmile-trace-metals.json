@@ -4,7 +4,7 @@
   "source_reference": "Original Ecosystem operation 1791883613.993319; original WQP sources and exact input hashes retained in the component.",
   "components": {
     "eighteenmile-trace-metals": {
-      "title": "Original153 trace-metal results, sampling calendar, selected scientific source and offline explorer",
+      "title": "Original 153 trace-metal results, sampling calendar, selected scientific source and offline explorer",
       "paths": [
         "eighteenmile_trace_metals.sources.json",
         "observations/eighteenmile_2023/trace_metals/README.md",
