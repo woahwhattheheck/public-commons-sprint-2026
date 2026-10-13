@@ -67,3 +67,21 @@ The existing Ecosystem sprint cutoff remains **October 13, 2026 at 14:00 UTC** (
 The current inventory also includes the original large-file intake, incremental source retention, complete large exports and independent receive. Both browser wrapper layouts retain their own relative imports. The source includes the original standalone compiler under `measurement_workspace/legacy_chemistry.py`, while the active Chemistry adapter keeps the full atomic revision, compound/interval mapping and original binary companions. The large-file entry delegates to this same guarded installer for complete scientific releases. It does not replace the original parser, solver, authenticated host or saved operations.
 
 Known preimages include the original core, merged source-bound edition and exact original1.2 composition. Unknown newer files remain available for their current owner to compose. Original source-instruction and owner-direction files travel with the complete release. Restart the same provider at its ordinary idle boundary so the managed Node engine loads the combined module edition.
+
+## Returned measurement reviews in the original operator
+
+This complete release also retains the original returned-review 1.0.2 engine, standalone decision desk and both original receiving courses under `checks/`. The existing Measurements panel now offers **Incorporate returned measurement reviews**. Select the sent baseline, returned review and current scientist's complete native archives; prepare the original comparison, download and extract its full decision desk, submit its explicit saved decision JSON, and reopen the independently editable result. See `operator/MEASUREMENT_RETURNED_REVIEWS.md` for the complete workflow. The original ten-file returned-review source manifest remains byte-exact.
+
+Use the same guarded installer above for this complete combined source. After installation, start the original operator normally against the independently received application copy and its own operator state/port; registry descriptors are loaded when the Operator is constructed. Refreshing an already-running browser alone does not register the new backend. Do not force-restart an active scientific operation.
+
+Saved comparisons and independent results live under the scientific Workspace's `measurement-returned-reviews/` family. The original whole-Workspace archive includes that folder; the native descriptor's read-only verifier checks the retained immutable files on receiving. The editable result's live SQLite database remains editable. Its complete `project.zip` and the handoff ZIP retain the frozen exported edition, exact submitted decisions and original branches. Original normalization, returned-review comparison and incorporation algorithms are unchanged.
+
+The included original-provider course operates the already completed ASTRA 533-record case through this same queue and independently receives its result:
+
+```sh
+python -B STAGE/checks/measurement_returned_reviews_operator.py --application APP --workspace ISOLATED_ORIGINAL_SCIENTIFIC_WORKSPACE --original ASTRA_COMPLETED_533_COURSE_DIRECTORY --output NEW_OUTSIDE_DIRECTORY
+```
+
+The original directory must contain `input-archives/baseline.zip`, `input-archives/returned.zip`, `input-archives/current.zip`, `comparison/plan.json` and `decisions.json`. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.
+
+Whole-Workspace transfer captures the independent reviewed project's exact owned database path (`measurement-returned-reviews/results/<64-hex-id>/result/measurements/measurements.sqlite`) through the original SQLite online-backup mechanism. This includes committed WAL edits while preserving unrelated SQLite source files byte-exact.
