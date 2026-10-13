@@ -856,6 +856,13 @@ def catalog(workspace):
     # Original observation station study catalogue extension
     from .observed_station_studies import prepared_studies as observed_station_studies
     studies.extend(observed_station_studies(workspace, original_studies=studies))
+    try:
+        from .trace_metal_geography import prepared_studies as trace_metal_studies
+    except ModuleNotFoundError as error:
+        if error.name != __package__ + ".trace_metal_geography":
+            raise
+    else:
+        studies.extend(trace_metal_studies(workspace))
     return {"schema": "upstate.station-geography-catalog/v1", "sources": sources, "observations": observations,
             "editions": editions, "prepared_studies": studies, "version": VERSION}
 
