@@ -1109,7 +1109,15 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
+        task = self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
+        if task.get("action") in {"profile.save", "scenario.save", "run.prepare", "run.compare", "run.start"}:
+            if (self.ws(task["workspace"]).root / "run-revisions").is_dir():
+                try:
+                    from run_revision import decorate_task as revision_task_links
+                    task.update(revision_task_links(self, task))
+                except Exception as error:
+                    task["_run_revision_link_errors"] = [str(error)]
+        return task
 
     def open_download(self, key):
         with self.lock:

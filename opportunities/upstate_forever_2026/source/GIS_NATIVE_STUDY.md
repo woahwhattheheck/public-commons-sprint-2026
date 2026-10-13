@@ -2,6 +2,38 @@
 
 The existing **Editable GIS projects** desk can select a saved native-model study directly. It reads the producing study's captured records and reuses its original native rasters, signed comparisons, prepared grid and source files. The ordinary GIS queue, offline viewer, QGIS working copies, ZIP receiving, source adoption and saved review decisions remain the same product.
 
+## Open a saved scientific report directly in editable GIS
+
+In **Sources → Saved scientific reports**, open the actual saved edition. Each ordered study exposes **Open original source files**. A retained native-model study whose original project is open also exposes **Prepare editable native GIS**. This opens the existing GIS desk with that exact source and saved scientific report selected. Received source collections remain inspectable; native raster export requires the original restored model project.
+
+The GIS preview preserves the report edition ID and a digest of its complete verified file descriptors. Its original PDF, HTML, data, selection, figures and edition/operation records travel unchanged as a document attachment with their relative hierarchy. A report containing several studies stays a complete report; the GIS layers belong to the explicitly selected native cohort.
+
+You may choose another saved scientific report containing the exact same source or choose no additional report. Native study reports and numeric source context continue to travel normally. Pending or failed context previews cannot silently remove a selected report from an export.
+
+### Include actual recorded execution history
+
+The **Saved execution history** control lists saved histories containing exactly the selected native run set. Choose a snapshot explicitly, then inspect its capture time and summary. The application verifies the same original project, run selections, completed artifacts, land-cover input stage, grid, profiles and scenarios before attaching that history. Later unrelated stages may remain in the history with their own recorded capture time. Missing intervals remain missing; reused calculation intervals remain separate from the receiving run’s local work.
+
+The original history HTML, numeric CSVs, full frozen source records, identity, manifest and ZIP travel as one document attachment. This is an observed execution snapshot, not an estimate of how long an unrecorded operation took. The history component is optional for ordinary GIS export. Install the maintained `native-run-history` component before selecting a saved history; the existing complete source handover contains its own dependencies and receiver.
+
+### Continue the actual native course
+
+Use the existing `source_tools/receive_native_study_gis.py` entrypoint and actual saved IDs:
+
+```sh
+python -B source_tools/receive_native_study_gis.py \
+  --application "$APP" --workspace "$WORKSPACE" --state-directory "$STATE" \
+  --source-collection-id "$COLLECTION" \
+  --scientific-report-id "$SAVED_REPORT" --execution-history-id "$SAVED_HISTORY"
+```
+
+Both context flags are optional. Reopening the same state directory retains the exact accepted queue requests and selected context hashes. Use a separate receiving state for a deliberate new report/history choice; completed phases in the existing course stay intact. The receiver verifies every context member’s original path, byte count and hash after independent GIS receiving, then reopens the original operations and download after Operator restart.
+
+The complete `gis-native-study` component declares the existing scientific-report component. The maintained installer adds one callback to the existing Sources host and preserves its other callbacks. The callback uses the existing asynchronous openDesk contract, so the original GIS desk finishes mounting before its intake method runs. Its shared report provider and controller replacements accept the known original predecessor or identical successor; a newer owner revision must be composed before installation. The ordinary native history modules are imported lazily.
+
+Open the actual outgoing GIS browser, QGIS project, every attached HTML/PDF/table/archive and the complete cold-reopened application as directed by `CURRENT_OWNER_DIRECTION.md` version **2026-10-13.3**. This continuation consumes completed scientific results and retained history without rerunning the source models.
+
+
 ## Use the retained study
 
 1. Open the scientific Workspace that owns the saved native study. A restored copy of that original project is supported; its local directory and operator key may differ.

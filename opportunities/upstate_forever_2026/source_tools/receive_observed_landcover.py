@@ -245,6 +245,92 @@ class Course:
         return replacement
 
 
+def original_source_intake(args, course):
+    """Bind explicit existing sources without changing the original course configuration."""
+    manifest = getattr(args, "source_manifest", None)
+    collection_id = getattr(args, "source_collection_id", None)
+    analysis_id = getattr(args, "analysis_source_id", None)
+    requested = None
+    if manifest:
+        manifest = manifest.resolve(strict=True)
+        required(manifest.is_file(), "Choose the original source manifest file")
+        requested = {"mode": "registered-manifest", "manifest": {
+            "path": str(manifest), "bytes": manifest.stat().st_size, "sha256": file_digest(manifest)}}
+    elif collection_id:
+        requested = {"mode": "existing-collection", "source_collection_id": collection_id}
+    if requested is not None and analysis_id:
+        requested["analysis_source_id"] = analysis_id
+    saved = course.value.get("original_source_intake")
+    if saved:
+        required(isinstance(saved, dict) and isinstance(saved.get("request"), dict),
+                 "The original source-intake record is incomplete")
+        if requested is not None:
+            required(saved["request"] == requested, "Resume with the same original source-intake choice")
+        return saved["request"]
+    if requested is not None:
+        required(not course.value["phases"].get("original-source-import")
+                 and not course.value["phases"].get("selected-comparison")
+                 and not course.value.get("native_products"),
+                 "Keep the original accepted import/selection; explicit intake must precede its admission")
+        course.value["original_source_intake"] = {"request": requested}
+        course.write()
+    return requested
+
+
+def registered_manifests(intake, course):
+    """Register a new intake only; retained native tasks reconcile their original preview."""
+    if not intake or intake["mode"] != "registered-manifest":
+        return ()
+    phase = course.value["phases"].get("original-source-import")
+    if phase:
+        required(phase["request"]["action"] == "source.import",
+                 "The retained source-intake phase uses another original action")
+        # Its immutable preview already retains path/hash. Reconcile the actual task before
+        # requiring temporary files; unfinished workers still validate the original preview.
+        return ()
+    original = intake["manifest"]
+    path = Path(original["path"]).resolve(strict=True)
+    required(path.is_file() and path.stat().st_size == original["bytes"]
+             and file_digest(path) == original["sha256"],
+             "The original staged source manifest changed before its import completed")
+    return (path,)
+
+
+def select_original_source(operator, workspace_key, intake, course, task):
+    if intake is None:
+        return task("original-source-import", "observed.landcover.import", {})["result"]
+    if intake["mode"] == "registered-manifest":
+        prior = course.value["phases"].get("original-source-import")
+        if prior:
+            required(prior["request"]["action"] == "source.import",
+                     "The retained source-intake phase uses another original action")
+            payload = prior["request"]["payload"]
+        else:
+            original = intake["manifest"]
+            matches = [item for item in operator.registered.values()
+                       if item["path"] == original["path"] and item["sha256"] == original["sha256"]]
+            required(len(matches) == 1, "Register the exact original staged manifest before import")
+            preview = operator.preview_source({"registered_id": matches[0]["id"]})
+            payload = {"preview_id": preview["id"]}
+        collection = task("original-source-import", "source.import", payload)["result"]
+        collection_id = collection["id"]
+    else:
+        required(intake["mode"] == "existing-collection", "Unknown original source-intake mode")
+        collection_id = intake["source_collection_id"]
+    candidates = [row for row in observed_landcover.catalog(operator.ws(workspace_key))["sources"]
+                  if row["source_collection_id"] == collection_id
+                  and (not intake.get("analysis_source_id")
+                       or row["analysis_source_id"] == intake["analysis_source_id"])]
+    required(len(candidates) == 1,
+             "Choose the unique original analysis-run source in the exact imported collection; "
+             "use --analysis-source-id when that collection contains several analyses")
+    choice = {name: candidates[0][name] for name in
+              ("source_collection_id", "analysis_source_id", "analysis_sha256")}
+    saved = course.value["original_source_intake"].get("selection")
+    required(saved is None or saved == choice, "The retained original source-intake identity changed")
+    return choice
+
+
 def cold_reopen(args):
     required(args.selection_id and args.report_id and args.expected_project_id,
              "Cold reopening needs the actual saved selection, report and project identities")
@@ -281,6 +367,7 @@ def run(args):
     }
     required(len(configuration["huc12s"]) == len(set(configuration["huc12s"])), "Select each original HUC once")
     course = Course(args.output / "selected-huc-receiving.json", configuration)
+    intake = original_source_intake(args, course)
     app_members = ("model/observed_landcover.py", "model/observed_landcover_report.py",
                    "model/observed_landcover_provenance.py", "CURRENT_OWNER_DIRECTION.md", "AGENTS.md",
                    "operator/observed_landcover_operator.py",
@@ -290,8 +377,9 @@ def run(args):
                    "model/scientific_report.py", "model/scientific_figures.py",
                    "model/landcover_report_source.py", "model/reuse.py", "model/workspace.py",
                    "operator/server.py", "operator/extension_registry.py",
-                   "source_tools/receive_observed_landcover.py",
-                   "observations/landcover_2023_2025/model-sources.json")
+                   "source_tools/receive_observed_landcover.py")
+    if intake is None:
+        app_members += ("observations/landcover_2023_2025/model-sources.json",)
     current_application = {name: describe_file(APPLICATION, APPLICATION / name) for name in app_members}
     for name in ("model/scientific_map_figures.py",):
         if (APPLICATION / name).is_file():
@@ -301,19 +389,27 @@ def run(args):
     operator = None
     try:
         operator = Operator(args.workspace, args.state_directory, create=args.create, title=args.title,
-                            restore_directory=args.restore_directory)
+                            restore_directory=args.restore_directory,
+                            source_manifests=registered_manifests(intake, course))
         key = operator.primary
         project = operator.ws(key).project["id"]
         required(course.value.get("project_id", project) == project, "The original receiving project changed")
         course.value.update(project_id=project, original_workspace_key=key)
         course.write()
-        for action in ("observed.landcover.import", "observed.landcover.save", "source-reports.render", "source-reports.export"):
+        actions = ("observed.landcover.save", "source-reports.render", "source-reports.export")
+        if intake is None:
+            actions += ("observed.landcover.import",)
+        for action in actions:
             required(operator.extensions.handles_action(action), "The current original operator has not registered " + action)
         def task(phase, action, payload):
             return course.task(operator, key, phase, action, payload, timeout=args.timeout_seconds,
                                resume_failed=args.resume_failed)
-        imported = task("original-source-import", "observed.landcover.import", {})["result"]
+        imported = select_original_source(operator, key, intake, course, task)
         inputs = operator.extensions.read("POST", "/api/observed-landcover/inputs", key, {"selection": imported})
+        if intake is not None:
+            # The maintained reader verifies every original result, grid, domain and matrix before publication.
+            course.value["original_source_intake"]["selection"] = imported
+            course.write()
         available = {row["huc12"] for row in inputs["watersheds"]}
         required(set(configuration["huc12s"]) <= available, "Selected HUCs are absent from the actual native original inventory")
         selection = {**imported, "huc12s": configuration["huc12s"], "title": args.title}
@@ -441,6 +537,13 @@ def main(argv=None):
     parser.add_argument("--create", action="store_true", help="Create this receiving Workspace if it does not yet exist")
     parser.add_argument("--operation-id", default="ECO-264B-SELECTED-HUC-20261013")
     parser.add_argument("--source-revision", default="installed-current-application")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--source-manifest", type=Path,
+                        help="Register and queue-import an already staged original source manifest")
+    source.add_argument("--source-collection-id",
+                        help="Use this existing original source collection in the receiving Workspace")
+    parser.add_argument("--analysis-source-id",
+                        help="Exact analysis-run source ID when the chosen manifest/collection has several analyses")
     parser.add_argument("--huc12", action="append", help="Actual original HUC12; repeat for selected watersheds")
     parser.add_argument("--title", default="Selected Upper Savannah watershed annual land-cover changes")
     parser.add_argument("--timeout-seconds", type=float, default=1800)
@@ -458,6 +561,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     required(not (args.recipient_handover and (args.selected_study or args.cold_reopen)),
              "Choose one original receiving continuation at a time")
+    required(not args.analysis_source_id or args.source_manifest or args.source_collection_id,
+             "--analysis-source-id requires an explicit original source manifest or collection")
+    required(not (args.source_manifest or args.source_collection_id) or not (
+        args.selected_study or args.recipient_handover or args.cold_reopen),
+        "The completed Study/handover/reopen continuations retain their original source; "
+        "use explicit intake only for the initial comparison/report course")
     required(args.timeout_seconds > 0, "Use a positive original task timeout")
     return run(args)
 

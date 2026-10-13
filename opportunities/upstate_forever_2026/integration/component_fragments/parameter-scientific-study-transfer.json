@@ -7,7 +7,10 @@
       "paths": [
         "model/parameter_study_transfer.py",
         "model/PARAMETER_STUDY_RECEIVING.md",
-        "integration/component_fragments/parameter-scientific-study-transfer.json"
+        "integration/component_fragments/parameter-scientific-study-transfer.json",
+        "model/parameter_study_receiving.py",
+        "operator/parameter_receiving.py",
+        "operator/web/parameter_received_studies.mjs"
       ]
     },
     "parameter-studies": {

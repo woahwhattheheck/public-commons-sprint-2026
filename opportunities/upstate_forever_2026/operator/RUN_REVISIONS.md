@@ -9,7 +9,7 @@ This workflow uses the actual prepared model grid and original InVEST model sele
 1. Open **Runs**, inspect the completed reference run, and choose **Revise and compare**. Alternatively, open **Run revisions** and select that completed run.
 2. Enter a meaningful revision title and choose **Create retained revision**.
 3. Choose **Revise parameter profile**, **Revise land-cover scenario**, or both. The original forms display the current saved selections. Save each revised record and wait for its accepted operation to finish.
-4. Return to **Run revisions**. Its current profile and scenario are taken from the actual saved task results. Use **Refresh saved results** if a task has just completed.
+4. In the original task detail, choose **Return to revision: [title]**, or reopen **Run revisions**. Its current profile and scenario are taken from the actual saved task results. Use **Refresh saved results** if a task has just completed.
 5. Choose **Prepare revised run**. The original grid and native model cohort are fixed to the reference. The profile and scenario are the latest completed selections retained by this revision.
 6. Open **Inspect inputs and start native models**. Use the existing run controls to inspect eligible and changed cells, then explicitly start or resume the original models. Preparation does not start the native calculation.
 7. Once the revised run is complete, choose **Compare reference and revised run**. The original comparison form keeps the reference first and this revised run second.
@@ -40,6 +40,8 @@ The JSON is a review handoff, not a raster archive. Use **Back up complete Works
 For client-facing reports and GIS outputs, use the saved comparison's existing delivery and GIS routes. Their original source, project, file and quantity identities remain authoritative.
 
 ## Acceptance and recovery
+
+Task details link back to every exact retained revision bound to that accepted task, including an original aliased task shared by more than one plan. The revised run's start, failure and resumed operation also link to its saved revision history. These links read retained metadata and leave the native queue unchanged.
 
 The revision form uses the original authenticated action queue. Its complete intent is retained before native task admission, and the existing operation ID prevents a lost response from starting a second task. Completed results are captured into the Workspace so its backup does not depend on an open browser.
 

@@ -6,6 +6,11 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 
+if __package__:
+    from . import study_context
+else:
+    import study_context
+
 BUILTIN_ID = "three-twenty-historical-2021-2025"
 TITLE = "Three and Twenty Creek — original historical comparison, 2021–2025"
 DIRECTORY = "observations/three_twenty_history_2021_2025"
@@ -167,6 +172,26 @@ def build_files(application=None):
         raise ValueError("Historical native statistics must exclude exactly the declared original pH 724 result.")
     files = {name: raw for name, raw in native.items() if name != "study-files.json"}
     files.update({ROOT + "/" + name: raw for name, raw in originals.items()})
+    application_root = Path(application) if application is not None else Path(__file__).resolve().parents[1]
+    context_manifests = []
+    for context_name in study_context.manifest_names(BUILTIN_ID):
+        if context_name == MANIFEST or not (application_root / context_name).is_file():
+            continue
+        retained = study_context.retained_files(application_root, application_root / context_name)
+        for name, raw in retained.items():
+            if name in files and files[name] != raw:
+                raise ValueError("An original station-network context conflicts at " + name)
+            files[name] = raw
+        context_manifests.append(context_name)
+    if context_manifests:
+        study["related_context_manifests"] = context_manifests
+        study["observation_selection_notes"].append(
+            "The original four-station river-network companion retains all four location representations, "
+            "65 downstream whole reaches, 45 upstream whole reaches, six geometric station-pair distances, "
+            "and its full interactive report and source code. This geographic context retains its own "
+            "four-station scope; the observation cohort, dates, result identities and statistics remain unchanged."
+        )
+        files["study.json"] = _json(study)
     original_manifest = json.loads(originals[MANIFEST])
     entry = next(item for item in original_manifest["entries"] if item["id"] == "three-twenty-historical-report")
     report_name = ROOT + "/" + entry["path"]
