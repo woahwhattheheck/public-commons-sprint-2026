@@ -71,7 +71,25 @@ def catalog(workspace):
                                     body_sha256=entry["body"]["sha256"],
                                     title=entry.get("title") or entry["id"],
                                     collection_title=collection.get("title", "")))
-    return dict(sources=sources, assignments=overview(workspace))
+    selections = [dict(id=row["id"], title=row["title"], source=row["source"],
+                       selection_sha256=row["selection_sha256"])
+                  for row in workspace._list("monitoring_field_selections")]
+    return dict(sources=sources, assignments=overview(workspace), native_selections=selections)
+
+
+def saved_selection(workspace, selection_id):
+    """Read the complete original saved selection using its maintained producer."""
+    from . import monitoring_field_selection
+    record = monitoring_field_selection.inspect(workspace, identifier(selection_id))
+    rows = [row for row in record["files"] if Path(row["path"]).name == "selection.json"]
+    if len(rows) != 1:
+        raise ValueError("Retain the original saved field-selection JSON.")
+    raw = verify_file(workspace.root, rows[0]).read_bytes()
+    source = record["source"]
+    return dict(selection_record_id=record["id"], title=record["title"],
+                selection_text=raw.decode("utf-8"), selection_sha256=record["selection_sha256"],
+                source=dict(source_collection_id=source["source_collection_id"],
+                            source_id=source["source_id"], body_sha256=source["document_sha256"]))
 
 
 def _selection(text, data):
@@ -136,6 +154,13 @@ def preview(workspace, request):
         raise ValueError("Choose a field source and saved field-selection JSON.")
     data, raw, binding = _source(workspace, request.get("source"))
     text = request.get("selection_text")
+    retained_selection = None
+    if request.get("selection_record_id") is not None:
+        retained = saved_selection(workspace, request["selection_record_id"])
+        if retained["selection_text"] != text or any(retained["source"][key] != binding[key]
+                for key in ("source_collection_id", "source_id", "body_sha256")):
+            raise ValueError("Keep the exact original native field selection and source together.")
+        retained_selection = {key: retained[key] for key in ("selection_record_id", "selection_sha256")}
     selection, selected, areas = _selection(text, data)
     title = request.get("title", "")
     if not isinstance(title, str) or not title.strip() or len(title) > 240:
@@ -144,6 +169,8 @@ def preview(workspace, request):
     identity = dict(schema="upstate.monitoring-field-assignment/v1", version=VERSION,
                     project_id=workspace.project["id"], source=binding,
                     selection_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(), title=title)
+    if retained_selection is not None:
+        identity["retained_selection"] = retained_selection
     key = digest(identity)
     result = dict(id=key, identity=identity, title=title, selection=selection, source=binding,
                   plan_id="field_" + key[:40], original_plan_id=selected["plan_id"],
@@ -292,6 +319,7 @@ def build(workspace, request):
                            and incoming_source.get("source_id") == original_source["source_id"]
                            and incoming_source.get("body_sha256") in (None, original_source["body_sha256"]))
             if (not same_source
+                    or captured.get("selection_record_id") != request.get("selection_record_id")
                     or captured["selection_text"] != request.get("selection_text")
                     or captured["title"] != str(request.get("title", "")).strip()):
                 raise ValueError("Reopen the original saved field assignment with its exact request.")
@@ -311,6 +339,8 @@ def build(workspace, request):
         frozen_request = dict(identity=prepared["identity"], source={key: binding[key] for key in
                               ("source_collection_id", "source_id", "body_sha256")},
                               selection_text=request["selection_text"], title=prepared["title"])
+        if request.get("selection_record_id") is not None:
+            frozen_request["selection_record_id"] = request["selection_record_id"]
         atomic_json(directory / "request.json", frozen_request, immutable=True)
         atomic_bytes(directory / "field-support.json", raw, immutable=True)
         atomic_bytes(directory / "field-selection.json", request["selection_text"].encode("utf-8"), immutable=True)
