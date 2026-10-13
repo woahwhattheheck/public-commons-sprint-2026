@@ -42,7 +42,7 @@ function parseCsvText(source){
  if(field!==""||row.length){row.push(field);rows.push(row);}
  return rows;
 }
-function documentPreview(name,source){
+function originalDocumentPreview(name,source){
  if(/\.html?$/i.test(name))return source;
  const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  let body;
@@ -50,6 +50,17 @@ function documentPreview(name,source){
  else body="<pre>"+esc(/\.json$/i.test(name)?JSON.stringify(JSON.parse(source),null,2):source)+"</pre>";
  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>"+esc(name)+"</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{font:15px/1.55 system-ui,sans-serif;margin:0;padding:1rem;color:#171717;background:#fff}h1{font-size:1.2rem;overflow-wrap:anywhere}p{max-width:70ch}.table{overflow:auto;border:1px solid #aaa}table{border-collapse:collapse}th,td{text-align:left;vertical-align:top;min-width:160px;max-width:340px;border:1px solid #bbb;padding:.65rem;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee}pre{font:14px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><h1>"+esc(name)+"</h1>"+body+"</body></html>";
 }
+function reportOpening(name,source){
+ if(!/^report-(?:sample|paid)\/app\.html$/.test(name))return null;
+ const marker="\n})(",at=source.indexOf(marker),end=source.lastIndexOf(");<\/script>");
+ if(source.split(marker).length!==2||end<=at)throw Error("The complete report desk opening changed.");
+ const values=JSON.parse("["+source.slice(at+marker.length,end)+"]"),workspace=values[0],guide=values[1],seed=workspace?.seed;
+ if(values.length!==5||workspace?.version!=="jsonsupport.report-handover.v1"||!Array.isArray(seed?.leads)||!seed.edition_id||typeof guide!=="string")throw Error("Complete report scope or guide missing.");
+ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const working=name.replace(/app\.html$/,"working.json"),agencies=seed.leads.map(a=>"<li>"+esc(a.document.organization)+"</li>").join("");
+ return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JSON Support report desk</title><style>html{color-scheme:light}*{box-sizing:border-box}body{margin:0;padding:20px;font:16px/1.55 system-ui;color:#23282d;background:#fff;overflow-wrap:anywhere}h1{font-size:24px;line-height:1.2}h2{font-size:19px}aside{border:1px solid #bfc5cb;padding:16px;background:#f6f7f8}li{margin:8px 0}code{white-space:normal;overflow-wrap:anywhere}pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}summary{cursor:pointer;min-height:44px;font-weight:600}</style></head><body data-jsonsupport-report-opening="complete"><h1>JSON Support report desk</h1><p>Complete editable report preparation for '+seed.leads.length+' original agency '+(seed.leads.length===1?"profile":"profiles")+'.</p><aside><h2>Open the working desk</h2><ol><li>Download the complete pack and extract the ZIP.</li><li>Open <code>'+esc(name)+'</code> in a browser.</li><li>Choose <strong>Open working file</strong> and receive <code>'+esc(working)+'</code>.</li></ol><p>Review the actual client reporting process, map a local source sample, prepare the exact conversion request, record actual results and save the full editable handover.</p></aside><h2>Included agency research</h2><ul>'+agencies+'</ul><h2>Complete working views</h2><ol><li>Agency context and current reporting process</li><li>Report setup, source records and typed column mapping</li><li>Conversion requests, actual results and returned-data comparison</li><li>Named client handovers and complete working-file receiving</li><li>Source-linked operating guide and conversion companion</li></ol><details><summary>Read the full report and conversion guide</summary><pre>'+esc(guide)+'</pre></details></body></html>';
+}
+function documentPreview(name,source){return reportOpening(name,source)??originalDocumentPreview(name,source);}
 function packagePanelMain(){
  const payload=JSON.parse(document.getElementById("source").textContent),box=document.getElementById("downloads"),status=document.getElementById("status"),frame=document.getElementById("preview"),previewBox=document.getElementById("document-preview"),heading=document.getElementById("document-title");
  const unbase=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),decode=new TextDecoder("utf-8",{fatal:true}),cache=new Map();let previewVersion=0;
