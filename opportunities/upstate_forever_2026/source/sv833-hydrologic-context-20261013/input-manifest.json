@@ -1,0 +1,57 @@
+{
+  "schema": "sv833.hydrologic-original-inputs/v1",
+  "captured_at": "2026-10-13",
+  "path_base": "application root",
+  "source_page": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+  "files": [
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+      "bytes": 575,
+      "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68",
+      "role": "feature",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833?f=json"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+      "bytes": 722,
+      "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db",
+      "role": "hydrolocation",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.636966%2034.704792)"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+      "bytes": 42,
+      "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c",
+      "role": "upstream_nwis_sites",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/navigation/UT/nwissite?f=json&distance=100"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+      "bytes": 7935,
+      "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51",
+      "role": "downstream_nwis_sites",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/navigation/DM/nwissite?f=json&distance=100"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+      "bytes": 23115,
+      "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8",
+      "role": "upstream_flowlines",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/navigation/UT/flowlines?f=json&distance=100"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 7993,
+      "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d",
+      "role": "whole_basin",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/basin?f=json&simplified=false&splitCatchment=false"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "role": "original_station_catalogue",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no"
+    }
+  ]
+}
