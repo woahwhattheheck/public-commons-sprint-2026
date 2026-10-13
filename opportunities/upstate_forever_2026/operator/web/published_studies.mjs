@@ -210,7 +210,7 @@ export function createPublishedStudiesDesk(host) {
         esc(observed.temporal_support || "Import the current installed study to retain its original activity sources.") +
         '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
       output += table("Observed series and report rows", series, [
-        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["record_count","Original rows"],
+        ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_support","Sample support"],["record_count","Original rows"],
         ["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
@@ -227,7 +227,7 @@ export function createPublishedStudiesDesk(host) {
       ],false);
       output += table("Original activity chronology", arr(observed.rows), [
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
-        ["parameter_original","Original parameter"],["value","Value"],["unit","Unit"],
+        ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["value","Value"],["unit","Unit"],
         ["detection_condition","Detection"],["detection_limit","Limit"],["detection_limit_unit","Limit unit"],
         ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"]
       ]);
@@ -256,7 +256,7 @@ export function createPublishedStudiesDesk(host) {
       ]);
       output += table("Retained original results", arr(dated.rows), [
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
-        ["project_id","Project"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
+        ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
         ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
         ["detection_limit_unit","Limit unit"],["depth","Depth"],["depth_unit","Depth unit"],
         ["cohort_selection","Cohort selection"],["activity_id","Activity identifier"]
