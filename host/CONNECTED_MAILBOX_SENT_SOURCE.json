@@ -1,0 +1,33 @@
+{
+  "schema": "commons.mailbox-sent-source-adoption/v1",
+  "operation": "MAIL-SENT-PUBLIC-SOURCE-ADOPTION-90ED-20261013",
+  "original": {
+    "repository": "woahwhattheheck/commons",
+    "commit": "bbcb451049ee8f469dcbe55a3f5f928d25cf6b3f",
+    "consumer_blob": "18ab62a45049ccf59e7cb18991653bf5a729b1fb",
+    "authority_blob": "35e9245381e3f5255365d0f8864ac01598fc558f",
+    "authority_usage": "Only the complete pure recipient and evidence validation functions are extracted. The historical private Git authority factory is not included."
+  },
+  "files": [
+    {
+      "path": "host/connected_mailbox_sent_readback.cjs",
+      "bytes": 8135,
+      "sha256": "b73fc6f090add9776ea4815b99a6ccb71a6fcc90ca54ad1fc2b44d458834419c"
+    },
+    {
+      "path": "host/connected_mailbox_sent_binding.cjs",
+      "bytes": 11759,
+      "sha256": "0ea31162381d9d61ea091c4c0469c7efc85e44c22b95f38726063603054f7b12"
+    },
+    {
+      "path": "host/connected_mailbox_sent_native.cjs",
+      "bytes": 14541,
+      "sha256": "5f8375b36e8c9617e18bdfc5f7546402b7db451d9031d4ce9726ac71ebea7688"
+    },
+    {
+      "path": "host/CONNECTED_MAILBOX_SENT_READBACK.md",
+      "bytes": 10356,
+      "sha256": "06b559929f3fb282e0856986bf07a7364642abc1800e2bb944e0717a04353de1"
+    }
+  ]
+}
