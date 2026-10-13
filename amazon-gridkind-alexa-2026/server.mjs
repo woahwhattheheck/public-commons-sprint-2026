@@ -13,6 +13,8 @@ import {openHouseholdWorkspace,digest,WorkspaceError} from './workspace.mjs';
 import {createRequestDetail,requestPackage,previewReview,reconcileReview} from './week-review.mjs';
 import {createHouseholdMCP,PROTOCOL} from './mcp.mjs';
 import {renderWeekReviewPage} from './week-review-page.mjs';
+import {createTariffService} from './tariff-service.mjs';
+import {inspectTariff,tariffRowsCSV,tariffHTML} from './tariff-source.mjs';
 const ROOT=dirname(fileURLToPath(import.meta.url));
 const LIMIT=100;
 function respond(res,status,body,extra={}){
@@ -34,7 +36,7 @@ function acceptsHost(req,boundHost){
 }
 export function start({port=Number(process.env.PORT||'4181'),host=process.env.HOST||'127.0.0.1',
   workspace=process.env.GRIDKIND_WORKSPACE||join(homedir(),'.local','share','gridkind')}={}){
-  const capturedSources=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs','week-review.mjs','week-review-page.mjs','exact-inputs.js'].map(name=>[name,readFileSync(join(ROOT,name))]));
+  const capturedSources=Object.fromEntries(['engine.mjs','agent.mjs','robustness/compare.mjs','weekly.mjs','week-review.mjs','week-review-page.mjs','exact-inputs.js','tariff-source.mjs','tariff-service.mjs'].map(name=>[name,readFileSync(join(ROOT,name))]));
   const sourcePins=Object.fromEntries(Object.entries(capturedSources).map(([name,bytes])=>[name,createHash('sha256').update(bytes).digest('hex')]));
   const reviewSources=Object.freeze(Object.fromEntries(['engine.mjs','weekly.mjs','exact-inputs.js','week-review.mjs'].map(name=>[name,capturedSources[name].toString('utf8')])));
   const store=openHouseholdWorkspace({directory:workspace,sourcePins});
@@ -202,6 +204,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
     committed(id,live);
     return {...result,householdId:live.householdId,state:view(id),replayed:false};
   }
+  const tariffs=createTariffService({store,check,view,committed});
   function workspaceAction(id,body){
     let live=check(id,body,true);
     if(body.action==='preview-import')return {preview:store.inspectImport(body.bundle)};
@@ -312,9 +315,9 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(!['127.0.0.1','::1','localhost'].includes(host))return respond(res,403,{error:'Assistant access is supported only on the original loopback server.'});
         return await mcp.handle(req,res,{readBody,origin:'http://'+req.headers.host});
       }
-      if(req.method==='GET'&&['/','/week','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/assistant.js','/style.css'].includes(path)){
-        const file=path==='/'?'index.html':path==='/week'?'week.html':path.slice(1);
-        const mime=path==='/'||path==='/week'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
+      if(req.method==='GET'&&['/','/week','/tariffs','/tariffs.js','/tariffs.css','/week-ui.js','/week.css','/week-review.mjs','/weekly.mjs','/engine.mjs','/app.js','/exact-inputs.js','/households.js','/robustness-ui.js','/scenario-handoff.js','/assistant.js','/style.css'].includes(path)){
+        const file=path==='/'?'index.html':path==='/week'?'week.html':path==='/tariffs'?'tariffs.html':path.slice(1);
+        const mime=path==='/'||path==='/week'||path==='/tariffs'?'text/html; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8';
         res.writeHead(200,{'content-type':mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"});
         return res.end(await readFile(join(ROOT,file)));
       }
@@ -324,6 +327,21 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
         if(path==='/api/assistant'){
           if(!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
           return respond(res,200,assistantView(id,'http://'+req.headers.host+'/mcp'));
+        }
+        if(path==='/api/tariffs')return respond(res,200,store.catalogue(id,{householdId:url.searchParams.get('householdId')||undefined,kind:url.searchParams.get('kind')||'tariff',offset:Number(url.searchParams.get('offset')||0)}));
+        if(path==='/api/tariffs/export'){
+          const record=store.record(id,url.searchParams.get('householdId')||store.current(id).id,url.searchParams.get('recordId'));
+          if(record.kind!=='tariff')throw new WorkspaceError('Choose a saved tariff source.');
+          const edition=inspectTariff(record.detail.edition),format=url.searchParams.get('format');
+          let text,mime,extension;
+          if(format==='source'){text=edition.source.csv;mime='text/csv';extension='original.csv';}
+          else if(format==='csv'){text=tariffRowsCSV(edition);mime='text/csv';extension='rows.csv';}
+          else if(format==='json'){text=JSON.stringify(edition,null,2)+'\n';mime='application/json';extension='json';}
+          else if(format==='html'){text=tariffHTML(record);mime='text/html';extension='html';}
+          else throw new WorkspaceError('Choose original source, normalized CSV, source JSON or HTML.');
+          res.writeHead(200,{'content-type':mime+'; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',
+            'x-frame-options':'DENY','referrer-policy':'no-referrer','content-disposition':'attachment; filename="gridkind-tariff-'+record.id+'.'+extension+'"'});
+          return res.end(text);
         }
         if(path==='/api/state')return respond(res,200,view(id));
         if(path==='/api/workspace/history')return respond(res,200,store.history(id,{householdId:url.searchParams.get('householdId')||undefined,offset:Number(url.searchParams.get('offset')||0)}));
@@ -358,19 +376,19 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
           return respond(res,200,bundle,{'content-disposition':`attachment; filename="gridkind-household-${bundle.payload.household.id.slice(0,8)}.json"`});
         }
       }
-      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review','/api/assistant'].includes(path))return respond(res,405,{error:'Unsupported operation'});
+      if(req.method!=='POST'||!['/api/action','/api/robustness','/api/workspace','/api/week','/api/week-review','/api/assistant','/api/tariffs'].includes(path))return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
       if(path==='/api/assistant'&&!['127.0.0.1','::1','localhost'].includes(host))throw new WorkspaceError('Assistant access requires the loopback server.',403);
-      const body=await readBody(req,path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
+      const body=await readBody(req,path==='/api/tariffs'?8*1024*1024:path==='/api/workspace'?8*1024*1024:path==='/api/week-review'?256*1024:40000);
       // Resolve current selection after the complete request is read. Every UI
       // mutation carries its saved revision, active household and live generation.
-      const result=path==='/api/assistant'?assistantAction(id,body):path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
+      const result=path==='/api/tariffs'?tariffs.action(id,body):path==='/api/assistant'?assistantAction(id,body):path==='/api/action'?action(id,body):path==='/api/robustness'?compare(id,body):path==='/api/week'?weekAction(id,body):path==='/api/week-review'?weekReviewAction(id,body):workspaceAction(id,body);
       return respond(res,200,result);
     }catch(error){
       const status=error instanceof WorkspaceError?error.status:([400,401,403,404,409,413].includes(error.status)?error.status:400);
       let state;
       if(status===409&&id){try{state=view(id);}catch{}}
-      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{})});
+      return respond(res,status,{error:error instanceof Error?error.message:'Invalid request',...(state?{state}:{}),...(error?.reviewOutcome?{reviewOutcome:error.reviewOutcome}:{}),...(error?.tariffOutcome?{tariffOutcome:error.tariffOutcome}:{})});
     }
   });
   server.once('close',()=>{mcp.close();clients.clear();store.close();});
