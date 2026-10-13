@@ -198,8 +198,16 @@
       "source": "model/monitoring_field_selection.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_field_selection.py",
-      "bytes": 16812,
-      "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+      "bytes": 16868,
+      "sha256": "3168fb44af42c9bbbf6855c9502917675a17849749a7b78a4e74fb2cecd1d5ea",
+      "retained_installed_editions": [
+        {
+          "bytes": 16812,
+          "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+        }
+      ],
+      "previous_bytes": 16812,
+      "previous_sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
     },
     {
       "source": "model/MONITORING_FIELDWORK.md",

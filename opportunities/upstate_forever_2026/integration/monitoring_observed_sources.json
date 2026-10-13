@@ -86,8 +86,8 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 61076,
-      "sha256": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a",
+      "bytes": 61953,
+      "sha256": "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
         "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
@@ -97,7 +97,8 @@
         "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
         "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1",
         "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
-        "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29"
+        "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29",
+        "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a"
       ]
     },
     {
@@ -113,8 +114,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 51704,
-      "sha256": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75",
+      "bytes": 52009,
+      "sha256": "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -137,7 +138,8 @@
         "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
         "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd",
         "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
-        "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12"
+        "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12",
+        "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75"
       ]
     },
     {
@@ -205,8 +207,11 @@
     },
     {
       "path": "model/monitoring_field_selection.py",
-      "bytes": 16812,
-      "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+      "bytes": 16868,
+      "sha256": "3168fb44af42c9bbbf6855c9502917675a17849749a7b78a4e74fb2cecd1d5ea",
+      "predecessor_sha256": [
+        "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+      ]
     },
     {
       "path": "model/MONITORING_FIELDWORK.md",

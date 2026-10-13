@@ -190,8 +190,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 33743,
-      "sha256": "0f2749231643587880f074bbac7d04c5a6d08cf9f7bb8c3357220dc4ff83a99a"
+      "bytes": 34769,
+      "sha256": "70ad65fa6d5dcfc07f85fe6f23c71db1d3717dd4b75868e7d15b765b89195682"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -300,8 +300,8 @@
     },
     {
       "path": "source/monitoring-field-study/source/field_planning.html",
-      "bytes": 34110,
-      "sha256": "b46469fab2c9c9c0e4a87ecec3613b6c26ef05a43413304df23ce30b4150300e"
+      "bytes": 34166,
+      "sha256": "1bffa954dc26fc348e359558b5290ac7271926dfda53bf054e7407291313d266"
     },
     {
       "path": "source/monitoring-field-study/source/make_field_brief.py",
@@ -340,8 +340,8 @@
     },
     {
       "path": "model/monitoring_field_selection.py",
-      "bytes": 16812,
-      "sha256": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf"
+      "bytes": 16868,
+      "sha256": "3168fb44af42c9bbbf6855c9502917675a17849749a7b78a4e74fb2cecd1d5ea"
     },
     {
       "path": "operator/monitoring_field_selection_native.py",
@@ -385,23 +385,23 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 61076,
-      "sha256": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a"
+      "bytes": 61953,
+      "sha256": "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640"
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 51704,
-      "sha256": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75"
+      "bytes": 52009,
+      "sha256": "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4"
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 45462,
-      "sha256": "52f038d5dad4ddd5bdf05b0d4f71bcc07f3b1fc77af3f4b93c4bd8a6033dcc7e"
+      "bytes": 45728,
+      "sha256": "4a632a0c27007cfa9fb671739eaf2da9a96ee8191f43b3d97ad78c9df6b258a9"
     },
     {
       "path": "integration/monitoring_study_transfer_sources.json",
-      "bytes": 26213,
-      "sha256": "cb1bf76f2bce93d89d15aac19ffb2934b89b89b7fa85847e5654e2ac3024a503"
+      "bytes": 26555,
+      "sha256": "8ee0fd024c541d89541a23fbf83304dc71d8b79088603670ff0cf5dee40b0358"
     }
   ],
   "preserved_shared_dependencies": [
