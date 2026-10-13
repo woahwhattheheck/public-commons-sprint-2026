@@ -87,7 +87,7 @@ async function rehearsalOpenControl(control){
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
-const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args),openScientificReport});
+const parameterStudies=attachParameterStudies({getState:()=>state,beginFormOpening:formOpening,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args),openScientificReport});
 async function openScientificReport(selection){
  if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
  const request={workspace,workspaceRevision,connectionEpoch};

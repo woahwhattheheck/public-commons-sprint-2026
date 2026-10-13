@@ -181,9 +181,20 @@ export function attachParameterStudies(host) {
     const selectedWorkspace = workspace(), sequence = ++formSequence;
     const body = document.querySelector('#form-body'), anchor = body?.firstChild;
     const dialog = document.querySelector('#operation-form')?.closest('dialog'), wasOpen = dialog?.open;
-    return {workspace: selectedWorkspace, current: () => workspace() === selectedWorkspace &&
+    const admitted = typeof host.beginFormOpening === 'function' ?
+      host.beginFormOpening('parameter-study.open') : () => true;
+    const current = () => admitted() && workspace() === selectedWorkspace &&
       sequence === formSequence && document.querySelector('#form-body') === body &&
-      body?.firstChild === anchor && dialog?.open === wasOpen};
+      body?.firstChild === anchor && dialog?.open === wasOpen;
+    return {workspace: selectedWorkspace, current, async read(operation) {
+      try {
+        const value = await operation();
+        return current() ? value : null;
+      } catch (error) {
+        if (current()) throw error;
+        return null;
+      }
+    }};
   }
 
   function formSession(selector, selectedWorkspace) {
@@ -633,7 +644,13 @@ export function attachParameterStudies(host) {
     if (!(data().runs || []).length) throw new Error('Prepare a native run before creating a parameter study.');
     const opening = formRequest(), originalWorkspace = opening.workspace;
     let initial = {}, editor = null;
-    if (id) initial = (await host.api(requested('/api/parameter-studies/view', {id, limit: 0}))).selection;
+    if (id) {
+      const retained = await opening.read(() =>
+        host.api(requested('/api/parameter-studies/view', {id, limit: 0})));
+      if (!opening.current()) return;
+      if (retained?.id !== id) throw new Error('The saved study response belongs to another original study.');
+      initial = retained.selection;
+    }
     if (!opening.current()) return;
     draftCatalog = null; confirmedSelection = null;
     const html = '<div class="parameter-study-draft"><div class="form-grid">' +
@@ -684,8 +701,10 @@ export function attachParameterStudies(host) {
 
   async function openCalibration(id) {
     const opening = formRequest(), originalWorkspace = opening.workspace;
-    const packet = await host.api(requested('/api/parameter-studies/calibration', {id}));
+    const packet = await opening.read(() =>
+      host.api(requested('/api/parameter-studies/calibration', {id})));
     if (!opening.current()) return;
+    if (packet?.study_id !== id) throw new Error('The calibration response belongs to another original study.');
     let editor = null;
     const eligible = packet.eligible || [], excluded = packet.excluded || [];
     const rows = eligible.map(row => '<tr><td><input type="checkbox" name="parameter_study_calibration_run" value="' +
@@ -725,13 +744,17 @@ export function attachParameterStudies(host) {
 
   async function openScientificSource(id, sourceId = '') {
     const opening = formRequest(), originalWorkspace = opening.workspace;
-    const value = await host.api(requested('/api/parameter-studies/scientific-source',
-      sourceId ? {source_id: sourceId} : {id}));
+    const value = await opening.read(() => host.api(requested('/api/parameter-studies/scientific-source',
+      sourceId ? {source_id: sourceId} : {id})));
     if (!opening.current()) return;
     const prepared = value?.scientific_report_selection;
-    if (value?.experiment_id !== id || prepared?.workspace_key !== originalWorkspace ||
-        !prepared?.sources?.length) throw new Error('Prepare the saved Parameter result source before opening its report composer.');
-    await host.refreshState();
+    if (value?.experiment_id !== id || (sourceId && value?.id !== sourceId) ||
+        prepared?.workspace_key !== originalWorkspace || prepared?.sources?.length !== 1 ||
+        prepared.sources[0]?.source_collection_id !== value?.source?.source_collection_id ||
+        prepared.sources[0]?.source_id !== value?.source?.source_id) {
+      throw new Error('Prepare the saved Parameter result source before opening its report composer.');
+    }
+    await opening.read(() => host.refreshState());
     if (!opening.current()) return;
     if (workspace() !== originalWorkspace) throw new Error('Reopen the report in its original Workspace.');
     if (typeof host.openScientificReport !== 'function') throw new Error('Open this application edition with its SourceReports composer.');
@@ -740,9 +763,10 @@ export function attachParameterStudies(host) {
 
   async function openReportSource(id, initialCase = '') {
     const opening = formRequest(), originalWorkspace = opening.workspace;
-    const packet = await host.api(requested('/api/parameter-studies/source-catalog', {id}));
+    const packet = await opening.read(() =>
+      host.api(requested('/api/parameter-studies/source-catalog', {id})));
     if (!opening.current()) return;
-    if (packet.experiment_id !== id) throw new Error('The report catalog belongs to another saved study.');
+    if (packet?.experiment_id !== id) throw new Error('The report catalog belongs to another saved study.');
     let editor = null, casePage = 0, query = '';
     const caseIds = new Set(packet.cases.map(row => row.id));
     if (initialCase && !caseIds.has(initialCase)) throw new Error('Refresh completed results before selecting this case in a report.');
