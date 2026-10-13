@@ -260,3 +260,14 @@ The default case set includes all plan areas, the analysis overview, and every r
 The command writes `receiving-water-browser.json`, the actual map ZIPs and native-browser screenshots to the chosen directory. The result identifies the project, source plan, analysis, each target, original queue tasks, saved review/export, exact source bindings and cold-reopened viewport. Resuming the same control selection and application edition reconciles its retained original operation IDs and complete downloads. The operation identity includes the actual installed driver, operator and renderer source hashes, and the command checks that the live server serves those same browser modules. Keep a changed application edition in its own output directory so its exports and screenshots remain distinguishable. Active tasks remain recorded when the observation duration elapses; `task_timeout_seconds` sets that duration. A native exception identifies its original task, stage and message in the same output.
 
 The receiving detail controls retain both subject ID and kind. The spatial workbench refreshes when a source plan or analysis finishes, and saved map titles identify their original statistic and model run. These joins use the existing operator, native spatial renderer, export producer and persisted queue.
+
+
+## Broad source catalogs and receiving-water results
+
+The receiving-water workspace keeps source plans, completed analysis tables, and download lists to 75 visible rows per page. Search and family/type filters apply to the entire saved record before pagination, so a water on the final page is reachable directly by its exact native ID. When the search exactly matches an ID, that ID takes precedence over partial name or source matches. Analysis area type continues to distinguish individual receiving waters from combined family areas when their IDs coincide.
+
+Previous and Next show the current range and matching total. Changing a filter resets the view to the first matching page; continuing an active analysis preserves the current page and clamps it to the available results. Catalog searches reuse each original record's search text within the loaded source edition.
+
+Downloads are listed when their section opens, with search by file name, label, or SHA256 and the same 75-row page size. The plan's original source-selection JSON is also materialized when opened. Every original download and source record remains available; these controls change rendering, not the retained scientific or source artifacts.
+
+The maintained browser journey waits until the exact selected plan or analysis has finished loading, then locates each target through its exact native ID and area type before opening the original map. This operates waters beyond the first page while retaining the same saved map, export, and fresh-context reopening checks. Use the browser command from the same application edition as the served receiving-water UI.

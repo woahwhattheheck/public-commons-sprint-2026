@@ -253,7 +253,7 @@ export function createWatershedContextDesk(host) {
     if (extra && extra.count === 0 && list(extra.huc8).length)
       text += ' HUC8 areas ' + extra.huc8.join(', ') + ' returned zero records for the selected classes.';
     return '<section class="wc-coverage"><h2>Source coverage</h2><p>' + esc(text) +
-      '</p><p class="wc-note">Selected source classes: ' + esc(list(coverage.selected_classes).join(', ') || 'See retained query') + '. Reach counts use the publisher’s HUC12 attributes. The receiving-water workflow calculates geometric intersections and upstream contributing areas from the original drainage network.</p>' +
+      '</p><p class="wc-note">Selected source classes: ' + esc(list(coverage.selected_classes).join(', ') || 'See retained query') + '. Source-feature counts use the publisher’s HUC12 attributes. The receiving-water workflow calculates geometric intersections and upstream contributing areas from the original drainage network.</p>' +
       '<details><summary>Classification query and source scope</summary><pre>' + esc(pretty(coverage)) + '</pre></details></section>';
   }
   function filtersHtml() {
@@ -288,7 +288,7 @@ export function createWatershedContextDesk(host) {
         metric(number(all.length), 'Model watersheds') +
         metric(number(sum(all, 'area_km2'), 1), 'Unique watershed area · km²') +
         metric(number(all.filter(row => row.priority).length), 'NRCS priority watersheds') +
-        metric(number(sum(all, 'selected_classification_count')), 'Selected-class reach records') +
+        metric(number(sum(all, 'selected_classification_count')), 'Selected-class source features') +
         '</section>' + coverageHtml(report) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
         '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
@@ -296,7 +296,7 @@ export function createWatershedContextDesk(host) {
         '</div></header>' +
         filtersHtml() + '<p data-wc-count class="wc-note" aria-live="polite"></p>' +
         '<div class="wc-table-scroll"><table><thead><tr>' +
-        ['Watershed', 'HUC8 / states', 'Area km²', 'NRCS priority', 'Selected reaches', 'Source classes', 'Coverage', ''].map(label => '<th scope="col">' + esc(label) + '</th>').join('') +
+        ['Watershed', 'HUC8 / states', 'Area km²', 'NRCS priority', 'Selected source features', 'Source classes', 'Coverage', ''].map(label => '<th scope="col">' + esc(label) + '</th>').join('') +
         '</tr></thead><tbody data-wc-rows></tbody></table></div></section>' +
         '<section data-wc-detail class="wc-detail" tabindex="-1" aria-label="Watershed detail"></section>' +
         selectionDownloads() + '<section class="wc-downloads"><h2>Regional report and original sources</h2>' +
@@ -363,14 +363,14 @@ export function createWatershedContextDesk(host) {
       ' acres</dd></div><div><dt>Model role</dt><dd>' + esc(human(row.role || 'model_domain')) +
       '</dd></div><div><dt>NRCS priority</dt><dd>' + esc(row.priority ? 'Priority in ' + list(row.priority_states).join(', ') : 'No priority flag in these source rows') +
       '</dd></div><div><dt>Downstream watershed</dt><dd>' + watershedDownstreamHtml(row, rows().map(item => item.huc12)) +
-      '</dd></div><div><dt>Reach assignment</dt><dd>' + esc(human(row.classification_assignment || 'publisher_huc12_attribute')) +
+      '</dd></div><div><dt>Source-feature assignment</dt><dd>' + esc(human(row.classification_assignment || 'publisher_huc12_attribute')) +
       '</dd></div></dl>' +
       '<div class="wc-detail-grid"><section><h3>Priority reasons</h3>' +
       (reasons.length ? '<ul>' + reasons.map(reason => '<li>' + esc(typeof reason === 'string' ? reason : pretty(reason)) + '</li>').join('') + '</ul>' :
         '<p class="wc-note">The source contains no priority reason for this watershed.</p>') +
       '<h3>Original state area records</h3><p class="wc-note">The regional total counts each watershed once. State rows retain their original area values.</p><dl class="wc-class-counts">' + Object.entries(stateAreas).map(([state, acres]) => '<div><dt>' + esc(state) + '</dt><dd>' + esc(number(acres, 1)) + ' acres</dd></div>').join('') + '</dl></section>' +
       '<section><h3>Classified-water source</h3><p>' + esc(number(row.selected_classification_count)) +
-      ' selected-class reach records · ' + esc(human(row.classification_coverage)) + '</p>' +
+      ' selected-class source features · ' + esc(human(row.classification_coverage)) + '</p>' +
       '<dl class="wc-class-counts">' + Object.entries(classCounts).map(([key, count]) =>
         '<div><dt>' + esc(key) + '</dt><dd>' + esc(number(count)) + '</dd></div>').join('') +
       '</dl><p class="wc-note">Jurisdiction: ' + esc(human(row.classification_scope)) + '. Source classes: ' +
