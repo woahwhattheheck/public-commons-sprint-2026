@@ -71,6 +71,121 @@ def _error(value):
     return str(value or "")
 
 
+def _native_provenance_report(summary):
+    """Explain retained original sources and producing versions without run IO."""
+    rows = summary.get("rows", [])
+    selection = summary.get("selection") or {}
+    selected = selection.get("source_run_ids", [])
+    bindings, versions, policies = {}, {}, set()
+    for row in rows:
+        case_id = row.get("id", "")
+        for field, role in (("native_source", "Result"),
+                            ("native_baseline_source", "Paired baseline")):
+            binding = row.get(field)
+            if not isinstance(binding, dict):
+                continue
+            token = json.dumps(binding, ensure_ascii=False, sort_keys=True)
+            item = bindings.setdefault(token, {"source": binding, "uses": set()})
+            item["uses"].add((str(case_id), role))
+        cohort = row.get("native_versions")
+        if not isinstance(cohort, dict):
+            continue
+        if cohort.get("policy"):
+            policies.add(str(cohort["policy"]))
+        for run_id, models in (cohort.get("runs") or {}).items():
+            for model, info in models.items():
+                role = ("Reference" if run_id == row.get("run_id") == row.get("baseline_run_id")
+                        else "Paired baseline" if run_id == row.get("baseline_run_id") else "Result")
+                token = (str(run_id), str(model),
+                         json.dumps(info, ensure_ascii=False, sort_keys=True))
+                item = versions.setdefault(token, {
+                    "run_id": run_id, "model": model, "info": info, "uses": set()})
+                item["uses"].add((str(case_id), role))
+    if not selected and not bindings and not versions:
+        return ""
+    pieces = [
+        '<h2>Original native sources and execution</h2>',
+        '<p>This register uses the source bindings and producing-model metadata saved with these '
+        'experiment cases. It preserves each original native run and its requested selection. '
+        'The current selection address identifies the same grid, profile, scenario and models '
+        'under the current requested version. Adoption reuses the original completed outputs.</p>',
+    ]
+    if selected:
+        pieces.append('<details><summary>Selected original run cohort</summary><ul>' +
+                      ''.join('<li><code>' + _text(run_id) + '</code></li>' for run_id in selected) +
+                      '</ul></details>')
+    if bindings:
+        pieces.append('<h3>Retained original output bindings</h3>')
+        for item in sorted(bindings.values(), key=lambda value: (
+                str(value["source"].get("run_id")), str(value["source"].get("canonical_run_id")))):
+            source = item["source"]
+            original = source.get("selection") or {}
+            producing = source.get("producing_versions") or {}
+            pieces.append(
+                '<section><h4>Original run <code>' + _text(source.get("run_id")) + '</code></h4>'
+                '<p>Current selection address <code>' + _text(source.get("canonical_run_id")) +
+                '</code><br>Requested native version: <code>' + _text(original.get("invest_version") or "Not recorded") +
+                '</code><br>Retained producing versions: ' +
+                '; '.join(_text(str(model).upper()) + ' <code>' + _text(version) + '</code>'
+                          for model, version in producing.items()) + '</p>')
+            pieces.append('<div class="scroll"><table><caption>Original output descriptors</caption>'
+                          '<thead><tr><th>Output</th><th>Units</th><th>Bytes</th><th>SHA-256</th>'
+                          '<th>Original run-relative path</th></tr></thead><tbody>')
+            for name, artifact in (source.get("artifacts") or {}).items():
+                pieces.append('<tr><th scope="row">' + _text(name) + '</th><td>' +
+                              _text(artifact.get("units") or "Not recorded") + '</td><td class="num">' +
+                              _number(artifact.get("bytes")) + '</td><td><code>' +
+                              _text(artifact.get("sha256")) + '</code></td><td><code>' +
+                              _text(artifact.get("path")) + '</code></td></tr>')
+            pieces.append('</tbody></table></div><details><summary>Original selection and source binding</summary>'
+                          '<pre>' + _text(json.dumps(source, ensure_ascii=False, indent=2, sort_keys=True)) +
+                          '</pre></details><details><summary>Cases using these outputs</summary><ul>' +
+                          ''.join('<li>' + _text(role) + ' · <code>' + _text(case_id) + '</code></li>'
+                                  for case_id, role in sorted(item["uses"])) + '</ul></details></section>')
+    if versions:
+        labels = {
+            "completed_stage_runtime": "Recorded on the completed model stage",
+            "observed_run_fallback": "Observed run runtime; completed-stage version unavailable",
+            "observed_runtime": "Observed run runtime",
+            "requested_legacy": "Requested version retained by a legacy record",
+            "unavailable": "No version recorded",
+        }
+        pieces.append('<h3>Producing model versions</h3><p>A completed stage takes precedence over '
+                      'the observed run runtime. A requested-only legacy record is labelled explicitly. '
+                      'NDR and SDR retain separate version records and source histories.</p>')
+        if policies:
+            pieces.append('<p>Retained comparison policy: ' +
+                          '; '.join('<code>' + _text(policy) + '</code>' for policy in sorted(policies)) +
+                          '.</p>')
+        pieces.append('<div class="scroll"><table><thead><tr><th>Original run / model</th>'
+                      '<th>Producing version</th><th>Version source</th><th>Requested version</th>'
+                      '<th>Observed run version</th><th>Stage completed</th><th>Retained record</th>'
+                      '</tr></thead><tbody>')
+        for item in sorted(versions.values(), key=lambda value: (
+                str(value["run_id"]), str(value["model"]),
+                json.dumps(value["info"], sort_keys=True))):
+            info = item["info"]
+            pieces.append(
+                '<tr><td><code>' + _text(item["run_id"]) + '</code><br>' +
+                _text(str(item["model"]).upper()) + '</td><td>' +
+                _text(info.get("comparison_version") or "Not recorded") + '</td><td>' +
+                _text(labels.get(info.get("basis"), info.get("basis") or "Not recorded")) +
+                '</td><td>' + _text(info.get("requested_version") or "Not recorded") +
+                '</td><td>' + _text(info.get("observed_run_version") or "Not recorded") +
+                '</td><td>' + _text(info.get("stage_completed_at") or "Not recorded") +
+                '</td><td><details><summary>Execution source and reuse</summary><pre>' +
+                _text(json.dumps(info, ensure_ascii=False, indent=2, sort_keys=True)) +
+                '</pre></details><details><summary>Case uses</summary><ul>' +
+                ''.join('<li>' + _text(role) + ' · <code>' + _text(case_id) + '</code></li>'
+                        for case_id, role in sorted(item["uses"])) +
+                '</ul></details></td></tr>')
+        pieces.append('</tbody></table></div>')
+    else:
+        pieces.append('<p>Per-model execution metadata was not recorded for these retained cases. '
+                      'The register preserves the available original source bindings.</p>')
+    return "".join(pieces)
+
+
 def render_report(summary):
     """Readable offline report; figures use the same retained paired-mass rows."""
     rows = summary.get("rows", [])
@@ -86,7 +201,8 @@ def render_report(summary):
         'table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}'
         'th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #d5d8db}'
         'th{background:#f0f1f2}td.num{font-variant-numeric:tabular-nums;white-space:nowrap}'
-        'code{overflow-wrap:anywhere;font-size:11px}.scroll{overflow:auto}.meta{display:flex;gap:24px;flex-wrap:wrap}'
+        'code{overflow-wrap:anywhere;font-size:11px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}'
+        '.scroll{overflow:auto}.meta{display:flex;gap:24px;flex-wrap:wrap}'
         '.notice{border:1px solid #bfc5cb;background:#f5f6f7;padding:12px}'
         '@media print{body{margin:0;max-width:none;padding:0;font-size:10pt}'
         'thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}'
@@ -145,6 +261,7 @@ def render_report(summary):
                       '<br>' + _text(row.get("baseline_run_id")) +
                       '</code></td><td>' + _text(_error(row.get("error"))) + '</td></tr>')
     pieces.append('</tbody></table></div>')
+    pieces.append(_native_provenance_report(summary))
     pieces.append('<h2>Interpretation and continued work</h2><p>Use the same-profile land-cover comparisons '
                   'to assess the response of an alternative. Keep the individual nutrient and sediment '
                   'quantities available when combining priorities. Run identifiers reopen the native '
