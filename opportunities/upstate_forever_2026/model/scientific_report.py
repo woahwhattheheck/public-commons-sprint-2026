@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v19-original-source-readable-layout"
+REPORT_VERSION = "upstate.scientific-report/v20-readable-source-captions"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -1197,6 +1197,9 @@ def report_pdf(path, title, sections, *, contact, source_records,
     styles["BodyText"].leading = 13
     styles["Heading2"].keepWithNext = True
     styles["Heading3"].keepWithNext = True
+    caption_style = ParagraphStyle("ScientificTableCaption", parent=styles["BodyText"],
+                                   keepWithNext=True,
+                                   spaceAfter=styles["BodyText"].spaceAfter + .05 * inch)
     cell_style = ParagraphStyle("ScientificTable", parent=styles["BodyText"],
                                 fontSize=8, leading=10, splitLongWords=1)
     story = [Paragraph(escape(str(title)), styles["Title"]), Spacer(1, .15 * inch)]
@@ -1263,7 +1266,9 @@ def report_pdf(path, title, sections, *, contact, source_records,
                 story.append(Spacer(1, .05 * inch))
         elif isinstance(block, dict) and block.get("kind") == "table":
             if block.get("caption"):
-                story.extend([paragraph(block["caption"]), Spacer(1, .05 * inch)])
+                # Keep the caption with the table; a separate Spacer breaks
+                # the heading/caption keepWithNext chain at a page boundary.
+                story.append(paragraph(block["caption"], caption_style))
             from .scientific_tables import pdf_table_flowables
             story.extend(pdf_table_flowables(
                 block, width=7.1 * inch, paragraph=paragraph, cell_style=cell_style,
