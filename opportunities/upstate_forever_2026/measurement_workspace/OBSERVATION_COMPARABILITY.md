@@ -392,3 +392,14 @@ downloads. Exercise the populated, empty, loading and error recovery states.
 Open the extracted offline desk and native PDF/HTML, view every captured image,
 and repair visible or functional defects in the same source before delivery.
 Retain these actual browser results beside the native handoff.
+
+
+## Receive another project's original cohort and save a local comparison
+
+A selected Study can contain a comparable-period source whose original native comparison belongs to another project. Its complete publisher responses and original measurement index remain usable in the receiving Workspace. On that received source's card, choose **Use original cohort for a local comparison**. The action carries the exact receiving Workspace, source collection, source identifier and recipe SHA256 into the existing comparable-period desk. The desk verifies every original input through the maintained source loader before enabling Save.
+
+Choose the earlier and later years and the saved report title. **Save complete comparison** uses the ordinary native task and immutable source-bound build. It retains a comparison in the current Workspace, preserving the received source and original report. Original year-pair defaults come from the retained source; the complete series, reporting limits, activity weights and shared-month calculation are unchanged. The desk exposes the original source title, collection, recipe digest, project and native selection under **Original cohort source** both before saving and after reopening the local result. This read-only context does not alter any original saved identity, request binding or receipt.
+
+After the task completes, open its saved comparison. **Open this report only** replaces the draft Scientific Report selection with this local result; **Add to current report** appends it. Continue through the existing report, selected Study and whole-Workspace export. The selected Study retains the local native comparison, the complete source package and its exact selected original input collection; reopening returns to that local comparison while its received original source remains separately identifiable.
+
+On the same assigned native/browser receiving course, inspect a received external-project cohort card, open the local-comparison action, choose a distinct title or year pair, save and reopen from Tasks, then make the original report/Study/Workspace round trip. Confirm the local project and original source identifiers in the rendered views, inspect the complete original rows and downloaded inputs, and open the exported files. During asynchronous loading, choosing another source or saved edition must supersede the pending read; changing the title or year selection must keep the current edit. Inspect desktop and narrow layouts using the current application's ordinary controls. Continue the existing course and retained artifacts; do not start another model run.
