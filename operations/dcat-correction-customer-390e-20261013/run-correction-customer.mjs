@@ -5,6 +5,7 @@ import { join, resolve, dirname, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { runDcatCorrectionBrowser, inspectDcatCorrectionBrowser } from './run-correction-browser.mjs';
+import { runDcatRecipientCorrectionBrowser, inspectDcatRecipientCorrectionBrowser } from './run-recipient-correction-browser.mjs';
 const PREFIX = 'stellar/scf-starforge-20261009/sf30-seller-sdk/ckan';
 const OPERATION = 'SCF-DCAT-CORRECTION-WORKBENCH-390E-20261013';
 const HASH = /^[a-f0-9]{64}$/, UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -41,13 +42,19 @@ function normalized(value) {
   const result = structuredClone(value);
   result.corrections ??= { schema: 'stellar-forge.dcat-corrections.v1', drafts: [] };
   result.corrections.pending ??= [];
+  result.corrections.exchanges ??= { schema: 'stellar-forge.dcat-correction-exchanges.v1', issues: [], proposals: [], decisions: [], pending: [] };
   return result;
 }
-function stripOwned(value, correctionId, catalogId, reviewId) {
+function stripOwned(value, correctionId, catalogId, reviewId, exchange) {
   const result = normalized(value);
   if (correctionId) result.corrections.drafts = result.corrections.drafts.filter(row => row.id !== correctionId);
   if (catalogId) result.catalogs = result.catalogs.filter(row => row.id !== catalogId);
   if (reviewId) result.reviews = result.reviews.filter(row => row.id !== reviewId);
+  if (exchange) {
+    result.corrections.drafts = result.corrections.drafts.filter(row => row.id !== exchange.correctionId);
+    for (const [kind, id] of [['issues', exchange.exchangeId], ['proposals', exchange.proposalId], ['decisions', exchange.decisionId]])
+      result.corrections.exchanges[kind] = result.corrections.exchanges[kind].filter(row => row.id !== id);
+  }
   return result;
 }
 /**
@@ -80,6 +87,8 @@ export async function runDcatCorrectionCustomer({
   const { receiveCkanWorkspaceArchive } = await import(pathToFileURL(join(ckan, 'archive.mjs')).href);
   const { validateDcatSemanticFiles } = await import(pathToFileURL(join(ckan, 'dcat-semantic.mjs')).href);
   const { validateDcatCorrectionFiles } = await import(pathToFileURL(join(ckan, 'dcat-corrections.mjs')).href);
+  const { validateDcatCorrectionExchangeFiles } = await import(pathToFileURL(join(ckan, 'dcat-correction-exchange.mjs')).href);
+  const exchangeCodec = await import(pathToFileURL(join(ckan, 'public/dcat-correction-exchange.mjs')).href);
   const { parseCkanJson } = await import(pathToFileURL(join(ckan, 'capture.mjs')).href);
   const rawResult = await files.readPrivate(join(comparisonOutputDirectory, 'result.json'), 67108864);
   need(sha(rawResult) === expectedComparisonResultSha256, 'CORRECTION_CUSTOMER_COMPARISON_RESULT_CHANGED');
@@ -139,20 +148,22 @@ export async function runDcatCorrectionCustomer({
   const result = { schema: 'commons.dcat-correction-customer-result.v1', operation: OPERATION,
     startedAt: new Date().toISOString(), complete: false, comparisonResultSha256: expectedComparisonResultSha256,
     originalArchive: declared.archive, source: [], runtime: null, producerReceiving: null, catalog: null,
-    browser: null, correction: null, review: null, downloads: [], archive: null, receiving: null,
+    browser: null, correction: null, review: null, exchange: null, exchangeDetails: null, reopenedExchange: null, downloads: [], archive: null, receiving: null,
     coldReopen: null, reopenedBrowser: null, followingArchive: null, errors: [], cleanup: [],
     presentation: { ready: false, reason: 'The producing operator must actually inspect the recorded desktop/narrow images and every delivered attachment before client-ready presentation.' } };
   const owners = { producer: { model: null, listener: null }, recipient: { model: null, listener: null } };
   async function closeOwner(name) {
-    const owned = owners[name];
-    if (owned.listener) {
-      try { await owned.listener.close(); owned.listener = null; result.cleanup.push({ owner: name + '-listener', closed: true }); }
-      catch (error) { result.cleanup.push({ owner: name + '-listener', closed: false, error: safeError(error) }); throw error; }
+    const owned = owners[name]; let failure;
+    // Each owned lifetime must be received even when an earlier close fails.
+    for (const [key, suffix] of [['listener', 'listener'], ['model', 'workspace']]) {
+      if (!owned[key]) continue;
+      try { await owned[key].close(); owned[key] = null; result.cleanup.push({ owner: name + '-' + suffix, closed: true }); }
+      catch (error) {
+        result.cleanup.push({ owner: name + '-' + suffix, closed: false, error: safeError(error) });
+        failure ??= error;
+      }
     }
-    if (owned.model) {
-      try { await owned.model.close(); owned.model = null; result.cleanup.push({ owner: name + '-workspace', closed: true }); }
-      catch (error) { result.cleanup.push({ owner: name + '-workspace', closed: false, error: safeError(error) }); throw error; }
-    }
+    if (failure) throw failure;
   }
   async function openOwner(name, withListener = false) {
     need(!owners[name].model && !owners[name].listener, 'CORRECTION_CUSTOMER_OWNER_ALREADY_OPEN');
@@ -208,9 +219,10 @@ export async function runDcatCorrectionCustomer({
     need(checked.hash === descriptor.sha256 && checked.bytes === descriptor.bytes, 'CORRECTION_CUSTOMER_SOURCE_FILE_CHANGED');
     const target = join(out, 'downloads', scope, name);
     await mkdir(dirname(target), { recursive: true, mode: 0o700 });
-    const source = await open(descriptor.file, constants.O_RDONLY | constants.O_NOFOLLOW);
-    const output = await open(target, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
+    let source, output, failure;
     try {
+      source = await open(descriptor.file, constants.O_RDONLY | constants.O_NOFOLLOW);
+      output = await open(target, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
       const before = await source.stat(), prior = await output.stat();
       need(before.isFile() && before.nlink === 1 && !(before.mode & 0o077) && before.size === descriptor.bytes &&
         prior.isFile() && prior.nlink === 1 && !(prior.mode & 0o077) && prior.size <= descriptor.bytes, 'CORRECTION_CUSTOMER_DOWNLOAD_FILE_CHANGED');
@@ -235,7 +247,19 @@ export async function runDcatCorrectionCustomer({
       const after = await source.stat();
       need(before.size === after.size && before.mtimeMs === after.mtimeMs && before.ctimeMs === after.ctimeMs,
         'CORRECTION_CUSTOMER_DOWNLOAD_SOURCE_CHANGED');
-    } finally { await source.close(); await output.close(); }
+    } catch (error) { failure = error; }
+    finally {
+      for (const [owner, handle] of [['download-source', source], ['download-output', output]]) {
+        if (!handle) continue;
+        try { await handle.close(); }
+        catch (error) {
+          result.cleanup.push({ owner, file: owner === 'download-source' ? descriptor.file : target,
+            closed: false, error: safeError(error) });
+          failure ??= error;
+        }
+      }
+    }
+    if (failure) throw failure;
     const actual = await files.hashPrivate(target, 8589934592);
     need(actual.hash === descriptor.sha256 && actual.bytes === descriptor.bytes, 'CORRECTION_CUSTOMER_DOWNLOAD_COPY_CHANGED');
     const receipt = { scope, name, file: target, bytes: actual.bytes, sha256: actual.hash, kind: descriptor.kind ?? null, id: descriptor.id ?? null };
@@ -320,7 +344,7 @@ export async function runDcatCorrectionCustomer({
     const materialized = await copyDescriptor(await model.dcatCatalogDownload(materialization.catalogId), scope, 'materialized-restored-catalog.json');
     need(materialized.sha256 === result.catalog.sha256 && materialized.bytes === result.catalog.bytes, 'CORRECTION_CUSTOMER_MATERIALIZED_BYTES_CHANGED');
     const reviewId = ledger.phases['preserve-restored-review']?.result?.id ?? ledger.phases['preserve-restored-review']?.selection?.reviewId;
-    need(same(stripOwned(model.status().dcat, draft.id, materialization.catalogId, reviewId), baseline.dcat),
+    need(same(stripOwned(model.status().dcat, draft.id, materialization.catalogId, reviewId, result.exchange), baseline.dcat),
       'CORRECTION_CUSTOMER_UNOWNED_HISTORY_CHANGED');
     return { id: draft.id, headRevisionId: draft.headRevisionId, source: draft.source,
       revisions: draft.revisions, materialization, downloads: records };
@@ -341,6 +365,89 @@ export async function runDcatCorrectionCustomer({
       candidateSha256: candidate.sha256, summary: saved.summary, canReceive: report.can_receive, report: fullReport, candidate,
       qualification: 'The new review retains original validation and conservation outcomes for the exact restored current catalogue. No release or semantic decision is inferred.' };
   }
+
+  async function verifyExchangeBrowser(value, directory, inspectOnly) {
+    need(value?.schema === 'commons.dcat-recipient-correction-browser.v1' &&
+      value.operation === 'SCF-DCAT-RECIPIENT-CORRECTIONS-390E-20261013' && value.complete === true &&
+      value.mode === (inspectOnly ? 'received-inspection' : 'recipient-course') &&
+      same(value.catalog, result.catalog) && value.errors?.length === 0 && value.pageErrors?.length === 0 &&
+      value.cleanup?.some(row => row.owner === 'browser-context' && row.closed), 'CORRECTION_CUSTOMER_EXCHANGE_BROWSER_INCOMPLETE');
+    for (const key of ['correctionId', 'exchangeId', 'proposalId', 'editionId', 'decisionId', 'authorRevisionId', 'adoptedRevisionId'])
+      need(UUID.test(value[key] ?? ''), 'CORRECTION_CUSTOMER_EXCHANGE_ID_REQUIRED');
+    for (const rows of [value.downloads, value.screenshots]) {
+      need(Array.isArray(rows) && rows.length > 0, 'CORRECTION_CUSTOMER_EXCHANGE_ARTIFACT_MISSING');
+      for (const row of rows) {
+        need(isAbsolute(row.file ?? '') && resolve(row.file).startsWith(resolve(directory) + '/') &&
+          HASH.test(row.sha256 ?? '') && Number.isSafeInteger(row.bytes), 'CORRECTION_CUSTOMER_EXCHANGE_ARTIFACT_INVALID');
+        const actual = await files.hashPrivate(row.file, 268435456);
+        need(actual.hash === row.sha256 && actual.bytes === row.bytes, 'CORRECTION_CUSTOMER_EXCHANGE_ARTIFACT_CHANGED');
+      }
+    }
+    need([1365, 390].every(width => value.observations.some(row => row.kind === 'layout' && row.viewport === width)),
+      'CORRECTION_CUSTOMER_EXCHANGE_LAYOUTS_MISSING');
+  }
+  const exchangeSelection = () => Object.fromEntries(
+    ['correctionId', 'exchangeId', 'proposalId', 'editionId', 'decisionId', 'authorRevisionId', 'adoptedRevisionId']
+      .map(key => [key, result.exchange[key]]));
+  async function collectExchange(model, scope) {
+    const selected = exchangeSelection(), draft = await model.dcatCorrection(selected.correctionId);
+    const issue = await model.dcatCorrectionExchange(selected.exchangeId);
+    const proposal = await model.dcatCorrectionProposal(selected.proposalId);
+    const decision = model.status().dcat.corrections.exchanges.decisions.find(row => row.id === selected.decisionId);
+    need(draft.source.kind === 'catalog' && draft.source.id === result.catalog.id && draft.source.sha256 === result.catalog.sha256 &&
+      draft.source.bytes === result.catalog.bytes && draft.revisions.length === 3 && draft.materializations.length === 0 &&
+      draft.revisions[0].kind === 'source' && draft.revisions[1].id === selected.authorRevisionId &&
+      draft.revisions[2].id === selected.adoptedRevisionId && draft.headRevisionId === selected.adoptedRevisionId,
+      'CORRECTION_CUSTOMER_EXCHANGE_HISTORY_CHANGED');
+    need(issue.correctionId === draft.id && issue.revisionId === draft.revisions[0].id &&
+      issue.documentSha256 === result.catalog.sha256 && issue.issuer === author && issue.history.length === 1 &&
+      proposal.exchangeId === issue.id && proposal.correctionId === draft.id && proposal.editions.length === 1 &&
+      proposal.editions[0].id === selected.editionId && decision?.proposalId === proposal.id &&
+      decision.revisionId === selected.adoptedRevisionId && decision.author === author,
+      'CORRECTION_CUSTOMER_EXCHANGE_BINDING_CHANGED');
+    await validateDcatCorrectionExchangeFiles(model.directory, model.status().dcat);
+    const retained = [];
+    for (const [kind, id, name] of [
+      ['issue', issue.id, 'issued-package.json'], ['recipient', issue.id, 'issued-recipient.html'],
+      ['initial-proposal', issue.id, 'initial-proposal.json'], ['proposal', proposal.id, 'exact-return.html'],
+      ['decision', decision.id, 'adoption-decision.json']])
+      retained.push(await copyDescriptor(await model.dcatCorrectionExchangeDownload({ kind, id }), scope, name));
+    for (const [index, file] of issue.files.entries()) {
+      const copy = await copyDescriptor(await model.dcatCorrectionExchangeDownload({ kind: 'file', id: issue.id, key: file.key }),
+        scope, 'original-file-' + index + '.bin');
+      need(copy.sha256 === file.sha256 && copy.bytes === file.bytes, 'CORRECTION_CUSTOMER_EXCHANGE_MEMBER_CHANGED');
+      retained.push({ ...copy, originalKey: file.key, originalName: file.name, originalRole: file.role });
+    }
+    const returned = retained.find(row => row.name === 'exact-return.html');
+    need(returned.sha256 === result.exchange.returnedFile.sha256 && returned.bytes === result.exchange.returnedFile.bytes,
+      'CORRECTION_CUSTOMER_ORIGINAL_RETURN_CHANGED');
+    const value = exchangeCodec.readCorrectionProposalFile(await files.readPrivate(returned.file, 268435456));
+    const checked = await exchangeCodec.validateCorrectionProposal(value);
+    need(value.editions.length === 1 && value.editions[0].id === selected.editionId && value.editions[0].operations.length === 3 &&
+      same(value.draft.operations, [{ op: 'add', path: '/_notAdopted', valueText: '{"queued":true}' }]) &&
+      value.draft.editor.valueText === '{"unfinished":', 'CORRECTION_CUSTOMER_UNFINISHED_RECIPIENT_CHANGED');
+    const records = [];
+    for (const revision of draft.revisions) {
+      const document = await copyDescriptor(await model.dcatCorrectionDownload({ correctionId: draft.id, revisionId: revision.id, kind: 'document' }),
+        scope, revision.id + '-document.json');
+      const record = await copyDescriptor(await model.dcatCorrectionDownload({ correctionId: draft.id, revisionId: revision.id, kind: 'revision' }),
+        scope, revision.id + '-revision.json');
+      records.push({ revision, document, record });
+    }
+    const adopted = records.at(-1), raw = await files.readPrivate(adopted.document.file, 134217728);
+    need(raw.equals(Buffer.from(checked.currentText, 'utf8')) && adopted.document.sha256 === value.editions[0].documentSha256 &&
+      raw.includes(Buffer.from('900719925474099312345')) && raw.includes(Buffer.from('1.2300000000000000001')) &&
+      !raw.includes(Buffer.from('"_notAdopted"')) && !raw.includes(Buffer.from('"unfinished"')), 'CORRECTION_CUSTOMER_ADOPTION_BYTES_CHANGED');
+    const decisionBody = JSON.parse(await files.readPrivate(retained.find(row => row.name === 'adoption-decision.json').file, 33554432));
+    need(decisionBody.id === selected.decisionId && decisionBody.request.expectedRevisionId === selected.authorRevisionId &&
+      decisionBody.request.editionId === selected.editionId && decisionBody.binding.proposalSha256 === proposal.sha256 &&
+      decisionBody.binding.documentSha256 === adopted.document.sha256 &&
+      decisionBody.binding.choices.some(row => row.path === '/dataset/0/title' && row.choice === 'returned'),
+      'CORRECTION_CUSTOMER_EXPLICIT_DECISION_CHANGED');
+    return { ...selected, source: draft.source, revisions: draft.revisions, issue, proposal, decision, files: retained, documents: records,
+      qualification: 'A separately labelled recipient exercise on the original catalogue. No materialization, migration acceptance, semantic decision or release is inferred.' };
+  }
+
   async function archive(model, name, file) {
     const selected = await phase({ name, model, kind: 'export complete workspace', collection: 'archives',
       selectionKey: null, request: { out: file }, start: input => model.archiveWorkspace(input),
@@ -353,10 +460,13 @@ export async function runDcatCorrectionCustomer({
   try {
     for (const name of ['model.mjs', 'server.mjs', 'archive.mjs', 'capture.mjs', 'dcat-workspace.mjs',
       'dcat-corrections.mjs', 'public/dcat-corrections.mjs', 'public/dcat-correction-json.mjs',
+      'dcat-correction-exchange.mjs', 'dcat-correction-recipient.mjs', 'public/dcat-correction-exchange.mjs',
+      'public/dcat-correction-exchanges.mjs', 'public/dcat-correction-recipient.mjs', 'public/dcat-correction-recipient.css',
+      'CORRECTION_EXCHANGES.md', 'CORRECTION_EXCHANGES_AGENT.md',
       'dcat-semantic.mjs', 'dcat-semantic-comparison.mjs', 'dcat_migration.py', 'CORRECTION_WORKBENCH.md', 'CORRECTIONS_AGENT.md']) {
       const raw = await readFile(join(ckan, name)); result.source.push({ path: PREFIX + '/' + name, bytes: raw.length, sha256: sha(raw) });
     }
-    for (const name of ['run-correction-customer.mjs', 'run-correction-browser.mjs']) {
+    for (const name of ['run-correction-customer.mjs', 'run-correction-browser.mjs', 'run-recipient-correction-browser.mjs']) {
       const raw = await readFile(new URL(name, import.meta.url));
       result.source.push({ path: 'operations/dcat-correction-customer-390e-20261013/' + name, bytes: raw.length, sha256: sha(raw) });
     }
@@ -395,6 +505,23 @@ export async function runDcatCorrectionCustomer({
       throw error;
     }
     await verifyBrowser(result.browser, browserOutput, false);
+    const exchangeOutput = join(out, 'browser-exchange');
+    const exchangePhase = async () => {
+      try {
+        result.exchange = await runDcatRecipientCorrectionBrowser({ playwright: browserRuntime,
+          listener: { url: owners.producer.listener.url, origin: owners.producer.listener.origin },
+          outputDirectory: exchangeOutput, catalog: result.catalog, baselineDocumentPath: original.download.file,
+          author, exchangeCodec, signal, timeoutMs, executablePath: chromiumPath });
+      } catch (error) {
+        if (await exists(join(exchangeOutput, 'result.json'))) result.exchange = await files.readJson(join(exchangeOutput, 'result.json'), 67108864);
+        throw error;
+      }
+      await verifyExchangeBrowser(result.exchange, exchangeOutput, false);
+      result.exchangeDetails = await collectExchange(producer, 'producer-exchange');
+    };
+    // Recover this exact browser journal before excluding its known completed IDs
+    // from the earlier course's unowned-history comparison.
+    if (await exists(join(exchangeOutput, 'progress.json'))) await exchangePhase();
     const reviewRequest = { sourceId: result.catalog.id, candidateId: result.browser.materialization.catalogId,
       normalizeV3: false, label: 'GSA restored original — correction course preservation review' };
     const reviewPhase = () => phase({ name: 'preserve-restored-review', model: producer, kind: 'review DCAT migration',
@@ -409,6 +536,8 @@ export async function runDcatCorrectionCustomer({
     reviewed ??= await reviewPhase();
     result.review = await collectReview(producer, reviewed.id, 'producer-review');
     await validateCorrection(producer, result.browser, 'producer-final-corrections', baseline);
+    if (!result.exchange) await exchangePhase();
+    await validateCorrection(producer, result.browser, 'producer-after-exchange', baseline);
     const producerState = normalized(producer.status().dcat);
     await validateDcatSemanticFiles(producerDirectory, producerState);
     await retain(join(out, 'producer-before-transfer.json'), encoded(producerState));
@@ -423,6 +552,7 @@ export async function runDcatCorrectionCustomer({
     await validateDcatSemanticFiles(recipientDirectory, recipient.status().dcat);
     await validateCorrection(recipient, result.browser, 'recipient-corrections', baseline);
     await collectReview(recipient, reviewed.id, 'recipient-review');
+    await collectExchange(recipient, 'recipient-exchange');
     await save('recipient-before-cold-reopen.json', normalized(recipient.status().dcat));
     await closeOwner('recipient');
     recipient = await openOwner('recipient', true);
@@ -444,12 +574,26 @@ export async function runDcatCorrectionCustomer({
     need(result.reopenedBrowser.correctionId === result.correction.id &&
       same(result.reopenedBrowser.materialization, result.browser.materialization) &&
       same(normalized(recipient.status().dcat), producerState), 'CORRECTION_CUSTOMER_READONLY_BROWSER_CHANGED_STATE');
+    const exchangeReceivingOutput = join(out, 'browser-received-exchange');
+    try {
+      result.reopenedExchange = await inspectDcatRecipientCorrectionBrowser({ playwright: browserRuntime,
+        listener: { url: owners.recipient.listener.url, origin: owners.recipient.listener.origin },
+        outputDirectory: exchangeReceivingOutput, catalog: result.catalog, author, exchangeCodec,
+        signal, timeoutMs, executablePath: chromiumPath, selection: exchangeSelection() });
+    } catch (error) {
+      if (await exists(join(exchangeReceivingOutput, 'result.json'))) result.reopenedExchange = await files.readJson(join(exchangeReceivingOutput, 'result.json'), 67108864);
+      throw error;
+    }
+    await verifyExchangeBrowser(result.reopenedExchange, exchangeReceivingOutput, true);
+    need(same(normalized(recipient.status().dcat), producerState), 'CORRECTION_CUSTOMER_EXCHANGE_INSPECTION_CHANGED_STATE');
+    await collectExchange(recipient, 'cold-reopened-exchange');
     result.followingArchive = await archive(recipient, 'archive-recipient', join(out, 'received-gsa-corrections-following.ckanw'));
     await closeOwner('recipient');
     const reopenedProducer = await openOwner('producer');
     need(same(normalized(reopenedProducer.status().dcat), producerState), 'CORRECTION_CUSTOMER_SENDER_CHANGED');
     await closeOwner('producer');
     result.complete = Boolean(result.browser.complete && result.reopenedBrowser.complete &&
+      result.exchange.complete && result.reopenedExchange.complete &&
       result.coldReopen && result.followingArchive && result.cleanup.every(row => row.closed));
   } catch (error) { result.errors.push(safeError(error)); result.complete = false; }
   finally {

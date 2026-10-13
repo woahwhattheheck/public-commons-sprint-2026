@@ -1,6 +1,7 @@
 // MIT. Catalogue correction editor within the original loopback application.
 import { parseCorrectionDocument, correctionTokens } from './dcat-correction-json.mjs';
 import { parseDcatJson, stringifyDcatJson } from './dcat-json.mjs';
+import { renderDcatCorrectionExchanges } from './dcat-correction-exchanges.mjs';
 const memories = new Map(), PAGE = 30;
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -341,5 +342,11 @@ export async function renderDcatCorrections(ctx, { onMaterialized } = {}) {
       item.createdAt, item.author, code(item.catalogId), code(item.revisionId),
       button(ctx, 'Use in migration review', async () => { onMaterialized?.(item, memory.candidateMode); await ctx.render(); }, busy)
     ])) : null));
+  area.append(await renderDcatCorrectionExchanges(ctx, { correction: selected, revision,
+    onOpenRevision: value => {
+      if (memory.operations.length || memory.attempt)
+        throw new Error('Download, save or clear the pending change set before opening another saved revision.');
+      memory.selected = value.correctionId; memory.revisionId = value.revisionId;
+      memory.queueBase = null; memory.preview = null; jump(memory, ''); } }));
   return area;
 }
