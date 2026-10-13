@@ -1,0 +1,17 @@
+.webmap-desk{color:#222;background:#fff;max-width:1200px;padding:24px;margin:0 auto;font:14px/1.5 system-ui,sans-serif}
+.webmap-desk *{box-sizing:border-box}.webmap-desk h1{font-size:25px;line-height:1.2;margin:0 0 8px}.webmap-desk h3{font-size:16px;margin:0 0 12px}
+.webmap-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;border-bottom:2px solid #333;margin-bottom:20px;padding-bottom:12px}
+.webmap-desk p{margin:8px 0}.webmap-muted{color:#555}.webmap-intro{max-width:80ch}.webmap-desk button,.webmap-desk select{font:inherit;color:#222;background:#fff;border:1px solid #888;border-radius:2px;padding:8px 12px;min-height:38px}
+.webmap-desk button{cursor:pointer}.webmap-desk button:hover{background:#eee}.webmap-desk button:disabled{color:#777;background:#f3f3f3;border-color:#ccc;cursor:default}
+.webmap-desk button:focus-visible,.webmap-desk select:focus-visible,.webmap-desk input:focus-visible,.webmap-desk summary:focus-visible,.webmap-desk a:focus-visible{outline:2px solid #222;outline-offset:3px}
+.webmap-map-label{display:grid;gap:6px;font-weight:600;max-width:760px;margin:18px 0 10px}.webmap-map-label select{width:100%;font-weight:400}
+.webmap-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0}.webmap-controls p{margin-right:auto}
+.webmap-layers{display:grid;gap:12px}.webmap-layer,.webmap-admission{border:1px solid #bbb;padding:16px;background:#fff}.webmap-layer-heading{display:flex;gap:12px;align-items:center}
+.webmap-checkbox{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.webmap-checkbox input{margin-top:4px;accent-color:#333;flex:none}
+.webmap-fields{font-size:12px;overflow-wrap:anywhere}.webmap-desk details{margin:10px 0}.webmap-desk summary{cursor:pointer;color:#444}.webmap-desk pre{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;border:1px solid #ddd;padding:12px}
+.webmap-contexts{margin:18px 0}.webmap-contexts:empty{display:none}.webmap-desk .webmap-primary{background:#292929;color:#fff;border-color:#292929;font-weight:600}.webmap-desk .webmap-primary:hover{background:#444}.webmap-desk .webmap-primary:disabled{background:#eee;color:#777;border-color:#bbb}
+.webmap-notice:empty,.webmap-pending:empty,.webmap-remote-list:empty,.webmap-history:empty{display:none}.webmap-notice{padding:10px 12px;background:#f2f2f2;border-left:3px solid #666}
+.webmap-pending{border:1px solid #ccc;padding:12px;margin:12px 0}.webmap-pending button{margin:4px 8px 4px 0}.webmap-id{font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}
+.webmap-remote-list,.webmap-admission,.webmap-history{margin-top:24px}.webmap-remote{display:grid;gap:4px;margin:8px 0}.webmap-remote small{color:#555;overflow-wrap:anywhere}.webmap-desk a{color:#222;text-decoration:underline;overflow-wrap:anywhere}
+.webmap-result-row{border-bottom:1px solid #ddd;padding:10px 0}.webmap-downloads{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0}.webmap-history button{margin:4px 10px 4px 0}.webmap-empty{padding:18px;background:#f6f6f6;border:1px solid #ddd}
+@media(max-width:640px){.webmap-desk{padding:16px}.webmap-heading{align-items:flex-start;flex-direction:column}.webmap-controls{gap:8px}.webmap-layer,.webmap-admission{padding:12px}.webmap-map-label{max-width:100%}}

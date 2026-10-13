@@ -1,0 +1,75 @@
+{
+  "schema": "eco.county-join-reference/v1",
+  "retrieved_on": "2026-10-13",
+  "geography_date": "2025-01-01",
+  "source_url": "https://tigerweb.geo.census.gov/tigerwebmain/Files/acs26/tigerweb_acs26_county_2025_acs25_sc.html",
+  "state": "45",
+  "rows": [
+    {
+      "original_county_name": "Greenville",
+      "GEOID": "45045",
+      "STATE": "45",
+      "COUNTY": "045"
+    },
+    {
+      "original_county_name": "Spartanburg",
+      "GEOID": "45083",
+      "STATE": "45",
+      "COUNTY": "083"
+    },
+    {
+      "original_county_name": "Cherokee",
+      "GEOID": "45021",
+      "STATE": "45",
+      "COUNTY": "021"
+    },
+    {
+      "original_county_name": "Pickens",
+      "GEOID": "45077",
+      "STATE": "45",
+      "COUNTY": "077"
+    },
+    {
+      "original_county_name": "Oconee",
+      "GEOID": "45073",
+      "STATE": "45",
+      "COUNTY": "073"
+    },
+    {
+      "original_county_name": "Union",
+      "GEOID": "45087",
+      "STATE": "45",
+      "COUNTY": "087"
+    },
+    {
+      "original_county_name": "Anderson",
+      "GEOID": "45007",
+      "STATE": "45",
+      "COUNTY": "007"
+    },
+    {
+      "original_county_name": "Laurens",
+      "GEOID": "45059",
+      "STATE": "45",
+      "COUNTY": "059"
+    },
+    {
+      "original_county_name": "Abbeville",
+      "GEOID": "45001",
+      "STATE": "45",
+      "COUNTY": "001"
+    },
+    {
+      "original_county_name": "Greenwood",
+      "GEOID": "45047",
+      "STATE": "45",
+      "COUNTY": "047"
+    }
+  ],
+  "join_contract": {
+    "input": "The original retained feature's CNTYNAME and original declared South Carolina context",
+    "key": "GEOID is a five-character string; COUNTY is a three-character string",
+    "geometry": "Keep original admitted geometry and CRS; add the mapping as derived metadata or an exact-key table",
+    "field_preservation": "Retain original FID/CNTYNAME/CNAME/FIPC/POP fields verbatim; GEOID enrichment carries this source separately"
+  }
+}
