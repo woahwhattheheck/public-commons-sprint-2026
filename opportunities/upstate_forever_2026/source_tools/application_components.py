@@ -79,12 +79,60 @@ def validate_catalog(catalog):
             relative(path)
         for root in strings(component.get("import_roots", []), name + " Python roots"):
             relative(root)
+        _validate_context_metadata(name, component)
         for dependency in strings(component.get("requires", []), name + " dependencies"):
             if dependency not in components:
                 raise ValueError(name + " requires an undefined component: " + dependency)
     if any(name not in components for name in required):
         raise ValueError("The edition selects an undefined component")
     return catalog
+
+
+def _validate_context_metadata(name, component):
+    """Describe source roles without altering retained member identities."""
+    for key in ("python_contexts", "retained_only", "html_templates"):
+        rows = component.get(key, [])
+        if not isinstance(rows, list):
+            raise ValueError(name + " " + key + " must be a list")
+        seen = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError(name + " " + key + " needs object declarations")
+            identity = row.get("prefix" if key == "python_contexts" else "path")
+            relative(identity)
+            if identity in seen:
+                raise ValueError(name + " repeats " + key + ": " + identity)
+            seen.add(identity)
+            if key == "python_contexts":
+                if set(row) - {"prefix", "import_roots", "installed_prefix"}:
+                    raise ValueError("Unknown Python context field: " + identity)
+                for root in strings(row.get("import_roots", []), "Context import roots"):
+                    relative(root)
+                if "installed_prefix" in row and row["installed_prefix"] != "":
+                    relative(row["installed_prefix"])
+            elif key == "retained_only":
+                if (set(row) != {"path", "reason"} or not isinstance(row["reason"], str)
+                        or not row["reason"].strip()):
+                    raise ValueError("Retained source needs its exact path and reason: " + identity)
+            else:
+                if (set(row) != {"path", "bindings"} or not isinstance(row["bindings"], list)
+                        or not row["bindings"]):
+                    raise ValueError("HTML template needs explicit route bindings: " + identity)
+                tokens = set()
+                for binding in row["bindings"]:
+                    if (not isinstance(binding, dict)
+                            or set(binding) != {"token", "url_prefix", "asset_root"}):
+                        raise ValueError("HTML template binding needs token, URL prefix and asset root")
+                    token, prefix = binding["token"], binding["url_prefix"]
+                    if (not isinstance(token, str) or not re.fullmatch(r"__[A-Z][A-Z0-9_]*__", token)
+                            or token in tokens):
+                        raise ValueError("HTML template tokens must be unique explicit placeholders")
+                    tokens.add(token)
+                    if (not isinstance(prefix, str) or not prefix.startswith("/")
+                            or prefix.startswith("//") or urlsplit(prefix).path != prefix):
+                        raise ValueError("HTML template route must be an application URL prefix")
+                    relative(prefix[1:])
+                    relative(binding["asset_root"])
 
 
 def _selected(catalog, extra):
@@ -149,7 +197,7 @@ def _module_candidates(name, roots=("", "operator")):
     chosen_roots = ("",) if isinstance(name, tuple) else roots
     return [prefix + base + suffix for root in chosen_roots
             for prefix in (root + "/" if root else "",)
-            for suffix in (".py", "/__init__.py")]
+            for suffix in ("/__init__.py", ".py")]
 
 
 def _asset(value):
@@ -310,13 +358,69 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     for name in selected:
         roots.extend(root for root in catalog["components"][name].get("import_roots", [])
                      if root not in roots)
+    contexts, retained_only, templates = {}, {}, {}
+    for component_name in selected:
+        component = catalog["components"][component_name]
+        for key, target, identity in (("python_contexts", contexts, "prefix"),
+                                      ("retained_only", retained_only, "path"),
+                                      ("html_templates", templates, "path")):
+            for row in component.get(key, []):
+                name = row[identity]
+                if name in target and target[name] != row:
+                    raise ValueError("Selected source contexts conflict: " + name)
+                target[name] = row
+    context_roots = list(dict.fromkeys([*roots, *(root for row in contexts.values()
+                                                for root in row.get("import_roots", []))]))
+
+    def context_for(owner):
+        matches = [row for prefix, row in contexts.items()
+                   if owner == prefix or owner.startswith(prefix + "/")]
+        return max(matches, key=lambda row: len(row["prefix"])) if matches else {}
+
+    def installed_owner(owner):
+        context = context_for(owner)
+        if "installed_prefix" not in context:
+            return owner
+        suffix = owner[len(context["prefix"]):].lstrip("/")
+        return relative(posixpath.join(context["installed_prefix"], suffix))
+
+    def resolve_module(name, owner):
+        if isinstance(name, tuple):
+            return name
+        context = context_for(owner)
+        ordered = list(dict.fromkeys([*context.get("import_roots", []), *roots]))
+        for candidate in _module_candidates(name, ordered):
+            if candidate in files:
+                base = candidate.removesuffix("/__init__.py").removesuffix(".py")
+                return tuple(PurePosixPath(base).parts)
+        for root in ordered:
+            base = (root + "/" if root else "") + _module_base(name)
+            if any(path.startswith(base + "/") for path in files):
+                return tuple(PurePosixPath(base).parts)
+        return name
+
+    def module_candidates(name):
+        candidates = _module_candidates(name, roots)
+        return next(([path] for path in candidates if path in files), candidates)
+
+    def template_resource(owner, value):
+        for binding in templates.get(owner, {}).get("bindings", []):
+            token = binding["token"]
+            if value == token or value.startswith(token + "/"):
+                suffix = unquote(urlsplit(value[len(token):]).path).lstrip("/")
+                if not suffix:
+                    raise ValueError("HTML template asset needs a member below its route")
+                relative(suffix)
+                return relative(posixpath.join(binding["asset_root"], suffix))
+        return local_resource(owner, value)
+
     module_names = set()
     for path in files:
         relative(path)
         if path.endswith(".py"):
             name = path[:-3].replace("/", ".").removesuffix(".__init__")
             module_names.add(name)
-            for root in roots:
+            for root in context_roots:
                 prefix = root.replace("/", ".") + "." if root else ""
                 if prefix and name.startswith(prefix):
                     module_names.add(name[len(prefix):])
@@ -343,9 +447,15 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         edges.append({"path": owner, "target": path, "kind": kind})
         if path not in files:
             issue(kind, owner, path, "Required original source member is absent")
+        elif path in retained_only and kind not in {
+                "component", "retained-source", "source-manifest", "source-primary", "source-companion"}:
+            issue("source-role", owner, path,
+                  "Runtime dependency reaches source declared retained-only",
+                  retained_reason=retained_only[path]["reason"])
 
     def require_module(name, owner, kind, *, namespace=False):
-        candidates = _module_candidates(name, roots)
+        name = resolve_module(name, owner)
+        candidates = module_candidates(name)
         found = [candidate for candidate in candidates if candidate in files]
         if found:
             for candidate in found:
@@ -363,7 +473,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     def namespace_exports(module, function):
         """Read literal exports from an original globals-namespace installer."""
         result = set()
-        for candidate in _module_candidates(module, roots):
+        for candidate in module_candidates(module):
             if candidate not in files:
                 continue
             try:
@@ -412,7 +522,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         if name in visiting:
             return set()
         exported = set()
-        for candidate in _module_candidates(name, roots):
+        for candidate in module_candidates(name):
             if candidate not in files:
                 continue
             try:
@@ -439,12 +549,12 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                     elif isinstance(item, ast.ImportFrom):
                         exported.update(alias.asname or alias.name for alias in item.names if alias.name != "*")
                         if item.module:
-                            package = list(PurePosixPath(candidate).parent.parts)
+                            package = list(PurePosixPath(installed_owner(candidate)).parent.parts)
                             if item.level and item.level <= len(package):
                                 target = (*package[:len(package) - item.level + 1],
                                           *item.module.split("."))
                             elif not item.level:
-                                target = item.module
+                                target = resolve_module(item.module, candidate)
                             else:
                                 target = None
                             if target:
@@ -480,9 +590,10 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         return exported
 
     def require_from(name, aliases, owner, line):
+        name = resolve_module(name, owner)
         require_module(name, owner, "python-import", namespace=True)
         exports = module_exports(name)
-        module_files = [candidate for candidate in _module_candidates(name, roots) if candidate in files]
+        module_files = [candidate for candidate in module_candidates(name) if candidate in files]
         is_package = (any(candidate.endswith("/__init__.py") for candidate in module_files)
                       or not module_files)
         for alias in aliases:
@@ -499,6 +610,14 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     for name in selected:
         for path in catalog["components"][name]["paths"]:
             require(path, "component:" + name, "component")
+
+    for path in retained_only:
+        require(path, "selected-source-contexts", "retained-source")
+    for path in templates:
+        require(path, "selected-source-contexts", "html-template")
+    for prefix in contexts:
+        if not any(path.startswith(prefix + "/") for path in files):
+            issue("python-context", prefix, prefix, "Declared Python source context is absent")
 
     source_members, source_manifests = [], []
     for manifest_path in sorted({path for name in selected
@@ -589,7 +708,9 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             except SyntaxError as error:
                 issue("python-syntax", path, path, error.msg, line=error.lineno)
                 continue
-            package = list(PurePosixPath(path).parent.parts)
+            if path in retained_only:
+                continue
+            package = list(PurePosixPath(installed_owner(path)).parent.parts)
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
@@ -606,6 +727,8 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         require_from(name, node.names, path, node.lineno)
                     elif node.module and node.module.split(".", 1)[0] in local_roots:
                         require_from(node.module, node.names, path, node.lineno)
+        elif path in retained_only:
+            continue
         elif path.endswith((".js", ".mjs")):
             for match in js_pattern.finditer(content):
                 value = match[1].split("?", 1)[0].split("#", 1)[0]
@@ -619,7 +742,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             parser.feed(content)
             for value in parser.references:
                 try:
-                    target = local_resource(path, value)
+                    target = template_resource(path, value)
                     if target is not None:
                         require(target, path, "html-asset")
                 except ValueError as error:
@@ -666,6 +789,10 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         "dependencies": sorted(edges, key=lambda row: (row["path"], row["kind"], row["target"])),
         "issues": missing,
     }
+    if contexts or retained_only or templates:
+        report["source_contexts"] = {
+            "python": list(contexts.values()), "retained_only": list(retained_only.values()),
+            "html_templates": list(templates.values())}
     if fragment_records:
         report["component_fragments"] = fragment_records
     return report
@@ -695,6 +822,9 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
     declared = {path for component in catalog["components"].values() for path in component["paths"]}
     declared.update(fragment["path"] for fragment in fragment_records)
     selected = _selected(catalog, ())
+    declared.update(row["path"] for name in selected
+                    for key in ("retained_only", "html_templates")
+                    for row in catalog["components"][name].get(key, []))
     declared.update(path for name in selected
                     for path in catalog["components"][name].get("source_manifests", []))
     for path in sorted(root.rglob("*")):

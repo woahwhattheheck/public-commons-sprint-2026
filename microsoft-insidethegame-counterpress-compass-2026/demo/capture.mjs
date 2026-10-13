@@ -12,7 +12,7 @@ import {legacyJourney} from './legacy-journey.mjs';
 
 const HERE=dirname(fileURLToPath(import.meta.url)), ROOT=resolve(HERE,'..');
 const options={};
-const allowed=new Set(['out','chromium','playwright','ffmpeg','ffprobe','match','review','recap-match','journey','browser-process-mode','resume','receive-video','receive-proof','captured-output']);
+const allowed=new Set(['out','chromium','playwright','ffmpeg','ffprobe','match','review','recap-match','journey','browser-process-mode','resume','receive-video','receive-proof','captured-output','receive-portable']);
 for(let i=2;i<process.argv.length;i+=2){
   const key=process.argv[i]?.replace(/^--/,''),value=process.argv[i+1];
   if(!allowed.has(key)||!process.argv[i].startsWith('--')||!value||Object.hasOwn(options,key))
@@ -26,13 +26,61 @@ if(mode==='integrated'&&(!options.match||!options.review))throw new Error('The i
 if(options['browser-process-mode']&&!['single','multiple'].includes(options['browser-process-mode']))throw new Error('Choose single or multiple browser process mode');
 if(options.resume&&options.resume!=='true')throw new Error('Use --resume true to finish an interrupted capture');
 const receivingOnly=Boolean(options['receive-video']);
+const portableReceiving=options['receive-portable']==='true';
+if(options['receive-portable']&&(!portableReceiving||!receivingOnly))
+  throw new Error('Use --receive-portable true only with the selected existing video');
 if(receivingOnly&&(!options.resume||!options['receive-proof']||!options['captured-output']))
   throw new Error('Receiving an existing video requires --resume true --receive-proof H264_RESULT.json --captured-output ORIGINAL_CAPTURE');
 if(!receivingOnly&&(options['receive-proof']||options['captured-output']))
   throw new Error('The receiving proof and original capture are selected with --receive-video');
 const output=resolve(options.out),recoveryPath=join(output,'capture-recovery.private.json'),require=createRequire(import.meta.url);
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-let selectedVideoProof=null,originalCapturedBytes=null,originalCapturedPath=null;
+let selectedVideoProof=null,originalCapturedBytes=null,originalCapturedPath=null,selectedCapture=null;
+let historicalCheckpointSha256=null;
+async function openPortableCapture(captured){
+  const bytes=await fs.readFile(join(captured,'capture-portable.json'));
+  const value=JSON.parse(bytes);
+  if(value.schema!=='counterpress.portable-capture.v1'||value.mode!=='integrated'||
+    !/^[a-f0-9]{64}$/.test(value.archive?.sha256)||!Number.isSafeInteger(value.archive?.bytes)||
+    value.archive.bytes<1||value.archive.members!==300||
+    !/^[a-f0-9]{64}$/.test(value.historicalCheckpointSha256)||
+    !(value.duration>0&&value.duration<118)||!Array.isArray(value.frames)||value.frames.length!==154||
+    !Array.isArray(value.captions)||value.captions.length!==11||
+    !value.source||Object.keys(value.source).length!==58)
+    throw new Error('The complete preserved recording descriptor is required');
+  const files=value.files;
+  const expected=['captions.srt','captions.vtt','Counterpress_Automatic_Story.json',
+    'prepared/captured-review-for-recovery.json'];
+  if(!files||Object.keys(files).sort().join('|')!==expected.sort().join('|'))
+    throw new Error('The preserved recording needs all original public receiving inputs');
+  for(const name of expected){
+    const row=files[name],raw=await fs.readFile(join(captured,name));
+    if(!Number.isSafeInteger(row.bytes)||raw.length!==row.bytes||hash(raw)!==row.sha256)
+      throw new Error('Preserved receiving source changed: '+name);
+  }
+  let previous=-1;
+  for(const frame of value.frames){
+    if(!Number.isFinite(frame.at)||frame.at<0||frame.at<previous||frame.at>value.duration||
+      !/^[a-f0-9]{64}$/.test(frame.sha256)||!Number.isSafeInteger(frame.bytes)||frame.bytes<1)
+      throw new Error('The preserved frame identities or timing differ');
+    previous=frame.at;
+  }
+  for(const [path,sha] of Object.entries(value.source))
+    if(!path||path.startsWith('/')||path.split('/').includes('..')||!/^[a-f0-9]{64}$/.test(sha))
+      throw new Error('The original captured source map differs');
+  return {bytes,value,recovery:{
+    schema:'counterpress.capture-recovery.v1',phase:'captured',mode:'integrated',
+    startedAt:null,source:value.source,gitHead:null,browserVersion:null,health:null,
+    duration:value.duration,frameBytes:value.frames.reduce((sum,frame)=>sum+frame.bytes,0),
+    frames:value.frames,captions:value.captions,
+    trace:[{operation:'receive-preserved-recording',archive:value.archive,
+      historicalCheckpointSha256:value.historicalCheckpointSha256,
+      originalPrivateCheckpointAvailable:false}],
+    requests:[],pageErrors:[],requestsComplete:false,originalPort:null,receivingStorage:null,journey:null,
+    provenance:{sourceMode:'saved-portable',archive:value.archive,
+      originalPrivateCheckpointAvailable:false,historicalCheckpointSha256:value.historicalCheckpointSha256}
+  }};
+}
 async function retainSelected(path,bytes){
   try{const old=await fs.readFile(path);if(!old.equals(bytes))throw new Error('Selected receiving bytes differ: '+path);return;}
   catch(error){if(error.code!=='ENOENT')throw error;}
@@ -46,13 +94,21 @@ async function retainSelected(path,bytes){
 if(receivingOnly){
   const captured=resolve(options['captured-output']);
   if(output===captured||output.startsWith(captured+'/'))throw new Error('Use a separate receiving output; the original capture stays unchanged');
-  originalCapturedPath=join(captured,'capture-recovery.private.json');
-  originalCapturedBytes=await fs.readFile(originalCapturedPath);
-  const original=JSON.parse(originalCapturedBytes),proofBytes=await fs.readFile(resolve(options['receive-proof']));
+  originalCapturedPath=join(captured,portableReceiving?'capture-portable.json':'capture-recovery.private.json');
+  let original;
+  if(portableReceiving){
+    const selected=await openPortableCapture(captured);
+    originalCapturedBytes=selected.bytes;selectedCapture=selected.value;original=selected.recovery;
+    historicalCheckpointSha256=selected.value.historicalCheckpointSha256;
+  }else{
+    originalCapturedBytes=await fs.readFile(originalCapturedPath);
+    original=JSON.parse(originalCapturedBytes);historicalCheckpointSha256=hash(originalCapturedBytes);
+  }
+  const proofBytes=await fs.readFile(resolve(options['receive-proof']));
   selectedVideoProof=JSON.parse(proofBytes);
   const chosen=await fs.readFile(resolve(options['receive-video']));
   if(selectedVideoProof.schema!=='counterpress.recording-h264.v1'||selectedVideoProof.complete!==true||
-    selectedVideoProof.capturedCheckpointSha256!==hash(originalCapturedBytes)||
+    selectedVideoProof.capturedCheckpointSha256!==historicalCheckpointSha256||
     selectedVideoProof.video?.sha256!==hash(chosen)||selectedVideoProof.video?.bytes!==chosen.length||
     selectedVideoProof.video.codec!=='h264'||selectedVideoProof.video.actualBrowserFrames!==original.frames?.length||
     !Number.isFinite(selectedVideoProof.video.maximumPacketTimestampErrorSeconds)||selectedVideoProof.video.maximumPacketTimestampErrorSeconds>0.002||
@@ -63,10 +119,12 @@ if(receivingOnly){
     throw new Error('The original completed capture is required');
   await fs.mkdir(output,{recursive:true,mode:0o700});
   const selection=Buffer.from(JSON.stringify({schema:'counterpress.existing-video-receiving.v1',
-    originalCapture:captured,checkpointSha256:hash(originalCapturedBytes),proofSha256:hash(proofBytes),
+    originalCapture:captured,checkpointSha256:historicalCheckpointSha256,
+    sourceMode:portableReceiving?'saved-portable':'original-private-checkpoint',
+    sourceDescriptorSha256:hash(originalCapturedBytes),proofSha256:hash(proofBytes),
     videoSha256:hash(chosen)},null,2)+'\n');
   await retainSelected(join(output,'receiving-selection.private.json'),selection);
-  await retainSelected(join(output,'original-capture-recovery.private.json'),originalCapturedBytes);
+  await retainSelected(join(output,portableReceiving?'original-capture-portable.json':'original-capture-recovery.private.json'),originalCapturedBytes);
   await fs.mkdir(join(output,'archives'),{recursive:true,mode:0o700});
   await fs.mkdir(join(output,'prepared'),{recursive:true,mode:0o700});
   for(const name of ['captions.srt','captions.vtt','Counterpress_Automatic_Story.json'])
@@ -87,7 +145,8 @@ if(receivingOnly){
     resumed.receivingStorage=null;
     resumed.importCapturedCoach=join(output,'prepared/captured-review-for-recovery.json');
     resumed.provenance={...(original.provenance||{}),selectedExistingVideo:true,
-      originalCaptureCheckpointSha256:hash(originalCapturedBytes),videoProofSha256:hash(proofBytes),
+      originalCaptureCheckpointSha256:historicalCheckpointSha256,
+      receivingSourceDescriptorSha256:hash(originalCapturedBytes),videoProofSha256:hash(proofBytes),
       originalCapturePreserved:true};
     await retainSelected(recoveryPath,Buffer.from(JSON.stringify(resumed,null,2)+'\n'));
   }
@@ -295,6 +354,9 @@ try{
   }
   const videoPath=join(output,'Counterpress_Compass_Running_Demo.mp4');
   if(receivingOnly&&recovery.phase!=='encoded')throw new Error('The selected-video receiving record must remain encoded');
+  if(portableReceiving&&(recovery.provenance?.sourceMode!=='saved-portable'||
+    recovery.provenance.receivingSourceDescriptorSha256!==hash(originalCapturedBytes)))
+    throw new Error('The retained recipient state belongs to another captured edition');
   if(recovery.phase!=='encoded'){
     announce({encoding:true,duration,frames:frames.length});
     await encode(['-hide_banner','-loglevel','error','-y','-filter_threads','1','-filter_complex_threads','1',
@@ -340,7 +402,12 @@ try{
       requestLogIncludesCapture:recovery.requestsComplete,synthetic:true,configuration:health,
       providerRequests:requests.filter(r=>['/api/foundry-draft','/api/opus-commentary','/api/opus-agent-insight'].includes(r.path)),
       publicUpload:false,entrySubmission:false},
-    existingVideoReceiving:receivingOnly?{originalCheckpointSha256:hash(originalCapturedBytes),originalCapturePreserved:true,videoProofSha256:hash(await fs.readFile(resolve(options['receive-proof'])))}:null,
+    existingVideoReceiving:receivingOnly?{originalCheckpointSha256:historicalCheckpointSha256,
+      originalCapturePreserved:true,sourceMode:portableReceiving?'saved-portable':'original-private-checkpoint',
+      originalPrivateCheckpointAvailable:!portableReceiving,
+      portableArchive:portableReceiving?selectedCapture.archive:null,
+      sourceDescriptorSha256:hash(originalCapturedBytes),
+      videoProofSha256:hash(await fs.readFile(resolve(options['receive-proof'])))}:null,
     closure:{browserClosed:true,servers:hosts.map(h=>({pid:h.child.pid,port:h.port,closed:h.closed,exitCode:h.child.exitCode,signal:h.child.signalCode}))},pageErrors};
   await fs.writeFile(join(output,'journey.json'),JSON.stringify({chapters:trace,http:requests},null,2)+'\n');
   await fs.writeFile(join(output,'capture-manifest.json'),JSON.stringify(manifest,null,2)+'\n');

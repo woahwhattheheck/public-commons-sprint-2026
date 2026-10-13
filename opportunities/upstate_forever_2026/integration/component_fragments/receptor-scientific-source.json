@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receptor-scientific-source",
+  "extend_components": {
+    "receptors": {
+      "paths": [
+        "model/receptor_report_source.py",
+        "model/RECEPTOR_REPORT_SOURCE.md"
+      ]
+    }
+  },
+  "required_components": [
+    "receptors"
+  ]
+}

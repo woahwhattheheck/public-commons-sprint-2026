@@ -29,7 +29,9 @@ Read the actual edition ID from `receiving-gauge-support.json`, under `phases.su
   --workspace "$WORKSPACE" --edition-id "$GAUGE_EDITION_ID" --inspect
 ```
 
-The catchments are NLDI upstream **whole catchments** with `splitCatchment=false`; their support can extend below the gauge within the gauge's NHDPlusV2 catchment. The report preserves this interpretation, the original station coordinates and full source geometries.
+The default original catchments are NLDI upstream **whole catchments** with `splitCatchment=false`; their support can extend below the gauge within the gauge's NHDPlusV2 catchment. The report preserves this interpretation, the original station coordinates and full source geometries.
+
+An explicitly captured alternative catchment edition remains available through `--catchment-manifest` or `--catchment-collection`, `--catchment-source-id`, and the maintained `--support-kind` check. Preserve these original choices when continuing such an operation. The current model verifies the declared method against the original features; this recovery change does not reclassify whole and split catchments.
 
 ## Interruption and resume
 

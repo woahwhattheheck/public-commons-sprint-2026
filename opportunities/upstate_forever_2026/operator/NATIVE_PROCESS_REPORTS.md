@@ -131,3 +131,11 @@ For a complete source/engine description, see [Native process quantities](../mod
 ## Complete application component
 
 The owned `integration/component_fragments/native-process-reports.json` declaration selects all five operator files and the original three producer files, with the maintained `core` and `observed-context` dependencies. Receive this fragment with those actual source bodies. The merged component-fragment loader composes it with the current shared application catalogue and validates the complete local dependency and resource closure. The shared baseline catalogue remains owned by its current maintainers.
+
+## Continue in the saved scientific-report composer
+
+A saved process report with its verified original source can open the existing standalone scientific-report composer directly. Choose **Open scientific report** in the saved result. This is available for source-only, completed, or imported-source products retained before a rendering failure. It uses the exact saved `source_collection_id` and `source_id`; it does not infer an internal entry key.
+
+The desk waits for that original source to be visible in the captured Workspace, then calls the maintained `openScientificReport({workspace_key, sources, title})` host entry point. The composer preserves existing ordered source choices and draft fields, appends the original choice once, and requires its normal current preview before queueing. Use that original workflow to arrange this process report alongside other retained scientific studies, prepare a saved report edition, inspect its output, export and reopen it. The mapped-delivery action remains available beside this direct scientific-report action.
+
+The action appears when the installed host exposes the maintained composer capability. Earlier application hosts retain all existing process-report build, source inspection, table, download and mapped-delivery controls while their current shared host is being received. Receive the host and composer together through their existing owned application component; this desk creates no separate renderer or report queue.
