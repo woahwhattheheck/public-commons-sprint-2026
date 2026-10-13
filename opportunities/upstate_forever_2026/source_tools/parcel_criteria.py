@@ -799,7 +799,13 @@ def _settings(value):
 def _coverage_from_entry(edition, entry):
     for holder in (entry.get("metadata"), entry.get("scope")):
         if isinstance(holder, dict) and isinstance(holder.get("criteria_coverage"), dict):
-            return _copy(holder["criteria_coverage"])
+            coverage = _copy(holder["criteria_coverage"])
+            source = coverage.get("source")
+            if not isinstance(source, dict) or not source.get("source_id"):
+                raise ValueError("Retained criterion coverage requires its exact original source ID")
+            if source.get("source_collection_id") is None:
+                source["source_collection_id"] = edition["id"]
+            return coverage
     scope = entry.get("metadata", {}).get("scope")
     masks = [item for item in edition["entries"] if item["id"] == "overlay-native-selection-context"]
     if scope in ("reporting", "focus") and len(masks) == 1:
@@ -814,6 +820,17 @@ def _matches_source(entry, variant):
         return False
     uri = str(entry.get("uri", "")).rstrip("/").lower().split("?")[0]
     role = str(entry.get("role", "")).upper()
+    if role in {str(value).upper() for value in variant.get("excluded_roles", [])}:
+        return False
+    metadata = entry.get("metadata") or {}
+    if any(metadata.get(key) != value for key, value in variant.get("required_metadata", {}).items()):
+        return False
+    if any(key not in metadata or metadata[key] is None
+           for key in variant.get("required_metadata_keys", [])):
+        return False
+    if any(key in metadata and metadata[key] == value
+           for key, value in variant.get("excluded_metadata", {}).items()):
+        return False
     token = " ".join(str(entry.get(key, "")) for key in ("id", "title", "uri")).lower()
     identity = bool(
         entry["id"] in variant.get("ids", [])

@@ -419,6 +419,12 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
     ]
     all_companions += [member.relative_to(root).as_posix() for folder in ("queries", "additional", "domain")
                       for member in sorted((root / folder).glob("*.json"))]
+    domain_body = json.loads(gzip.decompress((root / "domain/model-domain.esri.json.gz").read_bytes()))
+    native_huc_fields = [name for name in domain_body["features"][0]["attributes"]
+                         if name.casefold() in ("huc12", "huc_12")]
+    coverage_huc_field = huc_field or (native_huc_fields[0] if len(native_huc_fields) == 1 else None)
+    if not coverage_huc_field:
+        raise ValueError("Choose the exact original domain HUC12 field for parcel coverage")
     physical_layer = {
         "kind": "freshwater", "source_id": "sc-hydroclass-fw-physical-domain",
         "uri": LAYER, "metadata": metadata_member, "queries": queries + geometric_queries,
@@ -427,6 +433,12 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
         "selected_ids": "comparison/physical-selected-ids.json",
         "selection_geometry": "domain/model-domain.esri.json.gz",
         "selection_method": comparison["method"],
+        "criteria_coverage": {
+            "method": "provider_intersects_each_original_domain_polygon",
+            "huc12_field": coverage_huc_field,
+            "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+            "vintage": "Original retained 217-HUC model-domain polygon edition",
+        },
         "companions": sorted(set(all_companions)),
         "scope": {"selection_basis": "Original physical model-domain intersection",
                   "domain": domain_identity, "cohort_counts": comparison["cohort_counts"],
@@ -438,13 +450,16 @@ def _complete_coverage(capture_path, domain_archive, output, *, expected_huc_cou
         "captured_at": captured_at, "capture_time_status": capture_time_status,
         "layers": [physical_layer], "complete_geometry": True,
     }
-    _save(root / "capture.json", _encoded(descriptor))
-    result = {"capture": str(root / "capture.json"),
+    # An earlier completed source may retain capture.json without the parcel binding.
+    # Publish an additive descriptor while reusing every original query/geometry byte.
+    descriptor_path = root / "capture-criteria.json"
+    _save(descriptor_path, _encoded(descriptor))
+    result = {"capture": str(descriptor_path),
               "comparison": str(root / "comparison/coverage.json"),
               "cohort_counts": comparison["cohort_counts"],
               "new_geometry_pages": len(added_pages)}
     if edition:
-        result["edition"] = assemble(root / "capture.json", Path(edition))
+        result["edition"] = assemble(descriptor_path, Path(edition))
         if archive_output:
             result["archive"] = export_edition(Path(edition), Path(archive_output))
         if workspace:
