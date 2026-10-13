@@ -8,6 +8,8 @@ import posixpath
 from urllib.parse import quote, unquote, urlencode, urlsplit
 
 from model.delivery_review_version import REPORT_EDITION
+from model.delivery_catalogue import REPORT_ROLES
+from delivery_inspection import _snapshot, _url, preview as member_ticket
 
 REPORT_LIMIT = 16 * 1024 * 1024
 
@@ -25,35 +27,25 @@ def _retained_bytes(operator, ticket, limit=REPORT_LIMIT):
     return body
 
 
-def _ticket(record, descriptor):
-    if not isinstance(descriptor, dict):
-        return None
-    matches = [
-        item for item in record.get("_downloads", [])
-        if item.get("sha256") == descriptor.get("sha256")
-        and item.get("bytes") == descriptor.get("bytes")
-    ]
-    filename = descriptor.get("filename") or posixpath.basename(descriptor.get("path") or "")
-    return next((item for item in matches if item.get("filename") == filename),
-                matches[0] if matches else None)
-
-
-def _files(record):
+def _files(operator, workspace, delivery_id, record):
+    """Issue only the small fixed report set, never the complete GIS inventory."""
     result = {}
-    for role, descriptor in (record.get("files") or {}).items():
-        item = _ticket(record, descriptor)
-        if item:
-            result[role] = dict(item, role=role, relative_path=descriptor.get("path"))
+    for role in REPORT_ROLES:
+        descriptor = (record.get("files") or {}).get(role)
+        if descriptor is not None:
+            ticket, _ = member_ticket(operator, workspace, delivery_id, descriptor["path"])
+            result[role] = dict(ticket, role=role, relative_path=descriptor["path"])
     return result
 
 
-def _relative(value):
+def _relative(value, directory=""):
     if not isinstance(value, str) or not value or "\\" in value or "\0" in value:
         return None
     value = unquote(value)
-    if "\\" in value or "\0" in value or value.startswith("/"):
+    if ("\\" in value or any(ord(char) < 32 or ord(char) == 127 for char in value)
+            or value.startswith("/") or ":" in value):
         return None
-    result = posixpath.normpath(value)
+    result = posixpath.normpath(posixpath.join(directory, value))
     if result in {".", ".."} or result.startswith("../"):
         return None
     return result
@@ -62,9 +54,10 @@ def _relative(value):
 class _LinkedReport(HTMLParser):
     """Keep the authored report, linking only registered retained local files."""
 
-    def __init__(self, paths):
+    def __init__(self, paths, directory=""):
         super().__init__(convert_charrefs=False)
         self.paths = paths
+        self.directory = directory
         self.output = []
 
     def handle_decl(self, declaration):
@@ -84,7 +77,7 @@ class _LinkedReport(HTMLParser):
                 elif not url.scheme and not url.netloc and not url.path and url.fragment:
                     anchor_target = "_self"
                 elif not url.scheme and not url.netloc:
-                    retained = self.paths.get(_relative(url.path))
+                    retained = self.paths.get(_relative(url.path, self.directory))
                     if retained:
                         value = retained["url"]
                         if name == "href" and "download=1" in url.query.split("&"):
@@ -131,8 +124,9 @@ class _LinkedReport(HTMLParser):
 def read(operator, workspace, delivery_id, *, preview=False, report="scientific"):
     if report not in {"scientific", "client"}:
         raise ValueError("Choose the retained scientific report or client companion.")
-    record = operator.item(workspace, "deliveries", delivery_id)
-    files = _files(record)
+    _, snapshot = _snapshot(operator, workspace, delivery_id)
+    record = snapshot["record"]
+    files = _files(operator, workspace, delivery_id, record)
     selection = record.get("selection") or {}
     prefix = "client_" if report == "client" else ""
     selected_files = {role: files[prefix + role] for role in
@@ -176,20 +170,13 @@ def read(operator, workspace, delivery_id, *, preview=False, report="scientific"
     if preview:
         if not result["preview_url"]:
             raise ValueError("Create the current report edition before opening the report preview.")
-        paths = {}
-        for group in (record.get("files") or {}, record.get("maps") or {}):
-            for descriptor in group.values():
-                item = _ticket(record, descriptor)
-                relative = _relative(descriptor.get("path")) if isinstance(descriptor, dict) else None
-                if item and relative:
-                    paths[relative] = item
+        paths = {
+            member: {"url": _url(workspace, record["id"], member)}
+            for member in snapshot["inventory"]
+        }
         report_path = _relative(selected_files["report_html"].get("relative_path")) or "report.html"
         report_directory = posixpath.dirname(report_path)
-        links = {
-            posixpath.relpath(path, report_directory or "."): item
-            for path, item in paths.items()
-        }
-        parser = _LinkedReport(links)
+        parser = _LinkedReport(paths, report_directory)
         parser.feed(_retained_bytes(operator, selected_files["report_html"]).decode("utf-8"))
         parser.close()
         result["html"] = "".join(parser.output)

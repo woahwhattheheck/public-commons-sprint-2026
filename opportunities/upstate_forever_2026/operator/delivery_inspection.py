@@ -17,6 +17,9 @@ import stat
 from urllib.parse import quote
 
 from model.common import atomic_bytes, identifier
+from model.delivery_catalogue import delivery_view
+from model.delivery_review_version import REPORT_EDITION
+from delivery_preview import HTML_LIMIT, embed_images, image_policy
 
 SCHEMA = "upstate.delivery-inspection/v1"
 PREVIEW_POLICY = (
@@ -96,8 +99,9 @@ def _bridge_policy(policy):
 class _PreviewPolicies(HTMLParser):
     """Locate actual policy elements, without rewriting report/script bodies."""
 
-    def __init__(self, source):
+    def __init__(self, source, *, images=False):
         super().__init__(convert_charrefs=False)
+        self.images = images
         self.edits = []
         self.offsets = [0]
         for line in source.split("\n"):
@@ -114,7 +118,7 @@ class _PreviewPolicies(HTMLParser):
         policy = first.get("content")
         if policy is None:
             return
-        replacement = _bridge_policy(policy)
+        replacement = _bridge_policy(image_policy(policy) if self.images else policy)
         if replacement == policy:
             return
         amended = []
@@ -133,8 +137,8 @@ class _PreviewPolicies(HTMLParser):
     handle_startendtag = handle_starttag
 
 
-def _preview_html(source):
-    parser = _PreviewPolicies(source)
+def _preview_html(source, *, images=False):
+    parser = _PreviewPolicies(source, images=images)
     parser.feed(source)
     parser.close()
     for start, end, replacement in reversed(parser.edits):
@@ -214,7 +218,8 @@ def _snapshot(operator, workspace_key, delivery_id):
     if original["path"] in inventory:
         raise ValueError("A delivery output collides with its original retained record.")
     inventory[original["path"]] = original
-    saved = {"signature": _signature(first), "record": record, "inventory": inventory}
+    saved = {"signature": _signature(first), "record": record, "inventory": inventory,
+             "view": delivery_view(record)}
     with operator.lock:
         cache[cache_key] = saved
         cache.move_to_end(cache_key)
@@ -262,7 +267,7 @@ def _links(record):
     }
 
 
-def _detail(record):
+def _detail(record, view):
     """Small original fields needed by the existing delivery detail."""
     return {
         "schema": record["schema"], "id": record["id"], "state": record.get("state"),
@@ -270,7 +275,7 @@ def _detail(record):
         "map_count": len(record.get("maps") or {}),
         "package": {"auditStatus": (record.get("package") or {}).get("auditStatus")},
         "error": record.get("error"), "priority": record.get("priority"),
-        "_downloads": [],
+        "_downloads": [], "_delivery_view": view, "_current_report_edition": REPORT_EDITION,
     }
 
 
@@ -286,7 +291,7 @@ def read(operator, workspace_key, operation, payload):
     return {
         "schema": SCHEMA, "workspace_key": workspace_key, "delivery_id": key,
         "state": record.get("state"), "title": record.get("selection", {}).get("title"),
-        "detail": _detail(record),
+        "detail": _detail(record, saved["view"]),
         "files": files, "file_count": len(files), "total_bytes": sum(row["bytes"] for row in files),
         "links": _links(record), "preview_policy": "opaque_sandbox_with_declared_member_links",
         "support": "Each file is an original declared delivery member. Source areas remain independent; native receiving-water family totals use their retained union.",
@@ -312,12 +317,27 @@ def linked_preview(operator, workspace_key, delivery_id, member_path):
     ticket, policy = preview(operator, workspace_key, delivery_id, member_path)
     if policy is None:
         return ticket, policy
-    stream, metadata = operator.open_download(ticket["id"])
-    try:
-        source = stream.read().decode("utf-8-sig")
-    finally:
-        stream.close()
-    rendered = _preview_html(source)
+    def read_original(selected, limit):
+        if selected["bytes"] > limit:
+            raise ValueError("This original file exceeds inline preview capacity. Download the complete delivery.")
+        stream, metadata = operator.open_download(selected["id"])
+        try:
+            body = stream.read(limit + 1)
+        finally:
+            stream.close()
+        if len(body) != metadata["bytes"] or len(body) > limit:
+            raise ValueError("The original delivery file changed during preview")
+        return body
+
+    source = read_original(ticket, HTML_LIMIT).decode("utf-8-sig")
+    _, saved = _snapshot(operator, workspace_key, delivery_id)
+
+    def image_bytes(member, limit):
+        image_ticket, _ = preview(operator, workspace_key, delivery_id, member)
+        return read_original(image_ticket, limit)
+
+    source, images = embed_images(source, member_path, saved["inventory"], image_bytes)
+    rendered = _preview_html(source, images=images)
     body = rendered.encode("utf-8")
     sha = hashlib.sha256(body).hexdigest()
     directory = Path(operator.root) / "previews" / "delivery-html"
@@ -327,4 +347,4 @@ def linked_preview(operator, workspace_key, delivery_id, member_path):
         atomic_bytes(target, body, immutable=True)
     descriptor = {"bytes": len(body), "sha256": sha, "filename": PurePosixPath(member_path).name}
     return operator._ticket(workspace_key, target, descriptor,
-                            "Linked preview of " + metadata.get("label", member_path)), policy
+                            "Linked preview of " + ticket.get("label", member_path)), policy
