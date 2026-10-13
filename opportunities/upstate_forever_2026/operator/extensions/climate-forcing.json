@@ -1,0 +1,128 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "climate-forcing",
+  "title": "Climate forcing",
+  "version": "1.0.0",
+  "order": 51,
+  "assets": [
+    "climate_forcing.mjs",
+    "climate_forcing.css"
+  ],
+  "backend": {
+    "module": "climate_forcing",
+    "actions": [
+      "climate-forcing.prepare",
+      "climate-forcing.report"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-forcing/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-forcing/study",
+        "operation": "study",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-forcing/report",
+        "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/climate-forcing/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "climate_forcing",
+      "handler": "updates",
+      "args": [
+        "workspace"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/climate_forcing.mjs",
+    "factory": "createClimateForcing",
+    "requires": [
+      "api",
+      "getState",
+      "getWorkspace",
+      "showTask",
+      "showRunLog",
+      "openItem"
+    ],
+    "view": {
+      "id": "climate-forcing",
+      "title": "Climate forcing",
+      "after": "native-run-desk"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "styles": [
+      "/web/climate_forcing.css"
+    ]
+  }
+}
