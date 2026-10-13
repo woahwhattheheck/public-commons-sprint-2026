@@ -153,7 +153,7 @@ export function nativeReviewRows(bound){
   domain_sha256:bound.domain_source.sha256,legal_geometry_assignment:false}]);
 }
 export function nativeReportSection(bound){
- return ["Original217 membership of reviewed Georgia assessment features",[
+ return ["Original 217 membership of reviewed Georgia assessment features",[
   "The maintained original geographic operation supplies "+bound.summary.positive_features+
    " reviewed assessment features with positive-dimensional domain intersection, "+
    bound.summary.boundary_only_features+" with boundary-only contacts and "+
