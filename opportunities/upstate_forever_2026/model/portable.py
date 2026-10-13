@@ -527,6 +527,11 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
+            for pattern in ("compute-programmes/*/.programme.lock",
+                            "interactions/*/.interaction.lock",
+                            "interaction-results/*/.analysis.lock"):
+                for path in sorted(root.glob(pattern)):
+                    stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
@@ -900,6 +905,9 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                   "implementation": implementation,
                   "parameter_studies": parameter_studies,
                   **received_delivery(manifest, destination, record=received_record)}
+        if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
+            from .programme_interactions import validate_workspace as validate_programme_interactions
+            validate_programme_interactions(restored, verified_members=manifest["members"])
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
             raise ValueError("Receiving destination appeared during capture")
