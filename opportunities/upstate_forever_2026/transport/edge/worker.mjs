@@ -282,7 +282,9 @@ export class EcoRelay {
       problem(409,"ACK_CONFLICT","Acknowledge exactly the retained original input chunk.");
     this.ctx.storage.transactionSync(()=>{
       this.saveChunk(id,"input",offset,count,value.sha256);
-      record.input_offset=offset+count;this.save(record);
+      record.input_offset=offset+count;
+      if(record.direct_auto_seal&&record.input_offset===record.body_bytes){record.sealed=true;record.state="queued";}
+      this.save(record);
     });
     this.inputs.delete(id);this.wake(id);
     return {id,input_offset:record.input_offset,bytes:count,sha256:value.sha256};
@@ -319,14 +321,15 @@ export class EcoRelay {
       this.seal(id,{body_bytes:offset});
     } finally {if(reader)reader.releaseLock();}
   }
-  async result(id) {
+  async result(id,waitForOriginal=false,signal=null) {
     let record=this.require(id),deadline=timestamp()+20000;
-    while(!record.response&&!TERMINAL.has(record.state)&&timestamp()<deadline) {
-      await this.wait(id,Math.max(1,deadline-timestamp()));record=this.require(id);
+    while(!record.response&&!TERMINAL.has(record.state)&&(waitForOriginal||timestamp()<deadline)) {
+      if(signal?.aborted)problem(499,"RECIPIENT_DISCONNECTED","The original request remains retained under its identifier.");
+      await this.wait(id,waitForOriginal?20000:Math.max(1,deadline-timestamp()));record=this.require(id);
     }
     if(record.state==="uncertain")return json({id,code:"UPSTREAM_UNCERTAIN",error:record.error},409,
       {"X-Eco-Uncertain":"1","X-Eco-Request-ID":id});
-    if(record.state==="failed")return json({id,code:"RELAY_FAILED",error:record.error},502,{"X-Eco-Request-ID":id});
+    if(record.state==="failed")return json({id,code:"RELAY_FAILED",error:record.error},502,{"X-Eco-Request-ID":id,"X-Eco-Transport-Error":"RELAY_FAILED"});
     if(!record.response)return pending(record);
     if(this.readers.has(id))problem(409,"RESULT_OPEN","The original response is already being streamed; keep that response or wait for its cancellation.");
     const response=record.response,headers=new Headers(response.headers);
@@ -536,11 +539,14 @@ export class EcoRelay {
     const size=buffered?buffered.byteLength:request.body?integer(Number(length),"body byte count"):0;
     const created=this.create({id:request.headers.get("x-eco-request-id")||undefined,
       method,path:cleanPath(url.pathname+url.search),headers:request.headers,body_bytes:size});
+    if(!created.reused&&!created.record.sealed){
+      created.record.direct_auto_seal=true;this.save(created.record);
+    }
     if(buffered){
       if(buffered.byteLength)await this.input(created.record.id,0,buffered,await sha256(buffered));
       this.seal(created.record.id,{body_bytes:buffered.byteLength});
     } else if(request.body)await this.pump(request,created.record.id);
-    return this.result(created.record.id);
+    return this.result(created.record.id,method==="GET",request.signal);
   }
   async fetch(request) {
     try {
