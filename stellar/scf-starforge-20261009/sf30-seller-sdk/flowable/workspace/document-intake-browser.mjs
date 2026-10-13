@@ -1,8 +1,10 @@
+import {installDocumentComparison} from './document-comparison-browser.mjs';
 // MIT. Document source editing and native review in the existing Flowable workspace.
 export function installFlowableDocumentIntake({api,documentAPI,write,busy,button,node,pre,keyValues,notice,reload,openRecord,records,forEngine,requireEngine,workspaceId,portfolio}){
  const root=document.querySelector('[data-panel="documents"]'),captureEditor=root.querySelector('#document-source'),profile=root.querySelector('#document-profile'),
  definition=root.querySelector('#document-definition'),previewBox=root.querySelector('#document-preview'),savedBox=root.querySelector('#document-saved'),
  status=root.querySelector('#document-status');
+ const comparison=installDocumentComparison({root,documentAPI,busy,node,button,pre,keyValues,notice,workspaceId});
  let generation=0,preview=null,saved=null,capture=null,restoredWorkspace=null,loadedDefinitionsKey=null,lastConnection=null;
  const selection=()=>JSON.stringify({connectionId:requireEngine(),portfolioId:capture?.id,revision:capture?.revision,definitionId:definition.value,captureText:captureEditor.value,profileText:profile.value});
  const draftKey=()=> 'flowable-document-draft:'+workspaceId();
@@ -74,6 +76,7 @@ export function installFlowableDocumentIntake({api,documentAPI,write,busy,button
   target.value=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());edited();e.target.value='';
  }));
  return {async render(){
+  comparison.render();
   const epoch=++generation,workspace=workspaceId(),connectionId=requireEngine();
   if(lastConnection!==connectionId){lastConnection=connectionId;saved=null;preview=null;}
   if(restoredWorkspace!==workspace){restoredWorkspace=workspace;saved=null;preview=null;capture=null;loadedDefinitionsKey=null;captureEditor.value='';profile.value='';definition.value='';definition.dataset.restore='';previewBox.replaceChildren(node('p','Open this workspace original document source to preview.'));try{const retained=JSON.parse(sessionStorage.getItem(draftKey())??'null');if(retained){captureEditor.value=retained.captureText;profile.value=retained.profileText;definition.dataset.restore=retained.definitionId??'';}}catch{}}

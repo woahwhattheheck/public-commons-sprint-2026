@@ -51,7 +51,9 @@
     "operator-discovery",
     "grant-procedures",
     "grant-reporting",
-    "curriculum-migration-workbench-interfaces"
+    "curriculum-migration-workbench-interfaces",
+    "merchant-provider-tools",
+    "merchant-console-browser-assets"
   ],
   "components": [
     "stellar/scf_2026/sf47_budget_model",
@@ -330,7 +332,17 @@
     "tools/curriculum-migration-workbench/managed-browser-receiving.mjs",
     "tools/curriculum-migration-workbench/managed-receiving.mjs",
     "tools/curriculum-migration-workbench/managed-source-selection.json",
-    "tools/curriculum-migration-workbench/run-managed-receiving.py"
+    "tools/curriculum-migration-workbench/run-managed-receiving.py",
+    "products/curriculum-migration-workbench/PACKAGE_README.md",
+    "products/curriculum-migration-workbench/PUBLIC_SOURCE.json",
+    "products/curriculum-migration-workbench/AGENTS.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/receive.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/profiles.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/README.md",
+    "stellar/scf_2026/sf47_budget_model/budget.py",
+    "stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
@@ -339,9 +351,12 @@
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "Complete original curriculum API and bulk occurrence workbench with preserved source contracts, full comparisons and engineering decisions, generated API SDK, authenticated physical branches, typed managed client and customer-agent tools, Runtime Applications, independent receiving and full Grant Installation/source funding workflows.",
     "repository": {
-      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""
     },
-    "readme": "products/curriculum-migration-workbench/OPERATING.md"
+    "readme": "products/curriculum-migration-workbench/PACKAGE_README.md",
+    "bin": {
+      "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
+    }
   }
 }
