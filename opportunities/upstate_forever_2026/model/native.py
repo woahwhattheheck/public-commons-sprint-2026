@@ -11,8 +11,8 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, 
 from . import rasters
 from .model_selection import (models, run_models, required_roles, required_outputs, run_scope,
                               validate_completed_run, common_comparison_outputs)
-from .reuse import native_companions, verify_stage
-from .stage_cache import runtime_environment, signature, recover, register
+from .reuse import native_companions, registry_snapshot, verify_stage
+from .stage_cache import runtime_environment, signature, recover, register, execution_slot
 from .native_arguments import build_native_arguments
 
 
@@ -106,40 +106,40 @@ def execute_run(workspace, key):
                     register(workspace, key, name, state["stages"][name])
                     continue
                 selected = signature(name, args, runtime_source, verified_inputs=verified_inputs)
-                reused, rejected = recover(workspace, key, name, selected, directory, args)
-                if rejected:
-                    state.setdefault("reuse_observations", {})[name] = rejected
-                if reused is not None:
-                    state["stages"][name] = reused
-                    register(workspace, key, name, reused)
+                with execution_slot(workspace, selected):
+                    reused, rejected = recover(workspace, key, name, selected, directory, args)
+                    if rejected:
+                        state.setdefault("reuse_observations", {})[name] = rejected
+                    if reused is not None:
+                        state["stages"][name] = reused
+                        register(workspace, key, name, reused)
+                        atomic_json(directory / "run.json", state)
+                        logging.getLogger(__name__).info(
+                            "Reused original %s stage from run %s", name, reused["reused_from"]["run_id"])
+                        continue
+                    args_path = directory / (name + "-arguments.json")
+                    atomic_json(args_path, args)
+                    errors = module.validate(args)
+                    if errors:
+                        state["validation"] = {name: [{"fields": list(fields), "message": message}
+                                                       for fields, message in errors]}
+                        raise ValueError("Native " + name.upper() + " validation: " +
+                                         "; ".join(message for _, message in errors))
+                    started = now()
+                    registry = module.execute(args)
+                    if not isinstance(registry, dict):
+                        raise ValueError("Native engine did not return its original output registry")
+                    files, outputs, additional_files = registry_snapshot(directory, name, registry)
+                    stage = {"started_at": started, "completed_at": now(),
+                             "arguments": describe_file(directory, args_path),
+                             "files": files, "registry_ids": sorted(registry),
+                             "registry_outputs": outputs,
+                             "additional_files": additional_files,
+                             "companions": native_companions(directory, files),
+                             "input_signature": selected, "runtime": runtime_source}
+                    state["stages"][name] = stage
                     atomic_json(directory / "run.json", state)
-                    logging.getLogger(__name__).info(
-                        "Reused original %s stage from run %s", name, reused["reused_from"]["run_id"])
-                    continue
-                args_path = directory / (name + "-arguments.json")
-                atomic_json(args_path, args)
-                errors = module.validate(args)
-                if errors:
-                    state["validation"] = {name: [{"fields": list(fields), "message": message}
-                                                   for fields, message in errors]}
-                    raise ValueError("Native " + name.upper() + " validation: " +
-                                     "; ".join(message for _, message in errors))
-                started = now()
-                registry = module.execute(args)
-                if not isinstance(registry, dict):
-                    raise ValueError("Native engine did not return its original output registry")
-                files = {}
-                for output_id, path in registry.items():
-                    if isinstance(path, (str, Path)) and Path(path).is_file():
-                        files[output_id] = describe_file(directory, path)
-                stage = {"started_at": started, "completed_at": now(),
-                         "arguments": describe_file(directory, args_path),
-                         "files": files, "registry_ids": sorted(registry),
-                         "companions": native_companions(directory, files),
-                         "input_signature": selected, "runtime": runtime_source}
-                state["stages"][name] = stage
-                atomic_json(directory / "run.json", state)
-                register(workspace, key, name, stage)
+                    register(workspace, key, name, stage)
             output_selection = {"nitrogen_export": ("ndr", "n_total_export"),
                                 "phosphorus_export": ("ndr", "p_surface_export"),
                                 "sediment_export": ("sdr", "sed_export")}
