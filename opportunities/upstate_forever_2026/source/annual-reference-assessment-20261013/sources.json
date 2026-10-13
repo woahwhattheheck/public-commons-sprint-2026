@@ -1,0 +1,162 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah assessment geography and original annual-reference coverage",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "stations": 159,
+    "assessment_records": 192,
+    "domain_huc12_count": 217,
+    "annual_reference_basins": 5,
+    "annual_targets": 11
+  },
+  "entries": [
+    {
+      "id": "assessment-physical-geography159-20261013",
+      "title": "Original station points with physical HUC, utility and annual-reference membership",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "kind": "vector",
+      "role": "ASSESSMENT_GEOGRAPHY_CONTEXT",
+      "vintage": "Computed 2026-10-13 from original station capture, published 2024 assessment, July 2026 status and 2012 regional reference source",
+      "path": "assessment-geography-context.geojson",
+      "bytes": 169064,
+      "sha256": "e5b920eeb4b9afab55dd384c0aaeedbb39715808187021e4dd9b1a4c5d4dec8a",
+      "station_id_field": "station_id",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 11203,
+          "sha256": "933b95dd404e62281d5d0264c31324acf6885d4b61d4eceac083ff94c13a8fd3"
+        },
+        {
+          "path": "annual-reference-assessment-summary.json",
+          "bytes": 36973,
+          "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+        },
+        {
+          "path": "assessment-native-huc-context.json",
+          "bytes": 441989,
+          "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+        }
+      ],
+      "metadata": {
+        "derived_context": true,
+        "original_publisher_assignments_preserved": true,
+        "source_record_identity": "source_id plus original record id",
+        "spatial_relation_basis": "Native points and retained original polygons; EPSG:5070 exact covers"
+      },
+      "format": "GeoJSON",
+      "source_crs": "EPSG:4326",
+      "id_field": "station_id"
+    },
+    {
+      "id": "assessment-physical-stations159-20261013",
+      "title": "159 original stations: physical and publisher HUC comparison",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "kind": "table",
+      "role": "STATION_ASSESSMENT_CONTEXT",
+      "vintage": "Computed 2026-10-13 from original station capture, published 2024 assessment, July 2026 status and 2012 regional reference source",
+      "path": "assessment-native-huc-stations.csv",
+      "bytes": 42270,
+      "sha256": "291be0108b81e07009a30c976b230a84a14b97a964eb0791db8a9d8fb49e4c60",
+      "station_id_field": "station_id",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 11203,
+          "sha256": "933b95dd404e62281d5d0264c31324acf6885d4b61d4eceac083ff94c13a8fd3"
+        },
+        {
+          "path": "annual-reference-assessment-summary.json",
+          "bytes": 36973,
+          "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+        },
+        {
+          "path": "assessment-native-huc-context.json",
+          "bytes": 441989,
+          "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+        }
+      ],
+      "metadata": {
+        "derived_context": true,
+        "original_publisher_assignments_preserved": true,
+        "source_record_identity": "source_id plus original record id",
+        "spatial_relation_basis": "Native points and retained original polygons; EPSG:5070 exact covers"
+      }
+    },
+    {
+      "id": "assessment-physical-records192-20261013",
+      "title": "192 original assessment records: physical and publisher HUC comparison",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "kind": "table",
+      "role": "STATION_ASSESSMENT_CONTEXT",
+      "vintage": "Computed 2026-10-13 from original station capture, published 2024 assessment, July 2026 status and 2012 regional reference source",
+      "path": "assessment-native-huc-records.csv",
+      "bytes": 49799,
+      "sha256": "31ef5aa8d2aa0bb48a856857fb4421feef6ab35bc11cdee61db9b3ee4ed18c35",
+      "station_id_field": "station_id",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 11203,
+          "sha256": "933b95dd404e62281d5d0264c31324acf6885d4b61d4eceac083ff94c13a8fd3"
+        },
+        {
+          "path": "annual-reference-assessment-summary.json",
+          "bytes": 36973,
+          "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+        },
+        {
+          "path": "assessment-native-huc-context.json",
+          "bytes": 441989,
+          "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+        }
+      ],
+      "metadata": {
+        "derived_context": true,
+        "original_publisher_assignments_preserved": true,
+        "source_record_identity": "source_id plus original record id",
+        "spatial_relation_basis": "Native points and retained original polygons; EPSG:5070 exact covers"
+      }
+    },
+    {
+      "id": "annual-reference-assessment-membership795-20261013",
+      "title": "Five original annual-reference basins by 159 original assessment stations",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "kind": "table",
+      "role": "ANNUAL_REFERENCE_ASSESSMENT_CONTEXT",
+      "vintage": "Computed 2026-10-13 from original station capture, published 2024 assessment, July 2026 status and 2012 regional reference source",
+      "path": "annual-reference-station-memberships.csv",
+      "bytes": 184897,
+      "sha256": "5eb2333c54b727c790f6b007e8c31fc59fde8b589dd093e5224753073fb02c92",
+      "station_id_field": "station_id",
+      "companions": [
+        {
+          "path": "README.md",
+          "bytes": 11203,
+          "sha256": "933b95dd404e62281d5d0264c31324acf6885d4b61d4eceac083ff94c13a8fd3"
+        },
+        {
+          "path": "annual-reference-assessment-summary.json",
+          "bytes": 36973,
+          "sha256": "a44d3a1cdb761a0850bf65ae210ad2621f3cbeda0670b48e36028090a25ee34c"
+        },
+        {
+          "path": "assessment-native-huc-context.json",
+          "bytes": 441989,
+          "sha256": "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
+        }
+      ],
+      "metadata": {
+        "derived_context": true,
+        "original_publisher_assignments_preserved": true,
+        "source_record_identity": "source_id plus original record id",
+        "spatial_relation_basis": "Native points and retained original polygons; EPSG:5070 exact covers"
+      }
+    }
+  ],
+  "notes": [
+    "Physical selection, station publisher HUC and assessment-edition publisher HUC are separate fields.",
+    "Derived point layer supports the existing Spatial Review; original station native IDs/coordinates/body hashes remain properties.",
+    "The original annual-reference import/calibration pipeline remains the source of annual targets and catchment observations."
+  ]
+}
