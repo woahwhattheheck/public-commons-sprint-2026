@@ -9,7 +9,7 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import atlas_browser, cartography, map_atlas, portable, rasters
+from . import atlas_browser, cartography, client_report, map_atlas, portable, rasters
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report
@@ -228,6 +228,7 @@ def build(workspace, selection):
         selection["economic_edition_sha256"] = economic_link["edition_sha256"]
     selection["client_report_edition"] = CLIENT_REPORT_EDITION
     selection["report_renderer_version"] = scientific_report.REPORT_VERSION
+    selection["client_companion_edition"] = client_report.REPORT_EDITION
     selection["delivery_edition"] = DELIVERY_EDITION
     selection["application_sha256"] = portable.application_digest()
     review_ids = selection.get("spatial_review_ids", [])
@@ -643,6 +644,21 @@ def build(workspace, selection):
                     },
                 ))
                 state["files"]["report"] = describe_file(directory, target)
+                atomic_json(state_path, state)
+            companion_keys = ("client_report", "client_report_html",
+                              "client_report_markdown", "client_report_model")
+            if not all(name in state["files"] for name in companion_keys):
+                generated = client_report.build_report(
+                    workspace=workspace, directory=directory, selection=selection,
+                    state=state, baseline=baseline, alternatives=alternatives,
+                    grid=grid, profile=profile, records=records,
+                    observation_results=observation_results, comparison=comparison,
+                    scenario_summary=summary,
+                    additional_sections=receiving_water_delivery.report_section(water_product),
+                    output_stem="client-report", file_key_prefix="client_")
+                for name, relative in generated.items():
+                    state["files"][name] = describe_file(directory, directory / relative)
+                state["client_companion_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
             working = directory / "working" / "scientific-workspace.zip"
             if "working_archive" not in state["files"]:

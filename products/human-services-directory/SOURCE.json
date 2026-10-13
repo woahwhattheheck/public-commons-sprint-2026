@@ -104,7 +104,12 @@
     "conformanceForeignKeysNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_conformance_foreign_keys.py",
     "conformanceForeignKeysOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-conformance-foreign-keys.mjs",
     "conformanceForeignKeysNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_foreign_keys.py",
-    "conformanceForeignKeysClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_foreign_key_clients.mjs"
+    "conformanceForeignKeysClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_foreign_key_clients.mjs",
+    "operatingReturnsCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-operating-returns-schema.json",
+    "operatingReturnsNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_returns.py",
+    "operatingReturnsOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-returns.mjs",
+    "operatingReturnsNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_returns.py",
+    "operatingReturnsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_returns_clients.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
@@ -113,7 +118,10 @@
     "interactivePageBytes": 4194304,
     "operatingPlanDocumentBytes": 33554432,
     "operatingPlanRequestBytes": 67108864,
-    "operatingPlanBasisBytes": 4194304
+    "operatingPlanBasisBytes": 4194304,
+    "operatingReturnReviewBytes": 134217728,
+    "operatingReturnRequestBytes": 201326592,
+    "operatingReturnComparisonBytes": 268435456
   },
   "guides": {
     "operating": "products/human-services-directory/OPERATING.md",
@@ -123,7 +131,8 @@
     "conformanceNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md",
     "operatingPlans": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md",
     "conformanceForeignKeys": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEYS.md",
-    "conformanceForeignKeyClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEY_CLIENTS.md"
+    "conformanceForeignKeyClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEY_CLIENTS.md",
+    "operatingReturns": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_RETURNS.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
@@ -253,5 +262,40 @@
     "compatibility": "Earlier assessments keep their original implementation and seven original file kinds; current HSD assessments keep their applicable original files. Complete OperatingPlan records and histories remain unchanged.",
     "receiving": "Read all original records, pages and files through the native operator and Merchant; preserve full source-defined responses; receive the exact browser editable archive through the original Directory receiver in a separate private customer workspace; verify original immutable records and complete indices before exporting the customer packet.",
     "meaning": "Existence and resolution are separate. Every ambiguous match and original table selection remains explicit. Source publication does not establish native or client operation completion; completed operation records and verified files carry that evidence."
+  },
+  "operatingReturns": {
+    "schema": "stellar-forge.directory-operating-returns-source.v1",
+    "originalModel": {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "pullRequest": 935,
+      "head": "85d2072671e31c5b352e7bce4fb7c47a38f2802a",
+      "path": "stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs",
+      "gitBlob": "bd3e83ff93dba623647f9dbb046f5a573748d2d8",
+      "typesGitBlob": "ebb27c80e74ccadddd4515027296acc38b08a55a",
+      "adoption": "Complete unchanged original model/type declarations; original standalone UI/CLI ownership remains separate.",
+      "merge": "0cd72e1e555a0a5314a8c98b7842d65cc37b7484"
+    },
+    "baseline": {
+      "nativeCapsule": "d20ce33bd105e2eab0f02422320305311215e7fb",
+      "companionCapsule": "f6e2e793cbe07328e573095308679407f1ae532d",
+      "publicMerge": "65143e73a24398f87fc83cb57963399f2d0fec63",
+      "productMerge": "b5106541a0c157f16eeea5e1a779a7a11c66b3c5"
+    },
+    "collection": "operatingPlanReturns",
+    "stages": [
+      "prepared",
+      "reviewed",
+      "completed",
+      "applied"
+    ],
+    "retainedFiles": [
+      "review",
+      "comparison",
+      "input"
+    ],
+    "nativeOperation": "SCF-DIRECTORY-CUSTOMER-RETURN-450E-20261013",
+    "clientOperation": "SCF-DIRECTORY-CUSTOMER-RETURN-CLIENTS-450E-20261013",
+    "recovery": "Retain completed original review intent, reconcile exact native plan receive or full completed history, then preserve its separate applied receipt. All accepted inputs, original histories and source bindings are replayed during complete receiving.",
+    "meaning": "Authored local review and file receiving do not establish external response, acceptance or command execution. Completed native/client results carry actual operation evidence."
   }
 }

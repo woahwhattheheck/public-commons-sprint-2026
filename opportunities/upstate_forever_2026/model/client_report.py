@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -17,7 +18,7 @@ from .common import INVEST_VERSION
 from .model_selection import MODEL_LABELS, run_scope
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-3"
+REPORT_EDITION = "2026-10-13-client-report-3-companion-1"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -736,25 +737,44 @@ def render_pdf(path, report):
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
 
-def write_report(directory, report, *, pdf_name="report.pdf"):
-    """Write the complete report; return state-file keys and relative paths."""
+def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
+                 file_key_prefix=""):
+    """Write coordinated reports using canonical or companion filenames.
+
+    Defaults preserve the original report state keys. For a client companion to
+    an existing scientific report, use output_stem="client-report" and
+    file_key_prefix="client_". All map paths stay relative to the same directory.
+    pdf_name retains its original direct-writer behavior when no stem is set.
+    """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    pdf_relative = _safe_path(pdf_name)
-    if pdf_relative is None or Path(pdf_relative).name != pdf_relative:
-        raise ValueError("pdf_name must be a simple relative filename")
-    names = {"report": pdf_relative, "report_html": "report.html",
-             "report_markdown": "report.md", "report_model": "report-model.json"}
+    if not isinstance(file_key_prefix, str) or not re.fullmatch(r"[A-Za-z0-9_]*", file_key_prefix):
+        raise ValueError("file_key_prefix must contain only ASCII letters, digits and underscores")
+    if output_stem is not None:
+        if not isinstance(output_stem, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", output_stem):
+            raise ValueError("output_stem must be a simple filename stem")
+        if pdf_name != "report.pdf":
+            raise ValueError("Choose output_stem or pdf_name, rather than both")
+        stem = output_stem
+        pdf_relative = stem + ".pdf"
+    else:
+        stem = "report"
+        pdf_relative = _safe_path(pdf_name)
+        if pdf_relative is None or Path(pdf_relative).name != pdf_relative:
+            raise ValueError("pdf_name must be a simple relative filename")
+    names = {"report": pdf_relative, "report_html": stem + ".html",
+             "report_markdown": stem + ".md", "report_model": stem + "-model.json"}
     (directory / names["report_html"]).write_text(render_html(report), encoding="utf-8")
     (directory / names["report_markdown"]).write_text(render_markdown(report), encoding="utf-8")
     (directory / names["report_model"]).write_text(json.dumps(report, ensure_ascii=False,
                                                            indent=2, allow_nan=False) + "\n", encoding="utf-8")
     render_pdf(directory / names["report"], report)
-    return names
+    return {file_key_prefix + key: value for key, value in names.items()}
 
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
-                 scenario_summary=None, additional_sections=()):
+                 scenario_summary=None, additional_sections=(),
+                 output_stem=None, file_key_prefix=""):
     """Drop-in report hook for the existing delivery.py report branch."""
     report = compose_report(workspace=workspace, selection=selection, state=state,
                             baseline=baseline, alternatives=alternatives, grid=grid,
@@ -768,4 +788,5 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
             key += "-additional"
         report["sections"].append(_section(key, title, paragraphs))
         section_ids.add(key)
-    return write_report(directory, report)
+    return write_report(directory, report, output_stem=output_stem,
+                        file_key_prefix=file_key_prefix)

@@ -332,7 +332,10 @@ field definitions produce a concrete error rather than a guessed match.
 
 The output directory supports an exact replay. A different body cannot
 overwrite an existing artifact; use a new directory for a new source
-selection. Catalog and receptor identities derive from the original bytes,
+selection. Each complete file uses the application's atomic immutable writer;
+the completion manifest is written last. A stopped write leaves absent files
+that an exact replay can finish. The inventory uses the same writer.
+Catalog and receptor identities derive from the original bytes,
 selection, source layer, and native feature IDs. ObjectIDs are therefore
 never assumed to persist across a service's republishing.
 

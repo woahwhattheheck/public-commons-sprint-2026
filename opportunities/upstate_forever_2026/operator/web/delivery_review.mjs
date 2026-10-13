@@ -3,8 +3,12 @@ export function createDeliveryReview(ctx) {
   const {esc, button, bytes, number, when, runTitle, mapFamilies, mapTitles,
          section, pageHeader, table} = ctx;
   const labels = {
-    report: 'Client report · PDF',
-    report_html: 'Client report · HTML',
+    report: 'Scientific report · PDF',
+    client_report: 'Client companion · PDF',
+    client_report_html: 'Client companion · HTML',
+    client_report_markdown: 'Editable client companion · Markdown',
+    client_report_model: 'Client companion quantities and provenance · JSON',
+    report_html: 'Scientific report · HTML',
     report_markdown: 'Editable report · Markdown',
     report_model: 'Report quantities and provenance · JSON',
     report_data: 'Report quantities and provenance · JSON',
@@ -135,7 +139,8 @@ export function createDeliveryReview(ctx) {
     const used = new Set(), selection = row.selection || {};
     const hasReport = Boolean(byRole.report_html && (byRole.report_data || byRole.report_model));
     const savedEdition = (selection.client_report_edition || row.report_edition || '') + '|' +
-      (selection.report_renderer_version || row.report_renderer_version || '');
+      (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
+      (selection.client_companion_edition || row.client_companion_edition || '');
     const olderEdition = row._current_report_edition && savedEdition !== row._current_report_edition;
     let html = '<div class="delivery-review"><div class="meta"><span>' +
       esc(status(row.state)) + '</span><span>' +
@@ -143,7 +148,8 @@ export function createDeliveryReview(ctx) {
       (selection.scenario_run_ids || selection.alternative_run_ids || []).length + ' alternatives</span></div>';
     if (row.error) html += '<div class="notice error">' + esc(row.error.message) + '</div>';
     html += '<div class="delivery-actions">' +
-      (hasReport ? button('delivery-report', 'Read report', attrs(row.id), 'primary') : '') +
+      (hasReport ? button('delivery-report', 'Read scientific report', attrs(row.id), 'primary') : '') +
+      (byRole.client_report_html && byRole.client_report_model ? button('delivery-client-report', 'Read client companion', attrs(row.id)) : '') +
       openPDF(byRole.report) + download(byRole.delivery_archive, 'Download complete delivery') + '</div>';
     if (row.state === 'received_snapshot') {
       html += '<p class="report-note">This received copy includes the saved report, maps, study choices and working data. Prepare the complete copy to assemble its local delivery and working-project archives.</p>' +
@@ -155,9 +161,12 @@ export function createDeliveryReview(ctx) {
     html += '<h3 class="scenario-heading">Selected study cases</h3>' + selectedRuns(row) +
       '<div class="delivery-actions">' +
       button('delivery-revise', 'Revise delivery choices', attrs(row.id)) + '</div>';
-    html += group('Client report',
+    html += group('Scientific report',
       'The PDF and HTML share the same saved quantities. Markdown supports editing; JSON carries the report values and provenance.',
       entries.filter(file => ['report', 'report_html', 'report_markdown', 'report_data', 'report_model'].includes(file.role)), used);
+    html += group('Client companion',
+      'The decision guide retains the same original quantities, scenario support and seven-map context.',
+      entries.filter(file => /^client_report(?:_|$)/.test(file.role)), used);
     html += group('Complete delivery and working project',
       'Use the complete delivery for the report, maps and GIS outputs. The working scientific project restores the source files, model choices and retained native runs.',
       entries.filter(file => ['delivery_archive', 'working_archive'].includes(file.role)), used);
@@ -199,17 +208,18 @@ export function createDeliveryReview(ctx) {
     return html;
   }
 
-  async function preview(id) {
+  async function preview(id, report = 'scientific') {
     const workspace = ctx.getWorkspace();
-    const info = await ctx.api(ctx.endpoint('/api/deliveries/report', {id}));
+    const info = await ctx.api(ctx.endpoint('/api/deliveries/report', {id, report}));
     if (workspace !== ctx.getWorkspace()) return;
     if (!info.preview_url) throw Error('Create the current report edition before opening the report.');
     const files = Object.values(info.files || {});
-    const pdf = info.files?.report;
+    const selected = info.selected_files || info.files || {};
+    const pdf = selected.report;
     const body = '<div class="delivery-review"><div class="delivery-actions">' +
       button('item', 'Back to delivery', 'data-kind="deliveries" ' + attrs(id)) +
       openPDF(pdf) + download(pdf, 'Download PDF') +
-      download(info.files?.report_markdown, 'Download editable report') +
+      download(selected.report_markdown, 'Download editable report') +
       '</div><iframe class="delivery-report-frame" title="Client report" ' +
       'sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads" ' +
       'referrerpolicy="no-referrer" src="' + esc(info.preview_url) + '"></iframe></div>';
@@ -244,6 +254,7 @@ export function createDeliveryReview(ctx) {
 
   async function handle(action, id) {
     if (action === 'delivery-report') return preview(id);
+    if (action === 'delivery-client-report') return preview(id, 'client');
     if (action === 'delivery-report-refresh') return rebuild(id);
     if (action === 'delivery-revise') return ctx.revise(id);
     throw Error('Unknown delivery report action.');
