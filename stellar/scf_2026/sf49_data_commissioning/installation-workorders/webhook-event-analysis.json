@@ -1,0 +1,97 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "webhook-event-analysis",
+  "title": "Webhook event Analysis: complete acquired windows, editable customer work and independent receiving",
+  "task": {
+    "name": "Commission the customer's recurring event-to-application workflow",
+    "purpose": "Carry one authorized Stellar event family from the original complete acquired window into the customer's useful report, workbook or existing application, with retained source meaning, customer edits, complete files and an independently maintainable installation.",
+    "request": "Use the original customer Workshare and selected source/merchant installation. Agree the event family, contract or account scope, source rights, complete window, cursor-page terms and useful receiving outcome. Retain the original subscriber's complete NDJSON and matching manifest, their source/store/feed and page identities, original approved buyer operations and actual financial outcomes. Receive the exact pair into the existing Analysis workspace; select the actual payload pointers and type meanings, name the customer programme, read the whole native review and explicitly select its digest before apply. Open the complete typed event table, report and workbook. Preserve customer report definitions, notes, conversions and unrelated sheets. Continue a later useful cumulative source window through the same programme, reviewing changed definitions explicitly. Prepare a fresh linked complete delivery, receive all sixteen original files, reopen them offline, restore the whole native archive independently and continue the same customer work.",
+    "completeOutput": "The complete original acquired NDJSON and manifest; reviewed customer window and field mapping; every acquired event in typed JSONL and spreadsheet-safe CSV with native manifest; report HTML, JSON and table files; editable workbook and original workbook handover; complete native Analysis workspace and archive manifest; programme extracted from that exact archived database; original delivery identity and opening instructions. The receiving package also retains the original Installation seed, operator bindings, selected installed profile, complete event index, full workorder and native preview input. The original installed source, configuration references, accountable receiving engineer and actual accepted outcome stay with the same workorder.",
+    "repeatTrigger": "Select a later window when the actual source change, agreed reporting interval or new useful customer question makes another result necessary. A complete empty window and a later window with no new events retain those actual outcomes. Continue interrupted input, review, apply, delivery or download from its existing identity before selecting another operation. A source replay, workbook revision, fresh delivery or offline reopen retains the original purchase association.",
+    "pricedUnit": "The merchant's original advertised cursor page or resource determines its actual paid unit. The useful customer task can require several pages, with explicit aggregate buyer spending approval and completion acknowledgment. Original transfer/purchase records determine qualifying purchases. Event counts, source rows and delivery files are not payment counts. Professional implementation, hosting, source subscriptions and maintenance retain their original Workshare terms and cost owner. Select actual atomic price, task units, budget, network, asset, recipient and facilitators only from the approved Installation and buyer records."
+  },
+  "source": {
+    "reference": "Select the complete original event delivery index, exact acquired subscriber pair, original source/store/feed and window, accepted operation and review digest, and the actual installed source edition. Keep the original native Analysis workspace and programme identities.",
+    "mode": "SNAPSHOT",
+    "population": "Every original event and ordered acquired page in the selected complete cumulative subscriber export. Retain source sequences, original cursor/checkpoint history, individual event identities, each page's complete response identity and actual recorded outcome. The selected source scope, complete window and any actual empty outcome remain explicit. Later cumulative exports preserve the earlier accepted events and pages before advancing.",
+    "meaning": "Keep distinct events in the same transaction separate. Preserve original event/payload identities and source sequence; exact decimals and identifiers remain text when selected that way. Retain missing, JSON null and returned JSON kind separately. Keep every original payload and exact input bytes alongside selected typed fields. An acquired-event count describes data; only the original buyer and independently observed transfer records establish a financial outcome. The index distinguishes the selected accepted result edition from the programme edition in the archived workspace.",
+    "changePolicy": "The original source and merchant operators review source access, event family, output fields and offered terms. A changed field mapping or source scope requires the actual customer review; later cumulative receiving preserves its original prefix. Current report/workbook changes are reviewed against native revisions, retaining preceding attempts. Source withdrawal, payer limits, source replacement and a new useful task follow the original authorized workorder. Preserve already acquired output under its original terms."
+  },
+  "receiving": {
+    "application": "The original private Analysis application, Event programmes browser and installed event Analysis CLI; authenticated original Analysis agent and its typed input/review/delivery clients; existing resumable file writer and native workspace archive receiver. Grant Operations receives the complete selected Installation document through its existing Customer installations desk, preview/save and full-case handover.",
+    "acceptanceRule": "Open the customer's actual complete acquired window and full mapped review. Apply its explicitly accepted digest, then open the full typed table, report and workbook with the customer's meaningful edits. Continue the selected useful later source window without discarding current work. Inspect the exact sixteen-file delivery index and receive every declared file; reopen offline, restore the native archive into the receiving engineer's separate directory and reopen the same programme and retained work. Prepare a fresh linked delivery from the restored application. The producing maintainer views the actual populated normal/narrow rendered result and every outgoing attachment, operates important controls and repairs concrete faults. Record the named recipient's actual observations in the existing Installation's original checks.",
+    "changeAndWithdraw": "The customer controls field meanings, useful output, report/workbook choices and actual acceptance. The merchant and source owner retain publication/authorization and withdrawal controls; the buyer retains signing and aggregate spending authority. Original financial recovery remains with the buyer and facilitator. Analysis input, review, local apply, copy and Installation preparation do not independently dispatch a purchase. Changes and restored source connections continue through the original owners and explicit native selections.",
+    "recovery": "Retain original workspace/programme, input ID and exact files, source operation, reviewed digest, saved action IDs, accepted result, delivery ID and full index. Read an uncertain action's original status and explicitly resume its unchanged request. Continue exact native upload offsets and verified download prefixes; preserve cancellation. Reopen the sixteen-file package with its original alias and index. Restore the complete archived workspace to a distinct receiving directory and use a fresh linked delivery ID to snapshot later work. The original request, accepted result and snapshot programme remain separately identifiable.",
+    "maintenance": "Name the source/merchant owner, independent buyer, customer analyst, host maintainer and receiving engineer. Retain actual host/alias/workspace locations, trusted installed source, source-use authority, private credential references, source cadence, permitted fields, advertised units and buyer limits. Agree backups, independent restore, key rotation, monitoring, failed-delivery notification and support ownership. Preserve the original case and Workshare; technical preparation does not replace the maintainer's actual recorded acceptance."
+  },
+  "steps": [
+    {
+      "title": "Receive the original customer case and useful task",
+      "result": "Select its retained Workshare, full scope, named parties, phase owners, effort, fees, payment milestones and existing acceptance checks. Agree the real event family, destination, useful output and later-use condition. Preserve original funded and commercial assignments."
+    },
+    {
+      "title": "Select the installed source and original application",
+      "result": "Choose the exact original merchant/subscriber/Analysis source, native workspace UUID, programme and authenticated host alias. Retain configuration references without credential values and identify the independent receiving environment."
+    },
+    {
+      "title": "Acquire and retain the complete selected window",
+      "result": "The original authorized buyer acquires its approved complete cursor window. Retain the whole NDJSON/manifest and original page, source and transfer identities. Use the same request and financial recovery when interrupted; an actual empty window remains complete empty source."
+    },
+    {
+      "title": "Read the full mapped review and accept explicitly",
+      "result": "Receive both exact files under the original input ID. Select real payload pointers and meanings. Reopen the complete immutable native review, including all retained events/pages and customer definitions, then accept its actual digest under the original source operation."
+    },
+    {
+      "title": "Use and preserve editable customer work",
+      "result": "Open the full typed table, report and workbook. Make the customer's useful note, conversion or report change through the existing application. Preserve unrelated sheets and original source definitions."
+    },
+    {
+      "title": "Continue the actual next useful window",
+      "result": "Receive the later original cumulative pair under its selected input and operation. Preserve earlier accepted prefix, current report/workbook choices and preceding attempts. Review changed definitions before continuing the same programme."
+    },
+    {
+      "title": "Deliver and independently receive every file",
+      "result": "Prepare a fresh delivery ID linked to the accepted source operation. Inspect its exact index, receive all sixteen files with retained prefix recovery, reopen offline, and open the complete report/workbook and source attachments."
+    },
+    {
+      "title": "Restore and continue the original customer application",
+      "result": "Use the original native archive receiver on the named independent host. Reopen the same programme and customer history, then make a fresh linked delivery from that restored workspace. Retain actual source/output identities and measured recovery."
+    },
+    {
+      "title": "Join the complete operating source to the Installation",
+      "result": "Use the received delivery, actual native seed and explicit bindings to prepare the whole current Installation document and workorder. Reopen the prepared package independently, then preview/save in the existing Grant Operations case. Preserve original phase checks and record only observed acceptance."
+    },
+    {
+      "title": "Inspect the outgoing product and complete the handover",
+      "result": "The producer looks at the actual rendered normal/narrow application, all exported attachments and independently reopened work; operates the important controls and repairs concrete defects. Deliver complete source, configuration references, original application and Installation handover through the existing maintained receiver and Support case."
+    }
+  ],
+  "inputs": [
+    "Complete original customer Workshare, commissioning source/packet, case/plan identity, phase effort, fee/milestone terms and actual acceptance criteria",
+    "Actual useful event task, source scope/rights, contract/account/event family, original merchant resource and independent buyer approval",
+    "Complete original NDJSON and matching subscriber manifest with source/store/feed, original pages/checkpoint, recorded native/HTTP outcomes and original payment references",
+    "Explicit payload field pointers/types, exact decimal/identifier meaning, named customer analyst, actual reviewed digest and retained customer report/workbook choices",
+    "Exact installed source, original Analysis workspace UUID/programme/host alias, input/source/action/delivery identities and complete immutable index",
+    "All sixteen original delivery files including whole native workspace, programme snapshot, typed full table, workbook/report, reviewed input and every manifest",
+    "Fresh original SF47 Installation seed and explicit existing-case source/deployment/payment/receiving bindings, with its original Workshare and funded assignments",
+    "Named receiving host/operator, retained input/output directories, independent restore result, measured recovery, real viewed screen/attachment outcomes and support responsibility"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/webhook-feed/COMMISSIONING.md",
+      "blob": "b7f8d9c6963f626d06595a2e34d582e0297a04dd"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_PROGRAMMES.md",
+      "blob": "2ed0a28643554d46bda2145b13d5571824190171"
+    },
+    {
+      "path": "stellar-forge/mcp-paid-agent/ANALYSIS_EVENTS.md",
+      "blob": "b009e0ea10eaf60da4226964b1555b72a21c71e8"
+    },
+    {
+      "path": "stellar-forge/mcp-paid-agent/native-analysis-events-contract.mjs",
+      "blob": "c3a5f040289c40e9f0f2b4b42e018680585b347a"
+    }
+  ]
+}

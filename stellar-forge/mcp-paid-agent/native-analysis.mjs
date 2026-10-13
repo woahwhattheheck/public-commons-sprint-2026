@@ -15,6 +15,7 @@ import {createNativeSemanticActions} from './native-analysis-semantics.mjs';
 import {createNativeResearchActions,publicNativeResearchJob} from './native-analysis-research.mjs';
 import {createNativeLineageActions} from './native-analysis-lineage.mjs';
 import {createNativePublicationActions} from './native-analysis-publication.mjs';
+import {createNativeEventActions} from './native-analysis-events.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -128,6 +129,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   const research=createNativeResearchActions({publicJob});
   const lineage=createNativeLineageActions({reads,parse});
   const publication=createNativePublicationActions({reads,parse});
+  const events=createNativeEventActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -327,6 +329,9 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
     else if(lineage.handles(op))value=await lineage.call({operation:op,body,record,get,post,signal:context.signal,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
+    else if(events.handles(op))value=await events.call({operation:op,body,record,get,post,signal:context.signal,
+      getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum}),
+      postBytes:(route,value,maximum)=>request(connection,route,value,context.signal,{raw:true,maximum})});
     else if(research.handles(op))value=await research.call({operation:op,body,get,post});
     else if(sources.handles(op))value=await sources.call({operation:op,body,post});
     else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
