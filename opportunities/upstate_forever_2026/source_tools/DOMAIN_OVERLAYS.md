@@ -187,6 +187,116 @@ inventory retains PROTECTED_LANDS. NWI_MAPPING_STATUS and NWI_CONTEXT are explic
 additional context roles. PAD-US contains overlapping records; use a geometric
 union when calculating protected area.
 
+## Continue the paired wetland acquisition and use vectors immediately
+
+The existing acquisition publishes each completed layer independently. Continue
+the original plan and output directory for the wetland pair:
+
+    python -m source_tools.domain_overlays receive \
+      --output /absolute/retained-sources/upstream-context-20261012 \
+      --sources nwi-mapping-status,nwi-wetlands \
+      --retry-failed
+
+Inspect the existing process and capture-progress.json before resuming that
+directory. On a fresh connected receiver, pass the already produced original
+plan archive and its exact SHA256 as described above. This command retains
+previously completed source layers. Its sources.json becomes usable as soon as
+the selected original layers complete; the native requests and complete source
+companions stay with each entry.
+
+The vector habitat analysis can proceed before numeric NLCD delivery. Import
+this real sources.json into the existing full Workspace, preserving its
+reporting boundary, HUC selections, utility boundaries and other context
+overlays. Use the exact saved Water and Habitat selection for that study as the
+input to this continuation. The following joins the actual new collection ID
+and unique NWI source IDs into that existing selection:
+
+    python - "$eco_workspace" "$eco_capture/sources.json" \
+      "$eco_saved_context_selection" "$eco_nwi_selection" <<'PY'
+    import sys
+    from pathlib import Path
+    from model.common import atomic_json, read_json
+    from model.workspace import Workspace
+
+    workspace_path, manifest, saved_selection, output = sys.argv[1:]
+    workspace = Workspace(workspace_path)
+    collection = workspace.import_sources(manifest)
+    selection = dict(read_json(saved_selection))
+    overlays = dict(selection.get("overlays", {}))
+    for category, role in (("wetlands", "NWI"),
+                           ("mapping_status", "NWI_MAPPING_STATUS")):
+        entries = [row for row in collection["entries"] if row.get("role") == role]
+        if len(entries) != 1 or entries[0]["kind"] != "vector":
+            raise ValueError("Select the original paired NWI/status capture: " + role)
+        overlays[category] = {"collection_id": collection["id"],
+                              "source_id": entries[0]["id"]}
+    selection["overlays"] = overlays
+    atomic_json(Path(output), selection, immutable=True)
+    print(collection["id"])
+    PY
+
+The four shell variables refer to the actual existing Workspace, original
+capture directory, saved selection JSON, and a new selection JSON path.
+The saved selection can be the selection.json already retained in an existing
+water-context analysis; keep its original boundary and relations. The ordinary
+catalog command exposes the actual retained source selectors if composing the
+first analysis:
+
+    python water_context_cli.py --workspace "$eco_workspace" catalog
+    python water_context_cli.py --workspace "$eco_workspace" build \
+      --selection "$eco_nwi_selection"
+
+Read the returned analysis ID. Use that exact ID for show --boundaries, preview
+and export, for example:
+
+    python water_context_cli.py --workspace "$eco_workspace" show \
+      "$eco_context_analysis_id" --boundaries
+    python water_context_cli.py --workspace "$eco_workspace" export \
+      "$eco_context_analysis_id" --output "$eco_context_archive"
+
+The original NWI WETLAND_TYPE classes and mapping STATUS fields feed the
+existing context analysis. The source keeps ATTRIBUTE classification codes and
+the remaining native fields intact. Mapping status partitions Digital, No_Data,
+conflicting and unknown areas; an inventory polygon can remain present where
+mapping status is unknown. The existing summary uses geometric unions and
+reports the selected overlap with each retained HUC or utility boundary.
+A digitally mapped area with no published NWI polygon describes this inventory,
+and does not establish field-confirmed absence of wetlands.
+
+## Complete the grid handoff and recover an interrupted final publication
+
+When the original regional reference raster arrives, use prepare-nwi above
+against the same capture and exact reporting/focus source members. It produces
+the 30 m working-grid occurrence source together with its mapping-status
+companion. Import the complete prepared sources.json, then replace only the
+existing selection's wetlands reference with that actual NWI_CONTEXT collection
+and source ID. Remove the previous explicit mapping_status reference when using
+this paired raster edition: model.water_context.build automatically selects the
+status companion declared by that occurrence source. Keep all other overlays,
+the reporting boundary and HUC/utility relations.
+
+The status raster must travel with the occurrence raster and its original code
+dictionaries, plan, coverage and source companions. Importing only the occurrence
+GeoTIFF loses the information required to distinguish unknown inventory coverage
+from a digitally mapped cell without a published polygon. The complete
+source-entry.json and sources.json already express this pairing for Workspace
+import and whole-project backup.
+
+Preparation writes source-entry.json after completing the raster pair and
+retaining all original companions, then publishes sources.json for intake.
+If execution stops between those final writes, rerun the same prepare-nwi
+operation with the same parameters and directory. The completed-result path
+verifies the saved entry and every companion and repairs the missing
+sources.json. It reuses the completed rasters. An existing different manifest
+or changed completed source member remains an explicit conflict.
+
+After building the paired-raster context, retain its full archive and
+boundary-summaries.json together with the whole Workspace backup. Reopen that
+backup in an independent directory and open the saved context analysis. This
+preserves the actual collection/source IDs, both wetland layers, selected
+reporting and relationship boundaries, derived GIS files and their source
+editions for the receiving operator.
+
 ## Source references and observed interface
 
 - Existing collector and service contracts:
