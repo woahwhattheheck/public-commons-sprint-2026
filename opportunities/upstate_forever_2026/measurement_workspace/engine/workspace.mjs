@@ -1,3 +1,4 @@
+import {installLargeFileReads} from './large_intake.mjs';
 import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -266,3 +267,5 @@ export class MeasurementWorkspace {
     return this.summary();
   }
 }
+
+installLargeFileReads(MeasurementWorkspace);
