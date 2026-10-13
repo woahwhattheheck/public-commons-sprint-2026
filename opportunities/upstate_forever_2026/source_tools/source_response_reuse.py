@@ -113,9 +113,13 @@ def _provenance(directory, selection, rows):
         saved = read_json(path)
         if any(saved.get(key) != value for key, value in expected.items()):
             raise ValueError("The retained source continuation provenance differs")
+        metadata = {key: value for key, value in saved.items() if key != "previous_selection_body"}
+        atomic_json(directory / "continuation-metadata.json", metadata, immutable=True)
         return saved
     saved = {**expected, "created_at": now()}
     atomic_json(path, saved, immutable=True)
+    metadata = {key: value for key, value in saved.items() if key != "previous_selection_body"}
+    atomic_json(directory / "continuation-metadata.json", metadata, immutable=True)
     return saved
 
 
@@ -137,35 +141,77 @@ def locked(workspace, directory, selection):
         yield ResponseReuse(workspace, directory, rows, provenance) if rows else None
 
 
-def details(directory):
-    """Cheap current counters for operator polling and retained result reads."""
+def details(directory, *, state=None, states=None):
+    """Read compact polling metadata without loading a query WKT or provenance body."""
     directory = Path(directory)
-    path = directory / "continuation.json"
-    if not path.is_file():
-        return None
-    result = read_json(path)
+    metadata_path = directory / "continuation-metadata.json"
+    if metadata_path.is_file():
+        result = read_json(metadata_path)
+    else:
+        # Earlier editions embedded their complete predecessor selection in
+        # continuation.json. Their small state retains enough lineage for the
+        # operator, while that full document remains the export authority.
+        if state is None:
+            state_path = directory / "state.json"
+            state = read_json(state_path) if state_path.is_file() else {}
+        selection = state.get("selection", {})
+        previous = selection.get("continued_from")
+        if not previous:
+            return None
+        previous = identifier(previous)
+        previous_state = (states or {}).get(previous)
+        if previous_state is None:
+            previous_path = directory.parent / previous / "state.json"
+            previous_state = read_json(previous_path) if previous_path.is_file() else {}
+        result = {
+            "schema": SCHEMA, "operation_id": directory.name,
+            "previous_operation_id": previous,
+            "previous_implementation": previous_state.get("selection", {}).get("implementation"),
+            "current_implementation": selection.get("implementation"),
+            "donor_directory": (directory.parent / previous).relative_to(directory.parent.parent).as_posix(),
+            "request_sha256": digest(selection["request"]),
+            "query_domain_sha256": selection.get("query_domain_sha256"),
+        }
+    if result.get("schema") != SCHEMA or result.get("operation_id") != directory.name:
+        raise ValueError("The compact source continuation selects another acquisition")
     summary_path = directory / "continuation-reuse.json"
     summary = read_json(summary_path) if summary_path.is_file() else {}
-    result.pop("previous_selection_body", None)
     return {**result, **{key: summary.get(key, 0) for key in COUNTERS},
             "families": summary.get("families", {})}
 
 
-def children(root):
+def children(root, *, states=None):
+    """Derive successor links from one shared set of small acquisition states."""
     result = {}
     root = Path(root)
     if not root.exists():
         return result
-    for path in sorted(root.glob("*/continuation.json")):
-        if not re.fullmatch(r"[0-9a-f]{64}", path.parent.name):
+    if states is None:
+        states = {
+            path.parent.name: read_json(path) for path in sorted(root.glob("*/state.json"))
+            if re.fullmatch(r"[0-9a-f]{64}", path.parent.name)
+        }
+    for key, state in states.items():
+        previous = state.get("selection", {}).get("continued_from")
+        if previous:
+            result.setdefault(identifier(previous), []).append({
+                "id": key, "state": state.get("state", "prepared"),
+                "title": state.get("title"), "updated_at": state.get("updated_at"),
+            })
+    # A process can stop after publishing provenance and before its first state.
+    # New editions retain a small metadata record for that prepared successor.
+    for path in sorted(root.glob("*/continuation-metadata.json")):
+        key = path.parent.name
+        if key in states or not re.fullmatch(r"[0-9a-f]{64}", key):
             continue
         row = read_json(path)
-        state_path = path.parent / "state.json"
-        state = read_json(state_path) if state_path.is_file() else {}
-        result.setdefault(row["previous_operation_id"], []).append({
-            "id": path.parent.name, "state": state.get("state", "prepared"),
-            "title": state.get("title"), "updated_at": state.get("updated_at", row["created_at"]),
+        if row.get("schema") != SCHEMA or row.get("operation_id") != key:
+            raise ValueError("The compact source continuation selects another acquisition")
+        result.setdefault(identifier(row["previous_operation_id"]), []).append({
+            "id": key, "state": "prepared", "title": None, "updated_at": row.get("created_at"),
         })
+    for rows in result.values():
+        rows.sort(key=lambda row: row["id"])
     return result
 
 
