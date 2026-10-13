@@ -1,0 +1,30 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gis-source-selection",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/4783",
+  "extend_components": {
+    "gis-projects": {
+      "paths": [
+        "operator/web/gis-projects.mjs",
+        "operator/web/gis-projects.css",
+        "operator/extensions/gis-projects.json",
+        "operator/web/gis-working-selection.mjs",
+        "operator/GIS_WORKING_SELECTION.md",
+        "operator/gis-working-selection.schema.json",
+        "operator/gis_source_selection_receiving.py",
+        "operator/gis_source_selection_receiving.mjs",
+        "operator/GIS_SOURCE_SELECTION_RECEIVING.md",
+        "source_tools/receive_webmap_gis.py",
+        "source_tools/receive_gis_edition_review.py",
+        "source_tools/receive_gis_edition_review_browser.mjs",
+        "install_gis_projects.py",
+        "integration/component_fragments/gis-source-selection.json",
+        "AGENTS.md",
+        "CURRENT_OWNER_DIRECTION.md"
+      ]
+    }
+  },
+  "required_components": [
+    "gis-projects"
+  ]
+}
