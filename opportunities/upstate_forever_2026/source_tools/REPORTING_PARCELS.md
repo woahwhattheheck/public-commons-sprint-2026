@@ -268,3 +268,46 @@ The prepared inventory identity includes the attribute preparation revision, so
 an existing retained inventory remains immutable when these new native fields
 are added. Source collection binding and the county/provider/OID parcel key use
 the same published consumer contract.
+
+## Multicounty providers and exact source predicates
+
+A provider can carry an original ArcGIS `where` expression. It is part of the
+source-bound plan and must describe the actual selected county cohort. The
+maintained Aiken provider, `aiken-scfc-coastal-stewardship-copy`, uses
+`County = 'Aiken County'` against SCFC's thirteen-county Coastal layer. See
+[AIKEN_PARCEL_SOURCE.md](AIKEN_PARCEL_SOURCE.md) for the original map, native
+schema, source edition and complete acquisition route.
+
+The collector sends the same expression with every count, original-ID and
+exact-ID geometry request, including a provider-linear response when native
+true curves require one. It retains the expression in `selection.json`,
+`layer-capture.json`, capture progress, the native source manifest and prepared
+`input_sources` / `county-sources.csv` as `source_where`. The publisher's own
+`definitionExpression` remains a separate metadata value. Complete original
+response bodies, coordinates and field values remain retained.
+
+A provider that supplies `native_county_field` and `native_county_value`
+must supply both as nonempty strings. Preparation verifies that the published
+schema still contains the field and that every prepared source row has that
+exact native value before assigning a county/provider/OID key. Aiken therefore
+requires original `County == "Aiken County"`; the value is preserved without
+case folding or replacement. A mismatch stops that preparation with its
+provider and native OID. Native county field/value accompany prepared source
+provenance and the county-source CSV.
+
+Omitting `where` means `1=1`. Existing default captures and original request
+identities remain compatible. For a filtered provider, original capture
+restoration and reuse require the same URL, exact predicate text and unchanged
+original acquisition masks. An older unfiltered capture cannot become an
+Aiken-only capture through a catalogue edit. Use the maintained `run` command
+with the updated catalogue: it creates the matching source-bound plan and
+reuses only unchanged providers from earlier completed captures.
+
+On 2026-10-13 an original service query for OBJECTIDs 1, 101173 and 101174
+returned Aiken, Aiken and Bamberg respectively. The same exact-ID query with
+the Aiken predicate returned only 1 and 101173. A separate full native polygon
+response for OBJECTID 1 retained CRS 103146/latest6570 and parcel reference
+`036-08-07-001`. Those full original requests/responses and hashes are retained
+in the existing source operation. This check exercises the provider's actual
+county selection; the existing reporting-mask acquisition still determines
+which Aiken polygons enter a particular retained Workspace.
