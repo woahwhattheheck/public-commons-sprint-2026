@@ -1,0 +1,1703 @@
+{
+  "schema": "upstate.sources/v1",
+  "operation_id": "UPSTATE-EIGHTEENMILE-2023-OBSERVED-CONTEXT-20261013",
+  "title": "Eighteenmile Creek 2023 published monitoring study",
+  "entries": [
+    {
+      "id": "scdes-eighteenmile-study-2023-wgs84",
+      "title": "2023 Eighteenmile seasonal monitoring sites - WGS84",
+      "kind": "vector",
+      "path": "study_sites_wgs84.geojson",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "source_crs": "EPSG:4326",
+      "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
+      "bytes": 4456,
+      "metadata": {
+        "geometry_type": "Point",
+        "feature_count": 2,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "measurement_basis": "Published seasonal concentration summaries",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "sampling_depth_m": 0.3,
+        "coordinate_source": "Original Water Quality Portal station metadata",
+        "coordinate_datum": "WGS84",
+        "context_layer": true
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-nad83",
+      "title": "2023 Eighteenmile seasonal monitoring sites - NAD83",
+      "kind": "vector",
+      "path": "study_sites_nad83.geojson",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "source_crs": "EPSG:4269",
+      "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9",
+      "bytes": 6449,
+      "metadata": {
+        "geometry_type": "Point",
+        "feature_count": 3,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "measurement_basis": "Published seasonal concentration summaries",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "sampling_depth_m": 0.3,
+        "coordinate_source": "Original Water Quality Portal station metadata",
+        "coordinate_datum": "NAD83",
+        "context_layer": true
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-stations",
+      "title": "2023 Eighteenmile - Station metadata and original coordinate datums",
+      "kind": "table",
+      "path": "stations.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+      "bytes": 2246,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 5,
+        "record_key": "site_id",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-seasonal-summary",
+      "title": "2023 Eighteenmile - Seasonal concentration summaries",
+      "kind": "table",
+      "path": "seasonal_summaries.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+      "bytes": 8170,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 26,
+        "record_key": "site_id;stratum;parameter",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-surface-ranges",
+      "title": "2023 Eighteenmile - Surface field ranges",
+      "kind": "table",
+      "path": "surface_ranges.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+      "bytes": 1234,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 5,
+        "record_key": "site_id",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-continuous-do",
+      "title": "2023 Eighteenmile - Monthly dissolved oxygen summaries",
+      "kind": "table",
+      "path": "continuous_monthly_do.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+      "bytes": 2338,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 14,
+        "record_key": "site_id;year;month",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-continuous-ph",
+      "title": "2023 Eighteenmile - Monthly pH summaries",
+      "kind": "table",
+      "path": "continuous_monthly_ph.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+      "bytes": 2166,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 14,
+        "record_key": "site_id;year;month",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+          "bytes": 769
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-study-2023-reported-permits",
+      "title": "2023 Eighteenmile - Permits named by the published study",
+      "kind": "table",
+      "path": "reported_npdes_permits.csv",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2",
+      "bytes": 769,
+      "metadata": {
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "row_count": 4,
+        "record_key": "npdes_permit_id",
+        "period_start": "2023-04-05",
+        "period_end": "2023-10-17",
+        "units": "Original units retained in column names or row fields",
+        "source_tables": "Original table and PDF page retained on each numeric row"
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8",
+          "bytes": 2697
+        },
+        {
+          "path": "stations.csv",
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4",
+          "bytes": 2246
+        },
+        {
+          "path": "stations.json",
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e",
+          "bytes": 4331
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+          "bytes": 8170
+        },
+        {
+          "path": "surface_ranges.csv",
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+          "bytes": 1234
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+          "bytes": 2338
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+          "bytes": 2166
+        },
+        {
+          "path": "source_notes.json",
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb",
+          "bytes": 3408
+        },
+        {
+          "path": "README.md",
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d",
+          "bytes": 2360
+        },
+        {
+          "path": "map-layer-capture.json",
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d",
+          "bytes": 3819
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-measurements",
+      "title": "2023 Eighteenmile original WQP - measurements",
+      "kind": "table",
+      "path": "wqp/derived/measurements.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+      "bytes": 863082,
+      "metadata": {
+        "row_count": 920,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-activities",
+      "title": "2023 Eighteenmile original WQP - activities",
+      "kind": "table",
+      "path": "wqp/derived/activities.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+      "bytes": 181411,
+      "metadata": {
+        "row_count": 225,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-coverage",
+      "title": "2023 Eighteenmile original WQP - coverage",
+      "kind": "table",
+      "path": "wqp/derived/coverage.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+      "bytes": 92908,
+      "metadata": {
+        "row_count": 167,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-calendar",
+      "title": "2023 Eighteenmile original WQP - calendar",
+      "kind": "table",
+      "path": "wqp/derived/calendar.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+      "bytes": 6430,
+      "metadata": {
+        "row_count": 15,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-selected-chlorophyll",
+      "title": "2023 Eighteenmile original WQP - selected chlorophyll",
+      "kind": "table",
+      "path": "wqp/derived/selected_chlorophyll.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+      "bytes": 98672,
+      "metadata": {
+        "row_count": 75,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-chlorophyll-summary",
+      "title": "2023 Eighteenmile original WQP - chlorophyll summary",
+      "kind": "table",
+      "path": "wqp/derived/chlorophyll_summary.csv",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+      "bytes": 10709,
+      "metadata": {
+        "row_count": 5,
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "period_start": "2023-01-01",
+        "period_end": "2023-12-31",
+        "source_capture_date": "2026-10-13",
+        "source_basis": "Original agency WQP results; per-record source identity retained",
+        "original_result_rows": 920,
+        "units": "Original per-row units and detection qualifiers retained"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-observed-wgs84",
+      "title": "2023 Eighteenmile measured chlorophyll - WGS84",
+      "kind": "vector",
+      "path": "wqp/observed_chlorophyll_wgs84.geojson",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "source_crs": "EPSG:4326",
+      "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+      "bytes": 4172,
+      "metadata": {
+        "geometry_type": "Point",
+        "feature_count": 2,
+        "context_layer": true,
+        "source_capture_date": "2026-10-13",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "measurement_basis": "75 original CHLA observations; explicit project/calendar/displayed-clock cohort selection",
+        "sampling_depth_m": 0.3
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+          "bytes": 6096
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-wqp-observed-nad83",
+      "title": "2023 Eighteenmile measured chlorophyll - NAD83",
+      "kind": "vector",
+      "path": "wqp/observed_chlorophyll_nad83.geojson",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "source_crs": "EPSG:4269",
+      "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7",
+      "bytes": 6096,
+      "metadata": {
+        "geometry_type": "Point",
+        "feature_count": 3,
+        "context_layer": true,
+        "source_capture_date": "2026-10-13",
+        "study_id": "scdes-eighteenmile-lake-2023",
+        "measurement_basis": "75 original CHLA observations; explicit project/calendar/displayed-clock cohort selection",
+        "sampling_depth_m": 0.3
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4",
+          "bytes": 71625
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3",
+          "bytes": 11724
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541",
+          "bytes": 71632
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b",
+          "bytes": 92801
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4",
+          "bytes": 92708
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+          "bytes": 16829
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+          "bytes": 17299
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+          "bytes": 16792
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f",
+          "bytes": 1754
+        },
+        {
+          "path": "wqp/capture.json",
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5",
+          "bytes": 6595
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f",
+          "bytes": 12817
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc",
+          "bytes": 1230
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a",
+          "bytes": 863082
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d",
+          "bytes": 181411
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633",
+          "bytes": 92908
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01",
+          "bytes": 6430
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+          "bytes": 98672
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70",
+          "bytes": 10709
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916",
+          "bytes": 2993
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda",
+          "bytes": 4172
+        },
+        {
+          "path": "wqp/README.md",
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa",
+          "bytes": 3362
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-study-dates-observed-flow-2023",
+      "title": "Same-date and antecedent observed Eighteenmile flow at original study dates",
+      "kind": "table",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "wqp/study_flow_dates.csv",
+      "bytes": 27050,
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67",
+      "metadata": {
+        "row_count": 16,
+        "date_field": "sampling_date",
+        "same_date_discharge_field": "same_date_mean_cfs",
+        "flow_unit": "ft3/s",
+        "primary_hydrology_edition": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2"
+      },
+      "companions": [
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "wqp/flow_context.mjs",
+          "bytes": 4678,
+          "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+        },
+        {
+          "path": "wqp/build_flow_context.mjs",
+          "bytes": 2495,
+          "sha256": "f7504dd68a817b929597034c519c10fa931cf0aa10b60b1be759374362efb68f"
+        },
+        {
+          "path": "wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        },
+        {
+          "path": "wqp/FLOW_CONTEXT_README.md",
+          "bytes": 3553,
+          "sha256": "e1f7884d510e1620772e4e80a260ff974f7eeed682372a42c5b27c1bc031c2b6"
+        }
+      ]
+    }
+  ]
+}

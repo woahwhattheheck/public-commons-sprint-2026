@@ -133,3 +133,11 @@ Native annual diffuse export is compared with the empirical annual target while 
 - `chattooga_retrospective.calibration_plan(...)`: actual completed native runs to the existing annual-reference analysis.
 
 All generated source entries use the existing `upstate.sources/v1` manifest. No parallel observation, model or calibration engine is introduced.
+
+## Reading the retained catchment without Fiona
+
+The source planners read an unfiltered original GeoJSON FeatureCollection directly with Shapely and PyProj. They preserve the complete polygon geometry, original feature IDs (or source feature positions), and an explicitly named source CRS; RFC 7946 GeoJSON without a CRS uses longitude/latitude in WGS 84. Both input plans retain the same projection to EPSG:5070 and the same requested metre buffer. The reader metadata is included in each plan identity. Explicit layer or property filters and other vector formats continue through the maintained vector reader. This lets a small source-intake runtime prepare the original Chattooga plans without installing another vector driver.
+
+The actual original-reference import completed in the Chattooga receiving workspace before this change; its next source-planning step exposed the missing Fiona dependency. Replaying the same source-intake operation reuses that admitted observation and source collection, then writes the two original request plans.
+
+GeoJSON coordinate reference: https://www.rfc-editor.org/rfc/rfc7946#section-4

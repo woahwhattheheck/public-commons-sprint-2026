@@ -26,13 +26,31 @@ export async function documentCompositionExample(kind='orders',provider='mintpdf
 }
 export async function documentCompositionExtension(controller){
   if(!controller||typeof controller.start!=='function'||typeof controller.download!=='function'||
-    typeof controller.close!=='function')throw documentError('DOCUMENT_COMPOSITION_CONTROLLER_REQUIRED');
+    typeof controller.close!=='function'||typeof controller.bundles?.start!=='function')throw documentError('DOCUMENT_COMPOSITION_CONTROLLER_REQUIRED');
   const declared=await readBrowserAssets(new URL('./composition-browser-assets.json',import.meta.url));
   const additionalAssets=await Promise.all([...declared].map(async([route,{url,type}])=>
     ({route,type,bytes:await readFile(url)})));
   async function authenticatedRoute({request,url,send,body,signal,registerDownload}){
     if(!url.pathname.startsWith('/api/document-composition/'))return false;
     const path=url.pathname.slice('/api/document-composition/'.length),method=request.method;
+    if(path.startsWith('bundles/')){
+      const action=path.slice('bundles/'.length),bundles=controller.bundles;
+      if(method==='GET'){
+        if(action==='state'){send({...bundles.status(),assemblies:await bundles.list({
+          offset:number(url,'offset',0),limit:number(url,'limit',20)})});return true;}
+        if(action==='assembly'){send(await bundles.get({id:url.searchParams.get('id'),
+          ...(url.searchParams.has('sourceSha256')?{sourceSha256:url.searchParams.get('sourceSha256')}:{ }),signal}));return true;}
+        if(action==='operation'){send(bundles.operation({operationId:url.searchParams.get('operationId')}));return true;}
+      }
+      if(method==='POST'){
+        if(['stage','restore','materialize','prepare','run','receive','export'].includes(action)){
+          send(bundles.start(action,await body(action==='stage'||action==='restore'?40*1048576:2*1048576)),202);return true;}
+        if(action==='cancel'){send(await bundles.cancel(await body()),202);return true;}
+        if(action==='download'){
+          const input=await body();send(await registerDownload(downloadSignal=>bundles.download(input,{signal:downloadSignal})));return true;}
+      }
+      throw Object.assign(documentError('DOCUMENT_ASSEMBLY_ROUTE_NOT_FOUND'),{status:404});
+    }
     if(method==='GET'){
       if(path==='state'){
         send({...controller.status(),compositions:await controller.list({

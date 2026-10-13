@@ -2,7 +2,7 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const model = {state:null,schema:null,view:"overview",source:null,reconciliation:null,correction:null,pending:new Map(),busy:false};
-  const sections = [["overview","Overview"],["sources","Sources"],["rounds","Rounds"],["mappings","Mappings & evidence"],["reconciliations","Reconciliations"],["corrections","Corrections"],["catalogue","All records"],["handover","Handover & history"]];
+  const sections = [["overview","Overview"],["sources","Sources"],["rounds","Rounds"],["mappings","Mappings & evidence"],["reconciliations","Reconciliations"],["corrections","Corrections"],["catalogue","All records"],["cases","Cases & cutover"],["handover","Handover & history"]];
   const roles = ["source_inventory","target_inventory","migration_items","migration_failures","summary","structure","purview","mapping","attachment"];
   const checks = ["presence","path","size","hash","principals","label","classification_order"];
   const statuses = ["MATCH","DIFFERENT","UNKNOWN","AMBIGUOUS","MISSING","UNEXPECTED"];
@@ -22,6 +22,7 @@
     children.flat(Infinity).forEach(child => {
       if(child !== null && child !== undefined && child !== false) node.append(child instanceof Node ? child : document.createTextNode(String(child)));
     });
+    if(model.busy && tag==="button"){node.dataset.preDisabled=node.disabled?"1":"0";node.disabled=true;}
     return node;
   }
   const human = value => String(value || "").replaceAll("_"," ").replaceAll("."," / ");
@@ -120,22 +121,27 @@
   async function run(action) {
     if(model.busy) return;
     model.busy=true;document.body.dataset.busy="true";
+    const frozen=[...document.querySelectorAll("#main,#navigation,.operator,#record-body")].map(node=>[node,node.inert]);
+    frozen.forEach(([node])=>{node.inert=true;});
     document.querySelectorAll("button").forEach(node=>{node.dataset.preDisabled=node.disabled?"1":"0";node.disabled=true;});
     try{await action();}
     catch(error) {setNotice((error.code?error.code+": ":"")+error.message+" Changes are only complete when their retained operation reports success.","error");}
     finally{
       model.busy=false;document.body.dataset.busy="false";
+      frozen.forEach(([node,previous])=>{node.inert=previous;});
       document.querySelectorAll("button").forEach(node=>{if(node.dataset.preDisabled!==undefined){node.disabled=node.dataset.preDisabled==="1";delete node.dataset.preDisabled;}});
     }
   }
-  async function mutate(operation,payload) {
+  async function mutate(operation,payload,lifecycle={}) {
     const actor=$("#actor").value.trim();
     if(!actor){$("#actor").focus();throw new Error("Enter the operator name to record with this change.");}
     if(!crypto.randomUUID) throw new Error("Open this local workbench on localhost so operation IDs can be created securely.");
     const request={operation,payload:{...payload,actor,expected_revision:model.state.project.revision,operation_id:"op-"+crypto.randomUUID()}};
+    if(new Blob([JSON.stringify(request)]).size>2*1024*1024)throw new Error("This command exceeds 2 MiB. Use complete file intake for bulk source rows and mappings.");
     model.pending.set(request.payload.operation_id,request);savePending();
     setNotice("Applying "+human(operation)+" to revision "+request.payload.expected_revision+".");
     try {
+      if(lifecycle.prepared) await lifecycle.prepared(request);
       const result=await api("/api/operations",request);
       model.pending.delete(request.payload.operation_id);savePending();
       await refresh(false);
@@ -165,8 +171,11 @@
   function render() {
     if(!model.state)return;
     $("#navigation").replaceChildren(...sections.map(([id,label])=>el("button",{type:"button","aria-current":model.view===id?"page":null,onclick:()=>go(id)},label)));
-    const renderers={overview:overview,sources:sources,rounds:rounds,mappings:mappings,reconciliations:reconciliations,corrections:corrections,catalogue:catalogue,handover:handover};
+    const renderers={overview:overview,sources:sources,rounds:rounds,mappings:mappings,reconciliations:reconciliations,corrections:corrections,catalogue:catalogue,cases:caseDesk,handover:handover};
     $("#main").replaceChildren(renderers[model.view]());
+  }
+  function caseDesk() {
+    return window.MigrationCases.create({model,el,input,area,select,field,button,linkButton,panel,heading,note,details,table,badge,jsonRecord,read,run,setNotice,api,mutate,savePending,refresh,render,go,pageControls});
   }
   function recentColumns(kind,collection) {
     return [

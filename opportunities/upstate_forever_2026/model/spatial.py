@@ -237,8 +237,8 @@ class SpatialReview:
             for path in sorted((ws.root / "comparisons").glob("*/comparison.json")):
                 comparison = read_json(path)
                 ids = [comparison["baseline_run_id"]] + [a["run_id"] for a in comparison["alternatives"]]
-                if comparison["id"] != digest({"runs": ids, "direction": DIRECTION}) or comparison.get("direction") != DIRECTION:
-                    raise ValueError("Original run comparison selection changed")
+                from .native_versions import validate_run_comparison
+                validate_run_comparison(ws, comparison, expected_id=path.parent.name)
                 for alternative in comparison["alternatives"]:
                     for role, item in alternative["artifacts"].items():
                         add("comparison", comparison["id"], alternative["run_id"] + "/" + role, item,
@@ -364,7 +364,17 @@ class SpatialReview:
                 raise ValueError("The original selected source edition changed")
             current = tuple((str(p), _signature(p)) for p in originals)
             if current != original_signatures:
-                raise ValueError("Original source changed during native receiving")
+                # Creating a source-view hardlink updates the original inode's
+                # ctime without changing its bytes. Verify that narrow case
+                # against the retained digest, then cache the post-link state.
+                for body, (name, before), (_, after) in zip(bodies, original_signatures, current):
+                    if before == after:
+                        continue
+                    if before[:4] != after[:4]:
+                        raise ValueError("Original source changed during native receiving")
+                    self._verify_file(self.workspace.root, {
+                        "path": body["object"], "sha256": body["sha256"], "bytes": body["bytes"]})
+                current = tuple((str(p), _signature(p)) for p in originals)
             view_root = self.workspace.root / "source-views" / collection / digest(source_id)
             views = tuple((str(view_root / body.get("view_path", body["filename"])),
                            _signature(view_root / body.get("view_path", body["filename"]))) for body in bodies)
@@ -377,8 +387,25 @@ class SpatialReview:
         try:
             yield path, signatures
         finally:
-            if any(_signature(name) != expected for name, expected in signatures):
-                raise ValueError("Original spatial source changed during this read")
+            observed = tuple((name, _signature(name)) for name, _ in signatures)
+            if observed != signatures:
+                if any(actual[:4] != expected[:4]
+                       for (_, expected), (_, actual) in zip(signatures, observed)):
+                    raise ValueError("Original spatial source changed during this read")
+                # A new hardlink changes ctime without changing source bytes.
+                # Verify the files actually read, without rematerializing a
+                # copied view that may have changed during this read.
+                if record["source"] is None:
+                    self._verify_file(record["scope"], record["file"])
+                else:
+                    collection, source_id, entry = record["source"]
+                    view_root = self.workspace.root / "source-views" / collection / digest(source_id)
+                    for body in [entry["body"]] + entry.get("companions", []):
+                        self._verify_file(self.workspace.root, {
+                            "path": body["object"], "sha256": body["sha256"], "bytes": body["bytes"]})
+                        self._verify_file(view_root, {
+                            "path": body.get("view_path", body["filename"]),
+                            "sha256": body["sha256"], "bytes": body["bytes"]})
 
     @staticmethod
     def _units(source, record, band):

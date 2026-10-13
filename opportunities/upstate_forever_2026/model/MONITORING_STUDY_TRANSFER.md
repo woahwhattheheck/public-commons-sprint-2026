@@ -28,6 +28,8 @@ With **Include related results** enabled, an explicitly selected network include
 
 Disabling related results retains the dependencies necessary to reopen the selected original records. It does not discard campaign parent revisions, field history, source companions, or the chosen context's historical revision.
 
+A retained partial budget checkpoint records the completed budgets. To continue its pending budgets, repeat the exact original frontier request with its original configuration and budget list; the checkpoint does not invent an unsubmitted or unretained pending roster. A completed saved comparison retains every original plan and reported budget row.
+
 All records keep their original content-addressed IDs. A saved source object is retained once even when several designs or campaign revisions use it. There is no new Monitoring solver, fieldwork queue, or archive format.
 
 ## Capture and continuation
@@ -71,3 +73,9 @@ Receipt fields `selected_study_verification` and `continued_study_verification` 
 The implementation is additive `model/monitoring_study_transfer.py` with narrow joins in the existing selected-study model and browser. The Monitoring adapter mounts `monitoring-study-transfer.mjs` alongside its current report and fieldwork controls. The original observed-context controller exposes only the selected saved record's IDs/title for that handoff.
 
 The current component catalogue includes the complete selected-study and Monitoring source dependencies. Preserve current report-lineage, Decision, native-run adoption, delivery and investigation snapshot joins when composing this shared source.
+
+## Cold receiving and completed network reports
+
+Original report inspection may create missing source-view hardlinks after a cold restore. The typed transfer permits only that exact declared-source inode transition: source hashes, device, inode, size and mtime must remain unchanged, and a changed ctime requires an increased link count plus the original full body hash. Every other captured file remains under the original strict signature check. This same verification runs during selection and after archive receiving. Selecting a network also discovers completed reports attached directly to its saved designs; historical networks reached through another campaign remain dependency-only.
+
+An explicitly selected saved scientific report edition can follow this producer through `include_source`: its declared source ID, role, recipe kind, project and producer URN must agree with the original report record. Same-project reports retain their editable history. A foreign report keeps its contained source objects and original project provenance without borrowing local records.

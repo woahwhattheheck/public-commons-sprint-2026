@@ -12,7 +12,7 @@ from .implementation_schema import (
 
 TASK_FIELDS = (
     "id", "title", "candidate_id", "phase", "assignee", "status", "progress_pct",
-    "duration_days", "start_not_before", "depends_on", "start", "finish_exclusive",
+    "duration_days", "start_not_before", "source_due_date", "briefing_entry", "depends_on", "start", "finish_exclusive",
     "last_work_date", "schedule_state", "overdue", "issue_codes",
     "budget_minor", "commitment_minor", "actual_minor", "notes", "evidence_refs",
 )
@@ -285,6 +285,35 @@ def _economic_candidates(plan) -> str:
     return "<section><h2>Selected economic scenarios</h2>" + "".join(parts) + "</section>"
 
 
+
+def _briefing_followup(plan):
+    history = plan.get("briefing_imports", [])
+    if not history:
+        return ""
+    rows = []
+    for task in plan["tasks"]:
+        source = task.get("briefing_entry", {})
+        if not source:
+            continue
+        context = source.get("source_context", {})
+        binding = context.get("report_binding", {})
+        slide = context.get("slide", {})
+        rows.append((task["id"], task["title"], task["assignee"], task["status"],
+                     task.get("source_due_date"), source.get("kind"),
+                     binding.get("title"), slide.get("title"), slide.get("id"),
+                     binding.get("report_sha256"), source.get("source_link_id")))
+    return ("<section><h2>Report review follow-up</h2><p>"
+            "These tasks retain their original meeting entry and report page. "
+            "Source due dates are deadlines recorded in the notes; they do not set "
+            "working durations or move the scientific report's dates. Current task "
+            "owners and status include subsequent working-plan edits.</p>" +
+            _table(("Task ID", "Work", "Current owner", "Current status", "Source due date",
+                    "Original entry kind", "Original report", "Report page", "Page ID",
+                    "Original report SHA256", "Original notes source"),
+                   rows) +
+            _details("Received meetings, preserved local differences and original source identities",
+                     history) + "</section>")
+
 def render_report_html(document: dict, as_of: str | None = None) -> str:
     plan = validate_plan(document)
     summary = summarize_plan(plan, as_of)
@@ -384,6 +413,7 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
     sections.append(_details("Observation provenance and original fields", plan["observations"]))
     sections.append("</section>")
     sections.append(_economic_candidates(plan))
+    sections.append(_briefing_followup(plan))
     sections.append("<section><h2>Frozen source selections</h2>")
     for candidate in plan["candidates"]:
         sections.append(_details(

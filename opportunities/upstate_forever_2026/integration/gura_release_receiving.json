@@ -1,0 +1,52 @@
+{
+  "schema": "upstate.source-composition/v1",
+  "operation_id": "UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012",
+  "source": {
+    "bytes": 39318,
+    "sha256": "3952c30cd34dbb3c471d737a5875830c6a70b763b302c886c9f6e0e68e625d67",
+    "page_id": "page_970b4d1253208191b732c9a82221d705",
+    "block_id": "915bfe7b-f271-4326-83d1-826ba265f049"
+  },
+  "published_source_path": "source_tools/receive_gura.py",
+  "current_source_path": "source_tools/receive_gura_release.py",
+  "original_receiver_path": "source_tools/receive_gura.py",
+  "core_edits": [
+    {
+      "path": "model/workspace.py",
+      "label": "Admit the explicitly selected original model domain without expansion",
+      "before": "        if not 0 < buffer_m < 1000000:\n            raise ValueError(\"Specify the actual positive model-context buffer in metres\")\n",
+      "after": "        if not 0 <= buffer_m < 1000000:\n            raise ValueError(\"Specify the actual nonnegative model-context buffer in metres\")\n"
+    },
+    {
+      "path": "model/workspace.py",
+      "label": "Preserve original source geometry for an explicit zero buffer",
+      "before": "        model_geometry = model_core.buffer(buffer_m)\n",
+      "after": "        model_geometry = model_core if buffer_m == 0 else model_core.buffer(buffer_m)\n"
+    },
+    {
+      "path": "operator/web/app.mjs",
+      "label": "Expose the retained source-domain option in the actual native grid form",
+      "before": " field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min=\"0.01\" max=\"999999\" step=\"any\"'),'Metres. The model domain must cover the selected reporting area.')+\n",
+      "after": " field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min=\"0\" max=\"999999\" step=\"any\"'),'Metres. Use zero to retain the original source model domain without expansion. The model domain must cover the selected reporting area.')+\n"
+    }
+  ],
+  "grid_reference": {
+    "source_file": "model/rasters.py",
+    "sha256": "c7c24b0f138871bfdfa565d5c080e09733a7d7404e4730c1d29b3f6d1a9a20ed",
+    "behavior": "Exact selected resolution anchored to the original reference upper-left coordinate"
+  },
+  "source_inputs": [
+    {
+      "name": "NDR.zip",
+      "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/NDR.zip",
+      "bytes": 701988,
+      "sha256": "df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4d4c8af8bea53c6c7d"
+    },
+    {
+      "name": "SDR.zip",
+      "url": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/SDR.zip",
+      "bytes": 726334,
+      "sha256": "34351a1305d8e6258c2d566917cfeab5f152096e930ef5b0a834968146bdc779"
+    }
+  ]
+}

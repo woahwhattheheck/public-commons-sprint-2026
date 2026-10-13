@@ -26,7 +26,8 @@ import {
 export const DOCUMENT_SERVICE_SELECTION_SCHEMA = 'stellar-forge.document-service-selection.v1';
 export const DOCUMENT_SERVICE_SOURCE = 'products/document-merchant';
 export const DOCUMENT_SERVICE_SOURCE_FILES = Object.freeze([
-  'assembly.mjs','assembly-archive.mjs','assembly-cli.mjs','examples/ordered-pdfs.json','cli.mjs', 'launch.mjs', 'setup.mjs', 'contracts.mjs', 'renderer.mjs',
+  'commissioning.mjs','commissioning-facilitator.mjs','commissioning-cli.mjs','commissioning-application.mjs','application-provider.mjs',
+  'assembly.mjs','assembly-archive.mjs','assembly-cli.mjs','assembly-workspace.mjs','composition-public/pdf-bundles.mjs','examples/ordered-pdfs.json','cli.mjs', 'launch.mjs', 'setup.mjs', 'contracts.mjs', 'renderer.mjs',
   'batch.mjs', 'batch-cli.mjs', 'batch-render.mjs', 'composition.mjs', 'composition-cli.mjs',
   'composition-service.mjs',
   'composition-workspace.mjs',
@@ -83,7 +84,7 @@ export function normalizeDocumentServiceOptions(value = {}) {
   return {directory, configurationFile, service: native};
 }
 
-async function sourceFiles() {
+export async function readDocumentServiceSources() {
   const files = [];
   requireDocument(await realpath(ROOT) === ROOT && await realpath(JOB_SERVICE_RUNTIME) === JOB_SERVICE_RUNTIME,
     'DOCUMENT_SERVICE_SOURCE_CHANGED', 'Use the selected installed document and original Jobs source.');
@@ -145,7 +146,7 @@ export async function readDocumentServiceSelection(rawOptions = {}) {
       providerConfig: review.providerConfig, customerSetup: review.customerSetup,
       files: review.files
     },
-    sourceFiles: await sourceFiles(), optionalFiles,
+    sourceFiles: await readDocumentServiceSources(), optionalFiles,
     summary: {
       name: compiled.serviceName, publicOrigin: compiled.publicOrigin,
       provider: review.request.provider, formats: review.request.formats,

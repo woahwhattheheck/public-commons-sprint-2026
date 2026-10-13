@@ -186,7 +186,7 @@ The selected working profile remains the actual saved profile identified in the 
 
 Plans are immutable Workspace items under `calibration-plans`. Results are immutable items under `calibrations`. Original comparison IDs and per-candidate progress live under `calibration-analysis/<plan-id>/progress.json`.
 
-A matching original observation comparison is reused when its run, observation edition, catchment selection, source hash and current comparison version match. A partially selected native run also requires the comparison's recorded `model_scope.selected_models` to match its original scope. Historical combined-model comparisons remain reusable. Otherwise the maintained observation comparison aggregates the selected original native outputs. An interruption resumes the same plan and its completed comparisons. A complete saved analysis is returned directly on reopening.
+A matching original observation comparison is reused when its run, observation edition, catchment selection, source hash, current version-6 measurement/stream semantics, selected model scope and exact original export/stream/argument/module descriptors match. A completed current checkpoint also binds its candidate execution fingerprint, including an all-excluded comparison that contains no native raster row. Older comparison records remain retained; an unfinished analysis replaces its obsolete checkpoint link through the maintained current comparison engine. An interruption then resumes the same plan and its compatible completed comparisons. A complete saved analysis is returned directly on reopening.
 
 Earlier version-1 calibration plans remain immutable and keep their IDs. When analysis resumes an earlier plan, it checks the retained original native selection and enriches an in-memory copy of each candidate with the current model/output scope. The saved selection, original reference units, normalization and holdout partition stay attached to that same plan.
 
@@ -198,7 +198,7 @@ The operator's calibration workspace provides the same catalogue, preview, saved
 
 This module uses the maintained selected-model core's `model.model_selection.validate_completed_run` and `model.common.output_models`. Its companion [selected-model operations guide](SELECTED_MODEL_OPERATIONS.md) describes the original native run selection and stage reuse. Partial model selections stay explicit; the historical combined-model run identity continues to omit the optional `models` field.
 
-The unchanged `Workspace.compare_observations(run_id, observation_id, catchments)` API reads only the models selected for that run. Its version-3 comparison retains the entire original observation edition, including rows whose pollutant model is omitted, and gives those rows their original exclusions. An NDR-only analysis therefore uses the admitted nitrogen/phosphorus rows of a mixed edition through the same native comparison. Calibration narrows the declared objective and retains source exclusions in its own plan.
+The unchanged `Workspace.compare_observations(run_id, observation_id, catchments)` API reads only the models selected for that run. Its current version-6 comparison retains the entire original observation edition, including rows whose pollutant model is omitted, and gives those rows their original exclusions. An NDR-only analysis therefore uses the admitted nitrogen/phosphorus rows of a mixed edition through the same native comparison. Calibration narrows the declared objective and retains source exclusions in its own plan.
 
 | Native candidate selection | Available calibration parameters |
 | --- | --- |
@@ -239,3 +239,40 @@ All five functions take the maintained `model.workspace.Workspace`. `prepare` re
 The selection's required fields are `schema`, `title`, `candidate_run_ids`, `observation_id` and `catchments`. Its optional fields are `reference_run_id`, `observation_record_ids`, `catchment_groups`, `calibration_group_ids`, `validation_group_ids`, `objective`, `delivered_external_loads`, `temporal_weighting`, `leave_group_out` and `notes`.
 
 The module's scope is original annual-load parameter evaluation and selection. The spatial review, general experiment diagnostics, native simulation, seven-map delivery and customer review keep their existing source interfaces.
+
+
+## Producing native executions and physical load units
+
+Every new candidate snapshot records the maintained `model.native_versions` result for each selected model. A completed stage's runtime version takes precedence over the observed run-level version; the original requested version is the labeled legacy fallback. Requested and producing declarations remain separate. The catalogue exposes the original version labels, output mass convention and exact file descriptors even when a completed candidate has an execution issue.
+
+Before reading catchment rasters, the positive-weight objective resolves one compatible per-model version cohort. All compared NDR executions must have the same resolved NDR version, and all compared SDR executions must have the same resolved SDR version. NDR and SDR may retain different versions from one another when the same model's version is consistent across candidates. An objective using only N/P does not require equality of the candidates' unused SDR versions. All native models selected in a run still require a supported physical output convention because the shared observation engine opens those selected stages.
+
+The maintained observation reducer multiplies each original export cell value by its affine cell area in hectares. NatCap's original [NDR](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html) and [SDR](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html) guides both identify the conversion of their output rasters to values per hectare in InVEST 3.15.0. This integration reviews that physical convention for the 3.15–3.20 families. Earlier per-pixel exports cannot enter this per-hectare reduction, even if their run requested a newer version. A requested legacy fallback remains visibly unobserved execution provenance.
+
+| Native export | Retained raster convention | Aggregated native quantity |
+| --- | --- | --- |
+| NDR n_total_export | kg/ha/year | kg/year |
+| NDR p_surface_export | kg/ha/year | kg/year |
+| SDR sed_export | metric_tonnes/ha/year | metric_tonnes/year |
+
+The execution extension does not change any original raster, annual-load observation, scoring formula or pixel support. It selects the same-stage stream raster from the exact retained native arguments, including SDR stream_and_drainage when its drainage input was used. Files are verified against their original byte hashes before analysis; the plan/report preserves their descriptors and the per-model runtime/reuse origin.
+
+### Additive retained fields
+
+Candidate and catalogue entries include:
+
+- `native_versions` and `native_version_labels`: exact maintained per-model declarations and readable provenance.
+- `output_mass_basis`: parameter, native output, raster units, annual units, reduction and original guide.
+- `native_outputs`: original export, same-stage stream, arguments and native module descriptors.
+- `execution_fingerprint`: identity of those retained producing stages, original selection and physical contract.
+- Catalogue `execution_issues` and `calibration_eligible`: concrete incompatible or incomplete original-output reasons, with completed source candidates still visible.
+
+New plans and results include `native_execution`, schema `upstate.calibration-native-execution/v1`. Its `models`, `versions`, `runs` and policy come from the maintained cohort resolver. `rows` contains one original run/parameter row with producing-stage, requested and observed version fields, reuse origin, physical units and original output hashes. The complete snapshot is retained with its fingerprint and comparison schema version.
+
+Earlier immutable plans and completed reports keep their original identities. An unfinished earlier plan is enriched in memory from its exact original runs; its new progress checkpoint is bound to that execution fingerprint. Changed producing stages or original file identities require a new explicit plan. A saved completed report remains its original scientific edition. New consumer presentation editions add the richer execution tables without rewriting earlier dossiers.
+
+### Current observation support and restart behavior
+
+Preview uses the same `observation_support.comparison_issues` as the current comparison engine. Source quantities that represent a facility discharge, a concentration, an incompatible species or incomplete annual support retain their original context and readable exclusion before spatial preparation. The admitted annual observation source itself is unchanged.
+
+An interrupted calibration created by the older implementation may retain a version-3 comparison or an unstamped version-6 comparison. The current continuation checks original source and output bindings; compatible current comparisons are adopted, and older/incompatible links are recalculated through the current engine. Saved original comparison items are preserved. No native model is dispatched by this recovery.

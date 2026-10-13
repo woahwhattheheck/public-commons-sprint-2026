@@ -36,6 +36,26 @@ python -B -m model.cli --workspace /path/to/existing-workspace source-import /ab
 
 Continue with the same native 164 build command above. The existing Workspace supplies its original 217-HUC geometry.
 
+## Start with a new Workspace and the original model domain
+
+The original watershed archive supplies the 217-HUC geometry and all 36 original companions. Use the already retained `dbc61-upstate-model-domain-20261012.zip` from the existing source operation, or materialize the same Library item `libfile_cce17e762e948191be1d226b1dbce00d` (file `file_00000000982081f4a357dcf78d83f289`). Its complete original ZIP is 8,800,689 bytes, SHA-256 `1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04`.
+
+Extract the complete original archive into a new directory. Keep its original `sources.json` and every companion together:
+
+```sh
+node source_tools/source_bank_cli.mjs extract /path/to/dbc61-upstate-model-domain-20261012.zip /absolute/new/original217 --sha256 1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04
+```
+
+The maintained station-study command can create the Workspace, import both complete original source editions, build the native study and reopen its portable result in a second Workspace in one invocation:
+
+```sh
+python -B -m model.station_study --workspace /absolute/new/station-workspace --create-workspace --source-manifest /absolute/new/original217/sources.json --source-manifest source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json --build --study-id upper-savannah-assessments-all-editions-164 --receive-workspace /absolute/new/received-station-workspace --create-receiving-workspace
+```
+
+Run from the complete application's directory using its equipped GIS interpreter. The original source ID remains `upstate-wbd-upstream-domain-20261012`; native HUC12 strings, object IDs, rings and EPSG:3857 coordinates remain in the original source. Its `model-domain.esri.json.gz` is 3,732,669 bytes, SHA-256 `6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9`, and decodes to 11,220,042 original bytes with the domain hash above. The study verifies the decoded identity before selecting its watersheds.
+
+For source import and editable selection preparation before native geometry processing, omit `--build`, `--receive-workspace` and `--create-receiving-workspace`. The same command prints the actual prepared selection and any missing source requirement. To run the full source-water network and original 4/32 utility-area preparation in the same scientific project, use [the existing original source-water receiver](ORIGINAL_SOURCE_WATER_RECEIVING.md).
+
 ## Complete source selection
 
 | Assessment edition | Original selected records | Selected sites |

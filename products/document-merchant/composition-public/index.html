@@ -25,6 +25,7 @@
 <aside class="sidebar" aria-label="Saved compositions">
   <div class="section-heading"><h2>Saved work</h2><button id="refresh-list" type="button">Refresh</button></div>
   <button id="new-work" class="wide primary" type="button">New document set</button>
+  <button id="open-pdf-bundles" class="wide" type="button">Bundle existing PDFs</button>
   <ul id="saved-list" class="saved-list"></ul>
   <div class="pagination"><button id="list-previous" type="button">Previous</button><span id="list-page"></span><button id="list-next" type="button">Next</button></div>
   <details><summary>Receive an existing source plan</summary>
@@ -44,6 +45,62 @@
     <div class="section-heading"><h3 id="operation-title"></h3><button id="stop-operation" type="button">Stop current operation</button></div>
     <p id="operation-progress"></p><p id="operation-error"></p><div id="operation-files" class="download-list"></div>
   </section>
+<section id="pdf-bundles-panel" class="panel" hidden>
+  <div class="section-heading"><div><p class="eyebrow">EXISTING CUSTOMER PDFS</p><h2>Prepare a PDF bundle</h2></div><button id="pdf-bundles-refresh" type="button">Refresh saved bundles</button></div>
+  <p>Bring complete invoices, reports or other PDFs into this customer workspace. Choose their order, review the assembly merchant's price and receive every final volume with its original source.</p>
+  <details open><summary>New bundle from complete PDFs</summary>
+    <form id="pdf-bundle-form">
+      <div class="form-grid">
+        <label>Bundle ID<input id="pdf-bundle-id" required maxlength="64" autocomplete="off"></label>
+        <label>Bundle name<input id="pdf-bundle-name" required maxlength="200"></label>
+        <label>Document title<input id="pdf-bundle-title" required maxlength="170"></label>
+        <label>Customer task reference<input id="pdf-bundle-task" required maxlength="200"></label>
+        <label>PDFMint assembly merchant HTTPS origin<input id="pdf-bundle-origin" type="url" required autocomplete="off"></label>
+        <label>Complete PDF files (28 MiB total per browser upload)<input id="pdf-bundle-files" type="file" accept=".pdf,application/pdf" multiple></label>
+      </div>
+      <p id="pdf-bundle-file-count" class="file-info">Select the complete PDF files to include.</p>
+      <div id="pdf-bundle-file-order" class="download-list"></div>
+      <div class="action-row"><button id="pdf-bundle-stage" class="primary" type="submit">Save complete PDF sources</button><button id="pdf-bundle-clear" type="button">Clear selected files</button></div>
+    </form>
+  </details>
+  <details><summary>Receive an existing complete bundle source</summary>
+    <p>Receive the original assembly-plan.json and its included PDFs. Select the complete file, or use its local path in this customer's declared source roots for plans up to 192 MiB.</p>
+    <form id="pdf-bundle-restore-form">
+      <label>Complete source plan (up to 28 MiB)<input id="pdf-bundle-restore-upload" type="file" accept=".json,application/json"></label>
+      <p id="pdf-bundle-restore-info" class="file-info"></p>
+      <div class="form-grid">
+        <label>Original bundle ID<input id="pdf-bundle-restore-id" required maxlength="64" autocomplete="off"></label>
+        <label>Or full local source path<input id="pdf-bundle-restore-file" autocomplete="off"></label>
+        <label>Full source SHA256<input id="pdf-bundle-restore-sha" required minlength="64" maxlength="64" spellcheck="false"></label>
+      </div><button id="pdf-bundle-restore" type="submit">Receive complete bundle source</button>
+    </form>
+  </details>
+  <section id="pdf-bundle-operation" class="operation-panel" aria-live="polite" hidden>
+    <div class="section-heading"><h3 id="pdf-bundle-operation-title"></h3><button id="pdf-bundle-stop" type="button">Stop current bundle operation</button></div>
+    <p id="pdf-bundle-operation-detail"></p><p id="pdf-bundle-operation-error"></p>
+  </section>
+  <h3>Saved PDF bundles</h3><div id="pdf-bundle-list" class="download-list"></div>
+  <div class="pagination"><button id="pdf-bundle-previous" type="button">Previous</button><span id="pdf-bundle-page"></span><button id="pdf-bundle-next" type="button">Next</button></div>
+  <section id="pdf-bundle-detail" hidden>
+    <div class="section-heading"><h3 id="pdf-bundle-current-name"></h3><button id="pdf-bundle-refresh" type="button">Refresh this bundle</button></div>
+    <p id="pdf-bundle-counts"></p><p id="pdf-bundle-task-detail"></p><p id="pdf-bundle-source-sha" class="mono"></p>
+    <div id="pdf-bundle-price" class="price-panel"></div><p id="pdf-bundle-price-sha" class="mono"></p>
+    <div class="action-row">
+      <button id="pdf-bundle-materialize" type="button" hidden>Continue saving original sources</button>
+      <button id="pdf-bundle-prepare" type="button">Prepare assembly price</button>
+      <button id="pdf-bundle-run" class="primary" type="button">Assemble at this saved price</button>
+      <button id="pdf-bundle-receive" type="button">Receive existing assemblies</button>
+      <button id="pdf-bundle-source" type="button">Download complete source plan</button>
+    </div>
+    <h4>Original PDFs in the selected order</h4>
+    <div class="table-scroll"><table><thead><tr><th>Order</th><th>Original PDF</th><th>Complete file</th></tr></thead><tbody id="pdf-bundle-originals"></tbody></table></div>
+    <div class="pagination"><button id="pdf-bundle-source-previous" type="button">Previous PDFs</button><span id="pdf-bundle-source-page"></span><button id="pdf-bundle-source-next" type="button">Next PDFs</button></div>
+    <h4>Ordered output volumes</h4>
+    <div class="table-scroll"><table><thead><tr><th>Volume</th><th>Original PDFs in order</th><th>Receiving</th><th>PDF</th></tr></thead><tbody id="pdf-bundle-volumes"></tbody></table></div>
+    <div class="action-row"><button id="pdf-bundle-export" type="button">Export complete PDF bundle</button></div>
+    <div id="pdf-bundle-exports" class="exports"></div>
+  </section>
+</section>
 <section id="new-panel" class="panel">
   <div class="section-heading"><div><p class="eyebrow">1 · SOURCE DOCUMENTS</p><h2>Prepare a document set</h2></div></div>
   <div class="example-row">

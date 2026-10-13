@@ -87,6 +87,8 @@ def _campaign(closure, key, head):
         current = revision.get("parent_id")
         if current is None and number != 1:
             raise ValueError("Monitoring campaign history lost its first revision.")
+    if digest({"monitoring_campaign_creation": records[-1].get("operation_id")}) != key:
+        raise ValueError("The Monitoring campaign changed its original creation operation.")
     by_id = {record["id"]: record for record in records}
     for operation_id, operation in head["operations"].items():
         if (not isinstance(operation_id, str) or not operation_id
@@ -126,9 +128,68 @@ def _frontier_job(closure, key, head):
     }
 
 
-def _report(closure, key, value):
+def _inspect_report(closure, key, value):
+    """Keep native verification while admitting its exact source-view hardlinks.
+
+    The original producer verifies its retained recipe by materializing source
+    views. A cold restored Workspace has none. Only those declared CAS inodes
+    may change ctime here, and their original bytes and stable identity must
+    match before and after that owned operation.
+    """
+    from .common import file_digest
     from .monitoring_report_source import inspect
+    from .study_transfer import _identity, _member, _stable_data_identity
+
+    choice = value["source"]
+    collection = _native(closure, "sources", choice["source_collection_id"])
+    entries = [entry for entry in collection["entries"] if entry["id"] == choice["source_id"]]
+    if len(entries) != 1:
+        raise ValueError("The Monitoring report lost its exact original source entry.")
+    entry = entries[0]
+    declared = {}
+    for descriptor in [entry["body"]] + entry.get("companions", []):
+        path = _member(closure.root, descriptor["object"])
+        before = _identity(path)
+        checksum = identifier(descriptor["sha256"])
+        if before[2] != descriptor["bytes"] or file_digest(path) != checksum or _identity(path) != before:
+            raise ValueError("The original Monitoring report source changed before verification.")
+        token = before[:2]
+        previous = declared.get(token)
+        if previous is not None and previous["sha256"] != checksum:
+            raise ValueError("Monitoring report source references disagree about one original inode.")
+        declared[token] = {"identity": before, "sha256": checksum,
+                           "links": path.stat().st_nlink}
+    retained = {}
+    for relative, item in closure.files.items():
+        original = declared.get(item["identity"][:2])
+        if original is None:
+            continue
+        path = _member(closure.root, relative)
+        if (_identity(path) != item["identity"]
+                or _stable_data_identity(item["identity"]) != _stable_data_identity(original["identity"])
+                or item.get("sha256", original["sha256"]) != original["sha256"]):
+            raise ValueError("The selected Monitoring source changed before native verification.")
+        retained[relative] = original
+
     record = inspect(closure.workspace, key, verify=True)
+    for relative, original in retained.items():
+        path = _member(closure.root, relative)
+        after = _identity(path)
+        before = closure.files[relative]["identity"]
+        if after == before:
+            continue
+        if (_stable_data_identity(after) != _stable_data_identity(before)
+                or path.stat().st_nlink <= original["links"]
+                or file_digest(path) != original["sha256"]
+                or _identity(path) != after):
+            raise ValueError("The selected Monitoring source changed during native verification.")
+        closure.files[relative]["identity"] = after
+        closure.files[relative]["sha256"] = original["sha256"]
+    return record
+
+
+def _report(closure, key, value):
+    record = _inspect_report(closure, key, value)
     if record != value or record.get("state") != "complete":
         raise ValueError("Select a completed original Monitoring report source.")
     selection = record["selection"]
@@ -152,6 +213,41 @@ def _report(closure, key, value):
         "id": key, "record_sha256": record["record_sha256"],
         "source": copy.deepcopy(record["source"]),
     }
+
+
+def include_source(closure, collection_id, entry):
+    """Follow one explicitly ordered original Monitoring report source.
+
+    Scientific report edition transfer calls this for its actual chosen source.
+    Foreign project reports keep their contained CAS and original provenance;
+    local producer identities must resolve to their complete editable history.
+    """
+    from . import observed_context
+    if (entry.get("id") != "monitoring-design-and-field-history"
+            or entry.get("role") != "monitoring-report-source"):
+        return False
+    recipe = closure.read(entry["body"]["object"])
+    if (recipe.get("schema") != observed_context.SCHEMA
+            or recipe.get("report_context_kind") != "monitoring-design-and-field-history"):
+        raise ValueError("The selected Monitoring report lost its original recipe contract.")
+    project_id = recipe.get("project_id")
+    if not isinstance(project_id, str) or not project_id:
+        raise ValueError("The selected Monitoring report lost its declared original project.")
+    prefix = "urn:upstate:monitoring-report:" + project_id + ":"
+    uri = entry.get("uri")
+    if not isinstance(uri, str) or not uri.startswith(prefix):
+        raise ValueError("The selected Monitoring report changed its original producer identity.")
+    key = identifier(uri[len(prefix):])
+    if project_id != closure.workspace.project["id"]:
+        return False
+    path = "monitoring-report-sources/" + key + "/report.json"
+    report = closure.read(path)
+    expected = {"source_collection_id": identifier(collection_id), "source_id": entry["id"]}
+    if report.get("source") != expected:
+        raise ValueError("The local Monitoring producer names another original source edition.")
+    closure.need("monitoring-report-sources", key,
+                 "Editable history of the explicitly ordered Monitoring report")
+    return True
 
 
 def visit(closure, kind, key, value):
@@ -253,6 +349,8 @@ def related(closure):
             value = _related_row(closure, path)
             if value is not None and value.get("network_id") in networks:
                 closure.need(folder, path.stem, "Saved work on the explicitly selected Monitoring network")
+                if folder == "monitoring_plans":
+                    plans.add(path.stem)
     # A selected design carries its editable campaigns. Comparing against the
     # retained current revision avoids matching arbitrary hashes or prose.
     if networks or plans:

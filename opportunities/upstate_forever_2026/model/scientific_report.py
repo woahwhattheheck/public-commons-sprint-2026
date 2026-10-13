@@ -926,7 +926,8 @@ def _figure(block, root=None):
     return {**block, "path": relative}
 
 
-def report_pdf(path, title, sections, *, contact, source_records):
+def report_pdf(path, title, sections, *, contact, source_records,
+               footer="Scientific report · original model and source editions"):
     """Render the original report content with repeating, page-aware data tables."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
@@ -1006,7 +1007,7 @@ def report_pdf(path, title, sections, *, contact, source_records):
     def page_number(canvas, document):
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
-        canvas.drawString(.7 * inch, .42 * inch, "Scientific report · original model and source editions")
+        canvas.drawString(.7 * inch, .42 * inch, str(footer))
         canvas.drawRightString(7.8 * inch, .42 * inch, str(document.page))
         canvas.restoreState()
 
@@ -1101,7 +1102,9 @@ def _markdown_report(title, sections, prepared):
     return "\n".join(lines)
 
 
-def write_companions(directory, title, sections, *, contact, source_records, binding):
+def write_companions(directory, title, sections, *, contact, source_records, binding,
+                     subtitle="Scientific model results, scenario changes and retained source editions.",
+                     footer="Original scientific study, source editions and model selections retained with this report."):
     """Retain offline HTML and complete structured report blocks in the delivery."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -1121,7 +1124,7 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
                       for index, (heading, blocks) in enumerate(all_sections))
     supplied_contact = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
     prepared = ("Prepared by " + supplied_contact if supplied_contact
-                else "Original scientific study, source editions and model selections retained with this report.")
+                else str(footer))
     body = (
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -1143,7 +1146,7 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}body{font-size:10pt}"
         "table{font-size:8pt}a{text-decoration:none}@page{margin:16mm}}"
         "</style></head><body><main><h1>" + html_escape(str(title))
-        + "</h1><p>Scientific model results, scenario changes and retained source editions.</p>"
+        + "</h1><p>" + html_escape(str(subtitle)) + "</p>"
         "<nav aria-label=\"Report sections\"><strong>Contents</strong><ol>" + headings + "</ol></nav>"
         + content + "<footer>" + html_escape(prepared) + "</footer></main></body></html>\n"
     )
@@ -1155,6 +1158,7 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "schema": REPORT_VERSION, "title": title, "binding": binding,
         "sections": [{"heading": heading, "blocks": blocks} for heading, blocks in sections],
         "source_records": source_records, "contact": contact,
+        "presentation": {"subtitle": str(subtitle), "footer": prepared},
         "display_precision": "Six significant digits; complete original numeric data remains in the working project",
     })
     return {"report_html": describe_file(directory, html_path),

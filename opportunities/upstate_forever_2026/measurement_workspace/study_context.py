@@ -17,6 +17,15 @@ STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "sv833_hydrologic_context.sources.json": {
+        "studies": (SV833_STUDY,),
+        "retained_root": SV833_ROOT,
+        "prefixes": ("source/sv833-hydrologic-context-20261013/",),
+        "paths": (
+            "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+            "observations/sv833_2021_2026/csv.mjs",
+        ),
+    },
     "sv833_water_quality.sources.json": {
         "studies": (SV833_STUDY,),
         "retained_root": SV833_ROOT,

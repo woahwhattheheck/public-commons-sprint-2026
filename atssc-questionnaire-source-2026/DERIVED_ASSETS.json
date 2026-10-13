@@ -8,7 +8,10 @@
     "version": 1,
     "bytes": 2350227,
     "download_url": "https://chatgpt.com/api/library/files/libfile_24e125f7933481919868085ff377214b/download",
-    "members": 39
+    "members": 39,
+    "path": "derived/ATSSC_Original_Formula_Groups_and_Dependencies.zip",
+    "git_blob": "e6e46ec4ec8e037c1844d3b10846139bc31d4e80",
+    "sha256": "4ed31b0a6adfb6b2407d6cd581f0b8a9d7a793a6b9aab7cb0dcb10995a96bc4d"
   },
   "inventory": {
     "path": "derived/ATSSC_Formula_Dependency_Inventory.json",

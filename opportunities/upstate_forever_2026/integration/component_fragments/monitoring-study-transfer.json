@@ -1,0 +1,40 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-study-transfer",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/science/monitoring-editable-study-transfer-20261013",
+  "extend_components": {
+    "monitoring": {
+      "paths": [
+        "integration/monitoring_study_transfer_sources.json",
+        "model/MONITORING_REPORT_SOURCE.md",
+        "model/MONITORING_STUDY_TRANSFER.md",
+        "model/monitoring_report_cli.py",
+        "model/monitoring_report_source.py",
+        "model/monitoring_study_transfer.py",
+        "operator/extensions/monitoring-report.json",
+        "operator/monitoring_report_native.py",
+        "operator/web/monitoring-report.mjs",
+        "operator/web/monitoring-study-transfer.mjs"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/MONITORING_STUDY_TRANSFER.md",
+        "model/monitoring_observed_context.py",
+        "model/monitoring_report_source.py",
+        "model/monitoring_sources.py",
+        "model/monitoring_study_transfer.py",
+        "model/monitoring_workspace.py",
+        "model/requirements-monitoring.txt",
+        "model/study_transfer_cli.py",
+        "operator/study_transfer.py",
+        "operator/web/extensions/study_transfer.css",
+        "operator/web/extensions/study_transfer.mjs"
+      ]
+    }
+  },
+  "required_components": []
+}

@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 
 CODE_FILES = (
     "measurement_workspace/published_studies.py",
+    "measurement_workspace/study_reviews.py",
+    "measurement_workspace/STUDY_REVIEWS.md",
     "measurement_workspace/study_context.py",
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
@@ -27,6 +29,7 @@ CODE_FILES = (
     "source_tools/build_eighteenmile_stream_study.mjs",
     "measurement_workspace/OBSERVATION_SUPPORT.md",
     "operator/published_study_operator.py",
+    "operator/team_route_policy.json",
     "operator/extensions/published-studies.json",
     "operator/web/published_studies.mjs",
     "operator/web/published_studies.css",

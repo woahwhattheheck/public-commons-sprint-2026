@@ -18,7 +18,8 @@ from . import observed_context
 from .scientific_figures import _validate_figure
 
 VERSION = 1
-EDITION = "native-calibration-review-report-v1"
+EDITION = "native-calibration-review-report-v2"
+SUPPORTED_EDITIONS = frozenset({"native-calibration-review-report-v1", EDITION})
 KIND = "calibration-report-sources"
 DIRECTORY = "calibration-report-source-exports"
 SOURCE_ID = "native-calibration-review"
@@ -231,6 +232,30 @@ def _sections(review, report, plan, observed, detail, atlas):
             ]},
         ]],
     ]
+    execution = reviews.native_execution(report, plan)
+    execution_rows = execution.get("rows", [])
+    selected_execution = [row for row in execution_rows if row["run_id"] == report["selected_run_id"]]
+    execution_blocks = [
+        "Version sources remain attached to each original producing model. Completed-stage runtime, "
+        "observed-run fallback and requested legacy declaration are labeled separately. Raster units "
+        "and their catchment reduction are the retained conventions used by this calibration.",
+        _table(["Model", "Pollutant", "Version and source", "Requested version", "Raster units",
+                "Annual units", "Reduction"],
+               [[row["model"], row["parameter"], row["version_label"], row.get("requested_version"),
+                 row["raster_units"], row["annual_units"], row["reduction"]]
+                for row in selected_execution]),
+    ] if execution else [
+        "This historical analysis retains its original native run records in the complete dossier. "
+        "It predates the explicit per-output execution snapshot."
+    ]
+    if "tables/native-execution.csv" in review["files"]:
+        execution_blocks.append({"kind": "links", "items": [{
+            "title": "All candidate versions, original output identities and physical-unit conventions",
+            "path": "dossier/tables/native-execution.csv",
+        }]})
+    if execution:
+        execution_blocks.append("Retained execution fingerprint: " + execution["fingerprint"] + ".")
+    sections.append(["Original native model execution and physical outputs", execution_blocks])
     ranked = report["ranked_candidates"]
     displayed = ranked[:12]
     sections.append(["Nominal candidate comparison", [
@@ -387,6 +412,7 @@ def prepare(workspace, review_id):
                 **selection, "calibration_id": report["id"], "plan_id": plan["id"],
                 "selected_run_id": report["selected_run_id"],
                 "selected_profile_id": report["selected_profile_id"],
+                "native_execution": reviews.native_execution(report, plan),
                 "uncertainty_id": review["uncertainty_id"], "map_id": review["map_id"],
             },
             "sections": _sections(review, report, plan, observed, detail, atlas),
@@ -437,12 +463,12 @@ def prepare(workspace, review_id):
 
 def inspect(workspace, record_id):
     record = workspace._get(KIND, identifier(record_id))
-    if (record.get("version") != VERSION or record.get("edition") != EDITION
+    if (record.get("version") != VERSION or record.get("edition") not in SUPPORTED_EDITIONS
             or record.get("workspace_id") != workspace.project["id"]
             or digest(record["selection"]) != record["selection_id"]):
         raise ValueError("Select the original calibration report-source edition in this workspace")
     review = reviews.inspect(workspace, record["review_id"])
-    expected_selection = {"edition": EDITION, "workspace_id": workspace.project["id"],
+    expected_selection = {"edition": record["edition"], "workspace_id": workspace.project["id"],
                           "review_id": review["id"], "review_selection_id": review["selection_id"],
                           "source_stamp": review["source_stamp"]}
     if record["selection"] != expected_selection:
@@ -469,7 +495,7 @@ def inspect(workspace, record_id):
 
 def list_saved(workspace, review_id=None):
     return [{key: row.get(key) for key in (
-        "id", "state", "title", "review_id", "calibration_id", "plan_id", "selected_run_id",
+        "id", "edition", "state", "title", "review_id", "calibration_id", "plan_id", "selected_run_id",
         "selected_profile_id", "source_collection_id", "source_id", "figure_count", "companion_count")}
         for row in workspace._list(KIND) if review_id is None or row["review_id"] == review_id]
 
