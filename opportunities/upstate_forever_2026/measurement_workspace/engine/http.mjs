@@ -4,6 +4,7 @@ import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
 import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
 import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
 import {intakeOperation} from './intake.mjs';
+import {handbackOperation,handbackMember} from './source_handback.mjs';
 import {flowOperation,readFlowStudy,flowCSV} from './flow_workspace.mjs';
 import {largeOperation} from './large_http.mjs';
 import {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';
@@ -70,6 +71,14 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         send(response,200,await flowOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='large'){send(response,200,await largeOperation(s,method,parts.slice(1),query,['POST','PUT'].includes(method)?await readBody(request):{}));return;}
+      if(parts[0]==='handbacks'){
+        if(method==='GET'&&parts.length===3&&parts[2]==='files'){
+          const member=handbackMember(s,parts[1],query.name);
+          response.writeHead(200,{'Content-Type':member.type,'Content-Length':member.data.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Disposition':'attachment; filename="source-return-member"'});
+          response.end(member.data);return;
+        }
+        send(response,200,handbackOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
+      }
       const reaches=async()=>reachProvider?await reachProvider():await baseData(s.directory,'reaches.json');
       if(parts[0]==='collections'){
         if(method==='GET'&&parts.length===1){send(response,200,{collections:listCollections(s)});return;}
