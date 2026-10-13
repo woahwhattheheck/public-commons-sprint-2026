@@ -395,9 +395,15 @@ Technical references:
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Direct owner instructions
+
+Latest direct instruction, October 13 at 10:46 a.m. Eastern:
+
+> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
 > do the simulated model
 
@@ -435,7 +441,7 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
@@ -456,4 +462,4 @@ Compose the complete current source at the same existing Scientific Reports appl
 
 Use the already-populated original Workspace and exact source edition. At desktop and390px, open Read original scientific study, operate its original table search/pages, choose HTML and inspect the actual pixels, follow original CSV/JSON/nested HTML/image links, print, and switch away/back to confirm the document's own filters remain. Exercise append/replace without disturbing ordered source selection. Open the existing Three/Twenty station-network report and its observation_context comparison where retained: normalize each relative link against its actual inventoried member path, including the retained ../../ and ../../../ companions. Download/extract the existing complete source package and reopen its contained original report as the recipient would. Inspect failed-open Retry and a Workspace switch while loading.
 
-Keep the same3363 receiving/browser course and actual native/model operation identities. Return actual screenshots/images for the producing worker's own viewing. Source/controller review does not replace this actual outgoing-product use. The full current owner direction above, all-attachments inspection requirement and14:00UTC cutoff remain in force.
+Keep the same3363 receiving/browser course and actual native/model operation identities. Return actual screenshots/images for the producing worker's own viewing. Source/controller review does not replace this actual outgoing-product use. The full current owner direction above and all-attachments inspection requirement remain in force. Bryce's October 13, 2026, 14:46 UTC renewal supersedes the earlier cutoff; continue unfinished receiving from its saved state and preserve completed outputs, active processes and original implementation ownership.

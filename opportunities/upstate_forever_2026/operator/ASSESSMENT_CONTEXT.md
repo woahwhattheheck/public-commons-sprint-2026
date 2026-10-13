@@ -612,8 +612,10 @@ assessment receiving browser course exercises this route alongside the report
 downloads.
 
 Current owner direction is [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md),
-version **2026-10-13.3**. Keep this receiving route within the existing scientific
-case and its actual original source scope. For the prepared Upper Savannah
+version **2026-10-13.4**. Bryce renewed the existing unfinished Eco work at
+14:46 UTC on October 13, superseding the earlier cutoff. Continue this receiving
+route within the existing scientific case and its actual original source scope;
+preserve completed outputs, active processes and original implementation ownership. For the prepared Upper Savannah
 assessment studies, the retained publisher-HUC selection remains 192 published
 records; its all-editions context retains those records plus 101 draft records.
 Other saved source selections reopen under their own original filters and IDs.
