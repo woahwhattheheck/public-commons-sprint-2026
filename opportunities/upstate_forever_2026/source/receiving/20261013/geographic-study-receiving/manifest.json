@@ -3,12 +3,12 @@
   "operation": "ECO-S1-GEOGRAPHIC-EDITABLE-STUDY-RECEIVING-20261013",
   "source_file": "geographic-study-receiving.source.json",
   "source_identity": {
-    "bytes": 526120,
-    "sha256": "8ee358090f1de144a00ada90e988aa003c82eb94ba3e407587eb3f7f3aba07df",
-    "git_blob": "8a78df2abc5d21fdd4c3e2607256a5b726bdb61b"
+    "bytes": 531332,
+    "sha256": "99fea1e6af1eb3cb4c73f53157b80f5435ad4879ca47addd43f20b0866e1f68a",
+    "git_blob": "7c5d67a28b64a36dd9f134270f646736921d7566"
   },
   "source_files": 21,
-  "source_bytes": 477375,
+  "source_bytes": 480930,
   "source_references": [
     {
       "pull_request": 4342,
@@ -41,6 +41,12 @@
       "pull_request": 4432,
       "merge_commit": "47ce07eebcae0839a5820b9cdc5ddacac93ba25f",
       "scope": "Current Geographic selected Study preserves the exact adopted three-run Programme and its original typed visitor; retains4412 paired/archive correction."
+    },
+    {
+      "source_commit": "458a89cfcdfae69f9e743b3883322094a4ee5e28",
+      "path": "source/install_robust_workbench.py",
+      "git_blob": "7176cd957a9932e98459065928affd548e0e87a3",
+      "scope": "Current maintained installer adds original browser family, paired portable and conditional4432 Programme/archive dependency verification."
     }
   ],
   "files": [
@@ -186,10 +192,11 @@
     {
       "path": "source/install_robust_workbench.py",
       "encoding": "utf-8",
-      "bytes": 92888,
-      "sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
-      "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
-      "base_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587"
+      "bytes": 96443,
+      "sha256": "22da730d617de1493c34e11f52f358dcd4b33033f373c7962d34d9c89cf1d8d1",
+      "git_blob": "7176cd957a9932e98459065928affd548e0e87a3",
+      "base_sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
+      "before_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587"
     },
     {
       "path": "model/paired_ensemble/ensemble_portable.py",
@@ -221,8 +228,8 @@
     "publisher": "Existing WAT RegionalNativeInstaller V2 owner, coordinated in original Ecosystem Sales operation.",
     "robust_installer_join": {
       "source": "source/install_robust_workbench.py",
-      "git_blob": "5db35edad21387637d9472d243f50536d59e824a",
-      "base_git_blob": "c007883c8971f299f8740bf8484046b762cb3eeb",
+      "git_blob": "7176cd957a9932e98459065928affd548e0e87a3",
+      "base_git_blob": "5db35edad21387637d9472d243f50536d59e824a",
       "included_paths": [
         "integration/component_fragments/geographic-study-receiving.json",
         "model/GEOGRAPHIC_STUDY_RECEIVING.md",
@@ -232,9 +239,16 @@
         "source_tools/geographic_headwaters_handover.py",
         "source_tools/simulated_headwaters_handover.py"
       ],
-      "contract": "The maintained installer now accepts and verifies the complete receiving integration. Invoke this source version against WAT's complete composed current application and explicit guarded layers; retain both geographic handover helpers. Existing identical postimages are reused. Any differing receiver body must match a declared predecessor, or be composed by its current owner before installation. Existing unrelated components remain required by their original validators."
+      "contract": "The maintained installer now accepts and verifies the complete receiving integration. Invoke this source version against WAT's complete composed current application and explicit guarded layers; retain both geographic handover helpers. Existing identical postimages are reused. Any differing receiver body must match a declared predecessor, or be composed by its current owner before installation. Existing unrelated components remain required by their original validators.",
+      "original_predecessor_git_blob": "c007883c8971f299f8740bf8484046b762cb3eeb"
     },
-    "shared_current_source": "Shared receiving UI/provider bodies retain exact PR4342 identity and predecessor guards. The current WAT publisher composes any later Geographic opening, source preview or allocation successors, preserving them when their receiver bytes differ. The complete native family retains model/compute_programme.py, model/receptor_study_transfer.py and model/geographic_programme.py through the producer fragment and existing WAT runtime."
+    "shared_current_source": "Shared receiving UI/provider bodies retain exact PR4342 identity and predecessor guards. The current WAT publisher composes any later Geographic opening, source preview or allocation successors, preserving them when their receiver bytes differ. The complete native family retains model/compute_programme.py, model/receptor_study_transfer.py and model/geographic_programme.py through the producer fragment and existing WAT runtime.",
+    "browser_companion": {
+      "source_bank_git_blob": "a13e8651f3ad2d6332fb20ab58791dea8e79e4bf",
+      "schema": "commons.complete-source-bank/v1",
+      "source_files": 7,
+      "contract": "The existing WAT publisher retains this complete original A73C browser family as a preceding verified layer, including all five modules, guide and component. The current maintained installer accepts the complete family and checks its original native-receiving dependencies."
+    }
   },
   "receiving_bindings": [
     {
@@ -302,9 +316,10 @@
     },
     {
       "path": "source/install_robust_workbench.py",
-      "base_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587",
-      "post_sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
-      "post_git_blob": "5db35edad21387637d9472d243f50536d59e824a"
+      "base_sha256": "98be2fa2c592dc21156ceaf9c5041888427ff1f0f50013afcce3b4b1cba13dae",
+      "before_sha256": "c2c60dc17a560d4bd54da0c351977c211e0e25f465926b04311d7d182c2ef587",
+      "post_sha256": "22da730d617de1493c34e11f52f358dcd4b33033f373c7962d34d9c89cf1d8d1",
+      "post_git_blob": "7176cd957a9932e98459065928affd548e0e87a3"
     },
     {
       "path": "model/ensemble_study_transfer.py",
@@ -320,16 +335,20 @@
       "merge_commit": "55f1a35f7b802e5813dc28db5ae0736d58aef83f",
       "producer": "41971bb595b93130dfa2212841892bdc50dbd832"
     },
-    "installer": "5db35edad21387637d9472d243f50536d59e824a",
+    "installer": "7176cd957a9932e98459065928affd548e0e87a3",
     "publisher": "Existing WAT RegionalNativeInstaller V2 owner",
     "native_boundary": "Original regional reference trio completed at 13:15:26 UTC; the actual installation/receiving owner governs its next quiet source boundary.",
     "selected_programme": {
       "pull_request": 4432,
       "merge_commit": "47ce07eebcae0839a5820b9cdc5ddacac93ba25f",
       "producer": "466d174a09e94f191386eb1c3a9303ba0de26b90"
+    },
+    "original_native_delivery": {
+      "observation": "Existing8537 owner reports three-case report rendered/opened at desktop and390px and3.813GB selectedStudy exported/coldrestored; running application and original sealed results retain their current source boundary.",
+      "adoption": "WAT8885 independently read7176 maintained installer and confirmed source-family adoption."
     }
   },
-  "predecessor_delivery_commit": "c6c2aed70594fb2ccc89db7b17ae7cd024cfcb5f",
+  "predecessor_delivery_commit": "153f0c25149e9228c48b71302a431ad42f13a9fb",
   "superseded_unpublished_installer": "c4f95f9e4ccc2d21c12fdc0d4d29492789c14e20",
   "validation": "All21 complete source bodies verified independently against exact UTF-8 bytes, SHA256 and native Git blob identities. Root and source peers reviewed the current paired/archive producer, native receiving API/browser handoff, complete maintained installer dependency checks and complete original source declarations. Actual outgoing browser/attachment acceptance belongs to the existing native receiving course."
 }
