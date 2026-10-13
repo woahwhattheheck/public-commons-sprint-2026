@@ -113,7 +113,7 @@ def _restore(output, archive, project):
     return restored
 
 
-def _cold_reopen(restored, inspected, design, output, lock_fd):
+def _cold_reopen(restored, inspected, design, output, lock_fd, outcome=None):
     """Run the archive's own source in a clean Python process."""
     from source_tools.geographic_headwaters_reopen import _support
     support = _support()
@@ -130,6 +130,7 @@ def _cold_reopen(restored, inspected, design, output, lock_fd):
                "application": str(application), "workspace": str(workspace),
                "project": restored["project"], "archive_sha256": restored["archive_sha256"],
                "study_id": inspected["study"]["id"], "design": design,
+               **({"outcome": outcome} if outcome is not None else {}),
                "receiving_lock": _lock_identity(lock_fd, output / ".matched-control-receiving.lock")}
     request_path = directory / "request.json"
     result_path = directory / "result.json"
@@ -160,7 +161,8 @@ def _cold_reopen(restored, inspected, design, output, lock_fd):
                 or result.get("request_sha256") != request_sha or result.get("identity") != "MATCH"
                 or result.get("project") != restored["project"]
                 or result.get("study_id") != inspected["study"]["id"]
-                or result.get("design_id") != design["id"]):
+                or result.get("design_id") != design["id"]
+                or (outcome is not None and result.get("outcome_id") != outcome["id"])):
             raise ValueError("The contained application returned another saved design or Study")
         for name, identity in source_identity.items():
             if support._identity(support._member(application, name).lstat()) != identity:
@@ -198,16 +200,48 @@ def reopen(request_path, request_sha256, result_path, lock_fd):
     found = multivariate_control.inspect(workspace, request["design"]["id"])
     if found != request["design"]:
         raise ValueError("Cold reopening changed the retained design, adoption or native result")
+    outcome = None
+    if request.get("outcome") is not None:
+        from model import multivariate_control_outcomes
+        outcome = multivariate_control_outcomes.inspect(workspace, request["outcome"]["id"])
+        if outcome != request["outcome"]:
+            raise ValueError("Cold reopening changed the exact native outcome report, support or source")
     result = {"schema": REOPEN, "attempt_id": request["attempt_id"],
               "request_sha256": request_sha256, "project": workspace.project,
               "study_id": request["study_id"], "design_id": found["id"],
+              **({"outcome_id": outcome["id"]} if outcome is not None else {}),
               "identity": "MATCH", "verified_studies": verification, "completed_at": now()}
     atomic_json(Path(result_path), result, immutable=True)
     return result
 
 
+def _browser_admission(restored, study_id, design, outcome=None):
+    """Pin the received native Study for the existing browser course."""
+    root = Path(restored["workspace"]).resolve(strict=True)
+    members = ["workspace.json", "study-transfers/" + identifier(study_id) + ".json",
+               "multivariate-controls/" + identifier(design["id"]) + "/design.json"]
+    if design.get("adoption"):
+        members.append("multivariate-controls/" + design["id"] + "/adoption.json")
+    if outcome is not None:
+        members.append("multivariate-control-outcomes/" + identifier(outcome["id"]) + "/outcome.json")
+    runs = []
+    for path in sorted((root / "runs").glob("*/run.json")):
+        value = read_json(path)
+        if value.get("id") != path.parent.name:
+            raise ValueError("The received run differs from its original identifier")
+        members.append(path.relative_to(root).as_posix())
+        runs.append({"id": value["id"], "state": value["state"]})
+    return {"schema": "upstate.multivariate-control-browser-admission/v1",
+            "project": restored["project"], "archive_sha256": restored["archive_sha256"],
+            "application": restored["application"], "workspace": restored["workspace"],
+            "study_id": study_id, "design_id": design["id"],
+            **({"outcome_id": outcome["id"]} if outcome is not None else {}),
+            "run_records": runs,
+            "files": [describe_file(root, root / name) for name in members]}
+
+
 def receive(workspace, output, *, selection_path=None, design_id=None, execute=False,
-            prepared_id=None):
+            prepared_id=None, outcome_selection_path=None):
     """Optional chapter of the maintained geographic receiving runner."""
     from model import multivariate_control, scenario_footprint, study_transfer
     if (selection_path is None) == (design_id is None):
@@ -229,6 +263,15 @@ def receive(workspace, output, *, selection_path=None, design_id=None, execute=F
         else:
             requested = {"design_id": identifier(design_id)}
             selected = multivariate_control.inspect(workspace, design_id)["selection"]
+        outcome_requested = {}
+        outcome_selection = None
+        if outcome_selection_path is not None:
+            body = Path(outcome_selection_path).resolve(strict=True).read_bytes()
+            outcome_selection = json.loads(body)
+            from model import multivariate_control_outcomes
+            multivariate_control_outcomes.normalize(outcome_selection)
+            atomic_bytes(output / "original-outcome-selection.json", body, immutable=True)
+            outcome_requested["outcome_selection_sha256"] = hashlib.sha256(body).hexdigest()
         baseline = workspace.inspect_run(identifier(selected["baseline_run_id"]))
         footprint = scenario_footprint.get_footprint(
             workspace, identifier(selected["restoration_footprint_id"]))
@@ -244,7 +287,7 @@ def receive(workspace, output, *, selection_path=None, design_id=None, execute=F
                     or prepared["id"] != prepared_id or prepared["baseline_run_id"] != baseline["id"]
                     or restoration["id"] not in prepared["alternative_run_ids"]):
                 raise ValueError("The design does not use the selected original Geographic baseline and restoration")
-        identity = {"schema": SCHEMA, "project_id": workspace.project["id"], **requested,
+        identity = {"schema": SCHEMA, "project_id": workspace.project["id"], **requested, **outcome_requested,
                     "prepared_id": prepared_id, "execute": execute,
                     "baseline_run_id": baseline["id"], "restoration_run_id": restoration["id"]}
         operation_id = digest(identity)
@@ -316,10 +359,29 @@ def receive(workspace, output, *, selection_path=None, design_id=None, execute=F
                  native_execution="not_adopted")
         design = multivariate_control.inspect(workspace, design_id)
         atomic_json(output / "design.json", design)
+        outcome = None
+        if outcome_selection is not None:
+            if design_id not in outcome_selection["design_ids"]:
+                raise ValueError("Include this exact original saved design in the authored outcome group")
+            from model import multivariate_control_outcomes
+            outcome_preview = phase("matched-control-outcome-preview",
+                                    lambda: multivariate_control_outcomes.preview(workspace, outcome_selection))
+            atomic_json(output / "outcome-preview.json", outcome_preview)
+            originals = _original_runs(workspace)
+            outcome = phase("matched-control-outcome-report",
+                            lambda: multivariate_control_outcomes.prepare(workspace, outcome_selection,
+                                progress=lambda value: _event("matched-control-outcome-progress", progress=value)))
+            if _original_runs(workspace) != originals:
+                raise ValueError("The native outcome report changed or added a completed model run")
+            if outcome["id"] != outcome_preview["id"]:
+                raise ValueError("The prepared outcome left the exact original preview")
+            atomic_json(output / "outcome.json", outcome)
+            save(outcome_report=outcome, outcome_id=outcome["id"])
         transfer_selection = {
             "schema": study_transfer.SELECTION_SCHEMA,
             "title": selected["title"] + " — editable matched-control study",
-            "roots": [{"kind": "multivariate-controls", "id": design_id}],
+            "roots": [{"kind": "multivariate-controls", "id": design_id}]
+                     + ([{"kind": "multivariate-control-outcomes", "id": outcome["id"]}] if outcome is not None else []),
             "include_related_results": True,
         }
         preview = phase("matched-control-study-preview",
@@ -332,8 +394,9 @@ def receive(workspace, output, *, selection_path=None, design_id=None, execute=F
                          lambda: _restore(output, archive, workspace.project))
         save(restored=restored)
         cold = phase("matched-control-contained-reopen",
-                     lambda: _cold_reopen(restored, inspected, design, output, lock_fd))
+                     lambda: _cold_reopen(restored, inspected, design, output, lock_fd, outcome))
         save(state="complete", active_stage=None, design=design, independent_reopen=cold,
+             browser_admission=_browser_admission(restored, inspected["study"]["id"], design, outcome),
              preserved_originals=_preserve_original_runs(workspace, state["original_completed_runs"]),
              outcome=design["state"],
              producer_view="Pending actual desktop/narrow operation and viewing of every outgoing attachment.")

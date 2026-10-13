@@ -14,7 +14,7 @@ import {operateGeographicReview} from './geographic_review_browser.mjs';
 import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingEdition} from './geographic_browser_course.mjs';
 import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
-import {admitMatchedControlChapter,operateMatchedControl} from './multivariate_control_browser.mjs';
+import {admitMatchedControlChapter,admitMatchedControlReceiving,admitMatchedControlOutcomeChapter,operateMatchedControl,operateMatchedControlOutcomes} from './multivariate_control_browser.mjs';
 import {operateDeliveryPreparation} from '../operator/delivery_preparation_receiving.mjs';
 
 // Current direction .4 renews the full delivery. A caller may request its own deadline.
@@ -46,13 +46,27 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control','delivery_preparation'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control','delivery_preparation','matched_control_receiving','multivariate_control_outcomes'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
   const matchedControl=await admitMatchedControlChapter(settings.multivariate_control,{requireValue});
+  let outcomeChapter=await admitMatchedControlOutcomeChapter(settings.multivariate_control_outcomes,{requireValue});
+  if(outcomeChapter)requireValue(matchedControl,'Choose the retained original control chapter alongside its native outcome');
   if(settings.delivery_preparation!==undefined)requireValue(typeof settings.delivery_preparation==='boolean','Choose an explicit saved preparation continuation');
   if(settings.cutoff!==undefined){requireValue(typeof settings.cutoff==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(settings.cutoff)&&Number.isFinite(Date.parse(settings.cutoff)),'Use a complete caller-requested cutoff timestamp with timezone');CUTOFF=Date.parse(settings.cutoff);}
   check();
+  const nativeStudy=settings.matched_control_receiving===undefined?null:
+   await admitMatchedControlReceiving(settings.matched_control_receiving,matchedControl,
+    {readJSON,fileHash,regular,verified,equal,requireValue});
+  if(nativeStudy){
+   requireValue(["state_file","archive_sha256","handover_id","completion_scope","programme_action","delivery_preparation"]
+    .every(key=>settings[key]===undefined),"Use one original native Study receipt or one Geographic handover, without mixing their separate courses");
+   if(nativeStudy.receipt.outcome_report)outcomeChapter??={action:"inspect",outcome_id:nativeStudy.receipt.outcome_report.id};
+   if(outcomeChapter)requireValue(outcomeChapter.action==="inspect"&&outcomeChapter.outcome_id===nativeStudy.receipt.outcome_report?.id,
+    "Open the exact outcome already received with this native Study; prepare another outcome through its authored native course");
+   settings.restored_root??=nativeStudy.root;
+   requireValue(resolve(settings.restored_root)===nativeStudy.root,"The supplied browser root differs from the exact native Study restore");
+  }
   if(settings.programme_action!==undefined)requireValue(['inspect','adopt_completed'].includes(settings.programme_action),'Choose inspect or adopt_completed for the original Programme');
   let originalState=null,selectedState=null;
   if(settings.completion_scope!==undefined)requireValue(['reference','full_course'].includes(settings.completion_scope),'Use the actual saved reference or full-course scope');
@@ -81,23 +95,30 @@ async function main(argv){
    requireValue(!active,'The original browser process is already active');await fs.unlink(lockPath);lock=await fs.open(lockPath,'wx',0o600);
   }
   await lock.writeFile(canonical(lockRecord)+'\n');await lock.sync();
-  const receiving=await readJSON(await regular(restored,'receiving-complete.json'));
+  let receiving=null,delivered=null,completion=null,record=null,prepared=null,project,workspace,runIds,course;
+  if(nativeStudy){
+   project=nativeStudy.project;workspace=nativeStudy.workspace;course=nativeStudy.course;
+   runIds=[nativeStudy.nativeCohort.baseline_run_id,...nativeStudy.nativeCohort.restoration_run_ids];
+   requireValue((await fileHash(nativeStudy.source.path)).sha256===nativeStudy.source.sha256,
+    "The native receiving receipt changed while opening this browser operation");
+  }else{
+  receiving=await readJSON(await regular(restored,'receiving-complete.json'));
   requireValue(receiving.schema==='upstate.scientific-workspace-receiving-completion/v1'&&receiving.result?.identity==='MATCH','Finish the original ordinary project restore first');
   requireValue(/^[a-f0-9]{64}$/.test(settings.archive_sha256||'')&&receiving.archive_sha256===settings.archive_sha256,'Select the exact original archive SHA from the native receiving result');
-  const delivered=join(restored,'delivery');
-  const completion=await readJSON(await regular(delivered,'handover-complete.json'));
-  const record=await readJSON(await verified(delivered,completion.files.handover_record));
+  delivered=join(restored,'delivery');
+  completion=await readJSON(await regular(delivered,'handover-complete.json'));
+  record=await readJSON(await verified(delivered,completion.files.handover_record));
   requireValue(/^[a-f0-9]{64}$/.test(settings.handover_id||'')&&completion.id===settings.handover_id&&completion.identity.project_id===record.prepared.project_id,'Select the exact original handover ID from the native receiving result');
   for(const row of Object.values(completion.files))await verified(delivered,row);
-  const prepared=record.prepared,project=receiving.result.project;
+  prepared=record.prepared;project=receiving.result.project;
   requireValue(project.id===prepared.project_id&&record.scientific.workspace_id===project.id&&record.scientific.ensemble_id===prepared.ensemble_id,'The delivered source, project and native ensemble differ');
   requireValue(prepared.geography&&prepared.geography.model_domain_huc12s?.length&&record.scientific.state==='complete','Select the completed actual geographic report edition');
-  const workspace=join(restored,'workspace');
+  workspace=join(restored,'workspace');
   requireValue(equal(await readJSON(await regular(workspace,'workspace.json')),project),'The restored Workspace changed its original project');
-  const runIds=[prepared.baseline_run_id,...prepared.alternative_run_ids].map(safeId);
+  runIds=[prepared.baseline_run_id,...prepared.alternative_run_ids].map(safeId);
   for(const key of ['id','source_collection_id','grid_id','profile_id','ensemble_id'])safeId(prepared[key]);
   safeId(record.delivery_id);
-  const course=await admitGeographicCourse({workspace,record,readJSON,regular,equal,requireValue,safeId});
+  course=await admitGeographicCourse({workspace,record,readJSON,regular,equal,requireValue,safeId});
   requireValue(settings.completion_scope===undefined||settings.completion_scope===course.completion_scope,'The requested scope differs from the original archived report edition');
   if(settings.state_file){
    requireValue(isAbsolute(settings.state_file),'Use the original absolute receiving state path');
@@ -106,13 +127,18 @@ async function main(argv){
    requireValue(state.project_id===project.id&&state.ensemble_id===prepared.ensemble_id&&selectedState.delivery_id===record.delivery_id&&state.prepared?.id===prepared.id,'The caller state names another geographic delivery');
    requireValue(equal(selectedState.reference_basis,course.reference_basis),'The caller and original archive select different native reference progress');
   }
+  }
   const connection=await readJSON(settings.connection_file),operatorURL=new URL(connection.operator_url),token=new URLSearchParams(operatorURL.hash.slice(1)).get('token');
   requireValue(['http:','https:'].includes(operatorURL.protocol)&&!operatorURL.username&&!operatorURL.password&&token,'Use the exact existing operator startup URL with its capability');
   requireValue(!operatorURL.search&&['','/'].includes(operatorURL.pathname),'Use the existing operator root URL');
   secret=token;
   safeId(connection.workspace_key);
   if(connection.origin)requireValue(new URL(connection.origin).origin===operatorURL.origin,'The retained operator origin differs');
-  const binding={schema:INPUT,operation_id:settings.operation_id,project_id:project.id,geographic_id:prepared.id,
+  const binding=nativeStudy?{schema:INPUT,operation_id:settings.operation_id,project_id:project.id,
+   received_matched_control:nativeStudy.binding,run_ids:runIds,
+   planned_run_ids:course.planned_run_ids,completed_run_ids:course.completed_run_ids,
+   pending_run_ids:course.pending_run_ids,operator_workspace:connection.workspace_key}:
+   {schema:INPUT,operation_id:settings.operation_id,project_id:project.id,geographic_id:prepared.id,
    ensemble_id:prepared.ensemble_id,source_collection_id:prepared.source_collection_id,grid_id:prepared.grid_id,profile_id:prepared.profile_id,
    run_ids:runIds,completion_scope:course.completion_scope,course_state:course.course_state,
    planned_run_ids:course.planned_run_ids,completed_run_ids:course.completed_run_ids,pending_run_ids:course.pending_run_ids,
@@ -121,6 +147,7 @@ async function main(argv){
    archive_sha256:receiving.archive_sha256,operator_workspace:connection.workspace_key};
   if(settings.programme_action!==undefined)binding.programme_action=settings.programme_action;
   if(matchedControl)binding.multivariate_control=matchedControl;
+  if(outcomeChapter)binding.multivariate_control_outcomes=outcomeChapter;
   const progressPath=join(output,'browser-progress.json');
   progress=await exists(progressPath)?await readJSON(progressPath):{schema:RESULT,binding,attempts:[],created_at:now()};
   requireValue(progress.schema===RESULT&&equal(progress.binding,binding),'This browser output belongs to a different original case');
@@ -191,6 +218,7 @@ async function main(argv){
     if(!downloadedURLs.has(url.pathname)){await download(links[i],label,ticket);downloadedURLs.add(url.pathname);action('download_link',{path:url.pathname,label});}
    }
   }
+  if(!nativeStudy){
   const opening=await verified(delivered,completion.files.opening_page),startURL=pathToFileURL(opening).href;
   await page.goto(startURL,{waitUntil:'load'});requireValue(await page.locator('#native-filter').count()===1,'Open the original populated geographic START_HERE');
   const tableRows=page.locator('[data-native-case]'),rowCount=await tableRows.count();requireValue(rowCount>0,'The original native comparison table is empty');
@@ -238,14 +266,27 @@ async function main(argv){
    }
   }
   await operateGeographicReview({context,delivered,record,attemptRoot,artifact,screenshot,action,check,waitFor});
+  }
   await page.goto(operatorURL.href,{waitUntil:'domcontentloaded'});
   await waitFor(async()=>await page.locator('#workspace-select option[value="'+connection.workspace_key+'"]').count()>0,'existing operator workspace');
   await page.locator('#workspace-select').selectOption(connection.workspace_key);
   await waitFor(async()=>{const value=await api('/api/state');return value.workspace_key===connection.workspace_key&&value.data?.project?.id===project.id;},'same restored project');
   const before=await api('/api/state');await saveRecord('operator-before',before);
+  async function navigate(view){await closeDialog();await click('[data-view="'+view+'"]');}
+  if(nativeStudy){
+   for(const row of course.records.filter(row=>/^runs\/[0-9a-f]{64}\/run\.json$/.test(row.path))){
+    const current=await api('/api/item',{kind:'runs',id:row.value.id});
+    requireValue(equal(Object.fromEntries(Object.entries(current).filter(([key])=>key!=='_downloads')),row.value),
+     "The connected operator does not expose the exact independently received native run");
+   }
+   const receivedDesign=await apiPost('/api/multivariate-control/inspect',{design_id:nativeStudy.design.id});
+   requireValue(equal(Object.fromEntries(Object.entries(receivedDesign).filter(([key])=>key!=='_downloads')),nativeStudy.design),
+    "The connected operator opened another received matched-control design");
+   await saveRecord('original-matched-control-receiving',nativeStudy.receipt);
+   await saveRecord('original-matched-control-browser-admission',nativeStudy.binding);
+  }else{
   requireValue(before.data.sources.some(x=>x.id===prepared.source_collection_id),'The existing operator has another source edition');
   for(const id of course.planned_run_ids)requireValue(before.data.runs.some(x=>x.id===id),'The existing operator omits an original planned native run');
-  async function navigate(view){await closeDialog();await click('[data-view="'+view+'"]');}
   await navigate('geographic-headwaters');
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'saved geographic case');
   await click('[data-geo-case="'+prepared.id+'"]');
@@ -447,12 +488,25 @@ async function main(argv){
    const ids=value=>value.data[kind].map(x=>x.id).sort();
    requireValue(equal(ids(before),ids(after)),'The receiving course must preserve original '+kind+' identities');
   }
-  if(matchedControl)await operateMatchedControl({page,chapter:matchedControl,prepared,course,api,apiPost,
+  }
+  const matchedResult=matchedControl?await operateMatchedControl({page,chapter:matchedControl,prepared,course,api,apiPost,
+   nativeCohort:nativeStudy?.nativeCohort,
    workspaceKey:connection.workspace_key,equal,requireValue,check,waitFor,saveRecord,screenshot,
-   action,download,ticketDownloads,click,closeDialog,navigate,readJSON});
+   action,download,ticketDownloads,click,closeDialog,navigate,readJSON}):null;
+  const outcomeResult=outcomeChapter?await operateMatchedControlOutcomes({page,chapter:outcomeChapter,matchedResult,
+   nativeCohort:nativeStudy?.nativeCohort||{baseline_run_id:prepared.baseline_run_id,restoration_run_ids:prepared.alternative_run_ids},
+   pinnedOutcome:nativeStudy?.receipt.outcome_report,workspace,workspaceKey:connection.workspace_key,api,apiPost,equal,requireValue,
+   check,waitFor,saveRecord,screenshot,action,download,ticketDownloads,click,closeDialog,navigate,readJSON,verified}):null;
+  if(nativeStudy){
+   requireValue(matchedResult.design_id===nativeStudy.design.id,"The received browser chapter changed its selected design");
+   requireValue((await fileHash(nativeStudy.source.path)).sha256===nativeStudy.source.sha256,
+    "The original native receiving receipt changed during browser operation");
+   for(const row of nativeStudy.binding.files)await verified(workspace,row);
+  }else{
   await page.reload({waitUntil:'domcontentloaded'});await navigate('geographic-headwaters');
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'same case after actual reload');
   await click('[data-geo-case="'+prepared.id+'"]');await screenshot(page,'geographic-reopened',1440);await screenshot(page,'geographic-reopened',390);
+  }
   if(settings.delivery_preparation===true){
    async function preparationRequest({method,path,body,query}){
     check();const target=new URL(path,operatorURL);
@@ -476,7 +530,7 @@ async function main(argv){
   attempt.state='browser_completed';attempt.completed_at=now();attempt.elapsed_seconds=(Date.parse(attempt.completed_at)-Date.parse(attempt.started_at))/1000;
   attempt.human_inspection='The producing worker must open and personally view these actual screens and every outgoing attachment. Automated capture is not visual acceptance.';
   await checkpoint();await atomic(join(output,'result.json'),{schema:RESULT,binding,attempt,owner_direction:'2026-10-13.4',cutoff:settings.cutoff??null,automatic_resume:false});
-  process.stdout.write(JSON.stringify({state:'browser_completed',project_id:project.id,geographic_id:prepared.id,result:join(output,'result.json'),files:attempt.files.length,elapsed_seconds:attempt.elapsed_seconds})+'\n');
+  process.stdout.write(JSON.stringify({state:'browser_completed',project_id:project.id,...(nativeStudy?{design_id:nativeStudy.design.id,study_id:nativeStudy.receipt.study_id}:{geographic_id:prepared.id}),result:join(output,'result.json'),files:attempt.files.length,elapsed_seconds:attempt.elapsed_seconds})+'\n');
  }catch(error){
   if(attempt){attempt.state=stopped||Date.now()>=CUTOFF?'interrupted':'failed';attempt.ended_at=now();attempt.error={name:error.name,message:publicMessage(error.message)};
    try{await checkpoint();await atomic(join(output,'private','last-error.json'),{at:now(),message:publicMessage(error.message),stack:publicMessage(error.stack)});}catch{}}
