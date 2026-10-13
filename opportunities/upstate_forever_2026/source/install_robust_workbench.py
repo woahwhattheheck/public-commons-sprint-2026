@@ -21,6 +21,44 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "operator/server.py",
+    "operator/extension_registry.py",
+    "operator/source_reports.py",
+    "operator/source_archive_ingress.py",
+    "operator/scientific_synthesis.py",
+    "operator/scientific_source_reader.py",
+    "model/scientific_briefing.py",
+    "model/observed_context.py",
+    "model/scientific_report_review.py",
+    "model/scientific_synthesis.py",
+    "model/scientific_synthesis_catalog.py",
+    "integration/component_fragments/terrain-conditioning-report-source.json",
+    "integration/component_fragments/terrain-conditioning.json",
+    "integration/component_fragments/terrain-report-receiving.json",
+    "integration/component_fragments/terrain-study-transfer.json",
+    "model/terrain_conditioning_report_cli.py",
+    "model/terrain_conditioning_report_source.py",
+    "model/terrain_conditioning_scientific_report.py",
+    "model/terrain_conditioning_study_transfer.py",
+    "operator/TERRAIN_SCIENTIFIC_SOURCE.md",
+    "operator/extensions/terrain-conditioning.json",
+    "operator/terrain_conditioning_native.py",
+    "operator/web/terrain_conditioning.css",
+    "operator/web/terrain_conditioning.mjs",
+    "source/TERRAIN_STUDY_TRANSFER.md",
+    "source/observed-report-20261013/assessment_browser.mjs",
+    "source/observed-report-20261013/receive_browser.mjs",
+    "source/observed-report-20261013/receive_course.py",
+    "source/observed-report-20261013/receive_operator.py",
+    "source_tools/TERRAIN_CONDITIONING.md",
+    "source_tools/TERRAIN_REPORT_RECEIVING.md",
+    "source_tools/terrain_conditioning.py",
+    "source_tools/terrain_conditioning_report.py",
+    "source_tools/terrain_conditioning_response.py",
+    "source_tools/terrain_flood.cpp",
+    "source_tools/terrain_prepare.py",
+    "source_tools/terrain_report_browser.mjs",
+    "source_tools/terrain_report_receiving.py",
     "operator/delivery_preparation_receiving.mjs",
     "operator/web/delivery_preparation_storage.mjs",
     "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
@@ -392,6 +430,44 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "operator/server.py",
+    "operator/extension_registry.py",
+    "operator/source_reports.py",
+    "operator/source_archive_ingress.py",
+    "operator/scientific_synthesis.py",
+    "operator/scientific_source_reader.py",
+    "model/scientific_briefing.py",
+    "model/observed_context.py",
+    "model/scientific_report_review.py",
+    "model/scientific_synthesis.py",
+    "model/scientific_synthesis_catalog.py",
+    "integration/component_fragments/terrain-conditioning-report-source.json",
+    "integration/component_fragments/terrain-conditioning.json",
+    "integration/component_fragments/terrain-report-receiving.json",
+    "integration/component_fragments/terrain-study-transfer.json",
+    "model/terrain_conditioning_report_cli.py",
+    "model/terrain_conditioning_report_source.py",
+    "model/terrain_conditioning_scientific_report.py",
+    "model/terrain_conditioning_study_transfer.py",
+    "operator/TERRAIN_SCIENTIFIC_SOURCE.md",
+    "operator/extensions/terrain-conditioning.json",
+    "operator/terrain_conditioning_native.py",
+    "operator/web/terrain_conditioning.css",
+    "operator/web/terrain_conditioning.mjs",
+    "source/TERRAIN_STUDY_TRANSFER.md",
+    "source/observed-report-20261013/assessment_browser.mjs",
+    "source/observed-report-20261013/receive_browser.mjs",
+    "source/observed-report-20261013/receive_course.py",
+    "source/observed-report-20261013/receive_operator.py",
+    "source_tools/TERRAIN_CONDITIONING.md",
+    "source_tools/TERRAIN_REPORT_RECEIVING.md",
+    "source_tools/terrain_conditioning.py",
+    "source_tools/terrain_conditioning_report.py",
+    "source_tools/terrain_conditioning_response.py",
+    "source_tools/terrain_flood.cpp",
+    "source_tools/terrain_prepare.py",
+    "source_tools/terrain_report_browser.mjs",
+    "source_tools/terrain_report_receiving.py",
     "operator/delivery_preparation_receiving.mjs",
     "operator/web/delivery_preparation_storage.mjs",
     "source/MULTIVARIATE_CONTROL_OWNER_DIRECTION.md",
@@ -1616,7 +1692,119 @@ def verify_multivariate_control_dependencies(application, pending):
     ))
 
 
+def verify_terrain_receiving_dependencies(application, pending):
+    def source(name):
+        return pending.get(name) if name in pending else read_existing(application, name)
+    def require(names):
+        for name in names:
+            assembled_data(application, pending, name)
+    transfer = source("model/study_transfer.py")
+    ordered = source("model/scientific_report_study_transfer.py")
+    terrain = source("model/terrain_conditioning_report_source.py")
+    if (terrain is not None or (transfer is not None and b"terrain_conditioning_study_transfer" in transfer)
+            or (ordered is not None and b"terrain_conditioning_study_transfer" in ordered)):
+        require((
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_flood.cpp",
+        "source_tools/terrain_prepare.py",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "model/terrain_conditioning_report_cli.py",
+        "model/terrain_conditioning_study_transfer.py",
+        "operator/terrain_conditioning_native.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/web/terrain_conditioning.mjs",
+        "operator/web/terrain_conditioning.css",
+        "operator/TERRAIN_SCIENTIFIC_SOURCE.md",
+        "source/TERRAIN_STUDY_TRANSFER.md",
+        "integration/component_fragments/terrain-conditioning.json",
+        "integration/component_fragments/terrain-conditioning-report-source.json",
+        "integration/component_fragments/terrain-study-transfer.json",
+        "model/common.py",
+        "model/workspace.py",
+        "model/rasters.py",
+        "model/native_versions.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+    ))
+    provider = source("operator/terrain_conditioning_native.py")
+    if provider is not None:
+        require(("operator/extensions/terrain-conditioning.json", "operator/web/terrain_conditioning.mjs",
+                 "operator/web/terrain_conditioning.css"))
+        descriptor = json.loads(assembled_data(application, pending, "operator/extensions/terrain-conditioning.json"))
+        if (b"report_source" in provider and
+                ("terrain.conditioning.report-source.prepare" not in descriptor.get("backend", {}).get("actions", [])
+                 or not any(route.get("path") == "/api/terrain-conditioning/report-source-preview"
+                            for route in descriptor.get("backend", {}).get("routes", [])))):
+            raise ValueError("Install the complete original Terrain scientific-source registration")
+        for asset in descriptor.get("assets", []):
+            assembled_data(application, pending, "operator/web/" + asset)
+    receiver = source("source/observed-report-20261013/receive_operator.py")
+    browser = source("source/observed-report-20261013/receive_browser.mjs")
+    if ((receiver is not None and b"terrain_report_receiving" in receiver)
+            or (browser is not None and b"terrain_report_browser.mjs" in browser)):
+        require((
+        "source_tools/terrain_conditioning.py",
+        "source_tools/terrain_conditioning_response.py",
+        "source_tools/terrain_conditioning_report.py",
+        "source_tools/terrain_flood.cpp",
+        "source_tools/terrain_prepare.py",
+        "source_tools/TERRAIN_CONDITIONING.md",
+        "model/terrain_conditioning_report_source.py",
+        "model/terrain_conditioning_scientific_report.py",
+        "model/terrain_conditioning_report_cli.py",
+        "model/terrain_conditioning_study_transfer.py",
+        "operator/terrain_conditioning_native.py",
+        "operator/extensions/terrain-conditioning.json",
+        "operator/web/terrain_conditioning.mjs",
+        "operator/web/terrain_conditioning.css",
+        "operator/TERRAIN_SCIENTIFIC_SOURCE.md",
+        "source/TERRAIN_STUDY_TRANSFER.md",
+        "integration/component_fragments/terrain-conditioning.json",
+        "integration/component_fragments/terrain-conditioning-report-source.json",
+        "integration/component_fragments/terrain-study-transfer.json",
+        "source_tools/terrain_report_receiving.py",
+        "source_tools/terrain_report_browser.mjs",
+        "source_tools/TERRAIN_REPORT_RECEIVING.md",
+        "integration/component_fragments/terrain-report-receiving.json",
+        "source/observed-report-20261013/receive_operator.py",
+        "source/observed-report-20261013/receive_browser.mjs",
+        "source/observed-report-20261013/assessment_browser.mjs",
+        "source/observed-report-20261013/receive_course.py",
+        "model/common.py",
+        "model/workspace.py",
+        "model/rasters.py",
+        "model/native_versions.py",
+        "model/scientific_report.py",
+        "model/scientific_figures.py",
+        "model/scientific_report_editions.py",
+        "model/scientific_report_study_transfer.py",
+        "model/study_transfer.py",
+        "model/portable.py",
+        "operator/server.py",
+        "operator/extension_registry.py",
+        "operator/source_reports.py",
+        "operator/web/source_reports.mjs",
+        "operator/extensions/source-reports.json",
+        "operator/source_report_editions.py",
+        "operator/source_archive_ingress.py",
+        "operator/scientific_synthesis.py",
+        "operator/scientific_source_reader.py",
+        "model/scientific_briefing.py",
+        "model/observed_context.py",
+        "model/scientific_report_review.py",
+        "model/scientific_report_capture.py",
+        "model/scientific_synthesis.py",
+        "model/scientific_synthesis_catalog.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    ))
+
+
 def verify_composition(application, pending):
+    verify_terrain_receiving_dependencies(application, pending)
     verify_multivariate_control_dependencies(application, pending)
     verify_geographic_browser_dependencies(application, pending)
     verify_geographic_received_study_dependencies(application, pending)
