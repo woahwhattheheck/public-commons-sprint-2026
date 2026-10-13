@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "paired-ensemble-report",
+  "components": {
+    "paired-ensemble-report": {
+      "title": "Complete retained paired ensembles in the original scientific report composer",
+      "paths": [
+        "model/paired_ensemble/ensemble_report_source.py",
+        "model/paired_ensemble/ensemble_report_cli.py",
+        "model/paired_ensemble/REPORT_SOURCE.md",
+        "operator/paired_ensemble_report_native.py",
+        "operator/extensions/paired-ensemble-report.json",
+        "operator/web/paired_ensemble_report_desk.mjs"
+      ],
+      "requires": [
+        "paired-ensemble",
+        "observed-context"
+      ]
+    }
+  },
+  "required_components": [
+    "paired-ensemble-report"
+  ]
+}
