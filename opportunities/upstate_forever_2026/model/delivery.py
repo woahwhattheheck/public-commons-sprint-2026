@@ -277,6 +277,10 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         # Run completion dates describe the producing stages, not necessarily
         # the later comparison or normalization process.
         step.find("procdate").text = "Unknown"
+        add("idinfo/timeperd/timeinfo/sngdate/caldate", "Unknown")
+        add("idinfo/timeperd/current", "The original derived-dataset processing date is not recorded. "
+            "Producing-stage completion dates remain in the retained run records; "
+            "the actual packaging date is recorded in the packaging process step.")
         for source in sources:
             ET.SubElement(step, "srcused").text = source["id"]
         transfer = ET.SubElement(lineage, "procstep")
