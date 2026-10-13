@@ -849,6 +849,9 @@ def catalog(workspace):
         studies = []
     else:
         studies = prepared_studies(workspace)
+    # Original observation station study catalogue extension
+    from .observed_station_studies import prepared_studies as observed_station_studies
+    studies.extend(observed_station_studies(workspace, original_studies=studies))
     return {"schema": "upstate.station-geography-catalog/v1", "sources": sources, "observations": observations,
             "editions": editions, "prepared_studies": studies, "version": VERSION}
 

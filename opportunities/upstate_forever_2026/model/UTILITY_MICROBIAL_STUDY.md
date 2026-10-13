@@ -142,7 +142,7 @@ The original utility-focus assignments and any subsequently selected full-domain
 
 The normal Station geography ZIP carries its selected station/result source bindings and their complete companions, including the independent original microbial explorer and all of its relative files. The generated spatial collection lets the existing GIS workflow select the mapped stations through its ordinary source catalogue. A complete Workspace backup also retains the microbial preparation/receiving folder and the native saved edition.
 
-The source edition manifest is pinned to SHA256:
+The retained predecessor source edition manifest is pinned to SHA256:
 
 ~~~text
 ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23

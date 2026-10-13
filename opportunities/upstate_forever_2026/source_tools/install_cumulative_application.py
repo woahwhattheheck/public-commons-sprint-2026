@@ -4,6 +4,8 @@
 Uses the retained component authors' source transformations, composes their shared
 lifecycle hooks, restores bundled original input bytes, and publishes one complete
 application ZIP. Run with the existing scientific Python environment.
+Use --scientific-source for the retained canonical Keowee/review family when
+its original shared entrypoint differs from the current full checkout.
 """
 from __future__ import annotations
 
@@ -199,9 +201,17 @@ def shared_lifecycle(root):
     write(index, html)
 
 
-def compose(root, records=None):
+def compose(root, records=None, *, source_root=None):
     if records is None:
         records = []
+    retained_source = Path(source_root).resolve(strict=True) if source_root is not None else None
+    canonical_installers = (
+        "source_tools/install_keowee_watershed_join.py",
+        "source_tools/install_review_reconciliation.py",
+    )
+    if any((root / name).is_file() for name in canonical_installers):
+        if retained_source is None or retained_source == root.resolve():
+            raise ValueError("Pass the independent retained source_root when composing the Keowee and scientific-review families.")
     diagnostic_join(root, records)
     experiments = module(root, "install_experiments.py")
     apply_function(root, [
@@ -264,8 +274,28 @@ def compose(root, records=None):
         ], "Native Investigations and scientific interpretation", records)
     registered_desks_join(root, records)
     context_desks_join(root, records)
+    scientific_source_join(root, retained_source, records)
     continuity_join(root, records)
     return records
+
+
+def scientific_source_join(root, source_root, records):
+    """Run original scientific installers against their unchanged source edition."""
+    installers = (
+        ("Keowee methods and watershed scientific setup",
+         "source_tools/install_keowee_watershed_join.py"),
+        ("Original scientific review reconciliation",
+         "source_tools/install_review_reconciliation.py"),
+    )
+    for title, relative in installers:
+        if not (root / relative).is_file():
+            continue
+        if source_root is None or source_root.resolve() == root.resolve():
+            raise ValueError("Retain the independent original scientific source before installation.")
+        if not (source_root / relative).is_file():
+            raise ValueError("The retained scientific source is missing its original installer: " + relative)
+        result = module(source_root, relative)["install"](root, source_root)
+        records.append({"component": title, "result": result})
 
 
 def continuity_join(root, records):
@@ -721,7 +751,7 @@ def archive_application(root, destination):
             temporary.unlink(missing_ok=True)
 
 
-def install(source, output, archive):
+def install(source, output, archive, *, scientific_source=None):
     source, output = Path(source).resolve(strict=True), Path(output).absolute()
     if not (source / "model/workspace.py").is_file() or not (source / "operator/server.py").is_file():
         raise ValueError("Receive the complete source root before cumulative installation")
@@ -730,10 +760,36 @@ def install(source, output, archive):
     original = owned_inventory(source)
     source_components = component_inventory(source, allow_embedded=True)
     source_identity = identity(original)
+    scientific_root = (Path(scientific_source).resolve(strict=True)
+                       if scientific_source is not None else source)
+    scientific_installers = (
+        "source_tools/install_keowee_watershed_join.py",
+        "source_tools/install_review_reconciliation.py",
+    )
+    needs_scientific_source = any((source / name).is_file() for name in scientific_installers)
+    scientific_original = None
+    scientific_identity = None
+    if needs_scientific_source:
+        if (output == scientific_root or output.is_relative_to(scientific_root)
+                or scientific_root.is_relative_to(output)):
+            raise ValueError("Keep the canonical scientific source independent of the receiving directory.")
+        scientific_original = (original if scientific_root == source
+                               else owned_inventory(scientific_root))
+        scientific_identity = identity(scientific_original)
+        for relative in scientific_installers:
+            if (source / relative).is_file() and not (scientific_root / relative).is_file():
+                raise ValueError("The canonical scientific source is missing: " + relative)
+        keowee = "source_tools/install_keowee_watershed_join.py"
+        if (source / keowee).is_file():
+            # Validate exact canonical members before copying or transforming
+            # the full current application. Current shared host bytes can differ.
+            module(scientific_root, keowee)["package"](scientific_root)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         marker = json.loads((output / RECORD).read_text("utf-8"))
-        if marker.get("source_sha256") != source_identity or marker.get("installed_files") != owned_inventory(output):
+        if (marker.get("source_sha256") != source_identity
+                or marker.get("scientific_source_sha256") != scientific_identity
+                or marker.get("installed_files") != owned_inventory(output)):
             raise ValueError("The existing receiving edition has different source; choose its own output directory")
         installed_components = component_inventory(output)
         result = {"state": "current", "application": str(output), "source_sha256": source_identity,
@@ -754,7 +810,7 @@ def install(source, output, archive):
             raise ValueError("Copied application source differs from its retained inventory")
         sys.path[:0] = [str(root / "operator"), str(root)]
         phase = "compose_application"
-        compose(root, steps)
+        compose(root, steps, source_root=scientific_root)
         phase = "restore_original_inputs"
         inputs = restore_inputs(root)
         phase = "check_application_sources"
@@ -765,8 +821,13 @@ def install(source, output, archive):
             raise ValueError("A component installer changed the selected edition catalogue")
         if owned_inventory(source) != original:
             raise ValueError("The retained input source changed during installation")
+        if (scientific_original is not None and scientific_root != source
+                and owned_inventory(scientific_root) != scientific_original):
+            raise ValueError("The retained canonical scientific source changed during installation")
         record = {"schema": "upstate.cumulative-installation/v1", "operation_id": OPERATION,
-                  "source_sha256": source_identity, "steps": steps, "restored_inputs": inputs,
+                  "source_sha256": source_identity,
+                  "scientific_source_sha256": scientific_identity,
+                  "steps": steps, "restored_inputs": inputs,
                   "source_component_inventory": source_components,
                   "validation": validation, "installed_files": owned_inventory(root)}
         write(root / RECORD, json.dumps(record, ensure_ascii=False, indent=2) + "\n")
@@ -779,6 +840,8 @@ def install(source, output, archive):
                    "operation_id": OPERATION, "state": "error", "phase": phase,
                    "error": type(error).__name__, "message": str(error),
                    "source": str(source), "source_sha256": source_identity,
+                   "scientific_source": str(scientific_root),
+                   "scientific_source_sha256": scientific_identity,
                    "requested_output": str(output),
                    "retained_stage": str(staging),
                    "retained_application": str(root) if root.is_dir() else None,
@@ -820,9 +883,12 @@ def main(argv=None):
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--archive", type=Path)
+    parser.add_argument("--scientific-source", type=Path,
+                        help="Independent canonical Keowee/review family source; defaults to --source")
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(install(args.source, args.output, args.archive), indent=2, ensure_ascii=False))
+        print(json.dumps(install(args.source, args.output, args.archive,
+                                 scientific_source=args.scientific_source), indent=2, ensure_ascii=False))
         return 0
     except Exception as error:
         details = getattr(error, "receiving_details", None)

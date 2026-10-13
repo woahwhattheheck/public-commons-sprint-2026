@@ -69,12 +69,22 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     let node=nodes.get(key);
     if(!node){node=document.createElement('eco-monitoring');node.transport=(action,payload)=>transport(key,action,payload);nodes.set(key,node);}
     if(node.busy)throw Error('Finish the current monitoring operation before opening another network.');
+    const scoped=Object.values(network.nodes||{}).filter(row=>typeof row.source_properties?.rwmon_in_scope==='boolean');
+    let scopedConfiguration=null;
+    if(node.network?.id!==id && scoped.length){
+      scopedConfiguration={...node.json('advanced')};
+      for(const field of ['required_ids','existing_station_ids','minimum_by_stratum','site_costs','incompatible_pairs'])delete scopedConfiguration[field];
+      scopedConfiguration.excluded_ids=scoped.filter(row=>!row.source_properties.rwmon_in_scope).map(row=>row.id).sort();
+      scopedConfiguration.required_ids=[];scopedConfiguration.existing_station_ids=[];scopedConfiguration.minimum_by_stratum={};
+    }
     node.network=network;node.plan=null;node.campaign=null;
+    if(scopedConfiguration)node.$('advanced').value=JSON.stringify(scopedConfiguration,null,2);
     const select=node.$('networks');
     if(![...select.options].some(option=>option.value===id))select.add(new Option(network.title||id,id));
     select.value=id;node.$('plans').value='';node.$('campaigns').value='';
     node.$('frontier-results').replaceChildren();node.$('downloads').replaceChildren();
     node.render();
+    if(scoped.length){node.$('status').textContent='Opened the original network. Candidate search starts inside the selected water scope; the complete HUC routing remains available. Review Advanced constraints, costs and calendar before solving.';node.$('status').dataset.error='false';}
     return {network_id:id,workspace_key:key};
   }
   async function mount(root) {
