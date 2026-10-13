@@ -19,7 +19,7 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
     sys.path[:0] = [str(application / "operator"), str(application)]
     from server import Operator, Fault
     from gis_projects import GISProjects
-    from model import gis_project as gis, gis_workspace
+    from model import gis_project as gis, gis_workspace, gis_vector_review
     from model.common import atomic_json, digest
     from model.webmap_sources import CONTEXT_PARENT_SHA256
     from eco_intelligence.profiling import profile
@@ -218,6 +218,31 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         stream, _ = operator.open_download(viewer["id"])
         stream.close()
 
+        vector_review = complete("vector-review", "gis.vector.review", {
+            "receipt_id": received["result"]["id"],
+            "layer_ids": [row["id"] for row in received_project["layers"]
+                          if row["data"]["kind"] == "vector"]})
+        review = gis_vector_review.inspect(native, vector_review["result"]["id"])
+        if len(review["layers"]) != 1:
+            raise AssertionError("The original county review lost its exact vector selection.")
+        counts = review["layers"][0]["counts"]
+        if (counts["original_features"] != 10 or counts["working_features"] != 10
+                or counts["matched"] != 10 or counts["unchanged"] != 10
+                or any(counts[name] for name in ("attribute_changed", "geometry_changed",
+                    "geometry_unassessed", "added_identities", "removed_identities",
+                    "unmatched_original", "ambiguous_ids", "missing_working_identity",
+                    "invalid_original", "invalid_working"))):
+            raise AssertionError("The original unedited county GIS did not reopen as ten unchanged features.")
+        review_task = operator.task_view(vector_review["id"])
+        if review_task.get("_item") != {"kind": "gis_vector_reviews", "id": review["id"]}:
+            raise AssertionError("The original queue did not reopen the retained vector review.")
+        if {row["filename"] for row in review_task.get("_downloads", [])} != {
+                "review.json", "feature-changes.csv", "review.html", "vector-review.zip"}:
+            raise AssertionError("The vector review is missing a complete native download.")
+        for ticket in review_task["_downloads"]:
+            stream, _ = operator.open_download(ticket["id"])
+            stream.close()
+
         adopted = complete("adopt", "gis.project.adopt-sources", {
             "receipt_id": received["result"]["id"],
             "title": "Received original county GIS sources",
@@ -372,6 +397,8 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             "received_reexport": received_again_check,
             "retained_source_metadata": True, "original_county_attributes": True,
             "original_county_geometries": True,
+            "vector_review_id": review["id"], "vector_review_counts": counts,
+            "vector_review_complete_downloads": True,
             "typed_context_tables": typed_tables,
             "source_only_collection_id": table_collection["id"],
             "source_only_tables": source_only_tables,
@@ -426,6 +453,13 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             path, entry = operator.ws(key).source_file(table_collection["id"], row["source_id"])
             if entry["kind"] != "table" or profile(path) != row["profile"]:
                 raise AssertionError("Restart changed the independently adopted original table.")
+        retained_review = gis_vector_review.inspect(operator.ws(key), outcome["vector_review_id"])
+        if retained_review["layers"][0]["counts"] != outcome["vector_review_counts"]:
+            raise AssertionError("Restart changed the retained original-feature comparison.")
+        reopened_review_task = operator.task_view(receipt["phases"]["vector-review"]["task_id"])
+        for ticket in reopened_review_task["_downloads"]:
+            stream, _ = operator.open_download(ticket["id"])
+            stream.close()
         outcome.update(status="passed", restart_reopened=True,
                        source_only_collection_export=collection_result)
         atomic_json(report_path, outcome)
