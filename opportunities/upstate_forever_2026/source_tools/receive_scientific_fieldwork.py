@@ -127,15 +127,9 @@ def render_science(workspace, root, state, checkpoint, original, source):
         key = outcome["scientific_report_edition_id"]
         record, _, _ = scientific_report_editions.inspect(workspace, key)
         checkpoint("science_retained", scientific_edition_id=key)
-    # Use the real Operator's existing archive/ticket implementation. Rendering
-    # above is the same model lifecycle used by ScientificReportEditions.
-    from server import Operator, Fault
-    from source_report_editions import ScientificReportEditions
-    operator = Operator(workspace.root, root / "operator-state")
-    try:
-        ScientificReportEditions(operator, Fault).export(operator.primary, key)
-    finally:
-        operator.close()
+    # The operator and this native course use the same original archive producer.
+    # File tickets belong to the web provider; receiving needs the retained ZIP.
+    scientific_report_editions.export(workspace, key)
     return record
 
 
