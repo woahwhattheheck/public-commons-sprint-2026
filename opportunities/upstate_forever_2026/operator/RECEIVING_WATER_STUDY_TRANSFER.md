@@ -106,7 +106,7 @@ field remains omitted when its displayed default is unchanged.
 
 Changing a source choice retains its existing layer, feature filters and
 supporting metadata until they are explicitly edited. Review those settings
-when choosing a different source edition. The original engine validates the
+when choosing a different source edition. Explicitly clearing the optional catchment-network selector removes that complete binding, including its advanced fields; it is rejected while an upstream-HUC relationship still needs it. The original engine validates the
 complete relationship and source selection on preparation.
 
 ### Retained analysis choices
@@ -134,7 +134,7 @@ settings and original values.
 
 **Advanced retained selection** displays the complete original JSON. To change
 unsupported settings, edit it and choose **Apply selection to form**. Applying
-repopulates the controls and retains the complete new base. Submission refuses
+repopulates the controls and retains the complete new base. Apply permits one in-flight source read; a closed or replaced form cannot be reopened by its late response. Submission refuses
 unapplied JSON changes so they cannot disappear. The visible changed-settings
 summary compares the current form with the original saved selection.
 

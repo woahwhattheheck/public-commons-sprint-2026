@@ -35,7 +35,7 @@ export function attachReceivingWaters(context){
     if(target)target.innerHTML=report.render();
   }});
   let host=null,version=0,controller=null,timer=null,selected=null,record=null,catalog=null,workspaceKey=null;
-  let nextReceptor=1,nextCatalogSource=1,studyRequest=0;
+  let nextReceptor=1,nextCatalogSource=1,studyRequest=0,formRequest=0;
   const pageSize=75;
   let searchIndex=new WeakMap();
   let display={search:'',family:'',kind:'',run:'',quantity:'physical'};
@@ -404,6 +404,7 @@ export function attachReceivingWaters(context){
   }
   function mountDraft(root,seed,read,reopen,workspace,original=seed){
     const summary=root.querySelector('[data-water-edit-summary]');
+    let applying=false;
     const update=()=>{
       try{
         checkDraft(root,seed,workspace);
@@ -413,12 +414,15 @@ export function attachReceivingWaters(context){
       }catch(error){summary.textContent=error.message;}
     };
     root.addEventListener('input',update);root.addEventListener('change',update);root.addEventListener('click',update);
-    root.querySelector('[data-water-apply-selection]').addEventListener('click',async()=>{
+    root.querySelector('[data-water-apply-selection]').addEventListener('click',async event=>{
+      if(applying)return;
+      applying=true;event.target.disabled=true;
       try{
         if(root!==formRoot()||workspace!==currentWorkspace())throw Error('Reopen the form in its original workspace.');
         const next=jsonObject(value('receiving_advanced_selection',root),'Advanced retained selection');
         await reopen(next);
       }catch(error){toast(error.message);}
+      finally{applying=false;event.target.disabled=false;}
     });
     update();
   }
@@ -442,10 +446,11 @@ export function attachReceivingWaters(context){
     return Object.fromEntries(['title','id','family','source','layer','features','where','method','rationale','buffer','designation']
       .map(key=>[key,value('receptor_'+key,root)]));
   }
-  async function planForm(initial=null,origin=null){
-    const workspace=currentWorkspace(),marker=version,view=context.getView?.();
+  async function planForm(initial=null,origin=null,expectedRoot=null){
+    const workspace=currentWorkspace(),marker=version,view=context.getView?.(),request=++formRequest;
     await loadCatalog();
-    if(workspace!==currentWorkspace()||marker!==version||(view!==undefined&&view!==context.getView?.()))throw Error('Reopen the source-plan form in its original workspace.');
+    if(workspace!==currentWorkspace()||marker!==version||request!==formRequest||(view!==undefined&&view!==context.getView?.())||
+        (expectedRoot&&(expectedRoot!==formRoot()||!expectedRoot.isConnected||expectedRoot.closest('dialog')?.open===false)))throw Error('Reopen the source-plan form in its original workspace.');
     if(!vectorSources().length)throw Error('Import the original water and catchment vector sources first.');
     const seed=initial===null?{title:'',analysis_crs:'EPSG:5070',receptors:[newReceptor(1)]}:selectionObject(initial);
     if(!Array.isArray(seed.receptors)||!seed.receptors.length)throw Error('Retain at least one original receiving-area selection.');
@@ -470,7 +475,7 @@ export function attachReceivingWaters(context){
     };
     openForm(origin?'Revise saved receiving areas':'Define receiving areas','Choose original source geometry and its contribution relationship. Save a new selection while retaining the original source plan.',
       '<div class="form-grid">'+field('Study title',input('plan_title',f.title,'required'),'',true)+
-      field('Catchment network',sourceSelector('plan_catchments',f.catchments,false),'Required for HUC / ToHUC upstream relationships.',true)+
+      field('Catchment network',sourceSelector('plan_catchments',f.catchments,false),'Required for HUC / ToHUC upstream relationships. Clearing this choice removes the complete optional network and its advanced settings.',true)+
       field('Catchment layer',input('plan_catchment_layer',f.catchmentLayer),'Retain the original layer name when supplied.',true)+
       field('Catchment ID field',input('plan_huc_field',f.huc))+field('Downstream HUC field',input('plan_tohuc_field',f.tohuc))+
       field('Projected analysis CRS',input('plan_crs',f.crs,'required'),'Use a projected CRS measured in metres.',true)+
@@ -485,7 +490,7 @@ export function attachReceivingWaters(context){
           remove(node){flush();const index=rows.findIndex(row=>String(row.index)===node?.dataset.waterReceptorIndex);if(index<0)throw Error('Choose an area in this form.');rows.splice(index,1);paint();}
         };
         root.addEventListener('click',event=>{const button=event.target.closest('[data-water-plan-page]');if(!button)return;event.preventDefault();flush();page+=Number(button.dataset.waterPlanPage);paint();});
-        paint();mountDraft(root,seed,read,next=>planForm(next,origin),workspace,origin?.selection||seed);
+        paint();mountDraft(root,seed,read,next=>planForm(next,origin,root),workspace,origin?.selection||seed);
       });
   }
   async function inspectSource(button){
@@ -512,8 +517,11 @@ export function attachReceivingWaters(context){
     function updateMembers(group){
       const parent=value('account_parent',group),seed=group.receivingSeed;
       const previous=new Map([...group.querySelectorAll('[data-water-accounting-member]')].map(row=>[row.dataset.waterAccountingMember,value('account_role',row)]));
-      if(!previous.size)for(const id of seed.upstream_receptor_ids||[])previous.set(id,(seed.reservoir_receptor_ids||[]).includes(id)?'reservoir':'upstream');
-      for(const id of seed.reservoir_receptor_ids||[])if(!previous.has(id))previous.set(id,'reservoir');
+      if(!group.receivingMembersInitialized){
+        for(const id of seed.upstream_receptor_ids||[])previous.set(id,(seed.reservoir_receptor_ids||[]).includes(id)?'reservoir':'upstream');
+        for(const id of seed.reservoir_receptor_ids||[])if(!previous.has(id))previous.set(id,'reservoir');
+        group.receivingMembersInitialized=true;
+      }
       const available=rows().filter(row=>row.id!==parent||previous.get(row.id));
       for(const [id,role]of previous)if(role&&!available.some(row=>row.id===id))available.push({id,title:'Retained area '+id,missing:true});
       group.querySelector('[data-water-accounting-members]').innerHTML=available.map(row=>
@@ -549,7 +557,7 @@ export function attachReceivingWaters(context){
       });
     }
     root.querySelector('[name="analysis_plan"]').addEventListener('change',()=>{
-      try{if(list.children.length)savedGroups=readGroups(false);loadPlan();}
+      try{if(plan&&!waiting)savedGroups=readGroups(false);loadPlan();}
       catch(error){errorMessage=error.message;status.textContent='Keep or correct the current accounting draft before changing plans: '+error.message;}
     });
     add.addEventListener('click',()=>appendGroup());
@@ -580,10 +588,11 @@ export function attachReceivingWaters(context){
       out.groups=groups;return out;
     };
   }
-  async function analyzeForm(planId='',initial=null,origin=null){
-    const workspace=currentWorkspace(),marker=version,view=context.getView?.();
+  async function analyzeForm(planId='',initial=null,origin=null,expectedRoot=null){
+    const workspace=currentWorkspace(),marker=version,view=context.getView?.(),request=++formRequest;
     await loadCatalog();
-    if(workspace!==currentWorkspace()||marker!==version||(view!==undefined&&view!==context.getView?.()))throw Error('Reopen the analysis form in its original workspace.');
+    if(workspace!==currentWorkspace()||marker!==version||request!==formRequest||(view!==undefined&&view!==context.getView?.())||
+        (expectedRoot&&(expectedRoot!==formRoot()||!expectedRoot.isConnected||expectedRoot.closest('dialog')?.open===false)))throw Error('Reopen the analysis form in its original workspace.');
     const seed=initial===null?{plan_id:planId,baseline_run_id:'',alternative_run_ids:[],quantity_scope:'reporting'}:selectionObject(initial);
     const f=analysisFields(seed),complete=runs().filter(r=>r.state==='complete');
     if(!plans().length&&!f.plan)throw Error('Prepare a receiving-water source plan first.');
@@ -626,7 +635,7 @@ export function attachReceivingWaters(context){
             '<p class="water-note">'+(baseline?'No completed alternatives share this grid and scientific profile. A baseline-only analysis is available.':'Choose the baseline.')+'</p>';
         };
         root.querySelector('[name="analysis_baseline"]').addEventListener('change',update);update();
-        mountDraft(root,seed,read,next=>analyzeForm(next.plan_id||'',next,origin),workspace,origin?.selection||seed);
+        mountDraft(root,seed,read,next=>analyzeForm(next.plan_id||'',next,origin,root),workspace,origin?.selection||seed);
       });
   }
   async function editSaved(kind,id){

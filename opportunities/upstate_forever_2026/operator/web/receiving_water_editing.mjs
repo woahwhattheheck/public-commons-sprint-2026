@@ -85,6 +85,7 @@ export function revisePlan(seed,fields,rows){
   change(out,['catchments','layer'],fields.catchmentLayer,before.catchmentLayer,value=>value||undefined);
   change(out,['catchments','id_field'],fields.huc,before.huc);
   change(out,['catchments','downstream_field'],fields.tohuc,before.tohuc);
+  if(before.catchments&&!fields.catchments)delete out.catchments;
   out.receptors=rows.map(row=>reviseReceptor(row.seed,row.fields));
   if(!out.receptors.length)throw Error('Define at least one receiving area.');
   if(out.receptors.some(row=>row.relation?.method==='upstream_huc')){
