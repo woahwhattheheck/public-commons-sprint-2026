@@ -1,0 +1,63 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Official ARJWS and Pioneer public source-water records",
+  "captured_at": "2026-10-12",
+  "scope": "Original complete public intake response and four published source-water protection polygons for the two named public utilities.",
+  "notes": [
+    "The original state GIS coordinates are EPSG:26917.",
+    "Each source_area receptor uses its entire published polygon, including its original BUFFER_FT attribute.",
+    "Use family union for overlapping source areas; the full upstream catchment remains a distinct analysis scope."
+  ],
+  "entries": [
+    {
+      "id": "scdes-public-surface-intakes-20261012",
+      "title": "SCDES original statewide public surface-water intake points",
+      "kind": "vector",
+      "role": "SOURCE_WATER_INTAKES",
+      "path": "raw/public-intakes.esri.json",
+      "bytes": 25984,
+      "sha256": "29532afb9da03c4d45cf194748618daaace622be455c65881b98bdbe97fc97c2",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/0/query?where=1%3D1&outFields=*&returnGeometry=true&orderByFields=OBJECTID&resultRecordCount=2000&f=json",
+      "vintage": "Official public GIS response captured 2026-10-12; underlying publisher edition unstated",
+      "source_format": "Esri JSON",
+      "source_crs": "EPSG:26917",
+      "object_id_field": "OBJECTID",
+      "id_field": "OBJECTID",
+      "features": 71,
+      "companions": [
+        {
+          "path": "metadata/public-water-0.json",
+          "bytes": 7324,
+          "sha256": "4645265fddf9934abbe6cc6a7ce0e32faa52698355aa720f99ef4e12c332eba2",
+          "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/0?f=pjson"
+        }
+      ]
+    },
+    {
+      "id": "scdes-arjws-prwd-swpa-20261012",
+      "title": "SCDES original ARJWS and Pioneer source-water protection polygons",
+      "kind": "vector",
+      "role": "SOURCE_WATER_PROTECTION_AREAS",
+      "path": "raw/scdes-arjws-prwd-source-water-protection-original.json",
+      "bytes": 2389556,
+      "sha256": "ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2/query?objectIds=11,12,131,132&outFields=*&returnGeometry=true&orderByFields=OBJECTID&f=pjson",
+      "vintage": "Official public GIS response captured 2026-10-12; underlying publisher edition unstated",
+      "source_format": "Esri JSON",
+      "source_crs": "EPSG:26917",
+      "object_id_field": "OBJECTID",
+      "id_field": "OBJECTID",
+      "features": 4,
+      "buffer_field": "BUFFER_FT",
+      "buffer_units": "feet",
+      "companions": [
+        {
+          "path": "metadata/public-water-2.json",
+          "bytes": 10507,
+          "sha256": "83d0782b02932973314cfbaaf8b0233bfe57f7836560b6c6131f936b06651f15",
+          "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2?f=pjson"
+        }
+      ]
+    }
+  ]
+}

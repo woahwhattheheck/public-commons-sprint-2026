@@ -1,0 +1,1485 @@
+{
+  "schema": "upstate.keowee-priority-methods/v1",
+  "id": "lake-keowee-2020-published-scorecards",
+  "title": "Lake Keowee published parcel priorities",
+  "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+  "official_mirror": "https://www.des.sc.gov/sites/des/files/media/document/WBP_for_Lake_Keowee_Watersheds_2020.pdf",
+  "reference": "Lake Keowee Watershed-Based Plan (2020), sections 9-18 and Appendix D, printed pages 44-47, 53, 59, 68, 72-73, 80, 82, 87, 93 and 138-147.",
+  "source_scope": {
+    "huc10": [
+      "0306010102",
+      "0306010103"
+    ],
+    "edition": 2020
+  },
+  "interpretation": {
+    "default_headwater_orders": [
+      1,
+      2
+    ],
+    "alternative_headwater_orders": [
+      1
+    ],
+    "default_headwater_reference": {
+      "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+      "printed_page": 47,
+      "table": 31,
+      "edition": "2020"
+    },
+    "criterion_combination": "Add criterion scores within one practice; respect each maximum or sum cap. Keep practices as separate rankings.",
+    "population": "Parcels clipped to the selected study. Exclude already protected parcels for protection; retain them for restoration and practice selection.",
+    "area_units": "acres",
+    "metres_per_foot": 0.3048,
+    "square_metres_per_acre": 4046.8564224,
+    "sensitive_riparian_geometry": "Union of the original variable-width USFS Riparian Buffer Delineation Model v5.2 layer and a 30.48-metre waterway buffer.",
+    "impairment_reference": {
+      "pollutant": "bacteria",
+      "source_edition": "2016",
+      "source_page": 142
+    },
+    "current_metric_policy": "Current studies bind explicit current source editions, selected impairment pollutant and retained numeric classification thresholds. The old metric cutoffs remain reference metadata.",
+    "unknown_inputs": "Keep absent values distinct from observed false or zero; carry the known score and possible score interval until source inputs are joined.",
+    "threshold_intervals": "Area thresholds use inclusive lower bounds and the next higher threshold as the exclusive upper bound, avoiding gaps created by rounded printed upper limits."
+  },
+  "historical_metric_ranges": {
+    "cwa": {
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 138,
+        "edition": "2020"
+      },
+      "statistic": "parcel mean of Furman University 2017 CWA raster",
+      "classification": "three geometric-interval classes",
+      "low": [
+        0,
+        0.000004
+      ],
+      "medium": [
+        0.000005,
+        0.000261
+      ],
+      "high": [
+        0.000265,
+        0.014961
+      ]
+    },
+    "nitrogen": {
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 143,
+        "edition": "2020"
+      },
+      "source_units": "kg/pixel/year",
+      "statistic": "parcel mean",
+      "low": [
+        0,
+        0.032488
+      ],
+      "medium": [
+        0.0324489,
+        0.128093
+      ],
+      "high": [
+        0.128094,
+        0.40943
+      ]
+    },
+    "phosphorus": {
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 143,
+        "edition": "2020"
+      },
+      "source_units": "kg/pixel/year",
+      "statistic": "parcel mean",
+      "low": [
+        0,
+        0.001163
+      ],
+      "medium": [
+        0.001164,
+        0.036652
+      ],
+      "high": [
+        0.036653,
+        1.11924
+      ]
+    },
+    "sediment": {
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 143,
+        "edition": "2020"
+      },
+      "source_units": "tons/pixel/year",
+      "statistic": "parcel mean",
+      "low": [
+        0,
+        0
+      ],
+      "medium": [
+        0.000001,
+        0.000004
+      ],
+      "high": [
+        0.000005,
+        0.001241
+      ]
+    },
+    "stream_length": {
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 141,
+        "edition": "2020"
+      },
+      "printed_value_miles": 0.013,
+      "printed_location": "Three and Twenty Creek Watershed",
+      "operational_statistic": "Mean in-parcel stream length among stream-containing parcels in the actual selected study."
+    }
+  },
+  "source_interpretations": [
+    {
+      "id": "headwater-order",
+      "source_pages": [
+        47,
+        138,
+        145
+      ],
+      "published_alternatives": [
+        "Table31: first and second order",
+        "AppendixD protection: first order",
+        "AppendixD restoration: first and second order"
+      ],
+      "default": "Use Table31 first-and-second-order protection; retain a first-order-only sensitivity variant."
+    },
+    {
+      "id": "trout-code",
+      "source_pages": [
+        47,
+        139
+      ],
+      "published_code": "TGPT",
+      "current_scdes_code": "TPGT",
+      "default": "Retain original published label and bind the documented current trout-grow/put/take designation; do not rewrite the original source field."
+    },
+    {
+      "id": "nitrogen-bands",
+      "source_pages": [
+        143
+      ],
+      "issue": "Printed low and medium nitrogen intervals overlap. Other printed intervals have rounding gaps.",
+      "default": "Retain historical numbers as source metadata. Current model runs require explicit retained non-overlapping thresholds in matching units."
+    },
+    {
+      "id": "class-extension",
+      "source_pages": [
+        47,
+        139
+      ],
+      "issue": "The published score table specifies ORW, TN, TGPT and FW. It gives no separate ONRW or TPT score.",
+      "default": "Record any added class-to-points mapping as a current-study interpretation with its own source reference."
+    },
+    {
+      "id": "historical-classification",
+      "source_pages": [
+        138,
+        139
+      ],
+      "issue": "CWA and riparian-area breaks reflect historical study distributions.",
+      "default": "Retain their published values for the reference profile; give a recomputed current-study profile a distinct ID and preserve its threshold population."
+    },
+    {
+      "id": "impairment-selection",
+      "source_pages": [
+        59,
+        68,
+        73,
+        80,
+        87,
+        142
+      ],
+      "issue": "Summary tables say existing impairments; AppendixD specifies bacterial impairments.",
+      "default": "Expose the chosen pollutant scope in the method binding and use that retained source relationship consistently."
+    },
+    {
+      "id": "stream-length-location",
+      "source_pages": [
+        141
+      ],
+      "issue": "The Keowee appendix attributes its fixed stream-length value to a different watershed.",
+      "default": "Calculate the reference mean from the actual study rather than transferring the printed 0.013-mile value."
+    }
+  ],
+  "categories": [
+    {
+      "id": "land_protection",
+      "title": "Land protection",
+      "purpose": "protection",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 47,
+        "table": 31,
+        "edition": "2020"
+      },
+      "maximum": 31,
+      "priority": [
+        {
+          "min": 0,
+          "max": 9,
+          "label": "low"
+        },
+        {
+          "min": 10,
+          "max": 19,
+          "label": "medium"
+        },
+        {
+          "min": 20,
+          "max": 31,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "metric": "already_protected",
+        "equals": false
+      },
+      "criteria": [
+        {
+          "id": "critical_watershed_area",
+          "metric": "cwa_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 3,
+            "high": 4
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 138,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "headwater_stream",
+          "metric": "headwater_stream",
+          "type": "boolean",
+          "points": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 47,
+            "edition": "2020"
+          },
+          "notes": [
+            "Default follows Table 31 first- or second-order streams; Appendix D page 138 specifies first order only. The selected implementation records headwater_orders."
+          ]
+        },
+        {
+          "id": "stream_classification",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "orw_tn",
+              "metric": "stream_orw_or_tn",
+              "type": "boolean",
+              "points": 4,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 139,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "tpgt",
+              "metric": "stream_tpgt",
+              "type": "boolean",
+              "points": 3,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 139,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "fw_without_impairment",
+              "metric": "stream_fw_without_listed_impairment",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 139,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "fw_with_impairment",
+              "metric": "stream_fw_with_listed_impairment",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 139,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 139,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "sensitive_riparian_area",
+          "metric": "sensitive_riparian_acres",
+          "type": "thresholds",
+          "thresholds": [
+            {
+              "min": 43,
+              "points": 4
+            },
+            {
+              "min": 20,
+              "points": 3
+            },
+            {
+              "min": 8,
+              "points": 2
+            },
+            {
+              "min": 2,
+              "points": 1
+            }
+          ],
+          "otherwise": 0,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 139,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "forested_riparian_area",
+          "metric": "forested_sensitive_riparian_present",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 140,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "wetland_type",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "forested_emergent_riverine",
+              "metric": "wetland_forested_shrub_emergent_or_riverine",
+              "type": "boolean",
+              "points": 3,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 140,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "pond_lake",
+              "metric": "wetland_pond_or_lake",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 140,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 140,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "hydric_soil_area",
+          "metric": "hydric_soil_acres",
+          "type": "thresholds",
+          "thresholds": [
+            {
+              "min": 50,
+              "points": 3
+            },
+            {
+              "min": 30,
+              "points": 2
+            },
+            {
+              "min": 5,
+              "points": 1
+            }
+          ],
+          "otherwise": 0,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 140,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "floodplain",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "undeveloped",
+              "metric": "floodplain_without_development",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 141,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "developed",
+              "metric": "floodplain_with_development",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 141,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 141,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "source_water_area",
+          "metric": "source_water_protection_area_present",
+          "type": "boolean",
+          "points": 2,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 141,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "stream_length",
+          "metric": "stream_length_above_study_mean",
+          "type": "boolean",
+          "points": 2,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 141,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "protected_adjacency",
+          "metric": "adjacent_to_protected_land",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 142,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "parcel_size",
+          "metric": "parcel_acres",
+          "type": "thresholds",
+          "thresholds": [
+            {
+              "min": 50,
+              "points": 1
+            }
+          ],
+          "otherwise": 0,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 142,
+            "edition": "2020"
+          }
+        }
+      ]
+    },
+    {
+      "id": "agricultural_bmps",
+      "title": "Agricultural practices",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 59,
+        "table": 34,
+        "edition": "2020"
+      },
+      "maximum": 17,
+      "priority": [
+        {
+          "min": 0,
+          "max": 5,
+          "label": "low"
+        },
+        {
+          "min": 6,
+          "max": 11,
+          "label": "medium"
+        },
+        {
+          "min": 12,
+          "max": 17,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "any": [
+          {
+            "metric": "agricultural_cover_at_least_half",
+            "equals": true
+          },
+          {
+            "metric": "agriculture_adjacent_to_water",
+            "equals": true
+          }
+        ]
+      },
+      "criteria": [
+        {
+          "id": "agricultural_land",
+          "type": "sum",
+          "terms": [
+            {
+              "id": "majority_agriculture",
+              "metric": "agricultural_cover_at_least_half",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 143,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "agricultural_water_adjacency",
+              "metric": "agriculture_adjacent_to_water",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 143,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "cap": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_nitrogen_export",
+          "metric": "nitrogen_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_phosphorus_export",
+          "metric": "phosphorus_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_sediment_export",
+          "metric": "sediment_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "impairment_relation",
+          "metric": "associated_with_selected_impairment",
+          "type": "boolean",
+          "points": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 59,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "agricultural_point_sources",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "unpermitted",
+              "metric": "agricultural_unpermitted_source",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 144,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "permitted",
+              "metric": "agricultural_permitted_source",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 144,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 59,
+            "edition": "2020"
+          }
+        }
+      ],
+      "notes": [
+        "The summary table caps permitted and unpermitted agricultural source points jointly at 1. This profile follows that cap and its published 17-point maximum."
+      ]
+    },
+    {
+      "id": "wetland_restoration",
+      "title": "Wetland restoration or enhancement",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 68,
+        "table": 36,
+        "edition": "2020"
+      },
+      "maximum": 18,
+      "priority": [
+        {
+          "min": 0,
+          "max": 5,
+          "label": "low"
+        },
+        {
+          "min": 6,
+          "max": 11,
+          "label": "medium"
+        },
+        {
+          "min": 12,
+          "max": 18,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "any": [
+          {
+            "metric": "modified_wetland_present",
+            "equals": true
+          },
+          {
+            "metric": "historic_wetland_present",
+            "equals": true
+          }
+        ]
+      },
+      "criteria": [
+        {
+          "id": "restorable_wetlands",
+          "type": "sum",
+          "terms": [
+            {
+              "id": "modified",
+              "metric": "modified_wetland_present",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 144,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "historic",
+              "metric": "historic_wetland_present",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 144,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "cap": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 144,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "impairment_relation",
+          "metric": "associated_with_selected_impairment",
+          "type": "boolean",
+          "points": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 68,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "current_nitrogen_export",
+          "metric": "nitrogen_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_phosphorus_export",
+          "metric": "phosphorus_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_sediment_export",
+          "metric": "sediment_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "dam",
+          "metric": "dam_present",
+          "type": "boolean",
+          "points": 2,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 145,
+            "edition": "2020"
+          },
+          "notes": []
+        }
+      ]
+    },
+    {
+      "id": "riparian_restoration",
+      "title": "Riparian buffer restoration or enhancement",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 73,
+        "table": 37,
+        "edition": "2020"
+      },
+      "maximum": 26,
+      "priority": [
+        {
+          "min": 0,
+          "max": 8,
+          "label": "low"
+        },
+        {
+          "min": 9,
+          "max": 17,
+          "label": "medium"
+        },
+        {
+          "min": 18,
+          "max": 26,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "metric": "sensitive_riparian_present",
+        "equals": true
+      },
+      "criteria": [
+        {
+          "id": "sensitive_riparian",
+          "metric": "sensitive_riparian_present",
+          "type": "boolean",
+          "points": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 145,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "headwater_stream",
+          "metric": "headwater_stream",
+          "type": "boolean",
+          "points": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 145,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "water_adjacency",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "drinking_water",
+              "metric": "adjacent_to_drinking_water",
+              "type": "boolean",
+              "points": 4,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 146,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "other_water",
+              "metric": "adjacent_to_other_water",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 146,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 146,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "impairment_relation",
+          "metric": "associated_with_selected_impairment",
+          "type": "boolean",
+          "points": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 73,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "current_nitrogen_export",
+          "metric": "nitrogen_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_phosphorus_export",
+          "metric": "phosphorus_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_sediment_export",
+          "metric": "sediment_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "floodplain",
+          "metric": "floodplain_present",
+          "type": "boolean",
+          "points": 2,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 146,
+            "edition": "2020"
+          },
+          "notes": []
+        }
+      ],
+      "refinement": [
+        {
+          "id": "urban_floodplain",
+          "source_page": 73,
+          "rule": "Route an urban-floodplain parcel to the stormwater practice view while retaining its original riparian score."
+        }
+      ]
+    },
+    {
+      "id": "voluntary_dam_removal",
+      "title": "Voluntary dam removal opportunities",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 80,
+        "table": 39,
+        "edition": "2020"
+      },
+      "maximum": 5,
+      "priority": [
+        {
+          "min": 0,
+          "max": 0,
+          "label": "low"
+        },
+        {
+          "min": 2,
+          "max": 2,
+          "label": "medium"
+        },
+        {
+          "min": 5,
+          "max": 5,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "metric": "dam_present",
+        "equals": true
+      },
+      "criteria": [
+        {
+          "id": "dam",
+          "metric": "dam_present",
+          "type": "boolean",
+          "points": 2,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 145,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "impairment_relation",
+          "metric": "associated_with_selected_impairment",
+          "type": "boolean",
+          "points": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 80,
+            "edition": "2020"
+          },
+          "notes": []
+        }
+      ],
+      "refinement": [
+        {
+          "id": "candidate_context",
+          "source_page": 80,
+          "rule": "Consider agricultural uses or impoundments smaller than 50 acres; preserve current recreational and community uses when selecting a feasible intervention."
+        }
+      ]
+    },
+    {
+      "id": "shoreline_management",
+      "title": "Drinking-water shoreline management",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 82,
+        "table": 40,
+        "edition": "2020"
+      },
+      "maximum": 20,
+      "priority": [
+        {
+          "min": 0,
+          "max": 6,
+          "label": "low"
+        },
+        {
+          "min": 7,
+          "max": 13,
+          "label": "medium"
+        },
+        {
+          "min": 14,
+          "max": 20,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "metric": "adjacent_to_drinking_water",
+        "equals": true
+      },
+      "criteria": [
+        {
+          "id": "drinking_water_adjacency",
+          "metric": "adjacent_to_drinking_water",
+          "type": "boolean",
+          "points": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 146,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "current_nitrogen_export",
+          "metric": "nitrogen_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_phosphorus_export",
+          "metric": "phosphorus_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_sediment_export",
+          "metric": "sediment_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "sensitive_riparian",
+          "metric": "sensitive_riparian_present",
+          "type": "boolean",
+          "points": 4,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 145,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "private_access",
+          "type": "sum",
+          "terms": [
+            {
+              "id": "boat_ramp",
+              "metric": "private_boat_ramp_present",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 146,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "dock",
+              "metric": "private_dock_present",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 146,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "cap": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 146,
+            "edition": "2020"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stormwater_bmps",
+      "title": "Stormwater practices",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 87,
+        "table": 41,
+        "edition": "2020"
+      },
+      "maximum": 16,
+      "priority": [
+        {
+          "min": 0,
+          "max": 5,
+          "label": "low"
+        },
+        {
+          "min": 6,
+          "max": 11,
+          "label": "medium"
+        },
+        {
+          "min": 12,
+          "max": 16,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "any": [
+          {
+            "metric": "developed_land_present",
+            "equals": true
+          },
+          {
+            "metric": "known_logging_operation",
+            "equals": true
+          }
+        ]
+      },
+      "criteria": [
+        {
+          "id": "land_activity",
+          "type": "maximum",
+          "terms": [
+            {
+              "id": "developed",
+              "metric": "developed_land_present",
+              "type": "boolean",
+              "points": 2,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 143,
+                "edition": "2020"
+              },
+              "notes": []
+            },
+            {
+              "id": "logging",
+              "metric": "known_logging_operation",
+              "type": "boolean",
+              "points": 1,
+              "reference": {
+                "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+                "printed_page": 143,
+                "edition": "2020"
+              },
+              "notes": []
+            }
+          ],
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 87,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_nitrogen_export",
+          "metric": "nitrogen_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_phosphorus_export",
+          "metric": "phosphorus_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "current_sediment_export",
+          "metric": "sediment_export_priority",
+          "type": "levels",
+          "levels": {
+            "low": 0,
+            "medium": 2,
+            "high": 3
+          },
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 143,
+            "edition": "2020"
+          }
+        },
+        {
+          "id": "impairment_relation",
+          "metric": "associated_with_selected_impairment",
+          "type": "boolean",
+          "points": 3,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 87,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "unpermitted_sources",
+          "metric": "stormwater_unpermitted_source",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 144,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "permitted_sources",
+          "metric": "stormwater_permitted_source",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 144,
+            "edition": "2020"
+          },
+          "notes": []
+        }
+      ],
+      "notes": [
+        "The land-activity category has a published maximum of 2. When both development and logging are present this profile retains the maximum, preserving the 16-point category total."
+      ]
+    },
+    {
+      "id": "pet_waste_stations",
+      "title": "Pet-waste station locations",
+      "purpose": "restoration",
+      "reference": {
+        "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+        "printed_page": 93,
+        "table": 42,
+        "edition": "2020"
+      },
+      "maximum": 2,
+      "priority": [
+        {
+          "min": 0,
+          "max": 0,
+          "label": "low"
+        },
+        {
+          "min": 1,
+          "max": 2,
+          "label": "high"
+        }
+      ],
+      "eligibility": {
+        "constant": true
+      },
+      "criteria": [
+        {
+          "id": "pet_business",
+          "metric": "pet_traffic_business_present",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 147,
+            "edition": "2020"
+          },
+          "notes": []
+        },
+        {
+          "id": "public_access",
+          "metric": "public_access_land",
+          "type": "boolean",
+          "points": 1,
+          "reference": {
+            "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+            "printed_page": 147,
+            "edition": "2020"
+          },
+          "notes": []
+        }
+      ],
+      "refinement": [
+        {
+          "id": "public_park_sequence",
+          "source_page": 93,
+          "rule": "Prefer public parks in the implementation sequence, then pet-related businesses, while retaining both point contributions."
+        }
+      ]
+    }
+  ],
+  "septic": {
+    "id": "septic_suitability",
+    "title": "Septic-system suitability",
+    "reference": {
+      "source_uri": "https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf",
+      "printed_page": 53,
+      "table": 32,
+      "edition": "2020"
+    },
+    "type": "categorical",
+    "screening": {
+      "distance_from_sewer_ft": {
+        "operator": ">",
+        "value": 500
+      },
+      "distance_to_open_water_ft": {
+        "operator": "<=",
+        "value": 300
+      }
+    },
+    "age_groups": [
+      "unknown",
+      "before_1970",
+      "1971_to_2000",
+      "2001_to_2019"
+    ],
+    "multi_home_rule": "Use the oldest residence on the parcel.",
+    "soil_suitability": [
+      "Not Limited",
+      "Somewhat limited",
+      "Very limited"
+    ],
+    "source_detail": "Clemson Center for Watershed Excellence, Callahan and Zurqani (2019), Appendix E.",
+    "notes": [
+      "This table provides a categorical geospatial workflow; it does not provide an additive point total.",
+      "Preserve house age and SSURGO suitability as independent fields. For a current inventory, add post-2019 construction as an explicitly documented extension and retain the original age groups."
+    ]
+  }
+}

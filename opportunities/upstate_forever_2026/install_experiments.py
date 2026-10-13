@@ -12,10 +12,73 @@ import re
 import tempfile
 
 OPERATION = "ES-EXP-2319"
-KNOWN_PRIOR = {"model/experiments.py":["cb626fb6216db80052ccaf4f4c91f1f81e7052d44280d2dc9cc072cd9fcf7a5f","e16d9f0ae747640d31b3716697ca83b943132b3ed49495d444fd3f8285a9a37b","feb8e13c6ac00a8d9987d51f0cb1cdedd25d0e733613f7071b92c6f735b1127d","e391a8d01e873ef1dc1d83391ab51807d2d1f1d2389e962cb8930507580d9d5b","1116c5eeefb495dd7391d7018b6542f4f882d1f992c9a47ec74eb39d30712f61","fe09d098dfe2b3d14b8d40541802e3b893abfcaf719ecf878f92e0776084a38a"],"model/experiment_cli.py":["0da884c7f3e0fca47390e6ca2d13bdf4616b831168a0213b65a7a98b7038cae9"],"operator/experiment_operator.py":["c02476827809d17025db050fb553ed944def0aade6c70d350c2f342d74676257","b23afe5b52c269753b5ba8723a1848df17fd41136358d546ca2f9aaa3611dc30"],"operator/web/experiments.mjs":["5a1b52d75c6b86c33cac38e415c09dafccbdaacd918e07ae096460b1f3c6c99f","944e4bfaa7e5ca8bd21735219b5d7d7b6885802eebc77bf91458bd075399ba4a"],"operator/web/experiments.css":["24a01272447fe6eef2c4f160ee4b1bd45ed656d5c09a156b4af40012d935dca5","8fa0acfe7b03f4cd06a2b0f781a90891fb3e7a13e137af92d5815b6edaa016e4"],"operator/EXPERIMENTS.md":["ac49038e6268b8280fa4643afb477e84e5ffaa403bc7a26af3b6686859a73f85","ebd6469d79795bc15999c477af88c783e0ef2cd18f463edcd3c922a1e87928b6"],"source/experiment-methods-20261012.json":["f685b9f417e3dbb8277ba1dee5be48f598ea564e59942d8c48755c1629dddb19"]}
+KNOWN_PRIOR = {
+  "model/experiments.py": [
+    "cb626fb6216db80052ccaf4f4c91f1f81e7052d44280d2dc9cc072cd9fcf7a5f",
+    "e16d9f0ae747640d31b3716697ca83b943132b3ed49495d444fd3f8285a9a37b",
+    "feb8e13c6ac00a8d9987d51f0cb1cdedd25d0e733613f7071b92c6f735b1127d",
+    "e391a8d01e873ef1dc1d83391ab51807d2d1f1d2389e962cb8930507580d9d5b",
+    "1116c5eeefb495dd7391d7018b6542f4f882d1f992c9a47ec74eb39d30712f61",
+    "fe09d098dfe2b3d14b8d40541802e3b893abfcaf719ecf878f92e0776084a38a",
+    "ea6a49b365f297ae3cb3891136875abce07f9ec2a0478440123d6162243ad558",
+    "03e0c194040ded574d1e739e99ef03e1408c22995c9659714e5fd114e402f72f"
+  ],
+  "model/experiment_cli.py": [
+    "0da884c7f3e0fca47390e6ca2d13bdf4616b831168a0213b65a7a98b7038cae9",
+    "a1ceef94b5dc5c6cbe78f6cb3a3509d0e8af3e4be9661d3bd9a8e4b1bc179404"
+  ],
+  "operator/experiment_operator.py": [
+    "c02476827809d17025db050fb553ed944def0aade6c70d350c2f342d74676257",
+    "b23afe5b52c269753b5ba8723a1848df17fd41136358d546ca2f9aaa3611dc30",
+    "9628308bd9af5295aa668ab5959ee4081c4c20bb8c05c0131338df633d28cab2",
+    "f4d491ee4dce0ce8c54b75f45aa556970be426c73ccc7f3632672ffcffd99286"
+  ],
+  "operator/web/experiments.mjs": [
+    "5a1b52d75c6b86c33cac38e415c09dafccbdaacd918e07ae096460b1f3c6c99f",
+    "944e4bfaa7e5ca8bd21735219b5d7d7b6885802eebc77bf91458bd075399ba4a",
+    "04bade7104d2abe1955826729408fbd78c02057e94ed60341e7882465c46b701",
+    "cd7f5cac6ea00857744b31b11ae96d99dcdeb224195b756a5c45134e9fb3023a"
+  ],
+  "operator/web/experiments.css": [
+    "24a01272447fe6eef2c4f160ee4b1bd45ed656d5c09a156b4af40012d935dca5",
+    "8fa0acfe7b03f4cd06a2b0f781a90891fb3e7a13e137af92d5815b6edaa016e4",
+    "0f69752453cab8f32fc1f9a5571191bd28aed2524a164aeea2c33ec732033b45"
+  ],
+  "operator/EXPERIMENTS.md": [
+    "ac49038e6268b8280fa4643afb477e84e5ffaa403bc7a26af3b6686859a73f85",
+    "ebd6469d79795bc15999c477af88c783e0ef2cd18f463edcd3c922a1e87928b6",
+    "cfcd3ca0111d71130206c7f161cb2d4d6b6a49b39e25f0c0f6b493ca6a3e00d7",
+    "fa85aa73f6c8047a4de01bbe709e3d92ea05766afe037dbab14d0636fc0f2a13",
+    "59c2d0f5344f8ad398ef2bbf47edb695daf7875d749f13d3f2c6420491227f1d"
+  ],
+  "source/experiment-methods-20261012.json": [
+    "f685b9f417e3dbb8277ba1dee5be48f598ea564e59942d8c48755c1629dddb19"
+  ],
+  "model/EXPERIMENT_MODEL_SELECTION.md": [
+    "58696c48c59deb6a3c2d529dc3a5a6d5dbfe680070353c8319d736213a0efa3b"
+  ],
+  "install_experiments.py": [
+    "b385281038af1d8501df5c15bc6d9b0dec5f59320113c7e5a6839850921c5442",
+    "9b318ac5ed09a7c5f3e731685dd232b5416ecf8344d6ce226b026bfd9eb90791",
+    "e63e45591b52603ac7f4074710c3937b910a0a1f77650c60a65809bd3c337e01"
+  ],
+  "model/programme_experiments.py": [
+    "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
+    "ecba938e891af641a245e1c453c22a9a6d257e7b85d70c3b5d495999fead972d"
+  ],
+  "model/compute_programme_cli.py": [
+    "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
+    "268ea8468e60e13b81b6f2236df7cdcf8dae35a3767751e5168bd94e5dee3518",
+    "a49c784ccfb96497780444f8259db5743b446c4568c5c143e010b200d1f5b7ea",
+    "29437b34d83c871f652b7d5300f50c0aa46a144671013aabc877366068f93551"
+  ]
+}
+
 LEAVES = (
     "model/experiments.py", "model/experiment_cli.py",
     "model/EXPERIMENT_MODEL_SELECTION.md",
+    "model/programme_experiments.py", "model/compute_programme_cli.py",
+    "model/EXPERIMENT_PROGRAMME_CONTINUATION.md",
     "operator/experiment_operator.py", "operator/web/experiments.mjs",
     "operator/web/experiments.css", "operator/EXPERIMENTS.md",
     "source/experiment-methods-20261012.json",
@@ -116,6 +179,9 @@ def app_join(text):
     text = after_line(text, r"^import \{attachCustomerReviews\} from .+;$",
         "import {attachExperiments} from './experiments.mjs';",
         "import {attachExperiments}")
+    text = replace_once(text, "const actionLabels={",
+        "const actionLabels={'paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble',",
+        "'paired_ensemble.build':")
     text = replace_once(text, "const viewLabels={",
         "const viewLabels={experiments:'Scenario experiments',",
         "experiments:'Scenario experiments'")

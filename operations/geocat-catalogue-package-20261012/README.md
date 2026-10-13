@@ -52,3 +52,11 @@ Optional `source_carriers` selects complete original source carriers by reposito
 The native Git response must expose its matching SHA, base64 encoding and size. The runner verifies the decoded complete carrier's Git SHA and SHA256, then validates every member against the frozen selected source metadata before publishing any member. Only still-missing selected members are materialized in the existing private admitted context, using the original Git receiver's incoming manifest. Their full readback is retained. The same original builder and installer then continue.
 
 When a carrier selection covers all missing inputs, no interactive terminal feed occurs. Otherwise the unchanged source feed handles only the remaining missing identities. No source acquisition, worker, application engine, or package selection is replaced by this receiving option.
+
+## Receiving after the original host is unavailable
+
+The explicit `dependency_mode: "maintained-install"` uses the same selected distribution and its original runtime installer when the earlier complete installed graph is not available. Supply `maintained_install` with the actual absolute npm executable, an explicit boolean `offline`, and optionally the actual canonical npm cache directory. The default cache stays in this admitted context. This option does not claim receipt of the earlier FE85 graph or reuse its missing lock.
+
+Source receiving and the complete selected source build remain unchanged. The original `prepareRuntimeInstall` resolves the exact native/schema/openapi/mcp profile with the existing SDK 16.3.1 pin. The original `installRuntime` owns its kernel lease, dependency resolution, lock, logs and readiness result; the caller then performs the same full lock inspection, fresh source/import inspection, installed STAC CLI/browser journey and independent host reopen. Package provenance records `MAINTAINED_INSTALL`, the exact actual target lock/profile and the two unchanged source leaf locks. The original retained-graph branch remains the default and retains its complete graph/three-lock checks.
+
+The final save now also requires the returned original local path and create purpose, both durable file identities, and a valid version when returned. A failed or uncertain save retains its existing private call journal and is not replayed by this option.

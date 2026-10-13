@@ -752,7 +752,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         raise ValueError("First layer must be a complete application map or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
-    files, metadata, changes, externals = {}, {}, [], {}
+    files, metadata, changes, externals, references = {}, {}, [], {}, {}
     for index, layer in enumerate(layers):
         origin = layer.receipt["payload_sha256"]
         for name, content in sorted(layer.files.items()):
@@ -778,9 +778,19 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
                                 "previous_sha256": previous["sha256"] if previous else None,
                                 "sha256": item["sha256"]})
             files[name], metadata[name] = content, item
+        def keep_reference(original):
+            if (not isinstance(original, dict) or not isinstance(original.get("reference"), str)
+                    or not original["reference"]):
+                raise ValueError("Invalid original external-reference declaration")
+            references[canonical(original)] = dict(original)
+        for original in layer.document.get("external_references", []):
+            keep_reference(original)
         for original in layer.document.get("external_sources", []):
             if not isinstance(original, dict):
                 raise ValueError("Invalid original external-source declaration")
+            if "path" not in original and isinstance(original.get("reference"), str):
+                keep_reference(original)
+                continue
             name = source_member_name(original.get("path"), layer.document.get("prefix"))
             original = {**original, "path": name}
             checked_bytes(original.get("bytes"), name, limit=(1 << 63) - 1)
@@ -812,6 +822,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "members": {name: {key: item[key] for key in ("bytes", "sha256", "mode")}
                     for name, item in sorted(metadata.items())},
         "external_sources": [externals[name] for name in sorted(externals)],
+        "external_references": [references[key] for key in sorted(references)],
     }
     assembly_id = sha256(canonical(composition))
     return {
@@ -822,6 +833,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "state": "source_stage_complete_application",
         "files": dict(sorted(files.items())), "file_metadata": dict(sorted(metadata.items())),
         "assembly": composition, "external_sources": composition["external_sources"],
+        "external_references": composition["external_references"],
     }
 
 

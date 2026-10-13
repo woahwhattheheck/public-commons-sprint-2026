@@ -269,10 +269,15 @@ class ExperimentOperator:
             execution[case_id] = _native_execution(ws, row, cache)
         if "cases" in result or requested_cases:
             result["native_execution_by_case"] = execution
-        result["_downloads"] = self.app._files(workspace, result, scope)
+        # Native binding recovery can invalidate a summary without deleting
+        # its prior bytes. The maintained reader applies the current plan and
+        # binding rules before any result is presented as downloadable.
+        current_summary = experiments.read_summary(ws, key)
+        result["_downloads"] = (self.app._files(workspace, result, scope)
+                                if current_summary is not None else [])
         marker = scope / "operator-report.json"
         summary_path = scope / "summary.json"
-        if marker.is_file() and summary_path.is_file():
+        if marker.is_file() and current_summary is not None:
             retained = read_json(marker)
             if retained.get("summary_sha256") == file_digest(summary_path):
                 extra = self.app._files(workspace, {"files": {"report": retained["report"]}}, scope)
@@ -284,7 +289,8 @@ class ExperimentOperator:
             if (retained.get("schema") == "upstate.study-report-downloads/v1"
                     and retained.get("experiment_id") == key
                     and retained.get("workspace_id") == ws.project["id"]):
-                current = retained.get("summary_sha256") == file_digest(summary_path)
+                current = (current_summary is not None
+                           and retained.get("summary_sha256") == file_digest(summary_path))
                 result["study_report"] = {
                     "state": "current" if current else "stale",
                     "generated_at": retained.get("generated_at"),
@@ -326,6 +332,8 @@ class ExperimentOperator:
         with held(scope / ".experiment.lock", blocking=False):
             # Read the retained summary while its original writer is excluded.
             summary = experiments.read_summary(ws, key)
+            if summary is None:
+                raise ValueError("Build an updated experiment summary before creating its report.")
             summary_path = scope / "summary.json"
             summary_sha256 = file_digest(summary_path)
             text = render_report(summary)
