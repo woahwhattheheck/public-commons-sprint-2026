@@ -1,46 +1,46 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "f93a648ba7c75304b29048bef605daebf6d308a7",
+  "source_commit": "928f953e274374805467838809b1c9d8be8ca554",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MEASUREMENTS-RETURNED-REVIEW-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
   "source_files": 76,
   "installed_files": 74,
-  "source_bytes": 933078,
+  "source_bytes": 933912,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 295967,
-      "sha256": "c8e7fb9c9f1c83b6be1fcf1ab8168643c166d5869e91627ea7b15427da577441",
+      "bytes": 296187,
+      "sha256": "c686375e1fe851ff70b8997b4956bb9e66252305f477dba250831b7c0e038542",
       "members": 22,
-      "source_bytes": 218421
+      "source_bytes": 218589
     },
     {
       "path": "source-02.json",
       "bytes": 277403,
-      "sha256": "beebc012ac068caab89798769575eceff004268005d0c4f22b78da3605f20a61",
+      "sha256": "bdd7435314d7f755afd6cb493514fdfae784765c774413ab61dc1341de8f33e1",
       "members": 16,
       "source_bytes": 205891
     },
     {
       "path": "source-03.json",
-      "bytes": 296927,
-      "sha256": "d053772c00129961c7cd58299602c110cab436cacce1315dba818621cd5cca89",
+      "bytes": 297371,
+      "sha256": "2495cf9071f269d278c937562e8bb11d7613e03689e227906f59df5408191b06",
       "members": 15,
-      "source_bytes": 220672
+      "source_bytes": 221007
     },
     {
       "path": "source-04.json",
-      "bytes": 126470,
-      "sha256": "e3bf2a30629fae6606b72eae72f17ee3c997400693fb905389d36c2c20409f71",
+      "bytes": 126910,
+      "sha256": "909d21d4d9ec600c046a75b258c93c763f3baee4c8bce5d9856eed54b52c6012",
       "members": 6,
-      "source_bytes": 93731
+      "source_bytes": 94062
     },
     {
       "path": "source-05.json",
       "bytes": 262290,
-      "sha256": "8cc7f015a5c73626065cc134f33c1e57813e5eb3cea0b3238069bcaec4d6aba4",
+      "sha256": "479789790642a0c849d595c1d10c54d274d82beac117fcb9817bf8b4354f220c",
       "members": 17,
       "source_bytes": 194363
     }
@@ -84,8 +84,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 9271,
-      "sha256": "9f7740f9043d79f54810362a502be56ea3fef20ecae286dd6a54d55e7b54d696",
+      "bytes": 9348,
+      "sha256": "151f45cc189e766f3b8e47f7f86cd68050ed408f46cf39b5f36e55d2e5f19676",
       "role": "installed_component"
     },
     {
@@ -162,8 +162,8 @@
     },
     {
       "path": "integration/measurements/INSTALLATION.json",
-      "bytes": 26155,
-      "sha256": "cfd83871230a85d8a9a964ba7f9a88c87f424c13f48b9a1eef42ffffef406991",
+      "bytes": 26246,
+      "sha256": "e72aa23ba4c02ead95b75657a693054df24be7b53dabaed5065e5386dd839e15",
       "role": "installed_component"
     },
     {
@@ -390,8 +390,8 @@
     },
     {
       "path": "model/portable_databases.py",
-      "bytes": 7984,
-      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871",
+      "bytes": 8315,
+      "sha256": "cef958863d57ea3c196413fb14fcee4411a5d40681b06caad27c593e676b1ca2",
       "role": "installed_component"
     },
     {
@@ -408,8 +408,8 @@
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 12775,
-      "sha256": "cb7387d6ee2340f85cf0c7c42c0de3c9d490c1d7863091f93c237f2e23c88d15",
+      "bytes": 13110,
+      "sha256": "fd6c0f23a5e7569ad92890f91b7b4e1cee9d0cf6471dc93a3865c36c5b95260c",
       "role": "installed_component"
     },
     {
@@ -577,6 +577,7 @@
     "original_source_bytes": 103249,
     "readme": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
     "receiving_course": "checks/measurement_returned_reviews_operator.py",
-    "receiving_source_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409"
+    "receiving_source_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409",
+    "database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055"
   }
 }
