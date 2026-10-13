@@ -342,7 +342,13 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
         add_member(files, name, bytes_member(canonical_bytes(value)))
     add_json("comparison.json", record)
     add_json("selection.json", {**record["selection"], "title": record["title"]})
-    add_member(files, "report.html", bytes_member(report_html(record).encode("utf-8")))
+    from . import utility_monitoring_comparison as utility_report
+    utility_context = utility_report.prepare(workspace, record, network, plans)
+    add_member(files, "report.html", bytes_member(
+        utility_report.attach(report_html(record), utility_context).encode("utf-8")))
+    if utility_context is not None:
+        for name, member in utility_report.members(workspace, utility_context):
+            add_member(files, name, member)
     rows = _summary_rows(record)
     add_member(files, "comparison.csv", bytes_member(csv_text(rows, list(rows[0])).encode("utf-8")))
     add_json("native/frontier.json", frontier)
@@ -374,16 +380,23 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
         "schema": "upstate.monitoring-frontier-comparison-export/v1",
         "comparison_id": comparison_id, "project_id": record["project_id"],
         "frontier_id": record["frontier_id"],
+        **({"utility_presentation_id": utility_context["record"]["id"]} if utility_context else {}),
         "members": [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
                     for name, member in sorted(files.items())],
     })
     base = Path(export_root).resolve() if export_root else workspace.root.parent / (workspace.root.name + "-monitoring-exports")
     service.export_root = base
-    path = base / ("monitoring-budget-comparison-" + comparison_id) / "monitoring-budget-comparison.zip"
+    directory = base / ("monitoring-budget-comparison-" + comparison_id)
+    if utility_context is not None:
+        # Preserve an older published packet for this same immutable comparison.
+        directory = directory / "presentations" / utility_context["record"]["id"]
+    path = directory / "monitoring-budget-comparison.zip"
     retain_packet(path, files)
     return service._download(path, {"format": "budget-comparison", "comparison_id": comparison_id,
                                     "frontier_id": frontier["id"], "network_id": network["id"],
-                                    "files": len(files)})
+                                    "files": len(files),
+                                    **({"utility_presentation_id": utility_context["record"]["id"]}
+                                       if utility_context else {})})
 
 
 def verify_workspace(workspace):
