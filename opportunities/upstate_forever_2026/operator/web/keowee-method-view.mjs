@@ -222,7 +222,9 @@ function observationsMarkup(score) {
       const value = observation && typeof observation === "object" ? observation : { value: observation };
       const detail = sourceRecord(value) || sourceRecord(value.source_evidence) || sourceRecord(value.source_binding);
       return '<tr><th scope="row">' + escape(label(name)) + "</th><td>" +
-        renderMethodValue(value.value, value.unit) + "</td><td>" + detail + evidenceDetails(value) + "</td></tr>";
+        renderMethodValue(value.value, value.unit) +
+        (value.interval ? note("Retained acreage bounds") + intervalMarkup(value.interval) : "") +
+        "</td><td>" + detail + evidenceDetails(value) + "</td></tr>";
     }).join("") + "</tbody></table></div></details>";
 }
 function editionMarkup(score) {
