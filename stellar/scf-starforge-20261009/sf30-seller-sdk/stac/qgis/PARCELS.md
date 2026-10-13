@@ -377,3 +377,19 @@ The example source package retains the actual captured responses and schemas. Th
 - Pittsburgh parcel service and original field aliases: https://pghbridgis.pittsburghpa.gov/hosting/rest/services/ThreeOneOneServices/MapServer/5?f=pjson
 
 When a publisher changes a live endpoint, the retained capture remains the source for its existing edition. Acquire a new original response and review a successor edition when current data is needed.
+
+## 12. Run the original source-to-recipient walkthrough
+
+The complete product source includes `parcel-native-receiving.py` and `parcel-native-browser.mjs`. They continue one retained operation through the real analyst API and browser. Supply the original source directory, its manifest digest, the responsible analyst, and the same operation/output directory on every continuation.
+
+The private browser configuration selects existing installed executables through `node`, `playwrightModule`, and `chromium`. Pass that file with `--browser-config`. Pass the selected existing native QGIS runtime file with `--native-runtime-file` when it is available on that host.
+
+The walkthrough retains each original request before submitting it. It imports the source editions, previews and saves their reviews, carries explicitly unchanged successor decisions, and freezes portfolios in the separate County, local and 2012 base-year bases. The desktop and 390-pixel browser flow makes the named owner decision, retains entity versions, saves a portfolio and downloads its exact files.
+
+Next, the original `project.export` operation produces the complete reviewed project. The original `project.receive` operation opens that archive in `received-domain/`, including its own copied software. The recipient browser reads the same source, reviewed parcel, portfolios and successor history. The programme compares the complete original state, domain history and analyst requests before and after that read-only recipient walkthrough.
+
+A host that completes this stage without a selected QGIS runtime writes `result.json` with `status: "PARCEL_RECEIVING_COMPLETED"`. Its `domainReceiving` field contains the exact receiving receipt, archive descriptor, original request count and completed recipient browser result. `nativeContinuation` identifies the reviewed portfolio, map source and layer for the native stage. This is a completed source/review/portfolio receiving stage; native rendering follows through the retained operation when its QGIS runtime is selected.
+
+Continue with the same operation ID, output directory, original inputs and saved browser requests. The programme reopens completed requests and preserves the original frozen domain export and recipient history. With the QGIS runtime selected, it inspects and saves the real native map, renders and reads its features, exports the complete native project, then reopens and renders it in the independent recipient. The final native result uses `status: "COMPLETED"` and retains both domain and native receiving results.
+
+Keep the complete exported project as the receiving artifact. The operation directory also contains browser request/step files and continuation lineage needed to resume that particular walkthrough. Preserve those internal operation files with their existing custody; private connection files remain in the selected execution environment.
