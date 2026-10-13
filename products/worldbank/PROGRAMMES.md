@@ -40,8 +40,68 @@ The source selector pages through complete retained World Bank document
 revisions. Each entry displays the original handover's byte length and SHA-256,
 source document identity, capture time and reviewed observation count. A file
 path, partial API page or arbitrary browser upload cannot enter this selector.
-Register a candidate's original source document through the maintained source
-workflow before choosing it.
+Receive a candidate's original source document using the command workflow below
+before choosing it.
+
+## Receive the next original handover
+
+Use the complete new World Bank handover.zip returned by the source export or
+customer downloader. An Analysis workspace archive and a CSV by themselves are
+different inputs. Keep the full handover and its returned byte count and SHA-256.
+
+Close this customer's Analysis server before running the following commands.
+The command and browser use the same workspace lease. Read the programme's
+saved definition first:
+
+~~~sh
+starforge worldbank-product programme --python /srv/starforge/python/bin/python \
+  --workspace /srv/customer/economic-analysis show --name country_monitor
+~~~
+
+Retain its exact definition.view, definition.report, definition.workbook,
+definition.keys and definition.prefix, together with the programme revision.
+Select one new 32-character lowercase hexadecimal operation ID for this edition
+and keep it throughout intake, programme preparation and refresh. In the example
+below that ID is bd00f5b0c2bc4db28498d42f587fe84c; replace the example customer
+names and comparison keys with those returned by show.
+
+~~~sh
+starforge worldbank-product analysis --python /srv/starforge/python/bin/python \
+  recurring-review --handover /srv/customer/incoming/new-worldbank-handover.zip \
+  --workspace /srv/customer/economic-analysis \
+  --operation-id bd00f5b0c2bc4db28498d42f587fe84c \
+  --view customer_observations --report customer_report --workbook customer_workbook \
+  --keys '["source_id","country_id","country_iso3","indicator_id","period"]' \
+  --prefix worldbank --resume
+starforge worldbank-product programme --python /srv/starforge/python/bin/python \
+  --workspace /srv/customer/economic-analysis sources --limit 100
+~~~
+
+The maintained recurring engine verifies the original handover through the
+World Bank importer, preserves its original source/review and typed document,
+and prepares a comparison against the selected customer definitions. This
+intake leaves the customer's current view, saved SQL, report and workbook
+unchanged. Its exact request and completed work remain available for continuation.
+
+From sources, retain the matching handover SHA-256, source name and source
+revision. The source name is the selected prefix plus the first twelve
+characters of this operation ID: worldbank_bd00f5b0c2bc in this example. Use the
+returned revision, rather than assuming it is always 1. If sources has
+next_before, continue with --before using that exact cursor until the selected
+source is found.
+
+Prepare the named programme with the SAME operation ID, the programme revision
+read above and that exact source name/revision. The Prepare request below shows
+this continuation. The manager reopens the original recurring review and jobs;
+it preserves the original handover bytes, source-engine selection, prefix and
+customer identities. After preparation, continue through that programme's
+review and publish actions. A different handover or deliberate later review
+uses a new operation ID. If customer definitions changed during preparation,
+review those current edits in a new intentional operation.
+
+For a browser continuation, reopen programme serve after these command-line
+operations close. The retained candidate appears in the source selector; the
+original operation and its review appear in the programme history.
 
 Prepare source review imports the selected original handover through the
 original World Bank engine and compares its typed observations with the
@@ -117,11 +177,11 @@ All named-programme commands use the same manager as the browser. Global
 workspace/core options precede the subcommand:
 
 ~~~sh
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis list
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis sources
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis list
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis sources
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   show --name country_monitor
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   history --name country_monitor
 ~~~
 
@@ -150,27 +210,27 @@ Use the actual existing names and comparison keys. IDs shown here are examples;
 allocate one new ID for a new action and preserve it thereafter.
 
 ~~~sh
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   save --name country_monitor --request save-programme.json
 ~~~
 
-Prepare request:
+Prepare request (use the actual programme and source revisions):
 
 ~~~json
 {
   "id": "bd00f5b0c2bc4db28498d42f587fe84c",
   "expected_revision": 1,
-  "source": {"name": "original_received_edition", "revision": 1},
+  "source": {"name": "worldbank_bd00f5b0c2bc", "revision": 1},
   "resume": false
 }
 ~~~
 
 ~~~sh
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   prepare --name country_monitor --request prepare.json
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   operation --name country_monitor --id bd00f5b0c2bc4db28498d42f587fe84c
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   review --name country_monitor --id bd00f5b0c2bc4db28498d42f587fe84c
 ~~~
 
@@ -187,9 +247,9 @@ Publish uses that same operation ID and the actual returned review_sha256:
 ~~~
 
 ~~~sh
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   publish --name country_monitor --request publish.json
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   download --name country_monitor --id bd00f5b0c2bc4db28498d42f587fe84c \
   --filename WorldBank_Analysis_Delivery.zip --out /srv/customer/downloads/WorldBank_Analysis_Delivery.zip
 ~~~
@@ -208,7 +268,7 @@ For restored delivery, supply a new delivery ID and the accepted parent operatio
 ~~~
 
 ~~~sh
-starforge worldbank-product programme --workspace /srv/customer/economic-analysis \
+starforge worldbank-product programme --python /srv/starforge/python/bin/python --workspace /srv/customer/economic-analysis \
   reopen --name country_monitor --request reopen.json
 ~~~
 
