@@ -53,7 +53,88 @@ function contextFor(profile, input) {
     }
     return value;
   }
-  return { input, read, issues, readKeys };
+  function readInterval(key) {
+    readKeys.add(key);
+    const observation = input.observations?.[key];
+    const interval = observation?.interval;
+    if (interval == null) return UNKNOWN;
+    const spec = fields.get(key);
+    if (!spec) throw new Error("Unknown profile field: " + key);
+    const invalid = (detail) => {
+      issues.push({ field: key, code: "invalid_numeric_interval", detail });
+      return UNKNOWN;
+    };
+    if (spec.type !== "number" || typeof interval !== "object" || Array.isArray(interval)) {
+      return invalid("A numeric source interval requires a declared numeric field.");
+    }
+    const {lower, upper} = interval;
+    if (typeof lower !== "number" || typeof upper !== "number" ||
+        !Number.isFinite(lower) || !Number.isFinite(upper) || lower > upper ||
+        interval.closed !== true) {
+      return invalid("Supply finite ordered lower/upper values with both endpoints closed.");
+    }
+    if (spec.unit && (observation.unit !== spec.unit || interval.unit !== spec.unit)) {
+      return invalid("The observation and interval must retain the declared unit " + spec.unit + ".");
+    }
+    if ((spec.minimum != null && lower < spec.minimum) ||
+        (spec.maximum != null && upper > spec.maximum)) {
+      return invalid("The complete interval must remain inside the declared field domain.");
+    }
+    if (typeof interval.method !== "string" || !interval.method.trim() ||
+        typeof interval.reference !== "string" || !interval.reference.trim()) {
+      return invalid("Retain the interval's source method and reference.");
+    }
+    return interval;
+  }
+  return { input, read, readInterval, issues, readKeys };
+}
+
+
+function classifyNumericInterval(rule, interval, ctx, detail) {
+  // Boundaries and each intervening region exhaust the literal bin changes.
+  // These evaluation points stay internal; observations retain their interval.
+  const boundaries = new Set([interval.lower, interval.upper]);
+  for (const bin of rule.bins) for (const value of [bin.min, bin.max]) {
+    if (value !== null && interval.lower <= value && value <= interval.upper) boundaries.add(value);
+  }
+  const ordered = [...boundaries].sort((a, b) => a - b);
+  const probes = [...ordered];
+  for (let i = 1; i < ordered.length; i++) {
+    const left = ordered[i - 1], right = ordered[i];
+    const middle = left / 2 + right / 2;
+    if (left < middle && middle < right) probes.push(middle);
+  }
+  const options = [], labels = [], possibleLabels = [], states = new Set();
+  for (const value of probes) {
+    const matching = rule.bins.filter((bin) =>
+      (bin.min === null || (bin.min_inclusive ? value >= bin.min : value > bin.min)) &&
+      (bin.max === null || (bin.max_inclusive ? value <= bin.max : value < bin.max))
+    );
+    states.add(matching.length > 1 ? "ambiguous" : matching.length ? "scored" : "unclassified");
+    labels.push(...matching.map((bin) => bin.label));
+    const possible = matching.length ? matching : rule.bins;
+    possibleLabels.push(...possible.map((bin) => bin.label));
+    options.push(...possible.map((bin) => bin.points));
+  }
+  const values = unique(options);
+  const retainedInterval = JSON.parse(JSON.stringify(interval));
+  detail.classification = {
+    mode: "literal_published_bins_over_closed_interval", state: "bounded_interval",
+    labels: [...new Set(labels)], matched_classes: [...new Set(labels)],
+    classes: [...new Set(possibleLabels)], score_options: values,
+    attainable_states: [...states].sort(), value_interval: retainedInterval
+  };
+  detail.value_interval = retainedInterval;
+  detail.points_determined_by_interval = values.length === 1;
+  if (states.has("unclassified")) ctx.issues.push({
+    field: rule.field, code: "interval_crosses_unclassified_source_values",
+    detail: "The closed interval includes a printed gap or values outside the original bins; original alternatives are retained."
+  });
+  if (states.has("ambiguous")) ctx.issues.push({
+    field: rule.field, code: "interval_crosses_overlapping_source_bins",
+    detail: "The closed interval includes overlapping published bins; every matching class is retained."
+  });
+  return values;
 }
 
 function evaluateRule(rule, ctx, detail) {
@@ -87,8 +168,23 @@ function evaluateRule(rule, ctx, detail) {
         }
       }
     }
-    const value = read(rule.field);
-    if (value === UNKNOWN) return uncertain();
+    const observation = ctx.input.observations?.[rule.field];
+    const hasInterval = observation?.interval != null;
+    const interval = hasInterval ? ctx.readInterval(rule.field) : UNKNOWN;
+    const value = read(rule.field, hasInterval);
+    if (hasInterval && interval === UNKNOWN) return uncertain();
+    if (value !== UNKNOWN && interval !== UNKNOWN &&
+        (value < interval.lower || value > interval.upper)) {
+      ctx.issues.push({ field: rule.field, code: "value_outside_numeric_interval",
+        detail: "The exact observed value is outside its retained source interval." });
+      return uncertain();
+    }
+    if (value === UNKNOWN) {
+      if (interval !== UNKNOWN && (observation.value === null || observation.value === undefined)) {
+        return classifyNumericInterval(rule, interval, ctx, detail);
+      }
+      return uncertain();
+    }
     const matching = rule.bins.filter((bin) =>
       (bin.min === null || (bin.min_inclusive ? value >= bin.min : value > bin.min)) &&
       (bin.max === null || (bin.max_inclusive ? value <= bin.max : value < bin.max))
