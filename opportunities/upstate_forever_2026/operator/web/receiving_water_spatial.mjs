@@ -88,3 +88,77 @@ export function receivingWaterStateSignature(state) {
   return ['receiving_water_plans', 'receiving_water_analyses'].map(name =>
     (water[name] || []).map(row => [row.id, row.state]));
 }
+
+/** Open two retained plan editions in one native spatial review. */
+export function receivingWaterPlanMapRequest(target) {
+  const hash=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
+  if(target?.kind!=='receiving-water-plan-comparison'||
+     !hash(target.reference_id)||!hash(target.id)||
+     !hash(target.reference_sha256)||!hash(target.candidate_sha256)||
+     typeof target.subject!=='string'||!target.subject)
+    throw Error('Choose an exact receiving-water row from the saved plan comparison.');
+  return {reference_plan_id:target.reference_id,candidate_plan_id:target.id,
+    subject_id:target.subject,reference_record_sha256:target.reference_sha256,
+    candidate_record_sha256:target.candidate_sha256};
+}
+
+export function receivingWaterPlanMapView(catalog,target,value) {
+  const request=receivingWaterPlanMapRequest(target),clone=row=>JSON.parse(JSON.stringify(row));
+  const equalSelection=(a,b)=>a?.layer_id===b?.layer_id&&a?.layer===b?.layer&&
+    !Object.keys(a?.where||{}).length&&!Object.keys(b?.where||{}).length;
+  if(value?.schema!=='upstate.receiving-water-plan-map/v1'||
+     value.project_id!==catalog?.project?.id||value.subject_id!==request.subject_id||
+     value.reference?.id!==request.reference_plan_id||
+     value.candidate?.id!==request.candidate_plan_id||
+     value.reference?.record_sha256!==request.reference_record_sha256||
+     value.candidate?.record_sha256!==request.candidate_record_sha256||
+     typeof value.reference.present!=='boolean'||typeof value.candidate.present!=='boolean'||
+     (!value.reference.present&&!value.candidate.present))
+    throw Error('The geographic comparison differs from the original saved plan pair. Reopen the comparison.');
+  const view=value.view;
+  if(typeof view?.crs!=='string'||!view.crs||!Array.isArray(view.bounds)||
+     view.bounds.length!==4||!view.bounds.every(Number.isFinite)||
+     view.bounds[0]>=view.bounds[2]||view.bounds[1]>=view.bounds[3])
+    throw Error('The retained plan boundaries do not have a complete common map extent.');
+  if(typeof value.title!=='string'||!value.title.trim()||typeof value.notes!=='string'||
+     !Array.isArray(value.overlays)||!value.overlays.length||value.overlays.length>4||
+     !Array.isArray(value.bindings)||value.bindings.length!==value.overlays.length||
+     value.overlays.length>(catalog.limits?.overlays??24))
+    throw Error('Read the complete original receiving-water boundary comparison.');
+  const owners=new Map([value.reference,value.candidate].filter(row=>row.present).map(row=>[row.id,row]));
+  const roles=new Map([...owners.keys()].map(id=>[id,new Set()]));
+  const selections=[];
+  for(let index=0;index<value.overlays.length;index++){
+    const overlay=value.overlays[index],choice=overlay.selection;
+    const binding=value.bindings.find(row=>equalSelection(row.selection,choice));
+    const layer=catalog.layers.find(row=>row.id===choice?.layer_id);
+    if(!binding||!layer||layer.kind!=='vector'||binding.kind!=='vector'||
+       layer.group!=='receiving-water-plan'||!owners.has(binding.plan_id)||
+       layer.owner_id!==binding.plan_id||layer.receiving_water_plan_id!==binding.plan_id||
+       layer.subject_id!==request.subject_id||binding.subject_id!==request.subject_id||
+       !['receptor','contribution'].includes(binding.geometry_role)||
+       layer.geometry_role!==binding.geometry_role||
+       layer.sha256!==binding.sha256||layer.bytes!==binding.bytes||
+       !Number.isSafeInteger(binding.bytes)||binding.bytes<=0||
+       typeof choice.layer!=='string'||choice.layer!==layer.native_layer||
+       Object.keys(choice).some(key=>!['layer_id','layer','where'].includes(key))||
+       Object.keys(choice.where||{}).length)
+      throw Error('Restore this comparison’s exact original plan geometry before opening the map.');
+    if(typeof overlay.label!=='string'||!overlay.label||
+       !['solid','dash','dot'].includes(overlay.style)||
+       typeof overlay.visible!=='boolean'||!Number.isFinite(overlay.width)||
+       overlay.width<0.2||overlay.width>8||!Number.isFinite(overlay.opacity)||
+       overlay.opacity<0||overlay.opacity>1)
+      throw Error('The boundary comparison contains an invalid original overlay style.');
+    roles.get(binding.plan_id).add(binding.geometry_role);
+    selections.push({binding,selection:choice});
+  }
+  for(const found of roles.values())if(!found.has('receptor')||!found.has('contribution'))
+    throw Error('Retain both the original feature and its prepared contribution boundary for each displayed edition.');
+  const reference=selections.find(row=>row.binding.plan_id===request.reference_plan_id&&row.binding.geometry_role==='contribution')||
+    selections.find(row=>row.binding.geometry_role==='contribution')||selections[0];
+  return {reference:clone(reference.selection),primary:null,comparison:null,mode:'single',
+    view:clone(view),scale:{mode:'auto'},overlays:clone(value.overlays),
+    markers:[],point:null,frame:null,title:value.title,notes:value.notes,
+    previous_review_id:null,pendingSave:null,atlas_review:null,swipe:50};
+}
