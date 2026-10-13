@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Retain application sources, review collaborative document migrations, and operate the original Tiptap and Hocuspocus runtime.">
+  <title>Collaborative migration workspace</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#tt-main">Skip to workspace</a>
+  <header class="topbar">
+    <a class="brand" href="#/overview" aria-label="Collaborative migration workspace">
+      <span class="brand-mark" aria-hidden="true">[ : ]</span>
+      <span>Migration workspace<small>Tiptap · Hocuspocus</small></span>
+    </a>
+    <div class="topbar-right">
+      <span id="tt-connection" class="status" role="status">Sign in to open a workspace</span>
+      <span id="tt-actor" class="actor"></span>
+      <button id="tt-signout" class="quiet" type="button" hidden>Sign out</button>
+    </div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar" aria-label="Project and navigation">
+      <div class="project-switch">
+        <label for="tt-project-select">Project</label>
+        <select id="tt-project-select" disabled><option value="">Select a project</option></select>
+        <button id="tt-create-project" data-mutates class="secondary" type="button" disabled>New project</button>
+      </div>
+      <nav id="tt-navigation" aria-label="Workspace sections">
+        <a href="#/overview" data-pane="overview" aria-current="page"><span>01</span> Overview</a>
+        <a href="#/sources" data-pane="sources"><span>02</span> Sources</a>
+        <a href="#/access" data-pane="access"><span>03</span> Tenant access</a>
+        <a href="#/editions" data-pane="editions"><span>04</span> Editions</a>
+        <a href="#/migrations" data-pane="migrations"><span>05</span> Migration review</a>
+        <a href="#/documents" data-pane="documents"><span>06</span> Documents</a>
+        <a href="#/runtime" data-pane="runtime"><span>07</span> Runtime</a>
+        <a href="#/delivery" data-pane="delivery"><span>08</span> Delivery & history</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="eyebrow">Selected installation</span>
+        <code id="tt-instance">Not connected</code>
+        <p id="tt-runtime-summary">The host retains its own runtime and authorization.</p>
+      </div>
+    </aside>
+    <div class="workspace">
+      <section class="workspace-bar" aria-label="Selected project revision">
+        <div id="tt-identity"><span class="eyebrow">Collaborative application migration</span><strong>Open your project</strong></div>
+        <div class="revision-controls">
+          <label class="sr-only" for="tt-revision">Project revision</label>
+          <select id="tt-revision" disabled><option value="">Current view</option></select>
+          <button id="tt-refresh" class="quiet" type="button" disabled>Refresh</button>
+        </div>
+      </section>
+      <section id="tt-pending" class="notice" aria-label="Retained request" hidden></section>
+      <section id="tt-notice" class="notice" role="status" aria-live="polite" hidden></section>
+      <main id="tt-main" tabindex="-1">
+        <section class="welcome">
+          <span class="eyebrow">Source · review · collaboration · delivery</span>
+          <h1>Keep the migration and the working document together.</h1>
+          <p>Retain the original application inputs, review the document mapping, and open the native collaborative editor with the receiving host’s access rules.</p>
+          <form id="tt-auth-form" class="auth-form" autocomplete="off">
+            <label for="tt-token">Host access token</label>
+            <input id="tt-token" name="token" type="password" required autocomplete="off" spellcheck="false" aria-describedby="tt-token-help">
+            <p id="tt-token-help" class="help">Your host supplies this token. It stays in this page’s memory and is cleared when you sign out or reload.</p>
+            <button type="submit">Open workspace</button>
+          </form>
+        </section>
+      </main>
+      <section id="tt-editor-section" class="editor-section" aria-label="Collaborative document" hidden>
+        <header class="editor-heading">
+          <div><span class="eyebrow" id="tt-editor-tenant"></span><h2 id="tt-editor-title">Document</h2><p id="tt-editor-identity" class="small mono"></p></div>
+          <button id="tt-close-editor" class="quiet" type="button">Close editor</button>
+        </header>
+        <div id="tt-editor-alert" class="notice" hidden></div>
+        <div class="editor-status-bar">
+          <span id="tt-editor-network" class="status">Opening</span>
+          <span id="tt-editor-local" class="status">Loading local state</span>
+          <strong id="tt-editor-saved" role="status" aria-live="polite">Checking retained state</strong>
+          <span id="tt-editor-peers" class="peer-list" aria-label="Other editors"></span>
+        </div>
+        <div id="tt-editor-toolbar" class="editor-toolbar" role="toolbar" aria-label="Document formatting">
+          <button data-format="paragraph" type="button" title="Paragraph">Text</button>
+          <button data-format="heading2" type="button" title="Heading 2">H2</button>
+          <button data-format="heading3" type="button" title="Heading 3">H3</button>
+          <span class="toolbar-separator"></span>
+          <button data-format="bold" type="button" title="Bold"><b>B</b></button>
+          <button data-format="italic" type="button" title="Italic"><i>I</i></button>
+          <button data-format="strike" type="button" title="Strike through"><s>S</s></button>
+          <button data-format="code" type="button" title="Inline code">&lt;/&gt;</button>
+          <button data-format="bulletList" type="button" title="Bullet list">• List</button>
+          <button data-format="orderedList" type="button" title="Numbered list">1. List</button>
+          <button data-format="blockquote" type="button" title="Block quote">Quote</button>
+          <span class="toolbar-separator"></span>
+          <button data-format="undo" type="button">Undo</button>
+          <button data-format="redo" type="button">Redo</button>
+        </div>
+        <div id="tt-editor" class="editor-surface"></div>
+        <footer class="editor-footer">
+          <div><span id="tt-editor-words" class="small"></span><p id="tt-editor-save-detail" class="help"></p></div>
+          <div class="actions">
+            <button id="tt-editor-check" class="secondary" type="button">Check saved state</button>
+            <button id="tt-editor-network-toggle" class="secondary" type="button">Work offline</button>
+            <button id="tt-editor-download" class="quiet" type="button">Download editor state</button>
+          </div>
+        </footer>
+      </section>
+      <footer class="workspace-footer"><span>Original sources and native Yjs state remain attached to their project history.</span><a href="/operator-guide" id="tt-guide-link">Operator guide</a></footer>
+    </div>
+  </div>
+  <dialog id="tt-action-dialog" class="action-dialog">
+    <form id="tt-action-form" autocomplete="off">
+      <header><div><span id="tt-form-eyebrow" class="eyebrow">Project action</span><h2 id="tt-form-title"></h2></div><button type="button" data-close-dialog class="quiet" aria-label="Close action">Close</button></header>
+      <p id="tt-form-description" class="help"></p>
+      <div id="tt-form-fields" class="form-grid"></div>
+      <p id="tt-form-error" class="form-error" role="alert" hidden></p>
+      <footer><span id="tt-form-draft-status" class="small"></span><div class="actions"><button type="button" data-close-dialog class="secondary">Cancel</button><button id="tt-form-submit" type="submit">Save</button></div></footer>
+    </form>
+  </dialog>
+  <dialog id="tt-detail-dialog" class="detail-dialog">
+    <header><div><span id="tt-detail-kind" class="eyebrow">Retained record</span><h2 id="tt-detail-title"></h2></div><button type="button" data-close-detail class="quiet">Close</button></header>
+    <div id="tt-detail-body"></div>
+  </dialog>
+  <div id="tt-download-status" class="sr-only" role="status" aria-live="polite"></div>
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>
