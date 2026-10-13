@@ -1,4 +1,5 @@
 import {attachCommunityRevisions} from './community_revisions.mjs';
+import {attachCommunityReportHandover} from './community_report_handover.mjs';
 
 /**
  * Utility/community planning inside the original Upper Savannah operator.
@@ -361,10 +362,13 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   const plans=()=>list(data().community_plans);
   const reports=()=>list(data().community_reports);
   const revisions=attachCommunityRevisions({getState:current,api,endpoint,openForm,submitAction,detail,fileList,openPlan:id=>planDetail(id),studyTransferButton});
+  const handover=attachCommunityReportHandover({getState:current,api,endpoint,openForm,submitAction,detail,fileList,
+    getReport:id=>get('community_reports',id,{fresh:true})});
   const key=(kind,id)=>workspace()+'|'+kind+'|'+id;
   function sync(){
     if(activeWorkspace!==workspace()){
       studyTransferRequest++;
+      handover.invalidate();
       activeWorkspace=workspace();loadError='';validatedView=null;
       local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
       let saved;try{saved=JSON.parse(sessionStorage.getItem('upstate-community-view:'+workspace())||'null');}catch{}
@@ -540,12 +544,13 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return body+revisions.renderList();
   }
   function reportView(){
-    return reports().length?section('Community and utility reports','Open a retained report to preview its full narrative and download every original editable file.',
+    const body=reports().length?section('Community and utility reports','Open a retained report to preview its full narrative and download every original editable file.',
       table(['Report','Plan','Created','State',''],reports().map(r=>'<tr><th scope="row">'+e(r.title||r.selection?.title||'Community report')+'<small>'+e(short(r.id))+'</small></th>'+
         '<td>'+e(row('community_plans',r.plan_id||r.selection?.plan_id)?.title||short(r.plan_id||r.selection?.plan_id))+'</td>'+
         '<td>'+e(r.created_at?new Date(r.created_at).toLocaleString():'—')+'</td><td>'+e(human(r.state||'complete'))+'</td>'+
         '<td class="actions-cell">'+button('report-open','Open report','data-id="'+e(r.id)+'"','small')+'</td></tr>'))):
       empty('Retain a complete community report','Save an intervention plan, then build the narrative, original community rows, utility and watershed summaries, costs and model context.',button('tab-plans','Open plans'));
+    return '<div class="page-actions">'+handover.receiveButton()+'</div>'+body;
   }
   function render(){
     sync();persist();
@@ -1076,7 +1081,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   async function openPreparedReport(taskId,{sourceOnly=false,scientific=false}={}){
     const requestedWorkspace=workspace(),task=await api(endpoint('/api/task',{id:taskId}));
     if(workspace()!==requestedWorkspace)return;
-    if(task.workspace!==requestedWorkspace||task.action!=='community.report.source.prepare'||task.state!=='complete')
+    if(task.workspace!==requestedWorkspace||!['community.report.source.prepare','community.report.handover.receive'].includes(task.action)||task.state!=='complete')
       throw Error('Open a completed Community report source operation in its original Workspace.');
     const result=task.result||{},source=result.source,selection=result.delivery_selection;
     if(!source?.source_collection_id||!source?.source_id||!list(selection?.observed_context_sources).some(
@@ -1096,7 +1101,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   function taskActions(task){
     if(['community.plan.compare','community.revision.receive'].includes(task?.action))return revisions.taskActions(task);
-    if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
+    if(task?.action==='community.report.handover.export')return handover.taskActions(task);
+    if(task?.workspace!==workspace()||!['community.report.source.prepare','community.report.handover.receive'].includes(task.action)||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
       (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
       button('report-source-edition','Open retained report source','data-id="'+e(task.id)+'"')+
@@ -1111,7 +1117,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
       (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+
       button('report-source','Use in scientific report','data-id="'+e(id)+'"')+
-      studyTransferButton('community-reports',r.id)+'</div>'+
+      handover.reportButton(r)+studyTransferButton('community-reports',r.id)+'</div>'+
       '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+communityPlanRevisionMarkup(r.plan_revision)+
       (preview&&html?'<iframe class="community-report-preview" title="'+e(title)+'" src="'+e(html.url)+'" sandbox="" referrerpolicy="no-referrer"></iframe>':'')+
       (files.length?fileList(files):'<p class="notice">The report has no completed file tickets yet. Inspect its original operation for progress.</p>')+
@@ -1144,6 +1150,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   async function dispatch(node){
     if(node.dataset.action?.startsWith('community-revision-'))return revisions.dispatch(node);
+    if(node.dataset.action?.startsWith('community-handover-'))return handover.dispatch(node);
     const action=node.dataset.action?.replace(/^community-/,'');
     if(action?.startsWith('tab-')){local.tab=action.slice(4);redraw();return;}
     if(action==='sources'){document.getElementById('detail-dialog')?.close();return sourceForm();}
@@ -1182,6 +1189,6 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     }
     throw Error('This community action is not available.');
   }
-  function detach(){studyTransferRequest++;mountController?.abort();container=null;}
+  function detach(){studyTransferRequest++;handover.invalidate();mountController?.abort();container=null;}
   return {render,mount,dispatch,detach,capture,validateView,restoreView,taskActions};
 }

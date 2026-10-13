@@ -1,6 +1,6 @@
 # Transfer an editable Monitoring study
 
-Saved Monitoring work uses the original **Study transfer** desk and Workspace archive. Choose a network, design, budget comparison, campaign, or observational context. The archive preserves the original project and record identities, full source collections and companions, saved design decisions, and editable campaign history.
+Saved Monitoring work uses the original **Study transfer** desk and Workspace archive. Choose a network, design, budget frontier, saved budget comparison, campaign, or observational context. The archive preserves the original project and record identities, full source collections and companions, saved design decisions, and editable campaign history.
 
 ## Operator workflow
 
@@ -19,7 +19,8 @@ The handoff includes the original workspace key. A workspace switch before it re
 | --- | --- |
 | Network | Exact source editions, original body objects and every source companion |
 | Design | Its network, explicit costs and calendar, and its original saved budget-comparison progress when present |
-| Budget comparison | Every retained plan and original completed-budget mapping |
+| Budget frontier | Every retained plan and original completed-budget mapping |
+| Saved budget comparison | Its exact baseline choice, ordered original plans, frontier and network, and every specifically selected per-plan observed context |
 | Campaign | Current head, all parent revisions, field events, every historical plan/network, source station bindings, and original operation replay fingerprints |
 | Observational context | Its original observation edition, network and design, exact historical campaign revision, and the editable campaign when one is bound |
 | Related completed Monitoring report | Whole original producer directory and descriptors, exact historical records, ordinary retained report source collection, and its editable campaign |
@@ -83,6 +84,34 @@ An explicitly selected saved scientific report edition can follow this producer 
 ## Original fieldwork returns
 
 When a campaign event was returned from Implementation fieldwork, selected transfer retains the exact immutable `monitoring_field_returns/<request_id>/request.json` and `field-plan.json` that the original return producer recorded. Its maintained `source_binding` validator checks the reviewed request digest, original field-plan revision/document digest and complete event payload. The reviewed campaign revision enters the same typed history closure. Receiving repeats this validation from the transferred originals, so a field event remains tied to the actual saved fieldwork source.
+
+
+## Saved budget choices and their original scientific report
+
+In **Saved budget choices**, save or reopen a comparison, then choose **Transfer editable comparison**. The action reopens the exact saved native record before handing its original ID to Study transfer. Unsaved title, baseline or observed-context changes must first be saved as their own comparison. Navigation, workspace changes or changed selection during that read cancel the handoff.
+
+The typed root is `monitoring_frontier_comparisons`. Its original `selection.frontier_id`, `baseline_plan_id` and ordered `context_ids` remain unchanged. Transfer reuses `monitoring_frontier_comparison.inspect` to verify the original frontier/network/plan/context digests and follows those exact immutable records through the existing Monitoring dependency graph. It does not rerun the solver or calculate a new budget table. Feasible and infeasible retained rows keep their original status.
+
+With related results enabled, choosing a network or frontier discovers its saved comparison records and their completed original reports. Selecting a particular comparison retains its exact scientific inputs; a network reached only as a dependency does not pull unrelated later choices.
+
+A saved **Monitoring budget comparison** scientific report uses the original `monitoring-budget-comparison` recipe. Its selected-report transfer now follows the report's `comparison_id`, validates `comparison-records.json`, and carries the complete `native-monitoring-comparison.zip`, extracted source/report members, map figures and retained source collection. The original plan/campaign report path continues to validate `history-records.json`. Same-project report lineage reopens its native comparison; a foreign report keeps its declared original project and contained source bodies.
+
+For the existing Study transfer CLI or queued `study.export`, use this selection with the actual saved ID:
+
+```json
+{
+  "schema": "upstate.study-selection/v1",
+  "title": "Saved regional monitoring budget choices",
+  "roots": [
+    {"kind": "monitoring_frontier_comparisons", "id": "ACTUAL_SAVED_COMPARISON_ID"}
+  ],
+  "include_related_results": true
+}
+```
+
+Restore through the original Workspace receiver. Reopen the same saved comparison from **Saved budget choices**, review its original baseline and per-plan contexts, then create another comparison edition if new choices are needed. Existing campaign histories can continue independently. The original comparison exporter can produce its complete source/report ZIP from the received records; exports written outside a Workspace are regenerated through that existing command. Completed report-source directories retained inside the Workspace travel as their original bytes.
+
+This joins the already accepted regional Monitoring receiving course. Use its actual saved comparison ID and current full application, preserve an already-started request, and return the original archive/restore result or first native exception to the same operation.
 
 ## Open a restored selection in Monitoring
 

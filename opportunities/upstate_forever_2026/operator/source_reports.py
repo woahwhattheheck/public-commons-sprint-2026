@@ -91,6 +91,7 @@ BUNDLED_REPORT_MANIFESTS = (
     "results/assessment-association-review-20261013/observed-sources.json",
     "results/assessment-source-scope-review-20261013/observed-sources.json",
     "results/native-assessment-delivery-20261013/sources.json",
+    "results/native-assessment-microbial-delivery-20261013/sources.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json",
     "source/water_context/sources-20261013.json",
