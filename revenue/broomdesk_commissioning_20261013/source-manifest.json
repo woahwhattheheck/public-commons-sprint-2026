@@ -163,18 +163,18 @@
     },
     {
       "path": "browser-receiving.mjs",
-      "bytes": 13934,
-      "sha256": "53a0e94c6057f92fac584bc46f91cdc5b9af0d5b555a0a2a945c5c9e2f82d8c4"
+      "bytes": 14921,
+      "sha256": "43e0aaa138eeb7b419df436464dd3d5d2d99f1f5555728856062d798d2b05f79"
     },
     {
       "path": "browser-packages.mjs",
-      "bytes": 7573,
-      "sha256": "5baac0198e3cfaac670ede89cfc054362ad1caef35767e8add1250f15d2335a6"
+      "bytes": 8329,
+      "sha256": "cd010fac9142c69db709a4f1a38239c7d13e7d0429803ed7dcb8b77bb4c84aae"
     },
     {
       "path": "README.md",
-      "bytes": 13195,
-      "sha256": "7f25f9a382a15c9e5625c5f39c823c6dcb7956c93a6b43531fd4052530e04cd8"
+      "bytes": 14744,
+      "sha256": "1f9b1b4292c2923965c74a93af328e995a956e9055190ffbe9595f3a1130eac8"
     },
     {
       "path": "sample-package-viewer-input.json",
