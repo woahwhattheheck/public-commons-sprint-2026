@@ -60,7 +60,8 @@ def receive(application, output):
                         "sha256": _sha(profile_body), "schema": profile["schema"],
                         "title": profile["title"]}
     sys.path.insert(0, str(application))
-    names = ("model.watershed_context", "model.utility_watershed_context", "model.watershed_brief")
+    names = ("model.watershed_context", "model.utility_watershed_context", "model.watershed_brief",
+             "model.watershed_briefing", "model.client_briefing")
     modules = [importlib.import_module(name) for name in names]
     receiver_path = Path(__file__).resolve(strict=True)
     receiver_body = receiver_path.read_bytes()
@@ -73,7 +74,7 @@ def receive(application, output):
         body = path.read_bytes()
         implementation[name] = {"path": path.relative_to(application).as_posix(),
                                 "bytes": len(body), "sha256": _sha(body)}
-    context, utilities, brief = modules
+    context, utilities, brief, source_briefing, _client_briefing = modules
     observed_module = importlib.import_module("model.utility_observed_context")
     observed_path = Path(observed_module.__file__).resolve(strict=True)
     if not observed_path.is_relative_to(application):
@@ -125,6 +126,7 @@ def receive(application, output):
         for name in ("selected-watersheds.json", "selected-watersheds.csv", "original-utility-profile.json"):
             body = (folder / name).read_bytes()
             files[name] = {"path": name, "bytes": len(body), "sha256": _sha(body)}
+        files.update(source_briefing.write(folder, selection))
         files["utility-watershed-packet.zip"] = observed_module.write_packet(folder, files)
         utility_results.append({
             "utility_id": choice["utility_id"], "selection_id": choice["key"],

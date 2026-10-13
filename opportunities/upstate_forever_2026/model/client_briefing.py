@@ -51,7 +51,48 @@ def _chunks(rows, count):
         yield start, rows[start:start + count]
 
 
+def _source_binding(report, report_model_bytes=None):
+    """Bind original source-context pages without supplying a modeled baseline."""
+    source = report.get("source_binding")
+    selection = report.get("source_selection")
+    if (not isinstance(source, dict) or not isinstance(selection, dict)
+            or selection.get("schema") != "upstate.selected-watersheds/v1"
+            or not isinstance(report.get("sections"), list)
+            or not isinstance(report.get("maps"), list)
+            or report.get("delivery_mode") != "source_context"
+            or not isinstance(report.get("title"), str) or not report["title"]):
+        raise ValueError("Retain the complete original source-context report")
+    canonical = hashlib.sha256(_json(selection).encode("utf-8")).hexdigest()
+    if (source.get("canonical_sha256") != canonical
+            or source.get("context_id") != selection.get("context_id")
+            or source.get("selected_huc12s") != selection.get("selected_huc12s")
+            or not isinstance(source.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", source["sha256"])
+            or type(source.get("bytes")) is not int or source["bytes"] <= 0):
+        raise ValueError("The source-context report and original selection binding differ")
+    if report.get("baseline_run_id") is not None or report.get("alternative_run_ids"):
+        raise ValueError("Source-context pages retain their own source selection")
+    if report_model_bytes is None:
+        original = _json(report).encode("utf-8")
+        method = "sha256-canonical-json-utf8"
+    else:
+        if (not isinstance(report_model_bytes, bytes)
+                or _json(json.loads(report_model_bytes.decode("utf-8"))) != _json(report)):
+            raise ValueError("The original source-context report differs from its complete bytes")
+        original, method = report_model_bytes, "sha256-original-report-model-bytes"
+    return {
+        "schema": EDITION, "report_sha256": hashlib.sha256(original).hexdigest(),
+        "report_digest_method": method, "report_edition": report.get("report_edition"),
+        "report_kind": "source_context", "source_context": source,
+        "delivery_id": source.get("export_id"), "baseline_run_id": None,
+        "alternative_run_ids": [], "title": report["title"],
+        "delivery_mode": "source_context", "grid_id": None, "profile_id": None,
+    }
+
+
 def _binding(report, report_model_bytes=None):
+    if report.get("schema") == "upstate.source-context-report/v1":
+        return _source_binding(report, report_model_bytes)
     if report.get("schema") != "upstate.client-report/v1":
         raise ValueError("Select the original client report model")
     required = ("title", "baseline_run_id", "alternative_run_ids", "sections", "maps")
@@ -127,18 +168,27 @@ def _slides(report):
         })
 
     chapters.append({"id": "opening", "title": "Study and meeting purpose", "core": True})
-    baseline_title = ((report.get("quantity_provenance") or {}).get("baseline_scenario") or {}).get("title")
-    opening = (
-        '<p class="lead">' + _text(report.get("report_kind_label") or "Study assessment") +
-        '</p><dl class="facts"><div><dt>Baseline</dt><dd>' +
-        _text(baseline_title or "Retained baseline") + '</dd></div><div><dt>Alternatives</dt><dd>' +
-        str(len(report["alternative_run_ids"])) + '</dd></div><div><dt>Map families</dt><dd>' +
-        _text(report.get("map_families_present")) + ' of ' +
-        _text(report.get("map_families_expected")) + '</dd></div></dl>'
-        '<p>The following pages retain the report’s own quantities, support descriptions, '
-        'interpretation and source context. Use the agenda to choose the material for this meeting.</p>'
-        '<p>Record questions, decisions and assigned follow-up in Meeting notes. '
-        'Those notes remain separate from the scientific report.</p>')
+    if report.get("schema") == "upstate.source-context-report/v1":
+        opening = ('<p class="lead">' + _text(report["report_kind_label"]) +
+                   '</p><dl class="facts">' +
+                   ''.join('<div><dt>' + _text(row["label"]) + '</dt><dd>' +
+                           _text(row["value"]) + '</dd></div>' for row in report.get("source_scope", [])) +
+                   '</dl><p>These pages retain the original source geography, periods, methods, '
+                   'measurements and interpretation. Record the actual questions, decisions and '
+                   'assigned follow-up in Meeting notes.</p>')
+    else:
+        baseline_title = ((report.get("quantity_provenance") or {}).get("baseline_scenario") or {}).get("title")
+        opening = (
+            '<p class="lead">' + _text(report.get("report_kind_label") or "Study assessment") +
+            '</p><dl class="facts"><div><dt>Baseline</dt><dd>' +
+            _text(baseline_title or "Retained baseline") + '</dd></div><div><dt>Alternatives</dt><dd>' +
+            str(len(report["alternative_run_ids"])) + '</dd></div><div><dt>Map families</dt><dd>' +
+            _text(report.get("map_families_present")) + ' of ' +
+            _text(report.get("map_families_expected")) + '</dd></div></dl>'
+            '<p>The following pages retain the report’s own quantities, support descriptions, '
+            'interpretation and source context. Use the agenda to choose the material for this meeting.</p>'
+            '<p>Record questions, decisions and assigned follow-up in Meeting notes. '
+            'Those notes remain separate from the scientific report.</p>')
     add("opening", report["title"], opening, kind="opening")
     for index, section in enumerate(report["sections"]):
         source_id = section.get("id")
@@ -148,7 +198,7 @@ def _slides(report):
         chapter = "chapter-" + str(index + 1)
         title = str(section.get("title") or source_id)
         chapters.append({"id": chapter, "source_id": source_id,
-                         "title": title, "core": source_id in CORE_SECTIONS})
+                         "title": title, "core": (bool(section.get("core")) if report.get("schema") == "upstate.source-context-report/v1" else source_id in CORE_SECTIONS)})
         paragraphs = section.get("paragraphs", [])
         tables = section.get("tables", [])
         if not isinstance(paragraphs, list) or not isinstance(tables, list):
@@ -310,7 +360,7 @@ function renderNotes(){
 }
 document.getElementById('add-note').onclick=function(){if(notes.entries.length>=500){message('Export this meeting before starting another; this file supports 500 entries.');return;}var meta=currentMeta();if(!meta)return;notes.entries.push({id:(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),kind:document.getElementById('new-note-kind').value,status:'open',slide_id:meta.id,body:'',owner:'',due:''});save();renderNotes();var fields=document.querySelectorAll('#note-list textarea');fields[fields.length-1].focus();};
 function markdown(){
- var lines=['# '+(notes.meeting.title||binding.title)+' — meeting notes','','Report: '+binding.title,'Delivery: '+text(binding.delivery_id),'Baseline: '+binding.baseline_run_id,'Report edition: '+text(binding.report_edition),'Report SHA-256: '+binding.report_sha256,'Digest method: '+binding.report_digest_method,'Date: '+notes.meeting.date,'Participants: '+notes.meeting.participants,'','## Meeting purpose','',notes.meeting.purpose,'','## Selected agenda',''];
+ var lines=['# '+(notes.meeting.title||binding.title)+' — meeting notes','','Report: '+binding.title,'Delivery: '+text(binding.delivery_id),(binding.report_kind==='source_context'?'Source context: '+text(binding.source_context.context_id):'Baseline: '+binding.baseline_run_id),'Report edition: '+text(binding.report_edition),'Report SHA-256: '+binding.report_sha256,'Digest method: '+binding.report_digest_method,'Date: '+notes.meeting.date,'Participants: '+notes.meeting.participants,'','## Meeting purpose','',notes.meeting.purpose,'','## Selected agenda',''];
  model.chapters.filter(function(c){return agenda.has(c.id);}).forEach(function(c){lines.push('- '+c.title);});
  lines.push('','## Questions, decisions and follow-up','');
  notes.entries.forEach(function(v,i){var s=model.slides.find(function(x){return x.id===v.slide_id;});lines.push('### '+(i+1)+'. '+v.kind+' — '+v.status,'','Report section: '+s.title+' / '+v.slide_id,'Owner: '+v.owner,'Due: '+v.due,'',v.body,'');});
