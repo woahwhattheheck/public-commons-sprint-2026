@@ -30,6 +30,7 @@ from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
 from . import native_process_study_transfer as process_transfer
+from . import implementation_report_transfer as implementation_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
@@ -147,7 +148,8 @@ def _record_path(kind, key):
 
 
 class _Closure:
-    def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True):
+    def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True,
+                 implementation_lineage=True):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -166,6 +168,7 @@ class _Closure:
         self.report_source_records = {}
         self.scientific_report_records = {}
         self.report_lineage_enabled = report_lineage
+        self.implementation_lineage_enabled = implementation_lineage
         self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
@@ -584,6 +587,7 @@ class _Closure:
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
+            "implementation_report_sources": implementation_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
                                  "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
@@ -597,6 +601,7 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
+    implementation_transfer.capture_locks(stack, closure, already)
     for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure),
                      *process_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
@@ -842,6 +847,9 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
         if closure.scientific_report_records:
             identity["scientific_report_editions"] = report_editions.receipt(closure)
+        implementation_sources = implementation_transfer.receipt(closure)
+        if implementation_sources:
+            identity["implementation_report_sources"] = implementation_sources
         if closure.delivery_records:
             identity["completed_deliveries"] = delivery_transfer.receipt(closure)
         if closure.monitoring_records or closure.monitoring_reports:
@@ -911,13 +919,16 @@ def verify_received_studies(workspace):
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"],
-                           report_lineage="scientific_report_sources" in receipt["identity"]).resolve(
+                           report_lineage="scientific_report_sources" in receipt["identity"],
+                           implementation_lineage="implementation_report_sources" in receipt["identity"]).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
         report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
+        implementation_sources = receipt["identity"].get("implementation_report_sources", [])
+        implementation_transfer.verify_receipt(closure, implementation_sources)
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):
@@ -935,6 +946,7 @@ def verify_received_studies(workspace):
                        "retained_records": len(required), "identity": "MATCH",
                        "investigations": history, "decision_history": decision_history,
                        "monitoring_history": monitoring_history,
+                       "implementation_report_sources": copy.deepcopy(implementation_sources),
                        "scientific_report_editions": len(receipt["identity"].get("scientific_report_editions", []))})
     return result
 
