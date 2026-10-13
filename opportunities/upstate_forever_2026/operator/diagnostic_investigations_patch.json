@@ -76,13 +76,14 @@
       ]
     },
     "operator/INTELLIGENCE_DIAGNOSTICS.md": {
-      "sha256": "c2927af494d5c215845ea9306aa197f69f115499fde3889b677585098898f4fc",
+      "sha256": "fc8721519b77d40fb7020364fb5a77f1d8e5de66bf1a022ceefbdc9fcf03af96",
       "allowed_preimages": [
         "c66f353d08b32ed5656e12733bcb88697f8848600c938911c1265433396f2b41",
         "4e3ff6b746f4170e373827dfb508cccb68992ecc0572b19b82290a765b834fb8",
         "3c9ebd9cbd15a3cbb7b34a464bb1e294eff0340dcbe7590308015658aa793d16",
         "f58ac423e35b977cfc66d3b9d5bbaabf855fe5b8508b86a4e3eef62c22289363",
-        "7ceb0dc18e19849da9cdaaffe848a1f8ec272b2f458484e87797c8af3b96259f"
+        "7ceb0dc18e19849da9cdaaffe848a1f8ec272b2f458484e87797c8af3b96259f",
+        "c2927af494d5c215845ea9306aa197f69f115499fde3889b677585098898f4fc"
       ]
     },
     "operator/requirements-intelligence.txt": {
@@ -105,7 +106,8 @@
       "report_sha256",
       "trackExperimentSubmission",
       "pollExperimentSubmission",
-      "openForInvestigation"
+      "openForInvestigation",
+      "reconcileReads"
     ],
     "operator/web/experiments.mjs": [
       "attachExperiments",
