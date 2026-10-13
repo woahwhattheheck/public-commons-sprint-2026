@@ -13,7 +13,8 @@ from collections import defaultdict
 from typing import Any
 
 VERSION = "upstate.observation-support/v1"
-CONCENTRATIONS = {"total_chlorophyll_a", "microcystins"}
+CONCENTRATIONS = {"total_chlorophyll_a", "microcystins", "Ammonia",
+                  "Nitrate + Nitrite", "Kjeldahl nitrogen", "Phosphorus", "Nitrogen"}
 BASIS = (
     "The mean interval uses every retained result row in this station, parameter, "
     "source project and activity-type series. A quantified result contributes its "
@@ -35,9 +36,9 @@ def _number(value: Any) -> float | None:
     return result if math.isfinite(result) else None
 
 
-def _key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+def _key(row: dict[str, Any]) -> tuple[str, ...]:
     return tuple(str(row.get(key, "")) for key in
-                 ("site_id", "parameter", "project_id", "activity_type"))
+                 ("site_id", "parameter", "project_id", "activity_type", "series_key"))
 
 
 def _interval(row: dict[str, Any]) -> dict[str, Any]:
@@ -127,7 +128,7 @@ def summarize_series(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 def enrich_observation_context(context: dict[str, Any]) -> dict[str, Any]:
     """Add support to existing series without changing selection or statistics."""
-    groups: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    groups: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in context.get("rows", []):
         groups[_key(row)].append(row)
     series = []
@@ -151,9 +152,9 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
     for row in enriched["series"]:
         if row.get("parameter") in CONCENTRATIONS:
             groups[(row["parameter"], row.get("project_id", ""),
-                    row.get("activity_type", ""))].append(row)
+                    row.get("activity_type", ""), row.get("series_key", ""))].append(row)
     sections = []
-    for (parameter, project, activity_type), records in sorted(groups.items()):
+    for (parameter, project, activity_type, series_key), records in sorted(groups.items()):
         coverage, means = [], []
         for row in records:
             support = row["observation_support"]
@@ -175,6 +176,10 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
         title = "Original concentration support: " + parameter.replace("_", " ")
         blocks = [
             "Source project: " + project + "; activity type: " + activity_type + ". " + BASIS,
+            *([ "Sample fraction: " + str(records[0].get("sample_fraction", "")) +
+                "; analytical method: " + str(records[0].get("method_authority", "")) + " / " + str(records[0].get("method_id", "")) +
+                "; original result type: " + str(records[0].get("result_value_type", "")) +
+                "; source series identity: " + series_key + "." ] if series_key else []),
             {"kind": "table", "columns": [
                 "Station", "Result rows", "Supported quantified", "Below limit", "Unresolved",
                 "Unit", "Original reporting limits",

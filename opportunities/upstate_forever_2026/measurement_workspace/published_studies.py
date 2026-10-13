@@ -26,8 +26,10 @@ import zipfile
 
 if __package__:
     from .observation_support import enrich_observation_context, report_html as support_report_html
+    from .source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata
 else:
     from observation_support import enrich_observation_context, report_html as support_report_html
+    from source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata
 
 STORE_SCHEMA = "upstate.published-study-record/v1"
 EXPORT_SCHEMA = "upstate.published-study-export/v1"
@@ -379,7 +381,7 @@ OBSERVATION_PARAMETERS = {
 }
 
 
-def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[dict[str, Any]]:
+def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE, *, raw_wqp=False) -> list[dict[str, Any]]:
     reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig"), newline=""))
     required = {
         "station_id", "monitoring_location_id", "activity_id", "date", "local_time",
@@ -387,7 +389,7 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
         "detection_limit", "detection_limit_unit", "depth", "depth_unit",
     }
     headers = reader.fieldnames or []
-    field_map = WQP_FIELDS if source_file in (WQP_FILE, WQP_COHORT) else COHORT_FIELDS if source_file == COHORT_FILE else None
+    field_map = WQP_FIELDS if source_file in (WQP_FILE, WQP_COHORT) else COHORT_FIELDS if source_file == COHORT_FILE or raw_wqp else None
     expected = set(field_map.values()) if field_map else required
     if len(headers) != len(set(headers)) or not expected.issubset(headers):
         raise ValueError("The original observation CSV has an incompatible column contract.")
@@ -446,6 +448,11 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
 
 
 def _combined_observations(files):
+    registered = load_observations(files, _observation_rows)
+    if registered is not None:
+        if any(name in files for name in (OBSERVATION_FILE, COHORT_FILE, WQP_FILE, WQP_COHORT)):
+            raise ValueError("Use one explicit observation cohort per study version.")
+        return registered
     if WQP_FILE in files and WQP_COHORT in files:
         measured = _observation_rows(files[WQP_FILE], WQP_FILE)
         cohort = _observation_rows(files[WQP_COHORT], WQP_COHORT)
@@ -487,6 +494,10 @@ def _dated_context(complete, sites, parameters, observation_context):
             if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
     coverage = [row for row in complete["wqp_coverage"]
                 if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
+    generic = complete["study"].get("observation_calendar_filters") is True
+    if generic:
+        selected_ids = {row["record_id"] for row in observation_context["rows"]}
+        rows = [row for row in rows if row["record_id"] in selected_ids]
     observed_dates = {row["date"] for row in observation_context["rows"]}
     flow = [row for row in complete["flow_rows"] if row["sampling_date"] in observed_dates]
     return {
@@ -494,12 +505,16 @@ def _dated_context(complete, sites, parameters, observation_context):
         "rows": rows, "coverage": coverage, "summary": complete["wqp_summary"],
         "calendar": complete["wqp_calendar"], "flow_rows": flow,
         "flow_methods": complete["flow_methods"],
-        "dates_without_flow_context": sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
-        "selection_notes": [
+        "dates_without_flow_context": [] if generic else sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
+        "selection_notes": ([
+            "Station, characteristic, year and month filters select original dated WQP result rows. Original source CSVs remain complete in every study export.",
+            "Series keep their own fraction, analytical method, result value type, basis fields and support unit. Calculated source nitrogen remains a distinct characteristic and result type.",
+            "Whole-basin point membership is source context; it does not establish location upstream of a gauge within the same unsplit reach.",
+        ] if generic else [
             "WQP result rows retain the complete original acquisition year and original project identities. Station and parameter filters select these rows; continuous month/year and published depth-stratum filters apply to the published tables.",
             "Chlorophyll comparisons use the explicit reconciled cohort. Microcystin comparisons show every original campaign activity, including additional visits, with their own calendar and detection limits.",
             "Upstream flow context joins the retained agency reporting dates of the selected comparison activities. Original source response IDs, record indices and qualifiers remain in each row.",
-        ],
+        ]),
     }
 
 
@@ -578,15 +593,15 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         row for row in rows
         if row["site_id"] in sites
         and (not parameters or row["parameter"] in parameters)
-        and (not strata or "surface" in strata)
+        and (not strata or ("surface" in strata and study.get("observation_calendar_filters") is not True))
         and (not start or row["date"] >= start)
         and (not end or row["date"] <= end)
     ]
     groups = {}
     for row in chosen:
-        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", "")), []).append(row)
+        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", ""), row.get("series_key", "")), []).append(row)
     series = []
-    for (site_id, parameter, project_id, activity_type), records in sorted(groups.items()):
+    for (site_id, parameter, project_id, activity_type, series_key), records in sorted(groups.items()):
         numeric = [row["value"] for row in records if row["value"] is not None and not row["censored"]]
         units = sorted({row["unit"] for row in records if row["value"] is not None and row["unit"]})
         comparable_units = len(units) == 1 and all(
@@ -630,11 +645,16 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             basis += " Multiple result rows share an activity identifier; record count and distinct activity count are shown separately."
         if qualifiers:
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
+        metadata = series_metadata(records)
+        if metadata:
+            support = "Original stream sampling activities"
+            basis += " Fraction, method authority and identifier, result value type, original basis fields and effective support unit define separate series."
         series.append({
+            **metadata,
             "site_id": site_id, "parameter": parameter, "project_id": project_id,
             "activity_type": activity_type, "sample_support": support,
             "parameter_original": sorted({row["parameter_original"] for row in records}),
-            "unit": units[0] if comparable_units else "; ".join(units),
+            "unit": units[0] if comparable_units else metadata.get("support_unit", "; ".join(units)),
             "record_count": len(records), "activity_count": len(set(identifiers)),
             "numeric_count": len(numeric), "censored_count": censored, "missing_count": missing,
             "date_count": len(set(dates)), "period_start": dates[0], "period_end": dates[-1],
@@ -662,7 +682,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         "schema": "upstate.published-study-observation-comparison/v1",
         "rows": sorted(chosen, key=lambda row: (row["date"], row["local_time"], row["site_id"], row["parameter"], row["activity_id"])),
         "series": series, "period_start": start, "period_end": end,
-        "temporal_support": "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries.",
+        "temporal_support": ("Original sampling dates within the selected year and months; all original result fields and source query intervals are retained." if study.get("observation_calendar_filters") is True else "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries."),
         "parameter_mapping": OBSERVATION_PARAMETERS,
     }
 
@@ -840,7 +860,7 @@ class PublishedStudyStore:
             for name, filename in TABLE_FILES.items() if filename in files
         }
         observed = _combined_observations(files)
-        measurements = _observation_rows(files[WQP_FILE], WQP_FILE) if WQP_FILE in files else []
+        measurements = observed if OBSERVATION_INDEX in files else (_observation_rows(files[WQP_FILE], WQP_FILE) if WQP_FILE in files else [])
         result_counts = {
             "observed_activities": len(observed), "original_result_rows": len(measurements),
             "original_activity_count": len({(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"]) for row in measurements}),
@@ -944,8 +964,9 @@ class PublishedStudyStore:
                 row["source_selector"] = selector
         notes = _json(original("source_notes.json"))
         context_files = {name: original(name) for name in CONTEXT_FILES if name in record["source_entries"]}
+        context_files.update(observation_files(original, record["source_entries"]))
         observed = _combined_observations(context_files)
-        measurements = _observation_rows(context_files[WQP_FILE], WQP_FILE) if WQP_FILE in context_files else []
+        measurements = observed if OBSERVATION_INDEX in context_files else (_observation_rows(context_files[WQP_FILE], WQP_FILE) if WQP_FILE in context_files else [])
         coverage = _context_rows(context_files[WQP_COVERAGE], WQP_COVERAGE) if WQP_COVERAGE in context_files else []
         calendar = _context_rows(context_files[WQP_CALENDAR], WQP_CALENDAR) if WQP_CALENDAR in context_files else []
         flow = _context_rows(context_files[FLOW_FILE], FLOW_FILE) if FLOW_FILE in context_files else []
@@ -1089,7 +1110,7 @@ class PublishedStudyStore:
             relevant_notes.append(note)
         seasonal = selected.get("seasonal", [])
         observation_context = _observation_context(
-            complete["observation_rows"], selected.get("seasonal", []), complete["study"],
+            filter_calendar(complete["observation_rows"], complete["study"], year, month_set), selected.get("seasonal", []), complete["study"],
             sites, parameter_set, stratum_set,
         )
         observation_context = enrich_observation_context(observation_context)
@@ -1116,7 +1137,7 @@ class PublishedStudyStore:
             "temporal_support": {
                 "seasonal": complete["study"].get("grab_sampling", {}),
                 "continuous": complete["study"].get("continuous", {}),
-                "month_filter_applies_to": ["monthly_do", "monthly_ph"],
+                "month_filter_applies_to": (["observations", "original_measurements"] if complete["study"].get("observation_calendar_filters") is True else ["monthly_do", "monthly_ph"]),
             },
             "unit_definitions": UNIT_DEFINITIONS,
             "coverage": {
@@ -1406,7 +1427,8 @@ class PublishedStudyStore:
         observations = context.get("observations", {})
         observed = table("Original activities and published summaries", observations.get("series", []), [
             ("site_id", "Station"), ("parameter", "Parameter"), ("unit", "Unit"),
-            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_support", "Sample support"),
+            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_fraction", "Sample fraction"),
+            ("result_value_type", "Original result type"), ("original_methods", "Analytical methods"), ("sample_support", "Sample support"),
             ("record_count", "Original rows"), ("activity_count", "Activities"),
             ("numeric_count", "Quantified"), ("censored_count", "Censored"),
             ("published_n", "Printed n"), ("mean", "Quantified mean"),
@@ -1426,6 +1448,8 @@ class PublishedStudyStore:
             ("site_id", "Station"), ("date", "Date"), ("local_time", "Local time"),
             ("source_timezone", "Source time zone"), ("project_id", "Source project"),
             ("activity_type", "Original activity type"), ("parameter_original", "Source parameter"),
+            ("sample_fraction", "Sample fraction"), ("result_value_type", "Original result type"),
+            ("method_authority", "Method authority"), ("method_id", "Method identifier"),
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
@@ -1481,9 +1505,10 @@ class PublishedStudyStore:
                 '" style="max-width:100%;height:auto"><figcaption>' + esc(item["title"]) + "</figcaption></figure>"
                 for item in context["scientific_figures"]
             ) + "</section>"
+        source_cohort = study.get("observation_calendar_filters") is True
         url = study.get("original_url", "")
         source_link = (
-            '<a href="' + esc(url) + '">Original publisher report</a>'
+            '<a href="' + esc(url) + '">' + ("Original agency source query" if source_cohort else "Original publisher report") + "</a>"
             if url.startswith("https://") else esc(url)
         )
         return (
@@ -1497,20 +1522,21 @@ class PublishedStudyStore:
             ".meta{color:#515861}.source{border-left:3px solid #7e8790;padding-left:14px}"
             "@media print{body{margin:10mm;padding:0}table{font-size:9px}thead{display:table-header-group}tr{break-inside:avoid}section{overflow:visible}}</style>"
             "</head><body><header><p class='meta'>Published field study</p><h1>" + esc(study["title"]) + "</h1>"
-            "<p>Technical report " + esc(study.get("technical_report")) + " · " + esc(study.get("publication")) + "</p>"
+            "<p>" + ("Original agency observations" if source_cohort else "Technical report " + esc(study.get("technical_report"))) + " · " + esc(study.get("publication")) + "</p>"
             "<p>Selected stations: " + esc(", ".join(selection["site_ids"])) +
             " · Parameters: " + esc(", ".join(selection["parameters"]) or "all") +
             " · Strata: " + esc(", ".join(selection["strata"]) or "all") + "</p>"
-            "<p>Continuous selection: year " + esc(selection.get("year") or "all") +
+            "<p>" + ("Sampling-date selection: year " if source_cohort else "Continuous selection: year ") + esc(selection.get("year") or "all") +
             "; months " + esc(", ".join(map(str, selection.get("months", []))) or "all") +
-            ". Seasonal statistics retain the complete published campaign.</p>"
+            (". Original sampling dates define this selected cohort.</p>" if source_cohort else ". Seasonal statistics retain the complete published campaign.</p>") +
             "<p class='meta'>Study " + esc(context["record"]["study_id"]) + " · Version " +
             esc(context["record"]["version_id"]) + " · Source collection " +
             esc(context["record"]["source_collection_id"]) + "</p></header>"
-            "<div class='source'><p>" + source_link + "</p><p>Seasonal rows retain their original sample support, "
-            "depths and concentration units. Monthly n values count days. Original numeric cells remain available "
-            "in the accompanying CSV files.</p>" + visuals + "</div>" +
-            related_reports + seasonal + observed + figures + monthly + ranges + stations + permits +
+            "<div class='source'><p>" + source_link + "</p><p>" +
+            (esc(study.get("observation_scope", "")) if source_cohort else "Seasonal rows retain their original sample support, depths and concentration units. Monthly n values count days. Original numeric cells remain available in the accompanying CSV files.") +
+            "</p>" + visuals + "</div>" +
+            related_reports + ("" if source_cohort else seasonal) + observed + figures +
+            ("" if source_cohort else monthly + ranges) + stations + ("" if source_cohort else permits) +
             "<section><h2>Source notes</h2><ul>" + notes + "</ul></section></body></html>"
         )
 
