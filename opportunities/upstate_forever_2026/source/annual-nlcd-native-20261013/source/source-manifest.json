@@ -1,0 +1,101 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
+  "entries": [
+    {
+      "id": "usgs-annual-nlcd-2025-native-region-a9f6bfedc4bd3936",
+      "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
+      "kind": "raster",
+      "role": "NLCD",
+      "units": "class",
+      "resampling": "nearest",
+      "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+      "vintage": "USGS published Annual NLCD native time2025-01-01T00:00:00.000Z; captured2026-10-13",
+      "source_crs": "EPSG:5070",
+      "path": "land-cover.tif",
+      "bytes": 9237060,
+      "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+      "source_time": "2025-01-01T00:00:00.000Z",
+      "preparation_sha256": "c62a2098a0aebe7000d6dbbb7f94fd999a9f6067f299064d418bf17969d6aba3",
+      "source_description_sha256": "1a3cba52dca82969d46c0f08aa02f5f2047b5c94edb87bc476c8d172bbad0ff9",
+      "domain_feature_count": 217,
+      "buffer_m": 1000,
+      "native_grid": {
+        "schema": "upstate.nlcd-wms-native-grid/v1",
+        "crs": "EPSG:5070",
+        "source_origin": [
+          -2415585,
+          3314805
+        ],
+        "source_offsets": [
+          29.999999995403137,
+          -30.000000026127967
+        ],
+        "domain_buffer_m": 1000,
+        "buffered_domain_bounds": [
+          1114884.4671420595,
+          1238657.614564179,
+          1308131.2716092442,
+          1428180.0626974022
+        ],
+        "window": {
+          "col": 117682,
+          "row": 62887,
+          "width": 6443,
+          "height": 6319
+        },
+        "bounds": [
+          1114859.9994590343,
+          1238639.998191801,
+          1308149.9994294168,
+          1428209.9983569037
+        ],
+        "transform": [
+          29.999999995403137,
+          0,
+          1114859.9994590343,
+          0,
+          -30.000000026127967,
+          1428209.9983569037
+        ],
+        "tile_size": 1024,
+        "tiles": 49
+      },
+      "derivation": "Original WMS GetMap, unchanged published EPSG5070 cell edges and dimensions, explicit source time and nearest-neighbour request, discrete ColorMap type=values with each class encoded as opaque (class,0,0,255); transparent source cells normalize to published NoData250. Source PNG chunk CRCs, palette and alpha are decoded exactly; no image resampling or approximate colour matching.",
+      "metadata": {
+        "width": 6443,
+        "height": 6319,
+        "dtype": "uint8",
+        "nodata": 250,
+        "cell_count": 40713317,
+        "nodata_cells": 0,
+        "class_counts_scope": "Entire rectangular native source grid; polygon-domain and per-HUC totals are calculated by the receiving model using the original217feature domain.",
+        "provider_png_bytes": 11252658,
+        "provider_tiles": 49
+      },
+      "companions": [
+        {
+          "path": "plan.json",
+          "bytes": 146944,
+          "sha256": "1ebaae20730dd8cb7ce996211732e536b3ab6ed5ef56f724feaaae53c5af823c"
+        },
+        {
+          "path": "validation.json",
+          "bytes": 12504,
+          "sha256": "d3f93796a006fb80092f97584faca0c0cd13ab65232521ccf56be7fd52d97344"
+        },
+        {
+          "path": "class-area.csv",
+          "bytes": 923,
+          "sha256": "9e9d30c18b24ba605a8b53d7387b26910ef20561e55539b4f5c3a2b1f4ec1404"
+        },
+        {
+          "path": "style.sld",
+          "bytes": 1149,
+          "sha256": "73395f174359f4ac32ec7bfa33c3a729c7b8d8dc2aef93fd35cabc395304fefb"
+        }
+      ],
+      "model_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+    }
+  ]
+}
