@@ -1,7 +1,7 @@
 {
   "schema": "upstate.component-source-adoption/v1",
   "component": "Monitoring design and field operations",
-  "version": "1.5.0",
+  "version": "1.7.0",
   "archive": {
     "drive_file_id": "1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d",
     "bytes": 101834,
@@ -22,12 +22,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
       "path": "model/monitoring_actions.py",
-      "bytes": 4119,
-      "sha256": "3001009ea496a7b4168d1ae3e99018669e6abbfd4cb0d9ff49b04edf8e1a898a",
+      "bytes": 5097,
+      "sha256": "6a1943001eb067e41681d491dd25e6e6ecc3a324e958f4b547367db212bd84c1",
       "original_bytes": 2595,
       "original_sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f",
-      "previous_bytes": 3649,
-      "previous_sha256": "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a",
+      "previous_bytes": 4119,
+      "previous_sha256": "3001009ea496a7b4168d1ae3e99018669e6abbfd4cb0d9ff49b04edf8e1a898a",
       "retained_installed_editions": [
         {
           "bytes": 2595,
@@ -40,6 +40,10 @@
         {
           "bytes": 3649,
           "sha256": "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a"
+        },
+        {
+          "bytes": 4119,
+          "sha256": "3001009ea496a7b4168d1ae3e99018669e6abbfd4cb0d9ff49b04edf8e1a898a"
         }
       ]
     },
@@ -134,12 +138,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1876,
-      "sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc",
+      "bytes": 2017,
+      "sha256": "0c97b6dd758697849acc96a2f7b1fa42c2a702962569929e6b43fb798e498d35",
       "original_bytes": 1567,
       "original_sha256": "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf",
-      "previous_bytes": 1795,
-      "previous_sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
+      "previous_bytes": 1876,
+      "previous_sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc",
       "retained_installed_editions": [
         {
           "bytes": 1567,
@@ -156,6 +160,10 @@
         {
           "bytes": 1795,
           "sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61"
+        },
+        {
+          "bytes": 1876,
+          "sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc"
         }
       ]
     },
@@ -178,12 +186,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
       "path": "operator/monitoring_native.py",
-      "bytes": 9431,
-      "sha256": "d297c0b17358653f8af979277f5b6fee381447ca9b517f7a3e9b41e572cf6e47",
+      "bytes": 9632,
+      "sha256": "3f0d199f044445c45b72fde84bc356bac33e97ff7e45189d6cda0112456a47dd",
       "original_bytes": 3317,
       "original_sha256": "6f5ce1a12ee537c5963c198b99f3142055c7778f96df8d5b6aceae726e7a96c9",
-      "previous_bytes": 7930,
-      "previous_sha256": "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd",
+      "previous_bytes": 9431,
+      "previous_sha256": "d297c0b17358653f8af979277f5b6fee381447ca9b517f7a3e9b41e572cf6e47",
       "retained_installed_editions": [
         {
           "bytes": 6628,
@@ -196,6 +204,10 @@
         {
           "bytes": 7930,
           "sha256": "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd"
+        },
+        {
+          "bytes": 9431,
+          "sha256": "d297c0b17358653f8af979277f5b6fee381447ca9b517f7a3e9b41e572cf6e47"
         }
       ]
     },
@@ -244,12 +256,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8438,
-      "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+      "bytes": 8855,
+      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 8104,
-      "previous_sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
+      "previous_bytes": 8438,
+      "previous_sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
       "retained_installed_editions": [
         {
           "bytes": 7810,
@@ -258,6 +270,10 @@
         {
           "bytes": 8104,
           "sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a"
+        },
+        {
+          "bytes": 8438,
+          "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
         }
       ]
     },
@@ -423,13 +439,97 @@
       "path": "integrations/monitoring/install_observed_context.py",
       "bytes": 4753,
       "sha256": "866659927b487baeef09498535c5bca1c2bfee881793c6fe4a04555027c4a393"
+    },
+    {
+      "source": "docs/MONITORING_EXPORT_STREAMING.md",
+      "source_role": "current_application_source",
+      "path": "docs/MONITORING_EXPORT_STREAMING.md",
+      "bytes": 3798,
+      "sha256": "c525f42f13267bdcc20eaf4cc87d1a7a6c1d62504e2b983fcdc4d3cf4eff3341"
+    },
+    {
+      "source": "docs/MONITORING_FIELDWORK_RETURN.md",
+      "source_role": "current_application_source",
+      "path": "docs/MONITORING_FIELDWORK_RETURN.md",
+      "bytes": 6261,
+      "sha256": "98b23e599548d4c919f727f8cb44b43e3672463652b1efe2f9c85952937e58a5"
+    },
+    {
+      "source": "integration/component_fragments/monitoring-budget-comparison.json",
+      "source_role": "current_application_source",
+      "path": "integration/component_fragments/monitoring-budget-comparison.json",
+      "bytes": 801,
+      "sha256": "964daaf5c02aac67b6642cb976cad23e038cd491c3f16b4263f89e695596c1d2"
+    },
+    {
+      "source": "model/MONITORING_BUDGET_COMPARISON.md",
+      "source_role": "current_application_source",
+      "path": "model/MONITORING_BUDGET_COMPARISON.md",
+      "bytes": 6508,
+      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+    },
+    {
+      "source": "model/monitoring_field_return.py",
+      "source_role": "current_application_source",
+      "path": "model/monitoring_field_return.py",
+      "bytes": 24812,
+      "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b"
+    },
+    {
+      "source": "model/monitoring_frontier_comparison.py",
+      "source_role": "current_application_source",
+      "path": "model/monitoring_frontier_comparison.py",
+      "bytes": 25919,
+      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+    },
+    {
+      "source": "operator/MONITORING_BUDGET_CHOICES.md",
+      "source_role": "current_application_source",
+      "path": "operator/MONITORING_BUDGET_CHOICES.md",
+      "bytes": 6953,
+      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+    },
+    {
+      "source": "operator/web/monitoring-frontiers.css",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring-frontiers.css",
+      "bytes": 1484,
+      "sha256": "5e171a30eba7511e8c163c25e3a88209fcc7a07aa2ee5c07a5769260165cde59"
+    },
+    {
+      "source": "operator/web/monitoring-frontiers.mjs",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring-frontiers.mjs",
+      "bytes": 24139,
+      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+    },
+    {
+      "source": "operator/web/monitoring_field_return.mjs",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring_field_return.mjs",
+      "bytes": 10523,
+      "sha256": "5a203e3ca27b97e5b10fbfc8659bd6b573c1a001537446861fb982398e48b2b7"
+    },
+    {
+      "source": "source_tools/receive_monitoring_fieldwork.py",
+      "source_role": "current_application_source",
+      "path": "source_tools/receive_monitoring_fieldwork.py",
+      "bytes": 8230,
+      "sha256": "0013adef7cece77ff1c043bb06420a143d50b786686e79ab8de0cde565266eac"
+    },
+    {
+      "source": "source_tools/return_monitoring_fieldwork.py",
+      "source_role": "current_application_source",
+      "path": "source_tools/return_monitoring_fieldwork.py",
+      "bytes": 2717,
+      "sha256": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be"
     }
   ],
   "host": "operator/extension_registry.py",
   "registration": "operator/extensions/monitoring.json",
   "receiving": "operator/monitoring_receiving.py",
   "current_command": "python -B operator/monitoring_receiving.py --workspace /absolute/existing/workspace --selection /absolute/monitoring-selection.json --output /absolute/new-receiving-directory",
-  "integration": "The current descriptor binds the original seven writes, read route, task-file decoration and workspace receiving verification through the installed shared extension registry. Complete owned application files are in their original model/operator paths. The unmodified full component archive and its exact member manifest retain the standalone installer and original component checks.",
+  "integration": "The current descriptor binds the current native writes, read route, task-file decoration and workspace receiving verification through the installed shared extension registry. Complete owned application files are in their original model/operator paths. The unmodified full component archive and its exact member manifest retain the standalone installer and original component checks.",
   "original_version": "1.2.0",
   "composition": {
     "operation_id": "ECO13-MONITORING-DD6B-20261013",
@@ -515,6 +615,23 @@
         "Preserve original report columns, sections and export members for historical saved v1 contexts without an observations table"
       ],
       "preserved": "Original v1 nutrient context, network/plan/campaign identities, source bindings, native queue, study transfer, fieldwork, reporting and original scientific values"
+    },
+    {
+      "operation_id": "ECO13-MONITORING-SAVED-BUDGETS-DD6B-20261013",
+      "version": "1.7.0",
+      "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
+      "pull_request": 3521,
+      "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+      "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
+      "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json",
+      "changes": [
+        "Reopen the original ordered frontier plans and compare exact costs, source-weighted coverage and selected search-area changes",
+        "Bind saved comparisons to the original network, plans and exact observed-context editions",
+        "Stream complete comparison reports and original source/context packets through the native queue and file tickets",
+        "Reopen and verify saved comparisons after complete Workspace receiving",
+        "Compose the maintained native installer inventory and preserve predecessor editions"
+      ],
+      "preserved": "Original optimizer, calendars, campaign revisions, microbial observed context, fieldwork return, selected study transfer, scientific source bodies and current streamed exports"
     }
   ],
   "observational_context": {
@@ -572,5 +689,13 @@
       ],
       "reviewed_campaign_revision": true
     }
+  },
+  "saved_budget_comparison": {
+    "schema": "upstate.monitoring_frontier_comparisons/v1",
+    "collection": "monitoring_frontier_comparisons",
+    "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+    "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
+    "component": "integration/component_fragments/monitoring-budget-comparison.json",
+    "receiving": "Original complete Workspace backup/restore and Monitoring verify_workspace"
   }
 }
