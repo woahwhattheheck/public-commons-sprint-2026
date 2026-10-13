@@ -1,4 +1,4 @@
-"""Assemble the seven RFP map families and invoke the original delivery engine."""
+"""Assemble a regional RFP or original native-study scientific delivery."""
 from __future__ import annotations
 import importlib.util
 import json
@@ -9,7 +9,8 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import atlas_browser, cartography, client_report, map_atlas, portable, rasters
+from . import atlas_browser, cartography, client_report, map_atlas, native_study, portable, rasters
+import tempfile
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
@@ -22,7 +23,7 @@ SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
 DELIVERY_EDITION = "2026-10-13-integrated-report-2"
-DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-8"
+DELIVERY_FORMAT_VERSION = "retained-grid-study-analysis-economic-report-9"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -77,7 +78,8 @@ def _source_records(workspace, selection, grid, baseline):
             "derivation": "Original SDR terrain and flow calculation on the selected DEM",
             "source_dem_sha256": records["DEM"]["sha256"],
         }
-    missing = set(SOURCE_IDS) - set(records)
+    missing = (set(SOURCE_IDS) - set(records)
+               if native_study.mode(selection) == "regional_rfp" else set())
     if missing:
         raise ValueError("Retain the original source editions for " + ", ".join(sorted(missing)))
     return [records[key] for key in sorted(records)]
@@ -142,7 +144,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
             current = ET.SubElement(current, name) if found is None else found
         current.text = str(text)
     day = now()[:10].replace("-", "")
-    add("idinfo/citation/citeinfo/origin", contact["organization"])
+    add("idinfo/citation/citeinfo/origin", contact.get("organization") or selection.get("native_study", {}).get("title") or selection["title"])
     add("idinfo/citation/citeinfo/pubdate", day)
     add("idinfo/citation/citeinfo/title", title)
     add("idinfo/citation/citeinfo/geoform", "raster digital data")
@@ -221,14 +223,16 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
     add("eainfo/overview/eaover", "Single raster band: " + title + "; units " + unit +
         ". Native source artifact SHA256 " + raster["sha256"] + ".")
     add("eainfo/overview/eadetcit", "Delivered model, run, source and profile manifests.")
-    add("distinfo/distrib/cntinfo/cntorgp/cntorg", contact["organization"])
-    add("distinfo/distrib/cntinfo/cntemail", contact["email"])
+    if contact.get("organization"):
+        add("distinfo/distrib/cntinfo/cntorgp/cntorg", contact["organization"])
+    if contact.get("email"):
+        add("distinfo/distrib/cntinfo/cntemail", contact["email"])
     add("distinfo/resdesc", Path(path).with_suffix(".tif").name)
     add("distinfo/distliab", "Use the documented model and source assumptions with the delivered quantitative results.")
     add("metainfo/metd", day)
-    add("metainfo/metc/cntinfo/cntperp/cntper", contact["name"])
-    add("metainfo/metc/cntinfo/cntperp/cntorg", contact["organization"])
-    add("metainfo/metc/cntinfo/cntemail", contact["email"])
+    for key, route in (("name", "cntperp/cntper"), ("organization", "cntperp/cntorg"), ("email", "cntemail")):
+        if contact.get(key):
+            add("metainfo/metc/cntinfo/" + route, contact[key])
     add("metainfo/metstdn", "FGDC Content Standard for Digital Geospatial Metadata")
     add("metainfo/metstdv", "FGDC-STD-001-1998")
     ET.indent(root)
@@ -236,6 +240,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
 
 def build(workspace, selection):
     selection = dict(selection)
+    study_mode = native_study.prepare(selection)
     map_atlas.settings(selection.get("map_settings"))
     water_links = map_atlas.bind_water_selections(workspace, selection)
     report_link = bind_report(workspace, selection)
@@ -285,7 +290,7 @@ def build(workspace, selection):
         for review in reviews:
             reviewer.validate_saved(review)
     contact = selection["contact"]
-    if any(not isinstance(contact.get(k), str) or not contact[k].strip()
+    if not study_mode and any(not isinstance(contact.get(k), str) or not contact[k].strip()
            for k in ("name", "organization", "email")):
         raise ValueError("Retain the actual responsible contact for GIS metadata")
     from .model_selection import require_complete_delivery
@@ -391,12 +396,17 @@ def build(workspace, selection):
             boundary, _ = rasters.vector_geometry(boundary_path, target_crs=crs)
             reporting = rasters.polygon_union(boundary)
             records = _source_records(workspace, selection, grid, baseline)
+            if study_mode:
+                records = native_study.source_records(workspace, grid, profile, records)
+                native_study.retain(workspace, directory, state, selection, grid, profile,
+                                    baseline, alternatives, records)
+                atomic_json(state_path, state)
             overlay_choices = selection.get("overlays", {})
             for name in ("drinking_water", "high_quality_waters"):
-                if name not in overlay_choices:
+                if not study_mode and name not in overlay_choices:
                     raise ValueError("Select the actual " + name.replace("_", " ") + " source overlay")
             overlays = {name: _overlay(workspace, overlay_choices[name], crs, reporting, label=label)
-                        for name, label in OVERLAY_LABELS}
+                        for name, label in OVERLAY_LABELS if name in overlay_choices}
             if "protected_lands" in overlay_choices:
                 overlays["protected_lands"] = _overlay(workspace, overlay_choices["protected_lands"],
                     crs, reporting, label="Protected lands")
@@ -457,11 +467,14 @@ def build(workspace, selection):
                         raise ValueError("Parcel inventory requires its actual protected-land source")
                     overlays["protected_lands"] = _overlay(workspace, protected_choice, crs, reporting,
                                                            label="Protected lands")
+                for required_context in ("drinking_water", "high_quality_waters"):
+                    if required_context not in overlays and required_context not in receptor_overlays:
+                        raise ValueError("Parcel inventory requires its actual " + required_context.replace("_", " ") + " source; select that source or use the original-polygon planning inventory")
                 inventory_root = directory / "priorities"
                 inventory = parcel_inventory(workspace, overlay_choices["parcels"], grid, mass_paths,
                     priority, comparison, inventory_root, protected=overlays["protected_lands"],
-                    drinking_water=receptor_overlays.get("drinking_water", overlays["drinking_water"]),
-                    high_quality_water=receptor_overlays.get("high_quality_waters", overlays["high_quality_waters"]))
+                    drinking_water=receptor_overlays.get("drinking_water") or overlays.get("drinking_water"),
+                    high_quality_water=receptor_overlays.get("high_quality_waters") or overlays.get("high_quality_waters"))
                 state["parcel_priorities"] = inventory
                 for name, item in inventory["files"].items():
                     state["files"]["parcel_" + name] = describe_file(directory, inventory_root / item["path"])
@@ -498,10 +511,13 @@ def build(workspace, selection):
                 "current_nutrient_export": ([panel("nitrogen_export"), panel("phosphorus_export")], []),
                 "current_sediment_export": ([panel("sediment_export")], []),
                 "combined_pollutant_export": ([score_panel], []),
-                "critical_drinking_water": ([score_panel], [overlays["drinking_water"]] +
-                                              ([overlays["protected_lands"]] if "protected_lands" in overlays else [])),
-                "high_quality_waters": ([score_panel], [overlays["high_quality_waters"]]),
+
             }
+            if "drinking_water" in overlays:
+                all_specs["critical_drinking_water"] = ([score_panel], [overlays["drinking_water"]] +
+                    ([overlays["protected_lands"]] if "protected_lands" in overlays else []))
+            if "high_quality_waters" in overlays:
+                all_specs["high_quality_waters"] = ([score_panel], [overlays["high_quality_waters"]])
             if receptor_product:
                 for role, family in (("drinking_water", "critical_drinking_water"),
                                      ("high_quality_waters", "high_quality_waters")):
@@ -511,7 +527,7 @@ def build(workspace, selection):
                             "path": verify_file(receptor_root, item),
                             "label": "Relative export priority in contributing land"}
                         all_specs[family] = ([focused_panel],
-                            all_specs[family][1] + [receptor_overlays[role]])
+                            all_specs.get(family, ([], []))[1] + [receptor_overlays[role]])
             receiving_water_delivery.apply_map_specs(all_specs, water_product)
             future_maps = {}
             for alternative in comparison["alternatives"]:
@@ -526,9 +542,10 @@ def build(workspace, selection):
                                        ("future_nutrient_runoff", ["nitrogen_export", "phosphorus_export"])):
                     map_key = family + "-" + alternative["run_id"]
                     all_specs[map_key] = ([selected_panels[n] for n in names],
-                                         [overlays["drinking_water"]])
+                                         [overlays["drinking_water"]] if "drinking_water" in overlays else [])
                     future_maps.setdefault(family, []).append(map_key)
-            footer = ("Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
+            footer = ((selection["native_study"]["title"] + "; " if study_mode else "") +
+                      "Native InVEST " + INVEST_VERSION + "; original " + cells["resolution"] + " grid; baseline " + baseline["id"][:12] +
                       "; profile " + profile["title"] + "; source editions and full native outputs in the working archive.")
             atlas_pages = []
             for map_key, (panels, selected_overlays) in all_specs.items():
@@ -671,6 +688,14 @@ def build(workspace, selection):
                     observation_results=observation_results,
                     receptor_inventory=state.get("receptor_inventory"),
                 )
+                if study_mode:
+                    sections = [("Land-cover alternatives" if heading == "Future conservation and development scenarios" else heading, blocks)
+                                for heading, blocks in sections]
+                    sections.insert(0, ("Original native study", [
+                        state["native_study"]["title"], state["native_study"]["purpose"],
+                        *([state["native_study"]["reference"]] if state["native_study"].get("reference") else []),
+                        *state["native_study"]["methods"],
+                        "Original study metadata, reporting polygon, model domain, mask and biophysical table are retained under native-study."]))
                 sections.extend(scientific_report.receiving_sections(water_product))
                 sections.extend(analysis_delivery.report_sections(analysis_product))
                 sections.extend(scientific_sections(economic_decision, state))
@@ -696,7 +721,8 @@ def build(workspace, selection):
                     directory, selection.get("title", workspace.project["title"]), sections,
                     contact=contact, source_records=records,
                     binding={
-                        "delivery_id": key, "baseline_run_id": baseline["id"],
+                        "delivery_id": key, "delivery_mode": native_study.mode(selection),
+                        "native_study": state.get("native_study"), "baseline_run_id": baseline["id"],
                         "scenario_run_ids": scenario_ids, "profile_id": profile["id"],
                         "grid_id": grid["id"], "grid_measurements": cells, "comparison_id": comparison["id"],
                         "observation_comparison_ids": selection.get("observation_comparison_ids", []),
@@ -728,12 +754,72 @@ def build(workspace, selection):
                     state["files"][name] = describe_file(directory, directory / relative)
                 state["client_companion_edition"] = client_report.REPORT_EDITION
                 atomic_json(state_path, state)
-            working = directory / "working" / "scientific-workspace.zip"
-            working.parent.mkdir(parents=True, exist_ok=True)
+            working_relative = "working/scientific-workspace.zip"
             archive_roles = {"working_archive", "manifest", "package_index", "delivery_archive"}
+            manifest = {"schema": native_study.SCHEMA if study_mode else "upstate-ec-sdc-2026/delivery-v1",
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                         "record": state["files"]["native_grid_record"]["path"],
+                         "audit_scope": _delivery_audit_scope(selection, grid)},
+                "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
+                          "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
+                          "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
+                          "profile_id": profile["id"], "grid_id": grid["id"]},
+                "source_data": records, "rasters": {},
+                "maps": maps, "report_pdf": state["files"]["report"]["path"],
+                "report_edition": CLIENT_REPORT_EDITION,
+                "report_renderer_version": scientific_report.REPORT_VERSION,
+                "delivery_edition": DELIVERY_EDITION,
+                "project_assets": [state["files"]["combined_priority"]["path"],
+                                   working_relative,
+                                   state["files"]["display_scales"]["path"]]}
+            for name in rasters.MASS_UNITS:
+                manifest["rasters"][name] = {"path": state["files"][name]["path"],
+                    "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
+            primary_files = set(rasters.MASS_UNITS) | {
+                name + "_metadata" for name in rasters.MASS_UNITS} | {
+                "report", "manifest", "package_index", "delivery_archive"}
+            map_paths = {item["path"] for item in state["maps"].values()}
+            manifest["project_assets"] = list(dict.fromkeys(
+                [item["path"] for name, item in state["files"].items()
+                 if name not in primary_files and name not in archive_roles
+                 and item["path"] not in map_paths] + [working_relative]))
+            if report_link is not None:
+                manifest["source_report"] = report_link
+            if economic_link is not None:
+                manifest["economic_decision"] = economic_link
+            manifest["client_report"] = {
+                "edition": CLIENT_REPORT_EDITION, "renderer": scientific_report.REPORT_VERSION,
+                **{name: state["files"][name]["path"] for name in
+                   ("report", "report_html", "report_markdown", "report_data")}}
+            if study_mode:
+                manifest["delivery_mode"] = "native_study"
+                manifest["native_study"] = state["native_study"]
+            audit_manifest = directory / "delivery.json"
+            receiving_water_delivery.extend_assets(manifest, state)
+            analysis_delivery.extend_assets(manifest, state)
+            for report_name in ("report_html", "report_markdown", "report_data"):
+                report_path = state["files"][report_name]["path"]
+                if report_path not in manifest["project_assets"]:
+                    manifest["project_assets"].append(report_path)
+            # The browser includes the final scientific/client/analysis inventory.
+            # Omit derived package descriptors from its view: a previous working ZIP
+            # checksum would change this captured HTML again on every retry.
+            atlas_state = {**state, "files": {
+                name: item for name, item in state["files"].items()
+                if name not in archive_roles}}
+            state["files"][atlas_browser.BROWSER_KEY] = atlas_browser.write(
+                directory, atlas_state, manifest)
+            # Capture the exact final manifest too, so the restored offline atlas
+            # can open delivery.json. It names the fixed working path, not ZIP bytes.
+            atomic_json(audit_manifest, manifest)
+            state["files"]["manifest"] = describe_file(directory, audit_manifest)
+            atomic_json(state_path, state)
+            working = directory / working_relative
+            working.parent.mkdir(parents=True, exist_ok=True)
             snapshot = {
                 **{name: item for name, item in state["files"].items()
                    if name not in archive_roles},
+                "manifest": state["files"]["manifest"],
                 **{"map_" + name: item for name, item in state["maps"].items()}}
             registered = state["files"].get("working_archive")
             if registered is not None:
@@ -775,56 +861,10 @@ def build(workspace, selection):
                     delivery_files=snapshot, delivery_state=state)
             state["files"]["working_archive"] = describe_file(directory, working)
             atomic_json(state_path, state)
-            # Resolve the promised report link against the final actual inventory before
-            # publication; neither its bytes nor its checksum were invented while rendering.
             working_descriptor = state["files"]["working_archive"]
-            if working_descriptor["path"] != "working/scientific-workspace.zip":
+            if working_descriptor["path"] != working_relative:
                 raise ValueError("Working archive differs from the report's package-relative link")
             verify_file(directory, working_descriptor)
-            manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
-                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
-                         "record": state["files"]["native_grid_record"]["path"],
-                         "audit_scope": _delivery_audit_scope(selection, grid)},
-                "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
-                          "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
-                          "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
-                          "profile_id": profile["id"], "grid_id": grid["id"]},
-                "source_data": records, "rasters": {},
-                "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "report_edition": CLIENT_REPORT_EDITION,
-                "report_renderer_version": scientific_report.REPORT_VERSION,
-                "delivery_edition": DELIVERY_EDITION,
-                "project_assets": [state["files"]["combined_priority"]["path"],
-                                   state["files"]["working_archive"]["path"],
-                                   state["files"]["display_scales"]["path"]]}
-            for name in rasters.MASS_UNITS:
-                manifest["rasters"][name] = {"path": state["files"][name]["path"],
-                    "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
-            primary_files = set(rasters.MASS_UNITS) | {
-                name + "_metadata" for name in rasters.MASS_UNITS} | {
-                "report", "manifest", "package_index", "delivery_archive"}
-            map_paths = {item["path"] for item in state["maps"].values()}
-            manifest["project_assets"] = list(dict.fromkeys(
-                item["path"] for name, item in state["files"].items()
-                if name not in primary_files and item["path"] not in map_paths))
-            if report_link is not None:
-                manifest["source_report"] = report_link
-            if economic_link is not None:
-                manifest["economic_decision"] = economic_link
-            manifest["client_report"] = {
-                "edition": CLIENT_REPORT_EDITION, "renderer": scientific_report.REPORT_VERSION,
-                **{name: state["files"][name]["path"] for name in
-                   ("report", "report_html", "report_markdown", "report_data")}}
-            audit_manifest = directory / "delivery.json"
-            receiving_water_delivery.extend_assets(manifest, state)
-            analysis_delivery.extend_assets(manifest, state)
-            for report_name in ("report_html", "report_markdown", "report_data"):
-                report_path = state["files"][report_name]["path"]
-                if report_path not in manifest["project_assets"]:
-                    manifest["project_assets"].append(report_path)
-            atlas_browser.write(directory, state, manifest)
-            atomic_json(state_path, state)
-            atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
                 sys.path.insert(0, str(source_root))
@@ -838,11 +878,12 @@ def build(workspace, selection):
             while package_root.exists():
                 if (package_root / "package.json").is_file():
                     previous_package = read_json(package_root / "package.json")
-                    captured_manifest = next(item for item in previous_package["artifacts"]
-                                             if item["path"] == previous_package["manifestPath"])
+                    captured_manifest = next((item for item in previous_package.get("artifacts", [])
+                                              if item.get("path") == previous_package.get("manifestPath")), None)
                     if (previous_package.get("auditStatus") == "TECHNICAL_PRECHECK_PASS"
                             and not previous_package.get("missing")
-                            and all(captured_manifest[name] == current_manifest[name]
+                            and captured_manifest is not None
+                            and all(captured_manifest.get(name) == current_manifest[name]
                                     for name in ("bytes", "sha256"))):
                         module.verify(package_root)
                         package = previous_package
@@ -852,9 +893,18 @@ def build(workspace, selection):
                 label = "package-" + current_manifest["sha256"]
                 package_root = directory / (label if suffix == 1 else label + "-" + str(suffix))
             if package is None:
-                code = module.pack(audit_manifest, package_root)
+                captures = workspace.root / "delivery-captures"
+                captures.mkdir(parents=True, exist_ok=True)
+                owner = Path(tempfile.mkdtemp(prefix=key + "-", dir=captures))
+                captured = owner / "package"
+                state["package_capture"] = captured.relative_to(workspace.root).as_posix()
+                atomic_json(state_path, state)
+                code = module.pack(audit_manifest, captured)
                 if code:
-                    raise ValueError("Original delivery audit requires correction; inspect " + str(package_root / "audit.json"))
+                    raise ValueError("Delivery artifact audit requires correction; inspect " + str(captured / "audit.json"))
+                captured.replace(package_root)
+                owner.rmdir()
+                state.pop("package_capture", None)
                 package = read_json(package_root / "package.json")
             state["files"]["delivery_archive"] = package_archive(directory, package_root, package)
             state.update(state="complete", completed_at=now(), manifest=manifest,
