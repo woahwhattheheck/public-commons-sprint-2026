@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.original-domain-bounds/v1",
+  "source": {
+    "id": "upstate-wbd-upstream-domain-20261012",
+    "title": "Original WBD selected Upper Savannah upstream hydrologic domain",
+    "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+    "vintage": "2026-10-12T08:02:35.981797+00:00",
+    "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+    "bytes": 3732669,
+    "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "decoded_bytes": 11220042,
+    "source_crs": "EPSG:3857"
+  },
+  "original_spatial_reference": {
+    "wkid": 102100,
+    "latestWkid": 3857
+  },
+  "feature_count": 217,
+  "output": {
+    "path": "domain217-native3857-bounds.csv",
+    "bytes": 108588,
+    "sha256": "24fc2be0a18f0024410de1f727667ef6a2e68d012c4e4d7ace0971b0f5363179"
+  },
+  "method": "Per-feature minima and maxima over every X/Y position in every original Esri geometry ring. Original feature ordering, numeric precision and native feature identifiers retained; no reprojection, simplification, rounding, buffer or envelope union.",
+  "use": "Original217 domain feature query envelopes for source-side NHD/FW capture. Envelope queries require final intersection against the original rings; bounds alone include space outside the original polygon.",
+  "original_geometry": "model-domain.esri.json.gz",
+  "original_ring_identity": "CSV original_rings_pointer selects each feature in the exact decoded source body.",
+  "native_extent": {
+    "xmin": -9313900.708,
+    "ymin": 3948688.318599999,
+    "xmax": -9100567.2844,
+    "ymax": 4187395.567599997
+  }
+}
