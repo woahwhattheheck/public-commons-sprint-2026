@@ -430,6 +430,39 @@ def run_original_programme(args, receipt, state, state_path):
           process=state.get("original_native_process"))
 
 
+def build_reference_report(args, receipt, plan, state, state_path):
+    """Publish the completed original reference before the broad alternatives."""
+    from model.workspace import Workspace
+    from model import scenario_decisions
+
+    workspace = Workspace(args.workspace)
+    original = workspace.prepare_run({"grid_id": receipt["grid_id"],
+                                      "profile_id": receipt["profile_id"],
+                                      "scenario_id": receipt["scenario_id"]})
+    if original["state"] != "complete":
+        raise ValueError("Complete the retained original reference before producing its annual totals")
+    selection = scenario_decisions.select_cohort(
+        workspace, original["id"], alternative_run_ids=[],
+        title=receipt["study"] + " | original annual watershed totals", zones=plan["zones"])
+    state.update(phase="original annual watershed totals", updated_at=now())
+    atomic_json(state_path, state)
+
+    def report_progress(progress):
+        state.update(reference_report_progress=progress, updated_at=now())
+        atomic_json(state_path, state)
+        event("reference_report_progress", **progress)
+
+    report = scenario_decisions.build(workspace, selection, progress=report_progress)
+    directory = workspace.root / "scenario-decisions" / report["id"]
+    state.update(reference_report_id=report["id"],
+                 reference_report_directory=str(directory),
+                 reference_report_files=report["files"], updated_at=now())
+    atomic_json(state_path, state)
+    event("reference_report_complete", report_id=report["id"],
+          baseline_run_id=original["id"], directory=str(directory), files=report["files"])
+    return report
+
+
 def operator_command(args):
     command = [sys.executable, "-B", str(APPLICATION_ROOT / "operator" / "server.py"),
                "--workspace", str(args.workspace),
@@ -528,6 +561,7 @@ def workflow(args):
                 event("prepared", result=state)
                 return 0
             run_original_programme(args, receipt, state, state_path)
+            build_reference_report(args, receipt, plan, state, state_path)
             state.update(phase="native comparisons and reports", updated_at=now())
             atomic_json(state_path, state)
             retain_workflow(args, receipt, plan, state)

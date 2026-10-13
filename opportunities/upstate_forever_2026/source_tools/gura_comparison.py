@@ -467,7 +467,7 @@ def _programme_active(status):
 
 
 def _observe_programme(manager, programme_id, notify, record, *, gate_held=False):
-    status = manager.status(programme_id)
+    status = manager.status(programme_id, include_ensemble_candidates=False)
     notice = {"programme_id": programme_id, "state": status["state"],
               "phase": status.get("phase"), "active": status["active"],
               "counts": status["counts"], "observed_at": now(),
@@ -539,7 +539,7 @@ def run_retained_programme(manager, programme_id, directory, *,
                     last_notice = time.monotonic()
                 time.sleep(1)
         while True:
-            status = manager.status(programme_id)
+            status = manager.status(programme_id, include_ensemble_candidates=False)
             if not _programme_active(status) and not _local_child_active(issued, programme_id):
                 break
             if time.monotonic() - last_notice >= 10:
@@ -613,11 +613,11 @@ def run_retained_programme(manager, programme_id, directory, *,
         # An older caller may have won the original programme lock during
         # launch. Observe that exact programme to completion, without issuing
         # another child or replacing either caller's retained process record.
-        status = manager.status(programme_id)
+        status = manager.status(programme_id, include_ensemble_candidates=False)
         while _programme_active(status):
             _observe_programme(manager, programme_id, notify, command_record)
             time.sleep(2)
-            status = manager.status(programme_id)
+            status = manager.status(programme_id, include_ensemble_candidates=False)
         _observe_programme(manager, programme_id, notify, command_record)
         if status["state"] != "complete":
             raise RuntimeError("Original native programme " + programme_id + " is "
@@ -638,15 +638,15 @@ def _retained_programme(manager, selection, preferred=None):
                 == expected_runs)
 
     if preferred:
-        result = manager.status(preferred)
+        result = manager.status(preferred, include_ensemble_candidates=False)
         if not matches(result):
             raise ValueError("The retained programme differs from the original contrast selection")
         return result
     candidates = []
-    for summary in manager.catalog()["programmes"]:
+    for summary in manager.catalog(include_completed_sources=False)["programmes"]:
         if summary.get("state") == "unavailable":
             continue
-        candidate = manager.status(summary["id"])
+        candidate = manager.status(summary["id"], include_ensemble_candidates=False)
         if matches(candidate):
             candidates.append(candidate)
     if candidates:
