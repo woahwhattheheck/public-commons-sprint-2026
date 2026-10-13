@@ -597,12 +597,18 @@ class Course{
   close(){
     if(this.closingPromise)return this.closingPromise;
     this.closingPromise=(async()=>{
-      if(this.browserOwner)for(;;){try{await this.browserOwner.close();this.browserOwner=null;break;}catch(e){process.stderr.write(JSON.stringify({state:'BROWSER_CLOSE_PENDING',error:err(e)})+'\n');await delay(1000);}}
+      // Diagnostics must not abandon an owned browser, Staff child or manager.
+      const report=(state,error)=>{try{process.stderr.write(JSON.stringify({state,error:err(error)})+'\n');}catch{}};
+      if(this.browserOwner)for(;;){try{await this.browserOwner.close();this.browserOwner=null;break;}catch(e){report('BROWSER_CLOSE_PENDING',e);await delay(1000);}}
       for(const name of Object.keys(this.state?.hosts??{}))while(this.state.hosts[name].starts.some(x=>!x.closed)){
-        try{await this.stop(name);}catch(e){this.state.errors.push({at:now(),phase:'close-'+name,error:err(e)});await this.save();await delay(1000);}
+        try{await this.stop(name);}catch(e){
+          this.state.errors.push({at:now(),phase:'close-'+name,error:err(e)});
+          try{await this.save();}catch(saveError){report('CLOSE_RECORD_PENDING',saveError);}
+          report('APPLICATION_CLOSE_PENDING',e);await delay(1000);
+        }
       }
-      if(this.manager)for(;;){try{await this.manager.close();this.manager=null;break;}catch(e){process.stderr.write(JSON.stringify({state:'MCP_CLOSE_PENDING',error:err(e)})+'\n');await delay(1000);}}
-      await this.apps?.close();
+      if(this.manager)for(;;){try{await this.manager.close();this.manager=null;break;}catch(e){report('MCP_CLOSE_PENDING',e);await delay(1000);}}
+      if(this.apps)for(;;){try{await this.apps.close();this.apps=null;break;}catch(e){report('WORKSPACE_CLOSE_PENDING',e);await delay(1000);}}
     })().finally(()=>{this.closingPromise=null;});return this.closingPromise;
   }
   async finalize(candidate){
@@ -705,6 +711,6 @@ export async function main(argv=process.argv.slice(2)){
         request:reference.requestIdentity?{path:reference.requestPath,...reference.requestIdentity}:null},
       node:{path:process.execPath,version:process.version},playwright:{path:o.playwright,...await identity(o.playwright)},chromium:{path:o.chromium,...await identity(o.chromium)}};
     course=new Course(o,supplied,reference,selection,lease);await course.open();return await course.run();
-  }finally{try{if(course)await course.close();}finally{await lease.close();}}
+  }finally{if(course)await course.close();await lease.close();}
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)main().then(result=>process.stdout.write(JSON.stringify(result)+'\n')).catch(e=>{process.stderr.write(JSON.stringify({error:err(e)})+'\n');process.exitCode=1;});
