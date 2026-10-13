@@ -16,7 +16,7 @@ from .common import atomic_json, describe_file, digest, file_digest, held, read_
 from .workspace import Workspace
 
 SCHEMA = "upstate.economic-comparison-source/v1"
-EDITION = "economic-comparison-scientific-source-20261013-v3-native-context"
+EDITION = "economic-comparison-scientific-source-20261013-v4-endpoint-timing"
 ROOT = "economic-comparison-report-sources"
 RECIPE_NAME = "observed-report.json"
 MANIFEST_NAME = "model-sources.json"
@@ -302,6 +302,29 @@ def _physical_context_sections(editions):
     return sections
 
 
+def _programme_endpoint(cost):
+    """Recognize the retained forest endpoint without inventing a benefit trajectory."""
+    programme = cost.get("programme") if isinstance(cost, dict) else None
+    if not isinstance(programme, dict) or programme.get("schema") != "upstate.simulated-restoration-programme/v1":
+        return False
+    transitions = (programme.get("expected_footprint") or {}).get("changed_transitions")
+    return bool(isinstance(transitions, list) and transitions and all(
+        isinstance(item, dict) and item.get("from_code") in (81, 82)
+        and item.get("to_code") == 41 for item in transitions))
+
+
+def _programme_current_binding(cost, side, row, editions):
+    bound = cost.get("native_binding") if isinstance(cost, dict) else None
+    if not isinstance(bound, dict) or not editions or side not in editions:
+        return False
+    original = row.get(side) or {}
+    return bool(bound.get("run_id") == row["run_id"]
+                and all(bound.get(key) == editions[side]["input"].get(key)
+                        for key in ("report_id", "report_sha256", "zone_id"))
+                and all(bound.get(key) == original.get(key)
+                        for key in ("grid_id", "profile_id", "scenario_id")))
+
+
 def _programme_blocks(cost, labels, row, editions):
     programme, priced, bound = (cost.get(key) for key in ("programme", "priced_basis", "native_binding"))
     if not isinstance(programme, dict) or not isinstance(priced, dict):
@@ -311,15 +334,8 @@ def _programme_blocks(cost, labels, row, editions):
         return ["Additional original design metadata is retained in the saved Economic input; "
                 "its schema has no derived interpretation in this report."]
     bound = bound if isinstance(bound, dict) else {}
-    binding_matches = {}
-    for side in labels:
-        original_row = row.get(side) or {}
-        binding_matches[side] = bool(
-            bound.get("run_id") == row["run_id"]
-            and all(bound.get(k) == editions[side]["input"].get(k)
-                    for k in ("report_id", "report_sha256", "zone_id"))
-            and all(bound.get(k) == original_row.get(k)
-                    for k in ("grid_id", "profile_id", "scenario_id")))
+    binding_matches = {side: _programme_current_binding(cost, side, row, editions)
+                       for side in labels}
     planting, schedule = programme.get("planting") or {}, programme.get("programme") or {}
     source_rows = {item["id"]: item for item in priced.get("original_source_rows", [])}
     require(priced.get("currency") == "USD", "Retain the original programme pricing currency.")
@@ -393,6 +409,15 @@ def _programme_blocks(cost, labels, row, editions):
         "Benchmark applicability: " + _text(schedule.get("benchmark_applicability")),
         "Unpriced scope: " + _text(priced.get("unpriced_excluded_scopes")),
     ])
+    if _programme_endpoint(cost):
+        blocks.append(
+            "Benefit timing of this retained design: the native pasture/crop-to-forest transition "
+            "represents an established land-cover endpoint. Annualized cost divided by its modeled "
+            "annual avoided mass is an endpoint annual-equivalent comparison. It is not an estimate "
+            "of first-year seedling performance or a year-by-year benefit forecast. Establishment "
+            "delay, mortality and time-varying retention are not calculated. The original monitoring "
+            "note above remains the supplied assumption. If the binding table does not match the "
+            "current edition, this timing explanation describes the retained historical design only.")
     blocks.extend(_model_context_blocks(cost, labels, row, editions))
     return blocks
 
@@ -616,6 +641,22 @@ def report_sections(comparison, *, retained_editions=None):
                                  "Each pollutant uses the original annualized cost for its declared scope divided by "
                                  "its positive paired avoided annual mass. Pollutant ratios are separate "
                                  "views of that same cost, not allocated shares or additive benefits."))
+
+        endpoint_sides = [
+            side.capitalize() for side in ("first", "second")
+            if _programme_endpoint(row["cost_comparison"].get(side + "_input"))
+            and _programme_current_binding(row["cost_comparison"].get(side + "_input"),
+                                           side, row, retained_editions)
+        ]
+        if cost_effectiveness and endpoint_sides:
+            blocks.append(
+                " / ".join(endpoint_sides) + " programme timing basis: established land-cover "
+                "endpoint annual-equivalent cost per avoided mass. The saved formula is annualized "
+                "cost divided by the positive paired annual avoided export of the modeled forest "
+                "endpoint. It does not assert that newly planted seedlings deliver that benefit in "
+                "year one. No establishment-lag, survival or ecological growth curve is supplied by "
+                "this calculation; use the retained monitoring note and review those assumptions "
+                "separately. The saved metric and physical quantities above are unchanged.")
 
         if row["changes"]:
             blocks.append(_table(["Original field", "Change", "First", "Second"],
