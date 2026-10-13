@@ -99,8 +99,16 @@
       "source": "model/MONITORING_BUDGET_COMPARISON.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "previous_bytes": 6508,
+      "previous_sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+      "retained_installed_editions": [
+        {
+          "bytes": 6508,
+          "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
@@ -159,8 +167,16 @@
       "source": "model/monitoring_frontier_comparison.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "previous_bytes": 25919,
+      "previous_sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+      "retained_installed_editions": [
+        {
+          "bytes": 25919,
+          "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+        }
+      ]
     },
     {
       "source": "model/monitoring_implementation.py",
@@ -475,8 +491,16 @@
       "source": "operator/MONITORING_BUDGET_CHOICES.md",
       "source_role": "current_application_source",
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "previous_bytes": 6953,
+      "previous_sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
+      "retained_installed_editions": [
+        {
+          "bytes": 6953,
+          "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+        }
+      ]
     },
     {
       "source": "operator/MONITORING_COMPARISON_REPORT.md",
@@ -815,6 +839,19 @@
         "Compose the maintained native installer inventory and preserve predecessor editions"
       ],
       "preserved": "Original optimizer, calendars, campaign revisions, microbial observed context, fieldwork return, selected study transfer, scientific source bodies and current streamed exports"
+    },
+    {
+      "operation_id": "ECO-ED6E-MONITORING-PACKET-NAVIGATOR-20261013",
+      "export_edition": 2,
+      "source_predecessor": "a6af6c79628098b57050ba04959d62a4c79fb6db",
+      "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+      "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
+      "changes": [
+        "Open the complete exported comparison through an offline index of the original report, plans, observed contexts and retained sources",
+        "Use the same original member descriptors for encoded relative links, byte counts, SHA-256 values and the streamed ZIP",
+        "Retain earlier completed exports in their original paths and receive indexed packets under export edition 2"
+      ],
+      "preserved": "Original comparison IDs, selection recipe, optimizer, numerical rows, source/context records and full editable Workspace receiving"
     }
   ],
   "observational_context": {
@@ -890,7 +927,9 @@
     "guide": "model/MONITORING_BUDGET_COMPARISON.md",
     "operator_guide": "operator/MONITORING_BUDGET_CHOICES.md",
     "component": "integration/component_fragments/monitoring-budget-comparison.json",
-    "receiving": "Original complete Workspace backup/restore and Monitoring verify_workspace"
+    "receiving": "Original complete Workspace backup/restore and Monitoring verify_workspace",
+    "export_edition": 2,
+    "export_entrypoint": "index.html"
   },
   "scientific_report_comparison": {
     "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3593",
