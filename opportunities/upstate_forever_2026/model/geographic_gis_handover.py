@@ -19,6 +19,7 @@ from . import gis_workspace
 from . import native_run_history as history
 from . import ensemble_study_transfer as study
 from .gis_native_study import _SourceReader
+from .observed_context import source_choices as observed_source_choices
 
 SCHEMA = "upstate.geographic-reference-gis/v1"
 VERSION = 1
@@ -56,7 +57,7 @@ def _source_choices(workspace, prepared, scientific, delivery, context_source):
     for row in workspace._get("sources", prepared["source_collection_id"])["entries"]:
         add({"source_collection_id": prepared["source_collection_id"], "source_id": row["id"]})
     add(scientific["source"])
-    for row in delivery["selection"].get("observed_context_sources", []):
+    for row in observed_source_choices(delivery["selection"]):
         add(row)
     add(context_source)
     return result
