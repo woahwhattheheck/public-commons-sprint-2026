@@ -126,7 +126,7 @@ export async function prepareNativeRecovery({resumeFrom,output,sourceRoot,operat
   }
   need(sha(await readFile(originalReceiptPath))===sha(body),'RESUME_CHANGED','The original receiving receipt changed during selection.');
   await observe(previous.process,originalReceiptPath);
-  await mkdir(output,{mode:0o700});
+  // cp owns the new destination; pre-creating it conflicts with errorOnExist.
   await cp(from,output,{recursive:true,errorOnExist:true,force:false,dereference:false,preserveTimestamps:true,verbatimSymlinks:true});
   const originalReceiptSha256=sha(body),retained='recovery/'+originalReceiptSha256+'.receiving.json';
   await mkdir(join(output,'recovery'),{recursive:true,mode:0o700});
