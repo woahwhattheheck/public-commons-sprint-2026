@@ -7,17 +7,28 @@
       "paths": [
         "model/published_review_report_source.py",
         "model/published_review_study_transfer.py",
-        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md"
-      ],
-      "requires": [
-        "scientific-report-editions",
-        "study-transfer"
+        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+        "model/observed_context.py"
       ]
     },
     "study-transfer": {
       "paths": [
+        "model/published_review_report_source.py",
         "model/published_review_study_transfer.py",
         "model/PUBLISHED_REVIEW_REPORT_SOURCE.md"
+      ],
+      "requires": [
+        "published-studies"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/published_review_report_source.py",
+        "model/published_review_study_transfer.py",
+        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md"
+      ],
+      "requires": [
+        "study-transfer"
       ]
     }
   },
