@@ -1,0 +1,234 @@
+{
+  "schema": "amero.integration.v1",
+  "domain": {
+    "schema": "amero.reconciliation.v1",
+    "resourceKinds": [
+      "escala-community",
+      "escala-fund",
+      "escala-contribution",
+      "escala-token-mint",
+      "escala-token-balance",
+      "escala-proposal",
+      "escala-vote",
+      "escala-delegation",
+      "escala-tally",
+      "escala-milestone",
+      "escala-evidence",
+      "escala-attestation",
+      "escala-disbursement-request",
+      "escala-disbursement",
+      "escala-audit-event",
+      "escala-dashboard",
+      "escala-moneygram-event",
+      "escala-sdp-event",
+      "sdp-disbursement",
+      "sdp-payment",
+      "sdp-receiver",
+      "sdp-wallet",
+      "sdp-asset",
+      "sdp-distribution-wallet",
+      "sdp-balance",
+      "sdp-capabilities",
+      "sdp-organization",
+      "sdp-statistics",
+      "horizon-operation",
+      "horizon-transaction",
+      "horizon-network"
+    ],
+    "resultArrays": [
+      "communities",
+      "funds",
+      "contributions",
+      "tokens",
+      "proposals",
+      "votes",
+      "milestones",
+      "evidence",
+      "attestations",
+      "disbursementRequests",
+      "disbursements",
+      "sdpDisbursements",
+      "payments",
+      "receivers",
+      "wallets",
+      "assets",
+      "settlements",
+      "events",
+      "allocations",
+      "decisions",
+      "rejectedDecisions",
+      "totals",
+      "findings",
+      "sourceGaps",
+      "distributionWallets",
+      "balances",
+      "capabilities",
+      "organizations"
+    ],
+    "relations": [
+      "community-fund",
+      "proposal-milestone",
+      "proposal-vote",
+      "milestone-evidence",
+      "milestone-attestation",
+      "milestone-disbursement",
+      "disbursement-sdp",
+      "disbursement-payment",
+      "payment-settlement"
+    ]
+  },
+  "module": "lib/amero.mjs",
+  "exports": [
+    "normalizeBook",
+    "normalizeLinkDecision",
+    "reconcilePayments",
+    "normalizeDisbursementPlan"
+  ],
+  "synchronous": true,
+  "book": {
+    "required": [
+      "id",
+      "name",
+      "environment",
+      "connections",
+      "period"
+    ],
+    "connections": {
+      "escala": "string[]",
+      "sdp": "string[]",
+      "horizon": "string[]"
+    },
+    "nullable": [
+      "tenantId",
+      "communityId",
+      "fundId"
+    ],
+    "lists": [
+      "projectIds",
+      "proposalIds",
+      "milestoneIds",
+      "distributionWalletIds"
+    ],
+    "period": {
+      "start": "exact ISO instant",
+      "end": "exclusive exact ISO instant",
+      "timeZone": "IANA timezone"
+    },
+    "notes": "string"
+  },
+  "decision": {
+    "fields": [
+      "bookId",
+      "subjectVersionId",
+      "kind",
+      "status",
+      "targetVersionId",
+      "relation",
+      "subjectAmount",
+      "targetAmount",
+      "unitBinding",
+      "reason",
+      "actor",
+      "recordedAt",
+      "sources",
+      "supersedesDecisionId"
+    ],
+    "kind": [
+      "note",
+      "include",
+      "exclude",
+      "relate",
+      "allocate",
+      "withdraw"
+    ],
+    "status": [
+      "proposed",
+      "accepted",
+      "rejected"
+    ],
+    "unitBinding": {
+      "network": "passphrase",
+      "assetType": [
+        "native",
+        "credit_alphanum4",
+        "credit_alphanum12"
+      ],
+      "assetCode": "string",
+      "assetIssuer": "string|null",
+      "account": "string",
+      "memoType": [
+        "none",
+        "text",
+        "id",
+        "hash",
+        "return"
+      ],
+      "memo": "string|null"
+    },
+    "allocation": "SDP payment to original Horizon payment; equal exact same-unit amounts; outgoing account and complete source proof"
+  },
+  "plan": {
+    "definitionFields": [
+      "name",
+      "milestoneVersionId",
+      "proposalVersionId",
+      "approvalVersionIds",
+      "evidenceVersionIds",
+      "treasuryVersionIds",
+      "distributionWalletVersionId",
+      "assetVersionId",
+      "recipientWalletVersionId",
+      "registrationContactType",
+      "verificationField",
+      "rows",
+      "note"
+    ],
+    "registrationContactType": [
+      "EMAIL",
+      "PHONE_NUMBER",
+      "EMAIL_AND_WALLET_ADDRESS",
+      "PHONE_NUMBER_AND_WALLET_ADDRESS"
+    ],
+    "verificationField": [
+      "DATE_OF_BIRTH",
+      "YEAR_MONTH",
+      "PIN",
+      "NATIONAL_ID_NUMBER",
+      null
+    ],
+    "columns": [
+      "phone",
+      "email",
+      "id",
+      "amount",
+      "verification",
+      "paymentID",
+      "walletAddress",
+      "walletAddressMemo"
+    ],
+    "returnFields": [
+      "definition",
+      "versionPins",
+      "csv",
+      "multipartBoundBytes",
+      "createInput",
+      "findings",
+      "totals",
+      "status"
+    ],
+    "status": [
+      "PREPARED",
+      "NEEDS_REVIEW"
+    ],
+    "maximumRows": 10000,
+    "maximumMultipartBytes": 5000000,
+    "createInput": "{params:{},query:{},headers:{X-Wallet-Id},body:{name,asset_id,registration_contact_type,wallet_id?,verification_field?}}",
+    "semantics": "Preparation retains full original versions/source metadata and complete file. PREPARED is local instruction validity, never authorization or dispatch."
+  },
+  "native": {
+    "save": "plan.save {bookVersionId,definition,originalFileIds?:string[]}",
+    "prepare": "plan.prepare {planId,stage:create|instructions|status,disbursementVersionId?,status?}",
+    "writer": "Existing single SQLite workspace and original immutable request journal",
+    "originalFiles": "Optional originalFileIds pin complete existing workspace file descriptors and verified bytes in each immutable plan; generated CSV and definition remain separate full outputs."
+  }
+}

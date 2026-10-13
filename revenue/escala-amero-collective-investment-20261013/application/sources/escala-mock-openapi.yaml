@@ -1,0 +1,1082 @@
+openapi: 3.0.0
+info:
+  title: Escala Collective Investment API
+  description: |
+    API documentation for the Collective Investment API
+
+    ***Documents:***
+    - <a href="https://docs.google.com/document/d/1w6gW5SwUEl7QZylIBi1bp34vaEAPZmL1">Document Architecture</a>
+  version: 1.0.0
+servers:
+- url: https://collectiveinvestment.api.escalahq.com
+  description: Production server final 1
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Get API health status
+      description: Returns the health status of the API including timestamp and uptime.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+  /v1/funds:
+    post:
+      tags:
+        - Funds
+      summary: Create fund
+      description: Create a common fund within a community.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                communityId:
+                  type: string
+                  example: community_123
+                name:
+                  type: string
+                  example: Proyectos generales
+                tokenModel:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      example: fungible
+                    decimals:
+                      type: integer
+                      example: 2
+                governanceModel:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      example: SBT
+                    quorum:
+                      type: number
+                      format: double
+                      example: 0.2
+      responses:
+        '201':
+          description: Fund created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fundId:
+                    type: string
+                    example: fund_01
+                  status:
+                    type: string
+                    example: active
+  /v1/funds/{fundId}/contributions:
+    get:
+      tags:
+        - Funds
+      summary: List contributions for a specific fund
+      description: Returns a list of contributions and total balance for a fund.
+      parameters:
+      - in: path
+        name: fundId
+        schema:
+          type: string
+        required: true
+        description: ID of the fund
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fundId:
+                    type: string
+                    example: fund_01
+                  totalBalance:
+                    type: number
+                    format: double
+                    example: 1250.0
+                  contributions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        contributionId:
+                          type: string
+                          example: c_001
+                        userId:
+                          type: string
+                          example: user_abc123
+                        amount:
+                          type: number
+                          format: double
+                          example: 100.0
+                        date:
+                          type: string
+                          format: date-time
+                          example: 2025-09-01 12:00:00+00:00
+  /v1/tokens/mint:
+    post:
+      tags:
+        - Tokens
+      summary: Mint project tokens
+      description: Mint tokens for a project after USDC deposit confirmation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fundId:
+                  type: string
+                  example: fund_01
+                recipientWalletId:
+                  type: string
+                  example: wallet_def456
+                usdcAmount:
+                  type: number
+                  format: double
+                  example: 100.0
+                mintReason:
+                  type: string
+                  example: contribution_remittance
+                onchainTx:
+                  type: string
+                  example: onchain_tx_0x123
+      responses:
+        '201':
+          description: Token minted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mintId:
+                    type: string
+                    example: mint_1001
+                  token:
+                    type: string
+                    example: PT-001
+                  amount:
+                    type: number
+                    format: double
+                    example: 100
+                  status:
+                    type: string
+                    example: minted
+                  onchainProof:
+                    type: string
+                    example: tx_hash_0xabc
+  /v1/tokens/{walletId}:
+    get:
+      tags:
+        - Tokens
+      summary: Get token balances
+      description: Returns project and governance token balances for a wallet.
+      parameters:
+      - in: path
+        name: walletId
+        schema:
+          type: string
+        required: true
+        description: ID of the wallet
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  walletId:
+                    type: string
+                    example: wallet_def456
+                  uid:
+                    type: string
+                    example: user!@#$
+                  projectTokens:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        fundId:
+                          type: string
+                          example: fund_01
+                        tokenId:
+                          type: string
+                          example: PT-001
+                        balance:
+                          type: number
+                          example: 100
+                  governanceTokens:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        fundId:
+                          type: string
+                          example: fund_01
+                        tokenId:
+                          type: string
+                          example: GT-01
+                        balance:
+                          type: number
+                          example: 137.5
+  /v1/proposals/{proposalId}/proposals:
+    post:
+      tags:
+        - Proposals
+      summary: Create a proposal
+      description: Create a proposal to spend funds and open a voting window.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the parent proposal/project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Instalar 3 c\xE1maras de seguridad"
+                communityId:
+                  type: string
+                  example: community_123
+                description:
+                  type: string
+                  example: "Compra e instalacin de 3 cmaras en la avenida principal"
+                amountUsdc:
+                  type: number
+                  format: double
+                  example: 500.0
+                milestoneId:
+                  type: string
+                  example: ms_01
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    example: s3://evidence/quote.pdf
+      responses:
+        '201':
+          description: Proposal created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proposalId:
+                    type: string
+                    example: prop_200
+                  votingWindowStart:
+                    type: string
+                    format: date-time
+                    example: 2025-09-08 00:00:00+00:00
+                  votingWindowEnd:
+                    type: string
+                    format: date-time
+                    example: 2025-09-15 00:00:00+00:00
+  /v1/proposals/{proposalId}/votes:
+    post:
+      tags:
+        - Proposals
+      summary: Cast a vote
+      description: Cast a signed vote for a proposal.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: user_abc123
+                vote:
+                  type: string
+                  enum:
+                  - true
+                  - false
+                  - abstain
+                  example: true
+                signature:
+                  type: string
+                  example: base64-sig
+      responses:
+        '201':
+          description: Vote recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  voteId:
+                    type: string
+                    example: v_900
+                  proposalId:
+                    type: string
+                    example: prop_200
+                  votingDate:
+                    type: string
+                    format: date-time
+                    example: 2025-09-08 00:00:00+00:00
+                  status:
+                    type: string
+                    example: recorded
+  /v1/proposals/{proposalId}/delegate:
+    post:
+      tags:
+        - Proposals
+      summary: Delegate vote
+      description: Delegate voting power to another member.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fromUserId:
+                  type: string
+                  example: user_abc123
+                toUserId:
+                  type: string
+                  example: user_xyz999
+                amount:
+                  type: number
+                  example: 100
+                tokenId:
+                  type: string
+                  example: PT-001
+                delegateDate:
+                  type: string
+                  format: date-time
+                  example: 2026-09-01 00:00:00+00:00
+      responses:
+        '201':
+          description: Delegation active
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delegateId:
+                    type: string
+                    example: del_300
+                  status:
+                    type: string
+                    example: active
+  /v1/proposals/{proposalId}/tally:
+    get:
+      tags:
+        - Proposals
+      summary: Get vote tally
+      description: Get the vote count and snapshot for a proposal.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the proposal
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proposalId:
+                    type: string
+                    example: prop_200
+                  snapshotId:
+                    type: string
+                    example: snap_10
+                  yesWeight:
+                    type: number
+                    format: double
+                    example: 775.0
+                  noWeight:
+                    type: number
+                    format: double
+                    example: 275.0
+                  quorumRequired:
+                    type: number
+                    format: double
+                    example: 500.0
+                  status:
+                    type: string
+                    example: closed
+                  result:
+                    type: string
+                    example: approved
+  /v1/proposals/{proposalId}/milestones:
+    post:
+      tags:
+        - Proposals
+      summary: Create milestone
+      description: Create a milestone for tracking proposal payments or tasks.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Fase 1 - Transporte y alimentaci\xF3n"
+                Description:
+                  type: string
+                  example: transportar al equipo de trabajo y provisiondes del mismo
+                amountUsdc:
+                  type: number
+                  format: double
+                  example: 1250.0
+                dueDate:
+                  type: string
+                  format: date
+                  example: 2025-10-15
+      responses:
+        '201':
+          description: Milestone created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  milestoneId:
+                    type: string
+                    example: ms_01
+                  status:
+                    type: string
+                    example: open
+  /v1/proposals/{proposalId}/disbursements:
+    get:
+      tags:
+        - Proposals
+      summary: List proposal disbursements
+      description: List all disbursements for a proposal.
+      parameters:
+      - in: path
+        name: proposalId
+        schema:
+          type: string
+        required: true
+        description: ID of the proposal
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proposalId:
+                    type: string
+                    example: proj_001
+                  disbursements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        disbursementId:
+                          type: string
+                          example: dis_900
+                        amountUsdc:
+                          type: number
+                          format: double
+                          example: 500.0
+                        status:
+                          type: string
+                          example: executed
+                        disbursmentsDate:
+                          type: string
+                          format: date-time
+                          example: 2025-09-10 12:00:00+00:00
+  /v1/communities:
+    post:
+      tags:
+        - Communities
+      summary: Create community
+      description: Create a new community for collective investment (FlutterFlow integration).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Remesas para el desarrollo
+                description:
+                  type: string
+                  example: Comunidad ubicada en municipio X, desde tamaulipas hasta
+                    constitucion
+                adminUserId:
+                  type: string
+                  example: admin_001
+                defaultCurrency:
+                  type: string
+                  example: USDC
+                communityDate:
+                  type: string
+                  format: date-time
+  /v1/communities/{communityId}/invite:
+    post:
+      tags:
+        - Communities
+      summary: Invite user
+      description: Invite a user to join a community (email/QR). Includes referral
+        tracking.
+      parameters:
+      - in: path
+        name: communityId
+        schema:
+          type: string
+        required: true
+        description: ID of the community
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: newuser@example.com
+                role:
+                  type: string
+                  example: member
+                invitedbyId:
+                  type: string
+                  example: invt_09
+      responses:
+        '201':
+          description: Invitation sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inviteId:
+                    type: string
+                    example: inv_10
+                  status:
+                    type: string
+                    example: sent
+  /v1/milestones/{milestoneId}/evidence:
+    post:
+      tags:
+        - Milestones
+      summary: Upload evidence
+      description: Upload evidence files (hash + S3) for a milestone.
+      parameters:
+      - in: path
+        name: milestoneId
+        schema:
+          type: string
+        required: true
+        description: ID of the milestone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uploaderUserId:
+                  type: string
+                  example: admin_001
+                files:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - s3://evidence/photo1.jpg
+                  - s3://evidence/receipt.pdf
+                notes:
+                  type: string
+                  example: "Fotos y recibos de instalaci\xF3n"
+      responses:
+        '201':
+          description: Evidence uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  evidenceId:
+                    type: string
+                    example: ev_500
+                  status:
+                    type: string
+                    example: uploaded
+                  evidenceHash:
+                    type: string
+                    example: sha256:...
+  /v1/milestones/{milestoneId}/attestations:
+    get:
+      tags:
+        - Milestones
+      summary: List attestations
+      description: List all attestations for a milestone.
+      parameters:
+      - in: path
+        name: milestoneId
+        schema:
+          type: string
+        required: true
+        description: ID of the milestone
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  milestoneId:
+                    type: string
+                    example: ms_01
+                  attestations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        attestationId:
+                          type: string
+                          example: att_400
+                        attestorId:
+                          type: string
+                          example: oracle_01
+                        verifiedAt:
+                          type: string
+                          format: date-time
+                          example: 2025-09-10 12:00:00+00:00
+  /v1/oracles/attest:
+    post:
+      tags:
+        - Oracles
+      summary: Create attestation
+      description: Oracle publishes signed attestation for evidence hash (payment
+        verification).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                attestorId:
+                  type: string
+                  example: oracle_01
+                proposalId:
+                  type: string
+                  example: ms_01
+                evidenceHash:
+                  type: string
+                  example: sha256:...
+                signature:
+                  type: string
+                  example: base64-sig
+                Date:
+                  type: string
+                  format: date-time
+                  example: 2025-10-15 00:00:00
+      responses:
+        '201':
+          description: Attestation verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attestationId:
+                    type: string
+                    example: att_400
+                  status:
+                    type: string
+                    example: verified
+                  verifiedBy:
+                    type: string
+                    example: oracle_01
+  /v1/disbursements/request:
+    post:
+      tags:
+        - Disbursements
+      summary: Request disbursement
+      description: Request a disbursement after proposal approval. Uses X-Idempotency-Key
+        header.
+      parameters:
+      - in: header
+        name: X-Idempotency-Key
+        schema:
+          type: string
+        required: false
+        description: Idempotency key to prevent duplicate requests
+        example: uuid-req-1234
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                proposalId:
+                  type: string
+                  example: prop_200
+                milestoneId:
+                  type: string
+                  example: ms_01
+                requestedByUid:
+                  type: string
+                  example: admin_001
+                amountUsdc:
+                  type: number
+                  format: double
+                  example: 500.0
+                idempotencyKey:
+                  type: string
+                  example: uuid-req-1234
+                RequestedDate:
+                  type: string
+                  format: date-time
+                  example: 2025-09-10 12:00:00+00:00
+      responses:
+        '201':
+          description: Disbursement request created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disbursementRequestId:
+                    type: string
+                    example: dreq_800
+                  status:
+                    type: string
+                    example: pending_attestation_check
+  /v1/disbursements/{disbursementRequestId}/execute:
+    post:
+      tags:
+        - Disbursements
+      summary: Execute disbursement
+      description: Execute a disbursement using multisig/HSM (internal operation).
+      parameters:
+      - in: path
+        name: disbursementRequestId
+        schema:
+          type: string
+        required: true
+        description: ID of the disbursement request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                executedBy:
+                  type: string
+                  example: operator_001
+                multisigSignatures:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - sig1
+                  - sig2
+      responses:
+        '201':
+          description: Disbursement executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disbursementId:
+                    type: string
+                    example: dis_900
+                  status:
+                    type: string
+                    example: executed
+                  onchainTx:
+                    type: string
+                    example: tx_hash_0xabc
+                  disbursmentsDate:
+                    type: string
+                    format: date-time
+                    example: 2025-09-10 12:00:00+00:00
+
+  /v1/audit/events:
+    get:
+      tags:
+        - Audit
+      summary: Search audit events
+      description: Search for audit events (admin/auditor).
+      parameters:
+        - in: query
+          name: proposalId
+          schema:
+            type: string
+          description: Filter by proposal ID
+          example: prop_001
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+          description: Start date
+          example: 2025-01-01
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+          description: End date
+          example: 2025-09-30
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        eventId:
+                          type: string
+                          example: ev_1
+                        type:
+                          type: string
+                          example: mint
+                        detail:
+                          type: object
+                          properties:
+                            mintId:
+                              type: string
+                              example: mint_1001
+                        timestamp:
+                          type: string
+                          format: date-time
+                          example: 2025-09-01T12:00:00Z
+  /v1/dashboards/community/{communityId}:
+    get:
+      tags:
+        - Dashboards
+      summary: Public transparency dashboard
+      description: Get public transparency dashboard data for a community.
+      parameters:
+        - in: path
+          name: communityId
+          schema:
+            type: string
+          required: true
+          description: ID of the community
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  communityId:
+                    type: string
+                    example: community_123
+                  fundsSummary:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        fundId:
+                          type: string
+                          example: fund_01
+                        balanceUsdc:
+                          type: number
+                          format: double
+                          example: 1250.00
+                        proposalsCount:
+                          type: integer
+                          example: 2
+                  recentProposals:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        proposalId:
+                          type: string
+                          example: prop_200
+                        result:
+                          type: string
+                          example: approved
+
+  /v1/webhooks/moneygram/settlement:
+    post:
+      tags:
+        - Tokens & Tokens Factory
+      summary: MoneyGram Fiat Settlement Webhook
+      description: Endpoint securely exposed to the MoneyGram Access API to receive asynchronous confirmation of fiat settlement. This trigger automatically executes the USDC deposit into the Soroban Escrow (TreasuryContract) and calls the Token Factory to mint proportional Project Tokens.
+      security:
+        - WebhookAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoneyGramSettlementPayload'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: processed
+                  onchainTxPending:
+                    type: boolean
+                    example: true
+
+  /v1/webhooks/sdp/status:
+    post:
+      tags:
+        - disbursements flow
+      summary: SDP Bulk Payout Status Webhook
+      description: Receives async status updates directly from the Stellar Disbursement Platform (SDP) after a bulk payout is executed to local vendors. Updates the Escala B2B dashboard with real-time success or failure metrics.
+      security:
+        - WebhookAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SdpStatusUpdatePayload'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: updated
+
+components:
+  securitySchemes:
+    WebhookAuth:
+      type: apiKey
+      in: header
+      name: X-Webhook-Signature
+      description: HMAC SHA-256 signature for validating that the request originates from a trusted provider.
+  schemas:
+    MoneyGramSettlementPayload:
+      type: object
+      required:
+        - transactionId
+        - status
+        - fiatAmount
+        - usdcEquivalent
+        - userWalletId
+      properties:
+        transactionId:
+          type: string
+          example: mg_9988_xyz
+        status:
+          type: string
+          enum:
+            - SETTLED
+            - FAILED
+          example: SETTLED
+        fiatAmount:
+          type: number
+          example: 5000.00
+        usdcEquivalent:
+          type: number
+          example: 100.00
+        userWalletId:
+          type: string
+          example: wallet_def456
+    SdpStatusUpdatePayload:
+      type: object
+      required:
+        - disbursementId
+        - sdpTransactionId
+        - status
+        - completedAt
+      properties:
+        disbursementId:
+          type: string
+          example: dis_900
+        sdpTransactionId:
+          type: string
+          example: sdp_tx_001
+        status:
+          type: string
+          enum:
+            - SUCCESS
+            - PENDING
+            - FAILED
+          example: SUCCESS
+        completedAt:
+          type: string
+          format: date-time
+          example: '2026-09-10T12:05:00Z'

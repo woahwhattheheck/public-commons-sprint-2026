@@ -1,0 +1,38 @@
+{
+  "schema": "amero.original-provider-sources.v1",
+  "escala": {
+    "provider": "escala",
+    "original": "sources/escala-mock-openapi.yaml",
+    "openapi": "sources/escala-mock-openapi.json",
+    "projections": "sources/escala-projections.json",
+    "originalSha256": "e4b370b19eb1e0bb64378885d2f2c59d63b83270e9bace634b549db98693beb2",
+    "openapiSha256": "93c32967e21859ff929c02af40d9deda6b0283c3898107e4ad88828fc0e29a47",
+    "projectionsSha256": "8d9af7df4fe3c31161ee6e9c2fb10a0bfb541ec06f7110d32e8785d08629d6c7",
+    "repository": "escala-dev/collective-investment-api",
+    "commit": "ca9ae6256fdbf7786e20b4c2b2926ce179468944",
+    "executionSemantics": "published-mock"
+  },
+  "sdp": {
+    "provider": "sdp",
+    "original": "sources/sdp-openapi.yaml",
+    "openapi": "sources/sdp-openapi.json",
+    "projections": "sources/sdp-projections.json",
+    "originalSha256": "0064671e3fefb0d3b9560181b3288379e6b35be0c9197ee2ca3fdb9a3a395738",
+    "openapiSha256": "1f760b5631a5561e812f7f442587fa8c25567bd5e092fc946b175c80b8f22b61",
+    "projectionsSha256": "e20f6d1adc8d5f7b0aca6afa12372df3b91c1de7830ce6f3a8a00e6844b91182",
+    "repository": "stellar/stellar-disbursement-platform-backend",
+    "commit": "14704274467d267b6c6679052d7251ef6050d118",
+    "executionSemantics": "configured-provider"
+  },
+  "horizon": {
+    "source": "sources/horizon-original.json",
+    "repository": "stellar/js-stellar-sdk",
+    "tag": "v17.0.1",
+    "commit": "74ac883871396138e1882a3ca4bcec7e4ace76b5"
+  },
+  "interpretation": {
+    "escala": "Published fixed mock; two Swagger-only webhook operations are not implemented.",
+    "sdp": "Official version7.0.0 compatibility selection; actual partner deployment not supplied.",
+    "horizon": "Independent exact network/account/transaction evidence; never inferred from mock proof fields."
+  }
+}
