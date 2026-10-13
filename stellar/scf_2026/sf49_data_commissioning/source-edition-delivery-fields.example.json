@@ -1,7 +1,0 @@
-{
-  "delivery": {
-    "scope": "Implement one agreed source-edition operation on the customer's actual merchant host and connect its complete result to the named buyer application. The existing workorder must identify the source owner and entitlement, exact site/report/segment or asset/metric/window, complete page/file population, native field/type/time semantics, receiving operator, payment unit and aggregate buyer limits.",
-    "deliverables": "Customer-specific source/access and consumer mapping; immutable original source and catalog editions; explained comparison/review; selected query or report through the maintained merchant and original Stellar buyer; complete original receiving handover; source/terms change and second-operator recovery on the selected host. Retain original source, request, transfer, output, release and receiving identities.",
-    "acceptanceCriteria": "The named buyer completes the agreed useful task with its full selected output and source meanings intact. The receiving operator reopens the retained result on its authorized host, explains ambiguous/omitted fields and coverage, and performs the agreed source change or recovery while retaining earlier acquired output. Record original technical acceptance and each commercial invoice/collection event in this same workorder under its unchanged owner-supplied terms."
-  }
-}

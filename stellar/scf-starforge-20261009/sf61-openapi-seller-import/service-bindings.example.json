@@ -1,4 +1,0 @@
-[
-  { "method": "POST", "path": "/forecast", "id": "forecast",
-    "response": { "example": true, "latitude": 38.25, "longitude": -85.76 } }
-]

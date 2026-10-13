@@ -1,6 +1,0 @@
-numpy>=1.26,<3
-rasterio>=1.4.3,<2
-fiona>=1.9,<2
-pyproj>=3.6,<4
-shapely>=2,<3
-Pillow>=10,<13

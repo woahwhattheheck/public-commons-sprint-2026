@@ -1,7 +1,0 @@
-station_id,parameter,total_records,numeric_records,censored_records,study_date_records,missing_chlorophyll_dates,additional_dates,mean,sample_sd,minimum,maximum,statistic_unit,statistics_policy
-SV-838,"Chlorophyll a, corrected for pheophytin",15,15,0,15,,,24.097333333333335,8.583679253316117,12.35,38.88,ug/L,All 15 original numeric observations; sample standard deviation
-SV-838,Microcystins/nodularin,14,12,2,14,2023-09-05,,,,,,,Original censored values retained; no substitution
-SV-839,"Chlorophyll a, corrected for pheophytin",15,15,0,15,,,15.415333333333335,7.429484568419329,7.52,31.25,ug/L,All 15 original numeric observations; sample standard deviation
-SV-839,Microcystins/nodularin,15,13,2,14,2023-09-05,2023-08-24,,,,,,Original censored values retained; no substitution
-SV-840,"Chlorophyll a, corrected for pheophytin",15,15,0,15,,,6.065333333333333,1.7513214058723394,3.36,8.55,ug/L,All 15 original numeric observations; sample standard deviation
-SV-840,Microcystins/nodularin,14,12,2,13,2023-09-05;2023-10-17,2023-08-24,,,,,,Original censored values retained; no substitution

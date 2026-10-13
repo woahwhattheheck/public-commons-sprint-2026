@@ -1,9 +1,0 @@
-{
-  "name": "Contract events",
-  "pageSize": 1000,
-  "filters": [
-    {
-      "type": "contract"
-    }
-  ]
-}

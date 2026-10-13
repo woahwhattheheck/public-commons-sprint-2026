@@ -1,7 +1,0 @@
-{
-  "schema": "stellar-forge.planning-workbook-export-profile.v1",
-  "numberMode": "spreadsheet-numbers",
-  "precisionPolicy": "text",
-  "amountMode": "formulas",
-  "note": "Complete editable handover of the selected saved plan; retain original decimals and review the returned native result."
-}
