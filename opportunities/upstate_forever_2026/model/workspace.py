@@ -348,9 +348,9 @@ class Workspace:
         validate_completed_run(value)
         return value
 
-    def run(self, key):
+    def run(self, key, *, reuse_source_run_ids=None):
         from .native import execute_run
-        return execute_run(self, identifier(key))
+        return execute_run(self, identifier(key), reuse_source_run_ids=reuse_source_run_ids)
 
     def combine_runs(self, selection, source_runs, *, execute=True):
         from .run_assembly import combine_runs

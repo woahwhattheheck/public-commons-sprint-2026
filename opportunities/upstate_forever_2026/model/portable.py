@@ -18,6 +18,7 @@ APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_deliv
                      "receive_application_source.py", "requirements-terrain.txt",
                      "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md",
                      "environment.yml", "PROGRAMMES.md", "PAIRED_ENSEMBLES.md",
+                     "ENSEMBLES.md", "requirements-ensemble.txt",
                      "install_programmes.py", "requirements-paired-ensemble.txt",
                      "PUBLISHED_STUDIES.md", "install_published_studies.py",
                      "receive_published_studies.py", "tools/attach_published_report.py")
