@@ -74,6 +74,18 @@ def install_facade(namespace):
         if state is None:
             return None
         result = deepcopy(state)
+        runs = list(result.get("run_results", {}).values())
+        pending = sum(row.get("state") != "complete" for row in runs)
+        result["run_completion"] = {
+            "total": len(runs), "complete": len(runs) - pending, "pending": pending}
+        # Earlier editions could call a lineage-only plan complete while its
+        # successor runs remained prepared. Repair the presentation without
+        # modifying that retained checkpoint or its immutable plan.
+        if result.get("native_execution_requested") and pending and result.get("state") == "complete":
+            result["state"] = "prepared"
+            result["completion_note"] = (
+                "The source selections are saved. Complete the prepared refreshed runs "
+                "to retain their native outputs; equivalent native stages can be reused.")
         result["status"] = result.get("state", "planned")
         return marked(result, EDITION)
 
@@ -332,6 +344,13 @@ def install_facade(namespace):
                                  (state or {}).get("state", "planned"),
                                  bool(row.get("requires_native_rerun")),
                                  "; ".join(row.get("reasons", []))])
+        for row in (state or {}).get("run_results", {}).values():
+            writer.writerow(["run_completion", "runs", row.get("from_run_id"), row.get("to_run_id"),
+                             row.get("state", "prepared"), bool(row.get("requires_native_rerun")),
+                             json.dumps({"execution": row.get("execution"),
+                                         "model_results": row.get("model_results", {}),
+                                         "artifacts": row.get("artifacts", {})},
+                                        sort_keys=True, ensure_ascii=False)])
         for row in (state or {}).get("comparison_results", {}).values():
             writer.writerow(["comparison", "runs", row.get("from_run_id"), row.get("to_run_id"),
                              row.get("state"), "", row.get("reason", row.get("comparison_id", ""))])
@@ -350,6 +369,18 @@ def install_facade(namespace):
         summary_rows = "".join("<tr><th>" + esc(key.replace("_", " ")) + "</th><td>"
                                + esc(item) + "</td></tr>"
                                for key, item in raw["preview"]["summary"].items())
+        completion_rows = []
+        for row in (state or {}).get("run_results", {}).values():
+            models = "; ".join(
+                name.upper() + ": " + value.get("mode", "retained") +
+                (" from " + str(value["source_run_id"]) if value.get("source_run_id") else "")
+                for name, value in sorted(row.get("model_results", {}).items()))
+            completion_rows.append(
+                "<tr><td>" + esc(row.get("from_run_id", "")) + "</td><td>" +
+                esc(row.get("to_run_id", "")) + "</td><td>" +
+                esc(row.get("state", "prepared")) + "</td><td>" +
+                esc(row.get("execution", "prepared")) + "</td><td>" +
+                esc(models or "Native outputs have not been recorded.") + "</td></tr>")
         comparison_rows = []
         for comparison in data["comparisons"]:
             for alternative in comparison.get("alternatives", []):
@@ -369,7 +400,12 @@ def install_facade(namespace):
             + "</h1><p>Retained source-edition refresh. State: "
             + esc((state or {}).get("state", "planned")) + "</p><p>Plan: "
             + esc(raw["id"]) + "</p><table>" + summary_rows
-            + "</table><h2>Native annual export changes</h2>"
+            + "</table><h2>Refreshed run completion</h2><p>"
+            + esc((state or {}).get("completion_note", "Each completed successor retains its actual native model stages and outputs."))
+            + "</p><table><thead><tr><th>Original run</th><th>Refreshed run</th>"
+              "<th>State</th><th>Execution</th><th>Native stages</th></tr></thead><tbody>"
+            + ("".join(completion_rows) or "<tr><td colspan='5'>No affected native runs.</td></tr>")
+            + "</tbody></table><h2>Native annual export changes</h2>"
               "<p>Differences are alternative minus baseline on the retained common finite support. "
               "Excluded source coverage and annual mass remain in the detailed comparison data.</p>"
               "<table><thead><tr><th>Metric</th><th>Annual change</th><th>Summed units</th>"
