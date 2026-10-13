@@ -8,8 +8,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/README.md",
-      "bytes": 15107,
-      "sha256": "6638f4e7a04a972f6b999555c0d4054874b6f7b207c158d1cc56fb3779fa3db1"
+      "bytes": 18578,
+      "sha256": "10436cecbcef44801d4ad4dc2b6e985d6c2d840e3813b40bdcc09fd924a882a4"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/analysis.mjs",
@@ -18,8 +18,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
-      "bytes": 3542,
-      "sha256": "8456edfb30bae40588ffd7d8da2e8f73bb9a557583f02d02475af8d192058337"
+      "bytes": 3799,
+      "sha256": "70119cbd8d0512ec79ca668f6e93ac7a391e1d8508f1752295e4a13e5ed3caba"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/csv.mjs",
@@ -42,19 +42,54 @@
       "sha256": "fdebec75860cbc442d999e4c0169f83bc08172529f56ac725ad5082f60c15cc2"
     },
     {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/README.md",
+      "bytes": 9311,
+      "sha256": "180157a26ce1849e8cc499cc4f854cf9bbbb226a5faa296eba39baa0488c77e5"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/analysis.mjs",
+      "bytes": 21617,
+      "sha256": "d3b135c30bd93c9ed74ece0334812e9c763049fd1eb621ff8539a71a549f7418"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/build.mjs",
+      "bytes": 3276,
+      "sha256": "87a8dd2db69ca4cfdd371d4332b5c0f372b29bf451812f434a2def04589b321b"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/inputs.mjs",
+      "bytes": 1978,
+      "sha256": "39e616886fc8c15fdfcc2b5701087737f402c3bf3e4c41fd67713d7a0ba7124c"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/observation-inputs.json",
+      "bytes": 18764,
+      "sha256": "83821480dcabdaf22425eb21bb6bdd7c1bfdd02bab6ec7693a9c5d3c64d2f3d9"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/outputs.mjs",
+      "bytes": 5594,
+      "sha256": "65e6dc6ea4669a9111e70c6c3e1ad159527efc1a992e7fa78f8f6401280cd102"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
+      "bytes": 15427,
+      "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+    },
+    {
       "path": "source/three-twenty-hydrologic-context-20261013/outputs.mjs",
-      "bytes": 3077,
-      "sha256": "eff10b860bfd16c7d248bbabc397867ee9755345cb368e3d9192dd54a1b809b1"
+      "bytes": 3121,
+      "sha256": "d4055f6ac86be9df8bb9773dc1646d42cde810a990fe99b8e7ecd7bf2bb0c121"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/package_study.mjs",
-      "bytes": 7755,
-      "sha256": "3426edcb03d0e912dae45c5ee6dcb6f3e83b8a10d9e250138c5f6aac49131756"
+      "bytes": 12453,
+      "sha256": "7adff0b0d4a93da6b697f7e8c9331de4810fd6efe75ac5c1addaf749d08a20a4"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-      "bytes": 36154,
-      "sha256": "544edfbc6e395de54786e80182c2436d813ea0c6a3ba17e76f348b73a42ea858"
+      "bytes": 40060,
+      "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
     }
   ]
 }
