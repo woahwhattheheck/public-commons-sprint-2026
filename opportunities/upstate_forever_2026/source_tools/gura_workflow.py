@@ -472,7 +472,6 @@ def status(args):
 
 def workflow(args):
     from source_tools import gura_comparison
-    needs_native = args.command == "run"
     state_path = args.source_directory / "gura-workflow.json"
     with operation_lock(args.source_directory):
         rebound = restore_workflow_paths(args)
@@ -496,7 +495,10 @@ def workflow(args):
             state.pop("error", None)
             atomic_json(state_path, state)
             identity = source_identity()
-            available = runtime(require_native=needs_native)
+            # Reopening completed native runs needs only the GIS/reporting stack.
+            # ComputeProgrammes.execute verifies the pinned native runtime for
+            # unfinished runs, after resolving their original retained bindings.
+            available = runtime()
             source_reference = args._retained_source_reference or args.source_reference or (
                 "retained-application-sha256:" + identity["sha256"])
             state.update(runtime=available, application=identity, source_reference=source_reference,
