@@ -407,7 +407,11 @@ CARRIER_FILES = 10000
 SOURCE_SCHEMAS = {
     "commons.source-bank/v1", "commons.source-text-bank/v1", "upstate.source-bank/v1",
     "commons.source-map/1", "upstate.source-files/v1", "commons.source-files.v1",
-    "upstate.complete-application-transport/v1",
+    "upstate.complete-application-transport/v1", "commons.complete-source/v1",
+}
+CARRIER_SCHEMAS = {
+    "commons.compressed-source-carrier/v1", "commons.artifact-base64/v1",
+    "commons.complete-source-gzip.v1", "commons.gzip-source-bank/v1",
 }
 
 
@@ -464,23 +468,32 @@ def _carrier_gzip(data):
 
 def _carrier_envelope(value):
     schema = value.get("schema")
-    if schema not in ("commons.compressed-source-carrier/v1", "commons.artifact-base64/v1"):
+    if schema not in CARRIER_SCHEMAS:
         raise ValueError("Unsupported encoded source carrier")
     if value.get("encoding") not in ("gzip+base64", "base64"):
         raise ValueError("Unsupported original carrier encoding")
-    if schema == "commons.compressed-source-carrier/v1" and value["encoding"] != "gzip+base64":
+    if schema != "commons.artifact-base64/v1" and value["encoding"] != "gzip+base64":
         raise ValueError("The compressed source carrier needs its original gzip")
+    required = {
+        "commons.complete-source-gzip.v1": ("bytes", "sha256", "gzip_bytes", "gzip_sha256"),
+        "commons.gzip-source-bank/v1": ("payload_bytes", "payload_sha256",
+                                       "compressed_bytes", "compressed_sha256"),
+    }.get(schema, ())
+    if any(field not in value for field in required):
+        raise ValueError("Retain the original carrier's complete compressed and decoded identities")
     fields = [key for key in ("data", "content_base64") if key in value]
     if len(fields) != 1:
         raise ValueError("Choose one complete encoded carrier body")
     encoded = _carrier_base64(value[fields[0]])
-    if ("gzip_bytes" in value) != ("gzip_sha256" in value):
-        raise ValueError("Retain both original gzip identity fields")
-    if "gzip_bytes" in value:
-        _carrier_check(encoded, value["gzip_bytes"], value["gzip_sha256"], "original gzip")
+    for size_key, hash_key in (("gzip_bytes", "gzip_sha256"),
+                               ("compressed_bytes", "compressed_sha256")):
+        if (size_key in value) != (hash_key in value):
+            raise ValueError("Retain both original compressed identity fields: " + size_key)
+        if size_key in value:
+            _carrier_check(encoded, value[size_key], value[hash_key], "original gzip")
     identities = []
     for size_key, hash_key in (("bytes", "sha256"), ("original_bytes", "original_sha256"),
-                               ("decoded_bytes", "decoded_sha256")):
+                               ("decoded_bytes", "decoded_sha256"), ("payload_bytes", "payload_sha256")):
         if (size_key in value) != (hash_key in value):
             raise ValueError("Retain both original bank identity fields: " + size_key)
         if size_key in value:
@@ -554,8 +567,7 @@ def _carrier_decode(data, depth=0, expected_sha256=None):
                     and sha(data) != expected_sha256 and sha(data[3:]) == expected_sha256):
                 return data[3:], {}
             return data, {}
-        if isinstance(value, dict) and value.get("schema") in (
-                "commons.compressed-source-carrier/v1", "commons.artifact-base64/v1"):
+        if isinstance(value, dict) and value.get("schema") in CARRIER_SCHEMAS:
             raw, declaration = _carrier_envelope(value)
             nested, _ = _carrier_decode(raw, depth + 1)
             if nested != raw:
@@ -806,7 +818,7 @@ def receive_carrier(carrier_path, output, *, application, workspace, expected_sh
     if len(encoded) > CARRIER_LIMIT:
         raise ValueError("Normalized complete source bank exceeds the receiving limit")
     result = {"schema": "commons.source-bank-receiving/v1", "state": "complete",
-              "operation_id": source.get("operation_id") or "source-" + sha(original),
+              "operation_id": source.get("operation_id") or source.get("operation") or "source-" + sha(original),
               "directory": str(output), "source": str(output / "source"),
               "file_count": len(inventory),
               "source_bytes": sum(len(data) for _, data, _ in inventory),
