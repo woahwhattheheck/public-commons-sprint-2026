@@ -10,6 +10,8 @@ from model import management_cases as management
 from model import published_management_cases as published_management
 from model import biophysical_evidence_authoring as authoring
 from model.common import describe_file, verify_file
+from profile_workbook_return import (ProfileWorkbookReturn, ACTIONS as WORKBOOK_ACTIONS,
+                                      READS as WORKBOOK_READS)
 
 CUSTOMER_ACTIONS = frozenset({"profile.customer_review.create", "profile.customer_review.apply"})
 BIOPHYSICAL_ACTIONS = frozenset({
@@ -18,19 +20,20 @@ BIOPHYSICAL_ACTIONS = frozenset({
 })
 AUTHORING_ACTIONS = frozenset({"profile.biophysical.authoring.save", "profile.biophysical.authoring.register"})
 MANAGEMENT_ACTIONS = frozenset({"profile.management.prepare", "profile.management.experiment.prepare"})
-ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS | MANAGEMENT_ACTIONS | AUTHORING_ACTIONS
+ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS | MANAGEMENT_ACTIONS | AUTHORING_ACTIONS | WORKBOOK_ACTIONS
 READS = frozenset({"catalog", "inspect", "table", "preview", "compare", "methods",
                    "customer-review-catalog", "customer-review-inspect", "customer-review-preview",
                    "biophysical-catalog", "biophysical-template", "biophysical-evidence-preview",
                    "biophysical-evidence-inspect", "biophysical-ranges-preview", "biophysical-ranges-inspect",
                    "biophysical-authoring-list", "biophysical-authoring-inspect", "biophysical-authoring-export",
-                   "management-catalog", "management-preview", "management-inspect", "management-published-preview"})
+                   "management-catalog", "management-preview", "management-inspect", "management-published-preview"}) | WORKBOOK_READS
 
 
 class ProfileWorkbench:
     def __init__(self, operator, fault):
         self.operator = operator
         self.Fault = fault
+        self.workbook_return = ProfileWorkbookReturn(operator, fault)
 
 
     def _customer_downloads(self, workspace_key, result):
@@ -111,6 +114,8 @@ class ProfileWorkbench:
         return result
 
     def read(self, workspace_key, operation, payload=None):
+        if operation in WORKBOOK_READS:
+            return self.workbook_return.read(workspace_key, operation, payload)
         ws = self.operator.ws(workspace_key)
         value = payload or {}
         if not isinstance(value, dict):
@@ -189,6 +194,8 @@ class ProfileWorkbench:
         return {"workspace_key": workspace_key, **result}
 
     def invoke(self, task):
+        if task.get("action") in WORKBOOK_ACTIONS:
+            return self.workbook_return.invoke(task)
         ws = self.operator.ws(task["workspace"])
         action = task["action"]
         if action == "profile.biophysical.authoring.save":
@@ -234,6 +241,8 @@ class ProfileWorkbench:
         raise self.Fault("PROFILE_ACTION", "Choose a supported profile operation.", 404)
 
     def decorate_task(self, task):
+        if task.get("action") in WORKBOOK_ACTIONS:
+            return self.workbook_return.decorate_task(task)
         if task.get("action") not in ACTIONS or not isinstance(task.get("result"), dict):
             return task
         value = deepcopy(task)
@@ -285,6 +294,7 @@ class ProfileWorkbench:
 
     def verify_all(self, workspace):
         return {**model.verify_all(workspace),
+                "workbook_returns": self.workbook_return.verify_all(workspace),
                 "customer_reviews": customer_review.verify_all(workspace),
                 "biophysical_evidence": evidence.verify_all(workspace),
                 "biophysical_authoring": authoring.verify_all(workspace),
