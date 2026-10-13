@@ -6,12 +6,19 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
+from urllib.parse import quote
 
 from model.common import describe_file
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
+# Interactive original reports use an opaque origin and cannot call the operator.
+REPORT_POLICY = ("sandbox allow-scripts allow-downloads allow-modals allow-popups "
+                 "allow-popups-to-escape-sandbox; default-src 'none'; "
+                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
+                 "connect-src 'none'; object-src 'none'; base-uri 'none'; "
+                 "form-action 'none'; frame-ancestors 'self'")
 
 
 class PublishedStudyProvider:
@@ -64,6 +71,8 @@ class PublishedStudyProvider:
             self.builtin / "wqp" / "flow-context-public-sources.json",
             self.builtin / "wqp_20261013" / "source-manifest.json",
             self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_observation_report.sources.json",
+            self.builtin.parent.parent / "eighteenmile_lake_paired_analysis.sources.json",
         )
         for manifest_path in manifests:
             if not manifest_path.is_file():
@@ -184,10 +193,45 @@ class PublishedStudyProvider:
 
     def _source_links(self, workspace_key, ws, store, result):
         record = result["record"]
+        prefix = "/api/file/published-study/" + "/".join(
+            quote(str(part), safe="") for part in (workspace_key, record["source_collection_id"])
+        ) + "/"
+        reports = []
         for artifact in result.get("source_artifacts", []):
             path, _ = store.source_file(record["study_id"], artifact["path"], record["version_id"])
             artifact["download"] = self._ticket(workspace_key, ws, path, artifact["path"])
+            artifact["member_url"] = prefix + quote(artifact["path"], safe="/")
+            if PurePosixPath(artifact["path"]).suffix.lower() in (".html", ".htm"):
+                artifact["preview_url"] = artifact["member_url"]
+                reports.append({
+                    "path": artifact["path"], "url": artifact["preview_url"],
+                    "download": artifact["download"], "sha256": artifact["sha256"],
+                    "bytes": artifact["bytes"],
+                })
+        result["retained_reports"] = reports
         return result
+
+    def member(self, workspace_key, collection_id, member_path):
+        """Open exact original report members through the existing file transport."""
+        if not re.fullmatch(r"[0-9a-f]{64}", collection_id or ""):
+            self._fail("STUDY_COLLECTION", "Choose a retained study source collection.", 404)
+        ws, store = self._store(workspace_key)
+        try:
+            records = [
+                record for record in store.list_studies()["studies"]
+                if record.get("source_collection_id") == collection_id
+            ]
+            if len(records) != 1:
+                self._fail("STUDY_COLLECTION", "That retained study source collection is unavailable.", 404)
+            record = records[0]
+            # source_file accepts only registered inventory members and verifies
+            # their original content-addressed bodies before issuing the ticket.
+            path, _ = store.source_file(record["study_id"], member_path, record["version_id"])
+            return self._ticket(workspace_key, ws, path, member_path), REPORT_POLICY
+        except KeyError as error:
+            self._fail("STUDY_MEMBER", str(error), 404)
+        except (ValueError, OSError) as error:
+            self._fail("STUDY_SOURCE", str(error))
 
     def read(self, workspace_key, operation, payload):
         payload = payload or {}
