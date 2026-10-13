@@ -1,0 +1,151 @@
+{
+  "schema": "commons.original-public-source-receiving.v1",
+  "operation": "ECO-7F24-USGS-02186702-2026-SOURCE-814B-20261013",
+  "original_request": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791910161403349?thread_ts=1791724121.853269",
+  "source_claim": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791910738174909?thread_ts=1791724121.853269",
+  "state": "complete-original-provider-bodies-received; native-capture-not-run",
+  "transport": "Notion source_url import of direct first-party HTTPS; complete UTF-8 download_attachment readback",
+  "requested_selection": {
+    "monitoring_location_id": "USGS-02186702",
+    "start": "2026-01-01",
+    "end": "2026-10-12",
+    "parameter_code": "00060",
+    "statistic_id": "00003",
+    "time_series_id": "01502f5ee3204cb3a6b5fb14ef0895de"
+  },
+  "received_and_inspected_at": "2026-10-13 17:06:21 UTC",
+  "sources": [
+    {
+      "role": "metadata",
+      "filename": "USGS_02186702_2026_metadata.json",
+      "file_upload_id": "3f8dd772-3100-8104-8663-00b249eec6e7",
+      "request_url": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/time-series-metadata/items?f=json&limit=1000&monitoring_location_id=USGS-02186702&parameter_code=00060&statistic_id=00003",
+      "bytes": 2640,
+      "sha256": "9a84075e2284a5353fe5d644e5f09e3aa8e3cd448f6521c03d53cae1cba5bd3f",
+      "provider_timestamp": "2026-10-13T16:59:41.890582Z",
+      "request_started_before": "2026-10-13 16:59:15 UTC",
+      "request_finished_after": null,
+      "http_status": null,
+      "response_headers": null,
+      "provider_features": 1,
+      "pagination_next": []
+    },
+    {
+      "role": "station",
+      "filename": "USGS_02186702_2026_station.json",
+      "file_upload_id": "3f8dd772-3100-81a9-85e7-00b2cc43179f",
+      "request_url": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/monitoring-locations/items?f=json&limit=1000&id=USGS-02186702",
+      "bytes": 3610,
+      "sha256": "49109fb908d00e307ec4caf3581dd6567e71a4f840d1db4549ad6e01d1d669e5",
+      "provider_timestamp": "2026-10-13T16:59:38.428151Z",
+      "request_started_before": "2026-10-13 16:59:15 UTC",
+      "request_finished_after": null,
+      "http_status": null,
+      "response_headers": null,
+      "provider_features": 1,
+      "pagination_next": []
+    },
+    {
+      "role": "daily",
+      "filename": "USGS_02186702_2026_daily.json",
+      "file_upload_id": "3f8dd772-3100-8114-a291-00b28960a528",
+      "request_url": "https://api.waterdata.usgs.gov/ogcapi/v1/collections/daily/items?f=json&limit=1000&time_series_id=01502f5ee3204cb3a6b5fb14ef0895de&datetime=2026-01-01%2F2026-10-12&parameter_code=00060&statistic_id=00003",
+      "bytes": 188957,
+      "sha256": "32e3223041700e3412df7de9a9ac49a868867d9339b4cc43ad67fdf0cbef73be",
+      "provider_timestamp": "2026-10-13T17:03:31.366210Z",
+      "request_started_before": "2026-10-13 17:03:07 UTC",
+      "request_finished_after": "2026-10-13 17:03:31 UTC",
+      "http_status": null,
+      "response_headers": null,
+      "provider_features": 285,
+      "pagination_next": []
+    }
+  ],
+  "observed_profile": {
+    "count": 285,
+    "uniqueIDs": 285,
+    "uniqueDates": 285,
+    "first": "2026-01-01",
+    "last": "2026-10-12",
+    "missing": [],
+    "extra": [],
+    "values": {
+      "monitoring_location_id": [
+        "USGS-02186702"
+      ],
+      "parameter_code": [
+        "00060"
+      ],
+      "statistic_id": [
+        "00003"
+      ],
+      "time_series_id": [
+        "01502f5ee3204cb3a6b5fb14ef0895de"
+      ],
+      "unit_of_measure": [
+        "ft^3/s"
+      ],
+      "approval_status": [
+        "Provisional"
+      ],
+      "qualifier": [
+        null,
+        [
+          "ESTIMATED"
+        ]
+      ]
+    },
+    "oct12": {
+      "type": "Feature",
+      "properties": {
+        "time_series_id": "01502f5ee3204cb3a6b5fb14ef0895de",
+        "monitoring_location_id": "USGS-02186702",
+        "parameter_code": "00060",
+        "statistic_id": "00003",
+        "time": "2026-10-12",
+        "value": "89.5",
+        "unit_of_measure": "ft^3/s",
+        "approval_status": "Provisional",
+        "qualifier": null,
+        "last_modified": "2026-10-13T07:04:39.795751+00:00"
+      },
+      "id": "09c757f0-6c09-4e31-8856-f9d0174b87ff",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.8005555555555,
+          34.645
+        ]
+      }
+    },
+    "estimated_observation_dates": [
+      "2026-07-31",
+      "2026-08-01"
+    ]
+  },
+  "source_discrepancy": {
+    "series_metadata_end": "2026-10-11T04:00:00+00:00",
+    "daily_last_date": "2026-10-12",
+    "resolution": "Both original bodies preserved unchanged. Daily response has every requested date. No invented correction to metadata."
+  },
+  "limitations": [
+    "Notion does not expose actual origin HTTP status, headers, content encoding, redirect result or exact origin retrieval instant; these remain unknown, not inferred from successful file upload.",
+    "Provider timeStamp is a field in the original body, not the HTTP Date header.",
+    "This receipt records original-source receiving and full-body inspection only. It is not an upstate.usgs-flow capture manifest, Measurements import, reconciliation result or scientific validation.",
+    "The three source requests were sequential/parallel individual provider observations, not one atomic server snapshot."
+  ],
+  "maintained_engine": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "path": "opportunities/upstate_forever_2026/source_tools/usgs_flow.py",
+    "git_blob": "ea3901b75c7eaaca9768484e1d710ac29fdf5e02",
+    "edition": "upstate.usgs-flow/1.0.0",
+    "utf8_bytes": 45230,
+    "sha256": "24416b42a4bb79c06e756d6774ffc5d2759186f4f01b1bfc1ea48d65a7dbb8d7"
+  },
+  "owner_direction": {
+    "path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.4",
+    "git_blob": "bf68e73cc2819cfc807c40d3015644f3b8699e38",
+    "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
+  }
+}
