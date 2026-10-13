@@ -435,6 +435,10 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
     fieldwork = bind_campaign(ws, receipt, output)
     if fieldwork is not None:
         value["fieldwork_receiving"] = fieldwork
+    from source_tools.simulated_qc_comparison_recording import bind_comparison
+    qc_comparison = bind_comparison(ws, receipt, output)
+    if qc_comparison is not None:
+        value["qc_comparison_receiving"] = qc_comparison
     # Use the maintained validator, preserving its current input contract.
     sys.path.insert(0, str(APP / "operator"))
     from rehearsal_receiving import validate
@@ -511,6 +515,12 @@ def retain_rehearsal_interruption(args, error, result):
                 "operation_id", "original_review_id", "response_id",
                 "planning_handback_id", "revised_review_id", "handback_id")
             if name in customer}
+    comparison = frozen.get("qc_comparison")
+    if isinstance(comparison, dict):
+        checkpoint["qc_comparison_ids"] = {
+            name: comparison[name] for name in (
+                "operation_id", "field_operation_id", "plan_id",
+                "comparison_report_id", "comparison_id") if name in comparison}
     checkpoint["retained_progress"] = [
         {"path": str(path.relative_to(output)), "bytes": path.stat().st_size,
          "sha256": file_digest(path)}

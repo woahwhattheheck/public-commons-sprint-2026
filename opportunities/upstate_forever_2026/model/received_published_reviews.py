@@ -86,4 +86,8 @@ def augment(closure, retained, result):
             "report_ids": [row["id"] for row in result.get("reports", [])
                            if source in row.get("source_choices", [])],
         })
+    from . import published_review_admission
+    for row in result["published_reviews"]:
+        row["local_admissions"] = published_review_admission.list_admissions(
+            closure.workspace, study_id=result["id"], source=row["source"])
     return result

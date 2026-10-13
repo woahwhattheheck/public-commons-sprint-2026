@@ -10,7 +10,7 @@ const canonical=x=>JSON.stringify(x,(_,v)=>v&&typeof v==="object"&&!Array.isArra
 const identity=(path,body)=>({path,bytes:bytes(body).length,sha256:sha(body)});
 const ROOT="source/usgs-southeast-sparrow-2012/";
 const DISPLAY="annual-reference-display-geometry.geojson";
-const OPTIONS={actionLabel:"Select annual reference basin",pointLabel:"original NLDI reach start vertex used as label anchor",featureLabel:"retained reference footprints",mapLabel:"Original annual-reference catchment footprints",width:900,height:600,labelSize:16};
+const OPTIONS={actionLabel:"Select annual reference basin",pointLabel:"original NLDI reach start vertex used as label anchor",featureLabel:"retained reference footprints",mapLabel:"Original annual-reference catchment footprints",width:900,height:600,labelSize:16,separateCoincidentLabels:true};
 export const ANNUAL_MAP_EDITION="original-annual-basin-footprints-v1";
 
 function project(position) {
@@ -160,7 +160,7 @@ function annualMapBrowser() {
   if(!root)return;
   try {
     const context=JSON.parse(el("annual-basin-data").textContent), saved=JSON.parse(el("annual-basin-state").textContent||"null");
-    const options={actionLabel:"Select annual reference basin",pointLabel:"original NLDI reach start vertex used as label anchor",featureLabel:"retained reference footprints",mapLabel:"Original annual-reference catchment footprints",width:900,height:600,labelSize:16};
+    const options={actionLabel:"Select annual reference basin",pointLabel:"original NLDI reach start vertex used as label anchor",featureLabel:"retained reference footprints",mapLabel:"Original annual-reference catchment footprints",width:900,height:600,labelSize:16,separateCoincidentLabels:true};
     const select=el("annual-map-select"),focus=el("annual-map-focus"),review=el("annual-map-excluded");
     if(saved&&context.basins.some(b=>b.site===saved.selected)){select.value=saved.selected;focus.checked=!!saved.focus;review.checked=!!saved.review;}
     function draw(){

@@ -14,6 +14,8 @@ Retrieved October 13, 2026.
 - src/store/features/rainfallThunks.js, blob e2093a17ccdbd87fdcee3faf1cfc6a040d5c1388: POST fields, same-job polling, artifact refresh and inline fallback.
 - src/results/engine.js, blob 9979354e865744b5397535ba8d025bb3635950e4: current row/columnar result ingestion and native end-label convention.
 - src/components/sidebar/downloadTableUtils.js and src/store/utils/dateTime.js at the same pinned commit: exported time handling.
+- src/store/utils/transformers.js, blob 4babc16d055494395775d475d4c18d7cb701ef19, and src/components/sidebar/geomPicker.jsx, blob c4cb0732fded825b12b47fcd345ca01878721eb6: active gauge web_id selection used by the actual request.
+- Full observed availability and gauge response packet: source/20261013/publisher-selection.json. Original URLs are https://atlas.3riverswetweather.org/rainfall/v2/latest-observations/?format=json and https://atlas.3riverswetweather.org/rainfall/gauges/. The public HTTPS importer returned complete bytes but did not expose HTTP status or response headers; the packet preserves that distinction.
 - Older API documentation: https://3rww.github.io/api-docs/
   Used to interpret source codes. Its planned/v1 routes are not used as the current live contract.
 

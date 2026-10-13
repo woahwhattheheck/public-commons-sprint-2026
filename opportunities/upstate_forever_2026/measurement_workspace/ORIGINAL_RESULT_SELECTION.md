@@ -18,6 +18,12 @@ Every selector includes `original_source_path`, `original_source_sha256`, `sourc
 
 The reader requires distinct original result IDs and source-row identities across the complete cohort, rejects unknown or duplicate selectors, and checks chosen dates and both counts. It returns chosen rows in the full original source order. Values, units, qualifiers, raw cells, Activity joins and reporting-limit records remain those of the original rows.
 
+## Agreeing results from the same activity
+
+A study can explicitly declare `observation_statistic_basis: "agreeing_original_activity_characteristic/v1"`. The observed result table and original-cell exports retain every selected ResultIdentifier. Statistical summaries give one weight to each station/project/activity/characteristic only after all original raw cells agree except ResultIdentifier and ResultDetectionQuantitationLimitUrl, and normalized numerical, unit, censor, method, depth, date and activity support agree. Conflicting repeated values are rejected for this declared basis.
+
+The desk shows original result and measurement counts separately. Quantified means/sample SD and supported concentration intervals use the measurement cohort. The selected report ZIP includes `activity-weighted-measurements-selected.csv`, whose rows retain all original result IDs and source selectors in each group. Structured context retains both the original rows and statistical rows. Studies without the explicit basis keep their existing inclusion rules.
+
 ## Composition and export
 
 The existing observation reader retains this selector through `observation_files`; include it in the study's complete inventory and native manifest companions so source export and cold reopening preserve the same selected cohort. A study declares either this result selection or the existing microbial `observation-selection.json`; declaring both is rejected as ambiguous. The microbial exported-review contract remains unchanged.

@@ -1,6 +1,7 @@
 // MIT. Add review rounds to the existing SCF reader and installed browser assets.
 export const REVIEW_ROUND_OPERATION = 'SCF-SUBMISSION-REVIEW-ROUND-7108-20261012';
 export const REVIEW_ROUND_ROUTES = [
+  ['/grant-review-working-copy.mjs',['grant-review-working-copy.mjs','text/javascript; charset=utf-8']],
   ['/grant-review-round.html',['grant-review-round.html','text/html; charset=utf-8']],
   ['/grant-review-round.css',['grant-review-round.css','text/css; charset=utf-8']],
   ['/grant-review-round-core.mjs',['grant-review-round-core.mjs','text/javascript; charset=utf-8']],
@@ -18,8 +19,9 @@ export function attachGrantReviewRounds({templateHtml,sourceIndex}){
     application_sha256:index.application.sha256,application_git_blob:index.application.git_blob,
     draft_schema:'stellar-forge.grant-submission-draft.v1',draft_export_schema:'stellar-forge.grant-submission-export.v1',
     review_schema:'stellar-forge.grant-review-round.v1',review_export_schema:'stellar-forge.grant-review-round-export.v1',
+    working_schema:'stellar-forge.grant-review-working-copy.v1',working_export_schema:'stellar-forge.grant-review-working-export.v1',
     operation:REVIEW_ROUND_OPERATION,
-    guide:'https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS.md',
+    guide:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar-forge/developer-site/GRANT_REVIEW_ROUNDS.md',
   };
   return {templateHtml:html,sourceIndex:index};
 }

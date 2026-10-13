@@ -329,11 +329,12 @@ def _html(value):
     esc = lambda item: html.escape(str(item if item is not None else ""), quote=True)
     blocks = ['<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">',
         "<title>" + esc(value["title"]) + "</title>",
-        "<style>body{font:15px/1.5 system-ui,sans-serif;color:#171717;background:white;max-width:1150px;"
+        "<style>*{box-sizing:border-box}body{font:15px/1.5 system-ui,sans-serif;color:#171717;background:white;max-width:1150px;overflow-wrap:anywhere;"
         "margin:30px auto;padding:0 18px}table{border-collapse:collapse;width:100%;font-size:12px}"
         "th,td{border:1px solid #999;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}"
-        "pre{white-space:pre-wrap;overflow-wrap:anywhere}section{border-top:2px solid #777;margin-top:25px}"
-        "@media print{body{margin:0;max-width:none}thead{display:table-header-group}tr{break-inside:avoid}"
+        "th{overflow-wrap:normal}pre{white-space:pre-wrap;overflow-wrap:anywhere}section{border-top:2px solid #777;margin-top:25px}"
+        ".table-wrap{max-width:100%;overflow-x:auto}@media(max-width:620px){.table-wrap table{min-width:560px}.table-wrap th,.table-wrap td{min-width:85px}}"
+        "@media print{body{margin:0;max-width:none}.table-wrap{overflow:visible}.table-wrap table,.table-wrap th,.table-wrap td{min-width:0}thead{display:table-header-group}tr{break-inside:avoid}"
         "button{display:none}details{display:block}details>*{display:block}}</style>",
         "<button onclick='window.print()'>Print complete review</button><h1>" + esc(value["title"]) + "</h1>",
         "<p>" + esc(NOTICE) + "</p><p>Plan " + esc(value["plan_id"]) + " / saved revision " +
@@ -356,7 +357,7 @@ def _html(value):
             blocks.append("<p><strong>Original source context differs from the selected saved revision.</strong> "
                           "The decision retains its original QC basis.</p><pre>" +
                           esc(json.dumps(entry["source_changes"], indent=2, ensure_ascii=False)) + "</pre>")
-        blocks.append("<h3>Linked native tasks at this revision</h3><table><thead><tr>" +
+        blocks.append("<h3>Linked native tasks at this revision</h3><div class='table-wrap' tabindex='0' role='region' aria-label='Linked native tasks'><table><thead><tr>" +
                       "".join("<th>" + title + "</th>" for title in
                               ("Task", "Title", "Assignee", "Status", "Progress", "Evidence")) +
                       "</tr></thead><tbody>")
@@ -364,7 +365,7 @@ def _html(value):
             cells = (task["id"], task.get("title", "Missing from this revision"), task.get("assignee", ""),
                      task.get("status", "missing"), task.get("progress_pct"), ", ".join(task.get("evidence_refs", [])))
             blocks.append("<tr>" + "".join("<td>" + esc(cell) + "</td>" for cell in cells) + "</tr>")
-        blocks.append("</tbody></table><h3>Complete decision history</h3>")
+        blocks.append("</tbody></table></div><h3>Complete decision history</h3>")
         for event in entry["history"]:
             blocks.append("<h4>" + esc(event["as_of"]) + " / " + esc(event["actor"]) + " / " +
                           esc(event["decision"]) + " / " + esc(event["state"]) + "</h4><pre>" +

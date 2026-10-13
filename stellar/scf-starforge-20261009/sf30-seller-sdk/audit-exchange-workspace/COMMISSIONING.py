@@ -240,6 +240,9 @@ class Case:
             raise RuntimeError("; ".join(errors))
 
     def archive(self, status):
+        for pid in getattr(self, "rendered_process_groups", []):
+            need(not rendered_group_alive(pid),
+                 "Keep the original case until its rendered browser and native readers have all drained.")
         # A still-running original native process keeps its own input/output lease.
         for lock in self.root.glob("workspaces/*/native-analysis/*/operation.lock"):
             fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW)
@@ -308,14 +311,25 @@ class Host:
             try:
                 current = self.state()
                 identity = self.http("/api/identity")[1]
+            except (OSError, urllib.error.URLError):
+                self.connection = None
+            else:
                 need(identity == self.connection and current["workspaceId"] == self.connection["workspaceId"],
                      "The existing native listener's exact identity changed.")
                 self.process_identity = saved["process"]
                 self.owned_here = False
+                command = self.process_identity.get("command")
+                need(isinstance(command, list) and len(command) >= 2 and isinstance(command[1], str),
+                     "Retain the recorded original listener's complete application launch command.")
+                same_application = Path(command[1]).resolve() == (self.application / "application.py").resolve()
                 case.hosts.append(self)
-                return
-            except (OSError, urllib.error.URLError):
-                self.connection = None
+                if same_application:
+                    return
+                # Preserve and close the exact surviving old listener before
+                # serving an explicitly adopted immutable source generation.
+                # Cleanup errors stay visible; they cannot enter the new launch.
+                atomic(case.root / "hosts" / "history" / name / (sha(raw_json(saved)) + ".json"), raw_json(saved))
+                self.close()
         self.log_path = case.root / "logs" / (name + "-server.log")
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.log = self.log_path.open("ab", buffering=0)
@@ -326,7 +340,8 @@ class Host:
                                         stdout=subprocess.PIPE, stderr=self.log, start_new_session=True)
         self.process_identity = {"pid": self.process.pid, "command": command, "start": self.process_start(self.process.pid)}
         self.owned_here = True
-        case.hosts.append(self)
+        if self not in case.hosts:
+            case.hosts.append(self)
         selector = selectors.DefaultSelector()
         selector.register(self.process.stdout, selectors.EVENT_READ)
         try:
@@ -580,6 +595,22 @@ def browser_journey(case, host, combined):
          outcome["status"] == "passed", "The original full operator journey has not completed.")
     return outcome
 
+
+def initial_lda_handover(case, host):
+    """Deliver the original full case before its potentially long native models."""
+    exported = case.mutation(host, "lda-initial-full-workspace", "export.create", {
+        "kind": "workspace", "actor": case.operator,
+        "note": "Receive the complete original Audit workspace in LDA before the original native model continuation."})
+    path, raw = case.download(host, exported, "Complete_Audit_LDA_Initial_Workspace.zip")
+    _, members = package(raw)
+    result = {"format": "commons.audit-exchange.lda-source.v1", "operation": OPERATION,
+              "workspaceId": host.connection["workspaceId"], "path": str(path),
+              "bytes": len(raw), "sha256": sha(raw), "exportId": exported["id"], "members": len(members)}
+    atomic(case.root / "handoff" / "lda-initial-workspace.json", raw_json(result))
+    emit({"stage": "ORIGINAL_COMPLETE_LDA_INITIAL_WORKSPACE_READY", **result})
+    return result
+
+
 def projection_handoff(case, host, browser):
     exported = host.read("export.get", {"exportId": browser["projection"]["exportId"]})
     path, raw = case.download(host, exported, "Complete_Audit_Turnover_Projection.zip")
@@ -646,7 +677,7 @@ def native_analysis(case, host, browser, resume_label=None):
     outputs = []
     for item in row["outputs"]:
         export = host.read("export.get", {"exportId": item["id"]})
-        path, raw = case.download(host, export, "native/" + safe_name(item["name"]).name)
+        path, raw = case.download(host, export, "native/" + safe_name(item["name"]).as_posix())
         outputs.append({"id": export["id"], "name": item["name"], "path": str(path),
                         "sha256": sha(raw), "bytes": len(raw)})
     need(outputs, "Retain the actual native model outputs with their full input and model outcomes.")
@@ -797,6 +828,432 @@ def receiving_chain(case, host, browser):
 def second_state_id(host):
     return read_json(host.startup_file)["startup"]["workspaceId"]
 
+
+
+def rendered_group_alive(pid):
+    try:
+        os.killpg(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+
+def stop_rendered_group(child):
+    """Drain this owned browser session and its inherited native-reader lifetime."""
+    if rendered_group_alive(child.pid):
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(child.pid, signal.SIGTERM)
+    try:
+        child.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        pass
+    if rendered_group_alive(child.pid):
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(child.pid, signal.SIGKILL)
+    child.wait(timeout=30)
+    deadline = time.monotonic() + 30
+    while rendered_group_alive(child.pid):
+        need(time.monotonic() < deadline,
+             "Retain the original case until its same rendered native-reader process group has drained.")
+        time.sleep(.1)
+
+
+def rendered_source_inventory(application):
+    names = sorted(set(read_json(application / "SOURCE_FILES.json")["files"] + ["SOURCE_FILES.json"]))
+    rows = []
+    for name in names:
+        path = application / safe_name(name)
+        need(path.is_file() and not path.is_symlink(), "Open the complete actual served application: " + name)
+        body = path.read_bytes()
+        rows.append({"path": name, "bytes": len(body), "sha256": sha(body)})
+    return {"sha256": sha(raw_json(rows)), "files": rows}
+
+
+def run_browser_continuation(case, command, attempt, document, role):
+    """Keep the original controller in the browser and each synchronous native reader."""
+    invocation = {"format": FORMAT, "operation": OPERATION, "role": role,
+                  "startedAt": now(), "command": command, "inputSha256": sha(raw_json(document)),
+                  "sourceSha256": document["sourceSha256"], "servedSourceSha256": document["servedSourceSha256"],
+                  "browserSourceSha256": sha((case.application / "BROWSER_COMMISSIONING.mjs").read_bytes()),
+                  "timeoutSeconds": 3600}
+    atomic(attempt / "invocation.json", raw_json(invocation))
+    child, failure = None, None
+    log = attempt / "native-output.log"
+    try:
+        with log.open("ab", buffering=0) as output:
+            child = subprocess.Popen(command, cwd=case.application, stdout=output, stderr=subprocess.STDOUT,
+                                     env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"), start_new_session=True,
+                                     pass_fds=(case.guard,))
+            case.rendered_process_groups = getattr(case, "rendered_process_groups", []) + [child.pid]
+            atomic(attempt / "process.json", raw_json({"pid": child.pid, "start": Host.process_start(child.pid),
+                                                       "startedAt": now(), "command": command}))
+            try:
+                child.wait(timeout=3600)
+                if rendered_group_alive(child.pid):
+                    stop_rendered_group(child)
+            except subprocess.TimeoutExpired as error:
+                failure = error
+                stop_rendered_group(child)
+    except BaseException as error:
+        failure = error
+        if child is not None:
+            stop_rendered_group(child)
+    finally:
+        if child is not None and child.poll() is not None and not rendered_group_alive(child.pid):
+            case.rendered_process_groups.remove(child.pid)
+        observed = log.read_bytes() if log.exists() else b""
+        outcome = {"format": FORMAT, "operation": OPERATION, "role": role,
+                   "finishedAt": now(), "returncode": child.poll() if child else None,
+                   "started": child is not None, "logBytes": len(observed), "logSha256": sha(observed),
+                   "errorType": type(failure).__name__ if failure else None, "error": str(failure) if failure else None}
+        atomic(attempt / "outcome.json", raw_json(outcome))
+        emit({"stage": "ORIGINAL_BROWSER_CONTINUATION_RETURNED", **outcome})
+    if failure:
+        raise RuntimeError("Continue the same original browser case from " + str(attempt / "outcome.json")) from failure
+    need(outcome["returncode"] == 0, "Open the actual original continuation failure: " + str(attempt / "outcome.json"))
+    return outcome
+
+
+def render_final_host(case, host, role, shared_source_id, shared_revision_id):
+    """Use this same case's existing read/download controls, retaining every attempt."""
+    state = host.state()
+    source = read_json(case.root / "active-source.json")
+    served = rendered_source_inventory(host.application)
+    root = case.root / "rendered" / source["sha256"] / role
+    root.mkdir(parents=True, exist_ok=True)
+    selection = {"format": "commons.audit-exchange.rendered-selection.v1", "operation": OPERATION,
+                 "role": role, "workspaceId": state["workspaceId"], "version": state["version"],
+                 "sourceSha256": source["sha256"], "servedSourceSha256": served["sha256"],
+                 "sharedSourceId": shared_source_id, "sharedRevisionId": shared_revision_id,
+                 "exports": [{"id": row["id"], "name": row["name"], "bytes": row["bytes"], "sha256": row["sha256"]}
+                             for row in state["exports"]]}
+    identity = sha(raw_json(selection))
+    selected = root / identity
+    selected.mkdir(parents=True, exist_ok=True)
+    atomic(selected / "selection.json", raw_json(selection))
+    atomic(selected / "served-application.json", raw_json(served))
+    # A complete unchanged capture is reusable. Direct producer viewing of those
+    # same retained screens does not require another browser run.
+    for prior_path in sorted(selected.glob("capture-*.json"), reverse=True):
+        prior = read_json(prior_path)
+        need(prior["workspaceId"] == state["workspaceId"] and prior["version"] == state["version"] and
+             prior["sourceSha256"] == source["sha256"] and prior["servedSourceSha256"] == served["sha256"],
+             "Retain the original final rendered selection.")
+        previous = Path(prior["directory"])
+        captured = read_json(previous / "rendered-capture.json")
+        for row in captured["captures"]:
+            data = (previous / safe_name(row["path"])).read_bytes()
+            need(len(data) == row["bytes"] and sha(data) == row["sha256"], "The retained actual screen differs.")
+        for row in captured["downloads"]:
+            data = Path(row["path"]).read_bytes()
+            need(len(data) == row["bytes"] and sha(data) == row["sha256"], "The retained opened attachment differs.")
+        emit({"stage": "ORIGINAL_COMPLETE_RENDERING_REUSED", **prior})
+        return prior
+    attempts = selected / "attempts"
+    attempts.mkdir(parents=True, exist_ok=True)
+    number = max((int(path.name) for path in attempts.iterdir() if path.is_dir() and path.name.isdigit()), default=0) + 1
+    attempt = attempts / ("%04d" % number)
+    attempt.mkdir()
+    document = {**selection, "format": "commons.audit-exchange.rendered-input.v1",
+                "url": host.connection["url"], "instanceId": host.connection["instanceId"],
+                "operator": case.operator, "directory": str(attempt),
+                "sharedOriginalSha256": FIXTURES["shared"][2], "browser": case.inputs.get("browser", {}),
+                "pythonExecutable": sys.executable, "pythonCourse": str(case.application / "COMMISSIONING.py"),
+                "controllerFD": case.guard, "controllerLock": str(case.root / "operation.lock")}
+    wire = attempt / "input.json"
+    atomic(wire, raw_json(document))
+    node = os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node")
+    need(node, "Use the existing installed Node and actual browser for final case rendering.")
+    command = [node, str(case.application / "BROWSER_COMMISSIONING.mjs"), "--render", str(wire)]
+    run_browser_continuation(case, command, attempt, document, role)
+    captured = read_json(attempt / "rendered-capture.json")
+    need(captured["operation"] == OPERATION and captured["workspaceId"] == state["workspaceId"] and
+         captured["version"] == state["version"] and captured["sourceSha256"] == source["sha256"] and
+         captured["servedSourceSha256"] == served["sha256"] and
+         captured["status"] == "captured-awaiting-producer-view",
+         "The full rendered result must identify the exact original case and both source editions.")
+    for row in captured["captures"]:
+        body = (attempt / safe_name(row["path"])).read_bytes()
+        need(sha(body) == row["sha256"] and len(body) == row["bytes"], "Retain the complete actual rendered screen.")
+    result = {"role": role, "workspaceId": state["workspaceId"], "version": state["version"],
+              "sourceSha256": source["sha256"], "servedSourceSha256": served["sha256"],
+              "directory": str(attempt), "capturePath": str(attempt / "rendered-capture.json"),
+              "openPath": str(attempt / "OPEN.html"), "captureCount": len(captured["captures"]),
+              "downloadCount": len(captured["downloads"]), "openedCount": len(captured["opened"]),
+              "status": captured["status"]}
+    atomic(selected / ("capture-" + str(number).zfill(4) + ".json"), raw_json(result))
+    return result
+
+
+def colleague_return_continuation(case, author, browser, received):
+    """A complete colleague exchange within the existing two received workspaces."""
+    root = case.root / "colleague-return"
+    root.mkdir(parents=True, exist_ok=True)
+    application = case.root / "received-application"
+    recipient = Host(case, "recipient-two", application)
+    need(recipient.connection["workspaceId"] == received["receivedCliWorkspaceId"],
+         "The colleague continues the same original independently received workspace.")
+    selection_path = root / "original-selection.json"
+    if selection_path.exists():
+        selection = read_json(selection_path)
+    else:
+        original = author.read("source.get", {"sourceId": browser["patched"]["sourceId"],
+                                               "revisionId": browser["patched"]["revisionId"]})
+        colleague_sources = [row for row in recipient.state()["sources"]
+                             if row["originalSha256"] == FIXTURES["shared"][2]]
+        need(len(colleague_sources) == 1, "Select the single original shared-system source in the second receiving.")
+        colleague = recipient.read("source.get", {"sourceId": colleague_sources[0]["id"]})
+        def field_for(detail, building_id):
+            matches = [row for row in detail["model"]["entities"]
+                       if row["semanticKind"] == "building" and row["xmlId"] == building_id]
+            need(len(matches) == 1, "Use the actual original BuildingSync building identity.")
+            fields = [row for row in detail["model"]["fields"]
+                      if row["entityKey"] == matches[0]["key"] and row["name"] == "PremisesName"
+                      and row["kind"] == "text" and row["editable"]]
+            need(len(fields) == 1, "The actual native building name must identify one editable field.")
+            return fields[0]
+        original_field, colleague_field = field_for(original, "Building2"), field_for(colleague, "Building1")
+        systems = [row for row in colleague["model"]["entities"] if row["semanticKind"] == "system"
+                   and row["kind"] == "HVACSystem" and len(row["buildingKeys"]) == 2]
+        need(len(systems) == 1, "Keep the original cooling system's explicit two-building association.")
+        def selected(field, suffix):
+            return {"path": field["path"], "kind": field["kind"], "attributeName": field.get("attributeName"),
+                    "expected": field["value"], "value": field["value"] + suffix}
+        selection = {"format": "commons.audit-exchange.colleague-selection.v1", "operation": OPERATION,
+                     "authorWorkspaceId": author.connection["workspaceId"],
+                     "colleagueWorkspaceId": recipient.connection["workspaceId"],
+                     "original": {"sourceId": original["source"]["id"], "baselineRevisionId": original["revision"]["id"],
+                                  "field": selected(original_field, " - author coordination")},
+                     "colleague": {"sourceId": colleague["source"]["id"], "baselineRevisionId": colleague["revision"]["id"],
+                                   "field": selected(colleague_field, " - colleague review"),
+                                   "reviewEntityKey": systems[0]["key"], "reviewXmlId": systems[0]["xmlId"]}}
+        atomic(selection_path, raw_json(selection))
+    need(selection["operation"] == OPERATION and selection["authorWorkspaceId"] == author.connection["workspaceId"] and
+         selection["colleagueWorkspaceId"] == recipient.connection["workspaceId"],
+         "Preserve both original workspaces and the complete selected field edits.")
+    original, colleague = selection["original"], selection["colleague"]
+    changed_colleague = case.mutation(recipient, "colleague-shared-building-correction", "source.patch", {
+        "sourceId": colleague["sourceId"], "expectedRevisionId": colleague["baselineRevisionId"],
+        "patches": [colleague["field"]], "actor": case.operator,
+        "note": "Record the colleague's first-building name correction on the original shared-system audit."})
+    reviewed = case.mutation(recipient, "colleague-shared-cooling-review", "review.save", {
+        "sourceId": colleague["sourceId"], "revisionId": changed_colleague["revisionId"],
+        "entityKey": colleague["reviewEntityKey"], "title": "Preserve the shared cooling service to both buildings",
+        "status": "investigating", "note": "The original cooling HVAC system explicitly links Building1 and Building2. Retain both native associations while accepting the first-building naming correction.",
+        "assignee": case.operator, "dueDate": "", "evidence": [], "actor": case.operator})
+    changed_original = case.mutation(author, "author-shared-building-correction", "source.patch", {
+        "sourceId": original["sourceId"], "expectedRevisionId": original["baselineRevisionId"],
+        "patches": [original["field"]], "actor": case.operator,
+        "note": "Retain the author's separate second-building naming correction before reviewing the colleague return."})
+    returned = case.mutation(recipient, "colleague-complete-original-return", "export.create", {
+        "kind": "workspace", "actor": case.operator,
+        "note": "Return the complete original received audit, colleague correction, shared cooling review and all native history."})
+    archive_path, archive_raw = case.download(recipient, returned, "Colleague_Complete_Audit_Return.zip")
+    package(archive_raw)
+    source = read_json(case.root / "active-source.json")
+    browser_root = root / "browser"
+    attempts = root / "native-attempts"
+    attempts.mkdir(parents=True, exist_ok=True)
+    number = max((int(path.name) for path in attempts.iterdir() if path.is_dir() and path.name.isdigit()), default=0) + 1
+    attempt = attempts / ("%04d" % number)
+    attempt.mkdir()
+    document = {"format": "commons.audit-exchange.colleague-browser-input.v1", "operation": OPERATION,
+                "url": author.connection["url"], "workspaceId": author.connection["workspaceId"],
+                "instanceId": author.connection["instanceId"], "operator": case.operator,
+                "version": author.state()["version"], "directory": str(browser_root),
+                "captureDirectory": str(attempt / "rendered"), "sourceSha256": source["sha256"],
+                "servedSourceSha256": rendered_source_inventory(author.application)["sha256"],
+                "controllerFD": case.guard, "controllerLock": str(case.root / "operation.lock"),
+                "browser": case.inputs.get("browser", {}),
+                "returnedArchive": {"id": returned["id"], "path": str(archive_path),
+                                    "sha256": sha(archive_raw), "bytes": len(archive_raw)},
+                "original": {**original, "revisionId": changed_original["revisionId"]},
+                "colleague": {**colleague, "revisionId": changed_colleague["revisionId"],
+                              "reviewId": reviewed["reviewId"]}}
+    atomic(attempt / "input.json", raw_json(document))
+    node = os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node")
+    need(node, "Use the existing original browser runtime for the colleague return.")
+    command = [node, str(case.application / "BROWSER_COMMISSIONING.mjs"), "--return", str(attempt / "input.json")]
+    run_browser_continuation(case, command, attempt, document, "colleague-return")
+    applied = read_json(browser_root / "result.json")
+    need(applied["operation"] == OPERATION and applied["workspaceId"] == author.connection["workspaceId"] and
+         applied["status"] == "passed", "Complete the actual same-case colleague return in its original UI.")
+    exported = case.mutation(author, "complete-corrected-original-application", "export.create", {
+        "kind": "application", "editionId": applied["applied"]["edition"]["editionId"], "actor": case.operator,
+        "note": "Complete original application after explicit colleague correction decisions, author edit preservation and source-bound review receiving."})
+    full_path, full_raw = case.download(author, exported, "Complete_Corrected_Audit_Application.zip")
+    _, members = package(full_raw)
+    snapshot = json.loads(members["workspace.json"])
+    selected_revision = applied["applied"]["sources"][0]["revisionId"]
+    need(any(row["kind"] == "revision" and row["id"] == selected_revision for row in snapshot["records"]) and
+         any(row["kind"] == "review" and row["id"] == applied["review"]["id"] for row in snapshot["records"]) and
+         any(row["sha256"] == sha(archive_raw) for row in snapshot["objects"]),
+         "The full corrected application must include the accepted source, complete review and original colleague archive.")
+    result = {"format": "commons.audit-exchange.colleague-exchange-result.v1", "operation": OPERATION,
+              "status": "passed", "selection": selection, "returnedArchive": returned,
+              "returnedPath": str(archive_path), "browser": applied, "application": exported,
+              "applicationPath": str(full_path), "applicationSha256": sha(full_raw),
+              "workspaceId": author.connection["workspaceId"], "colleagueWorkspaceId": recipient.connection["workspaceId"]}
+    atomic(root / "result.json", raw_json(result))
+    emit({"stage": "ORIGINAL_COLLEAGUE_RETURN_COMPLETE", "path": str(root / "result.json"),
+          "workspaceId": result["workspaceId"], "revisionId": selected_revision,
+          "applicationPath": str(full_path), "applicationSha256": result["applicationSha256"]})
+    return result
+
+
+
+def receive_corrected_application(case, author, received, colleague):
+    """Continue recipient-one with the complete corrected outgoing application."""
+    root = case.root / "colleague-return" / "onward"
+    root.mkdir(parents=True, exist_ok=True)
+    raw = Path(colleague["applicationPath"]).read_bytes()
+    need(sha(raw) == colleague["applicationSha256"], "Retain the complete corrected outgoing application.")
+    _, members = package(raw)
+    original_snapshot = json.loads(members["workspace.json"])
+    application = case.root / "corrected-received-application"
+    application_names = []
+    for name, body in members.items():
+        if name.startswith("application/"):
+            relative = name[len("application/"):]
+            atomic(application / safe_name(relative), body)
+            application_names.append(relative)
+    declared = read_json(application / "SOURCE_FILES.json")["files"]
+    need(set(declared) <= set(application_names) and
+         {"application.py", "workspace.py", "correction_return.py", "public/corrections.js"} <= set(application_names),
+         "Reopen the complete actual corrected application, including its native colleague workflow.")
+    saved_workspace_id = read_json(case.root / "hosts" / "recipient-one.json")["startup"]["workspaceId"]
+    # The first receiving host may still be open during the original uninterrupted
+    # course; deliberately close that exact host before adopting the delivered app.
+    first = next((host for host in case.hosts if host.name == "recipient-one" and host.connection is not None), None)
+    if first is None:
+        first = Host(case, "recipient-one", case.root / "received-application")
+    need(first.connection["workspaceId"] == saved_workspace_id,
+         "Continue the same recipient-one workspace and its original receiving history.")
+    first.close()
+    recipient = Host(case, "recipient-one", application)
+    need(recipient.connection["workspaceId"] == saved_workspace_id,
+         "The corrected application must reopen the original recipient workspace.")
+    accepted = case.mutation(recipient, "receive-complete-corrected-application", "workspace.receive", {
+        "contentBase64": base64.b64encode(raw).decode("ascii"),
+        "name": Path(colleague["applicationPath"]).name, "actor": case.operator,
+        "note": "Receive the complete corrected application into the same first recipient, preserving its earlier audit copies and history."})
+    original_source_id = colleague["selection"]["original"]["sourceId"]
+    shared_id = accepted["sourceIdMap"][original_source_id]
+    need(shared_id not in set(received["first"]["sourceIdMap"].values()) and
+         set(received["first"]["sourceIdMap"].values()) <= {row["id"] for row in recipient.state()["sources"]},
+         "The onward receiving must preserve all previous recipient sources with distinct new local identities.")
+    current = recipient.read("source.get", {"sourceId": shared_id})
+    applied_source = next(item for item in colleague["browser"]["applied"]["sources"]
+                          if item["sourceId"] == original_source_id)
+    need(current["revision"]["sha256"] == applied_source["sha256"] and
+         current["source"]["originalSha256"] == FIXTURES["shared"][2],
+         "The onward recipient must open the exact accepted corrected native XML.")
+    forwarded = case.mutation(recipient, "retain-complete-corrected-recipient", "export.create", {
+        "kind": "workspace", "actor": case.operator,
+        "note": "Retain the actual corrected receiving, previous received audit copies, all original colleague-return bytes and review history."})
+    forwarded_path, forwarded_raw = case.download(recipient, forwarded, "Received_Corrected_Complete_Audit.zip")
+    _, final_members = package(forwarded_raw)
+    snapshot = json.loads(final_members["workspace.json"])
+    original_workspace = original_snapshot["workspace"]["workspaceId"]
+    package_sha = sha(raw)
+    def matches(payload, original_id):
+        provenance = payload.get("receivedFrom", {})
+        return provenance.get("workspaceId") == original_workspace and \
+               provenance.get("recordId") == original_id and provenance.get("packageSha256") == package_sha
+    mapped = {}
+    for record in original_snapshot["records"]:
+        rows = [row["payload"] for row in snapshot["records"]
+                if row["kind"] == record["kind"] and matches(row["payload"], record["id"])]
+        need(len(rows) == 1, "Keep each full corrected receiving record and its original package identity.")
+        mapped[record["id"]] = rows[0]
+    actual_revision = mapped[applied_source["revisionId"]]
+    original_review = colleague["browser"]["review"]
+    actual_review = mapped[original_review["id"]]
+    original_edition_id = colleague["browser"]["applied"]["edition"]["editionId"]
+    actual_edition = mapped[original_edition_id]
+    original_export = colleague["browser"]["applied"]["archive"]
+    received_exports = [row for row in snapshot["priorExports"]
+                        if row.get("receivedFrom", {}).get("workspaceId") == original_workspace and
+                        row["receivedFrom"].get("exportId") == original_export["id"] and
+                        row["receivedFrom"].get("packageSha256") == package_sha]
+    need(len(received_exports) == 1, "Retain the exact complete original colleague-return archive on onward receiving.")
+    received_export = received_exports[0]
+    _, archive_bytes = recipient.http(received_export["downloadUrl"], raw=True)
+    need(archive_bytes == Path(colleague["returnedPath"]).read_bytes() and
+         received_export["sha256"] == colleague["returnedArchive"]["sha256"],
+         "The onward receiving changed the complete original colleague archive.")
+    need(actual_revision["id"] == current["revision"]["id"] and actual_revision["sourceId"] == shared_id and
+         actual_revision["colleagueReturn"]["exportId"] == received_export["id"] and
+         actual_revision["colleagueReturn"]["packageSha256"] == original_export["sha256"],
+         "Keep the corrected revision's complete archive metadata and its remapped local export.")
+    need(actual_review["sourceId"] == shared_id and actual_review["revisionId"] == actual_revision["id"] and
+         actual_review["original"] == original_review["original"] and
+         actual_review["colleagueReturn"]["exportId"] == received_export["id"] and
+         any(row["id"] == actual_review["id"] for row in actual_edition["reviews"]) and
+         any(row["sourceId"] == shared_id and row["revisionId"] == actual_revision["id"] for row in actual_edition["sources"]),
+         "Keep the full returned review, native source binding and saved correction edition after remapping.")
+    edition = recipient.read("edition.get", {"editionId": actual_edition["id"]})
+    need(edition == actual_edition, "Open the actual full received saved edition.")
+    recipient.close()
+    cli = [sys.executable, str(application / "application.py"), "state", "--directory", str(recipient.directory),
+           "--workspace-id", saved_workspace_id]
+    child = subprocess.run(cli, cwd=application, capture_output=True, timeout=120,
+                           env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"), pass_fds=(case.guard,))
+    atomic(root / "reopened-cli.stdout.json", child.stdout)
+    atomic(root / "reopened-cli.stderr.log", child.stderr)
+    atomic(root / "reopened-cli-outcome.json", raw_json({"command": cli, "returncode": child.returncode,
+           "stdoutSha256": sha(child.stdout), "stderrSha256": sha(child.stderr)}))
+    need(child.returncode == 0, "Reopen the complete corrected application through its original native CLI.")
+    state = json.loads(child.stdout)["result"]
+    need(state["workspaceId"] == saved_workspace_id and
+         any(row["id"] == shared_id and row["currentRevisionId"] == actual_revision["id"] for row in state["sources"]),
+         "The independently reopened recipient must keep the exact corrected source selection.")
+    result = {"format": "commons.audit-exchange.corrected-receiving.v1", "operation": OPERATION,
+              "workspaceId": saved_workspace_id, "applicationDirectory": str(application),
+              "applicationSha256": package_sha, "received": accepted,
+              "sourceId": shared_id, "revisionId": actual_revision["id"], "editionId": actual_edition["id"],
+              "reviewId": actual_review["id"], "colleagueArchiveExport": received_export,
+              "forwarded": forwarded, "forwardedPath": str(forwarded_path), "forwardedSha256": sha(forwarded_raw),
+              "originalRecipientSourceIds": list(received["first"]["sourceIdMap"].values()),
+              "sourceCount": len(state["sources"]), "status": "passed"}
+    atomic(root / "result.json", raw_json(result))
+    emit({"stage": "ORIGINAL_CORRECTED_APPLICATION_RECEIVED_AND_REOPENED", **result})
+    return result
+
+
+def rendered_receiving_continuation(case, author, received, colleague, onward):
+    """Open the actual corrected outgoing application and its same accepted recipient."""
+    source = read_json(case.root / "active-source.json")
+    author_source = colleague["selection"]["original"]["sourceId"]
+    author_revision = next(row["revisionId"] for row in colleague["browser"]["applied"]["sources"]
+                           if row["sourceId"] == author_source)
+    results = [render_final_host(case, author, "author", author_source, author_revision)]
+    application = Path(onward["applicationDirectory"])
+    need(application.is_dir(), "Retain the complete corrected application installed by the same onward receiving.")
+    recipient = Host(case, "recipient-one", application)
+    need(recipient.connection["workspaceId"] == onward["workspaceId"],
+         "Reopen the same original recipient with the exact accepted corrected application.")
+    results.append(render_final_host(case, recipient, "recipient-one", onward["sourceId"], onward["revisionId"]))
+    result = {"format": "commons.audit-exchange.rendered-delivery.v1", "operation": OPERATION,
+              "sourceSha256": source["sha256"], "status": "captured-awaiting-producer-view",
+              "capturedAt": now(), "roles": results,
+              "colleagueReturn": {"path": str(case.root / "colleague-return" / "result.json"),
+                                  "captureDirectory": colleague["browser"]["captureDirectory"],
+                                  "openPath": str(Path(colleague["browser"]["captureDirectory"]) / "OPEN.html")},
+              "correctedReceiving": {"path": str(case.root / "colleague-return" / "onward" / "result.json"),
+                                      "workspaceId": onward["workspaceId"], "sourceId": onward["sourceId"],
+                                      "revisionId": onward["revisionId"], "editionId": onward["editionId"]},
+              "instructions": "Open both OPEN.html indexes and their actual screens and outgoing attachments. "
+              "Operate the original producer and corrected received application at desktop and narrow widths. "
+              "Inspect populated, empty, loading and actual error states, downloads and reopen. "
+              "Repair any broken, unstyled, cramped, clipped, overflowing or unreadable output before readiness. "
+              "Capture, source review, HTTP/DOM checks or another worker's approval do not replace producer viewing."}
+    target = case.root / "rendered" / source["sha256"] / ("delivery-" + sha(raw_json(result))[:20] + ".json")
+    atomic(target, raw_json(result))
+    atomic(case.root / "rendered" / "latest.json", raw_json({"path": str(target), **result}), replace=True)
+    emit({"stage": "ORIGINAL_FINAL_RENDERING_CAPTURED", "path": str(target), **result})
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True, help="Complete selected application containing SOURCE_FILES.json")
@@ -816,18 +1273,28 @@ def main(argv=None):
         case.step("02-complete-original-source", lambda: full_source(case, host, combined, "combined"))
         browser = case.step("03-complete-operator-workflow", lambda: browser_journey(case, host, combined))
         case.step("04-original-shared-source", lambda: full_source(case, host, browser["shared"], "shared"))
+        initial_lda_handover(case, host)
         projection = case.step("05-complete-native-turnover-handoff", lambda: projection_handoff(case, host, browser))
         analysis = case.step("06-actual-native-models", lambda: native_analysis(case, host, browser, args.resume_analysis))
         joined = case.step("07-original-consumer-source-link", lambda: consumer_join(case, host, projection, args.consumer_receipt))
         case.step("08-original-frozen-edition-review", lambda: frozen_review(case, host, browser))
         received = case.step("09-complete-receiving-and-reopen", lambda: receiving_chain(case, host, browser))
+        colleague = colleague_return_continuation(case, host, browser, received)
+        onward = receive_corrected_application(case, host, received, colleague)
+        rendered_receiving_continuation(case, host, received, colleague, onward)
         original_result = read_json(case.root / "result.json") if (case.root / "result.json").is_file() else None
         result = {"format": FORMAT, "operation": OPERATION, "status": "passed",
                   "completedAt": original_result["completedAt"] if original_result else now(),
                   "workspaceId": host.connection["workspaceId"], "sourceSha256": read_json(case.root / "active-source.json")["sha256"],
                   "nativeAnalysis": analysis, "consumer": joined, "receiving": received,
                   "stages": [read_json(path) for path in sorted((case.root / "stages").glob("*.json"))]}
-        atomic(case.root / "result.json", raw_json(result))
+        if original_result is not None:
+            need(original_result["operation"] == OPERATION and original_result["workspaceId"] == result["workspaceId"] and
+                 original_result["stages"] == result["stages"],
+                 "Keep the original completed business history while appending the rendered continuation.")
+            result = original_result
+        else:
+            atomic(case.root / "result.json", raw_json(result))
     except BaseException as failure:
         error = failure
         if case:

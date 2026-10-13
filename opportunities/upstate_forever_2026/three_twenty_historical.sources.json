@@ -1,0 +1,1869 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Three and Twenty Creek historical observations, 2021–2025",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "selected_original_results": 1502,
+    "activities": 120,
+    "original_inputs": 22,
+    "paired_activity_dates": 24,
+    "compatible_contrasts": 275
+  },
+  "entries": [
+    {
+      "id": "three-twenty-historical-report",
+      "title": "Historical station comparison with original-record explorer",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "observations/three_twenty_history_2021_2025/historical-station-comparison.html",
+      "bytes": 694186,
+      "sha256": "1f7f24fe2ecbbb60196084e44b52c9b3863afc571da5c2090acd1fbb6f2dfa37",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original 2021–2025 observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "upstate.three-twenty-historical-study/v1",
+        "study_id": "three-twenty-historical-2021-2025",
+        "original_result_rows": 1502,
+        "original_activity_count": 120,
+        "compatible_contrasts": 275,
+        "comparison": "Station B minus station A; original clocks and compatibility groups retained"
+      },
+      "companions": [
+        {
+          "path": "observations/three_twenty_history_2021_2025/README.md",
+          "bytes": 9513,
+          "sha256": "a34852ec6883d34d937ee8c129aa51c2e58de2bfe8040ad7599c106911ec8dad"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/agency-calculated-nitrogen-checks.csv",
+          "bytes": 1321,
+          "sha256": "183e05c2ce45bbda77ef6faa388c54f2f19f21eb36b673316a161a872adeb047"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/analysis_core.mjs",
+          "bytes": 18558,
+          "sha256": "8ef320fd9bbd4e6eff3f820fcb928698dbc847ad2d1c1f28b007fea219783c9f"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/annual-sample-summaries.csv",
+          "bytes": 276895,
+          "sha256": "03665a57f581af95669f5cfcdc17452f4a7ed0b91bc6f9627e1bdd6d5ee14b82"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/authored-inputs.json",
+          "bytes": 7804,
+          "sha256": "fff7ad470107ffbda99fba4fbaf4ed0a7163f931ae0ca428f187a866dd099850"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/build_study.mjs",
+          "bytes": 3369,
+          "sha256": "d56e14f5851f7a3f2a85581edff5b01b25ac1d062b1ffab0b688a75af3de8a7b"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/coverage.json",
+          "bytes": 1026,
+          "sha256": "f3d2073a0186e822405cfa020d2256ade1e1e7ae9756a660fe5bca452c6c3600"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-study.json",
+          "bytes": 5383046,
+          "sha256": "2a2b7e9c3df137f080b20478aa6a2c1ecc65c807b01d60ca9e1c40acccf3daa6"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/input-manifest.json",
+          "bytes": 12469,
+          "sha256": "bf145bcff5a3c9418354864911b7e953ecc6da7da48c1c985ba8a51a5be68d3d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/observation-sources.json",
+          "bytes": 22179,
+          "sha256": "5804ce8b5a55128dd77a708f8e3a14490ee3567615cdf4e65f881afe84f9c9c4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/result-selection.json",
+          "bytes": 590959,
+          "sha256": "2b8e2687396e0dc12254d851b87ef60579b75b650f4286b370b2cc59f0e4198a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/seasonal_summaries.csv",
+          "bytes": 127,
+          "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/source_notes.json",
+          "bytes": 927,
+          "sha256": "b4b2743afbda36da2d856c819bd08ec0f26a5253d25fcc67f73b4783b0ed4168"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/stations.csv",
+          "bytes": 704,
+          "sha256": "a37325a866106e64ea634dac7358672942d5d7844827fbcd0641824e2a5c5f21"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study-files.json",
+          "bytes": 5292,
+          "sha256": "66cfa26a241707db7f3d78ec9fa1c43018445bfe7b33d3ef7bdc48ef50d488c8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study.json",
+          "bytes": 1572,
+          "sha256": "ff5ab6265a0fcf6c770d0c26f40e8d94825e1a6f57f077d53627666a67a3382d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/original-measurement-support.csv",
+          "bytes": 1635053,
+          "sha256": "2cdd5c2ee87d2e8bdb1a3cd59253b9bfcc1d657fe3b9c921aa9024c932417620"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/package_study.mjs",
+          "bytes": 4113,
+          "sha256": "8f2e092c8a047e6aae0a6e3d3d0e36e945e846d41197471439b1edb35baf08de"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/paired-contrast-summaries.csv",
+          "bytes": 38072,
+          "sha256": "c4cc5f4800aa41f7d4b10c59c4446f819b7db059b34adc82078b67238e8ab994"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/reconstructed-total-nitrogen.csv",
+          "bytes": 235774,
+          "sha256": "bcebb339d553d3002ad45278c4bcafc394c5f3f4f6dbd4cacaa6eb4457560166"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/report.mjs",
+          "bytes": 15285,
+          "sha256": "61aeab9b2c7df90a547b9613d8d41a098086a818818464c6a0fbd6d3e4eeccb0"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-activity-pairs.csv",
+          "bytes": 7821,
+          "sha256": "4ca11a6ec7a4f63d8f8c19878983111f90f44e2e485f7defb0a3ffc989b7a1b9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-compatible-contrasts.csv",
+          "bytes": 368566,
+          "sha256": "39f2f40a5c097eed3e8db8586e3613a0c73d8bbe4ec89f155363da30b7915e64"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-incompatible-pairs.csv",
+          "bytes": 97,
+          "sha256": "6af0502342e1495457d063487eff73755851d61f3164ce5003be64eaaba46071"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/sampling-calendar.csv",
+          "bytes": 30189,
+          "sha256": "06afa1224cfaf82437f7e8371d927b936cb7deeff39f875a00ca7b30783e1099"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/source-quality-flags.csv",
+          "bytes": 144,
+          "sha256": "021c0c5a2859cada6ebc9b20f640f09f0f7479bd49f6aef25efbfcbb9a48cd53"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-historical-analysis",
+      "title": "Complete historical source-bound analysis",
+      "kind": "document",
+      "role": "observed_water_quality_analysis",
+      "path": "observations/three_twenty_history_2021_2025/historical-study.json",
+      "bytes": 5383046,
+      "sha256": "2a2b7e9c3df137f080b20478aa6a2c1ecc65c807b01d60ca9e1c40acccf3daa6",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original 2021–2025 observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "upstate.three-twenty-historical-study/v1",
+        "study_id": "three-twenty-historical-2021-2025",
+        "original_result_rows": 1502,
+        "original_activity_count": 120,
+        "compatible_contrasts": 275,
+        "comparison": "Station B minus station A; original clocks and compatibility groups retained"
+      },
+      "companions": [
+        {
+          "path": "observations/three_twenty_history_2021_2025/README.md",
+          "bytes": 9513,
+          "sha256": "a34852ec6883d34d937ee8c129aa51c2e58de2bfe8040ad7599c106911ec8dad"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/agency-calculated-nitrogen-checks.csv",
+          "bytes": 1321,
+          "sha256": "183e05c2ce45bbda77ef6faa388c54f2f19f21eb36b673316a161a872adeb047"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/analysis_core.mjs",
+          "bytes": 18558,
+          "sha256": "8ef320fd9bbd4e6eff3f820fcb928698dbc847ad2d1c1f28b007fea219783c9f"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/annual-sample-summaries.csv",
+          "bytes": 276895,
+          "sha256": "03665a57f581af95669f5cfcdc17452f4a7ed0b91bc6f9627e1bdd6d5ee14b82"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/authored-inputs.json",
+          "bytes": 7804,
+          "sha256": "fff7ad470107ffbda99fba4fbaf4ed0a7163f931ae0ca428f187a866dd099850"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/build_study.mjs",
+          "bytes": 3369,
+          "sha256": "d56e14f5851f7a3f2a85581edff5b01b25ac1d062b1ffab0b688a75af3de8a7b"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/coverage.json",
+          "bytes": 1026,
+          "sha256": "f3d2073a0186e822405cfa020d2256ade1e1e7ae9756a660fe5bca452c6c3600"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-station-comparison.html",
+          "bytes": 694186,
+          "sha256": "1f7f24fe2ecbbb60196084e44b52c9b3863afc571da5c2090acd1fbb6f2dfa37"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/input-manifest.json",
+          "bytes": 12469,
+          "sha256": "bf145bcff5a3c9418354864911b7e953ecc6da7da48c1c985ba8a51a5be68d3d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/observation-sources.json",
+          "bytes": 22179,
+          "sha256": "5804ce8b5a55128dd77a708f8e3a14490ee3567615cdf4e65f881afe84f9c9c4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/result-selection.json",
+          "bytes": 590959,
+          "sha256": "2b8e2687396e0dc12254d851b87ef60579b75b650f4286b370b2cc59f0e4198a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/seasonal_summaries.csv",
+          "bytes": 127,
+          "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/source_notes.json",
+          "bytes": 927,
+          "sha256": "b4b2743afbda36da2d856c819bd08ec0f26a5253d25fcc67f73b4783b0ed4168"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/stations.csv",
+          "bytes": 704,
+          "sha256": "a37325a866106e64ea634dac7358672942d5d7844827fbcd0641824e2a5c5f21"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study-files.json",
+          "bytes": 5292,
+          "sha256": "66cfa26a241707db7f3d78ec9fa1c43018445bfe7b33d3ef7bdc48ef50d488c8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study.json",
+          "bytes": 1572,
+          "sha256": "ff5ab6265a0fcf6c770d0c26f40e8d94825e1a6f57f077d53627666a67a3382d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/original-measurement-support.csv",
+          "bytes": 1635053,
+          "sha256": "2cdd5c2ee87d2e8bdb1a3cd59253b9bfcc1d657fe3b9c921aa9024c932417620"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/package_study.mjs",
+          "bytes": 4113,
+          "sha256": "8f2e092c8a047e6aae0a6e3d3d0e36e945e846d41197471439b1edb35baf08de"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/paired-contrast-summaries.csv",
+          "bytes": 38072,
+          "sha256": "c4cc5f4800aa41f7d4b10c59c4446f819b7db059b34adc82078b67238e8ab994"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/reconstructed-total-nitrogen.csv",
+          "bytes": 235774,
+          "sha256": "bcebb339d553d3002ad45278c4bcafc394c5f3f4f6dbd4cacaa6eb4457560166"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/report.mjs",
+          "bytes": 15285,
+          "sha256": "61aeab9b2c7df90a547b9613d8d41a098086a818818464c6a0fbd6d3e4eeccb0"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-activity-pairs.csv",
+          "bytes": 7821,
+          "sha256": "4ca11a6ec7a4f63d8f8c19878983111f90f44e2e485f7defb0a3ffc989b7a1b9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-compatible-contrasts.csv",
+          "bytes": 368566,
+          "sha256": "39f2f40a5c097eed3e8db8586e3613a0c73d8bbe4ec89f155363da30b7915e64"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-incompatible-pairs.csv",
+          "bytes": 97,
+          "sha256": "6af0502342e1495457d063487eff73755851d61f3164ce5003be64eaaba46071"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/sampling-calendar.csv",
+          "bytes": 30189,
+          "sha256": "06afa1224cfaf82437f7e8371d927b936cb7deeff39f875a00ca7b30783e1099"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/source-quality-flags.csv",
+          "bytes": 144,
+          "sha256": "021c0c5a2859cada6ebc9b20f640f09f0f7479bd49f6aef25efbfcbb9a48cd53"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-historical-paired-contrasts",
+      "title": "Compatible same-date station contrasts",
+      "kind": "table",
+      "role": "observed_water_quality_comparison",
+      "path": "observations/three_twenty_history_2021_2025/same-date-compatible-contrasts.csv",
+      "bytes": 368566,
+      "sha256": "39f2f40a5c097eed3e8db8586e3613a0c73d8bbe4ec89f155363da30b7915e64",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original 2021–2025 observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "upstate.three-twenty-historical-study/v1",
+        "study_id": "three-twenty-historical-2021-2025",
+        "original_result_rows": 1502,
+        "original_activity_count": 120,
+        "compatible_contrasts": 275,
+        "comparison": "Station B minus station A; original clocks and compatibility groups retained"
+      },
+      "companions": [
+        {
+          "path": "observations/three_twenty_history_2021_2025/README.md",
+          "bytes": 9513,
+          "sha256": "a34852ec6883d34d937ee8c129aa51c2e58de2bfe8040ad7599c106911ec8dad"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/agency-calculated-nitrogen-checks.csv",
+          "bytes": 1321,
+          "sha256": "183e05c2ce45bbda77ef6faa388c54f2f19f21eb36b673316a161a872adeb047"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/analysis_core.mjs",
+          "bytes": 18558,
+          "sha256": "8ef320fd9bbd4e6eff3f820fcb928698dbc847ad2d1c1f28b007fea219783c9f"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/annual-sample-summaries.csv",
+          "bytes": 276895,
+          "sha256": "03665a57f581af95669f5cfcdc17452f4a7ed0b91bc6f9627e1bdd6d5ee14b82"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/authored-inputs.json",
+          "bytes": 7804,
+          "sha256": "fff7ad470107ffbda99fba4fbaf4ed0a7163f931ae0ca428f187a866dd099850"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/build_study.mjs",
+          "bytes": 3369,
+          "sha256": "d56e14f5851f7a3f2a85581edff5b01b25ac1d062b1ffab0b688a75af3de8a7b"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/coverage.json",
+          "bytes": 1026,
+          "sha256": "f3d2073a0186e822405cfa020d2256ade1e1e7ae9756a660fe5bca452c6c3600"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-station-comparison.html",
+          "bytes": 694186,
+          "sha256": "1f7f24fe2ecbbb60196084e44b52c9b3863afc571da5c2090acd1fbb6f2dfa37"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-study.json",
+          "bytes": 5383046,
+          "sha256": "2a2b7e9c3df137f080b20478aa6a2c1ecc65c807b01d60ca9e1c40acccf3daa6"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/input-manifest.json",
+          "bytes": 12469,
+          "sha256": "bf145bcff5a3c9418354864911b7e953ecc6da7da48c1c985ba8a51a5be68d3d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/observation-sources.json",
+          "bytes": 22179,
+          "sha256": "5804ce8b5a55128dd77a708f8e3a14490ee3567615cdf4e65f881afe84f9c9c4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/result-selection.json",
+          "bytes": 590959,
+          "sha256": "2b8e2687396e0dc12254d851b87ef60579b75b650f4286b370b2cc59f0e4198a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/seasonal_summaries.csv",
+          "bytes": 127,
+          "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/source_notes.json",
+          "bytes": 927,
+          "sha256": "b4b2743afbda36da2d856c819bd08ec0f26a5253d25fcc67f73b4783b0ed4168"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/stations.csv",
+          "bytes": 704,
+          "sha256": "a37325a866106e64ea634dac7358672942d5d7844827fbcd0641824e2a5c5f21"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study-files.json",
+          "bytes": 5292,
+          "sha256": "66cfa26a241707db7f3d78ec9fa1c43018445bfe7b33d3ef7bdc48ef50d488c8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study.json",
+          "bytes": 1572,
+          "sha256": "ff5ab6265a0fcf6c770d0c26f40e8d94825e1a6f57f077d53627666a67a3382d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/original-measurement-support.csv",
+          "bytes": 1635053,
+          "sha256": "2cdd5c2ee87d2e8bdb1a3cd59253b9bfcc1d657fe3b9c921aa9024c932417620"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/package_study.mjs",
+          "bytes": 4113,
+          "sha256": "8f2e092c8a047e6aae0a6e3d3d0e36e945e846d41197471439b1edb35baf08de"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/paired-contrast-summaries.csv",
+          "bytes": 38072,
+          "sha256": "c4cc5f4800aa41f7d4b10c59c4446f819b7db059b34adc82078b67238e8ab994"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/reconstructed-total-nitrogen.csv",
+          "bytes": 235774,
+          "sha256": "bcebb339d553d3002ad45278c4bcafc394c5f3f4f6dbd4cacaa6eb4457560166"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/report.mjs",
+          "bytes": 15285,
+          "sha256": "61aeab9b2c7df90a547b9613d8d41a098086a818818464c6a0fbd6d3e4eeccb0"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-activity-pairs.csv",
+          "bytes": 7821,
+          "sha256": "4ca11a6ec7a4f63d8f8c19878983111f90f44e2e485f7defb0a3ffc989b7a1b9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-incompatible-pairs.csv",
+          "bytes": 97,
+          "sha256": "6af0502342e1495457d063487eff73755851d61f3164ce5003be64eaaba46071"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/sampling-calendar.csv",
+          "bytes": 30189,
+          "sha256": "06afa1224cfaf82437f7e8371d927b936cb7deeff39f875a00ca7b30783e1099"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/source-quality-flags.csv",
+          "bytes": 144,
+          "sha256": "021c0c5a2859cada6ebc9b20f640f09f0f7479bd49f6aef25efbfcbb9a48cd53"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-historical-annual-summaries",
+      "title": "Method-stratified annual sample summaries",
+      "kind": "table",
+      "role": "observed_water_quality_summary",
+      "path": "observations/three_twenty_history_2021_2025/annual-sample-summaries.csv",
+      "bytes": 276895,
+      "sha256": "03665a57f581af95669f5cfcdc17452f4a7ed0b91bc6f9627e1bdd6d5ee14b82",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original 2021–2025 observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "upstate.three-twenty-historical-study/v1",
+        "study_id": "three-twenty-historical-2021-2025",
+        "original_result_rows": 1502,
+        "original_activity_count": 120,
+        "compatible_contrasts": 275,
+        "comparison": "Station B minus station A; original clocks and compatibility groups retained"
+      },
+      "companions": [
+        {
+          "path": "observations/three_twenty_history_2021_2025/README.md",
+          "bytes": 9513,
+          "sha256": "a34852ec6883d34d937ee8c129aa51c2e58de2bfe8040ad7599c106911ec8dad"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/agency-calculated-nitrogen-checks.csv",
+          "bytes": 1321,
+          "sha256": "183e05c2ce45bbda77ef6faa388c54f2f19f21eb36b673316a161a872adeb047"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/analysis_core.mjs",
+          "bytes": 18558,
+          "sha256": "8ef320fd9bbd4e6eff3f820fcb928698dbc847ad2d1c1f28b007fea219783c9f"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/authored-inputs.json",
+          "bytes": 7804,
+          "sha256": "fff7ad470107ffbda99fba4fbaf4ed0a7163f931ae0ca428f187a866dd099850"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/build_study.mjs",
+          "bytes": 3369,
+          "sha256": "d56e14f5851f7a3f2a85581edff5b01b25ac1d062b1ffab0b688a75af3de8a7b"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/coverage.json",
+          "bytes": 1026,
+          "sha256": "f3d2073a0186e822405cfa020d2256ade1e1e7ae9756a660fe5bca452c6c3600"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-station-comparison.html",
+          "bytes": 694186,
+          "sha256": "1f7f24fe2ecbbb60196084e44b52c9b3863afc571da5c2090acd1fbb6f2dfa37"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-study.json",
+          "bytes": 5383046,
+          "sha256": "2a2b7e9c3df137f080b20478aa6a2c1ecc65c807b01d60ca9e1c40acccf3daa6"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/input-manifest.json",
+          "bytes": 12469,
+          "sha256": "bf145bcff5a3c9418354864911b7e953ecc6da7da48c1c985ba8a51a5be68d3d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/observation-sources.json",
+          "bytes": 22179,
+          "sha256": "5804ce8b5a55128dd77a708f8e3a14490ee3567615cdf4e65f881afe84f9c9c4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/result-selection.json",
+          "bytes": 590959,
+          "sha256": "2b8e2687396e0dc12254d851b87ef60579b75b650f4286b370b2cc59f0e4198a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/seasonal_summaries.csv",
+          "bytes": 127,
+          "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/source_notes.json",
+          "bytes": 927,
+          "sha256": "b4b2743afbda36da2d856c819bd08ec0f26a5253d25fcc67f73b4783b0ed4168"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/stations.csv",
+          "bytes": 704,
+          "sha256": "a37325a866106e64ea634dac7358672942d5d7844827fbcd0641824e2a5c5f21"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study-files.json",
+          "bytes": 5292,
+          "sha256": "66cfa26a241707db7f3d78ec9fa1c43018445bfe7b33d3ef7bdc48ef50d488c8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study.json",
+          "bytes": 1572,
+          "sha256": "ff5ab6265a0fcf6c770d0c26f40e8d94825e1a6f57f077d53627666a67a3382d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/original-measurement-support.csv",
+          "bytes": 1635053,
+          "sha256": "2cdd5c2ee87d2e8bdb1a3cd59253b9bfcc1d657fe3b9c921aa9024c932417620"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/package_study.mjs",
+          "bytes": 4113,
+          "sha256": "8f2e092c8a047e6aae0a6e3d3d0e36e945e846d41197471439b1edb35baf08de"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/paired-contrast-summaries.csv",
+          "bytes": 38072,
+          "sha256": "c4cc5f4800aa41f7d4b10c59c4446f819b7db059b34adc82078b67238e8ab994"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/reconstructed-total-nitrogen.csv",
+          "bytes": 235774,
+          "sha256": "bcebb339d553d3002ad45278c4bcafc394c5f3f4f6dbd4cacaa6eb4457560166"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/report.mjs",
+          "bytes": 15285,
+          "sha256": "61aeab9b2c7df90a547b9613d8d41a098086a818818464c6a0fbd6d3e4eeccb0"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-activity-pairs.csv",
+          "bytes": 7821,
+          "sha256": "4ca11a6ec7a4f63d8f8c19878983111f90f44e2e485f7defb0a3ffc989b7a1b9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-compatible-contrasts.csv",
+          "bytes": 368566,
+          "sha256": "39f2f40a5c097eed3e8db8586e3613a0c73d8bbe4ec89f155363da30b7915e64"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-incompatible-pairs.csv",
+          "bytes": 97,
+          "sha256": "6af0502342e1495457d063487eff73755851d61f3164ce5003be64eaaba46071"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/sampling-calendar.csv",
+          "bytes": 30189,
+          "sha256": "06afa1224cfaf82437f7e8371d927b936cb7deeff39f875a00ca7b30783e1099"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/source-quality-flags.csv",
+          "bytes": 144,
+          "sha256": "021c0c5a2859cada6ebc9b20f640f09f0f7479bd49f6aef25efbfcbb9a48cd53"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        }
+      ]
+    },
+    {
+      "id": "three-twenty-historical-sampling-calendar",
+      "title": "Original activity sampling calendar",
+      "kind": "table",
+      "role": "observed_water_quality_calendar",
+      "path": "observations/three_twenty_history_2021_2025/sampling-calendar.csv",
+      "bytes": 30189,
+      "sha256": "06afa1224cfaf82437f7e8371d927b936cb7deeff39f875a00ca7b30783e1099",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original 2021–2025 observations; derived 2026-10-13",
+      "metadata": {
+        "source_schema": "upstate.three-twenty-historical-study/v1",
+        "study_id": "three-twenty-historical-2021-2025",
+        "original_result_rows": 1502,
+        "original_activity_count": 120,
+        "compatible_contrasts": 275,
+        "comparison": "Station B minus station A; original clocks and compatibility groups retained"
+      },
+      "companions": [
+        {
+          "path": "observations/three_twenty_history_2021_2025/README.md",
+          "bytes": 9513,
+          "sha256": "a34852ec6883d34d937ee8c129aa51c2e58de2bfe8040ad7599c106911ec8dad"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/agency-calculated-nitrogen-checks.csv",
+          "bytes": 1321,
+          "sha256": "183e05c2ce45bbda77ef6faa388c54f2f19f21eb36b673316a161a872adeb047"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/analysis_core.mjs",
+          "bytes": 18558,
+          "sha256": "8ef320fd9bbd4e6eff3f820fcb928698dbc847ad2d1c1f28b007fea219783c9f"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/annual-sample-summaries.csv",
+          "bytes": 276895,
+          "sha256": "03665a57f581af95669f5cfcdc17452f4a7ed0b91bc6f9627e1bdd6d5ee14b82"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/authored-inputs.json",
+          "bytes": 7804,
+          "sha256": "fff7ad470107ffbda99fba4fbaf4ed0a7163f931ae0ca428f187a866dd099850"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/build_study.mjs",
+          "bytes": 3369,
+          "sha256": "d56e14f5851f7a3f2a85581edff5b01b25ac1d062b1ffab0b688a75af3de8a7b"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/coverage.json",
+          "bytes": 1026,
+          "sha256": "f3d2073a0186e822405cfa020d2256ade1e1e7ae9756a660fe5bca452c6c3600"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-station-comparison.html",
+          "bytes": 694186,
+          "sha256": "1f7f24fe2ecbbb60196084e44b52c9b3863afc571da5c2090acd1fbb6f2dfa37"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/historical-study.json",
+          "bytes": 5383046,
+          "sha256": "2a2b7e9c3df137f080b20478aa6a2c1ecc65c807b01d60ca9e1c40acccf3daa6"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/input-manifest.json",
+          "bytes": 12469,
+          "sha256": "bf145bcff5a3c9418354864911b7e953ecc6da7da48c1c985ba8a51a5be68d3d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/observation-sources.json",
+          "bytes": 22179,
+          "sha256": "5804ce8b5a55128dd77a708f8e3a14490ee3567615cdf4e65f881afe84f9c9c4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/result-selection.json",
+          "bytes": 590959,
+          "sha256": "2b8e2687396e0dc12254d851b87ef60579b75b650f4286b370b2cc59f0e4198a"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/seasonal_summaries.csv",
+          "bytes": 127,
+          "sha256": "63a06fd00559d274e53fbde8b54a4e007323c3e6160da57fcf5114cba24d77c9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/source_notes.json",
+          "bytes": 927,
+          "sha256": "b4b2743afbda36da2d856c819bd08ec0f26a5253d25fcc67f73b4783b0ed4168"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/stations.csv",
+          "bytes": 704,
+          "sha256": "a37325a866106e64ea634dac7358672942d5d7844827fbcd0641824e2a5c5f21"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study-files.json",
+          "bytes": 5292,
+          "sha256": "66cfa26a241707db7f3d78ec9fa1c43018445bfe7b33d3ef7bdc48ef50d488c8"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/native-study/study.json",
+          "bytes": 1572,
+          "sha256": "ff5ab6265a0fcf6c770d0c26f40e8d94825e1a6f57f077d53627666a67a3382d"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/original-measurement-support.csv",
+          "bytes": 1635053,
+          "sha256": "2cdd5c2ee87d2e8bdb1a3cd59253b9bfcc1d657fe3b9c921aa9024c932417620"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/package_study.mjs",
+          "bytes": 4113,
+          "sha256": "8f2e092c8a047e6aae0a6e3d3d0e36e945e846d41197471439b1edb35baf08de"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/paired-contrast-summaries.csv",
+          "bytes": 38072,
+          "sha256": "c4cc5f4800aa41f7d4b10c59c4446f819b7db059b34adc82078b67238e8ab994"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/reconstructed-total-nitrogen.csv",
+          "bytes": 235774,
+          "sha256": "bcebb339d553d3002ad45278c4bcafc394c5f3f4f6dbd4cacaa6eb4457560166"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/report.mjs",
+          "bytes": 15285,
+          "sha256": "61aeab9b2c7df90a547b9613d8d41a098086a818818464c6a0fbd6d3e4eeccb0"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-activity-pairs.csv",
+          "bytes": 7821,
+          "sha256": "4ca11a6ec7a4f63d8f8c19878983111f90f44e2e485f7defb0a3ffc989b7a1b9"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-compatible-contrasts.csv",
+          "bytes": 368566,
+          "sha256": "39f2f40a5c097eed3e8db8586e3613a0c73d8bbe4ec89f155363da30b7915e64"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/same-date-incompatible-pairs.csv",
+          "bytes": 97,
+          "sha256": "6af0502342e1495457d063487eff73755851d61f3164ce5003be64eaaba46071"
+        },
+        {
+          "path": "observations/three_twenty_history_2021_2025/source-quality-flags.csv",
+          "bytes": 144,
+          "sha256": "021c0c5a2859cada6ebc9b20f640f09f0f7479bd49f6aef25efbfcbb9a48cd53"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-activities-2021-20261013-original.csv",
+          "bytes": 17210,
+          "sha256": "d66f469852b6897dcb8f4331142f86f9577203420009c965145207ef6adf9ec4"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 37404,
+          "sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 104616,
+          "sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+          "bytes": 133399,
+          "sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed"
+        },
+        {
+          "path": "source/sv833-water-quality-20261013/original/sv833-result-limits-2021-20261013-original.csv",
+          "bytes": 110860,
+          "sha256": "cfe407194b3326c696b7627c4aaa2594cc6d8ae20f88fd6d7d8aa80928918dd1"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-activities-2021-2025-original.csv",
+          "bytes": 14829,
+          "sha256": "e8539ad190658d545dddffa22db79266892634963e682c9a1b3c60deaf42c853"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-limits-2021-2025-original.csv",
+          "bytes": 134811,
+          "sha256": "90a40c9bf766c3a20fbccd3e32eb7ee654ed4ecb5ac34532fb763856670ea682"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2021-original.csv",
+          "bytes": 92035,
+          "sha256": "9b0984a9b5ec24b0ee150d5950039e1bcbe46b0c4e6a56242a743d3e735c9d55"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2022-original.csv",
+          "bytes": 30767,
+          "sha256": "d4e050f85a3e6c4496e218a86985dd76c4ea910a8b91b5a800cab9e2cee4d64a"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2023-original.csv",
+          "bytes": 90026,
+          "sha256": "c4106482975b253617e4780b29917a2d9a2425eef3eac52a64a10c046a928eed"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2024-original.csv",
+          "bytes": 78089,
+          "sha256": "d1c3e66079706e959fbddb0cad73af250229f80597686bd2405fc491fc20c0c3"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-111-results-2025-original.csv",
+          "bytes": 72042,
+          "sha256": "33d27873f16677f806234cb369169fbd14fd56afb77dcf0c3a9c58691c7436db"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-activities-2021-2025-original.csv",
+          "bytes": 8461,
+          "sha256": "5bbf0660690e5ed76481b15b1fb51e508a14c910f051723346c000ddd7dd198d"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-limits-2021-2025-original.csv",
+          "bytes": 45922,
+          "sha256": "e15060540d927c9dc71d199b254e61d3a8d0bab26114147e04e9b9b634a99a20"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2021-original.csv",
+          "bytes": 59097,
+          "sha256": "0918dbb5015a3998c86efcbef42a66a62bd0a2c1cc977a8a68170fddeeed7dc9"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2022-original.csv",
+          "bytes": 34778,
+          "sha256": "7077dc6f23ef535574dc7f1edf02793acc797280d98a3a7ed3d184985f63ba7c"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2023-original.csv",
+          "bytes": 20743,
+          "sha256": "e9528da80e93295e6b555c0d7597a8064e67f8f7f88227430655fc523ad57aa8"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2024-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-history-20261013/original/three-twenty-sv-735-results-2025-original.csv",
+          "bytes": 2104,
+          "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-111-station-2026-original.csv",
+          "bytes": 1290,
+          "sha256": "445bba685654433fd815350478bacd8ab5504c6153d10591a514871dc9658939"
+        },
+        {
+          "path": "source/three-twenty-water-quality-20261013/original/three-twenty-sv-735-station-2026-original.csv",
+          "bytes": 1287,
+          "sha256": "0a92788a6adbcab34e59fd654a162b78b17373e85fa78a29911290d1677c3c16"
+        }
+      ]
+    }
+  ]
+}

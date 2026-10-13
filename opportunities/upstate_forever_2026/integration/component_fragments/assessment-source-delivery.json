@@ -148,7 +148,15 @@
         "source_tools/annual_reference_maps.mjs",
         "source_tools/observed_flow_map.mjs",
         "source/hydrology-huc05-07-20261013/nldi/geographic_support.mjs",
-        "CURRENT_OWNER_DIRECTION.md"
+        "CURRENT_OWNER_DIRECTION.md",
+        "results/native-assessment-annual-basin-maps-20261013/README.md",
+        "results/native-assessment-annual-basin-maps-20261013/artifacts.json",
+        "results/native-assessment-annual-basin-maps-20261013/annual-reference-basins.svg",
+        "results/native-assessment-annual-basin-maps-20261013/annual-reference-original-components.svg",
+        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip",
+        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.json",
+        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.part01.txt",
+        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.part02.txt"
       ],
       "requires": [
         "assessment-context",

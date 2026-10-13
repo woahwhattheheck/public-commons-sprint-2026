@@ -386,7 +386,7 @@ def render_html(result):
             if isinstance(block, str):
                 content.append("<p>" + esc(block) + "</p>")
             elif block["kind"] == "table":
-                content.append("<div class='table'><table><thead><tr>" +
+                content.append("<div class='table' tabindex='0' role='region' aria-label='" + esc(heading) + " table'><table><thead><tr>" +
                     "".join("<th>" + esc(c) + "</th>" for c in block["columns"]) + "</tr></thead><tbody>" +
                     "".join("<tr>" + "".join("<td>" + esc(v) + "</td>" for v in row) + "</tr>" for row in block["rows"]) +
                     "</tbody></table></div>")
@@ -403,12 +403,13 @@ def render_html(result):
         "</ul><p>Review identity " + esc(result["id"]) + " · Plan digest " + esc(result["plan_sha256"]) + "</p></section>")
     return ("<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<title>" + esc(result["title"]) + "</title><style>"
-        "body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#171717;background:#fff}"
+        "*{box-sizing:border-box}body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#171717;background:#fff;overflow-wrap:anywhere}"
         "main{max-width:1300px;margin:auto;padding:28px}h1{font-size:27px}h2{font-size:19px}"
         "section{margin:26px 0;border-top:1px solid #999;padding-top:10px}a{color:inherit;text-decoration:underline}"
         "table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:7px;text-align:left;vertical-align:top}"
-        "th{background:#eee}.table{overflow:auto}td{overflow-wrap:anywhere}header p{color:#555}"
-        "@media print{main{padding:0;max-width:none}.table{overflow:visible}thead{display:table-header-group}"
+        "th{background:#eee;overflow-wrap:normal}.table{max-width:100%;overflow-x:auto}td{overflow-wrap:anywhere}header p{color:#555}"
+        "@media(max-width:620px){main{padding:16px}.table table{min-width:720px}.table th,.table td{min-width:96px}}"
+        "@media print{main{padding:0;max-width:none}.table{overflow:visible}.table table,.table th,.table td{min-width:0}thead{display:table-header-group}"
         "tr{break-inside:avoid}h2{break-after:avoid}a{text-decoration:none}table{font-size:9px}@page{size:landscape;margin:12mm}"
         "</style><main><header><p>IMPLEMENTATION &amp; FIELDWORK · SAMPLE QUALITY CONTROL</p><h1>" +
         esc(result["title"]) + "</h1><p>Review date " + esc(result["as_of"]) + " · " +
