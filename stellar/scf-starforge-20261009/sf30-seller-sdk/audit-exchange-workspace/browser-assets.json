@@ -78,6 +78,20 @@
         "AUDIT_RECIPIENT_INSTALLED.md",
         "text/plain; charset=utf-8"
       ]
+    ],
+    [
+      "/recipient-queue.js",
+      [
+        "public/recipient-queue.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/AUDIT_RECIPIENT_QUEUE.md",
+      [
+        "AUDIT_RECIPIENT_QUEUE.md",
+        "text/plain; charset=utf-8"
+      ]
     ]
   ]
 }

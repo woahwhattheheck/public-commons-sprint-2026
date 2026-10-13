@@ -26,7 +26,9 @@ READ_ACTIONS = {"workspace.get", "source.get", "edition.get", "source.compare", 
 WRITE_ACTIONS = {"source.import", "source.replace", "source.patch", "source.validate", "edition.save",
                  "review.save", "link.save", "projection.save", "analysis.run", "analysis.resume", "export.create", "workspace.receive", "return.apply"}
 from recipient_operator import SPECIAL_ACTIONS as RECIPIENT_ACTIONS, WRITE_ACTIONS as RECIPIENT_WRITES
-WRITE_ACTIONS |= RECIPIENT_WRITES
+import recipient_queue
+READ_ACTIONS |= recipient_queue.READ_ACTIONS
+WRITE_ACTIONS |= RECIPIENT_WRITES | recipient_queue.WRITE_ACTIONS
 APPLICATION_ID = 1096107080
 
 def identifier(prefix):
@@ -224,6 +226,8 @@ class Workspace:
         return {"ok": True, "result": result, "state": state}
 
     def _read(self, db, action, inputs):
+        if action in recipient_queue.READ_ACTIONS:
+            return recipient_queue.read(self, db, action, inputs)
         if action == "return.preview":
             return preview_corrections(self, db, inputs)
         if action == "return.plan":
@@ -303,6 +307,8 @@ class Workspace:
         return record
 
     def _write(self, db, action, inputs):
+        if action in recipient_queue.WRITE_ACTIONS:
+            return recipient_queue.write(self, db, action, inputs)
         if action in RECIPIENT_WRITES:
             from recipient_operator import native_write as recipient_write
             return recipient_write(self, db, action, inputs)
