@@ -66,3 +66,16 @@ Use the original equipped programme's browser and receiving directory. The compa
 Before presenting this app or any attachment to a prospect/customer, the responsible producer must personally open, render, LOOK at and operate that exact outgoing version. Actually view its desktop/narrow screenshots, full loaded/empty/error states and important controls. Open every produced attachment in its ordinary viewer; inspect the ZIP's usable contents, complete source files and independently reopened project. Fix concrete usability and behaviour defects within the original workflow. The source exercise and static review support this work; record the actual viewed version and meaningful receiving edit.
 
 This is the standing direct Bryce rendered-product and all-attachment instruction. Carry it into downstream operating guides and delegated assignments. It creates no new approval queue or controller.
+
+
+## Continue the same original browser receiving
+
+Retain the shared services/migration-receiving/continuation.mjs from the same public source selection. runUniformReceiving keeps its original caller-owned page/context contract. Reuse the same outputDirectory and original application edition.
+
+The first invocation saves its complete original application, initial workspace, fixed workspace/copy identities and source operation. It opens a stable original-programme.html URL. A subsequent invocation restores the complete original checkpoint and same browser store, reconciles each exact saved source import, mapping and correction before any repeated click, and adopts an already-committed operation. It also reopens an already-edited independent receiving copy without applying the same correction twice.
+
+A kernel-held local IPC lease serializes this one receiving directory on Linux or Windows and releases on process exit. Every invocation has its own attempts/ directory; the prior complete files and captures remain intact. Named completed phases reopen exact saved outputs. The final native-receiving.json records all retained file identities and restores a missing member from its complete retained bytes before returning the same completed result. Preserve the complete original directory including intent, source, state, checkpoints, attempts and retained-bytes.
+
+Application mutation now freezes controls synchronously through the actual async operation. The next workspace and the cleared submitted form are saved in one browser transaction. Failed storage retains the original typed form and both complete alternatives in the embedded/downloadable recovery bundle, while the current applied result does not show a stale already-submitted form as a new request.
+
+The original producer still opens and LOOKS at every outgoing attachment and actual desktop/mobile capture, operates the controls and reopens full exports. The continuation preserves that operating course; it does not replace actual viewing with source checks.
