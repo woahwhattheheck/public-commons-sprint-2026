@@ -9,6 +9,12 @@ const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
   ['parameter-studies', 'Parameter studies'],
+  ['calibration-plans', 'Calibration designs'],
+  ['calibrations', 'Calibration evaluations'],
+  ['calibration-uncertainties', 'Calibration source-error reviews'],
+  ['calibration-maps', 'Calibration residual maps'],
+  ['calibration-reviews', 'Calibration scientific reviews'],
+  ['calibration-report-sources', 'Calibration report sources'],
   ['parameter-working', 'Parameter working designs'],
   ['multivariate-controls', 'Matched-control designs'],
   ['multivariate-control-outcomes', 'Matched-control native outcomes'],
@@ -381,6 +387,8 @@ export function attachStudyTransfer(host) {
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&['parameter-studies','parameter-working'].includes(row.kind)&&typeof host.openParameterStudy==='function'
               ?button('open-parameter',row.kind==='parameter-working'?'Open working design':'Open Parameter study','data-study-open="'+escapeHTML(key)+'"'):'')+
+            (row.state!=='unreadable'&&['calibration-plans','calibrations'].includes(row.kind)&&typeof host.openExtension==='function'
+              ?button('open-calibration',row.kind==='calibrations'?'Open Calibration evaluation':'Open Calibration design','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
               ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
@@ -661,6 +669,15 @@ export function attachStudyTransfer(host) {
           ...(row.kind==='parameter-working'?{working_revision_id:row.id}:{experiment_id:row.id})},
           {current:()=>current(captured)&&serial===retainedRecordRequest});
       }
+      else if(action==='open-calibration'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||!['calibration-plans','calibrations'].includes(row.kind)||typeof host.openExtension!=='function')
+          throw Error('Choose an original saved Calibration design or evaluation.');
+        const captured=stamp(),serial=++retainedRecordRequest;
+        const isCurrent=()=>current(captured)&&serial===retainedRecordRequest;
+        try{await host.openExtension('calibration','openForStudy',{workspace_key:captured.workspace,kind:row.kind,id:row.id,isCurrent});}
+        catch(error){if(isCurrent())throw error;}
+      }
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')
@@ -773,6 +790,7 @@ export function attachStudyTransfer(host) {
   }
 
   function openForStudies(selection) {
+    if(typeof selection?.isCurrent==='function'&&!selection.isCurrent())return;
     const roots=Array.isArray(selection)?selection:selection?.roots;
     if(!Array.isArray(roots)||!roots.length)throw new Error('Select saved scientific studies.');
     const next=workspaceNow();

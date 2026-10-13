@@ -1,3 +1,4 @@
+import {receivedCalibrationStudiesHTML,openReceivedCalibrationStudy} from './calibration_received_studies.mjs';
 import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
 import {receivedPublishedReviewsHTML,openReceivedPublishedReview} from './received_published_reviews.mjs';
 import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML,reportComparisonHTML} from './study_report_navigation.mjs';
@@ -64,10 +65,10 @@ export function attachReceivedStudies(host) {
       '<p>Open a saved study, its scientific reports, original editable plans, assessment contexts, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Assessment sources</th><th>Gauge studies</th><th>Model studies</th><th>Parameter studies</th><th>Management designs</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Assessment sources</th><th>Gauge studies</th><th>Model studies</th><th>Parameter studies</th><th>Calibrations</th><th>Management designs</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.assessment_source_count??0)+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.editable_parameter_study_count??0)+'</td><td>'+esc(row.management_case_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.assessment_source_count??0)+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.editable_parameter_study_count??0)+'</td><td>'+esc(row.calibration_study_count??0)+'</td><td>'+esc(row.management_case_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -142,6 +143,7 @@ export function attachReceivedStudies(host) {
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
     html+=receivedParameterStudiesHTML(value,!!disabled);
+    html+=receivedCalibrationStudiesHTML(value,!!disabled);
     html+=receivedManagementHTML(value,!!disabled);
     html+=receivedComparabilityHTML(value,!!disabled);
     html+=receivedEconomicComparisonsHTML(value,!!disabled);
@@ -262,6 +264,14 @@ export function attachReceivedStudies(host) {
       return openRetainedStudyRecord(host,{kind,id,tab:target.dataset.recordTab},{
         workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
       });
+    }
+    if(action?.startsWith('calibration-study-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value.id;
+      try{return await openReceivedCalibrationStudy(host,value,target,{workspace_key:ws,current:stillCurrent});}
+      catch(reason){if(!stillCurrent())return;throw reason;}
     }
     if(action?.startsWith('parameter-study-')){
       const ws=workspace,e=epoch,value=opened;
