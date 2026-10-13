@@ -1,4 +1,5 @@
 /** Guided operation of the existing Upper Savannah scientific workspace. */
+import {attachRegionalJourney} from './regional_journey.mjs';
 const SCHEMA='upstate.operating-journey/v1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=value=>Array.isArray(value)?value:[];
@@ -58,6 +59,7 @@ export function nativeTiming(run,task,at=new Date().toISOString()){
 }
 export function validateJourneyImport(value,state){
  if(!value||value.schema!==SCHEMA||value.project_id!==state?.data?.project?.id)throw Error('Open the original project or its restored copy before importing these journey selections.');
+ if(value.regional!==undefined&&value.regional!==null&&(typeof value.regional!=='object'||Array.isArray(value.regional)||value.regional.schema!=='upstate.regional-journey/v1'))throw Error('Choose the original regional journey selection format.');
  const selection={};
  for(const [key,collection]of Object.entries(fields)){
   const id=value.selection?.[key]||'';
@@ -75,7 +77,7 @@ export function validateJourneyImport(value,state){
  if(delivery&&(delivery.selection?.baseline_run_id!==base?.id||!list(delivery.selection?.scenario_run_ids).includes(run?.id)))throw Error('The selected delivery belongs to a different baseline or alternative.');
  const mapPack=list(state.data.spatial_exports).find(x=>x.id===selection.spatial_export_id);
  if(mapPack&&selection.spatial_review_id&&mapPack.review_id!==selection.spatial_review_id)throw Error('The map pack belongs to a different saved geographic view.');
- return {selection,step:journeySteps.some(x=>x.id===value.step)?value.step:'study',notes:typeof value.notes==='string'?value.notes:'',note_versions:list(value.note_versions).filter(x=>typeof x?.text==='string').map(x=>({text:x.text,recorded_at:typeof x.recorded_at==='string'?x.recorded_at:null})),started_at:stamp(value.started_at)!==null?value.started_at:new Date().toISOString()};
+ return {selection,regional:value.regional?JSON.parse(JSON.stringify(value.regional)):null,step:journeySteps.some(x=>x.id===value.step)?value.step:'study',notes:typeof value.notes==='string'?value.notes:'',note_versions:list(value.note_versions).filter(x=>typeof x?.text==='string').map(x=>({text:x.text,recorded_at:typeof x.recorded_at==='string'?x.recorded_at:null})),started_at:stamp(value.started_at)!==null?value.started_at:new Date().toISOString()};
 }
 export function attachOperatingJourney(host){
  let snapshot=null,preferences=null,currentKey=null,storageMessage='',busy=false,mounted=null,removeListeners=null,rail=null,currentView='overview',storageRevision=null,savedNotes='',savedSelection='';
@@ -86,7 +88,9 @@ export function attachOperatingJourney(host){
  const row=(kind,id)=>rows(kind).find(x=>x.id===id);
  const selected=key=>row(fields[key],preferences?.selection[key]);
  const title=(kind,id)=>{const item=row(kind,id);return item?.title||item?.spec?.title||item?.selection?.title||item?.metadata?.title||short(id)||'Choose a saved item';};
+ const selectionRevision=value=>canonical({selection:value?.selection||{},regional:value?.regional??null});
  const runTitle=item=>item?title('scenarios',item.selection?.scenario_id)+' · '+title('profiles',item.selection?.profile_id)+' · '+modelLabel(item.selection):'Choose a native run';
+ const regional=attachRegionalJourney({...host,getState:state,getSelection:()=>preferences?.selection||{},getContext:()=>preferences?.regional??null,setContext:value=>{if(preferences){preferences.regional=value;save();}}});
  function retainIntent(id){
   const pending=preferences?.pending[id];
   if(!currentKey||!pending?.request)throw Error('Retain the original request before submitting this operation.');
@@ -136,8 +140,8 @@ export function attachOperatingJourney(host){
     if(remoteChanged&&localChanged&&incomingNotes!==preferences.notes)variants.push({text:incomingNotes,recorded_at:new Date().toISOString()});
     else if(remoteChanged&&!localChanged)preferences.notes=incomingNotes;
     preferences.note_versions=variants.filter((item,index,all)=>typeof item?.text==='string'&&all.findIndex(other=>other?.text===item.text)===index);
-    if(canonical(latest.selection)!==savedSelection&&canonical(preferences.selection)===savedSelection){
-     const incoming=validateJourneyImport(latest,state());preferences.selection=incoming.selection;preferences.generation=latest.generation||crypto.randomUUID();
+    if(selectionRevision(latest)!==savedSelection&&selectionRevision(preferences)===savedSelection){
+     const incoming=validateJourneyImport(latest,state());preferences.selection=incoming.selection;preferences.regional=incoming.regional;preferences.generation=latest.generation||crypto.randomUUID();
     }
    }
    for(const [id,pending]of Object.entries(preferences.pending)){
@@ -149,7 +153,7 @@ export function attachOperatingJourney(host){
    preferences.revision=crypto.randomUUID();
    const saved={...preferences,pending:{}};
    localStorage.setItem(currentKey,JSON.stringify(saved));
-   storageRevision=preferences.revision;savedNotes=preferences.notes;savedSelection=canonical(preferences.selection);storageMessage='';
+   storageRevision=preferences.revision;savedNotes=preferences.notes;savedSelection=selectionRevision(preferences);storageMessage='';
   }catch(error){
    if(error.message?.startsWith('An original journey request'))throw error;
    storageMessage='Journey selections are available in this tab. Download them to keep a copy.';
@@ -179,6 +183,11 @@ export function attachOperatingJourney(host){
   for(const key of ['comparison_id','spatial_review_id','spatial_export_id','delivery_id'])preferences.selection[key]='';
  }
  function clearDownstream(field){
+  if(['grid_id','profile_id'].includes(field)){
+   const profile=selected('profile_id'),grid=selected('grid_id');
+   const available=profile?nativeModels(profile):['ndr','sdr'];
+   preferences.selection.models=grid?available.filter(name=>nativeModels(grid.spec).includes(name)):available;
+  }
   if(['grid_id','profile_id','scenario_id'].includes(field))preferences.selection.run_id='';
   if(['grid_id','profile_id','scenario_id','run_id'].includes(field)){preferences.selection.comparison_id='';preferences.selection.delivery_id='';}
  }
@@ -209,14 +218,15 @@ export function attachOperatingJourney(host){
    if((!saved||saved.project_id!==next.data.project.id||saved.workspace_key!==next.workspace_key)&&next.data.operator_session?.journey){
     saved={...next.data.operator_session.journey,workspace_key:next.workspace_key,active:true};
    }
-   preferences={schema:SCHEMA,project_id:next.data.project.id,workspace_key:next.workspace_key,active:false,step:'study',started_at:new Date().toISOString(),generation:crypto.randomUUID(),selection:{...Object.fromEntries(Object.keys(fields).map(k=>[k,''])),models:[]},notes:'',pending:{},requests:{},note_versions:[]};
+   preferences={schema:SCHEMA,project_id:next.data.project.id,workspace_key:next.workspace_key,active:false,step:'study',started_at:new Date().toISOString(),generation:crypto.randomUUID(),selection:{...Object.fromEntries(Object.keys(fields).map(k=>[k,''])),models:[]},notes:'',regional:null,pending:{},requests:{},note_versions:[]};
    if(saved?.schema===SCHEMA&&saved.project_id===next.data.project.id&&saved.workspace_key===next.workspace_key){
     try{
      const valid=validateJourneyImport(saved,next);
      Object.assign(preferences,valid,{active:!!saved.active,generation:typeof saved.generation==='string'?saved.generation:crypto.randomUUID(),pending:saved.pending&&typeof saved.pending==='object'&&!Array.isArray(saved.pending)?saved.pending:{},requests:saved.requests&&typeof saved.requests==='object'&&!Array.isArray(saved.requests)?saved.requests:{}});
     }catch(error){storageMessage=error.message;}
    }
-   storageRevision=saved?.revision||null;savedNotes=preferences.notes;savedSelection=canonical(preferences.selection);
+   storageRevision=saved?.revision||null;savedNotes=preferences.notes;savedSelection=selectionRevision(preferences);
+   preferences.browser_view_draft=saved?.browser_view_draft&&saved.browser_view_draft.project_id===next.data.project.id?saved.browser_view_draft:null;
    try{
     for(let i=0;i<localStorage.length;i++){
      const name=localStorage.key(i);if(!name?.startsWith(currentKey+':intent:'))continue;
@@ -325,8 +335,8 @@ export function attachOperatingJourney(host){
   return html;
  }
  function inputs(){
-  const base=selected('baseline_run_id'),grid=row('grids',base?.selection?.grid_id),profile=row('profiles',base?.selection?.profile_id),collection=row('sources',grid?.spec?.source_collection_id);
-  if(!base)return notice('Choose the starting study first.');
+  const base=selected('baseline_run_id'),grid=selected('grid_id')||row('grids',base?.selection?.grid_id),profile=selected('profile_id')||row('profiles',base?.selection?.profile_id),collection=row('sources',grid?.spec?.source_collection_id||profile?.source_collection_id);
+  if(!grid&&!profile)return notice('Select a saved scientific profile and model grid to inspect their original inputs.');
   let html=facts([['Source edition',collection?.title||collection?.id],['Coordinate system',grid?.grid?.crs_name||grid?.grid?.crs],['Resolution',grid?.grid?.resolution_m!==undefined?number(grid.grid.resolution_m)+' m':null],['Grid dimensions',grid?.grid?number(grid.grid.width)+' × '+number(grid.grid.height):null],['Upstream context',grid?.spec?.upstream_buffer_m!==undefined?number(grid.spec.upstream_buffer_m)+' m':null],['Model period',typeof profile?.model_period==='object'?JSON.stringify(profile.model_period):profile?.model_period]]);
   html+='<div class="page-actions">'+open('sources',collection?.id,'Open original sources')+open('grids',grid?.id,'Inspect grid and boundary')+open('profiles',profile?.id,'Inspect parameters')+map('grids',grid?.id,'Inspect geography')+'</div>';
   const entries=list(collection?.entries);
@@ -336,7 +346,7 @@ export function attachOperatingJourney(host){
  function change(){
   const base=selected('baseline_run_id'),scenario=selected('scenario_id');
   return '<div class="journey-fields">'+select('scenario_id','Saved case or scenario',rows('scenarios'))+select('profile_id','Parameter profile',rows('profiles'))+select('grid_id','Complete model grid',rows('grids').filter(x=>x.state==='complete'))+'</div>'+
-   '<div class="page-actions">'+action('scenario','Revise selected scenario','',true)+action('profile','Revise parameter profile')+action('grid','Revise model grid')+'</div>'+
+   '<div class="page-actions">'+action('scenario','Revise selected scenario','',true)+action('profile','Revise parameter profile')+action('regional-profile','Open profile workbench')+action('grid','Revise model grid')+'</div>'+
    (scenario?facts([['Scenario kind',human(scenario.kind)],['Reason',scenario.reason],['Specified land-cover changes',list(scenario.patches).length],['Starting baseline',base?runTitle(base):'Choose the starting study']]):notice('Choose an existing scenario or create one using the original scenario form.'))+
    (base&&preferences.selection.scenario_id===base.selection?.scenario_id?notice('The original baseline is selected. Save and select a separate case change to compare an alternative.'): '');
  }
@@ -393,8 +403,9 @@ export function attachOperatingJourney(host){
   const nativeSession=Object.hasOwn(state()?.data||{},'operator_session');
   let html='<div class="page-actions">'+(nativeSession?action('save-view','Save view and notes'):'')+action('backup','Create complete native backup','',true)+action('restore','Restore workspace archive')+action('export','Download journey selections')+action('notes','Download operating notes')+'</div>';
   const saved=state()?.data?.operator_session;
-  if(saved)html+=facts([['View saved with project',when(saved.saved_at)],['Saved project',saved.project_id]]);
-  html+='<label class="journey-import"><span>Resume a saved journey in this project</span><input type="file" data-journey-import accept=".json,application/json"><small>'+ (nativeSession?'Workspace backups include the saved view and notes. You can also import a separate selections file for the same project.':'Use the journey selections file after opening the original project or its restored copy.')+'</small></label>';
+  if(saved)html+=facts([['View saved with project',when(saved.saved_at)],['Saved profile',title('profiles',saved.journey?.selection?.profile_id)],['Saved native models',modelLabel(saved.journey?.selection)]])+'<div class="page-actions">'+action('open-saved-view','Open saved project view')+'</div>'+notice('Opening the project view keeps the current browser view available below.');
+  if(preferences.browser_view_draft)html+='<div class="page-actions">'+action('swap-browser-view','Switch to retained browser view')+'</div>'+notice('The retained browser view includes its selected records, watershed context and notes. Switching keeps the view you are leaving available for another switch.');
+  html+='<label class="journey-import"><span>Open regional workflow or resume a saved journey</span><input type="file" data-journey-import accept=".json,application/json"><small>'+ (nativeSession?'Workspace backups include the saved view and notes. You can also import a separate selections file for the same project.':'Use the regional-workflow-opening.json receipt or journey selections file in the original project or its restored copy.')+'</small></label>';
   if(backup)html+='<h3>Latest native backup</h3>'+facts([['State',human(backup.state)],['Created',when(backup.created_at)],['Bytes',number(backup.result?.bytes)],['Original project',backup.result?.project_id]])+'<div class="page-actions">'+action('task','Open backup and original download','data-id="'+esc(backup.id)+'"')+'</div>';
   if(restore)html+='<h3>Latest native restore</h3>'+facts([['State',human(restore.state)],['Created',when(restore.created_at)],['Original identity',restore.result?.identity||'Available after completion']])+'<div class="page-actions">'+action('task','Inspect restore','data-id="'+esc(restore.id)+'"')+(restore.result?.workspace_key?action('workspace','Open restored workspace','data-id="'+esc(restore.result.workspace_key)+'"'):'')+'</div>';
   const opened=list(state()?.workspaces).find(x=>x.id===workspace());
@@ -426,9 +437,9 @@ export function attachOperatingJourney(host){
    '<nav class="journey-steps" aria-label="Operating journey steps">'+journeySteps.map((item,i)=>action('step',String(i+1)+'. '+item.title,'data-step="'+item.id+'" aria-current="'+(item.id===step.id?'step':'false')+'"')).join('')+'</nav>'+
    '<section class="journey-main" aria-labelledby="journey-step-title"><p class="eyebrow">STEP '+(index+1)+' OF '+journeySteps.length+'</p><h2 id="journey-step-title">'+esc(step.title)+'</h2>'+
    '<dl class="journey-instructions">'+[['Do',step.do],['See',step.see],['Meaning',step.meaning]].map(([label,text])=>'<div><dt>'+label+'</dt><dd>'+esc(text)+'</dd></div>').join('')+'</dl>'+
-   '<blockquote class="journey-speaking">'+esc(step.say)+'</blockquote><div class="journey-work">'+renderers[step.id]()+'</div>'+
+   '<blockquote class="journey-speaking">'+esc(step.say)+'</blockquote><div class="journey-work">'+(['study','inputs','compare'].includes(step.id)?'<div data-journey-regional-slot></div>':'')+renderers[step.id]()+'</div>'+
    '<div class="journey-step-actions">'+(index?action('step','Previous step','data-step="'+journeySteps[index-1].id+'"'):'<span></span>')+(index<journeySteps.length-1?action('step','Next: '+journeySteps[index+1].title,'data-step="'+journeySteps[index+1].id+'"',true):action('view','Open workspace overview','data-view-name="overview"'))+'</div></section>'+
-   '<section class="journey-notes"><h2>Notes for this project</h2><label><span>Decisions and questions to carry forward</span><textarea data-journey-field="notes" rows="5">'+esc(preferences.notes)+'</textarea></label>'+list(preferences.note_versions).map(version=>'<details><summary>Notes retained from another tab · '+esc(when(version.recorded_at))+'</summary><pre class="journey-note-version">'+esc(version.text)+'</pre></details>').join('')+'</section>'+operationTable()+
+   '<section class="journey-notes"><h2>Notes for this project</h2><label><span>Decisions and questions to carry forward</span><textarea data-journey-field="notes" rows="5">'+esc(preferences.notes)+'</textarea></label>'+list(preferences.note_versions).map(version=>'<details><summary>Retained notes · '+esc(when(version.recorded_at))+'</summary><pre class="journey-note-version">'+esc(version.text)+'</pre></details>').join('')+'</section>'+operationTable()+
    '<details class="journey-reference"><summary>Control guide and plain language</summary><dl>'+journeyVocabulary.map(([term,meaning])=>'<dt>'+esc(term)+'</dt><dd>'+esc(meaning)+'</dd>').join('')+'</dl><h3>Questions to be ready for</h3><ul><li>Which source editions and model period are selected?</li><li>Where is the reporting boundary, and how much upstream context is included?</li><li>What exactly changed between the baseline and this alternative?</li><li>Did the biophysical profile also change?</li><li>What are the units and valid-cell coverage of this result?</li><li>Is this a saved result, a current calculation, or a continuation?</li><li>Which observations can be compared with the modeled annual loads?</li><li>Can the recipient reopen the working project and original maps?</li></ul></details></div>';
  }
  function focusState(container){
@@ -447,6 +458,7 @@ export function attachOperatingJourney(host){
   if(!preferences)return;
   const focus=focusState(container);detach();mounted=container;
   container.innerHTML=render();
+  regional.mount(container.querySelector('[data-journey-regional-slot]'),preferences.step);
   const input=event=>{
    if(event.target.dataset.journeyField==='notes'){preferences.notes=event.target.value;save();}
   };
@@ -467,7 +479,7 @@ export function attachOperatingJourney(host){
   removeListeners=()=>{container.removeEventListener('input',input);container.removeEventListener('change',change);};
   restoreFocus(container,focus);
  }
- function detach(){if(removeListeners)removeListeners();removeListeners=null;mounted=null;}
+ function detach(){regional.detach();if(removeListeners)removeListeners();removeListeners=null;mounted=null;}
  function updateRail(view){
   currentView=view;
   if(!rail){rail=document.createElement('aside');rail.className='journey-rail';rail.setAttribute('aria-label','Current operating journey');document.querySelector('#content')?.before(rail);}
@@ -481,11 +493,12 @@ export function attachOperatingJourney(host){
  }
  function exportValue(){
   const taskIds=new Set(Object.values(preferences.pending).map(x=>x?.task_id).filter(Boolean));
-  return {schema:SCHEMA,project_id:state().data.project.id,step:preferences.step,started_at:preferences.started_at,selection:{...preferences.selection},notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:new Date().toISOString(),recorded_context:{project_title:state().data.project.title,workspace_key:workspace(),tasks:list(state().tasks).filter(task=>taskIds.has(task.id)).map(task=>({id:task.id,operation_id:task.operation_id,action:task.action,state:task.state,created_at:task.created_at,started_at:task.started_at??null,ended_at:task.ended_at??null})),selected_run_timing:nativeTiming(matchingRun(),matchingRun()?latestTask('run.start',matchingRun().id):null)}};
+  return {schema:SCHEMA,project_id:state().data.project.id,step:preferences.step,started_at:preferences.started_at,selection:{...preferences.selection},regional:regional.capture(),notes:preferences.notes,note_versions:list(preferences.note_versions),observed_at:new Date().toISOString(),recorded_context:{project_title:state().data.project.title,workspace_key:workspace(),tasks:list(state().tasks).filter(task=>taskIds.has(task.id)).map(task=>({id:task.id,operation_id:task.operation_id,action:task.action,state:task.state,created_at:task.created_at,started_at:task.started_at??null,ended_at:task.ended_at??null})),selected_run_timing:nativeTiming(matchingRun(),matchingRun()?latestTask('run.start',matchingRun().id):null)}};
  }
  function operatingNotes(){
   const value=exportValue(),base=selected('baseline_run_id'),run=matchingRun(),lines=['# Upper Savannah — operating notes','',state().data.project.title,'','Recorded: '+value.observed_at,'Project: '+value.project_id,'','## Selected analysis',''];
   for(const [key,collection]of Object.entries(fields))if(value.selection[key])lines.push('- '+human(key)+': '+title(collection,value.selection[key])+' ('+value.selection[key]+')');
+  const regionalNotes=regional.notes();if(regionalNotes)lines.push('',regionalNotes);
   lines.push('','## Operating journey','');
   journeySteps.forEach((step,i)=>lines.push('### '+(i+1)+'. '+step.title,'','Do: '+step.do,'','See: '+step.see,'','Meaning: '+step.meaning,'','Say: '+step.say,''));
   lines.push('## Actual result and timing','');
@@ -502,13 +515,45 @@ export function attachOperatingJourney(host){
   for(const version of list(preferences.note_versions))lines.push('### Notes retained from another tab','',version.recorded_at||'','',version.text,'');
   return lines.join('\n');
  }
+ async function selectOpening(value,{locked=false}={}){
+  if(busy&&!locked)throw Error('Wait for the current operation response before importing a regional opening.');
+  const originalWorkspace=workspace();if(!locked)busy=true;
+  try{
+   const opened=await regional.opening(value,state());
+   if(workspace()!==originalWorkspace)throw Error('Open the intended regional workspace and import the opening again.');
+   const validated=validateJourneyImport({schema:SCHEMA,project_id:state().data.project.id,selection:opened.selection,regional:opened.regional,step:'inputs',notes:preferences.notes,note_versions:preferences.note_versions,started_at:preferences.started_at},state());
+   Object.assign(preferences,validated,{active:true,generation:crypto.randomUUID()});
+   save();host.toast('Regional watershed selection and scientific profile opened in the original journey.');return host.navigate('journey');
+  }finally{if(!locked)busy=false;}
+ }
+ async function openRetainedView(value,{projectRevision=null}={}){
+  if(busy)throw Error('Wait for the current operation response before opening another view.');
+  const originalWorkspace=workspace(),generation=preferences.generation,originalSelection=selectionRevision(preferences);
+  busy=true;
+  try{
+   const imported=validateJourneyImport(value,state());
+   imported.regional=await regional.validateImport(imported.regional,originalWorkspace);
+   if(workspace()!==originalWorkspace||preferences.generation!==generation||selectionRevision(preferences)!==originalSelection)throw Error('The selected workspace or view changed. Open the retained view again.');
+   const leaving=exportValue();
+   const versions=[...list(preferences.note_versions),...list(imported.note_versions)];
+   if(preferences.notes&&preferences.notes!==imported.notes)versions.push({text:preferences.notes,recorded_at:new Date().toISOString()});
+   imported.note_versions=versions.filter((item,index,all)=>typeof item?.text==='string'&&all.findIndex(other=>other?.text===item.text)===index);
+   Object.assign(preferences,imported,{active:true,generation:crypto.randomUUID(),browser_view_draft:leaving});
+   if(projectRevision)preferences.opened_project_revision=projectRevision;
+   save();if(mounted)mount(mounted);updateRail(currentView);
+   host.toast(projectRevision?'Saved project view opened. The prior browser view is retained.':'Retained browser view opened.');
+  }finally{busy=false;}
+ }
  async function importFile(file){
   if(busy)throw Error('Wait for the current operation response before importing selections.');
   const originalWorkspace=workspace();busy=true;
   try{
    const value=JSON.parse(await file.text());
    if(workspace()!==originalWorkspace)throw Error('Open the intended workspace and import the journey again.');
+   if(value.schema==='upstate.regional-workflow-opening/v1')return await selectOpening(value,{locked:true});
    const imported=validateJourneyImport(value,state());
+   imported.regional=await regional.validateImport(imported.regional,originalWorkspace);
+   if(workspace()!==originalWorkspace)throw Error('Open the intended workspace and import the journey again.');
    Object.assign(preferences,imported,{active:true,generation:crypto.randomUUID(),pending:{},requests:{}});
    save();if(mounted)mount(mounted);updateRail(currentView);host.toast('Journey selections opened in this original project.');
   }finally{busy=false;}
@@ -516,6 +561,7 @@ export function attachOperatingJourney(host){
  async function dispatch(button){
   if(!preferences)throw Error('Open the scientific workspace first.');
   const name=button.dataset.action?.replace(/^journey-/,'');
+  if(name?.startsWith('regional-'))return regional.dispatch(button);
   if(name==='home'){preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
   if(name==='step'){if(!journeySteps.some(x=>x.id===button.dataset.step))return;preferences.step=button.dataset.step;preferences.active=true;save();if(mounted)mount(mounted);return host.navigate('journey');}
   if(name==='view')return host.navigate(button.dataset.viewName);
@@ -525,6 +571,15 @@ export function attachOperatingJourney(host){
   if(name==='workspace')return host.selectWorkspace(button.dataset.id);
   if(name==='export'){const value=exportValue();download('Upper_Savannah_Journey_'+short(value.project_id)+'.json',JSON.stringify(value,null,2)+'\n','application/json');return;}
   if(name==='notes'){download('Upper_Savannah_Operating_Notes_'+short(state().data.project.id)+'.md',operatingNotes(),'text/markdown;charset=utf-8');return;}
+  if(name==='open-saved-view'){
+   const saved=state()?.data?.operator_session;
+   if(!saved?.journey)throw Error('Save a project view before opening it.');
+   return openRetainedView(saved.journey,{projectRevision:saved.revision});
+  }
+  if(name==='swap-browser-view'){
+   if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');
+   return openRetainedView(preferences.browser_view_draft);
+  }
   if(name==='save-view'){
    if(busy)throw Error('The current operation is being retained. Wait for its response.');
    const selectedWorkspace=workspace(),generation=preferences.generation;
@@ -561,7 +616,7 @@ export function attachOperatingJourney(host){
   observe(next,hostView());
   if(mounted)mount(mounted,next);
  }
- const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,isBusy:()=>busy,activate:()=>{if(preferences&&!preferences.active){preferences.active=true;save();}},capture:exportValue};
+ const controller={observe,beforeSubmission,acceptTask,mount,update,detach,dispatch,updateRail,selectOpening,isBusy:()=>busy,activate:()=>{if(preferences&&!preferences.active){preferences.active=true;save();}},capture:exportValue};
  function install(){
   if(!document.querySelector('link[data-operating-journey]')){const link=document.createElement('link');link.rel='stylesheet';link.href='/web/journey.css';link.dataset.operatingJourney='';document.head.append(link);}
   if(!document.querySelector('[data-view="journey"]')){
