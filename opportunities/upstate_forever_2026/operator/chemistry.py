@@ -1,9 +1,12 @@
 """Chemical analysis on the original Operator's workspace, queue and downloads."""
 from __future__ import annotations
 from copy import deepcopy
+import html
+from model import chemistry_reports, chemistry_report_source
+from model.common import verify_file
 from model.chemistry import Chemistry, ACTIONS, invoke
 from model.common import digest
-READS = {'catalog', 'case', 'run', 'page'}
+READS = {'catalog', 'case', 'run', 'page', 'report', 'report-source'}
 
 class ChemistryOperations:
     def __init__(self, operator, fault):
@@ -20,6 +23,14 @@ class ChemistryOperations:
             if result.get('schema') == 'upstate.chemistry-run/v1':
                 for item in files.get('artifacts', []):
                     item['path'] = 'chemistry-runs/' + result['id'] + '/' + item['path']
+            if result.get('schema') == 'upstate.chemistry-report-sources/v1':
+                directory = result['directory'].rstrip('/') + '/'
+                for item in files.get('files', {}).values():
+                    item['path'] = directory + item['path']
+                if files.get('manifest'):
+                    original_manifest = deepcopy(files['manifest'])
+                    original_manifest['path'] = directory + original_manifest['path']
+                    files.setdefault('artifacts', []).append(original_manifest)
             # The original exporter returns one retained artifact descriptor.
             # Present it through the host's existing artifact collection so the
             # native file registrar exposes the editable ZIP without changing
@@ -32,12 +43,34 @@ class ChemistryOperations:
         m = self.manager(workspace)
         if operation == 'catalog':
             value = m.catalog()
+            value['reports'] = chemistry_reports.catalog(m.ws)
+            value['report_sources'] = chemistry_report_source.list_saved(m.ws)
             # Compact operator state intentionally omits full source entries.
             value['sources'] = [
                 {'id': collection['id'], 'title': collection['title'],
                  'entries': [{'id': entry['id'], 'title': entry.get('title', entry['id']),
                               'kind': entry.get('kind')} for entry in collection['entries']]}
                 for collection in m.ws._list('sources')]
+        elif operation == 'report':
+            value = chemistry_reports.inspect(m.ws, payload['report_id'])
+            original = verify_file(m.ws.root, value['report']).read_text(encoding='utf-8')
+            directory = m.ws.root / chemistry_reports.FOLDER / value['id']
+            for item in value['artifacts']:
+                path = verify_file(m.ws.root, item)
+                relative = path.relative_to(directory).as_posix()
+                ticket = self.operator._ticket(workspace, path, item, label=relative)
+                old = "href='" + html.escape(relative, quote=True) + "'"
+                new = ("href='" + html.escape(ticket['url'], quote=True)
+                       + "' target='_blank' rel='noopener'")
+                original = original.replace(old, new)
+            value = {**value, 'preview_html': original}
+        elif operation == 'report-source':
+            value = chemistry_report_source.inspect(m.ws, payload['source_record_id'])
+            choice = {name: value[name] for name in ('source_collection_id', 'source_id')}
+            value = {**value, 'source_selection': choice,
+                     'scientific_report_selection': {
+                         'workspace_key': workspace, 'sources': [choice],
+                         'title': value['title']}}
         elif operation == 'case': value = m.get_case(payload['case_id'])
         elif operation == 'run': value = m.get_run(payload['run_id'])
         elif operation == 'page':

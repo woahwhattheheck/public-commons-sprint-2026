@@ -1268,6 +1268,148 @@ def prepare_scenario(workspace, selection):
         return workspace.save_scenario(scenario)
 
 
+def _retained_treatment_footprint(workspace, run, scenario):
+    """Read the original land-cover stage accounting without a raster/model rerun."""
+    if scenario.get("kind") != "landcover":
+        return None
+    declared = scenario.get("patches", [])
+    stage = run.get("stages", {}).get("landcover", {})
+    edits = stage.get("edits")
+    result = {
+        "schema": "upstate.portfolio-treatment-footprint/v1",
+        "run_id": run["id"], "scenario_id": scenario["id"],
+        "grid_id": run["selection"]["grid_id"],
+        "source_collection_id": scenario.get("source_collection_id"),
+        "state": "unavailable", "patches": [], "summary": {}, "notes": [],
+        "semantics": {
+            "source": "Accounting retained by this run's original land-cover stage; no new raster or model execution.",
+            "eligibility": "Valid mask cell whose current value matches from_codes at that position in the ordered patches.",
+            "changed": "Eligible cell whose current value differs from the destination; patch assignments may overlap.",
+            "net_changed": "Sum of final_owned_cells: unique final differences from baseline, attributed to the last value-changing patch.",
+            "area": "Actual saved grid affine determinant in square metres divided by 10000.",
+            "benefit": "Treatment footprint describes changed model inputs; annual export changes come from the retained native comparison.",
+        },
+    }
+    if not isinstance(edits, list) or len(edits) != len(declared):
+        result["notes"].append("This saved stage does not retain complete ordered patch accounting. No missing count is inferred.")
+        return result
+    artifact = stage.get("artifact")
+    if not isinstance(artifact, dict):
+        raise ValueError("The retained land-cover accounting has no original raster descriptor")
+    verify_file(workspace.root / "runs" / run["id"], artifact)
+    grid = workspace.get_grid(run["selection"]["grid_id"])["grid"]
+    transform = grid["transform"]
+    area = abs(float(transform[0]) * float(transform[4]) -
+               float(transform[1]) * float(transform[3])) / 10000.0
+    if (not math.isfinite(area) or area <= 0 or
+            not math.isclose(area, float(grid["pixel_area_ha"]), rel_tol=1e-10, abs_tol=1e-12)):
+        raise ValueError("The retained treatment grid has inconsistent pixel area")
+    result.update(state="retained", pixel_area_ha=area, artifact=deepcopy(artifact),
+                  stage_completed_at=stage.get("completed_at"), original_edits=deepcopy(edits))
+    count_fields = ("mask_cells", "valid_mask_cells", "nodata_mask_cells",
+                    "eligible_cells", "already_destination_cells", "changed_cells",
+                    "final_owned_cells")
+    for index, (patch, saved) in enumerate(zip(declared, edits)):
+        if not isinstance(saved, dict):
+            raise ValueError("The retained land-cover patch accounting is not a record")
+        if ("index" in saved and saved["index"] != index or
+                "patch" in saved and saved["patch"] != patch):
+            raise ValueError("Retained treatment accounting differs from the original ordered patch")
+        row = {
+            "patch_number": index + 1, "mask_source_id": patch["mask_source_id"],
+            "mask_kind": saved.get("mask_kind"), "selected_layer": saved.get("selected_layer"),
+            "selected_features": saved.get("selected_features"), "where": deepcopy(patch.get("where")),
+            "from_codes": deepcopy(patch["from_codes"]), "to_code": patch["to_code"],
+            "source": deepcopy(saved.get("source")), "transitions": deepcopy(saved.get("transitions")),
+            "source_polygon_hectares": saved.get("source_polygon_hectares"),
+        }
+        for field in count_fields:
+            value = saved.get(field)
+            if value is not None and (type(value) is not int or value < 0 or
+                    value > int(grid["width"]) * int(grid["height"])):
+                raise ValueError("Retained treatment count is outside the original grid support: " + field)
+            row[field] = value
+        for smaller, larger in (("valid_mask_cells", "mask_cells"),
+                ("nodata_mask_cells", "mask_cells"), ("eligible_cells", "valid_mask_cells"),
+                ("changed_cells", "eligible_cells"), ("final_owned_cells", "changed_cells")):
+            if row[smaller] is not None and row[larger] is not None and row[smaller] > row[larger]:
+                raise ValueError("Retained treatment count exceeds its original support: " + smaller)
+        if all(row[name] is not None for name in ("mask_cells", "valid_mask_cells", "nodata_mask_cells")):
+            if row["valid_mask_cells"] + row["nodata_mask_cells"] != row["mask_cells"]:
+                raise ValueError("The retained treatment mask counts do not close")
+        if all(row[name] is not None for name in ("eligible_cells", "changed_cells", "already_destination_cells")):
+            if row["changed_cells"] + row["already_destination_cells"] != row["eligible_cells"]:
+                raise ValueError("The retained treatment eligibility counts do not close")
+        for count, field in (("eligible_cells", "eligible_hectares"),
+                              ("changed_cells", "changed_hectares"),
+                              ("final_owned_cells", "final_owned_hectares")):
+            row[field] = row[count] * area if row[count] is not None else None
+            if saved.get(field) is not None and row[field] is not None and not math.isclose(
+                    float(saved[field]), row[field], rel_tol=1e-10, abs_tol=1e-12):
+                raise ValueError("The retained treatment area differs from its original count")
+        if row["valid_mask_cells"] == 0:
+            explanation = "No valid model-grid pixel centres lie in this mask."
+        elif row["eligible_cells"] == 0:
+            explanation = "No valid masked cell matches the declared source classes at this patch position."
+        elif row["changed_cells"] == 0:
+            explanation = "Eligible cells already have the destination value."
+        elif row["changed_cells"] is None:
+            explanation = "This legacy stage does not retain an actual changed-cell count."
+        else:
+            explanation = "The original stage applied the declared value change."
+        row["explanation"] = explanation
+        result["patches"].append(row)
+    def total(field):
+        values = [row[field] for row in result["patches"]]
+        return sum(values) if all(value is not None for value in values) else None
+    net = total("final_owned_cells")
+    if net is not None and net > int(grid["width"]) * int(grid["height"]):
+        raise ValueError("Retained final treatment support exceeds its original grid")
+    assignments = total("changed_cells")
+    result["summary"] = {
+        "patch_count": len(declared), "changed_assignments": assignments,
+        "net_changed_cells": net, "net_changed_hectares": net * area if net is not None else None,
+    }
+    if net == 0:
+        result["notes"].append("The final land-cover values are unchanged from baseline. The saved native comparison reports this unchanged selected treatment.")
+    elif net is None:
+        result["notes"].append("Final unique changed support was not retained by this legacy stage; overlapping patch counts are not summed into a net area.")
+    else:
+        result["notes"].append("Final changed cells count each retained baseline difference once, including ordered or overlapping patches.")
+    return result
+
+
+def _treatment_footprint_html(footprint):
+    if not footprint:
+        return ""
+    esc = lambda value: html.escape(str(value), quote=True)
+    summary = footprint["summary"]
+    rows = []
+    for row in footprint["patches"]:
+        cells = lambda key: "Unavailable" if row[key] is None else str(row[key])
+        values = (row["patch_number"], row["mask_source_id"],
+                  ", ".join(map(str, row["from_codes"])) + " → " + str(row["to_code"]),
+                  cells("valid_mask_cells"), cells("eligible_cells"),
+                  cells("changed_cells"), _display(row["changed_hectares"]),
+                  cells("final_owned_cells"), row["explanation"])
+        rows.append("<tr>" + "".join("<td>" + esc(value) + "</td>" for value in values) + "</tr>")
+    net = summary.get("net_changed_cells")
+    status = ("Final changed cells: " + str(net) + " · " +
+              _display(summary.get("net_changed_hectares")) + " ha."
+              if net is not None else "Final unique changed area: unavailable in the retained stage.")
+    return ("<h3>Actual selected treatment footprint</h3><p>" + esc(status) + "</p>" +
+        "".join("<p>" + esc(note) + "</p>" for note in footprint["notes"]) +
+        ("<table><thead><tr><th>Patch</th><th>Original mask</th><th>Classes</th>"
+         "<th>Valid mask cells</th><th>Eligible cells</th><th>Changed assignments</th>"
+         "<th>Changed ha</th><th>Final changed cells</th><th>Result</th></tr></thead><tbody>" +
+         "".join(rows) + "</tbody></table>" if rows else "") +
+        "<p>Each patch reads the values after earlier patches. Changed assignments can overlap; "
+        "final changed cells count unique differences from baseline. These are retained input changes, "
+        "separate from the annual export changes below.</p>"
+        "<p><a href=\"treatment-footprint.csv\">Treatment footprint CSV</a> · "
+        "<a href=\"treatment-footprint.json\">Original footprint accounting</a></p>")
+
+
 def _evaluation(workspace, record, selection):
     run_id = selection.get("evaluation_run_id")
     comparison_id = selection.get("comparison_id")
@@ -1295,6 +1437,7 @@ def _evaluation(workspace, record, selection):
               "models_changed": run_models(run) != run_models(baseline),
               "native_versions": {"ranking_baseline": portfolio_pairing.native_version(baseline),
                                   "evaluation": portfolio_pairing.native_version(run)}}
+    result["treatment_footprint"] = _retained_treatment_footprint(workspace, run, scenario)
     for artifact in run.get("artifacts", {}).values():
         verify_file(workspace.root / "runs" / run["id"], artifact)
     if comparison_id:
@@ -1390,7 +1533,8 @@ def _report_html(record, analysis, evaluation, title):
             "<section><h2>Native portfolio evaluation</h2><p>Original model run: " +
             esc(evaluation["state"]) + ". Parameter profile: " +
             esc("changed from the screening baseline" if evaluation["profile_changed"] else "same as the screening baseline") +
-            ".</p><table><thead><tr><th>Pollutant</th><th>Baseline annual export</th>"
+            ".</p>" + _treatment_footprint_html(evaluation.get("treatment_footprint")) +
+            "<table><thead><tr><th>Pollutant</th><th>Baseline annual export</th>"
             "<th>Portfolio annual export</th><th>Units</th><th>Common-cell annual change</th>"
             "<th>Comparison cells</th></tr></thead><tbody>" + "".join(evaluated_rows) +
             "</tbody></table><p>Annual totals use each run's retained valid cells. Changes use the "
@@ -1486,6 +1630,20 @@ def build_report(workspace, selection):
         }
         if evaluation:
             files["evaluation"] = describe_file(workspace.root, directory / "evaluation.json")
+            footprint = evaluation.get("treatment_footprint")
+            if footprint:
+                atomic_json(directory / "treatment-footprint.json", footprint, immutable=True)
+                fields = ("patch_number", "mask_source_id", "mask_kind", "selected_layer",
+                          "selected_features", "where", "from_codes", "to_code",
+                          "mask_cells", "valid_mask_cells", "nodata_mask_cells", "eligible_cells",
+                          "already_destination_cells", "changed_cells", "final_owned_cells",
+                          "eligible_hectares", "changed_hectares", "final_owned_hectares",
+                          "source_polygon_hectares", "transitions", "explanation")
+                atomic_bytes(directory / "treatment-footprint.csv",
+                             _csv_bytes(footprint["patches"], fields), immutable=True)
+                for name, filename in (("treatment_footprint", "treatment-footprint.json"),
+                                       ("treatment_footprint_csv", "treatment-footprint.csv")):
+                    files[name] = describe_file(workspace.root, directory / filename)
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
             for name, item in sorted(files.items()):

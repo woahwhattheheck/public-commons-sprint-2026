@@ -1,4 +1,4 @@
-/** Native-grid land-cover areas from retained NAD83 or EPSG:5070 polygons.
+/** Native-grid land-cover areas from retained EPSG:3857, NAD83 or EPSG:5070 polygons.
  * Albers equations: USGS Professional Paper 1395, equations 3-12,14-12..18.
  * https://pubs.usgs.gov/pp/1395/report.pdf
  * https://proj.org/en/stable/operations/projections/aea.html
@@ -18,6 +18,30 @@ function nad83To5070(lon, lat) {
   const rho0=a*Math.sqrt(c-n*q(23*rad))/n,theta=n*(lon+96)*rad;
   return [rho*Math.sin(theta),rho0-rho*Math.cos(theta)];
 }
+
+// Reproduces the native PROJ operation selected for the original Upper Savannah
+// EPSG:3857 domain on 2026-10-13. The NAD83/WGS84 (1) operation is a null shift;
+// its stated 4 m accuracy is distinct from numerical implementation agreement.
+const WEBMERCATOR_OPERATION = {
+  source_epsg:3857,target_epsg:5070,
+  description:"Inverse of Popular Visualisation Pseudo-Mercator + Inverse of NAD83 to WGS 84 (1) + Conus Albers",
+  definition:"proj=pipeline step inv proj=webmerc lat_0=0 lon_0=0 x_0=0 y_0=0 ellps=WGS84 step proj=aea lat_0=23 lon_0=-96 lat_1=29.5 lat_2=45.5 x_0=0 y_0=0 ellps=GRS80",
+  stated_accuracy_m:4,
+  native_control:{source:[-9231631.8728,4187362.152400002],target:[1176760.6723355297,1427167.8254433053],
+    evidence_uri:"https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791874776189589"}
+};
+function webMercatorTo5070(x,y) {
+  if(!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>Math.PI*6378137||Math.abs(y)>Math.PI*6378137)
+    throw Error("Expected finite source EPSG:3857 metres within its published extent");
+  const lon=x/6378137*180/Math.PI,lat=Math.atan(Math.sinh(y/6378137))*180/Math.PI;
+  return nad83To5070(lon,lat);
+}
+function coordinateOperation(sourceEpsg) {
+  return sourceEpsg===3857?WEBMERCATOR_OPERATION:sourceEpsg===4269?
+    {source_epsg:4269,target_epsg:5070,description:"NAD83 GRS80 ellipsoidal Albers, EPSG:5070"}:
+    {source_epsg:5070,target_epsg:5070,description:"Original EPSG:5070 coordinates"};
+}
+
 function exactRings(feature) {
   const g=feature.geometry;
   if (!g || g.curveRings || g.curvePaths) throw Error("Supply the retained ordinary polygon rings");
@@ -27,8 +51,8 @@ function exactRings(feature) {
   throw Error("Expected polygon or multipolygon geometry");
 }
 function prepareZones(features, sourceEpsg, grid, idField="huc12") {
-  if (![4269,5070].includes(sourceEpsg))
-    throw Error("Declare the actual retained source CRS; supported EPSG:4269 and EPSG:5070");
+  if (![3857,4269,5070].includes(sourceEpsg))
+    throw Error("Declare the actual retained source CRS; supported EPSG:3857, EPSG:4269 and EPSG:5070");
   const [dx,rx,x0,ry,dy,y0]=grid.affine, {width,height}=grid;
   if (!(dx>0 && dy<0 && rx===0 && ry===0 && Number.isInteger(width) && Number.isInteger(height)))
     throw Error("Expected a north-up regular native grid");
@@ -45,7 +69,7 @@ function prepareZones(features, sourceEpsg, grid, idField="huc12") {
       if(ring.length<4)throw Error("Short original polygon ring: "+id);
       if(ring[0][0]!==ring.at(-1)[0]||ring[0][1]!==ring.at(-1)[1])throw Error("Open original ring: "+id);
       const points=ring.map(p=>{
-        const xy=sourceEpsg===4269?nad83To5070(p[0],p[1]):[p[0],p[1]];
+        const xy=sourceEpsg===3857?webMercatorTo5070(p[0],p[1]):sourceEpsg===4269?nad83To5070(p[0],p[1]):[p[0],p[1]];
         if(!xy.every(Number.isFinite))throw Error("Nonfinite original coordinate");
         const u=(xy[0]-x0)/dx,v=(xy[1]-y0)/dy;
         minU=Math.min(minU,u);maxU=Math.max(maxU,u);minV=Math.min(minV,v);maxV=Math.max(maxV,v);
@@ -108,7 +132,7 @@ async function summarizeRows(prepared, readRow, metadata={}) {
   const classRows=(counts)=>NLCD_CODES.map(code=>({class_code:code,cells:counts[code],area_m2:counts[code]*area,area_ha:counts[code]*area/10000}));
   return {schema:"upstate.landcover-zonal-summary/v1",metadata,grid,source_epsg:prepared.source_epsg,
     method:{pixel_rule:"centre inclusion; half-open scanline edges; even-odd ring parity",
-      coordinate_conversion:prepared.source_epsg===4269?"NAD83 GRS80 ellipsoidal Albers, EPSG:5070":"original EPSG:5070 coordinates",
+      coordinate_conversion:coordinateOperation(prepared.source_epsg),
       polygon_edges:"straight segments between transformed original vertices",
       cell_area_m2:area,source_vertex_count:prepared.vertex_count,
       coverage:"every original polygon is wholly inside the supplied native raster rectangle"},
@@ -120,4 +144,4 @@ async function summarizeRows(prepared, readRow, metadata={}) {
       selected_cells:z.cell_count,nodata_cells:z.nodata_count,area_m2:z.cell_count*area,
       valid_area_m2:(z.cell_count-z.nodata_count)*area,classes:classRows(z.counts)}))};
 }
-export {NLCD_CODES,nad83To5070,prepareZones,summarizeRows};
+export {NLCD_CODES,nad83To5070,webMercatorTo5070,coordinateOperation,prepareZones,summarizeRows};

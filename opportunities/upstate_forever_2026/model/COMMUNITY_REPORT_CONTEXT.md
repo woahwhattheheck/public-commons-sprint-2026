@@ -14,6 +14,14 @@ The Community report keeps the exact saved plan, original community table, inter
 
 The task’s completed-result buttons remain available after reopening the operator. Source preparation does not change the original plan or report.
 
+## Read changes between saved plans
+
+Build a new Community report from a saved revised plan to receive its **Changes from previous saved plan** register. Open that report in Communities to see interventions added or removed, exact field and order changes, plan-detail changes, selected whole block groups, entered cost estimates, and original scientific/CSV lineage. **Open previous saved plan** returns to the retained parent edition.
+
+Entered-estimate totals and their difference carry the number of interventions with and without an estimate. Missing estimates remain separate. Community counts describe the original whole source block groups, including their overlapping utility and watershed memberships.
+
+The report retains `previous-plan.json`, `plan-revision-summary.json` and `plan-revision-changes.csv`. The CSV stores exact before/after values as JSON. Preparing this report as a scientific source carries those same original files and register sections into the ordered composer. Initial plans and reports created before this register retain their existing content; a new report edition adds the register without changing an earlier report.
+
 ## Native course
 
 From the maintained application root, use the actual saved report ID and its `files["community-report.json"]["sha256"]`:
@@ -53,8 +61,72 @@ The producer lives inside the original Community report root; imported sources a
 
 ## Reading the scientific context
 
+The prepared source uses community-planning edition 3. Its human-readable sections show selected whole-block-group counts in separate rows, with the complete total, available subtotal and number of groups supplying each measure. Missing values remain explicit. Utility and watershed summaries carry the same coverage fields while retaining their separate membership scopes.
+
+Poverty percentages retain the saved paired-group calculation: the numerator counts households below poverty and the denominator counts all households in the same groups with both values present. The report labels both the complete selected-group percentage and the known paired-group percentage, including the number of contributing groups. It does not average the printed block-group percentages. Income rows retain the source currency, reference value and citation, known-group count and range of original block-group medians. Those bounds are not a pooled median or mean income.
+
+Source provenance is presented as labelled URI, vintage, collection/member, file path, byte count and SHA256 fields. Original nested metadata remains legible as separate field rows; the unchanged original JSON and every indexed companion remain available. Intervention estimates show their known-count and entered-total coverage in USD, followed by readable programme and action tables. Modeled totals and paired changes use separate tables with their original units and support.
+
+When the original Community report contains a saved plan revision, the scientific sections retain the original parent/current plan IDs, changed fields, membership scope, entered-cost availability and signed current-minus-previous estimate difference. Added or removed intervention records are shown field by field, while the complete revision JSON, CSV and previous plan remain indexed original companions. Membership changes describe selected geography, and estimate changes describe entered planning inputs.
+
+Preparing an existing Community report with the current producer creates a distinct scientific source edition because the operation identity includes the producer version and source hash. The original saved report, source files and previously prepared editions remain unchanged. Existing ordered selections continue to identify their exact source editions; review the chosen edition when adding the new source in the composer.
+
 Population, households and poverty counts describe the selected whole source block groups. Utility service populations describe whole utility systems. Overlapping utility and watershed summaries keep their original memberships and are not additive.
 
 Interventions, progress labels and cost estimates are recorded planning decisions. Native totals keep their original reporting mask, units and valid-cell count; alternative changes retain the original common-support comparison. The report does not allocate those values to communities or proposed interventions.
 
 Regional context shows each selected original HUC area once and each original NRCS state portion with its edition and designation. A complete query with zero selected South Carolina class matches describes that query’s named classes. Assessment sources remain the basis for water-quality condition and impairment decisions.
+
+
+## Receive an original report when its Workspace is offline
+
+A complete Community report ZIP and its saved report record can be received as
+scientific source in an actual destination Workspace. This continues the original
+report edition without rebuilding its plan, importing intervention edits again,
+or assigning the sender's project ID to the recipient.
+
+Use the inner original `community-report.zip`, its exact saved
+`revised-report.json` (or original saved record), the original project UUID from
+its receiving receipt, and the record's
+`files["community-report.json"]["sha256"]`. A broader receiving package may
+contain these originals; keep that package unchanged and extract the named
+original members first.
+
+~~~sh
+python -B -m model.community_report_context \
+  --workspace ACTUAL_RECEIVING_WORKSPACE \
+  --report-archive ORIGINAL_COMMUNITY_REPORT_ZIP \
+  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \
+  --original-project-id ORIGINAL_PROJECT_UUID \
+  --report-sha256 ORIGINAL_REPORT_JSON_SHA256
+~~~
+
+The existing live-Workspace `--report-id` route remains available. Choose exactly
+one route. The archive route accepts the same `--prepare-only` and optional
+`--delivery-id` controls. Its returned `source`, `delivery_selection` and
+`sources.json` feed the same scientific report composer and standalone renderer.
+
+The receiver checks the saved report's immutable identity and selection, the
+original ZIP size and SHA256, exact member inventory, each member's byte length,
+SHA256 and ZIP CRC, original plan/table identities, original file index, and any
+saved revision register. Member paths stay inside the receiving directory.
+Interrupted copies resume from verified original members. The exact ZIP and
+saved record remain companions of the typed scientific source.
+
+The recipe's original project/report/plan IDs describe the sender. The actual
+destination project owns the newly imported source collection and scientific
+report edition. Cross-project Community source IDs remain provenance; this
+source-only receiving route does not recreate editable sender records. Use the
+existing complete Workspace or selected **Transfer editable study** archive to
+continue those original editable records.
+
+Reports made before the parent-plan change register retain their original
+content. Receiving an archive does not calculate a replacement register or relabel
+it as a newer Community report format. A newer report must be built from the
+actual saved plan through the ordinary live-Workspace route.
+
+After preparation, pass the returned `delivery_selection` source choices to
+`observed_report_render.prepare`, render with the existing report renderer, and
+use `observed_report_render.archive_report` for complete receiving and independent
+reopening. All received source bytes, original report companions and the rendered
+scientific report follow ordinary Workspace backup/restore.

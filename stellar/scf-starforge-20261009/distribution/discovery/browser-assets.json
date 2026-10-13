@@ -29,6 +29,237 @@
         "../catalog.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/operating-plan.html",
+      [
+        "operating-plan.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan.mjs",
+      [
+        "operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan.css",
+      [
+        "operating-plan.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-core.mjs",
+      [
+        "../operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-reporting-editor.mjs",
+      [
+        "grant-reporting-editor.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-reporting-editor.css",
+      [
+        "grant-reporting-editor.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/reporting/grant-reporting-core.mjs",
+      [
+        "../grant-reporting-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/reporting/grant-reporting-input.mjs",
+      [
+        "../grant-reporting-input.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/reporting/grant-reporting-plan.mjs",
+      [
+        "../grant-reporting-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/reporting/operating-plan.mjs",
+      [
+        "../operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/reporting/catalog.mjs",
+      [
+        "../catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/scf_2026/sf47_budget_model/workspace/source-tables-core.mjs",
+      [
+        "../../../../scf_2026/sf47_budget_model/workspace/source-tables-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/scf_2026/sf47_budget_model/workspace/source-workbooks.mjs",
+      [
+        "../../../../scf_2026/sf47_budget_model/workspace/source-workbooks.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar-forge/developer-site/dist/source-table-workspace.mjs",
+      [
+        "../../../../../stellar-forge/developer-site/dist/source-table-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar-forge/developer-site/dist/onboarding.mjs",
+      [
+        "../../../../../stellar-forge/developer-site/dist/onboarding.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/iati/document_evidence/operating_procedure.mjs",
+      [
+        "../../../sf30-seller-sdk/iati/document_evidence/operating_procedure.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/distribution/discovery/operating-plan.mjs",
+      [
+        "../operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/distribution/discovery/catalog.mjs",
+      [
+        "../catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-return.html",
+      [
+        "operating-plan-return.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-return.mjs",
+      [
+        "operating-plan-return.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-return.css",
+      [
+        "operating-plan-return.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-return-core/operating-plan-return.mjs",
+      [
+        "../operating-plan-return.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-return-core/operating-plan.mjs",
+      [
+        "../operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-return-core/catalog.mjs",
+      [
+        "../catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-plan-returns.md",
+      [
+        "../OPERATING_PLAN_RETURNS.md",
+        "text/plain; charset=utf-8"
+      ]
+    ],
+    [
+      "/support-operating-plan.mjs",
+      [
+        "support-operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/support-operating-plan.css",
+      [
+        "support-operating-plan.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/support-operating-core/support-operating-plan.mjs",
+      [
+        "../support-operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/support-operating-core/operating-plan.mjs",
+      [
+        "../operating-plan.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/support-operating-core/catalog.mjs",
+      [
+        "../catalog.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/operating-return-core/operating-plan-return-workbook.mjs",
+      [
+        "../operating-plan-return-workbook.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar-forge/developer-site/dist/source-document-tables.mjs",
+      [
+        "../../../../../stellar-forge/developer-site/dist/source-document-tables.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/stellar-forge/developer-site/dist/source-table-intake.mjs",
+      [
+        "../../../../../stellar-forge/developer-site/dist/source-table-intake.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

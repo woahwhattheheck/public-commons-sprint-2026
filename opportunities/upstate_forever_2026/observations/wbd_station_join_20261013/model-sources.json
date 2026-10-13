@@ -2,29 +2,41 @@
   "schema": "upstate.sources/v1",
   "entries": [
     {
-      "id": "upstate-observation-wbd-point-watersheds-20261013-6767a6191214",
+      "id": "upstate-observation-wbd-point-watersheds-20261013-4dae93920775",
       "title": "Current official WBD watershed crosswalk for original observation locations",
       "kind": "table",
       "path": "derived/point_watersheds.csv",
       "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
       "vintage": "2026-10-13",
-      "sha256": "6767a61912146ade1496a72a4704c00085aa02523d8e92c97e5124792354c28f",
-      "bytes": 237618,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4",
+      "bytes": 254495,
       "metadata": {
         "schema": "upstate.current-wbd-observation-join/v1",
         "logical_source_id": "upstate-observation-wbd-point-watersheds",
         "operation_id": "upper-savannah-observation-wbd-20261013",
-        "input_point_count": 184,
-        "completed_point_count": 184,
-        "captured_geometry_count": 183,
-        "row_count": 184,
-        "published_huc_values_preserved": true
+        "input_point_count": 197,
+        "completed_point_count": 197,
+        "captured_geometry_count": 196,
+        "row_count": 197,
+        "published_huc_values_preserved": true,
+        "original_184_rows_preserved": true,
+        "nldi_coordinate_count": 13
       },
       "companions": [
         {
-          "path": "inputs/assessment/stations_wgs84_2026.geojson",
-          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9",
-          "bytes": 116707
+          "path": "README.md",
+          "sha256": "a1ee3a6b77ec75fdd64256ca3525e1119fc2faa7aece4efc089e99cb32266a17",
+          "bytes": 6635
+        },
+        {
+          "path": "capture-index.json",
+          "sha256": "d3f9579edd3e708c63c9d2d4805207a2ff0e744c363524238d161783d40c7cf7",
+          "bytes": 1001879
+        },
+        {
+          "path": "derived/summary.json",
+          "sha256": "f46a7dba0d4e03e93b2a95ce8253b26581cd5c414a0c54bac7ef770b9a2739ec",
+          "bytes": 5464
         },
         {
           "path": "inputs/assessment/stations_nad83_2026.geojson",
@@ -37,34 +49,9 @@
           "bytes": 25346
         },
         {
-          "path": "inputs/source/water_context/20261013/domain-huc12s.json",
-          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
-          "bytes": 3256
-        },
-        {
-          "path": "inputs/hydrology/derived/monitoring_stations_nad83.geojson",
-          "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e",
-          "bytes": 155365
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
-          "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
-          "bytes": 8562
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
-          "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
-          "bytes": 8502
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
-          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
-          "bytes": 11329
-        },
-        {
-          "path": "inputs/eighteenmile-study/study_sites_wgs84.geojson",
-          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
-          "bytes": 4456
+          "path": "inputs/assessment/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9",
+          "bytes": 116707
         },
         {
           "path": "inputs/eighteenmile-study/study_sites_nad83.geojson",
@@ -72,344 +59,64 @@
           "bytes": 6449
         },
         {
+          "path": "inputs/eighteenmile-study/study_sites_wgs84.geojson",
+          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
+          "bytes": 4456
+        },
+        {
+          "path": "inputs/hydrology/derived/monitoring_stations_nad83.geojson",
+          "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e",
+          "bytes": 155365
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
+          "bytes": 11329
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+          "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
+          "bytes": 8502
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+          "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
+          "bytes": 8562
+        },
+        {
           "path": "inputs/source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
           "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
           "bytes": 30153
         },
         {
-          "path": "original/wbd-huc12-layer.json",
-          "sha256": "e156e8d83bc5d8d93c5fe7eea282bce47480f0fde07989056c90562672223b25",
-          "bytes": 9517
+          "path": "inputs/source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63",
+          "bytes": 21927
         },
         {
-          "path": "query-plan.json",
-          "sha256": "cfe27b718fd572bd8c08066a79b0f69c872c9247b2dda8bbfcf16ae801920aad",
-          "bytes": 758077
+          "path": "inputs/source/water_context/20261013/domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "bytes": 3256
         },
         {
-          "path": "capture-index.json",
-          "sha256": "f339aa0fbc24cd0441d3cacc2b2d55714ae1d397f7d20187e9c80808ff327573",
-          "bytes": 934680
+          "path": "original/point-CL-015.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
         },
         {
-          "path": "original/station-SV-335.json",
+          "path": "original/point-CL-017.json",
+          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
+          "bytes": 3049
+        },
+        {
+          "path": "original/point-CL-018.json",
           "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
           "bytes": 3037
-        },
-        {
-          "path": "original/station-SV-336.json",
-          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
-          "bytes": 3043
-        },
-        {
-          "path": "original/station-RS-06190.json",
-          "sha256": "4926f223a1cc9aaacf46caa53389e5747b64c066bcc2847e4205645640700dd4",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-192.json",
-          "sha256": "2ac018c7c1220165c1eaed661e08cdab72a4d213d4fd50fffdcb506f63ecdd2a",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-24163.json",
-          "sha256": "4333f9fc6b0e129ce1b44ecaf1734e0756d092671dab848950fb3f2f39d04db7",
-          "bytes": 3050
-        },
-        {
-          "path": "original/point-RL-01020.json",
-          "sha256": "39d8f20dc118e3ae3ec048cb04a94e1ca3fcfc17f9124051eec09faf8b5d8f17",
-          "bytes": 3053
-        },
-        {
-          "path": "original/point-SV-790.json",
-          "sha256": "37ec9c69345106f4ea90b689b6d49d76972fc9fb13ef186ca1ea8f8ae308fc28",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-SV-234.json",
-          "sha256": "9649b62f6945393e023877c924a678332535fd172140e88c185bc8ae06337d01",
-          "bytes": 3035
-        },
-        {
-          "path": "original/point-SV-268.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
         },
         {
           "path": "original/point-CL-019.json",
           "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
           "bytes": 3046
-        },
-        {
-          "path": "original/point-RL-13080.json",
-          "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
-          "bytes": 3046
-        },
-        {
-          "path": "original/point-RS-12089.json",
-          "sha256": "122bf6cdd0e0e0fa4911bebe27cb98b08ddfa3d7102407b96637a2e5f563c159",
-          "bytes": 3045
-        },
-        {
-          "path": "original/point-SV-203.json",
-          "sha256": "ff980bb2fd22e4ab710d65d572a4daa4c0de55de67127116cd63143cd5b3169a",
-          "bytes": 3063
-        },
-        {
-          "path": "original/point-SV-311.json",
-          "sha256": "d766310fd5b18accc9ab95cbf2db4800c6639c3ae700786de82f81d9fed2d7ab",
-          "bytes": 3022
-        },
-        {
-          "path": "original/point-SV-206.json",
-          "sha256": "a31cd84f3e81090d08f976e980d2507f80f4ca148fc04f65fc2e4f64f8735acd",
-          "bytes": 3034
-        },
-        {
-          "path": "original/point-SV-107.json",
-          "sha256": "4b2d66843c3974be2a9e6e53f7faaaaeac61ba28db2379e1077385d523e29ccc",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-004.json",
-          "sha256": "4a67eeefa5aa6b9a20f2f5c67be6654eb2b2a8b82200302e1f60dc1a525aeee6",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-RS-05412.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-SV-236.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-SV-241.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-SV-376.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-SV-233.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-03506.json",
-          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-RS-18429.json",
-          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-SV-111.json",
-          "sha256": "62d0008197b8e14b25da21f62796d915dbdfde60d9638b3b824818e210a42db9",
-          "bytes": 3046
-        },
-        {
-          "path": "original/point-SV-205.json",
-          "sha256": "92e11e780e599045b4807b85d012239c111fcaae8d31c79d4c8989f4a18480ed",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-SV-106.json",
-          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-RL-15105.json",
-          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RS-14201.json",
-          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RS-04380.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-SV-344.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RL-17129.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RL-17133.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-13137.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-06170.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-SV-345.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-SV-364.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-RS-21014.json",
-          "sha256": "233c948d6f9c63f9d16c03a526d615ea15ff5f0858f14980b5848b7338ef5642",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-RL-16112.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-RL-16120.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-139.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-141.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-031.json",
-          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-SV-037.json",
-          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RL-16044.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-17076.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-19165.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-21217.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-24073.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RS-19458.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-SV-331.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RS-15281.json",
-          "sha256": "f6be0cf3f534e1a75680e84b6504f93d0179230ce13cbe015071932ecfa73209",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-RL-21209.json",
-          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-SV-357.json",
-          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-RS-02490.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-22078.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-05414.json",
-          "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
-          "bytes": 3050
-        },
-        {
-          "path": "original/point-SV-100.json",
-          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
-          "bytes": 3053
-        },
-        {
-          "path": "original/point-RL-21225.json",
-          "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
-          "bytes": 3051
-        },
-        {
-          "path": "original/point-SV-098.json",
-          "sha256": "7b82996a3378024a994622047030d6e0b6330e98f257d843633d6e4c34de25dd",
-          "bytes": 3054
-        },
-        {
-          "path": "original/point-RS-01049.json",
-          "sha256": "26d770d9021611486e0700e7e3c18b3f129ba598d523fdae214cf1d265d7dec1",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RS-18426.json",
-          "sha256": "3d0fda00a72924e9eec14588d68d1cffd6310c6ae2d8647f514f8d5f5c2bcd96",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RL-18100.json",
-          "sha256": "c048a26d79dc03cbd0c21aed730c32db356d163d2d8410d1fc7b7026d823d054",
-          "bytes": 3045
-        },
-        {
-          "path": "original/point-RS-09286.json",
-          "sha256": "534b8fd7df6f5765794a70f6712e15bae812382f74a7765ed1d1e92134a8144c",
-          "bytes": 3033
         },
         {
           "path": "original/point-CL-040.json",
@@ -422,36 +129,6 @@
           "bytes": 3086
         },
         {
-          "path": "original/point-SV-066.json",
-          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
-          "bytes": 3086
-        },
-        {
-          "path": "original/point-SV-818.json",
-          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
-          "bytes": 3086
-        },
-        {
-          "path": "original/point-SV-313.json",
-          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-CL-017.json",
-          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
-          "bytes": 3049
-        },
-        {
-          "path": "original/point-CL-015.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-599.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
           "path": "original/point-CL-096.json",
           "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
           "bytes": 3051
@@ -462,54 +139,189 @@
           "bytes": 3054
         },
         {
-          "path": "original/point-CL-018.json",
-          "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
-          "bytes": 3037
-        },
-        {
-          "path": "original/point-SV-229A.json",
-          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
-          "bytes": 3049
-        },
-        {
-          "path": "original/point-SV-799.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
           "path": "original/point-MC-03.json",
           "sha256": "65f75062e968b7b866230267141ab612f55175ce7a31538d6e1646603327049a",
           "bytes": 3049
         },
         {
-          "path": "original/point-SV-822.json",
+          "path": "original/point-RL-01020.json",
+          "sha256": "39d8f20dc118e3ae3ec048cb04a94e1ca3fcfc17f9124051eec09faf8b5d8f17",
+          "bytes": 3053
+        },
+        {
+          "path": "original/point-RL-13080.json",
+          "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
+          "bytes": 3046
+        },
+        {
+          "path": "original/point-RL-15105.json",
+          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-RL-16044.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-16112.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-RL-16120.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-RL-17076.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-17129.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RL-17133.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RL-18100.json",
+          "sha256": "c048a26d79dc03cbd0c21aed730c32db356d163d2d8410d1fc7b7026d823d054",
+          "bytes": 3045
+        },
+        {
+          "path": "original/point-RL-19165.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-21209.json",
+          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-RL-21217.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-21225.json",
+          "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
+          "bytes": 3051
+        },
+        {
+          "path": "original/point-RL-24073.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RS-01049.json",
+          "sha256": "26d770d9021611486e0700e7e3c18b3f129ba598d523fdae214cf1d265d7dec1",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-RS-02490.json",
           "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
           "bytes": 3038
         },
         {
-          "path": "original/point-SV-823.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
+          "path": "original/point-RS-03506.json",
+          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
+          "bytes": 3043
         },
         {
-          "path": "original/point-SV-101.json",
-          "sha256": "57e94c4c935f224fe98c9cdb2d863adb0a24a9fa982595a05625f3882739571a",
-          "bytes": 3050
+          "path": "original/point-RS-04380.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
         },
         {
-          "path": "original/point-SV-109.json",
+          "path": "original/point-RS-05412.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-RS-05414.json",
           "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
           "bytes": 3050
         },
         {
-          "path": "original/point-SV-642.json",
-          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
-          "bytes": 3053
+          "path": "original/point-RS-06170.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
         },
         {
-          "path": "original/point-SV-734.json",
-          "sha256": "0b0af64de4014ef97866d1f8e7d2bbb2ac67fc1059ff5262d20e9fe8fdb46c2c",
-          "bytes": 3035
+          "path": "original/point-RS-09286.json",
+          "sha256": "534b8fd7df6f5765794a70f6712e15bae812382f74a7765ed1d1e92134a8144c",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RS-12089.json",
+          "sha256": "122bf6cdd0e0e0fa4911bebe27cb98b08ddfa3d7102407b96637a2e5f563c159",
+          "bytes": 3045
+        },
+        {
+          "path": "original/point-RS-13137.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RS-14201.json",
+          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-RS-15281.json",
+          "sha256": "f6be0cf3f534e1a75680e84b6504f93d0179230ce13cbe015071932ecfa73209",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-RS-18426.json",
+          "sha256": "3d0fda00a72924e9eec14588d68d1cffd6310c6ae2d8647f514f8d5f5c2bcd96",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-RS-18429.json",
+          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-RS-19458.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RS-21014.json",
+          "sha256": "233c948d6f9c63f9d16c03a526d615ea15ff5f0858f14980b5848b7338ef5642",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-RS-22078.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-RS-24163.json",
+          "sha256": "4333f9fc6b0e129ce1b44ecaf1734e0756d092671dab848950fb3f2f39d04db7",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-004.json",
+          "sha256": "4a67eeefa5aa6b9a20f2f5c67be6654eb2b2a8b82200302e1f60dc1a525aeee6",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-SV-031.json",
+          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-SV-037.json",
+          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
+          "bytes": 3041
         },
         {
           "path": "original/point-SV-054.json",
@@ -522,9 +334,269 @@
           "bytes": 3045
         },
         {
+          "path": "original/point-SV-066.json",
+          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
+          "bytes": 3086
+        },
+        {
+          "path": "original/point-SV-098.json",
+          "sha256": "7b82996a3378024a994622047030d6e0b6330e98f257d843633d6e4c34de25dd",
+          "bytes": 3054
+        },
+        {
+          "path": "original/point-SV-100.json",
+          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
+          "bytes": 3053
+        },
+        {
+          "path": "original/point-SV-101.json",
+          "sha256": "57e94c4c935f224fe98c9cdb2d863adb0a24a9fa982595a05625f3882739571a",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-106.json",
+          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-107.json",
+          "sha256": "4b2d66843c3974be2a9e6e53f7faaaaeac61ba28db2379e1077385d523e29ccc",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-109.json",
+          "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-111.json",
+          "sha256": "62d0008197b8e14b25da21f62796d915dbdfde60d9638b3b824818e210a42db9",
+          "bytes": 3046
+        },
+        {
+          "path": "original/point-SV-139.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-SV-141.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-SV-192.json",
+          "sha256": "2ac018c7c1220165c1eaed661e08cdab72a4d213d4fd50fffdcb506f63ecdd2a",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-203.json",
+          "sha256": "ff980bb2fd22e4ab710d65d572a4daa4c0de55de67127116cd63143cd5b3169a",
+          "bytes": 3063
+        },
+        {
+          "path": "original/point-SV-205.json",
+          "sha256": "92e11e780e599045b4807b85d012239c111fcaae8d31c79d4c8989f4a18480ed",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-SV-206.json",
+          "sha256": "a31cd84f3e81090d08f976e980d2507f80f4ca148fc04f65fc2e4f64f8735acd",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-SV-229A.json",
+          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
+          "bytes": 3049
+        },
+        {
+          "path": "original/point-SV-233.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-234.json",
+          "sha256": "9649b62f6945393e023877c924a678332535fd172140e88c185bc8ae06337d01",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-SV-236.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-241.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-SV-268.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-311.json",
+          "sha256": "d766310fd5b18accc9ab95cbf2db4800c6639c3ae700786de82f81d9fed2d7ab",
+          "bytes": 3022
+        },
+        {
+          "path": "original/point-SV-313.json",
+          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-SV-331.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-SV-344.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-SV-345.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
+        },
+        {
+          "path": "original/point-SV-357.json",
+          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-SV-364.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
+        },
+        {
+          "path": "original/point-SV-376.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-SV-599.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-642.json",
+          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
+          "bytes": 3053
+        },
+        {
           "path": "original/point-SV-699.json",
           "sha256": "646c6a8346ef4a42e947d0bae6442ec876c47aaea8aac9e2408674b77014152b",
           "bytes": 3019
+        },
+        {
+          "path": "original/point-SV-734.json",
+          "sha256": "0b0af64de4014ef97866d1f8e7d2bbb2ac67fc1059ff5262d20e9fe8fdb46c2c",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-SV-790.json",
+          "sha256": "37ec9c69345106f4ea90b689b6d49d76972fc9fb13ef186ca1ea8f8ae308fc28",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-SV-799.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-818.json",
+          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
+          "bytes": 3086
+        },
+        {
+          "path": "original/point-SV-822.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-823.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-agency_projected.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-nldi_indexed.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-original_state.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-374.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-838.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-839.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-840.json",
+          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
+          "bytes": 3032
         },
         {
           "path": "original/point-usgs_gauge-USGS-02176930.json",
@@ -655,11 +727,6 @@
           "path": "original/point-usgs_gauge-USGS-02187000.json",
           "sha256": "d8e7cabaec4855cea1589b2950403fab78107ad76765bce08da2c325e1ef3be9",
           "bytes": 3032
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-344108083090600.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
         },
         {
           "path": "original/point-usgs_gauge-USGS-02187251.json",
@@ -852,6 +919,26 @@
           "bytes": 3037
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02193340-nldi_indexed.json",
+          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193340.json",
+          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193500-nldi_indexed.json",
+          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
+          "bytes": 3054
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193500.json",
+          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
+          "bytes": 3054
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02194501.json",
           "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
           "bytes": 3086
@@ -862,94 +949,9 @@
           "bytes": 3051
         },
         {
-          "path": "original/point-npdes_outfall-SC0000477-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-agency_projected.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0000477-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-nldi_indexed.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0000477-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-original_state.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-374.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-838.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-839.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-840.json",
-          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-02193340.json",
-          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
-          "bytes": 3034
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-02193500.json",
-          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
-          "bytes": 3054
+          "path": "original/point-usgs_gauge-USGS-02195320-nldi_indexed.json",
+          "sha256": "9e96526a5e4839ab15fb789643b897ee43a79bcc01f61e2b6385d067ad5f2953",
+          "bytes": 3028
         },
         {
           "path": "original/point-usgs_gauge-USGS-02195320.json",
@@ -957,9 +959,19 @@
           "bytes": 3028
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02195470-nldi_indexed.json",
+          "sha256": "aa900b030cc9b9998c6c084a3afa04936f641bd5cfee6ed9d76607459618615f",
+          "bytes": 3016
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02195470.json",
           "sha256": "aa900b030cc9b9998c6c084a3afa04936f641bd5cfee6ed9d76607459618615f",
           "bytes": 3016
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02196000-nldi_indexed.json",
+          "sha256": "a994ca64bc9f3730ad4b5f751b7750ef19c8b8dae8ebe859ee164991a1898cd3",
+          "bytes": 3045
         },
         {
           "path": "original/point-usgs_gauge-USGS-02196000.json",
@@ -967,9 +979,19 @@
           "bytes": 3045
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02196485-nldi_indexed.json",
+          "sha256": "f82f26efdd74493b29ff28687f822b245318e1ec394737184003934c6daac000",
+          "bytes": 3040
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02196485.json",
           "sha256": "f82f26efdd74493b29ff28687f822b245318e1ec394737184003934c6daac000",
           "bytes": 3040
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02196690-nldi_indexed.json",
+          "sha256": "3dcc6041ae078a55fd0d25a048a32b45dede5c6ebb83e30143158157fcfe3915",
+          "bytes": 3041
         },
         {
           "path": "original/point-usgs_gauge-USGS-02196690.json",
@@ -977,7 +999,17 @@
           "bytes": 3041
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02196835-nldi_indexed.json",
+          "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
+          "bytes": 3035
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02196835.json",
+          "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-021968385-nldi_indexed.json",
           "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
           "bytes": 3035
         },
@@ -987,9 +1019,19 @@
           "bytes": 3035
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02197000-nldi_indexed.json",
+          "sha256": "7896525223598cdcdce53463d89c47c99a28a2cef11e0674c761ced3dc256094",
+          "bytes": 3064
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02197000.json",
           "sha256": "7896525223598cdcdce53463d89c47c99a28a2cef11e0674c761ced3dc256094",
           "bytes": 3064
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02197020-nldi_indexed.json",
+          "sha256": "e6dbcc433ab4e3e12c81939f52af6a23c241e60225f45fe1591c36c38048057f",
+          "bytes": 3027
         },
         {
           "path": "original/point-usgs_gauge-USGS-02197020.json",
@@ -997,9 +1039,19 @@
           "bytes": 3027
         },
         {
+          "path": "original/point-usgs_gauge-USGS-021973269-nldi_indexed.json",
+          "sha256": "35df4cd1d4e344d31512aa0ca9706265029d6eb90f58a218f716e342293c072b",
+          "bytes": 3071
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-021973269.json",
           "sha256": "35df4cd1d4e344d31512aa0ca9706265029d6eb90f58a218f716e342293c072b",
           "bytes": 3071
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02197500-nldi_indexed.json",
+          "sha256": "f220e13732e5b623b8c9e23c4ede6d103ea55996e9108656cf7135d6ab3b75c4",
+          "bytes": 3054
         },
         {
           "path": "original/point-usgs_gauge-USGS-02197500.json",
@@ -1007,9 +1059,34 @@
           "bytes": 3054
         },
         {
-          "path": "watershed_join.mjs",
-          "sha256": "a2bb5fd9341dfc71f2561809ca118c30134897f78502485df00879e245df203b",
-          "bytes": 8346
+          "path": "original/point-usgs_gauge-USGS-344108083090600.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
+        },
+        {
+          "path": "original/station-RS-06190.json",
+          "sha256": "4926f223a1cc9aaacf46caa53389e5747b64c066bcc2847e4205645640700dd4",
+          "bytes": 3033
+        },
+        {
+          "path": "original/station-SV-335.json",
+          "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
+          "bytes": 3037
+        },
+        {
+          "path": "original/station-SV-336.json",
+          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
+          "bytes": 3043
+        },
+        {
+          "path": "original/wbd-huc12-layer.json",
+          "sha256": "e156e8d83bc5d8d93c5fe7eea282bce47480f0fde07989056c90562672223b25",
+          "bytes": 9517
+        },
+        {
+          "path": "query-plan.json",
+          "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7",
+          "bytes": 813824
         },
         {
           "path": "rebuild.mjs",
@@ -1017,41 +1094,48 @@
           "bytes": 2019
         },
         {
-          "path": "README.md",
-          "sha256": "14353aad3ff1565862a89850c592b07e40f1ee1e144e8dcbc23c1a1ada4a37be",
-          "bytes": 7109
-        },
-        {
-          "path": "derived/summary.json",
-          "sha256": "9891b4879db81ed99a691ab56e3e630fe7f6e3b56e0a5d381fb6e4eea63b85da",
-          "bytes": 5147
+          "path": "watershed_join.mjs",
+          "sha256": "aee840c8a9ecc26b69b04168422cc31716df6857a6fde7f0dfc431564f2bf1fb",
+          "bytes": 8376
         }
       ]
     },
     {
-      "id": "upstate-observation-wbd-polygon-matches-20261013-0f34b1d5d958",
+      "id": "upstate-observation-wbd-polygon-matches-20261013-cc766b498061",
       "title": "Current official WBD polygon matches for original observation locations",
       "kind": "table",
       "path": "derived/polygon_matches.csv",
       "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
       "vintage": "2026-10-13",
-      "sha256": "0f34b1d5d958e3cdac5a1fe6c7a7de9b01e9634751947fb4e6a065d2d5a2d0a9",
-      "bytes": 413208,
+      "sha256": "cc766b49806106e311fb5f198fc06de1745f1acfbd2587d5a612b195b2ab84cc",
+      "bytes": 442427,
       "metadata": {
         "schema": "upstate.current-wbd-observation-join/v1",
         "logical_source_id": "upstate-observation-wbd-polygon-matches",
         "operation_id": "upper-savannah-observation-wbd-20261013",
-        "input_point_count": 184,
-        "completed_point_count": 184,
-        "captured_geometry_count": 183,
-        "row_count": 184,
-        "published_huc_values_preserved": true
+        "input_point_count": 197,
+        "completed_point_count": 197,
+        "captured_geometry_count": 196,
+        "row_count": 197,
+        "published_huc_values_preserved": true,
+        "original_184_rows_preserved": true,
+        "nldi_coordinate_count": 13
       },
       "companions": [
         {
-          "path": "inputs/assessment/stations_wgs84_2026.geojson",
-          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9",
-          "bytes": 116707
+          "path": "README.md",
+          "sha256": "a1ee3a6b77ec75fdd64256ca3525e1119fc2faa7aece4efc089e99cb32266a17",
+          "bytes": 6635
+        },
+        {
+          "path": "capture-index.json",
+          "sha256": "d3f9579edd3e708c63c9d2d4805207a2ff0e744c363524238d161783d40c7cf7",
+          "bytes": 1001879
+        },
+        {
+          "path": "derived/summary.json",
+          "sha256": "f46a7dba0d4e03e93b2a95ce8253b26581cd5c414a0c54bac7ef770b9a2739ec",
+          "bytes": 5464
         },
         {
           "path": "inputs/assessment/stations_nad83_2026.geojson",
@@ -1064,34 +1148,9 @@
           "bytes": 25346
         },
         {
-          "path": "inputs/source/water_context/20261013/domain-huc12s.json",
-          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
-          "bytes": 3256
-        },
-        {
-          "path": "inputs/hydrology/derived/monitoring_stations_nad83.geojson",
-          "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e",
-          "bytes": 155365
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
-          "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
-          "bytes": 8562
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
-          "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
-          "bytes": 8502
-        },
-        {
-          "path": "inputs/observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
-          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
-          "bytes": 11329
-        },
-        {
-          "path": "inputs/eighteenmile-study/study_sites_wgs84.geojson",
-          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
-          "bytes": 4456
+          "path": "inputs/assessment/stations_wgs84_2026.geojson",
+          "sha256": "070ef1609c281a100fee656541717961c99159a6fade4863a3940ab469c7e3d9",
+          "bytes": 116707
         },
         {
           "path": "inputs/eighteenmile-study/study_sites_nad83.geojson",
@@ -1099,344 +1158,64 @@
           "bytes": 6449
         },
         {
+          "path": "inputs/eighteenmile-study/study_sites_wgs84.geojson",
+          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
+          "bytes": 4456
+        },
+        {
+          "path": "inputs/hydrology/derived/monitoring_stations_nad83.geojson",
+          "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e",
+          "bytes": 155365
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+          "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
+          "bytes": 11329
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+          "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
+          "bytes": 8502
+        },
+        {
+          "path": "inputs/observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+          "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
+          "bytes": 8562
+        },
+        {
           "path": "inputs/source/hydrology-huc05-07-20261013/derived/calibration_stations_nad83.geojson",
           "sha256": "7b3c37a20656ddfcfe630d47b0ebff831f26fa2df70125c31727fadcd4bd62d9",
           "bytes": 30153
         },
         {
-          "path": "original/wbd-huc12-layer.json",
-          "sha256": "e156e8d83bc5d8d93c5fe7eea282bce47480f0fde07989056c90562672223b25",
-          "bytes": 9517
+          "path": "inputs/source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+          "sha256": "b7df40fc5bfd60cfc526dec7b86c6c71a50f7f98315f0169f3d3e1f70bd81f63",
+          "bytes": 21927
         },
         {
-          "path": "query-plan.json",
-          "sha256": "cfe27b718fd572bd8c08066a79b0f69c872c9247b2dda8bbfcf16ae801920aad",
-          "bytes": 758077
+          "path": "inputs/source/water_context/20261013/domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "bytes": 3256
         },
         {
-          "path": "capture-index.json",
-          "sha256": "f339aa0fbc24cd0441d3cacc2b2d55714ae1d397f7d20187e9c80808ff327573",
-          "bytes": 934680
+          "path": "original/point-CL-015.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
         },
         {
-          "path": "original/station-SV-335.json",
+          "path": "original/point-CL-017.json",
+          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
+          "bytes": 3049
+        },
+        {
+          "path": "original/point-CL-018.json",
           "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
           "bytes": 3037
-        },
-        {
-          "path": "original/station-SV-336.json",
-          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
-          "bytes": 3043
-        },
-        {
-          "path": "original/station-RS-06190.json",
-          "sha256": "4926f223a1cc9aaacf46caa53389e5747b64c066bcc2847e4205645640700dd4",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-192.json",
-          "sha256": "2ac018c7c1220165c1eaed661e08cdab72a4d213d4fd50fffdcb506f63ecdd2a",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-24163.json",
-          "sha256": "4333f9fc6b0e129ce1b44ecaf1734e0756d092671dab848950fb3f2f39d04db7",
-          "bytes": 3050
-        },
-        {
-          "path": "original/point-RL-01020.json",
-          "sha256": "39d8f20dc118e3ae3ec048cb04a94e1ca3fcfc17f9124051eec09faf8b5d8f17",
-          "bytes": 3053
-        },
-        {
-          "path": "original/point-SV-790.json",
-          "sha256": "37ec9c69345106f4ea90b689b6d49d76972fc9fb13ef186ca1ea8f8ae308fc28",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-SV-234.json",
-          "sha256": "9649b62f6945393e023877c924a678332535fd172140e88c185bc8ae06337d01",
-          "bytes": 3035
-        },
-        {
-          "path": "original/point-SV-268.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
         },
         {
           "path": "original/point-CL-019.json",
           "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
           "bytes": 3046
-        },
-        {
-          "path": "original/point-RL-13080.json",
-          "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
-          "bytes": 3046
-        },
-        {
-          "path": "original/point-RS-12089.json",
-          "sha256": "122bf6cdd0e0e0fa4911bebe27cb98b08ddfa3d7102407b96637a2e5f563c159",
-          "bytes": 3045
-        },
-        {
-          "path": "original/point-SV-203.json",
-          "sha256": "ff980bb2fd22e4ab710d65d572a4daa4c0de55de67127116cd63143cd5b3169a",
-          "bytes": 3063
-        },
-        {
-          "path": "original/point-SV-311.json",
-          "sha256": "d766310fd5b18accc9ab95cbf2db4800c6639c3ae700786de82f81d9fed2d7ab",
-          "bytes": 3022
-        },
-        {
-          "path": "original/point-SV-206.json",
-          "sha256": "a31cd84f3e81090d08f976e980d2507f80f4ca148fc04f65fc2e4f64f8735acd",
-          "bytes": 3034
-        },
-        {
-          "path": "original/point-SV-107.json",
-          "sha256": "4b2d66843c3974be2a9e6e53f7faaaaeac61ba28db2379e1077385d523e29ccc",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-004.json",
-          "sha256": "4a67eeefa5aa6b9a20f2f5c67be6654eb2b2a8b82200302e1f60dc1a525aeee6",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-RS-05412.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-SV-236.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-SV-241.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-SV-376.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-SV-233.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-03506.json",
-          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-RS-18429.json",
-          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-SV-111.json",
-          "sha256": "62d0008197b8e14b25da21f62796d915dbdfde60d9638b3b824818e210a42db9",
-          "bytes": 3046
-        },
-        {
-          "path": "original/point-SV-205.json",
-          "sha256": "92e11e780e599045b4807b85d012239c111fcaae8d31c79d4c8989f4a18480ed",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-SV-106.json",
-          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-RL-15105.json",
-          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RS-14201.json",
-          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RS-04380.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-SV-344.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RL-17129.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RL-17133.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-13137.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-RS-06170.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-SV-345.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-SV-364.json",
-          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
-          "bytes": 3059
-        },
-        {
-          "path": "original/point-RS-21014.json",
-          "sha256": "233c948d6f9c63f9d16c03a526d615ea15ff5f0858f14980b5848b7338ef5642",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-RL-16112.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-RL-16120.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-139.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-141.json",
-          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
-          "bytes": 3026
-        },
-        {
-          "path": "original/point-SV-031.json",
-          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-SV-037.json",
-          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
-          "bytes": 3041
-        },
-        {
-          "path": "original/point-RL-16044.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-17076.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-19165.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-21217.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RL-24073.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RS-19458.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-SV-331.json",
-          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
-          "bytes": 3025
-        },
-        {
-          "path": "original/point-RS-15281.json",
-          "sha256": "f6be0cf3f534e1a75680e84b6504f93d0179230ce13cbe015071932ecfa73209",
-          "bytes": 3036
-        },
-        {
-          "path": "original/point-RL-21209.json",
-          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-SV-357.json",
-          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
-          "bytes": 3029
-        },
-        {
-          "path": "original/point-RS-02490.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-22078.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-RS-05414.json",
-          "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
-          "bytes": 3050
-        },
-        {
-          "path": "original/point-SV-100.json",
-          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
-          "bytes": 3053
-        },
-        {
-          "path": "original/point-RL-21225.json",
-          "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
-          "bytes": 3051
-        },
-        {
-          "path": "original/point-SV-098.json",
-          "sha256": "7b82996a3378024a994622047030d6e0b6330e98f257d843633d6e4c34de25dd",
-          "bytes": 3054
-        },
-        {
-          "path": "original/point-RS-01049.json",
-          "sha256": "26d770d9021611486e0700e7e3c18b3f129ba598d523fdae214cf1d265d7dec1",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RS-18426.json",
-          "sha256": "3d0fda00a72924e9eec14588d68d1cffd6310c6ae2d8647f514f8d5f5c2bcd96",
-          "bytes": 3042
-        },
-        {
-          "path": "original/point-RL-18100.json",
-          "sha256": "c048a26d79dc03cbd0c21aed730c32db356d163d2d8410d1fc7b7026d823d054",
-          "bytes": 3045
-        },
-        {
-          "path": "original/point-RS-09286.json",
-          "sha256": "534b8fd7df6f5765794a70f6712e15bae812382f74a7765ed1d1e92134a8144c",
-          "bytes": 3033
         },
         {
           "path": "original/point-CL-040.json",
@@ -1449,36 +1228,6 @@
           "bytes": 3086
         },
         {
-          "path": "original/point-SV-066.json",
-          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
-          "bytes": 3086
-        },
-        {
-          "path": "original/point-SV-818.json",
-          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
-          "bytes": 3086
-        },
-        {
-          "path": "original/point-SV-313.json",
-          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
-          "bytes": 3043
-        },
-        {
-          "path": "original/point-CL-017.json",
-          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
-          "bytes": 3049
-        },
-        {
-          "path": "original/point-CL-015.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
-          "path": "original/point-SV-599.json",
-          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
-          "bytes": 3033
-        },
-        {
           "path": "original/point-CL-096.json",
           "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
           "bytes": 3051
@@ -1489,54 +1238,189 @@
           "bytes": 3054
         },
         {
-          "path": "original/point-CL-018.json",
-          "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
-          "bytes": 3037
-        },
-        {
-          "path": "original/point-SV-229A.json",
-          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
-          "bytes": 3049
-        },
-        {
-          "path": "original/point-SV-799.json",
-          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
-          "bytes": 3032
-        },
-        {
           "path": "original/point-MC-03.json",
           "sha256": "65f75062e968b7b866230267141ab612f55175ce7a31538d6e1646603327049a",
           "bytes": 3049
         },
         {
-          "path": "original/point-SV-822.json",
+          "path": "original/point-RL-01020.json",
+          "sha256": "39d8f20dc118e3ae3ec048cb04a94e1ca3fcfc17f9124051eec09faf8b5d8f17",
+          "bytes": 3053
+        },
+        {
+          "path": "original/point-RL-13080.json",
+          "sha256": "ad81563917a0d81f367d0e25db9459ac35e5fc1bfb01260eb945ab9fb3de1d0f",
+          "bytes": 3046
+        },
+        {
+          "path": "original/point-RL-15105.json",
+          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-RL-16044.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-16112.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-RL-16120.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-RL-17076.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-17129.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RL-17133.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RL-18100.json",
+          "sha256": "c048a26d79dc03cbd0c21aed730c32db356d163d2d8410d1fc7b7026d823d054",
+          "bytes": 3045
+        },
+        {
+          "path": "original/point-RL-19165.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-21209.json",
+          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-RL-21217.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RL-21225.json",
+          "sha256": "2e9628477d8bd19a4e0f8ec2822c1d56927e860678d7db79cf2e2a2f98d3dde3",
+          "bytes": 3051
+        },
+        {
+          "path": "original/point-RL-24073.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RS-01049.json",
+          "sha256": "26d770d9021611486e0700e7e3c18b3f129ba598d523fdae214cf1d265d7dec1",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-RS-02490.json",
           "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
           "bytes": 3038
         },
         {
-          "path": "original/point-SV-823.json",
-          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
-          "bytes": 3038
+          "path": "original/point-RS-03506.json",
+          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
+          "bytes": 3043
         },
         {
-          "path": "original/point-SV-101.json",
-          "sha256": "57e94c4c935f224fe98c9cdb2d863adb0a24a9fa982595a05625f3882739571a",
-          "bytes": 3050
+          "path": "original/point-RS-04380.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
         },
         {
-          "path": "original/point-SV-109.json",
+          "path": "original/point-RS-05412.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-RS-05414.json",
           "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
           "bytes": 3050
         },
         {
-          "path": "original/point-SV-642.json",
-          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
-          "bytes": 3053
+          "path": "original/point-RS-06170.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
         },
         {
-          "path": "original/point-SV-734.json",
-          "sha256": "0b0af64de4014ef97866d1f8e7d2bbb2ac67fc1059ff5262d20e9fe8fdb46c2c",
-          "bytes": 3035
+          "path": "original/point-RS-09286.json",
+          "sha256": "534b8fd7df6f5765794a70f6712e15bae812382f74a7765ed1d1e92134a8144c",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RS-12089.json",
+          "sha256": "122bf6cdd0e0e0fa4911bebe27cb98b08ddfa3d7102407b96637a2e5f563c159",
+          "bytes": 3045
+        },
+        {
+          "path": "original/point-RS-13137.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-RS-14201.json",
+          "sha256": "a1e580c48cc55e5722d74ee5c9959b9d8476b061f45bc116390355d02da15e3d",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-RS-15281.json",
+          "sha256": "f6be0cf3f534e1a75680e84b6504f93d0179230ce13cbe015071932ecfa73209",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-RS-18426.json",
+          "sha256": "3d0fda00a72924e9eec14588d68d1cffd6310c6ae2d8647f514f8d5f5c2bcd96",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-RS-18429.json",
+          "sha256": "052bd048e5e6ad7ae9a97764d015ffd28febde53590c171912e368f1b2c60008",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-RS-19458.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-RS-21014.json",
+          "sha256": "233c948d6f9c63f9d16c03a526d615ea15ff5f0858f14980b5848b7338ef5642",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-RS-22078.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-RS-24163.json",
+          "sha256": "4333f9fc6b0e129ce1b44ecaf1734e0756d092671dab848950fb3f2f39d04db7",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-004.json",
+          "sha256": "4a67eeefa5aa6b9a20f2f5c67be6654eb2b2a8b82200302e1f60dc1a525aeee6",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-SV-031.json",
+          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
+          "bytes": 3041
+        },
+        {
+          "path": "original/point-SV-037.json",
+          "sha256": "b9cbd86c8355a6ec713864185a62af7e7c9941ce9588432ab8f0db7d14467849",
+          "bytes": 3041
         },
         {
           "path": "original/point-SV-054.json",
@@ -1549,9 +1433,269 @@
           "bytes": 3045
         },
         {
+          "path": "original/point-SV-066.json",
+          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
+          "bytes": 3086
+        },
+        {
+          "path": "original/point-SV-098.json",
+          "sha256": "7b82996a3378024a994622047030d6e0b6330e98f257d843633d6e4c34de25dd",
+          "bytes": 3054
+        },
+        {
+          "path": "original/point-SV-100.json",
+          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
+          "bytes": 3053
+        },
+        {
+          "path": "original/point-SV-101.json",
+          "sha256": "57e94c4c935f224fe98c9cdb2d863adb0a24a9fa982595a05625f3882739571a",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-106.json",
+          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-107.json",
+          "sha256": "4b2d66843c3974be2a9e6e53f7faaaaeac61ba28db2379e1077385d523e29ccc",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-109.json",
+          "sha256": "28c5a71556760f020b4d1e68b86d62e5048c932d0892b7dc666d0c1b1a4386c6",
+          "bytes": 3050
+        },
+        {
+          "path": "original/point-SV-111.json",
+          "sha256": "62d0008197b8e14b25da21f62796d915dbdfde60d9638b3b824818e210a42db9",
+          "bytes": 3046
+        },
+        {
+          "path": "original/point-SV-139.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-SV-141.json",
+          "sha256": "66f9681a8fac1e983f39b35d26dfd68d22958f9fc7b0541a8f6b10eeb6c6e293",
+          "bytes": 3026
+        },
+        {
+          "path": "original/point-SV-192.json",
+          "sha256": "2ac018c7c1220165c1eaed661e08cdab72a4d213d4fd50fffdcb506f63ecdd2a",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-203.json",
+          "sha256": "ff980bb2fd22e4ab710d65d572a4daa4c0de55de67127116cd63143cd5b3169a",
+          "bytes": 3063
+        },
+        {
+          "path": "original/point-SV-205.json",
+          "sha256": "92e11e780e599045b4807b85d012239c111fcaae8d31c79d4c8989f4a18480ed",
+          "bytes": 3036
+        },
+        {
+          "path": "original/point-SV-206.json",
+          "sha256": "a31cd84f3e81090d08f976e980d2507f80f4ca148fc04f65fc2e4f64f8735acd",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-SV-229A.json",
+          "sha256": "5e8a3c22e6e9395e0b98bfcf61acaa860d27c71e325980aa8c6ee5bf9311653f",
+          "bytes": 3049
+        },
+        {
+          "path": "original/point-SV-233.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-234.json",
+          "sha256": "9649b62f6945393e023877c924a678332535fd172140e88c185bc8ae06337d01",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-SV-236.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-241.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-SV-268.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-311.json",
+          "sha256": "d766310fd5b18accc9ab95cbf2db4800c6639c3ae700786de82f81d9fed2d7ab",
+          "bytes": 3022
+        },
+        {
+          "path": "original/point-SV-313.json",
+          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
+          "bytes": 3043
+        },
+        {
+          "path": "original/point-SV-331.json",
+          "sha256": "f58c3506ec89a70ce94a49700cc515f0b0d43fd62dc55910d131e2e18084dc7f",
+          "bytes": 3025
+        },
+        {
+          "path": "original/point-SV-344.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
+        },
+        {
+          "path": "original/point-SV-345.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
+        },
+        {
+          "path": "original/point-SV-357.json",
+          "sha256": "5fa357e61e10a01c5f7720aabeeb132b9a89f8136e5bfdb7c56ba0610d120680",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-SV-364.json",
+          "sha256": "9e6119e962a86e6512646dc11fc9e103a240a193f7d96ab0fa31e64f302db985",
+          "bytes": 3059
+        },
+        {
+          "path": "original/point-SV-376.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-SV-599.json",
+          "sha256": "89f5a19b67cbf162d1b177c6f5c5f790039dfbe17401783bf518c906a766d522",
+          "bytes": 3033
+        },
+        {
+          "path": "original/point-SV-642.json",
+          "sha256": "ce5681256f91a20ab9a96d2056ff2ea8c32f1f97cb601a77ea977f2548ea21c0",
+          "bytes": 3053
+        },
+        {
           "path": "original/point-SV-699.json",
           "sha256": "646c6a8346ef4a42e947d0bae6442ec876c47aaea8aac9e2408674b77014152b",
           "bytes": 3019
+        },
+        {
+          "path": "original/point-SV-734.json",
+          "sha256": "0b0af64de4014ef97866d1f8e7d2bbb2ac67fc1059ff5262d20e9fe8fdb46c2c",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-SV-790.json",
+          "sha256": "37ec9c69345106f4ea90b689b6d49d76972fc9fb13ef186ca1ea8f8ae308fc28",
+          "bytes": 3029
+        },
+        {
+          "path": "original/point-SV-799.json",
+          "sha256": "93be8cac3c8e076cfac0160594524dfeec665d0b84500427d6b005d50f82ab9b",
+          "bytes": 3032
+        },
+        {
+          "path": "original/point-SV-818.json",
+          "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
+          "bytes": 3086
+        },
+        {
+          "path": "original/point-SV-822.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-SV-823.json",
+          "sha256": "0c92db8271f01c1f42c570818b3a7b7d4bbe53d5605e1991f9260277bf40319e",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0000477-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0035700-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-agency_projected.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-nldi_indexed.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0042994-001-original_state.json",
+          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
+          "bytes": 3048
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-agency_projected.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-nldi_indexed.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-npdes_outfall-SC0047856-001-original_state.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-374.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-838.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-839.json",
+          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
+          "bytes": 3038
+        },
+        {
+          "path": "original/point-study_station-SV-840.json",
+          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
+          "bytes": 3032
         },
         {
           "path": "original/point-usgs_gauge-USGS-02176930.json",
@@ -1682,11 +1826,6 @@
           "path": "original/point-usgs_gauge-USGS-02187000.json",
           "sha256": "d8e7cabaec4855cea1589b2950403fab78107ad76765bce08da2c325e1ef3be9",
           "bytes": 3032
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-344108083090600.json",
-          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
-          "bytes": 3042
         },
         {
           "path": "original/point-usgs_gauge-USGS-02187251.json",
@@ -1879,6 +2018,26 @@
           "bytes": 3037
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02193340-nldi_indexed.json",
+          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193340.json",
+          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
+          "bytes": 3034
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193500-nldi_indexed.json",
+          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
+          "bytes": 3054
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02193500.json",
+          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
+          "bytes": 3054
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02194501.json",
           "sha256": "dd2628a9d07816fbc38a9ad80b5db7425b2b1a9d93e5dd2a028eec44659a3940",
           "bytes": 3086
@@ -1889,94 +2048,9 @@
           "bytes": 3051
         },
         {
-          "path": "original/point-npdes_outfall-SC0000477-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-agency_projected.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-agency_projected.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0000477-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-nldi_indexed.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-nldi_indexed.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0000477-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0035700-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0042994-001-original_state.json",
-          "sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37",
-          "bytes": 3048
-        },
-        {
-          "path": "original/point-npdes_outfall-SC0047856-001-original_state.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-374.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-838.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-839.json",
-          "sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc",
-          "bytes": 3038
-        },
-        {
-          "path": "original/point-study_station-SV-840.json",
-          "sha256": "2933aa96088c56cc11df614407bbcb037496a2d245d610913fa5a1daed3f6fd4",
-          "bytes": 3032
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-02193340.json",
-          "sha256": "ea9de532196a9f9ddcff9dcd8e6297f732a5ccfcf32255bbc23452588b6304a3",
-          "bytes": 3034
-        },
-        {
-          "path": "original/point-usgs_gauge-USGS-02193500.json",
-          "sha256": "262fcd9a5b223c4470fb7197202993f882ef1d35335828234f58331216c5ad88",
-          "bytes": 3054
+          "path": "original/point-usgs_gauge-USGS-02195320-nldi_indexed.json",
+          "sha256": "9e96526a5e4839ab15fb789643b897ee43a79bcc01f61e2b6385d067ad5f2953",
+          "bytes": 3028
         },
         {
           "path": "original/point-usgs_gauge-USGS-02195320.json",
@@ -1984,9 +2058,19 @@
           "bytes": 3028
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02195470-nldi_indexed.json",
+          "sha256": "aa900b030cc9b9998c6c084a3afa04936f641bd5cfee6ed9d76607459618615f",
+          "bytes": 3016
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02195470.json",
           "sha256": "aa900b030cc9b9998c6c084a3afa04936f641bd5cfee6ed9d76607459618615f",
           "bytes": 3016
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02196000-nldi_indexed.json",
+          "sha256": "a994ca64bc9f3730ad4b5f751b7750ef19c8b8dae8ebe859ee164991a1898cd3",
+          "bytes": 3045
         },
         {
           "path": "original/point-usgs_gauge-USGS-02196000.json",
@@ -1994,9 +2078,19 @@
           "bytes": 3045
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02196485-nldi_indexed.json",
+          "sha256": "f82f26efdd74493b29ff28687f822b245318e1ec394737184003934c6daac000",
+          "bytes": 3040
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02196485.json",
           "sha256": "f82f26efdd74493b29ff28687f822b245318e1ec394737184003934c6daac000",
           "bytes": 3040
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02196690-nldi_indexed.json",
+          "sha256": "3dcc6041ae078a55fd0d25a048a32b45dede5c6ebb83e30143158157fcfe3915",
+          "bytes": 3041
         },
         {
           "path": "original/point-usgs_gauge-USGS-02196690.json",
@@ -2004,7 +2098,17 @@
           "bytes": 3041
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02196835-nldi_indexed.json",
+          "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
+          "bytes": 3035
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02196835.json",
+          "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
+          "bytes": 3035
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-021968385-nldi_indexed.json",
           "sha256": "ab01a5fa578e31e07a2d1cde0b32c6e6296759e539d93725071baa5f5911da4c",
           "bytes": 3035
         },
@@ -2014,9 +2118,19 @@
           "bytes": 3035
         },
         {
+          "path": "original/point-usgs_gauge-USGS-02197000-nldi_indexed.json",
+          "sha256": "7896525223598cdcdce53463d89c47c99a28a2cef11e0674c761ced3dc256094",
+          "bytes": 3064
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-02197000.json",
           "sha256": "7896525223598cdcdce53463d89c47c99a28a2cef11e0674c761ced3dc256094",
           "bytes": 3064
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02197020-nldi_indexed.json",
+          "sha256": "e6dbcc433ab4e3e12c81939f52af6a23c241e60225f45fe1591c36c38048057f",
+          "bytes": 3027
         },
         {
           "path": "original/point-usgs_gauge-USGS-02197020.json",
@@ -2024,9 +2138,19 @@
           "bytes": 3027
         },
         {
+          "path": "original/point-usgs_gauge-USGS-021973269-nldi_indexed.json",
+          "sha256": "35df4cd1d4e344d31512aa0ca9706265029d6eb90f58a218f716e342293c072b",
+          "bytes": 3071
+        },
+        {
           "path": "original/point-usgs_gauge-USGS-021973269.json",
           "sha256": "35df4cd1d4e344d31512aa0ca9706265029d6eb90f58a218f716e342293c072b",
           "bytes": 3071
+        },
+        {
+          "path": "original/point-usgs_gauge-USGS-02197500-nldi_indexed.json",
+          "sha256": "f220e13732e5b623b8c9e23c4ede6d103ea55996e9108656cf7135d6ab3b75c4",
+          "bytes": 3054
         },
         {
           "path": "original/point-usgs_gauge-USGS-02197500.json",
@@ -2034,9 +2158,34 @@
           "bytes": 3054
         },
         {
-          "path": "watershed_join.mjs",
-          "sha256": "a2bb5fd9341dfc71f2561809ca118c30134897f78502485df00879e245df203b",
-          "bytes": 8346
+          "path": "original/point-usgs_gauge-USGS-344108083090600.json",
+          "sha256": "df79bebe5a9b322797b6242df1cd53e6b69293d0bc5b6337fe6711e167f7fefc",
+          "bytes": 3042
+        },
+        {
+          "path": "original/station-RS-06190.json",
+          "sha256": "4926f223a1cc9aaacf46caa53389e5747b64c066bcc2847e4205645640700dd4",
+          "bytes": 3033
+        },
+        {
+          "path": "original/station-SV-335.json",
+          "sha256": "02d65740362aaad47b03867ee8a3250a0cbd53c18e6e527cc8ad36a252e01014",
+          "bytes": 3037
+        },
+        {
+          "path": "original/station-SV-336.json",
+          "sha256": "33c50c1235626837c14f44b8764bed2ec7bc89dc94aa83115e48b090a14e2272",
+          "bytes": 3043
+        },
+        {
+          "path": "original/wbd-huc12-layer.json",
+          "sha256": "e156e8d83bc5d8d93c5fe7eea282bce47480f0fde07989056c90562672223b25",
+          "bytes": 9517
+        },
+        {
+          "path": "query-plan.json",
+          "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7",
+          "bytes": 813824
         },
         {
           "path": "rebuild.mjs",
@@ -2044,14 +2193,9 @@
           "bytes": 2019
         },
         {
-          "path": "README.md",
-          "sha256": "14353aad3ff1565862a89850c592b07e40f1ee1e144e8dcbc23c1a1ada4a37be",
-          "bytes": 7109
-        },
-        {
-          "path": "derived/summary.json",
-          "sha256": "9891b4879db81ed99a691ab56e3e630fe7f6e3b56e0a5d381fb6e4eea63b85da",
-          "bytes": 5147
+          "path": "watershed_join.mjs",
+          "sha256": "aee840c8a9ecc26b69b04168422cc31716df6857a6fde7f0dfc431564f2bf1fb",
+          "bytes": 8376
         }
       ]
     }

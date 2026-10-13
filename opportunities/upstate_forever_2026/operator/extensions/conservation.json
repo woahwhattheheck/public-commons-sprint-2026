@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "conservation",
   "title": "Conservation plans",
-  "version": "4",
+  "version": "5",
   "order": 50,
   "assets": [
     "retained_desks.mjs",
@@ -29,7 +29,8 @@
       "conservation.scenario.create",
       "conservation.criteria.prepare",
       "conservation.experiment.prepare",
-      "conservation.sources.capture"
+      "conservation.sources.capture",
+      "conservation.report.source.prepare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -83,6 +84,19 @@
         ],
         "path": "/api/conservation/source-capture",
         "operation": "source-capture",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/conservation/report-source",
+        "operation": "report-source",
         "handler": "read",
         "args": [
           "workspace_key",

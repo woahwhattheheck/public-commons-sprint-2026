@@ -50,6 +50,13 @@ def delivery_catalog(workspace):
                          "title": record.get("title") or record["id"],
                          "state": record.get("state"), "available": True,
                          "kind": "source_context", "reason": ""})
+    from .scientific_briefing import KIND as scientific_kind
+    for path in sorted((Path(workspace.root) / scientific_kind).glob("*/briefing.json")):
+        record = read_json(path)
+        if record.get("state") == "complete":
+            rows.append({"id": record["id"], "choice_key": "scientific-briefing:" + record["id"],
+                         "title": record["title"], "state": "complete", "available": True,
+                         "kind": "scientific_report", "reason": ""})
     return {"reports": rows}
 
 def delivery_sources(workspace, delivery_id):
@@ -89,6 +96,11 @@ def source_context_sources(workspace, export_id):
             or report["source_binding"].get("bytes") != len(original)):
         raise ImplementationError("The source briefing and retained selected watershed file differ")
     return {"report": paths["report"], "index": paths["index"]}
+
+def scientific_sources(workspace, briefing_id):
+    from .scientific_briefing import notes_sources
+    return notes_sources(workspace, identifier(briefing_id))
+
 
 def source_bundle(report_path, index_path, notes_path):
     """Verify the retained historical slide index instead of regenerating page IDs."""

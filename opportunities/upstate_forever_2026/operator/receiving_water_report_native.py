@@ -62,6 +62,7 @@ def decorate_task(operator, task):
     public = deepcopy(task)
     result = public.get("result") or {}
     public.setdefault("_downloads", []).extend(_files(operator, task["workspace"], result))
+    public["_extension_task_actions"] = {"extension_id": "receiving-waters"}
     public["_receiving_water_report"] = {
         "id": result.get("id"), "title": result.get("title"),
         "view": "receiving-waters", "source": result.get("source"),

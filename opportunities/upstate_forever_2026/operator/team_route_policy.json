@@ -2,7 +2,7 @@
   "schema": "commons.ecosystem.extension-access-review.v1",
   "activeManifests": 57,
   "retiredManifests": 1,
-  "registeredRoutes": 228,
+  "registeredRoutes": 230,
   "registeredFileRoutes": 11,
   "registeredActions": 168,
   "safeViewerPosts": [
@@ -22,6 +22,7 @@
     "/api/conservation-optimization/plan",
     "/api/economic-desk/preview",
     "/api/ensembles/preview",
+    "/api/landcover-ledger/inputs",
     "/api/map-atlas/compare",
     "/api/map-atlas/inspect",
     "/api/map-atlas/review",
@@ -91,7 +92,9 @@
     "/api/watershed-context/catalog",
     "/api/watershed-context/export",
     "/api/watershed-context/huc",
-    "/api/watershed-context/report"
+    "/api/watershed-context/report",
+    "/api/published-studies/geographic-preview",
+    "/api/published-studies/geographic-selection"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

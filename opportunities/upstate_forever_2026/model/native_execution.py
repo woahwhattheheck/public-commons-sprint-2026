@@ -1,6 +1,7 @@
 """Progress and recoverable failure records for the existing native run."""
 from __future__ import annotations
 
+import contextlib
 import copy
 import errno
 import fcntl
@@ -11,7 +12,7 @@ from pathlib import Path
 import socket
 import sys
 
-from .common import atomic_json, canonical, now, relative_file, verify_file
+from .common import atomic_json, canonical, held, now, relative_file, verify_file
 from .model_selection import run_models, run_scope
 from .reuse import verify_stage
 
@@ -140,6 +141,134 @@ def _resource_status():
     if errors:
         result["read_errors"] = errors
     return result
+
+
+
+@contextlib.contextmanager
+def native_batch_lease(path):
+    """Keep the existing batch lease alive in an explicitly inherited child."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield fd
+    finally:
+        # Closing this descriptor keeps a surviving child's inherited lease.
+        os.close(fd)
+
+
+class NativeProcessInterrupted(RuntimeError):
+    """One observed child signal stops its original coordinator for recovery."""
+
+    def __init__(self, failure):
+        super().__init__(failure["message"])
+        self.native_failure = copy.deepcopy(failure)
+
+
+def process_interrupted(error):
+    """Follow actual signal receipts through existing coordinator exceptions."""
+    seen = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        failure = getattr(error, "native_failure", None)
+        if (isinstance(failure, dict)
+                and failure.get("kind") == "native_process_interrupted"
+                and ((type(failure.get("return_code")) is int and failure["return_code"] < 0)
+                     or (failure.get("return_code") is None
+                         and failure.get("exit_observation") == "worker_missing_without_result"))):
+            return True
+        error = error.__cause__ or error.__context__
+    return False
+
+
+def _memory_event_delta(before, after):
+    first = (before or {}).get("cgroup", {})
+    last = (after or {}).get("cgroup", {})
+    keys = ("version", "membership", "path")
+    if (not first.get("path") or any(first.get(key) != last.get(key) for key in keys)):
+        return {"state": "unavailable", "scope": "shared_cgroup"}
+    delta = {}
+    for field in ("memory.events", "memory.events.local"):
+        old, new = first.get(field), last.get(field)
+        if not isinstance(old, dict) or not isinstance(new, dict):
+            continue
+        values = {key: new[key] - value for key, value in old.items()
+                  if type(value) is int and type(new.get(key)) is int and new[key] >= value}
+        if values:
+            delta[field] = values
+    observed = any(values.get("oom_kill", 0) > 0 or values.get("oom_group_kill", 0) > 0
+                   for values in delta.values())
+    return {"state": "observed" if delta else "unavailable", "scope": "shared_cgroup",
+            "identity": {key: first.get(key) for key in keys},
+            "delta": delta, "oom_kill_observed": observed if delta else None}
+
+
+def process_failure(return_code, *, run_id, process, before=None, after=None,
+                    native_state=None, missing_result=False):
+    """Describe an observed signal; a group OOM event is not child attribution."""
+    observed_signal = type(return_code) is int and return_code < 0
+    if not observed_signal and not (return_code is None and missing_result):
+        return None
+    import signal
+    signum, name = None, None
+    if observed_signal:
+        signum = -return_code
+        try:
+            name = signal.Signals(signum).name
+        except ValueError:
+            name = "signal " + str(signum)
+    message = ("Native run " + run_id + " ended by " + name
+               + " (process exit " + str(return_code) + ")." if observed_signal else
+               "The original native worker is no longer alive and has no completed result; "
+               "its process exit code is unavailable after reconnection.")
+    memory = _memory_event_delta(before, after)
+    failure = {
+        "kind": "native_process_interrupted", "type": "NativeProcessInterrupted",
+        "message": message,
+        "exit_observation": "signal" if observed_signal else "worker_missing_without_result",
+        "run_id": run_id, "return_code": return_code,
+        "signal": {"number": signum, "name": name},
+        "process": copy.deepcopy(process), "observed_at": now(),
+        "memory_events": memory,
+        "recovery": ("Reconcile the recorded host memory or external stop, then continue this same "
+                     "saved study or programme. Completed cases and native stages are retained; "
+                     "the continuation starts only unfinished native work."),
+    }
+    if memory.get("oom_kill_observed"):
+        failure["message"] += (" An OOM-kill counter increased in the shared cgroup during "
+                               "this attempt; the counter does not identify the killed process.")
+    if before is not None:
+        failure["resources_before"] = copy.deepcopy(before)
+    if after is not None:
+        failure["resources_after"] = copy.deepcopy(after)
+    if native_state:
+        failure["native_run_state"] = native_state.get("state")
+        if native_state.get("error"):
+            failure["native_error"] = copy.deepcopy(native_state["error"])
+    return failure
+
+
+def record_process_interruption(workspace, run_id, failure, *, pid):
+    """Reconcile only the original dead child's journal under its native lock."""
+    directory = workspace.root / "runs" / run_id
+    with held(directory / ".run.lock", blocking=False):
+        state = workspace.inspect_run(run_id)
+        execution = state.get("execution", {})
+        if (state.get("state") == "complete" or execution.get("pid") != pid
+                or state.get("state") not in {"running", "failed"}):
+            return False
+        error = copy.deepcopy(failure)
+        error["phase"] = execution.get("phase")
+        for name in ("model", "artifact"):
+            if name in execution:
+                error[name] = execution[name]
+        state.update(state="failed", updated_at=now(), error=error)
+        execution.update(state="interrupted", interrupted_at=now(),
+                         process_return_code=failure["return_code"])
+        state["model_scope"] = run_scope(state)
+        atomic_json(directory / "run.json", state)
+    return True
 
 
 def storage_status(directory):

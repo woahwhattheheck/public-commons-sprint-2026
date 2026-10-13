@@ -13,10 +13,18 @@ LAKE_STUDY = "scdes-eighteenmile-lake-2023"
 STREAM_STUDY = "scdes-eighteenmile-streams-2020-2025"
 SV833_STUDY = "scdes-sv833-water-quality-2021-2026"
 SV833_ROOT = "application-context/sv833"
+RL18151_STUDY = "scdes-rl18151-water-quality-2018-2026"
+RL18151_ROOT = "application-context/rl18151"
 STREAM_ROOT = "application-context/stream-nutrients"
 PHYSICAL_ROOT = "application-context/physical-water-quality"
 
 FAMILIES = {
+    "source/rl18151-lake-phosphorus-20261013/sources.json": {
+        "studies": (RL18151_STUDY,),
+        "retained_root": RL18151_ROOT,
+        "prefixes": ("source/rl18151-lake-phosphorus-20261013/",),
+        "paths": (),
+    },
     "sv833_hydrologic_context.sources.json": {
         "studies": (SV833_STUDY,),
         "retained_root": SV833_ROOT,
@@ -103,7 +111,7 @@ def source_files(application, manifest_path):
     """Return the unchanged app-relative manifest and every declared source body."""
     application = Path(application).resolve(strict=True)
     manifest_path = Path(manifest_path).resolve(strict=True)
-    name = manifest_path.name
+    name = manifest_path.relative_to(application).as_posix()
     family = FAMILIES.get(name)
     if family is None or manifest_path != application / name or not manifest_path.is_file():
         raise ValueError("Choose a registered original application-root context manifest.")
@@ -114,7 +122,7 @@ def source_files(application, manifest_path):
     files = {name: raw_manifest}
     for entry in native["entries"]:
         for item in [entry, *entry.get("companions", [])]:
-            relative = _relative(item["path"])
+            relative = _relative(str(PurePosixPath(name).parent / _relative(item["path"])))
             if relative not in family["paths"] and not any(relative.startswith(prefix) for prefix in family["prefixes"]):
                 raise ValueError("A context source is outside its declared original families: " + relative)
             path = (application / relative).resolve(strict=True)
@@ -131,5 +139,6 @@ def source_files(application, manifest_path):
 
 def retained_files(application, manifest_path):
     files = source_files(application, manifest_path)
-    root = FAMILIES[Path(manifest_path).name]["retained_root"]
+    name = Path(manifest_path).resolve(strict=True).relative_to(Path(application).resolve(strict=True)).as_posix()
+    root = FAMILIES[name]["retained_root"]
     return {root + "/" + name: raw for name, raw in files.items()}

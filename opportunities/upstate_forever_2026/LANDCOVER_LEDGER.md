@@ -197,3 +197,208 @@ python -B -m unittest discover -s tests -v
 A fifth source-contract journey exercises original retained run/grid resolution, Fiona watershed conversion, interrupted native-adapter continuation, complete edition reopening, actual authored operator action/download hooks, unchanged original run records, full-directory receiving and changed-source refusal. Its Workspace/common fixture follows the inspected original interface; it is not an installed native scientific engine.
 
 These journeys use explicitly constructed categorical cells to check implementation arithmetic; they are not Upper Savannah watershed results. Original regional baseline/scenario inputs are produced by the source and model owners. Their full 217-HUC run remains the native integration acceptance population. Browser navigation in this container returned `ERR_BLOCKED_BY_ADMINISTRATOR`; report source and JavaScript syntax can be checked here, while the original operator host performs the visible browser journey. The original source/scenario writers remain unchanged; native operator integration is supplied as the additive shared-host descriptor and adapters. Full original-host composition and regional source execution use the receiving integration owner’s environment.
+
+## Compare annual raster source editions
+
+The Land-cover changes desk supports an annual source comparison directly from
+the current Workspace. Choose **Annual raster source editions**, select an
+original reference raster and one or more comparison rasters, and keep the
+original categorical band for each. Each choice shows its retained title,
+vintage and role. The source details also expose exact entry IDs and raster
+SHA-256 values. Select actual NLCD class rasters; other integer scientific
+rasters can have a different coding system.
+
+Choose the original reporting polygons and their actual identifier and name
+fields. Original HUC values remain strings. The maintained Esri/Fiona reader
+retains the source CRS, attributes and feature identities; the existing ledger
+transforms polygon geometry into the selected raster's native CRS. Equal-area
+hectares are required by default. The explicit **Allow projected planar hectares**
+option also supports retained projected grids such as an existing EPSG:26917
+demonstration. This uses the reducer's original projected-planar area method;
+its preview and report label the resulting area basis. It does not reproject
+or resample the rasters.
+It reads the rasters on their original lattice. The same width, height, CRS and
+affine transform are required for all selected operands. No resampling or
+modeled run is created by this mode.
+
+**Check selected inputs** verifies the retained source bytes and companions,
+integer band existence, common native lattice and area basis, and reporting identifiers.
+**Build land-cover ledger** performs the actual polygon intersections,
+NLCD-class validation, valid-data coverage and transitions through the original
+queued action. Different source masks remain distinct. Keep **Across every
+selected alternative** for a common comparison cohort, or explicitly choose
+pair-specific support. Unknown classes stop the calculation by default; the
+explicit exclusion option quantifies their omitted area. Overlapping reporting
+polygons require the existing overlap option and retain the unique union total.
+
+A completed edition opens its original report and exposes native downloads for
+the portable ZIP, source bindings, CSV tables, complete geographic outputs and
+derived rasters. The saved input details retain exact collection/source/band
+references. Drafts and accepted tasks remain associated with their original
+Workspace across desk return; a late response cannot replace an edited draft or
+another Workspace. A failed native task can resume its original committed ledger
+windows.
+
+The model selection contract is:
+
+```json
+{
+  "input_mode": "sources",
+  "title": "Annual NLCD source comparison",
+  "baseline_source": {
+    "source_collection_id": "<original collection ID>",
+    "source_id": "<original reference raster entry>",
+    "band": 1
+  },
+  "alternative_sources": [
+    {
+      "source_collection_id": "<original collection ID>",
+      "source_id": "<original comparison raster entry>",
+      "band": 1
+    }
+  ],
+  "zones": {
+    "source_collection_id": "<original collection ID>",
+    "source_id": "<original polygon entry>",
+    "id_field": "huc12",
+    "name_field": "name"
+  },
+  "options": {
+    "support_scope": "all",
+    "unknown_policy": "error",
+    "allow_overlap": false
+  }
+}
+```
+
+Use actual retained IDs from the catalog. Reference and comparison describe the
+chosen operand order, not a guessed chronology. Source titles and vintages stay
+as published or supplied. An observed class difference does not by itself
+identify its cause or the date of a land-management event.
+
+### Retained identity and restoration
+
+The source mode uses upstate.landcover-source-binding/v1. It stores the exact
+original source entries and companions, selected bands, header/mask metadata,
+stable source-view member names, native grid and complete reporting-source
+binding. Source comparisons have a null grid_id because they read source
+rasters directly; the native grid definition is retained in their binding.
+Existing run-mode selections and saved upstate.landcover-binding/v1 editions
+continue to use their original run and grid IDs.
+
+Opening a completed source edition recreates verified source views from the
+immutable original objects and checks their native headers and dependency
+membership. Equivalent CRS serialization across PROJ versions is accepted while
+the original display metadata remains retained; grid, band and mask meaning
+must still agree. Every report artifact is hash verified. Complete report ZIPs
+contain calculated outputs and bindings; use the original Workspace backup to
+retain editable original raster and vector source bytes and application code.
+
+An interrupted calculation resumes only against its existing source paths and
+original reducer signature. Moving the entire Workspace after a completed run
+supports verified reopen. Moving an unfinished reducer checkpoint changes its
+absolute-path execution signature, so it must finish on its original native
+operation before an editable project is moved.
+
+### Install the complete comparison mode
+
+Publish the adapter, desk, exports, native CLI and original installer together.
+The maintained install_landcover.py retains the new source helper and additive
+integration/component_fragments/landcover-source-inputs.json declaration,
+accepts only the exact known predecessor bodies, and merges the single input
+preview route into the current Team policy without replacing peer routes.
+The registered queued build remains the existing analyst action; the input
+preview is a workspace-authorized read.
+
+### Read an original source comparison offline
+
+A source comparison keeps the original reference edition and each selected comparison edition in their original order. The offline report's Comparison edition selector uses the retained source title and source time; choosing another edition updates the displayed reference/comparison pair, watershed quantities and matching transition-raster download together. The source panel retains each source collection and entry, band, original CRS, units, URI and exact raster byte count and SHA-256.
+
+The complete portable report includes source-editions.csv and input-editions.json alongside the existing hectare/transition/coverage CSV files, complete watershed geometry, original calculation JSON and derived rasters. The CSV is a readable source index. input-editions.json carries the same complete binding hashed into the actual calculation, including original raster and reporting-geometry records. Normal archive receiving verifies these companions through its existing complete member inventory. Opening a different ledger JSON in the standalone viewer keeps its companion downloads associated with that ledger's own portable package.
+
+All source comparisons retain the maintained fractional polygon/pixel area calculation and selected common-valid-data support. Published or simulated categorical input editions retain their own original labels; a class difference alone does not identify the cause or date of a land-management event. Existing run-based comparisons keep their original scenario selectors and exports.
+
+
+## Native Workspace commands and portable reopening
+
+The original land-cover CLI now accepts an existing retained Workspace directly.
+The file-level `run`, `report`, `pack` and `receive` commands retain their original
+arguments and behavior.
+
+Run these commands from the installed application directory with the existing GIS
+Python. The catalog supplies exact imported collection/source identifiers and
+existing run identifiers; use those values in the original JSON selection.
+
+```sh
+python -B -m model.landcover_cli workspace --workspace /original/workspace catalog --result /receiving/landcover-catalog.json
+python -B -m model.landcover_cli workspace --workspace /original/workspace preview --selection /receiving/annual-selection.json --result /receiving/landcover-preview.json
+python -B -m model.landcover_cli workspace --workspace /original/workspace build --selection /receiving/annual-selection.json --receive-report /receiving/annual-report --archive /receiving/annual-workspace.zip --restore /receiving/annual-reopened --result /receiving/annual-operation.json
+```
+
+`preview` verifies the original raster bytes, retained companions, integer band,
+equal-area grid compatibility, reporting source and selected original polygon
+identifiers. The actual build computes the fractional polygon overlap and valid
+NLCD class support. It produces the complete original CSV, GIS raster, geometry,
+HTML and report ZIP, then reopens the original saved edition.
+
+Optional `--receive-report` receives that exact report ZIP and compares its full
+computed ledger and annual-source binding with the original. The paired
+`--archive`/`--restore` options use the maintained full Workspace archive and
+restore APIs, retain the original project, and inspect the completed edition
+against the restored original source objects. The restored binding and report
+must equal the producing edition; input source views are reconstructed by the
+original Workspace reader. The same GIS interpreter then executes the restored
+application’s own `model.landcover_cli workspace ... inspect` command, with no
+model execution or recursive archive options. Its saved edition, binding, signature
+and source-edition interpretation must match; the operation records the actual
+process status and stderr. Archive, result and receiving destinations remain
+outside the original Workspace and its ancestor directories, and separate from one another. The result JSON also remains separate from the input selection JSON.
+
+The command returns complete JSON and optionally writes it to `--result`.
+Its `edition` contains original file descriptors; `report_archive` identifies the
+complete report ZIP, and the optional receiving fields identify the actual report
+directory, Workspace ZIP and restored project. Progress from committed reducer
+windows is emitted on stderr. Subsequent `workspace inspect EDITION_ID` commands
+accept the same optional receiving arguments.
+
+A repeat command reuses an already complete edition, verifies an existing report
+destination against its original manifest, verifies an existing full archive and
+reopens an existing restored edition. It preserves those completed artifacts
+instead of replacing them. Resuming interrupted raster calculation still uses
+the original source and output paths; portable reopening is the complete-edition
+archive and inspect path, not relocation of an unfinished reducer checkpoint.
+
+For the current regional native operation, the active original project is
+`/mnt/data/eco-cohort-resume/received/workspace`, and its maintained application is
+`/mnt/data/eco-cohort-resume/received/application` on the existing 640a host.
+Use the actual installed source catalog to choose the original 2023 and corrected
+2025 NLCD editions and reporting polygons. The corrected 2025 raster has SHA-256
+`3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`;
+its imported source collection ID comes from that actual catalog. The source-only
+path requires the existing GIS environment and does not require an InVEST run.
+
+
+
+## Use a saved ledger in Scientific Reports
+
+Open its saved edition in **Land-cover changes**, enter the source title and choose
+**Prepare scientific report**. The original native queue retains this operation;
+an interrupted preparation can resume from the same task. Preparation attaches the
+completed ledger, complete watershed rows, source bodies, geometry, GIS outputs
+and offline report. Source mode and retained-run mode use their original identities.
+
+Open a completed source, then choose **Open Scientific Reports composer**. The
+existing composer receives the exact source collection and entry; it preserves its
+ordered selection of other reports and its editable title/contact fields. Complete
+the ordinary preview and build there. The source ZIP is also available from this
+ledger and the native task's original file tickets. Saved report sources reopen
+with the ledger after returning to the desk or restoring its full Workspace.
+
+A later task completion leaves a newer ledger selection or another Workspace in
+place. Accepted preparation tasks remain in the original native queue across desk
+changes. Returning to their ledger exposes the retained source without recomputing
+land-cover transitions.
+
+See [the complete source preparation guide](model/LANDCOVER_REPORT_SOURCE.md) for
+the original Python API and CLI, input membership, portable source bundle and
+scientific interpretation.

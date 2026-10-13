@@ -13,6 +13,7 @@ from measurement_workspace.study_reviews import PublishedStudyReviews
 from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace import sv833_observations as sv833
+from measurement_workspace import rl18151_observations as rl18151
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
@@ -47,6 +48,8 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == rl18151.BUILTIN_ID:
+            return rl18151.builtin_companion(self.builtin.parent.parent)
         if builtin_id == sv833.BUILTIN_ID:
             return sv833.builtin_companion(self.builtin.parent.parent)
         if builtin_id == microbial.BUILTIN_ID:
@@ -276,6 +279,9 @@ class PublishedStudyProvider:
                             "publication": metadata.get("publication"),
                             "counts": metadata.get("content_counts", {}),
                         })
+                rl18151_source = rl18151.catalog_entry(self.builtin.parent.parent)
+                if rl18151_source:
+                    builtin.append(rl18151_source)
                 sv833_source = sv833.catalog_entry(self.builtin.parent.parent)
                 if sv833_source:
                     builtin.append(sv833_source)
@@ -289,6 +295,14 @@ class PublishedStudyProvider:
                     "source_roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()],
                     "table_titles": TABLE_TITLES,
                 }
+            if operation in ("geographic-preview", "geographic-selection"):
+                from measurement_workspace import geographic_study_selection as geographic
+                if operation == "geographic-preview":
+                    return geographic.preview(ws, store, payload)
+                result = geographic.resolve(ws, store, payload)
+                result["study"] = self._source_links(workspace_key, ws, store, result["study"])
+                result["context"] = self._source_links(workspace_key, ws, store, result["context"])
+                return result
             if operation == "review":
                 result = PublishedStudyReviews(store).get(payload.get("review_id"))
                 result["context"] = self._source_links(workspace_key, ws, store, result["context"])
@@ -317,7 +331,9 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    if builtin_id == sv833.BUILTIN_ID:
+                    if builtin_id == rl18151.BUILTIN_ID:
+                        available = rl18151.catalog_entry(self.builtin.parent.parent) is not None
+                    elif builtin_id == sv833.BUILTIN_ID:
                         available = sv833.catalog_entry(self.builtin.parent.parent) is not None
                     elif builtin_id == microbial.BUILTIN_ID:
                         available = microbial.catalog_entry(self.builtin.parent.parent) is not None

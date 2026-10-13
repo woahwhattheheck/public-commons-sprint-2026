@@ -91,6 +91,8 @@ Stopping begins with an interrupt, then escalates for that owned group after the
 
 The existing execution record, worker record and heartbeat include a `resources` snapshot from the actual calculating process. Native failures retain `resources_at_failure`, and original-reference start events include the same snapshot. These fields record process resident/high-water memory, the resolved cgroup v2 memory usage and limits, memory events, selected memory-stat counters, and the explicit GDAL/BLAS thread and cache settings inherited by that process. If GDAL is already loaded, the snapshot reads its cache usage and usable-memory value; it reads the cache maximum only once actual cached blocks show that GDAL has initialized the cache.
 
+The Native calculation console shows the latest saved worker observation alongside its current process memory. After the worker exits, the same console keeps the last observed resident/peak memory, shared group usage and limit, cache values, inherited settings, and observation timestamp. Group event totals are labeled as lifetime counters. The API selects observations only from the matching execution ID and complete process identity, with the worker-start record as a fallback; older workers continue to show their existing live-process metrics. The original operation-record download includes the same retained observation.
+
 Compare the latest heartbeat with the execution's recorded timestamp when recovering an interrupted calculation. Cgroup event counts cover the selected group and its descendants; `memory.events.local` retains the local counters. The `shmem` value is included in `file`, so do not add those two memory figures. A missing optional kernel field remains absent, and read failures are recorded without aborting the model.
 
 These observations stay outside native runtime fingerprints and scientific stage signatures. They preserve reuse of the same completed stages while making inherited cache limits and shared memory pressure visible. See the [Linux cgroup v2 memory interface](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html) and [GDAL cache API](https://gdal.org/en/stable/api/raster_c_api.html).
@@ -127,7 +129,7 @@ Once the original child is selected, compute-programmes/PARENT/supervision/TASK.
 
 ### Receiving the current complete source
 
-The increment contains seven full files. Assemble them together, then run the existing installer with the receiving native interpreter:
+The increment contains eight full files, including `model/native_execution.py`, which supplies the worker's resource observer. Assemble them together, then run the existing installer with the receiving native interpreter:
 
     ACTUAL_PYTHON -B install_native_supervision.py --application ACTUAL_APPLICATION --retention
 

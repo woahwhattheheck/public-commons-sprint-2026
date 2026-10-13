@@ -81,15 +81,24 @@ RECEIVING_REPORT_REQUIRED = (
     "operator/extensions/receiving-water-report.json",
     "operator/web/receiving_water_report.mjs",
     "integration/component_fragments/receiving-water-report.json",
+    "model/receiving_water_report_transfer.py",
+    "model/RECEIVING_WATER_REPORT_TRANSFER.md",
+    "integration/component_fragments/receiving-water-report-transfer.json",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/receiving_water_report_maps.py",
+    "model/RECEIVING_WATER_REPORT_MAPS.md",
+    "integration/component_fragments/receiving-water-report-maps.json",
 )
 MONITORING_ACTIONS = {
     "monitoring.network.import", "monitoring.design", "monitoring.frontier",
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4 and 5 descriptors, before this report-source workflow.
+# Exact retained version 4–6 descriptors, before registered report task controls.
 DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
-                           "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c"}
+                           "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
+                           "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -262,6 +271,7 @@ def join_registry_app(text):
     ):
         text = text.replace(old, "")
     text = text.replace("receivingWaters.detach();", "")
+    text = text.replace("(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+", "")
     text = text.replace("receivingWaters.taskActions(row)+", "")
     text = text.replace("openReceivingPlan:id=>receivingWaters.openPlan(id)",
                         "openReceivingPlan:id=>extensions.openExtension('receiving-waters','openPlan',id)")
@@ -672,6 +682,9 @@ def install(root, *, check=False):
     if ("openScientificReport" not in original_app
             or "sourceReports.openForSources(" not in original_app):
         raise ValueError("Receive the current shared scientific report composer and its source-selection host capability")
+    extension_host = (root / "operator/web/extension_host.mjs").read_text(encoding="utf-8")
+    if "task._extension_task_actions?.extension_id" not in extension_host:
+        raise ValueError("Receive the current shared host with registered backend task-result navigation")
     required = (REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
                 + MONITORING_REPORT_REQUIRED + RECEIVING_REPORT_REQUIRED)
     for relative in required:
@@ -776,6 +789,7 @@ def install(root, *, check=False):
         if installed is not None and installed != template:
             previous = json.loads(json.dumps(template))
             previous["version"] = "2"
+            previous["client"].pop("task_actions", None)
             previous["assets"] = [name for name in previous["assets"]
                                   if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
                                                   "receiving_water_report.mjs"}]

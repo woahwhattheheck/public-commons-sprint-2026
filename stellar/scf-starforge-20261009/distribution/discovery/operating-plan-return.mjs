@@ -1,6 +1,6 @@
 // MIT. Review returned customer procedures against their complete original saved history.
 import { inspectOperatingPlan, operatingPlanDraft, saveOperatingPlanRevision,
-  renderOperatingPlanMarkdown, receiveOperatingPlan } from './operating-plan.mjs';
+  renderOperatingPlanMarkdown, receiveOperatingPlan, inspectOperatingFile } from './operating-plan.mjs';
 
 export const OPERATING_RETURN_SCHEMA = 'stellar-forge.operating-plan-return.v1';
 export const OPERATING_RETURN_COMPARISON_SCHEMA = 'stellar-forge.operating-plan-return-comparison.v1';
@@ -8,10 +8,17 @@ export const OPERATING_RETURN_MAX_BYTES = 128 * 1024 * 1024;
 export const OPERATING_RETURN_PLAN_MAX_BYTES = 32 * 1024 * 1024;
 export const OPERATING_RETURN_CHOICES = Object.freeze(['current', 'incoming', 'base', 'custom']);
 const PLAN_FIELDS = ['title', 'customer', 'purpose', 'period', 'owner', 'receiving', 'notes'];
-const STEP_FIELDS = ['title', 'instruction', 'inputs', 'expectedResult', 'owner', 'due'];
+const STEP_FIELDS = ['title', 'instruction', 'inputs', 'expectedResult', 'owner', 'due', 'files'];
 const WORK_FIELDS = ['title', 'instruction', 'inputs', 'expectedResult', 'argv', 'selection'];
 const RESULT_FIELDS = ['status', 'recordedResult'];
+const progress = (value, version) => version === 2
+  ? { status: value.status, recordedResult: value.recordedResult,
+      files: Object.hasOwn(value, 'files') ? clone(value.files) : null }
+  : pick(value, RESULT_FIELDS);
 const pick = (value, keys) => Object.fromEntries(keys.map(key => [key, value[key]]));
+const resultChanged = (left, right, version) =>
+  !same(progress(left, version), progress(right, version)) ||
+  (version === 'current' && !same(left.files ?? [], right.files ?? []));
 const ORDER_KEY = '/steps/@order';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -84,7 +91,7 @@ function row(key, kind, title, base, current, incoming, stepId = null) {
   return { key, kind, label: title, stepId, base: clone(base), current: clone(current), incoming: clone(incoming),
     automatic, conflict: automatic === null };
 }
-function comparisons(source) {
+function comparisons(source, version) {
   const rows = [];
   for (const field of PLAN_FIELDS) {
     const item = row('/' + field, 'plan-field', label(field), source.base[field], source.local[field], source.returned[field]);
@@ -102,25 +109,30 @@ function comparisons(source) {
     } else {
       const currentWork = pick(current, WORK_FIELDS), incomingWork = pick(incoming, WORK_FIELDS);
       const crossedResult = !same(currentWork, incomingWork) &&
-        ((!same(currentWork, pick(base, WORK_FIELDS)) && !same(pick(incoming, RESULT_FIELDS), pick(base, RESULT_FIELDS))) ||
-         (!same(incomingWork, pick(base, WORK_FIELDS)) && !same(pick(current, RESULT_FIELDS), pick(base, RESULT_FIELDS))));
+        ((!same(currentWork, pick(base, WORK_FIELDS)) && resultChanged(incoming, base, version)) ||
+         (!same(incomingWork, pick(base, WORK_FIELDS)) && resultChanged(current, base, version)));
       if (crossedResult) {
         const item = row('/steps/' + id, 'step-context', title + ' · work and recorded results', base, current, incoming, id);
         item.automatic = null; item.conflict = true;
         item.reason = 'The work changed on one branch while recorded progress or results changed on the other. Review the complete step before carrying results onto different work.';
         rows.push(item);
       } else {
-        for (const field of STEP_FIELDS) {
+        // The maintained unversioned format compares files separately. Version 2
+        // groups files with progress; the original legacy format has no file row.
+        for (const field of version === 'current' ? STEP_FIELDS : STEP_FIELDS.filter(key => key !== 'files')) {
           const item = row('/steps/' + id + '/' + field, 'step-field', title + ' · ' + label(field),
-            base[field], current[field], incoming[field], id);
+            field === 'files' ? base.files ?? [] : base[field],
+            field === 'files' ? current.files ?? [] : current[field],
+            field === 'files' ? incoming.files ?? [] : incoming[field], id);
           if (item) rows.push(item);
         }
         const item = row('/steps/' + id + '/@command', 'step-command', title + ' · registration and command arguments',
           pick(base, ['selection', 'argv']), pick(current, ['selection', 'argv']), pick(incoming, ['selection', 'argv']), id);
         if (item) rows.push(item);
-        const progress = row('/steps/' + id + '/@progress', 'step-progress', title + ' · recorded progress and result',
-          pick(base, RESULT_FIELDS), pick(current, RESULT_FIELDS), pick(incoming, RESULT_FIELDS), id);
-        if (progress) rows.push(progress);
+        const result = row('/steps/' + id + '/@progress', 'step-progress',
+          title + (version === 2 ? ' · recorded progress, result and files' : ' · recorded progress and result'),
+          progress(base, version), progress(current, version), progress(incoming, version), id);
+        if (result) rows.push(result);
       }
     }
   }
@@ -146,13 +158,15 @@ function validateDecision(value, keys) {
     value.order.every(id => typeof id === 'string') && new Set(value.order).size === value.order.length,
   'RETURN_ORDER_CHOICE', 'Keep each selected step ID once in the reviewed order.');
 }
-function record(value) {
-  only(value, ['schema', 'id', 'createdAt', 'current', 'incoming', 'reviewer', 'notes', 'decisions', 'completion'], 'Returned-plan review');
+function recordMode(value, version) {
+  only(value, ['schema', 'id', 'createdAt', 'current', 'incoming', 'reviewer', 'notes', 'decisions', 'completion', 'reportingVersion'], 'Returned-plan review');
   need(value.schema === OPERATING_RETURN_SCHEMA, 'RETURN_SCHEMA_INVALID', 'Choose a complete operating-plan return review.');
+  need(value.reportingVersion === undefined || value.reportingVersion === 2,
+    'RETURN_REPORTING_VERSION', 'Keep the original review comparison version.');
   identity(value.id, 'Review ID'); time(value.createdAt);
   text(value.reviewer, 'Reviewing operator', 1000); text(value.notes, 'Review notes');
   size(value, OPERATING_RETURN_MAX_BYTES, 'Complete return review');
-  const source = sources(value.current, value.incoming), compared = comparisons(source);
+  const source = sources(value.current, value.incoming), compared = comparisons(source, version);
   const keys = new Set(compared.rows.map(item => item.key));
   need(Array.isArray(value.decisions) && value.decisions.length <= keys.size,
     'RETURN_DECISIONS_INVALID', 'Keep one decision for each selected change.');
@@ -162,6 +176,24 @@ function record(value) {
   need(value.completion === null || plain(value.completion), 'RETURN_COMPLETION_INVALID',
     'The review completion must be a complete saved result or null.');
   return { value: clone(value), source, compared };
+}
+function record(value) {
+  if (value?.reportingVersion !== undefined) return recordMode(value, value.reportingVersion);
+  // Unfinished unversioned reviews keep the maintained separate-file comparison
+  // when it preserves every explicit decision. Completed records must reproduce
+  // their complete saved result. The original interpretation remains available
+  // for older decisions or results that the later comparison cannot reproduce.
+  let currentError;
+  try {
+    const parsed = recordMode(value, 'current');
+    validateCompletion(parsed);
+    return parsed;
+  } catch (error) { currentError = error; }
+  try {
+    const parsed = recordMode(value, 'legacy');
+    validateCompletion(parsed);
+    return parsed;
+  } catch { throw currentError; }
 }
 function choiceValue(item, decision) {
   const take = decision?.take ?? item.automatic ?? 'current';
@@ -195,13 +227,17 @@ function project(parsed) {
       if (step) {
         for (const field of STEP_FIELDS) if (rendered.has('/steps/' + id + '/' + field))
           step[field] = clone(rendered.get('/steps/' + id + '/' + field).value);
-        for (const [suffix, fields] of [['@command', ['selection', 'argv']], ['@progress', RESULT_FIELDS]]) {
+        for (const [suffix, fields] of [['@command', ['selection', 'argv']],
+          ['@progress', value.reportingVersion === 2 ? [...RESULT_FIELDS, 'files'] : RESULT_FIELDS]]) {
           const grouped = rendered.get('/steps/' + id + '/' + suffix);
           if (grouped) {
             if (!plain(grouped.value) || fields.some(field => !Object.hasOwn(grouped.value, field)) ||
               Object.keys(grouped.value).length !== fields.length)
               issues.push({ key: grouped.key, message: 'Keep ' + fields.join(' and ') + ' together in this complete choice.' });
-            else for (const field of fields) step[field] = clone(grouped.value[field]);
+            else for (const field of fields) {
+              if (field === 'files' && grouped.value.files === null) delete step.files;
+              else step[field] = clone(grouped.value[field]);
+            }
           }
         }
       }
@@ -286,7 +322,7 @@ export function inspectOperatingPlanReturn(value) {
 export function createOperatingPlanReturn(current, incoming, {
   id, reviewer = '', notes = '', createdAt = new Date().toISOString(),
 } = {}) {
-  return inspectOperatingPlanReturn({ schema: OPERATING_RETURN_SCHEMA, id, createdAt,
+  return inspectOperatingPlanReturn({ schema: OPERATING_RETURN_SCHEMA, reportingVersion: 2, id, createdAt,
     current, incoming, reviewer, notes, decisions: [], completion: null });
 }
 export function compareOperatingPlanReturn(value) {
@@ -301,7 +337,7 @@ export function reviseOperatingPlanReturn(value, updates) {
 export function decideOperatingPlanReturn(value, key, decision = null) {
   const saved = inspectOperatingPlanReturn(value);
   need(saved.completion === null, 'RETURN_ALREADY_COMPLETED', 'Keep the completed review and prepare a new review for later work.');
-  const keys = new Set(comparisons(sources(saved.current, saved.incoming)).rows.map(item => item.key));
+  const keys = new Set(record(saved).compared.rows.map(item => item.key));
   need(keys.has(key), 'RETURN_DECISION_MISSING', 'Choose a displayed change in this return review.');
   const decisions = saved.decisions.filter(item => item.key !== key);
   if (decision !== null) {
@@ -347,6 +383,20 @@ export function applyOperatingPlanReturn(value, {
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const display = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+function renderReviewValue(value) {
+  const carried = Array.isArray(value) ? value : plain(value) ? value.files : null;
+  if (!Array.isArray(carried) || carried.length === 0)
+    return '<pre>' + escapeHTML(display(value)) + '</pre>';
+  let files;
+  try { files = carried.map(inspectOperatingFile); }
+  catch { return '<pre>' + escapeHTML(display(value)) + '</pre>'; }
+  const summaries = files.map(({ content, ...file }) => file);
+  const visible = Array.isArray(value) ? summaries : { ...value, files: summaries };
+  return '<pre>' + escapeHTML(display(visible)) + '</pre><ul>' + files.map(file =>
+    '<li><a download="' + escapeHTML(file.name) + '" href="data:application/octet-stream;base64,' +
+    file.content + '">' + escapeHTML(file.name) + '</a> · ' + file.bytes + ' bytes · ' +
+    escapeHTML(file.mediaType) + '</li>').join('') + '</ul>';
+}
 export function renderOperatingPlanReturnHTML(value) {
   const review = inspectOperatingPlanReturn(value), report = compareOperatingPlanReturn(review);
   const rows = report.rows.map(item => '<article><h2>' + escapeHTML(item.label) + '</h2><p>' +
@@ -355,13 +405,15 @@ export function renderOperatingPlanReturnHTML(value) {
     (item.stale ? '<p>The included work changed after this order was reviewed. Choose its complete sequence again.</p><pre>' +
       escapeHTML(display(item.reviewedOrder)) + '</pre>' : '') +
     '<div class="values">' + [['base', 'Shared revision'], ['current', 'Current work'], ['incoming', 'Returned work']]
-      .map(([key, title]) => '<section><h3>' + title + '</h3><pre>' + escapeHTML(display(item[key])) + '</pre></section>').join('') +
+      .map(([key, title]) => '<section><h3>' + title + '</h3>' + renderReviewValue(item[key]) + '</section>').join('') +
     '</div><h3>' + (item.reviewed ? 'Reviewed choice: ' : 'Proposed choice: ') + escapeHTML(item.take) +
-    '</h3><pre>' + escapeHTML(display(item.value)) + '</pre>' +
+    '</h3>' + renderReviewValue(item.value) +
     (item.note ? '<h3>Decision note</h3><p class="text">' + escapeHTML(item.note) + '</p>' : '') + '</article>').join('');
   const result = review.completion?.plan;
   const operating = result ? '<h2>Reviewed operating procedure</h2><pre>' +
-    escapeHTML(renderOperatingPlanMarkdown(result)) + '</pre>' : '';
+    escapeHTML(renderOperatingPlanMarkdown(result)) + '</pre>' + result.revisions.at(-1).steps
+      .filter(step => step.files?.length).map(step => '<h3>' + escapeHTML(step.title) + '</h3>' +
+        renderReviewValue({ files: step.files })).join('') : '';
   return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>Returned procedure · ' + escapeHTML(review.current.revisions.at(-1).title) +
     '</title><style>body{font:15px/1.55 Arial,Helvetica,sans-serif;color:#202326;background:#fff;max-width:1200px;margin:auto;padding:2rem}h1{font-size:1.8rem}h2{font-size:1.2rem}h3{font-size:1rem}header{border-bottom:2px solid #30363b}article{border:1px solid #b8bec4;padding:1rem;margin:1rem 0;break-inside:avoid}.values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}pre{font:12px/1.5 monospace;background:#f4f5f6;padding:1rem;white-space:pre-wrap;overflow-wrap:anywhere}.text{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:720px){body{padding:1rem}.values{grid-template-columns:1fr}}@media print{body{max-width:none;padding:0}details>pre{display:block}}</style></head><body><header>' +

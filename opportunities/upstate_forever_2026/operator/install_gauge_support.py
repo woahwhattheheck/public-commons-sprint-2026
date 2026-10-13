@@ -14,12 +14,14 @@ FILES = (
     "model/gauge_support.py",
     "model/gauge_report_context.py",
     "source_tools/receive_gauge_support.py",
+    "source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md",
     "operator/gauge_support.py",
     "operator/extensions/gauge-support.json",
     "operator/web/gauge_support.mjs",
     "operator/web/gauge_support.css",
     "operator/install_gauge_support.py",
     "operator/GAUGE_SUPPORT.md",
+    "integration/component_fragments/gauge-scientific-composer.json",
 )
 REQUIRES = (
     "model/station_geography.py", "model/station_assessment_context.py", "model/spatial_esri.py",
@@ -27,6 +29,8 @@ REQUIRES = (
     "model/observed_context.py", "model/scientific_report.py",
     "operator/extension_registry.py", "operator/web/extension_host.mjs",
     "operator/extensions/station-geography.json", "operator/extensions/watershed-context.json",
+    "operator/source_reports.py", "operator/source_report_editions.py",
+    "operator/web/source_reports.mjs", "operator/web/source_report_editions.mjs",
 )
 
 
@@ -63,8 +67,12 @@ def install(application, source_root, *, apply=False):
             ast.parse(body.decode("utf-8"), filename=member)
         if member.endswith(".json"):
             value = json.loads(body)
-            if value.get("schema") != "upstate.operator-extension/v1" or value.get("id") != "gauge-support":
-                raise ValueError("Choose the gauge-support shared extension descriptor")
+            if member == "operator/extensions/gauge-support.json":
+                if value.get("schema") != "upstate.operator-extension/v1" or value.get("id") != "gauge-support":
+                    raise ValueError("Choose the gauge-support shared extension descriptor")
+            elif (value.get("schema") != "upstate.application-component-fragment/v1"
+                    or value.get("id") != "gauge-scientific-composer"):
+                raise ValueError("Choose the original Gauge scientific-composer component fragment")
         target = application / member
         if not target.resolve().is_relative_to(application):
             raise ValueError("Component destination leaves its application root")

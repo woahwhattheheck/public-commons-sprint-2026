@@ -466,7 +466,10 @@ class CalibrationOperations:
             except ValueError as error:
                 issue = str(error)
             return {"workspace_key": workspace, "report_source": record,
-                    "source_selection": choice, "delivery_selection": selection,
+                    "source_selection": choice,
+                    "scientific_report_selection": {"workspace_key": workspace, "sources": [choice],
+                                                    "title": record["title"]},
+                    "delivery_selection": selection,
                     "delivery_issue": issue,
                     "_downloads": [self._document(workspace, report_source_science.KIND,
                                                    record["id"], "Native calibration report source")]}

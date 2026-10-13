@@ -602,6 +602,7 @@ def context_desks_join(root, records, *, application_source=None):
             "observations/station_context.sources.json",
             "calibration_station_geography.sources.json",
             "regional_station_context.sources.json",
+            "observations/wbd_station_join_20261013/station-context.sources.json",
         )
         source_records = [manifest(name) for name in manifests if (root / name).is_file()]
         result = observed_station["install"](root, root)
@@ -668,13 +669,53 @@ def context_desks_join(root, records, *, application_source=None):
         result = native["install"](root, application_source)
         records.append({"component": "Native conservation interactions", "result": result})
 
+    programme_interactions_path = "install_programme_interactions.py"
+    if (root / programme_interactions_path).is_file():
+        programme_interactions = module(root, programme_interactions_path)
+        complete("Conservation studies in run programmes",
+                 tuple(programme_interactions["SOURCE_FILES"]) + (programme_interactions_path,))
+        result = programme_interactions["install"](root, root)
+        records.append({"component": "Conservation studies in run programmes", "result": result})
+
+    programme_study_path = "operator/install_programme_study.py"
+    if (root / programme_study_path).is_file():
+        complete("Native-study Programme export", (
+            programme_study_path, "operator/programme_study_patch.json",
+            "operator/PROGRAMME_NATIVE_STUDY.md", "model/native_study.py",
+            "model/compute_programme.py", "operator/web/programmes.mjs"))
+        result = module(root, programme_study_path)["install"](root, root)
+        records.append({"component": "Native-study Programme export", "result": result})
+
+    point_source_path = "operator/install_point_source_context.py"
+    if (root / point_source_path).is_file():
+        point_sources = module(root, point_source_path)
+        complete("Retained point-source observation context", point_sources["FILES"])
+        result = point_sources["install"](root, root)
+        records.append({"component": "Retained point-source observation context", "result": result})
+
+    analysis_source_path = "operator/install_analysis_source_context.py"
+    if (root / analysis_source_path).is_file():
+        analysis_sources = module(root, analysis_source_path)
+        complete("Scenario analysis source context", analysis_sources["ADDITIONS"])
+        result = analysis_sources["install"](root, root)
+        records.append({"component": "Scenario analysis source context", "result": result})
+
     monitoring_path = "integrations/monitoring/install_observed_context.py"
     if (root / monitoring_path).is_file():
         adoption = json.loads((root / "integrations/monitoring/source_adoption.json").read_text("utf-8"))
+        context = adoption.get("observational_context", {})
+        source_manifests = context.get("source_manifests")
+        if source_manifests is None:
+            source_manifests = [context.get(
+                "source_manifest", "eighteenmile_monitoring_context.sources.json")]
+        if (not isinstance(source_manifests, list) or not source_manifests
+                or any(not isinstance(name, str) or not name for name in source_manifests)
+                or len(source_manifests) != len(set(source_manifests))):
+            raise ValueError("Monitoring observational source manifests are invalid")
         complete("Monitoring observational context", tuple(
             item["path"] for item in adoption["installed_files"]) + (
-                monitoring_path, "integration/monitoring_observed_sources.json",
-                "eighteenmile_monitoring_context.sources.json"))
+                monitoring_path, "integration/monitoring_observed_sources.json"
+            ) + tuple(source_manifests))
         for item in adoption["installed_files"]:
             body = (root / item["path"]).read_bytes()
             if len(body) != item["bytes"] or sha(body) != item["sha256"]:
@@ -682,7 +723,7 @@ def context_desks_join(root, records, *, application_source=None):
         result = module(root, monitoring_path)["install"](root, application_source)
         records.append({"component": "Monitoring observational context", "result": result,
                         "original_source_manifests": [
-                            manifest("eighteenmile_monitoring_context.sources.json")]})
+                            manifest(name) for name in source_manifests]})
 
     # Use the maintained collector composition once on the actual receiving
     # source. Newer assemblers read these names from portable; older complete

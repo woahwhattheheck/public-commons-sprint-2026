@@ -3,6 +3,7 @@
  * Native analysis records remain the source of all quantities and scores.
  */
 import {createAnalysisDelivery} from './scenario_analysis_delivery.mjs';
+import {createAnalysisSourceContext} from './analysis_source_context.mjs';
 import {nativeModelsForOutputs,nativeCommonVersionIssues,nativeModelVersionLabel} from './native_versions.mjs';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,7 +56,7 @@ const canonicalSelection=value=>{
 const tabs=[
   ['physical','Physical changes'],['priority','Planning priorities'],
   ['sensitivity','Weight sensitivity'],['pairs','Compare alternatives'],
-  ['coverage','Coverage and choices'],['source-areas','Source areas'],['delivery','GIS delivery'],['files','Download results']
+  ['coverage','Coverage and choices'],['source-areas','Source areas'],['source-context','Source context'],['delivery','GIS delivery'],['files','Download results']
 ];
 const amount=(value,places=4)=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString(undefined,{maximumFractionDigits:places}):'—';
 const percent=value=>typeof value==='number'&&Number.isFinite(value)?amount(value*100,2)+'%':'—';
@@ -283,6 +284,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   const cache=new Map(),inflight=new Map();
   let sourceIntakeVersion=0;
   const delivery=createAnalysisDelivery({getState,api,endpoint,openDelivery,openReceivingPlan,openItem,onChange:()=>redraw()});
+  const sourceContext=createAnalysisSourceContext({getState,api,endpoint,submitAction,openItem,fileList,onChange:()=>redraw()});
   let container=null,controller=null,workspaceKey='',error='',generation=0;
   let local={selected:'',region:'reporting_area',run:'',weight:'',tab:'physical'};
   const current=()=>getState();
@@ -513,10 +515,10 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   }
   function detail(record){
     keepFilters(record);
-    const body={physical,priority,sensitivity,pairs,coverage,'source-areas':sourceAreas,delivery:row=>delivery.render(row),files}[local.tab](record);
+    const body={physical,priority,sensitivity,pairs,coverage,'source-areas':sourceAreas,'source-context':row=>sourceContext.render(row),delivery:row=>delivery.render(row),files}[local.tab](record);
     return section(record.title||record.selection?.title||'Selected scenario analysis','Baseline: '+runName(record,record.baseline_run_id)+'. Compared native outputs: '+analyzedOutputs(record).map(pollutantName).join(', ')+'.',
       '<div class="analysis-tabs" role="tablist" aria-label="Scenario analysis results">'+tabs.map(([id,title])=>'<button type="button" role="tab" tabindex="'+(local.tab===id?'0':'-1')+'" aria-selected="'+(local.tab===id)+'" data-action="analysis-tab" data-tab="'+id+'">'+esc(title)+'</button>').join('')+'</div>'+
-      (['files','source-areas','delivery'].includes(local.tab)?'':filters(record))+'<div class="analysis-results" role="tabpanel" aria-label="'+esc(tabs.find(t=>t[0]===local.tab)?.[1])+'">'+body+'</div>');
+      (['files','source-areas','source-context','delivery'].includes(local.tab)?'':filters(record))+'<div class="analysis-results" role="tabpanel" aria-label="'+esc(tabs.find(t=>t[0]===local.tab)?.[1])+'">'+body+'</div>');
   }
   function render(){
     sync();
@@ -529,11 +531,14 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
     if(!container)return;
     container.innerHTML=render();persist();
     if(local.tab==='delivery'&&selected())delivery.ensure(selected());
+    if(local.tab==='source-context'&&selected())sourceContext.ensure(selected());
   }
   function mount(node){
     controller?.abort();container=node;controller=new AbortController();const g=++generation;
+    if(local.tab==='source-context'&&selected())sourceContext.ensure(selected());
     node.addEventListener('change',event=>{
       if(event.target.matches?.('[data-analysis-delivery-plan]')){delivery.selectPlan(selected(),event.target.value);return;}
+      if(event.target.dataset?.analysisContextField&&selected()){sourceContext.change(event,selected());return;}
       const name=event.target.dataset.analysisFilter;
       if(name&&['region','run','weight'].includes(name)){local[name]=event.target.value;redraw();}
     },{signal:controller.signal});
@@ -551,7 +556,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   function update(){
     if(!container)return;
     const signature=JSON.stringify({workspace:workspace(),analyses:records(),
-      tasks:rows(current()?.tasks).filter(task=>task.action==='scenario.analyze')});
+      tasks:rows(current()?.tasks).filter(task=>task.action==='scenario.analyze'),source_context:sourceContext.fingerprint()});
     if(signature===updateSignature)return;
     updateSignature=signature;
     const active=document.activeElement;
@@ -574,7 +579,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       load(local.selected).then(()=>{if(g===generation&&container){error='';redraw();}})
         .catch(e=>{if(g===generation&&container){error=e.message;redraw();}});
   }
-  function detach(){generation++;controller?.abort();container=null;updateSignature='';}
+  function detach(){generation++;controller?.abort();sourceContext.detach();container=null;updateSignature='';}
   function runTitle(id,selectedData=data()){
     const run=rows(selectedData.runs).find(r=>r.id===id),scenario=rows(selectedData.scenarios).find(s=>s.id===run?.selection?.scenario_id);
     return scenario?.title||short(id);
@@ -851,6 +856,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   async function dispatch(node){
     const action=node.dataset.action?.replace(/^analysis-/,'');
     if(action?.startsWith('delivery-'))return delivery.dispatch(node,selected());
+    if(action?.startsWith('context-'))return sourceContext.dispatch(node,selected());
     if(action==='open-source-plan'){
       const id=node.dataset.id;
       if(!scenarioSourceAreas(selected()).some(area=>area.metadata.source_plan_id===id))throw Error('Choose a source plan retained by this saved analysis.');

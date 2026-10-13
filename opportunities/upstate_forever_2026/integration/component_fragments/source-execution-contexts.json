@@ -18,6 +18,8 @@
         "source_tools/application_components.py",
         "integration/APPLICATION_SOURCE_CONTEXTS.md",
         "operator/monitoring.py",
+        "model/monitoring_workspace.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring.py",
         "integration/reach_chemistry/tests/test_installer.py",
         "source/usgs-southeast-sparrow-2012/preparation/vendor/geographiclib-2.2.0/original/Geodesic.html",
@@ -42,12 +44,12 @@
       ],
       "retained_only": [
         {
-          "path": "operator/monitoring.py",
+          "path": "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring.py",
           "reason": "Original package-based compatibility adapter; the current maintained descriptor loads monitoring_native."
         },
         {
-          "path": "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring.py",
-          "reason": "Original package-based compatibility adapter; the current maintained descriptor loads monitoring_native."
+          "path": "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
+          "reason": "Original fallback payload from the earlier Monitoring installer; current_application_files.json selects maintained model/monitoring_workspace.py, whose runtime imports remain validated."
         },
         {
           "path": "integration/reach_chemistry/tests/test_installer.py",
