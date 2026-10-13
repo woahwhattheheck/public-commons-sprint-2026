@@ -18,7 +18,7 @@ from .common import INVEST_VERSION
 from .model_selection import MODEL_LABELS, run_scope
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-5"
+REPORT_EDITION = "2026-10-13-client-report-6"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -35,7 +35,7 @@ MAPS = (
      "Read nitrogen and phosphorus separately with their annual mass units. Use the retained change polygons and replacement land-cover classes to explain the cause of each modeled difference."),
     ("critical_drinking_water", "Critical drinking-water protection",
      "Review land protection and restoration opportunities in relation to the retained source-water geography.",
-     "Combine the selected utility/source-water overlay with physical exports and the relevant alternatives. This connects an upstream land decision to the source-water area that it influences."),
+     "Read the selected source-water overlay's own label and geographic meaning with physical exports and the relevant alternatives. Use the retained contributing-area analysis when interpreting upstream connections."),
     ("high_quality_waters", "High-quality water resources",
      "Review land influencing waters identified by the selected high-quality-water designation source.",
      "Read the original designation, mapped water feature and selected spatial relationship together. The designation source and any analysis buffer appear in the methods and source records."),
@@ -373,6 +373,12 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         workspace, baseline, alternatives, comparison, scenario_summary)
     reporting_rows = _quantity_rows(baseline)
     grid_spec = grid.get("spec", {})
+    overlay_choices = selection.get("overlays") or {}
+    source_water_choice = (overlay_choices.get("drinking_water") or {}
+                           if isinstance(overlay_choices, Mapping) else {})
+    source_water_label = (source_water_choice.get("label")
+                          if isinstance(source_water_choice, Mapping) else None)
+    source_water_label = source_water_label or "Drinking-water source areas"
     map_count = sum(bool(item["files"]) for item in maps)
     sections = []
 
@@ -398,6 +404,8 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         ["Reporting support", grid_context["cell_label"] + " selected by the retained reporting mask; native NoData retained"],
         ["Reporting boundary source", _source_label(source_records, (grid_spec.get("reporting_area") or {}).get("source_id"), "REPORTING_BOUNDARY")],
         ["Model domain source", _source_label(source_records, (grid_spec.get("model_domain") or {}).get("source_id"), "MODEL_DOMAIN")],
+        ["Source-water overlay", _text(source_water_label)],
+        ["Source-water overlay selection", _text(source_water_choice)],
         ["Upstream context buffer", _fmt(grid_spec.get("upstream_buffer_m")) + " m"],
         ["Profile", _text(profile.get("title")) + " | " + _text(profile.get("id"))],
         ["Alternatives in this edition", str(len(alternatives))],
@@ -441,11 +449,18 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                              scenario_paragraphs, scenario_tables))
 
     sections.append(_section("atlas", "Seven-map decision guide", [
-        "Use the map titles, legends, scale bars and north arrows in the accompanying publication PDFs. The current-export maps show physical annual quantities; the combined planning map uses the saved normalization and weights. The future-map files retain each selected alternative."
-    ], [_table(["Map family", "Decision", "How to read it", "Files"],
+        "Use the map titles, legends, scale bars and north arrows in the accompanying publication PDFs. The current-export maps show physical annual quantities; the combined planning map uses the saved normalization and weights. The future-map files retain each selected alternative.",
+        "The file index below lists each publication map separately, including every selected alternative."
+    ], [_table(["Map family", "Decision", "How to read it", "Availability"],
                [[m["title"], m["decision"], m["reading"],
-                 "; ".join(x["path"] for x in m["files"]) or m["status"]]
+                 str(len(m["files"])) + " map file(s)" if m["files"] else m["status"]]
                 for m in maps])]))
+    map_file_rows = [[m["title"], item["role"], item["path"]]
+                     for m in maps for item in m["files"]]
+    if map_file_rows:
+        sections.append(_section("atlas-files", "Publication map file index", [
+            "File paths are relative to this delivery. Family aliases that point to the same file appear once within that family."
+        ], [_table(["Map family", "Retained map role", "Relative PDF path"], map_file_rows)]))
 
     priority = state.get("priority") or {}
     priority_rows = [[str(key).replace("_", " "), _text(value)] for key, value in priority.items()
@@ -479,7 +494,7 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                       "Yes" if row.get("source_water") == 1 else "No" if row.get("source_water") == 0 else "Not recorded",
                       _pct(row.get("protected_fraction"))] for row in top]
         sections.append(_section("parcels", "Parcel review and inventory coverage", [
-            "The parcel inventory translates the selected raster and overlay evidence into a practical review list. Its reported footprint describes the actual available parcel source; the whole-basin model and a partial parcel inventory retain their different geographic coverage.",
+            "The parcel inventory translates the selected raster and overlay evidence into a practical review list. Its reported footprint describes the actual available parcel source; the selected study and a partial parcel inventory retain their different geographic coverage.",
             "The shortlist is ordered by retained mean combined priority. Source-water membership and protected-area overlap give additional review context. A protected fraction measures the mapped overlap within the parcel; the original source category remains available in the complete GIS inventory.",
             "Use the complete parcel-priorities CSV/GeoPackage for physical quantities and the parcel-scenarios CSV for annual baseline, alternative and paired-change quantities. The short list below carries the original compact priority fields. Parcel centre-cell quantities and any separate fractional-cell analysis retain their method labels."
         ], [_table(["Inventory measure", "Retained value"], table_rows),
@@ -712,9 +727,11 @@ def render_pdf(path, report):
             weights = [1] * count
             if count == 2:
                 weights = [1, 2.3]
-            elif section["id"] == "atlas":
+            elif section["id"] == "atlas" and count == 4:
                 weights = [.85, 1.25, 1.7, 1.2]
-            elif section["id"] == "sources":
+            elif section["id"] == "atlas-files" and count == 3:
+                weights = [.9, 1.1, 2.5]
+            elif section["id"] == "sources" and count == 3:
                 weights = [.8, .65, 2.5]
             cells = [[p(value, "ClientHeadCell") for value in table["columns"]]]
             cells.extend([p(value, "ClientCell") for value in row] for row in table["rows"])
