@@ -1,6 +1,7 @@
 /**
  * Open the delivered geographic case through its original files and existing Operator.
- * No native model, Operator server, source import or queued mutation is started here.
+ * The original Operator serves this receiving course. No native model or source import is started here.
+ * Optional programme_action=adopt_completed uses its existing completed-output Programme action.
  */
 import {promises as fs, createReadStream, constants as fsConstants} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
@@ -10,6 +11,7 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {operateGeographicReview} from './geographic_review_browser.mjs';
 import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingEdition} from './geographic_browser_course.mjs';
 import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
+import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
 
 const CUTOFF=Date.parse('2026-10-13T14:00:00Z');
 const INPUT='upstate.geographic-browser-input/v1', RESULT='upstate.geographic-browser-result/v1';
@@ -39,9 +41,10 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
+  if(settings.programme_action!==undefined)requireValue(['inspect','adopt_completed'].includes(settings.programme_action),'Choose inspect or adopt_completed for the original Programme');
   let originalState=null,selectedState=null;
   if(settings.completion_scope!==undefined)requireValue(['reference','full_course'].includes(settings.completion_scope),'Use the actual saved reference or full-course scope');
   if(settings.state_file){
@@ -107,6 +110,7 @@ async function main(argv){
    native_progress:course.native_progress,reference_basis:course.reference_basis,
    delivery_id:record.delivery_id,review_id:record.review.review_id,handover_id:completion.id,
    archive_sha256:receiving.archive_sha256,operator_workspace:connection.workspace_key};
+  if(settings.programme_action!==undefined)binding.programme_action=settings.programme_action;
   const progressPath=join(output,'browser-progress.json');
   progress=await exists(progressPath)?await readJSON(progressPath):{schema:RESULT,binding,attempts:[],created_at:now()};
   requireValue(progress.schema===RESULT&&equal(progress.binding,binding),'This browser output belongs to a different original case');
@@ -233,6 +237,7 @@ async function main(argv){
   requireValue(saved._downloads.every(x=>downloadedURLs.has(new URL(x.url,operatorURL).pathname)),'Not every original case download control was exercised');
   await screenshot(page,'geographic-saved-case',1440);await screenshot(page,'geographic-saved-case',390);
   await operateGeographicAllocation({page,workspace,prepared,saved,api,readJSON,regular,verified,equal,requireValue,check,waitFor,saveRecord,screenshot,action,ticketDownloads,downloadedURLs,context});
+  await operateGeographicProgramme({page,prepared,record,completion,delivered,course,verified,mode:settings.programme_action||'inspect',api,readJSON,equal,requireValue,check,waitFor,saveRecord,screenshot,action,download,ticketDownloads,click,closeDialog,navigate});
   await click('[data-geo-edit="'+prepared.id+'"]');
   const title=page.locator('[data-sp-title]');
   await waitFor(async()=>await title.inputValue()===prepared.selection.title,'original geographic choices');

@@ -525,15 +525,409 @@ def receive(args):
             server.operator.close()
 
 
+
+def resume_tail(args):
+    """Reopen the original operator tasks; never recreate a map or backup."""
+    application = Path(args.application).resolve(strict=True)
+    output = Path(args.output).resolve(strict=True)
+    require(args.workspace, "--resume needs the original --workspace.")
+    workspace_directory = Path(args.workspace).resolve(strict=True)
+    require(not output.is_relative_to(workspace_directory)
+            and not workspace_directory.is_relative_to(output),
+            "Keep the existing receiving output separate from its original Workspace.")
+    state = output / "operator-state"
+    require(state.is_dir() and not state.is_symlink(),
+            "Resume the existing output containing its original operator-state.")
+    sys.path[:0] = [str(application / "operator"), str(application)]
+    from model.common import atomic_json, digest, file_digest, read_json, verify_file
+    from model.workspace import Workspace
+    from model import portable
+
+    ws = Workspace(workspace_directory)
+    registry = read_json(state / "workspaces.json")
+    workspace = digest({"directory": str(ws.root)})
+    require(isinstance(registry, dict) and workspace in registry
+            and Path(registry[workspace]["directory"]).resolve() == ws.root
+            and registry[workspace].get("project_id") == ws.project["id"],
+            "This output does not register the selected original Workspace.")
+    require(not state.resolve().is_relative_to(application),
+            "Keep operator state outside the application.")
+
+    def tasks():
+        values = []
+        for path in sorted((state / "tasks").glob("*.json")):
+            require(not path.is_symlink(), "A retained task is not an ordinary original file.")
+            task = read_json(path)
+            require(task.get("schema") == "upstate.operator-task/v1"
+                    and task.get("id") == path.stem
+                    and task["id"] == digest({"workspace": task["workspace"],
+                                              "operation_id": task["operation_id"]})
+                    and task.get("request_sha256") == digest({
+                        "workspace": task["workspace"], "action": task["action"],
+                        "payload": task["payload"]}),
+                    "A retained original task identity or request changed.")
+            values.append(task)
+        return values
+
+    def unique(rows, chosen, label):
+        if chosen:
+            rows = [row for row in rows if row["id"] == chosen]
+        require(len(rows) == 1, "Select the exact original " + label
+                + " task ID; this output has " + str(len(rows)) + " matching records.")
+        return rows[0]
+
+    retained = tasks()
+    backup = unique([t for t in retained if t["workspace"] == workspace
+                     and t["action"] == "workspace.backup"],
+                    args.backup_task, "backup")
+    require(backup["payload"] == {"include_intermediates": True},
+            "Resume the original complete Workspace backup including intermediates.")
+    exported = unique([t for t in retained if t["workspace"] == workspace
+                       and t["action"] == "watershed.context.export"
+                       and t["state"] == "complete"
+                       and t.get("ended_at", "") <= backup["created_at"]],
+                      args.export_task, "completed watershed export")
+    export_id = exported["result"]["id"]
+    require(isinstance(export_id, str) and len(export_id) == 64
+            and all(c in "0123456789abcdef" for c in export_id),
+            "The retained export task has no original export identity.")
+    export_root = ws.root / "watershed-context-exports" / export_id
+    export_path = export_root / "export.json"
+    selection = read_json(export_path)
+    require(selection.get("schema") == "upstate.watershed-context-export/v1"
+            and selection.get("id") == export_id and selection.get("state") == "complete",
+            "The original completed export record differs from its retained task.")
+    payload = exported["payload"]
+    report_id = selection["report_id"]
+    require(isinstance(report_id, str) and report_id.startswith("watershed-")
+            and len(report_id) == 30 and all(c in "0123456789abcdef" for c in report_id[10:]),
+            "The retained export has no original regional report identity.")
+    report_root = ws.root / "watershed-context" / report_id
+    record = read_json(report_root / "operator-report.json")
+    report = read_json(verify_file(report_root, record["files"]["watershed-context.json"]))
+    priorities = sorted(row["huc12"] for row in report["hucs"] if row["priority"])
+    require(payload.get("report_id") == report_id == record.get("id") == report.get("id")
+            and sorted(payload.get("huc12s", [])) == priorities == sorted(selection["huc12s"])
+            and len(priorities) == args.expect_priority_hucs
+            and report["summary"]["huc_count"] == args.expect_hucs
+            and report["summary"]["selected_classification_count"] == args.expect_selected_reaches
+            and selection["report_sha256"] == record["files"]["watershed-context.json"]["sha256"]
+            and selection["source_fingerprint"] == record["source_fingerprint"],
+            "The original task, report and priority selection do not match this receiving course.")
+    require(bool(payload.get("include_map")) == bool(selection.get("watershed_map_context"))
+            and bool(payload.get("include_evidence")) == bool(selection.get("landcover_observation_context")),
+            "The retained export lost its original map or observed-evidence choice.")
+    selected_path = verify_file(export_root, selection["files"]["selected-watersheds.json"])
+    selected = read_json(selected_path)
+    require(selected.get("export_id") == export_id
+            and sorted(row["huc12"] for row in selected["hucs"]) == priorities,
+            "The saved selection body differs from the original completed export.")
+    source_choices = {}
+    for task in retained:
+        if (task["workspace"] != workspace or task["action"] != "watershed.context.analyze"
+                or task["state"] != "complete" or task.get("result", {}).get("id") != report_id):
+            continue
+        ref = task["payload"].get("selection", task["payload"])
+        if ref.get("source_collection_id") and ref.get("source_id"):
+            source_choices[(ref["source_collection_id"], ref["source_id"])] = ref
+    require(len(source_choices) == 1,
+            "The original imported regional source is ambiguous or absent from retained tasks.")
+    collection_id, source_id = next(iter(source_choices))
+    source_collection = ws._get("sources", collection_id)
+    require(sum(entry.get("id") == source_id for entry in source_collection["entries"]) == 1,
+            "The retained source choice is missing or duplicated in its original collection.")
+
+    # Capture actual complete source/report/export files. All paths remain original.
+    pinned_files = {}
+    def pin(path):
+        path = Path(path)
+        require(not path.is_symlink() and path.resolve().is_relative_to(ws.root),
+                "A retained scientific file leaves its original Workspace.")
+        relative = path.relative_to(ws.root).as_posix()
+        pinned_files[relative] = {"path": relative, "bytes": path.stat().st_size,
+                                  "sha256": file_digest(path)}
+    pin(report_root / "operator-report.json")
+    pin(export_path)
+    for root, descriptors in ((report_root, record["files"]), (export_root, selection["files"])):
+        for descriptor in descriptors.values():
+            pin(verify_file(root, descriptor))
+    original_reports = {report_id: report}
+    for task in retained:
+        if (task["workspace"] == workspace and task["action"] == "watershed.context.receive"
+                and task["state"] == "complete"):
+            key = task["result"]["id"]
+            folder = ws.root / "watershed-context" / key
+            saved = read_json(folder / "operator-report.json")
+            pin(folder / "operator-report.json")
+            for descriptor in saved["files"].values():
+                pin(verify_file(folder, descriptor))
+            original_reports[key] = read_json(verify_file(folder, saved["files"]["watershed-context.json"]))
+    pin(ws.root / "sources" / (collection_id + ".json"))
+    def pin_source(descriptor):
+        require(isinstance(descriptor.get("object"), str),
+                "The imported original source has no retained object.")
+        pin(verify_file(ws.root, {**descriptor, "path": descriptor["object"]}))
+    for entry in source_collection["entries"]:
+        for descriptor in [entry["body"], *entry.get("companions", [])]:
+            pin_source(descriptor)
+    manifest_descriptor = source_collection.get("original_manifest")
+    if manifest_descriptor:
+        pin_source(manifest_descriptor)
+
+    request = {
+        "schema": "upstate.watershed-operator-resume/v1",
+        "workspace_key": workspace, "project_id": ws.project["id"],
+        "backup_task": {key: backup[key] for key in ("id", "operation_id", "request_sha256", "payload")},
+        "export_task": {key: exported[key] for key in ("id", "operation_id", "request_sha256", "payload")},
+        "report_id": report_id, "export_id": export_id,
+        "source_collection_id": collection_id, "source_id": source_id,
+        "source_fingerprint": record["source_fingerprint"],
+        "selected_huc12s": priorities,
+        "files": [pinned_files[key] for key in sorted(pinned_files)],
+    }
+    request["id"] = digest(request)
+    request_path = output / "operator-tail-request.json"
+    if request_path.exists():
+        require(read_json(request_path) == request,
+                "The original receiving request/files changed; preserve this output and its recorded request.")
+
+    spec = importlib.util.spec_from_file_location("_upstate_watershed_resume_server",
+                                                  application / "operator/server.py")
+    server_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_module)
+    server = thread = journey = None
+    receipt_path = output / "operator-journey-resume.json"
+    prior = read_json(receipt_path) if receipt_path.exists() else {}
+    result = {"schema": "upstate.watershed-context-operator-journey/v1",
+              "resumed": True, "resume_request_id": request["id"],
+              "started_at": prior.get("started_at", datetime.now(timezone.utc).isoformat()),
+              "state": "running", "application": str(application),
+              "workspace_directory": str(ws.root), "workspace_mode": "existing",
+              "original_project_id": ws.project["id"], "report_id": report_id,
+              "export_id": export_id, "source_collection_id": collection_id,
+              "source_id": source_id, "source_fingerprint": record["source_fingerprint"],
+              "selected_huc12s": priorities, "summary": report["summary"],
+              "classification_coverage": report.get("classification_coverage"),
+              "network": report.get("network"),
+              "original_report_sha256": record["files"]["watershed-context.json"]["sha256"],
+              "include_original_map": bool(payload.get("include_map")),
+              "include_observed_evidence": bool(payload.get("include_evidence")),
+              "original_backup_task_id": backup["id"]}
+    try:
+        # The existing server acquires operator-state/.operator.lock BEFORE
+        # reopening task state. A live original owner causes an immediate error.
+        server, startup = server_module.start_server(
+            ws.root, state_directory=state, create=False,
+            source_roots=[Path(args.source_dir).resolve(strict=True)] if args.source_dir else [],
+            restore_directory=output / "received", port=0)
+        require(startup["workspace_key"] == workspace
+                and startup["project"]["id"] == ws.project["id"],
+                "Reopened operator changed the original workspace identity.")
+        atomic_json(request_path, request, immutable=True)
+        old_receipt = output / "operator-journey.json"
+        if old_receipt.exists() and not (output / "operator-journey.before-resume.json").exists():
+            from model.common import atomic_bytes
+            atomic_bytes(output / "operator-journey.before-resume.json",
+                         old_receipt.read_bytes(), immutable=True)
+        thread = threading.Thread(target=server.serve_forever,
+                                  kwargs={"poll_interval": 0.1}, daemon=True)
+        thread.start()
+        journey = OperatorJourney(server, args.timeout, output)
+
+        def checkpoint(stage):
+            result.update(stage=stage, tasks=journey.tasks, downloads=journey.downloads,
+                          updated_at=datetime.now(timezone.utc).isoformat())
+            atomic_json(receipt_path, result)
+            print(json.dumps({"state": "resuming", "stage": stage,
+                              "backup_task_id": backup["id"], "export_id": export_id}), flush=True)
+
+        def await_task(original):
+            current = journey.request("/api/task", params={"id": original["id"]})
+            require(all(current.get(key) == original.get(key) for key in
+                        ("id", "workspace", "action", "operation_id", "request_sha256", "payload")),
+                    "The retained original task changed while reopening.")
+            if current["state"] in {"failed", "interrupted", "cancelled"}:
+                current = journey.request("/api/task/resume", body={"id": original["id"]})
+            started = time.monotonic()
+            while current["state"] in {"queued", "running"}:
+                if time.monotonic() - started > args.timeout:
+                    raise TimeoutError(current["action"] + " remains " + current["state"]
+                                       + "; preserve original task " + current["id"])
+                time.sleep(0.2)
+                current = journey.request("/api/task", params={"id": original["id"]})
+            require(current["state"] == "complete",
+                    "Original " + current["action"] + " ended as " + current["state"]
+                    + ": " + json.dumps(current.get("error", {}), sort_keys=True))
+            journey.tasks.append({"id": current["id"], "action": current["action"],
+                                  "state": "complete", "resumed_original": True})
+            return current
+
+        def download_original(ticket, group):
+            # Retain any interrupted old download. Hash-addressed resume names
+            # are reused only after checking the complete original ticket.
+            filename = ticket["sha256"] + "-" + ticket["filename"]
+            path = output / "downloads" / group / filename
+            if path.exists():
+                require(not path.is_symlink() and path.is_file(),
+                        "A retained resume download is not an ordinary file: " + str(path))
+                if path.stat().st_size == ticket["bytes"] and file_digest(path) == ticket["sha256"]:
+                    journey.downloads.append({"path": path.relative_to(output).as_posix(),
+                        "filename": ticket["filename"], "bytes": ticket["bytes"],
+                        "sha256": ticket["sha256"], "reused": True})
+                    return path
+                # Preserve an owned interrupted download before receiving the
+                # complete original ticket again; never alter scientific inputs.
+                interrupted = path.with_name(path.name + ".interrupted-" + uuid.uuid4().hex)
+                path.rename(interrupted)
+                result.setdefault("interrupted_downloads", []).append({
+                    "path": interrupted.relative_to(output).as_posix(),
+                    "bytes": interrupted.stat().st_size, "sha256": file_digest(interrupted)})
+            return journey.download(ticket, group, filename=filename)
+
+        checkpoint("original-backup")
+        complete_backup = await_task(backup)
+        tickets = complete_backup.get("_downloads", [])
+        require(len(tickets) == 1, "The original backup has no unique retained archive.")
+        ticket = tickets[0]
+        backup_path = Path(complete_backup["result"]["path"]).resolve(strict=True)
+        require(backup_path == (state / "outputs" / (backup["id"] + ".zip")).resolve()
+                and backup_path.stat().st_size == ticket["bytes"]
+                and file_digest(backup_path) == ticket["sha256"],
+                "The original backup task output differs from its original archive.")
+        archived = portable.inspect_archive(backup_path, verify=True)
+        require(archived["project"] == ws.project
+                and archived["selection"]["include_intermediates"] is True,
+                "The existing archive has another project or omits intermediate stages.")
+        for item in request["files"]:
+            retained_member = archived["members"].get("workspace/" + item["path"])
+            require(retained_member is not None
+                    and all(retained_member.get(key) == item[key] for key in ("bytes", "sha256")),
+                    "The original archive does not retain this source/report/export edition: " + item["path"])
+        result["archive"] = {"bytes": ticket["bytes"], "sha256": ticket["sha256"],
+                             "original_task_path": str(backup_path)}
+        checkpoint("original-archive-download")
+        archive = download_original(ticket, "resumed-workspace")
+
+        restores = [t for t in tasks() if t["workspace"] == workspace
+                    and t["action"] == "workspace.restore"]
+        if args.restore_task:
+            restores = [t for t in restores if t["id"] == args.restore_task]
+            require(len(restores) == 1, "Choose the exact original restore task ID.")
+        else:
+            require(len(restores) <= 1,
+                    "Multiple restore tasks are retained; select --restore-task explicitly.")
+        if restores:
+            original_restore = restores[0]
+            upload = server.operator.upload(original_restore["payload"]["upload_id"])
+            require(upload["sha256"] == ticket["sha256"] and upload["bytes"] == ticket["bytes"],
+                    "The original restore task belongs to a different archive.")
+        else:
+            require(not args.restore_task, "The selected original restore task is absent.")
+            # Upload identity is determined by original bytes/name/type. Reuse
+            # a retained matching upload before transferring the same file again.
+            uploads = []
+            for path in sorted((state / "uploads").glob("*.json")):
+                item = read_json(path)
+                if item.get("sha256") == ticket["sha256"] and item.get("bytes") == ticket["bytes"]:
+                    uploads.append(item)
+            operation_id = "watershed_restore_" + request["id"]
+            expected_task_id = digest({"workspace": workspace, "operation_id": operation_id})
+            restore_request_path = output / "operator-tail-restore.json"
+            if restore_request_path.exists():
+                restore_request = read_json(restore_request_path)
+                require(restore_request.get("resume_request_id") == request["id"]
+                        and restore_request.get("operation_id") == operation_id
+                        and restore_request.get("task_id") == expected_task_id
+                        and restore_request.get("archive_sha256") == ticket["sha256"],
+                        "The original pending restore request changed.")
+                upload = server.operator.upload(restore_request["upload_id"])
+            else:
+                upload = (server.operator.upload(uploads[0]["id"]) if uploads
+                          else journey.upload_archive(archive, ticket))
+            require(upload["sha256"] == ticket["sha256"] and upload["bytes"] == ticket["bytes"],
+                    "The retained restore upload differs from the original backup.")
+            atomic_json(restore_request_path, {
+                "resume_request_id": request["id"], "operation_id": operation_id,
+                "task_id": expected_task_id, "upload_id": upload["id"],
+                "archive_sha256": ticket["sha256"]}, immutable=True)
+            original_restore = journey.request("/api/actions", body={
+                "workspace": workspace, "action": "workspace.restore",
+                "payload": {"upload_id": upload["id"]}, "operation_id": operation_id})
+            require(original_restore["id"] == expected_task_id,
+                    "The resumed restore did not retain its original recorded request identity.")
+        result["original_restore_task_id"] = original_restore["id"]
+        checkpoint("original-independent-restore")
+        restore = await_task(original_restore)
+        receiving = restore["result"]
+        require(receiving.get("identity") == "MATCH"
+                and receiving.get("archive_sha256") == ticket["sha256"],
+                "Independent receiving changed the original project/archive identity.")
+        restored_key = receiving["workspace_key"]
+        restored = server.operator.ws(restored_key)
+        require(restored.project == ws.project and restored.root != ws.root,
+                "The receiving project is not an independent copy of the original.")
+        for item in request["files"]:
+            verify_file(restored.root, item)
+        require(restored._get("sources", collection_id) == source_collection,
+                "Independent receiving changed the original source collection.")
+        for entry in source_collection["entries"]:
+            restored.source_file(collection_id, entry["id"])
+        for key, original_report in original_reports.items():
+            reopened = journey.regional(restored_key, "report", report_id=key)
+            require(reopened["report"] == original_report,
+                    "Independent receiving changed an original native report.")
+        reopened = journey.regional(restored_key, "export", export_id=export_id)
+        require({key: value for key, value in reopened.items() if key != "_downloads"} == selection,
+                "Independent receiving changed the original saved selection or its complete file inventory.")
+        for item in reopened.get("_downloads", []):
+            download_original(item, "resumed-received-priority-watersheds")
+        map_context = selection.get("watershed_map_context")
+        if map_context:
+            mapped = journey.regional(restored_key, "map", report_id=report_id,
+                export_id=export_id, map_source_sha256=map_context["source"]["sha256"])
+            require(mapped["saved_selection"] == map_context,
+                    "The reopened map changed the original retained geographic selection.")
+            download_original(mapped["geometry"], "resumed-received-original-map")
+        result.update(state="complete", stage="complete",
+            receiving={"identity": receiving["identity"], "archive_sha256": receiving["archive_sha256"],
+                       "members": receiving["members"],
+                       "directory": Path(receiving["directory"]).relative_to(output).as_posix()},
+            tasks=journey.tasks, downloads=journey.downloads,
+            finished_at=datetime.now(timezone.utc).isoformat())
+        atomic_json(receipt_path, result)
+        atomic_json(output / "operator-journey.json", result)
+        return result
+    except BaseException as error:
+        # Do not write or alter an output held by its still-live original server.
+        if server is not None:
+            result.update(state="failed", error={"type": type(error).__name__, "message": str(error)},
+                          tasks=journey.tasks if journey else [],
+                          downloads=journey.downloads if journey else [],
+                          finished_at=datetime.now(timezone.utc).isoformat())
+            atomic_json(receipt_path, result)
+        raise
+    finally:
+        if server is not None:
+            if thread is not None:
+                server.shutdown()
+                thread.join()
+            server.server_close()
+            server.operator.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True)
-    parser.add_argument("--source-dir", required=True)
+    parser.add_argument("--source-dir", help="Original registered source directory; required unless --resume")
     parser.add_argument("--workspace",
                         help="Existing original Workspace; otherwise create OUTPUT/workspace")
     parser.add_argument("--source-manifest",
                         help="Exact upstate.sources/v1 manifest; defaults to SOURCE_DIR/complete-sources.json")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--resume", action="store_true", help="Resume the existing original backup/restore tail only")
+    parser.add_argument("--backup-task", help="Exact retained backup task ID when the output contains several")
+    parser.add_argument("--export-task", help="Exact completed export task ID when the output contains several")
+    parser.add_argument("--restore-task", help="Exact retained restore task ID when the output contains several")
     parser.add_argument("--include-observed-evidence", action="store_true",
                         help="Include the retained land-cover/station evidence in the selected export and full archive receiving")
     parser.add_argument("--include-original-map", action="store_true",
@@ -550,7 +944,10 @@ def main():
     require(args.timeout > 0, "Task timeout must be positive.")
     require(bool(args.completed_archive) == bool(args.completed_archive_sha256),
             "Supply the completed archive and its published SHA256 together.")
-    result = receive(args)
+    require(args.resume or args.source_dir, "A new receiving course needs --source-dir.")
+    require(args.resume or not any((args.backup_task, args.export_task, args.restore_task)),
+            "Task selectors apply only to --resume.")
+    result = resume_tail(args) if args.resume else receive(args)
     print(json.dumps({"state": result["state"], "report_id": result["report_id"],
                       "export_id": result["export_id"], "hucs": result["summary"]["huc_count"],
                       "selected": len(result["selected_huc12s"]),

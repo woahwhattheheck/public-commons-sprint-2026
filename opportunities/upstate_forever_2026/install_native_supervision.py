@@ -30,6 +30,9 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "integration/parameter-receiving-joins.json",
            "model/parameter_archive_source.py",
            "model/PARAMETER_ARCHIVE_SOURCE.md",
+           "model/parameter_support_reconciliation.py",
+           "model/PARAMETER_SUPPORT_RECONCILIATION.md",
+           "integration/component_fragments/parameter-support-reconciliation.json",
            "receiving/gura-original-four-case-results.json",
            "integration/component_fragments/parameter-archive-source.json",
            "model/record_catalog.py", "model/delivery_catalogue.py",
@@ -831,6 +834,12 @@ def source_scope_dependency(body):
     if not {"SCOPE_FILE", "VERSION"} <= constants:
         raise ValueError("Incoming original source presenter lacks SCOPE_FILE or VERSION")
 
+
+# Exact original sources before PR4364 support-accounting integration.
+PREVIOUS.setdefault("model/parameter_report_source.py", []).append("4e4cb2003479778ff11c17666916e24675b83980327e3d3f50a3bbd01d1d7e4b")
+PREVIOUS.setdefault("model/parameter_archive_source.py", []).append("28127e77d1a81189baf901387cc95e9b9260295197ce1cb9d9326742d031311b")
+PREVIOUS.setdefault("model/PARAMETER_ARCHIVE_SOURCE.md", []).append("4eda1388b253fc6154cb966e72bd6c6eb8a31a310e768f9e99dbb6bfb536fed3")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("1738cde143ef315e8bb2090b2270f3e1744fdafa7fc6283033d090c44a4dce59")
 
 def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)

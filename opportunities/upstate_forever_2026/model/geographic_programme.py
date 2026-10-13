@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import hashlib
+import json
 from pathlib import Path
 import time
 
@@ -227,6 +228,21 @@ def _verified_report(ws, manager, programme_id, binding, selection):
     return status, report
 
 
+def _verify_inputs(ws, geographic_id, inputs):
+    """Verify retained science while omitting portable runtime lock markers."""
+    from .portable import member_name
+    directory = ws.root / "geographic-headwaters" / identifier(geographic_id) / "inputs"
+    for item in inputs["files"]:
+        relative = member_name(item["path"])
+        if relative.name.endswith(".lock"):
+            # held() creates empty runtime markers; portable backup omits them.
+            # Keep their original receipt entries, without requiring recreation.
+            if item.get("bytes") != 0 or item.get("sha256") != hashlib.sha256(b"").hexdigest():
+                raise ValueError("A declared runtime lock contains retained input data")
+            continue
+        verify_file(directory, item)
+
+
 def adopt(workspace, geographic_id, *, delivery_id=None, expected_preview_id=None, previous=None):
     """Create or reopen the existing Programme around three completed originals."""
     ws = _workspace(workspace)
@@ -254,8 +270,7 @@ def adopt(workspace, geographic_id, *, delivery_id=None, expected_preview_id=Non
         if current_binding != binding or current_selection != selection:
             raise ValueError("The original geographic preparation changed during adoption")
         started = time.perf_counter()
-        for item in inputs["files"]:
-            verify_file(directory / "inputs", item)
+        _verify_inputs(ws, binding["geographic_id"], inputs)
         for run_id in binding["run_ids"]:
             ws.run(run_id)
         native_verification_seconds = time.perf_counter() - started
@@ -307,8 +322,7 @@ def verify(workspace, value):
             or value.get("original_ensemble_id") != prepared["ensemble_id"]
             or value.get("native_runs") != cases):
         raise ValueError("Geographic Programme lineage differs in the received project")
-    for item in inputs["files"]:
-        verify_file(ws.root / "geographic-headwaters" / binding["geographic_id"] / "inputs", item)
+    _verify_inputs(ws, binding["geographic_id"], inputs)
     for run_id in binding["run_ids"]:
         ws.run(run_id)
     status, report = _verified_report(ws, ComputeProgrammes(ws),
@@ -325,3 +339,151 @@ def verify(workspace, value):
     return {"identity": "MATCH", "project_id": ws.project["id"],
             "geographic_id": binding["geographic_id"], "programme_id": status["id"],
             "report_id": report["id"], "run_ids": binding["run_ids"]}
+
+
+def operator_opening(workspace, adoption):
+    """Bind the maintained Guided journey to an original mapped alternative."""
+    ws = _workspace(workspace)
+    verify(ws, adoption)
+    status = ComputeProgrammes(ws).status(adoption["programme_id"],
+                                          include_ensemble_candidates=False)
+    by_key = {row["key"]: row for row in status["runs"]}
+    focus_key = adoption["native_study_selection"]["scenario_runs"][0]
+    focus = by_key[focus_key]
+    run = ws.inspect_run(focus["run_id"])
+    baseline_id = adoption["binding"]["run_ids"][0]
+    comparison_id = status["comparisons"][focus_key]["id"]
+    comparison = ws.retained_item("comparisons", identifier(comparison_id))
+    if (comparison["baseline_run_id"] != baseline_id
+            or focus["run_id"] not in [row["run_id"] for row in comparison["alternatives"]]):
+        raise ValueError("The geographic opening comparison differs from its original cases")
+    selected = {
+        "baseline_run_id": baseline_id, "grid_id": run["selection"]["grid_id"],
+        "profile_id": run["selection"]["profile_id"], "scenario_id": run["selection"]["scenario_id"],
+        "run_id": run["id"], "models": ["ndr", "sdr"], "comparison_id": comparison["id"],
+        "spatial_review_id": "", "spatial_export_id": "",
+        "delivery_id": adoption.get("existing_delivery_id") or "",
+        "calibration_review_id": "",
+    }
+    context = {"project_id": ws.project["id"], "geographic_id": adoption["geographic_id"],
+        "programme_id": adoption["programme_id"], "adoption_preview_id": adoption["preview_id"],
+        "source_collection_id": adoption["binding"]["source_collection_id"],
+        "alternative_run_ids": adoption["binding"]["run_ids"][1:], "selection": selected}
+    key = digest(context)
+    journey = {
+        "schema": "upstate.operating-journey/v1", "project_id": ws.project["id"],
+        "step": "compare", "selection": selected, "regional": None, "community": None,
+        "notes": (
+            "Actual retained Upper Savannah geography; explicitly simulated terrain, forcing, "
+            "land cover and coefficients. Original completed InVEST 3.20 NDR/SDR results. "
+            "Inspect the selected baseline and mapped alternative on their common valid support. "
+            "Annual N/P export is kg/year and sediment is metric tonnes/year reaching modeled streams. "
+            "The upstream model domain, South Carolina reporting mask and utility focus remain distinct. "
+            "Programme: " + adoption["programme_id"] + ". "
+            "Geographic source edition: " + adoption["geographic_id"] + "."),
+        "note_versions": [],
+        "recorded_context": {"project_title": ws.project["title"],
+                             "operator_opening": {"id": key, **context}},
+    }
+    if isinstance(run.get("completed_at"), str):
+        journey["started_at"] = run["completed_at"]
+    return {"schema": "upstate.geographic-operator-opening/v1", "id": key,
+            "project_id": ws.project["id"], "geographic_id": adoption["geographic_id"],
+            "programme_id": adoption["programme_id"], "entry_view": "journey",
+            "programme_view": "programmes", "journey": journey}
+
+
+def save_operator_opening(operator, workspace_key, adoption, *, expected_revision):
+    """Save an explicitly reviewed opening through the existing live Operator.
+
+    Pass the revision observed before the opening request, including None for a
+    genuinely new session. A retry must keep that original revision. Later user
+    choices are preserved; this function never creates a server or native run.
+    """
+    if expected_revision is not None:
+        identifier(expected_revision)
+    ws = operator.ws(workspace_key)
+    opening = operator_opening(ws, adoption)
+    current = operator.operator_session(workspace_key)
+    previous = (current or {}).get("journey", {})
+    prior_context = previous.get("recorded_context", {}).get("operator_opening", {})
+    wanted = opening["journey"]["selection"]
+    same_opening = prior_context.get("id") == opening["id"]
+    if same_opening and previous.get("selection") == wanted:
+        saved, state = current, "already_selected"
+    elif same_opening or (current or {}).get("revision") != expected_revision:
+        # Keep both manual changes after this opening and a different view
+        # saved while its original reviewed request was waiting.
+        saved, state = current, "preserved_current"
+    else:
+        journey = deepcopy(opening["journey"])
+        # These are other retained views in the same project, not replacements
+        # for this comparison. Keep them while selecting the original runs.
+        for name in ("regional", "community"):
+            if name in previous:
+                journey[name] = deepcopy(previous[name])
+        saved = operator.save_operator_session(workspace_key, {
+            "journey": journey, "expected_revision": expected_revision})
+        state = "saved"
+    readback = operator.operator_session(workspace_key)
+    if readback != saved:
+        raise ValueError("The operator view changed during opening; retain its current revision")
+    descriptor = None
+    path = ws.root / "operator-session.json"
+    if saved is not None:
+        body = path.read_bytes()
+        if json.loads(body) != saved:
+            raise ValueError("The saved operator file differs from its current view")
+        descriptor = {"path": "operator-session.json", "bytes": len(body),
+                      "sha256": hashlib.sha256(body).hexdigest()}
+    elif path.exists():
+        raise ValueError("An operator session appeared during receiving; retain its current view")
+    applied = (saved or {}).get("journey", {}).get("selection") == wanted and state != "preserved_current"
+    return {"schema": "upstate.geographic-operator-opening-receipt/v1",
+            "project_id": ws.project["id"], "geographic_id": adoption["geographic_id"],
+            "programme_id": adoption["programme_id"], "opening_id": opening["id"],
+            "state": state, "selection_applied": applied,
+            "observed_revision": expected_revision,
+            "revision": (saved or {}).get("revision"), "operator_session": saved,
+            "operator_session_file": descriptor, "requested_selection": wanted,
+            "selection": (saved or {}).get("journey", {}).get("selection"),
+            "entry_view": opening["entry_view"], "programme_view": opening["programme_view"]}
+
+
+def verify_operator_opening(workspace, adoption, receipt):
+    """Verify the exact saved or preserved operator view in the received project."""
+    ws = _workspace(workspace)
+    opening = operator_opening(ws, adoption)
+    if (not isinstance(receipt, dict)
+            or receipt.get("schema") != "upstate.geographic-operator-opening-receipt/v1"
+            or any(receipt.get(key) != opening[key]
+                   for key in ("project_id", "geographic_id", "programme_id"))
+            or receipt.get("opening_id") != opening["id"]
+            or receipt.get("requested_selection") != opening["journey"]["selection"]
+            or receipt.get("state") not in {"saved", "already_selected", "preserved_current"}):
+        raise ValueError("The operator opening receipt differs from the original geographic adoption")
+    descriptor, saved = receipt.get("operator_session_file"), receipt.get("operator_session")
+    if saved is None:
+        if (descriptor is not None or (ws.root / "operator-session.json").exists()
+                or receipt["state"] != "preserved_current" or receipt.get("selection") is not None
+                or receipt.get("revision") is not None or receipt.get("selection_applied") is not False):
+            raise ValueError("The received project differs from its preserved empty operator view")
+    else:
+        if (not isinstance(descriptor, dict) or descriptor.get("path") != "operator-session.json"
+                or saved.get("schema") != "upstate.operator-session/v1"
+                or saved.get("project_id") != ws.project["id"]
+                or saved.get("revision") != receipt.get("revision")
+                or digest(saved.get("journey")) != saved.get("revision")
+                or saved.get("journey", {}).get("selection") != receipt.get("selection")
+                or read_json(verify_file(ws.root, descriptor)) != saved):
+            raise ValueError("The received operator selection differs from its retained session")
+        applied = (receipt["state"] != "preserved_current"
+                   and receipt["selection"] == opening["journey"]["selection"])
+        if receipt.get("selection_applied") is not applied:
+            raise ValueError("The operator opening status differs from its actual saved selection")
+        if receipt["state"] != "preserved_current" and not applied:
+            raise ValueError("The saved geographic opening selects another original case")
+    return {"identity": "MATCH", "project_id": ws.project["id"],
+            "geographic_id": adoption["geographic_id"], "programme_id": adoption["programme_id"],
+            "opening_id": opening["id"], "state": receipt["state"],
+            "selection_applied": receipt["selection_applied"], "revision": receipt["revision"]}

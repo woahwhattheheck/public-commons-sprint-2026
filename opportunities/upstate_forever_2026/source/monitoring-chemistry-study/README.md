@@ -64,6 +64,25 @@ The existing destination is reopened through native `portable.resume_restore` wi
 
 Preserve the actual application edition, input files, archive, receiving paths, progress JSON and its sibling selection file when continuing an accepted operation. Rerun the same capture command after interruption. A missing completed archive or receiving directory must be recovered at its original path instead of replaced by a new operation. The original opener command remains usable without `--expected-selection`; supplying the frozen selection, as above, additionally compares the complete original records and bytes. The progress JSON and sibling cold-opening record retain the actual archive and native identities.
 
+## Carry reviewed field selections with the completed study
+
+After installing the field-selection component, start a new original Operator against an independent restored project copy; an already initialized Operator keeps its earlier extension registry. In **Monitoring design → Saved field selections**, receive the existing operated `examples/Monitoring_4800_Field_Selection.json` from the original field package or retained source companions. Its exact SHA256 is `29a31882db493664d955bb4872209eb1791f999704a163f5fe36ccbf64dc98dc`. The original collection is `371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3`, source `monitoring-field-planning`. Keep the file's original reviewed station choices, notes and rounds. Its accompanying crew CSV and two-page calendar PDF remain in the same complete source edition.
+
+Use the actual completed `monitoring.field-selection.receive` task's `result.id` as `FIELD_SELECTION_ID`. This identifies the newly retained native edition; it is different from the original support ID or saved Monitoring plan. Open that edition's maintained working HTML and confirm the exact selected budget, source stations, original coordinate bases, notes and rounds. The field-selection panel preserves the original source separately. A received selection records review choices; it does not assign campaign stations or mark samples collected.
+
+To capture that edition alongside all four completed analyses and the original three-plan comparison, use new output/archive/receiving paths:
+
+```sh
+python -B "$STUDY/capture_editable_workspace.py" --application "$APP" --workspace "$WS" --reports "$REPORTS_JSON" --comparison "$OUT/budget-study/comparison.json" --field-selection "$FIELD_SELECTION_ID" --archive "$OUT/field-editable-workspace.zip" --receive-into "$OUT/field-received" --output "$OUT/field-receiving.json"
+python -B "$STUDY/open_completed_study.py" --application "$OUT/field-received/application" --workspace "$OUT/field-received/workspace" --reports "$REPORTS_JSON" --comparison "$OUT/budget-study/comparison.json" --output "$OUT/field-archived-application-reopen.json" --expected-selection "$OUT/field-receiving.json.selection.json"
+```
+
+Repeat `--field-selection` to include another already retained edition, such as a subsequently edited selection. The flag is optional. Omission preserves the original capture intent, producer set and selected-record shape, so completed older captures remain reopenable without a field-selection module. Do not add the flag to an already accepted older capture's output or archive; start the explicit new selection at a new capture boundary. Continue an interrupted field capture with its same IDs and original paths.
+
+For this explicit mode, the existing isolated opener imports `model.monitoring_field_selection` from the delivered application and pins its exact source bytes. Its native read-only inspector verifies each selection against the same original project, network, frontier and one of the selected comparison's exact plans. The frozen capture includes the entire retained selection, original JSON and initialized HTML, source collection record, original source manifest, document and every companion. The archived application must reproduce those same records and byte identities. The standalone cold-opening command derives the optional IDs from its frozen expected selection; without an expected selection, pass the same `--field-selection` flags explicitly.
+
+Reopen the received Operator and use its **Saved field selections** controls, not only the receiving JSON. Download and open the actual maintained HTML and original selection, compare their notes, rounds and candidate coordinates, and inspect the original crew CSV and every calendar PDF page. Operate and personally view the populated desktop and 390 px layouts, then save/reopen one deliberate subsequent edit through the original queue. This extends the same completed study and requires no optimizer or model rerun.
+
 ## Original numerical course
 
 `run_compound_native.py` retains the executed derived-input definition from the original receiving course. It requires the exact authored case and its saved original calibration, 512-draw ensemble and monitoring records. Each compound row preserves its original component records, positive weights, N basis, error-scale rule and fit/holdout role. Explicit interval endpoints remain separate from point errors.

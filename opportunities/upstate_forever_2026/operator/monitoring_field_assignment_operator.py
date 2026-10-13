@@ -28,6 +28,8 @@ def read(operator, workspace_key, operation, payload):
     workspace = operator.ws(workspace_key)
     if operation == "catalog":
         return assignments.catalog(workspace)
+    if operation == "selection":
+        return assignments.saved_selection(workspace, payload["id"])
     if operation == "preview":
         return assignments.preview(workspace, payload)
     if operation == "detail":

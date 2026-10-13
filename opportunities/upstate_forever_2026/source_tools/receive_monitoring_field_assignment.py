@@ -94,6 +94,7 @@ def main():
     parser.add_argument("--source-collection-id")
     parser.add_argument("--source-id", default="monitoring-field-planning")
     parser.add_argument("--selection-file")
+    parser.add_argument("--native-selection-id")
     parser.add_argument("--title", default="Monitoring field assignments")
     parser.add_argument("--receive-directory")
     parser.add_argument("--python")
@@ -109,6 +110,8 @@ def main():
     if saved.exists():
         selected = read_json(saved)
         request = selected["request"]
+        if args.native_selection_id and args.native_selection_id != request.get("selection_record_id"):
+            raise ValueError("Resume with the same original native field-selection record.")
         if args.selection_file:
             incoming = Path(args.selection_file).read_bytes().decode("utf-8")
             if incoming != request["selection_text"]:
@@ -117,10 +120,17 @@ def main():
             raise ValueError("Resume with the same original source collection.")
         destination = args.receive_directory or selected["receiving_directory"]
     else:
-        if not args.source_collection_id or not args.selection_file:
-            parser.error("First receiving requires --source-collection-id and --selection-file.")
-        request = dict(source={"source_collection_id": args.source_collection_id, "source_id": args.source_id},
-                       selection_text=Path(args.selection_file).read_bytes().decode("utf-8"), title=args.title)
+        if args.native_selection_id:
+            if args.selection_file or args.source_collection_id:
+                parser.error("Choose the native saved selection or an original source plus file, not both.")
+            original = assignment.saved_selection(workspace, args.native_selection_id)
+            request = dict(source=original["source"], selection_text=original["selection_text"],
+                           selection_record_id=original["selection_record_id"], title=args.title)
+        else:
+            if not args.source_collection_id or not args.selection_file:
+                parser.error("First receiving needs --native-selection-id or --source-collection-id plus --selection-file.")
+            request = dict(source={"source_collection_id": args.source_collection_id, "source_id": args.source_id},
+                           selection_text=Path(args.selection_file).read_bytes().decode("utf-8"), title=args.title)
         prepared = assignment.preview(workspace, request)
         request["expected_id"] = prepared["id"]
         destination = args.receive_directory

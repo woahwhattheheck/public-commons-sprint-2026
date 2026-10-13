@@ -25,6 +25,7 @@ from . import observed_landcover_receiving
 from . import received_published_reviews
 from . import study_report_transfer
 from . import assessment_study_transfer
+from . import geographic_study_receiving
 
 HEX = re.compile(r"[0-9a-f]{64}")
 SCHEMA = "upstate.study-receiving-view/v1"
@@ -196,6 +197,7 @@ def detail(workspace, key):
     observed_landcover_receiving.augment(closure, retained, result)
     received_published_reviews.augment(closure, retained, result)
     assessment_study_transfer.augment(closure, retained, result)
+    geographic_study_receiving.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()

@@ -1,0 +1,51 @@
+{
+  "format": "upper-savannah-measurement-returned-source/v1",
+  "version": "1.0.2",
+  "files": [
+    {
+      "path": "MEASUREMENT_RETURNED_REVIEWS.md",
+      "bytes": 10267,
+      "sha256": "6d6b7f77494178b8994a0acadada29d1e65b1f78aa16751feaa95c6f91aba850"
+    },
+    {
+      "path": "checks/returned_review_capacity.mjs",
+      "bytes": 8950,
+      "sha256": "24c6b8c0e8f32aeb69a538c885c421b779858b7a87b9759ca19a188ee6994d9c"
+    },
+    {
+      "path": "checks/returned_review_journey.mjs",
+      "bytes": 10088,
+      "sha256": "6f901f4e0eaa7e1721e73db53b9eb4eae1521f1652b62976f0ea73ced5435152"
+    },
+    {
+      "path": "install_measurement_returned_reviews.py",
+      "bytes": 6131,
+      "sha256": "f295be2ff1a40bab01296c87bcc952d4d2cda41f616cb622cefbc16bf06b20d1"
+    },
+    {
+      "path": "integration/component_fragments/measurement-returned-reviews.json",
+      "bytes": 1002,
+      "sha256": "9a8a059d7c57c0974df2cc5581e7481dd5fa3ed26153b9ee6683da2d711027ae"
+    },
+    {
+      "path": "measurement_workspace/engine/returned_review_cli.mjs",
+      "bytes": 2977,
+      "sha256": "3c95ea1dd7a66d93c09359e3e5510a64f06dac93676be666a8e083b2d4277543"
+    },
+    {
+      "path": "measurement_workspace/engine/returned_review_reports.mjs",
+      "bytes": 19382,
+      "sha256": "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40"
+    },
+    {
+      "path": "measurement_workspace/engine/returned_reviews.mjs",
+      "bytes": 32888,
+      "sha256": "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea"
+    },
+    {
+      "path": "source_tools/print_measurement_return.py",
+      "bytes": 9841,
+      "sha256": "395f43610cdf838a4c64926091ee49025ecada3c7b2ece3a078f9de586b388b4"
+    }
+  ]
+}

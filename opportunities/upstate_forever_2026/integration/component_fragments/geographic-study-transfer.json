@@ -1,0 +1,38 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-study-transfer",
+  "required_components": [
+    "study-transfer"
+  ],
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/geographic_study_transfer.py",
+        "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+        "model/geographic_headwaters.py",
+        "model/geographic_receiving_context.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_scenario_allocation_report.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_siting_contrasts.py",
+        "model/geographic_utility_groups.py",
+        "model/ensemble_study_transfer.py",
+        "model/paired_ensemble/ensemble_portable.py",
+        "model/receiving_water_report_transfer.py",
+        "model/scenario_footprint.py",
+        "model/ensembles.py",
+        "model/ensemble_operations.py",
+        "model/ensemble_report.py",
+        "source_tools/headwaters_parameter_course.py",
+        "source_tools/geographic_scenario_context.py",
+        "source_tools/geographic_scenario_interpretation.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/receive_geographic_headwaters.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/compute_programme.py",
+        "model/receptor_study_transfer.py",
+        "model/geographic_programme.py"
+      ]
+    }
+  }
+}

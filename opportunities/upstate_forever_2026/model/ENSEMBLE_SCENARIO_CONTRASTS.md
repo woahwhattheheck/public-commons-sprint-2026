@@ -42,6 +42,50 @@ The scientific source contains the original ensemble plan, grid metadata, profil
 
 Control matching describes the variables selected by its retained construction method. Matching original land-cover area and precipitation does not by itself establish equal slope, erodibility, routing, upstream area or a causal treatment effect. Read the original matched-control document and its pair-specific geographic support with the annual result. Intake concentrations require their own transport and observation interpretation.
 
+## Use the existing native command line
+
+The same capability is available through the original `model.ensemble_cli` entry point. It reuses the saved design and completed native outputs. It never starts NDR or SDR. Run from the maintained application directory with its already-qualified scientific Python and the actual retained Workspace:
+
+```sh
+cd "$CASE_APPLICATION"
+"$CASE_PYTHON" -B -m model.ensemble_cli --workspace "$CASE_WORKSPACE" scenario-catalog ENSEMBLE_ID
+"$CASE_PYTHON" -B -m model.ensemble_cli --workspace "$CASE_WORKSPACE" scenario-report ENSEMBLE_ID --reference-scenario-id REFERENCE_ID --alternative-scenario-id ALTERNATIVE_ID
+"$CASE_PYTHON" -B -m model.ensemble_cli --workspace "$CASE_WORKSPACE" scenario-report-inspect ENSEMBLE_ID SOURCE_OPERATION_ID
+```
+
+Replace the uppercase IDs with the catalogue's original identities. Repeat `--alternative-scenario-id` for additional distinct alternatives. Every retained parameter member is included by the maintained producer. The reference cannot also be an alternative.
+
+The default prepares the original scientific source, figures, PDF, HTML and source package. `--without-render` retains the source without rendering those report formats. A later identical selection can complete its original report. `--coefficient-evidence FILE.json` optionally supplies the existing evidence selection object with `evidence_ids` and `range_ids`; use only real records from the same Workspace. Omitting it does not invent coefficient evidence or alter the retained profile tables and references.
+
+The final stdout JSON is the original source operation, including `id`, `selection.scenario_reference`, `source`, original file descriptors, native completion and source state. Retain its exact `id` as `SOURCE_OPERATION_ID`; `scenario-report-inspect` verifies that precise saved edition and its declared files instead of choosing a later source. A historical source may be labeled stale relative to current implementations while remaining readable. Preparation returns exit2 if any selected native pair is incomplete; its already-produced partial source and original run diagnostics remain retained. Ordinary command errors also return exit2 with the original exception type and message.
+
+### Completed twelve-case simulated headwaters example
+
+The original source packet identifies project `1b6a344c-df5a-4986-a5e4-47a2d158324b`, application `/mnt/data/eco-transfer13/original-received/application` and Workspace `/mnt/data/eco-transfer13/original-received/workspace`. These are the actual producing packet's paths; use the same owner's current retained paths if that original project has moved. Preserve its source editions and completed runs.
+
+| Saved choice | Exact original identity |
+|---|---|
+| Four-profile ensemble | `8cb02b0fe3b6a96782525e8aa5607621dd0a456719c6651ce07a675d9cae1ff4` |
+| Matched-area off-riparian reference | `28044212ab992451e31b5e9e6dc831a9221a5ef53ac136ea56b2af063f70f223` |
+| Riparian restoration alternative | `8d419f1c618cc7a5025c01eb40f173afbbe6919e4ba96580f6e7e1e36943d65d` |
+| Separately retained original baseline | `63f5d52029585807ff8f4d5e8d5fff0972adf7c01811d97cab3edbee3d9658d7` |
+
+The original complete numeric/source packet is public Git blob `3eae73d8b83b3541435aa2c201200a6439d97be6` (1,066,937 bytes / SHA256 `75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572`). Its twelve members retain their independent byte/hash descriptors, including original report `9c0d1a2a6cf4bfa06a5811885d4bc8955ef9ccf5e020284a9b6169e86aa50cac` and source operation `537f895db502ab3a00e1cf9b636a67f82a02a29b7395df837bbc1f18855739c2`. Those earlier completed editions stay unchanged.
+
+The four scientific profiles combine MFD/D8 routing with dimensionless SDR maximum-L values 122 and 333. Both alternatives convert 635 original 30m cells (57.15ha: 236 pasture and 399 crop cells) to forest. The matched control retains the same class counts outside the riparian corridor with its original precipitation-matching method. Its label does not establish equality of terrain, routing or every other property. This is the completed simulated 120×120-cell, 1,296ha square, separate from the regional Upper Savannah geometry work.
+
+After the catalogue confirms those retained identities, this complete one-line command selects the original control as reference:
+
+```sh
+"$CASE_PYTHON" -B -m model.ensemble_cli --workspace "$CASE_WORKSPACE" scenario-report 8cb02b0fe3b6a96782525e8aa5607621dd0a456719c6651ce07a675d9cae1ff4 --reference-scenario-id 28044212ab992451e31b5e9e6dc831a9221a5ef53ac136ea56b2af063f70f223 --alternative-scenario-id 8d419f1c618cc7a5025c01eb40f173afbbe6919e4ba96580f6e7e1e36943d65d
+```
+
+This prepares twelve direct physical rows: four profiles times nitrogen, phosphorus and sediment. Read the actual returned common-support hashes, common and unmatched cell counts, reference mass, riparian mass and signed change. The producer derives these quantities from the completed reference/alternative rasters. Source classification remains simulated; annual stream export is not a measured concentration or an intake load.
+
+In the original operator, open this ensemble → **Compare two scenarios** → **Open exact edition** for the returned source ID. Open the original difference maps and all reports/downloads. Use **Compose scientific report** to select that exact source in the maintained ordered composer, then the existing Study transfer or Workspace backup to hand over and cold-reopen the actual project. The four profiles and their source choices remain editable. Preserve the existing original baseline report and all other saved editions.
+
+Use and visually inspect the actual desktop and narrow screens, every report page, CSV/JSON, map, ZIP and independently reopened editable Study as required by `CURRENT_OWNER_DIRECTION.md` version 2026-10-13.3 and `AGENTS.md`. Return actual source/report/Study identities and any exact native exception to the same completed-case owner; no second model run or receiving process is required.
+
 ## Native API and exact files
 
 ```python

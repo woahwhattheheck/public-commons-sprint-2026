@@ -1,0 +1,335 @@
+{
+  "schema": "tjl.oacaa.acs-working-plan.v1",
+  "measurementPeriod": "Provider source-labelled 2013–2021; metadata retrieved October 2026",
+  "cohorts": [
+    {
+      "key": "history",
+      "path": "datasets/ohio-us-scorecard-asset-history.json",
+      "datasetId": "ohio-us-scorecard-asset-history",
+      "bytes": 27948,
+      "sha256": "5822d1471e6418fec8a1e0d0fb1ec31df61731e0cd0dfb50f95ce7c2c4149863",
+      "originals": [
+        "sources/Scorecard-assets-trends-original.json",
+        "sources/Scorecard-assets-current-original.json"
+      ]
+    },
+    {
+      "key": "definitions",
+      "path": "datasets/scorecard-asset-measure-definitions.json",
+      "datasetId": "scorecard-asset-measure-definitions",
+      "bytes": 4491,
+      "sha256": "3de7a2523b82715d9a7974e7f95092483c39a5347bc4820083a70bc3538d67f6",
+      "originals": [
+        "sources/Scorecard-assets-source-metadata.json"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "asset-scorecard-history",
+      "title": "Prosperity Now Scorecard household asset history",
+      "url": "https://scorecard.prosperitynow.org/rest/place-data?measures=asset-poverty-rate,liquid-asset-poverty-rate&locs=39,0&datasets=trend&collate=place",
+      "locator": "Ohio/US; asset-poverty-rate/liquid-asset-poverty-rate; all original trend fields",
+      "note": "Source-labelled years 2013–2021; missing/suppressed original markers retained."
+    },
+    {
+      "id": "asset-scorecard-current",
+      "title": "Prosperity Now Scorecard current household values",
+      "url": "https://scorecard.prosperitynow.org/rest/place-data?measures=asset-poverty-rate,liquid-asset-poverty-rate&locs=39,0&datasets=group0&collate=place",
+      "locator": "Ohio/US; group0 values; source year2021",
+      "note": "Same selected2021 values independently agree with the trend response."
+    },
+    {
+      "id": "asset-scorecard-method",
+      "title": "Prosperity Now Scorecard original measure definitions",
+      "url": "https://scorecard.prosperitynow.org/rest/mea?measures=asset-poverty-rate,liquid-asset-poverty-rate&extras=copyblocks,sources,datasets",
+      "locator": "copyblocks and sources for the two asset measures",
+      "note": "Full original response retained internally; this edition paraphrases definitions and preserves response hash."
+    },
+    {
+      "id": "asset-issuer-transcription",
+      "title": "OACAA2026 report: retained Tables6–7 transcription",
+      "url": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf",
+      "locator": "Original Tables6–7 OCR; page images remain the original receiving operation",
+      "note": "Retained separately from provider values. Discrepancies are source-review items."
+    }
+  ],
+  "sections": [
+    {
+      "id": "asset-cushion-overview",
+      "title": "Household savings and financial resilience",
+      "summary": "Wealth measures complement income poverty",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "asset-overview-meaning",
+          "type": "paragraph",
+          "text": "A household can be above the annual income poverty threshold and still lack a financial cushion. Asset poverty compares net worth with a three-month poverty-level benchmark; liquid asset poverty uses the provider’s defined assets that can be converted to cash. These are household measures, so their percentages cannot be added to population poverty rates.",
+          "sourceIds": [
+            "asset-scorecard-method"
+          ]
+        },
+        {
+          "id": "asset-overview-values",
+          "type": "paragraph",
+          "text": "In the provider’s source-labelled 2021 data, 20% of Ohio households are asset poor and 29% are liquid asset poor. The corresponding US estimates are 19% and 27%. These are descriptive source estimates, not measurements of current 2026 conditions or tests of a statistically significant difference.",
+          "sourceIds": [
+            "asset-scorecard-current",
+            "asset-scorecard-history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "asset-latest-comparison",
+      "title": "Ohio and national household asset estimates",
+      "summary": "Provider data-year label: 2021",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "asset-latest-precision",
+          "type": "paragraph",
+          "text": "The editable dataset preserves every original provider precision field and the exact statistical response. It does not convert those fields into a confidence interval without an explicit confidence level and unit. Bars show the selected point estimates.",
+          "sourceIds": [
+            "asset-scorecard-method",
+            "asset-scorecard-current"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "asset-history-series",
+      "title": "Household asset history with explicit gaps",
+      "summary": "Provider source-labelled years 2013–2021",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "asset-history-gaps",
+          "type": "paragraph",
+          "text": "The received trend includes published observations for 2013, 2014, 2015, 2016, 2019 and 2021. For 2017, 2018 and 2020, the source returns an unavailable or suppressed marker. The tables preserve those empty rate cells; they are not zero values and have not been interpolated.",
+          "sourceIds": [
+            "asset-scorecard-history"
+          ]
+        },
+        {
+          "id": "asset-history-comparability",
+          "type": "paragraph",
+          "text": "Source years identify the provider’s editions. The measures concern households and differ from the annual income-poverty and five-year county datasets elsewhere in this report. Descriptive changes in these displayed estimates do not establish a cause or statistical significance.",
+          "sourceIds": [
+            "asset-scorecard-method",
+            "asset-scorecard-history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "asset-source-reconciliation",
+      "title": "Asset-table source reconciliation",
+      "summary": "Retained issuer transcription and original provider values",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "asset-reconciliation-numeric",
+          "type": "paragraph",
+          "text": "The working edition uses the original provider history. For Ohio 2015 asset poverty, that response is 28.9%, while the retained report transcription reads 28.2%. For Ohio 2019, the original provider value is 27.0%; the OCR transcription is corrupted. Both representations remain attached to the editable source so the issuer’s original page can be reviewed before its text is changed.",
+          "sourceIds": [
+            "asset-scorecard-history",
+            "asset-issuer-transcription"
+          ]
+        },
+        {
+          "id": "asset-reconciliation-2011",
+          "type": "paragraph",
+          "text": "The issuer’s tables also contain 2011 observations, but 2011 is absent from the received provider trend selection. Those old cells remain in the transcription concordance and are not reconstructed in the provider working dataset.",
+          "sourceIds": [
+            "asset-issuer-transcription",
+            "asset-scorecard-history"
+          ]
+        },
+        {
+          "id": "asset-reconciliation-threshold",
+          "type": "paragraph",
+          "text": "The provider’s explanatory copy includes a four-person 2020 threshold example. The definition chapter preserves that date rather than relabelling the example as 2021 or 2026. Local modeled estimates are outside this Ohio/US source selection.",
+          "sourceIds": [
+            "asset-scorecard-method"
+          ]
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "cohort": "definitions",
+      "mapping": {
+        "id": "asset-definitions-table",
+        "kind": "table",
+        "sectionId": "asset-cushion-overview",
+        "sectionTitle": "Household savings and financial resilience",
+        "blockId": "asset-definitions-table",
+        "title": "How the measures differ",
+        "caption": "Source-backed definitions; the threshold example retains its original 2020 date.",
+        "rowIds": [
+          "net-worth",
+          "liquid-assets",
+          "threshold",
+          "period"
+        ],
+        "columns": [
+          "label",
+          "definition",
+          "note"
+        ]
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "asset-current-table",
+        "kind": "table",
+        "sectionId": "asset-latest-comparison",
+        "sectionTitle": "Ohio and national household asset estimates",
+        "blockId": "asset-current-table",
+        "title": "Selected original 2021 estimates",
+        "caption": "Percent of households; provider-labelled 2021 observations.",
+        "rowIds": [
+          "ohio-asset-2021",
+          "ohio-liquid-2021",
+          "us-asset-2021",
+          "us-liquid-2021"
+        ],
+        "columns": [
+          "geography",
+          "measure",
+          "percent",
+          "universe"
+        ]
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "asset-asset-current-chart",
+        "kind": "chart",
+        "sectionId": "asset-latest-comparison",
+        "sectionTitle": "Ohio and national household asset estimates",
+        "blockId": "asset-asset-current-chart",
+        "title": "Households without the net-worth cushion",
+        "caption": "Percent of households; source-labelled 2021; point estimates.",
+        "rowIds": [
+          "ohio-asset-2021",
+          "us-asset-2021"
+        ],
+        "columns": [],
+        "labelColumn": "geography",
+        "valueColumn": "percent",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "asset-liquid-current-chart",
+        "kind": "chart",
+        "sectionId": "asset-latest-comparison",
+        "sectionTitle": "Ohio and national household asset estimates",
+        "blockId": "asset-liquid-current-chart",
+        "title": "Households without the liquid-asset cushion",
+        "caption": "Percent of households; source-labelled 2021; point estimates.",
+        "rowIds": [
+          "ohio-liquid-2021",
+          "us-liquid-2021"
+        ],
+        "columns": [],
+        "labelColumn": "geography",
+        "valueColumn": "percent",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "asset-history-ohio-table",
+        "kind": "table",
+        "sectionId": "asset-history-series",
+        "sectionTitle": "Household asset history with explicit gaps",
+        "blockId": "asset-history-ohio-table",
+        "title": "Ohio original household asset history",
+        "caption": "Empty rate cells preserve original unavailable/suppressed markers. Both measures have separate source observations.",
+        "rowIds": [
+          "ohio-asset-2013",
+          "ohio-asset-2014",
+          "ohio-asset-2015",
+          "ohio-asset-2016",
+          "ohio-asset-2017",
+          "ohio-asset-2018",
+          "ohio-asset-2019",
+          "ohio-asset-2020",
+          "ohio-asset-2021",
+          "ohio-liquid-2013",
+          "ohio-liquid-2014",
+          "ohio-liquid-2015",
+          "ohio-liquid-2016",
+          "ohio-liquid-2017",
+          "ohio-liquid-2018",
+          "ohio-liquid-2019",
+          "ohio-liquid-2020",
+          "ohio-liquid-2021"
+        ],
+        "columns": [
+          "period",
+          "measure",
+          "percent",
+          "availability"
+        ]
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "asset-history-us-table",
+        "kind": "table",
+        "sectionId": "asset-history-series",
+        "sectionTitle": "Household asset history with explicit gaps",
+        "blockId": "asset-history-us-table",
+        "title": "US original household asset history",
+        "caption": "Empty rate cells preserve original unavailable/suppressed markers. Both measures have separate source observations.",
+        "rowIds": [
+          "us-asset-2013",
+          "us-asset-2014",
+          "us-asset-2015",
+          "us-asset-2016",
+          "us-asset-2017",
+          "us-asset-2018",
+          "us-asset-2019",
+          "us-asset-2020",
+          "us-asset-2021",
+          "us-liquid-2013",
+          "us-liquid-2014",
+          "us-liquid-2015",
+          "us-liquid-2016",
+          "us-liquid-2017",
+          "us-liquid-2018",
+          "us-liquid-2019",
+          "us-liquid-2020",
+          "us-liquid-2021"
+        ],
+        "columns": [
+          "period",
+          "measure",
+          "percent",
+          "availability"
+        ]
+      }
+    }
+  ],
+  "sharedOriginals": [
+    "sources/OACAA2026-Tables6-7-retained-OCR.json",
+    "asset_reporting.cjs",
+    "ASSET_SOURCE_CONCORDANCE.json",
+    "ASSET_SOURCE_GUIDE.md",
+    "ASSET_SOURCE_MANIFEST.json",
+    "asset-working-plan.json",
+    "asset-source-lock.json"
+  ],
+  "concordance": "ASSET_SOURCE_CONCORDANCE.json"
+}

@@ -22,6 +22,34 @@
         "style.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/object-sessions-desk.mjs",
+      [
+        "object-sessions-desk.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/recovery-support-desk.mjs",
+      [
+        "recovery-support-desk.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/object-bundles-desk.mjs",
+      [
+        "object-bundles-desk.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/object-comparisons-desk.mjs",
+      [
+        "object-comparisons-desk.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

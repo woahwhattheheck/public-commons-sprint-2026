@@ -1,0 +1,804 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "edition": "headwaters-native-interpretation-20261013-v2",
+  "title": "Original headwaters demonstration: source loading, native delivery and routing",
+  "classification": "SIMULATED DEMONSTRATION INPUTS; ORIGINAL COMPLETED NATIVE OUTPUTS",
+  "sections": [
+    [
+      "Decision and scope",
+      [
+        "In the original completed 1,296 ha simulated teaching case, corridor restoration reduces modeled stream export more than the matched off-corridor control for nitrogen, phosphorus and sediment under all four retained profiles. Each alternative changes 635 original cells (57.15 ha), with the same pasture/crop counts and closely matched precipitation. The ranking holds within each profile's exact common support.",
+        "This report joins the completed twelve original InVEST 3.20.0 runs to the independently replayed input chapter. It retains the original generated square, assumed physical/biophysical inputs, exact run/profile IDs and full numerical source. The Upper Savannah geographic edition is a separate case.",
+        {
+          "kind": "table",
+          "columns": [
+            "Quantity",
+            "Retained value"
+          ],
+          "rows": [
+            [
+              "Native course",
+              "12/12 complete"
+            ],
+            [
+              "Grid",
+              "120 × 120; 30 m; EPSG:26917; 1,296 ha"
+            ],
+            [
+              "Each changed layout",
+              "635 cells; 57.15 ha"
+            ],
+            [
+              "Profiles",
+              "MFD / D8 × dimensionless SDR maximum-L 122 / 333"
+            ],
+            [
+              "N and P units",
+              "kg/year delivered to modeled streams"
+            ],
+            [
+              "Sediment units",
+              "metric tonnes/year delivered to modeled streams"
+            ]
+          ]
+        },
+        "Read these as modeled annual masses. The report does not convert them into intake concentration or measured water quality; a receiving-water and flow/concentration analysis has its own source and support."
+      ]
+    ],
+    [
+      "Source change and placement",
+      [
+        "The original full-grid source arithmetic gives nearly equal assumed nutrient-source changes: corridor versus control reductions are 891.301394 versus 891.288826 kg N/year and 72.906282 versus 72.905246 kg P/year. Their differences are 0.0125676163 kg N/year and 0.0010358655 kg P/year. All four original profile records name the exact same coefficient-table SHA as that replay.",
+        "Native stream-export reductions therefore differ substantially despite nearly balanced source-loading changes. The comparison supports a placement-sensitive model result. It does not isolate distance from the generated stream axis as a single causal variable: the retained layouts also differ in elevation and in opposing class-specific K factors. Original changes in cover/retention and routing remain part of the modeled intervention.",
+        {
+          "kind": "table",
+          "columns": [
+            "Profile",
+            "Pollutant",
+            "Corridor reduction",
+            "Control reduction",
+            "Extra corridor reduction",
+            "Reduction ratio"
+          ],
+          "rows": [
+            [
+              "MFD/122",
+              "Nitrogen (kg/year)",
+              "2646.863",
+              "1099.860",
+              "1547.003",
+              "2.4065"
+            ],
+            [
+              "MFD/122",
+              "Phosphorus (kg/year)",
+              "212.165",
+              "89.026",
+              "123.139",
+              "2.3832"
+            ],
+            [
+              "MFD/122",
+              "Sediment (t/year)",
+              "127.911",
+              "113.907",
+              "14.004",
+              "1.1229"
+            ],
+            [
+              "MFD/333",
+              "Nitrogen (kg/year)",
+              "2646.863",
+              "1099.860",
+              "1547.003",
+              "2.4065"
+            ],
+            [
+              "MFD/333",
+              "Phosphorus (kg/year)",
+              "212.165",
+              "89.026",
+              "123.139",
+              "2.3832"
+            ],
+            [
+              "MFD/333",
+              "Sediment (t/year)",
+              "127.911",
+              "113.907",
+              "14.004",
+              "1.1229"
+            ],
+            [
+              "D8/122",
+              "Nitrogen (kg/year)",
+              "2685.037",
+              "1002.367",
+              "1682.671",
+              "2.6787"
+            ],
+            [
+              "D8/122",
+              "Phosphorus (kg/year)",
+              "215.194",
+              "81.271",
+              "133.923",
+              "2.6479"
+            ],
+            [
+              "D8/122",
+              "Sediment (t/year)",
+              "396.860",
+              "201.005",
+              "195.855",
+              "1.9744"
+            ],
+            [
+              "D8/333",
+              "Nitrogen (kg/year)",
+              "2685.037",
+              "1002.367",
+              "1682.671",
+              "2.6787"
+            ],
+            [
+              "D8/333",
+              "Phosphorus (kg/year)",
+              "215.194",
+              "81.271",
+              "133.923",
+              "2.6479"
+            ],
+            [
+              "D8/333",
+              "Sediment (t/year)",
+              "396.860",
+              "201.005",
+              "195.855",
+              "1.9744"
+            ]
+          ]
+        },
+        {
+          "kind": "table",
+          "columns": [
+            "Routing",
+            "Pollutant and annual unit",
+            "Corridor per changed ha",
+            "Control per changed ha",
+            "Reporting support (ha)"
+          ],
+          "rows": [
+            [
+              "MFD",
+              "Nitrogen (kg/year/changed model ha)",
+              "46.314",
+              "19.245",
+              "1263.06"
+            ],
+            [
+              "MFD",
+              "Phosphorus (kg/year/changed model ha)",
+              "3.712",
+              "1.558",
+              "1263.06"
+            ],
+            [
+              "MFD",
+              "Sediment (t/year/changed model ha)",
+              "2.238",
+              "1.993",
+              "1257.84"
+            ],
+            [
+              "D8",
+              "Nitrogen (kg/year/changed model ha)",
+              "46.982",
+              "17.539",
+              "1274.76"
+            ],
+            [
+              "D8",
+              "Phosphorus (kg/year/changed model ha)",
+              "3.765",
+              "1.422",
+              "1274.76"
+            ],
+            [
+              "D8",
+              "Sediment (t/year/changed model ha)",
+              "6.944",
+              "3.517",
+              "1274.76"
+            ]
+          ]
+        },
+        "This intervention-area normalization divides the original reporting-support baseline-minus-alternative annual stream export by each alternative's actual net changed model area: 57.15 ha for the corridor and 57.15 ha for the matched control. It measures the whole modeled response per changed hectare, including downstream delivery effects; it is not an observed removal rate or export density at the changed cells. The reporting-support area in the last column is a separate denominator and is not used in this division.",
+        "The six-row display uses each routing's Lmax 122 records. All 24 original configuration/scenario/pollutant rows, their support identities and original unchanged input-area records remain retained; the Lmax 333 results are numerically identical within routing in this case. Normalizing equal changed areas preserves the within-profile ranking. MFD and D8 stay separate support groups, and differing landscape covariates prevent a single-factor causal interpretation.",
+        "The ratio compares two positive modeled reductions on the same valid comparison support within one profile. It is not a quoted price or a financial return. Full-grid assumed input loads and valid native export masks have different coverage; this report does not divide one by the other to infer a delivery fraction."
+      ]
+    ],
+    [
+      "Native baseline, restoration and matched control",
+      [
+        "Each row below uses a common baseline and exactly the same valid-cell mask across all three scenarios. The two saved scenario comparisons have identical baseline ID, support SHA and cell count; those identities are checked before this three-way table is derived.",
+        {
+          "kind": "table",
+          "columns": [
+            "Profile",
+            "Pollutant",
+            "Baseline",
+            "Corridor",
+            "Control",
+            "Common cells"
+          ],
+          "rows": [
+            [
+              "MFD/122",
+              "Nitrogen (kg/year)",
+              "3786.089",
+              "1139.226",
+              "2686.229",
+              "14034"
+            ],
+            [
+              "MFD/122",
+              "Phosphorus (kg/year)",
+              "300.995",
+              "88.830",
+              "211.969",
+              "14034"
+            ],
+            [
+              "MFD/122",
+              "Sediment (t/year)",
+              "700.435",
+              "572.524",
+              "586.528",
+              "13976"
+            ],
+            [
+              "MFD/333",
+              "Nitrogen (kg/year)",
+              "3786.089",
+              "1139.226",
+              "2686.229",
+              "14034"
+            ],
+            [
+              "MFD/333",
+              "Phosphorus (kg/year)",
+              "300.995",
+              "88.830",
+              "211.969",
+              "14034"
+            ],
+            [
+              "MFD/333",
+              "Sediment (t/year)",
+              "700.435",
+              "572.524",
+              "586.528",
+              "13976"
+            ],
+            [
+              "D8/122",
+              "Nitrogen (kg/year)",
+              "3815.335",
+              "1130.298",
+              "2812.969",
+              "14164"
+            ],
+            [
+              "D8/122",
+              "Phosphorus (kg/year)",
+              "302.921",
+              "87.727",
+              "221.650",
+              "14164"
+            ],
+            [
+              "D8/122",
+              "Sediment (t/year)",
+              "1011.979",
+              "615.119",
+              "810.974",
+              "14164"
+            ],
+            [
+              "D8/333",
+              "Nitrogen (kg/year)",
+              "3815.335",
+              "1130.298",
+              "2812.969",
+              "14164"
+            ],
+            [
+              "D8/333",
+              "Phosphorus (kg/year)",
+              "302.921",
+              "87.727",
+              "221.650",
+              "14164"
+            ],
+            [
+              "D8/333",
+              "Sediment (t/year)",
+              "1011.979",
+              "615.119",
+              "810.974",
+              "14164"
+            ]
+          ]
+        },
+        "For MFD/122, nitrogen reduction is 69.9102% in the corridor versus 29.0500% in the control; phosphorus is 70.4879% versus 29.5772%; sediment is 18.2616% versus 16.2623%. These percentages use each original common-support baseline.",
+        "The complete scenario CSV retains full precision, both original run IDs, comparison IDs, profile IDs, support hashes and source JSON pointers."
+      ]
+    ],
+    [
+      "Routing sensitivity on the actual intersection",
+      [
+        "Routing changes valid coverage. Comparing the full MFD and D8 totals directly mixes a routing change with a support change. The original parameter comparisons instead restrict both baseline surfaces to their exact intersection.",
+        {
+          "kind": "table",
+          "columns": [
+            "Profile versus MFD/122",
+            "Pollutant",
+            "Reference common",
+            "Alternative common",
+            "Change (%)",
+            "Common cells"
+          ],
+          "rows": [
+            [
+              "MFD/333",
+              "Nitrogen (kg/year)",
+              "3786.089",
+              "3786.089",
+              "0.0000",
+              "14034"
+            ],
+            [
+              "MFD/333",
+              "Phosphorus (kg/year)",
+              "300.995",
+              "300.995",
+              "0.0000",
+              "14034"
+            ],
+            [
+              "MFD/333",
+              "Sediment (t/year)",
+              "700.435",
+              "700.435",
+              "0.0000",
+              "13976"
+            ],
+            [
+              "D8/122",
+              "Nitrogen (kg/year)",
+              "3786.089",
+              "3800.742",
+              "0.3870",
+              "14034"
+            ],
+            [
+              "D8/122",
+              "Phosphorus (kg/year)",
+              "300.995",
+              "301.841",
+              "0.2809",
+              "14034"
+            ],
+            [
+              "D8/122",
+              "Sediment (t/year)",
+              "700.435",
+              "1006.436",
+              "43.6874",
+              "13976"
+            ],
+            [
+              "D8/333",
+              "Nitrogen (kg/year)",
+              "3786.089",
+              "3800.742",
+              "0.3870",
+              "14034"
+            ],
+            [
+              "D8/333",
+              "Phosphorus (kg/year)",
+              "300.995",
+              "301.841",
+              "0.2809",
+              "14034"
+            ],
+            [
+              "D8/333",
+              "Sediment (t/year)",
+              "700.435",
+              "1006.436",
+              "43.6874",
+              "13976"
+            ]
+          ]
+        },
+        "On those original intersections, switching the baseline from MFD to D8 changes nitrogen by +0.3870%, phosphorus by +0.2809%, and sediment by +43.6874%. The D8-only 130 nutrient cells and 188 sediment cells are excluded from these contrasts. Complete per-scenario placement rankings above use each routing profile's own common support.",
+        {
+          "kind": "table",
+          "columns": [
+            "Pollutant",
+            "Whole-total difference",
+            "Common-cell difference",
+            "D8-only amount",
+            "D8-only cells"
+          ],
+          "rows": [
+            [
+              "Nitrogen (kg/year)",
+              "29.246458",
+              "14.653145",
+              "14.593313",
+              "130"
+            ],
+            [
+              "Phosphorus (kg/year)",
+              "1.925470",
+              "0.845586",
+              "1.079885",
+              "130"
+            ],
+            [
+              "Sediment (t/year)",
+              "311.544128",
+              "306.001543",
+              "5.542585",
+              "188"
+            ]
+          ]
+        },
+        "These three exact decompositions separate the changed common-cell mass from mass on newly valid D8 cells. Added coverage is 11.70 ha for nutrients and 16.92 ha for sediment. The full-precision parameter CSV retains the zero residual of each identity; no raster was regridded or re-summed here.",
+        "The recorded supports are 14,034 cells (1,263.06 ha) for MFD nutrients, 13,976 cells (1,257.84 ha) for MFD sediment, and 14,164 cells (1,274.76 ha) for D8. The native grid itself remains 14,400 cells (1,296 ha). This is an assumption sensitivity exercise, not a probability distribution or confidence interval."
+      ]
+    ],
+    [
+      "Slope-length-cap result",
+      [
+        "Changing SDR Lmax from 122 to 333 produces identical saved sums and byte-identical original and converted export rasters for all 18 routing × scenario × pollutant comparisons. The report checks both native-output SHA256 and converted-output SHA256 from the original complete run records.",
+        {
+          "kind": "table",
+          "columns": [
+            "Routing",
+            "Scenario",
+            "Pollutant",
+            "Native SHA identical",
+            "Converted SHA identical"
+          ],
+          "rows": [
+            [
+              "MFD",
+              "baseline",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "baseline",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "baseline",
+              "Sediment",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "corridor",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "corridor",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "corridor",
+              "Sediment",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "control",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "control",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "MFD",
+              "control",
+              "Sediment",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "baseline",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "baseline",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "baseline",
+              "Sediment",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "corridor",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "corridor",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "corridor",
+              "Sediment",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "control",
+              "Nitrogen",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "control",
+              "Phosphorus",
+              "true",
+              "true"
+            ],
+            [
+              "D8",
+              "control",
+              "Sediment",
+              "true",
+              "true"
+            ]
+          ]
+        },
+        "For this simulated terrain, three scenarios and two tested dimensionless SDR maximum-L settings (122 and 333), the retained outputs are identical within each routing family. This finite tested-setting result does not show that maximum-L is generally unimportant or prove that the cap never bound. The four profiles produce two distinct observed output families; they are not independent probabilistic realizations. The two routing choices remain materially different. All twelve retained SDR stages record their correct routing and Lmax in the original execution-input signature and were executed without stage reuse. NDR does not use the SDR cap; six equivalent NDR stages were retained through the original reuse mechanism."
+      ]
+    ],
+    [
+      "Recorded execution and source identities",
+      [
+        "The original retained model-stage start is 2026-10-13T10:25:11.721153+00:00; the final original run completed at 2026-10-13T10:25:37.406439+00:00. The recorded interval is 25.685 seconds and includes six reused model stages among 24 retained NDR/SDR stages. This interval excludes environment setup, source preparation, report generation and editable handover; it is not a new end-to-end benchmark.",
+        {
+          "kind": "table",
+          "columns": [
+            "Original identity",
+            "Value"
+          ],
+          "rows": [
+            [
+              "Ensemble",
+              "8cb02b0fe3b6a96782525e8aa5607621dd0a456719c6651ce07a675d9cae1ff4"
+            ],
+            [
+              "Report",
+              "9c0d1a2a6cf4bfa06a5811885d4bc8955ef9ccf5e020284a9b6169e86aa50cac"
+            ],
+            [
+              "Run signature",
+              "63985762ce5999a05f123d1148ce8e747d69e6ec85630a2708a2d9753fc66381"
+            ],
+            [
+              "Native model version",
+              "3.20.0"
+            ],
+            [
+              "Report created",
+              "2026-10-13T10:25:38.179335+00:00"
+            ]
+          ]
+        },
+        "The native inventory retains all 36 original output descriptors, full units, original and converted hashes, run IDs and completion timestamps. Original stage timing and reuse fields are retained alongside the unchanged source bodies."
+      ]
+    ],
+    [
+      "Use in the RFP workshare",
+      [
+        "For Tim's review, open the original scenario inputs, show the two equal-area land-cover edits, select a retained profile, and compare the original annual output maps with this table. Change an explicit input or alternative through the maintained workflow, then save and independently reopen the editable case. The input and native chapters can be selected together in the existing scientific report viewer.",
+        "The useful engineering handoff is the reproducible model/reporting workflow with editable assumptions, exact original sources, support-aware comparisons and a retained project. Scientific direction, scenario choice and interpretation remain with the modeling team. Apply the same sequence to the separate actual Upper Savannah source geography and RFP scope.",
+        "The existing original-native report owns its 15 scientific figures and raster views. This companion contributes the joined input/result interpretation and complete numerical audit paths without replacing those maps."
+      ]
+    ],
+    [
+      "Complete source and machine-readable outputs",
+      [
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Full precision interpretation",
+              "path": "source/headwaters_native_interpretation_20261013/analysis.json"
+            },
+            {
+              "title": "All 24 original scenario comparisons",
+              "path": "source/headwaters_native_interpretation_20261013/scenario-comparisons.csv"
+            },
+            {
+              "title": "All 12 within-profile placement contrasts",
+              "path": "source/headwaters_native_interpretation_20261013/placement-comparisons.csv"
+            },
+            {
+              "title": "All 9 original parameter comparisons",
+              "path": "source/headwaters_native_interpretation_20261013/parameter-comparisons.csv"
+            },
+            {
+              "title": "All 18 cap identity checks",
+              "path": "source/headwaters_native_interpretation_20261013/cap-identity.csv"
+            },
+            {
+              "title": "All 36 original output descriptors",
+              "path": "source/headwaters_native_interpretation_20261013/native-inventory.csv"
+            },
+            {
+              "title": "Original native numerical report",
+              "path": "source/headwaters_native_interpretation_20261013/retained/numeric/report.json"
+            },
+            {
+              "title": "Original twelve native run records",
+              "path": "source/headwaters_native_interpretation_20261013/retained/original/native-runs.json"
+            },
+            {
+              "title": "Original input analysis",
+              "path": "source/headwaters_input_interpretation_20261013/analysis.json"
+            },
+            {
+              "title": "Original class-specific covariate balance",
+              "path": "source/headwaters_input_interpretation_20261013/covariate-balance.csv"
+            },
+            {
+              "title": "Readable chapter",
+              "path": "source/headwaters_native_interpretation_20261013/CHAPTER.md"
+            },
+            {
+              "title": "Offline report",
+              "path": "source/headwaters_native_interpretation_20261013/report.html"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "inputs": [
+    {
+      "path": "source/headwaters_input_interpretation_20261013/analysis.json",
+      "bytes": 10921,
+      "sha256": "d1b68b8f7bdd384df28ff87aab2369c7fb02e7fc1d35762d2ac2ba6411659736"
+    },
+    {
+      "path": "source/headwaters_input_interpretation_20261013/biophysical-source-replay.csv",
+      "bytes": 397,
+      "sha256": "bd5d7a436a302df751e57f63c188216402f13acdfff26c847b9b83733651fd94"
+    },
+    {
+      "path": "source/headwaters_input_interpretation_20261013/covariate-balance.csv",
+      "bytes": 2475,
+      "sha256": "866edbc91ad8f46b0fa4beced8ce6e6ec4d8d69de1713b896b26dde5b48c1c6c"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/numeric/release.json",
+      "bytes": 1536,
+      "sha256": "33a7982468772b05f0e14c9605100613600e074c3b4673686dc956a379fb1fc3"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/numeric/report.json",
+      "bytes": 220725,
+      "sha256": "066b3267c63cd1812f789d4781627c399d0c94ec7f19d5640a09f28fc4fbbc70"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/ensemble.json",
+      "bytes": 20386,
+      "sha256": "2f3ac6fc167d9b53344767256b98af20f53c86b6c3790239bfa2585ced45ccaa"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/grid.json",
+      "bytes": 6814,
+      "sha256": "9ee1ffa2a0a9d02cd2e9841840779ca59878b4a22d3463f91a96262c75de1ad9"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/native-runs.json",
+      "bytes": 705166,
+      "sha256": "22f56730c6861d0199d8d8749d7efded076d64bcfc5e963348c1aa59288c61ed"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/4fdd94724e3ebdd706e6ccee2d352f516a2482321b43378a62dc62101c54537b.json",
+      "bytes": 4087,
+      "sha256": "c3ae2be71172ce36bb7890cdb54dfe9fa9f804be3abddd21c8ff955b75b7e4e5"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/6a24d29ad5adc6adb5dc1806fe2229045132e44549e0ea71f828a460b83fe6c3.json",
+      "bytes": 1090,
+      "sha256": "c2a18df3aa818784998d9e2a0338b523f2d4732f04c99b6aa131a8836ba2f459"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/cbfaa2e529a87cee974d42a359b821c33be059801f8cef70e04f48209939bafc.json",
+      "bytes": 4091,
+      "sha256": "d90544d8f5206ea872f0fa874f92d1d3cde11910f727b025050142338290479b"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/profiles/e4b07bb38701fb980e78ee47159ba5866865fac42eedb361555b9c575eea1738.json",
+      "bytes": 4087,
+      "sha256": "62ae53c209c141b8ae87ad66b2f9ae5d48f5612daffc4efcbd9eb9b709729f6e"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/28044212ab992451e31b5e9e6dc831a9221a5ef53ac136ea56b2af063f70f223.json",
+      "bytes": 821,
+      "sha256": "7dd065a4a25d651bd5a6934fd881503ce7b961d6a7cf6db8012168b6a1870428"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/63f5d52029585807ff8f4d5e8d5fff0972adf7c01811d97cab3edbee3d9658d7.json",
+      "bytes": 341,
+      "sha256": "66e860a13a6dd9c692b8b805e5ff7f6c50f1ea94e108e16df0d0c1785683f5bd"
+    },
+    {
+      "path": "source/headwaters_native_interpretation_20261013/retained/original/scenarios/8d419f1c618cc7a5025c01eb40f173afbbe6919e4ba96580f6e7e1e36943d65d.json",
+      "bytes": 743,
+      "sha256": "4ffa3175427df28ba629288ae3f40dd7447a47093a742ea569f8e1387e52f224"
+    }
+  ],
+  "source_links": [
+    "source/headwaters_native_interpretation_20261013/analysis.json",
+    "source/headwaters_native_interpretation_20261013/scenario-comparisons.csv",
+    "source/headwaters_native_interpretation_20261013/placement-comparisons.csv",
+    "source/headwaters_native_interpretation_20261013/parameter-comparisons.csv",
+    "source/headwaters_native_interpretation_20261013/cap-identity.csv",
+    "source/headwaters_native_interpretation_20261013/native-inventory.csv",
+    "source/headwaters_native_interpretation_20261013/retained/numeric/report.json",
+    "source/headwaters_native_interpretation_20261013/retained/original/native-runs.json",
+    "source/headwaters_input_interpretation_20261013/analysis.json",
+    "source/headwaters_input_interpretation_20261013/covariate-balance.csv",
+    "source/headwaters_native_interpretation_20261013/CHAPTER.md",
+    "source/headwaters_native_interpretation_20261013/report.html"
+  ]
+}

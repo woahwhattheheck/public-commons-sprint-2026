@@ -82,7 +82,11 @@ def write_geometry(path, geometry, crs, *, layer, title):
     from shapely.geometry import MultiPolygon
     if geometry.geom_type == "Polygon":
         geometry = MultiPolygon([geometry])
-    schema = {"geometry": "MultiPolygon", "properties": {"id": "int", "title": "str"}}
+    # Exact polygon intersections may retain line/point components at touching
+    # boundaries. Keep the original GeometryCollection intact in its GeoPackage;
+    # downstream polygon-mask validation remains unchanged.
+    geometry_type = "Unknown" if geometry.geom_type == "GeometryCollection" else "MultiPolygon"
+    schema = {"geometry": geometry_type, "properties": {"id": "int", "title": "str"}}
     with vector_environment(), fiona.open(path, "w", driver="GPKG", schema=schema,
                     crs_wkt=crs.to_wkt(), layer=layer) as out:
         out.write({"geometry": mapping(geometry), "properties": {"id": 1, "title": title}})

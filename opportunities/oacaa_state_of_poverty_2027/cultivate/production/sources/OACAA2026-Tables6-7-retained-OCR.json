@@ -1,0 +1,70 @@
+{
+  "schema": "tjl.oacaa.retained-table-transcription.v1",
+  "source": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf",
+  "representation": "Retained OCR transcription, not visually verified page pixels",
+  "locator": "Tables 6 and 7",
+  "text": "Table 6. Ass.e't povei,ty tates Ohia and the United States1 2011-2021\n\n<table><tr> <td></td> <td> Wll</td> <td> 2013</td> <td> 2014</td> <td> 2015</td> <td> 20:16</td> <td> 2019</td> <td> 20.2:1</td> </tr>\n<tr> <td> Ohlo</td> <td> 23.7%</td> <td> 27.S%</td> <td> 27,3!)6</td> <td> 28.2%</td> <td> 25.2%</td> <td> 21.0'Mi</td> <td> 2010%</td> </tr>\n<tr> <td> United States</td> <td> 25.4%</td> <td> 23.5%</td> <td> 25.3%</td> <td> 24.5%,</td> <td> 24.1%</td> <td> .Z4,0/%.</td> <td> 19.0%</td> </tr></table>\n\n• Ass,atpoverty ls a me.asure af tl,e financlal cu.shiQn nf;!eded to withstand a flnanch:11 crisll li.e. medical emergny, Jbb I.Qss, et:t.\n• Abovt one. oyt of everv five ho1..1seholds ln Ohlo doe.s: not have 1mo1,>__gh ombTned as.se to cowr ttirne montlu' IMng expenses at the FPL thresliold; Ol'Ho's-asset poverty ra,te cc>htinues to be nigher than the national rat.e\nTable 7. Uqutd PSEJI poverty mesOhlo ifld .the• Uqrted :States, 2011-202.1\n\n<table><tr> <td></td> <td> 1-011</td> <td> 2013</td> <td> 2014</td> <td> :ZOlS</td> <td> 2.016</td> <td> 2819</td> <td> 2.0U</td> </tr>\n<tr> <td> 10h10</td> <td> 44.7%</td> <td> 31.0%</td> <td> 40.3%,</td> <td> 36.g%</td> <td> 34.9%</td> <td> 3-!\\.0%</td> <td> 29.0%</td> </tr>\n<tr> <td> United</td> <td> 43.5%</td> <td> 17.0%</td> <td> 40.0%</td> <td> 37.6%</td> <td> 36.9%</td> <td> 32.0¾</td> <td> 27.0%</td> </tr></table>\nStales\nSciiJ.rn','p·r,iNalllf Stt-ard; data was 11vt fl.'\\11.!'\n• Uquid assets arethose: whidi can be easily ek£hil'lge:d for casn (e:.g., gold,, s:avlngs ac-counts, gavernment bends]\n• [lllear!y th ree 1 n ten ot, ro t, ousel'i elds lack the lfquld assets: needed t:ostJy 01.1t of govertv fur three montns, lligher thilln the !llathmal rate\n",
+  "years": [
+    2011,
+    2013,
+    2014,
+    2015,
+    2016,
+    2019,
+    2021
+  ],
+  "rows": [
+    {
+      "geography": "Ohio",
+      "measure": "asset-poverty-rate",
+      "cells": [
+        "23.7%",
+        "27.S%",
+        "27,3!)6",
+        "28.2%",
+        "25.2%",
+        "21.0'Mi",
+        "2010%"
+      ]
+    },
+    {
+      "geography": "US",
+      "measure": "asset-poverty-rate",
+      "cells": [
+        "25.4%",
+        "23.5%",
+        "25.3%",
+        "24.5%,",
+        "24.1%",
+        ".Z4,0/%.",
+        "19.0%"
+      ]
+    },
+    {
+      "geography": "Ohio",
+      "measure": "liquid-asset-poverty-rate",
+      "cells": [
+        "44.7%",
+        "31.0%",
+        "40.3%,",
+        "36.g%",
+        "34.9%",
+        "3-!\\.0%",
+        "29.0%"
+      ]
+    },
+    {
+      "geography": "US",
+      "measure": "liquid-asset-poverty-rate",
+      "cells": [
+        "43.5%",
+        "17.0%",
+        "40.0%",
+        "37.6%",
+        "36.9%",
+        "32.0¾",
+        "27.0%"
+      ]
+    }
+  ]
+}

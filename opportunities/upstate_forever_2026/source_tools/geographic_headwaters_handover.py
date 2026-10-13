@@ -326,6 +326,9 @@ def _render(data):
         _link("workspace", links["native_report"]["path"], "Complete native report JSON, at original precision"),
         _link("delivery", "handover-record.json", "This handover's complete selected source inventory"),
     ]
+    if data.get("geographic_programme") is not None:
+        original_links.append(_link("delivery", "geographic-programme.json",
+                                    "Complete saved Programme, original results and editable map selection"))
     figures = '<div class="figures">' + "".join(
         '<figure><a href="' + _url("workspace", row["path"]) + '"><img src="'
         + _url("workspace", row["path"]) + '" alt="' + _text(Path(row["path"]).stem.replace("-", " "))
@@ -397,6 +400,12 @@ filter();
         'contain the editable source and original scientific project.</p>'
         '<pre>python application/model/cli.py restore GEOGRAPHIC_STUDY.zip NEW_DIRECTORY</pre>'
         + guides
+        + (('<h3>Saved native Programme</h3><p>Open <strong>Programmes</strong> in the received application and select '
+             '<code>' + _text(data["geographic_programme"]["programme_id"]) + '</code>. '
+             'Its baseline, riparian restoration and matched-control results already exist. Open the report, '
+             'inspect original source choices, or explicitly create a source-update successor; reopening this '
+             'Programme does not run the remaining sensitivity design.</p>')
+           if data.get("geographic_programme") is not None else '')
         + '<h3>Continue this exact geographic case</h3><ol>'
         '<li>Start the contained operator against the received sibling Workspace using its current start guide; '
         'reopen the existing project without creating a new one.</li>'
@@ -421,7 +430,7 @@ filter();
         'Original native calculations and editable source</footer><script>' + script + '</script></body></html>\n')
 
 
-def prepare(workspace, output, state, prepared, scientific, delivery, exported, *, reference_basis=None):
+def prepare(workspace, output, state, prepared, scientific, delivery, exported, *, reference_basis=None, programme=None):
     """Return delivery_root/files for the caller's one ordinary portable.backup."""
     output = Path(output).resolve(strict=True)
     if (output.is_relative_to(workspace.root.resolve())
@@ -507,6 +516,13 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
             "operator_choices": _operator_choices(prepared)}
     if reference_basis is not None:
         data["reference_basis"] = deepcopy(reference_basis)
+    if programme is not None:
+        from model.geographic_programme import verify as verify_programme
+        verify_programme(workspace, programme)
+        if (programme.get("geographic_id") != prepared["id"]
+                or programme.get("existing_delivery_id") != delivery["id"]):
+            raise ValueError("Select the programme of this original geographic delivery")
+        data["geographic_programme"] = deepcopy(programme)
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "content_sha256": digest(data), "helper_sha256": file_digest(Path(__file__)),
                 "style_sha256": hashlib.sha256(STYLE.encode("utf-8")).hexdigest()}
@@ -525,6 +541,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
                 pending = Path(temporary)
                 atomic_json(pending / "handover-record.json", data, immutable=True)
                 atomic_json(pending / "geographic-operator-choices.json", data["operator_choices"], immutable=True)
+                if programme is not None:
+                    atomic_json(pending / "geographic-programme.json", programme, immutable=True)
                 atomic_bytes(pending / "START_HERE.html", _render(data).encode("utf-8"), immutable=True)
                 review_files = dict(review_manifest["members"])
                 review_files["review-manifest.json"] = describe_file(review_root, review_root / "review-manifest.json")
@@ -547,6 +565,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
                 files = {"opening_page": describe_file(pending, pending / "START_HERE.html"),
                          "handover_record": describe_file(pending, pending / "handover-record.json"),
                          "operator_choices": describe_file(pending, pending / "geographic-operator-choices.json")}
+                if programme is not None:
+                    files["geographic_programme"] = describe_file(pending, pending / "geographic-programme.json")
                 for index, name in enumerate(sorted(review_files)):
                     files["customer_review_%05d" % index] = {
                         "path": "customer-review/" + name,

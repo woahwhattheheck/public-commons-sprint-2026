@@ -55,16 +55,37 @@ def atomic_json(path, value):
         Path(pending).unlink(missing_ok=True)
 
 
-def inspect_study(application, root, reports_path, comparison_path, expected=None):
+def field_ids(value=None, expected=None):
+    """Keep field retention explicit; a frozen new selection can supply its own IDs."""
+    frozen = (expected or {}).get("retained", {}).get("field_selections", {})
+    if value is None:
+        value = list(frozen)
+    require(isinstance(value, (list, tuple))
+            and all(isinstance(item, str) and len(item) == 64
+                    and all(c in "0123456789abcdef" for c in item) for item in value)
+            and len(set(value)) == len(value),
+            "Choose distinct retained native field-selection IDs")
+    if expected is not None:
+        require(set(value) == set(frozen),
+                "Retain exactly the field selections in the frozen original study")
+    return list(value)
+
+
+def inspect_study(application, root, reports_path, comparison_path, expected=None,
+                  field_selection_ids=None):
     """Executed only in the new isolated interpreter below; native reads stay native."""
     import importlib
     application = Path(application).resolve(strict=True)
     root = Path(root).resolve(strict=True)
     sys.path.insert(0, str(application))
-    modules = {name: importlib.import_module(name) for name in PRODUCERS}
+    chosen_fields = field_ids(field_selection_ids, expected)
+    producers = dict(PRODUCERS)
+    if chosen_fields:
+        producers["model.monitoring_field_selection"] = "model/monitoring_field_selection.py"
+    modules = {name: importlib.import_module(name) for name in producers}
     common = modules["model.common"]
     loaded = {}
-    for name, relative in PRODUCERS.items():
+    for name, relative in producers.items():
         path = Path(modules[name].__file__).resolve(strict=True)
         require(path == application / relative,
                 "Selected producer loaded outside the delivered application: " + name)
@@ -151,6 +172,39 @@ def inspect_study(application, root, reports_path, comparison_path, expected=Non
             retain(root / collections[kind] / (value["id"] + ".json"))
     retain(root / "monitoring_frontier_comparisons" / (comparison["id"] + ".json"))
     retained.update(comparison=comparison, frontier=frontier, network=network, plans=plans)
+    if chosen_fields:
+        field_service = modules["model.monitoring_field_selection"]
+        retained["field_selections"] = {}
+        retained["field_source_collections"] = {}
+        for selection_id in chosen_fields:
+            record = field_service.inspect(workspace, selection_id)
+            binding, selection = record["source"], record["selection"]
+            require(record["project_id"] == workspace.project["id"]
+                    and selection["project_id"] == workspace.project["id"]
+                    and binding["network_id"] == network["id"]
+                    and binding["frontier_id"] == frontier["id"]
+                    and selection["frontier_id"] == frontier["id"]
+                    and selection["plan_id"] in frontier["plan_ids"],
+                    "Selected field choices belong to another original project or budget study")
+            retain(root / field_service.COLLECTION / (selection_id + ".json"))
+            for item in record["files"]:
+                retain(common.verify_file(root, item))
+            source_id = binding["source_collection_id"]
+            collection = workspace._get("sources", source_id)
+            entry = next(item for item in collection["entries"]
+                         if item["id"] == binding["source_id"])
+            retain(root / "sources" / (source_id + ".json"))
+            # The field inspector verifies the original manifest, body and full
+            # companion inventory read-only. Pin their exact archive members too.
+            for item in [collection["original_manifest"], entry["body"],
+                         *entry.get("companions", [])]:
+                path = common.relative_file(root, item["object"])
+                require(path.stat().st_size == item["bytes"]
+                        and common.file_digest(path) == item["sha256"],
+                        "An original field-source member changed during capture")
+                retain(path)
+            retained["field_selections"][selection_id] = record
+            retained["field_source_collections"][source_id] = collection
     if expected is not None:
         require(retained == expected["retained"],
                 "Cold receiving changed a selected original scientific record")
@@ -169,7 +223,8 @@ def inspect_study(application, root, reports_path, comparison_path, expected=Non
     }
 
 
-def open_study(application, workspace, reports, comparison, output, *, expected=None, lock_fd=None):
+def open_study(application, workspace, reports, comparison, output, *, expected=None, lock_fd=None,
+               field_selection_ids=None):
     """Keep the public original CLI; the capture helper may supply its frozen selection."""
     application, workspace, reports, comparison = (
         Path(path).resolve(strict=True) for path in (application, workspace, reports, comparison))
@@ -179,6 +234,9 @@ def open_study(application, workspace, reports, comparison, output, *, expected=
     output.parent.mkdir(parents=True, exist_ok=True)
     request = {"application": str(application), "root": str(workspace),
                "reports_path": str(reports), "comparison_path": str(comparison), "expected": expected}
+    chosen_fields = field_ids(field_selection_ids, expected)
+    if chosen_fields:
+        request["field_selection_ids"] = chosen_fields
     request_path = output.with_name(output.name + ".request.json")
     atomic_json(request_path, request)
     child = (
@@ -214,6 +272,8 @@ def main():
     parser.add_argument("--comparison", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--expected-selection", type=Path)
+    parser.add_argument("--field-selection", action="append", dest="field_selection_ids",
+                        help="Retained native field-selection ID; repeat for multiple editions")
     args = parser.parse_args()
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -223,7 +283,8 @@ def main():
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         result = open_study(args.application, args.workspace, args.reports, args.comparison,
                             output, expected=read_json(args.expected_selection)
-                            if args.expected_selection else None, lock_fd=fd)
+                            if args.expected_selection else None, lock_fd=fd,
+                            field_selection_ids=args.field_selection_ids)
     finally:
         os.close(fd)
     print(json.dumps({key: result[key] for key in (

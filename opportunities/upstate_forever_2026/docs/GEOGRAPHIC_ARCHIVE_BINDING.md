@@ -173,3 +173,85 @@ An already completed reference group can receive a new report/source implementat
 All three reference-aware APIs receive the SAME unmodified ECHO basis: opening-page `prepare(reference_basis=...)`, archive `retain_binding(reference_basis=...)`, and independent `cold_reopen(reference_basis=...)`. The maintained archive explicitly captures the full original plan, actual pending run records and their sources, selected completed NDR+SDR reference outputs, course/report/decision products, exact review and immutable opening-page basis. The cold child imports the actual archived application and checks those same members. Omitting the basis retains the original strict all-member behavior. Reference snapshots retain their original scope; later complete products get their own source/binding/archive identity.
 
 The native-first and report-only continuations both retain the original `native_parameter_course` phase name. Its first-completed timing therefore remains identical on an unchanged reference replay, instead of changing the opening-page identity just because the operator switched modes. The selected reference basis and original operation request carry the actual execution choice.
+
+
+## Continue an already admitted preparation after a source correction
+
+An earlier `--prepare-only` admission retains its original caller and producer hashes. Installing a corrected receiver must not recreate the geography or change its saved run IDs. Use the explicit prepared-execution adoption on the SAME Workspace, original selection bytes and receiving output:
+
+```sh
+"$PYTHON" -Bu "$APP/source_tools/receive_geographic_headwaters.py" --workspace "$WORKSPACE" --selection "$SELECTION" --output "$RECEIVING" --adopt-prepared --run-reference
+"$PYTHON" -Bu "$APP/source_tools/receive_geographic_headwaters.py" --workspace "$WORKSPACE" --selection "$SELECTION" --output "$RECEIVING" --adopt-prepared --run
+```
+
+The first command executes or reuses only the original reference member and receives its complete separately scoped product. The second is the explicit later full-design continuation. Choose the existing operation's actual command and owned execution boundary; these examples do not authorize a concurrent second writer. Preserve the current solver and the original deadline.
+
+`retained_execution_prepared` verifies the complete original admission/selection bytes, project, receiving record and identical prepared record in the Workspace, then validates its current original parameter plan and native run bindings without requiring completion. The receiver skips `geographic.prepare`, retains the original operation ID, and records an immutable `upstate.geographic-prepared-execution-adoption/v1` source edition with the requested reference/full mode and actual current caller/course/ensemble/native support hashes. Earlier admissions, preparations, source adoptions and returned native errors remain intact. The same native locks, version checks and saved-run execution remain authoritative.
+
+`--adopt-prepared` is valid only with explicit `--run-reference` or `--run` and is mutually exclusive with the two report/handover adoption options. It is not a way to retarget geography, choose a different source selection, normalize changed selection bytes, or bypass the current prepared/run identity. Existing `--adopt-handover` still requires the full original course complete; `--adopt-reference-report` still requires the completed original reference group and never executes a model.
+
+## Completed reference results in the original Programmes workflow
+
+The receiving course adopts the three completed original geographic NDR/SDR cases
+through `model.geographic_programme.adopt` after its mapped delivery and before
+handover/archive capture. This existing API verifies original native outputs and
+uses the maintained Programme comparison/report implementation. Its restricted
+Workspace cannot dispatch native work. Pending sensitivity runs stay in the
+original partial parameter course.
+
+The complete adoption is retained immutably in
+`programme-editions/<original-project-prepared-delivery-digest>.json`. The
+current `geographic-programme.json` pointer is updated only after the original
+full result is saved; prior pointer values survive in `programme-history`.
+Repeating the same source/delivery adopts the previous full result and verifies
+it without replacing its measured timings. A later mapped delivery receives a
+separate original adoption edition.
+
+The complete archive includes `delivery/geographic-programme.json`, the
+opening page's programme link/instructions, and all native Programme records,
+progress and report members. The original archive binding checks their exact
+bytes. The independent child imports the delivered application's own
+`geographic_programme.verify`, compares the archived adoption with the original
+request, then verifies the original geographic/input/native/report identities.
+The cold result returns both the complete adoption and its native verification.
+
+Open the received application and its existing Programmes desk. Select the
+programme ID in the opening page or `geographic-programme.json`; inspect all
+three original reference cases, report downloads and existing mapped selection.
+A source-update successor is an explicit user operation; reopening these saved
+records does not run sensitivity cases.
+
+The native receiving component includes the three existing Programme source
+leaves and requires its maintained `programme-activity` family. It does not
+require the wrapper component `geographic-programme` in reverse, avoiding its
+existing dependency on native receiving. Existing callers of the handover,
+binding and cold helpers can omit the new `programme` keyword; their original
+selection semantics remain.
+
+Use the same prepared-execution or report-only arguments documented above.
+Install this complete source family only at an idle original application
+boundary; preserve the source of every running native process. The producing
+operator must open, view and use the actual populated Programme, reports,
+source downloads and received editable project under the standing owner
+direction and original 14:00 UTC cutoff.
+
+## Receive a directly prepared original Workspace
+
+For an original preparation made through the native Workspace API, use
+`--workspace-preparation ORIGINAL_PREPARED_ID` with the unchanged original
+`--workspace`, its full original `--selection` JSON, and a newly owned
+`--output`. Choose `--report-only --reference-handover` when the original
+reference trio is already complete. The existing `--run-reference` or `--run`
+modes are explicit execution choices.
+
+This mode validates the retained preparation, receipt, source/grid/profiles,
+scenarios and all original native run selections. It starts a CURRENT receiving
+admission whose `origin` identifies the actual prepared record, input receipt
+and original three run IDs. Current receiver/producer hashes describe receiving
+code; they are not asserted as historical preparation provenance. It does not
+call geographic.prepare, import new sources, or create an absent Workspace.
+
+Resume with the same current admission and output. A later explicit report or
+executor source adoption uses the existing admission modes normally. Never
+manufacture a previous CLI receipt for a directly prepared project, and never
+change its original selection merely to fit a receiving command.

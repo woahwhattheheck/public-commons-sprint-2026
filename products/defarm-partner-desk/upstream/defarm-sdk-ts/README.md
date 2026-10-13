@@ -1,0 +1,127 @@
+# @defarm/sdk
+
+TypeScript SDK for [DeFarm](https://defarm.net) — verifiable agri traceability with
+**client-side sealing**: sensitive fields are encrypted on *your* side so that only the
+recipients you address can ever read them. The DeFarm server stores the sealed envelope and is
+**structurally blind** — it holds no private key, so it *cannot* read, not merely *does not*.
+
+> Don't trust DeFarm — audit this SDK. The crypto client is open source (MIT) precisely so that
+> an agency, a partner, or an auditor can audit every cryptographic operation on a key. The pure crypto
+> lives in [`src/core/`](https://github.com/defarm-repo/defarm-sdk-ts/tree/main/src/core), free of network and I/O, and is held byte-for-byte to the
+> Rust reference implementation by cross-language conformance vectors.
+
+## The model in 30 seconds
+
+- Every animal/item gets a **DFID** anchored on a public network (Stellar) + IPFS. Anyone can
+  verify authenticity and integrity without trusting DeFarm.
+- Sharing has two orthogonal axes: **membership** gates who reads the clear fields of an item;
+  **sealing** (this SDK's core) encrypts a field per-recipient. *Seal = key, membership = item.*
+- Sealing for N recipients = **1 vault + N padlocks**: one ciphertext, one random data key (DK),
+  and the same DK wrapped via HPKE for each recipient's public key. The circuit defines who *can*
+  be reached; the wraps define who *was*.
+- The commitment is hiding — `HMAC(HKDF(DK), plaintext)`, not a raw hash — so low-entropy values
+  (a price, a CPF) cannot be brute-forced from public anchors.
+- Two distinct keys: **Ed25519** signs (authorship) and **X25519** encrypts (wraps). The signing
+  key gives zero decryption power. Private keys are generated locally and **never leave your
+  side** — DeFarm is a key *directory*, not a key *authority*, and every public key it serves is
+  re-verified here against its owner-signed binding before use.
+
+**API reference:** [defarm-repo.github.io/defarm-sdk-ts](https://defarm-repo.github.io/defarm-sdk-ts/) —
+generated from the code's TSDoc on every merge (no drift by construction).
+
+## Install
+
+```bash
+npm install @defarm/sdk
+```
+
+Node 18+. Pure-JS crypto ([hpke-js](https://github.com/dajiaji/hpke-js) +
+[noble](https://paulmillr.com/noble/)) — no native modules.
+
+## Quickstart
+
+```ts
+import { DefarmClient } from "@defarm/sdk";
+
+const defarm = new DefarmClient({
+  gateway: testGateway, // ask DeFarm for your test-environment host; one base URL repoints everything
+  network: "testnet",                    // production anchoring is explicit opt-in
+});
+
+await defarm.login(email, password);
+
+// 1. Keys: generated locally on first use, public halves registered with a signed binding.
+const identity = await defarm.ensureKeys();
+
+// 2. Ingest (partner API key required; preview = dry-run, writes nothing).
+const client2 = new DefarmClient({ gateway, auth: { apiKey } });
+const { dfids } = await client2.ingest([{ value_chain: "DEFARM", country: "BR", year: 2026, sisbov, breed: "Nelore" }]);
+
+// 3. Seal a field — only the addressed recipient (and you) can ever read it.
+const sealed = await defarm.seal({
+  dfid,
+  fieldPath: "preco_venda",
+  value: "R$ 8.500,00",
+  circuitId,
+  to: [buyerRecipient], // resolved from the directory; binding re-verified before sealing
+});
+
+// 4. The recipient opens locally with their own private key.
+const opened = await buyer.open({ dfid, fieldPath: "preco_venda" });
+console.log(opened.value, opened.authorshipVerified);
+
+// 5. Anyone verifies the DFID publicly — no account, no trust in DeFarm.
+const report = await defarm.verify(dfid);
+```
+
+Safe defaults, enforced by the SDK (the integrator exposes at most three choices per sensitive
+field — *seal? for whom? via link?* — everything else is default/directory/domain):
+
+- a sealed field is **private** and addressed to **yourself** unless you say otherwise;
+- your own key is always included (opt-out is explicit — nobody loses access to their own data
+  by accident);
+- key input never comes from the user: identity → key is resolved by the directory and
+  re-verified cryptographically;
+- the crypto suite is fixed and never exposed as an option.
+
+## Status
+
+`0.2.x` is the first line with client-side sealing (the `0.1.x` line was a thin HTTP client,
+pre-sealing). The cross-language conformance vectors are green in CI and regenerated weekly
+from the server's Rust implementation. Features
+blocked on backend work are declared and throw `NotImplementedError` with the issue reference —
+they are never faked: `grant()` (re-wrap), `grantLink()` (capability token), `revoke()`.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/core/` | Pure crypto — the auditable surface. No network, no I/O. |
+| `src/client.ts` | The five operations: `ensureKeys`, `ingest`, `seal`, `open`, `verify`. |
+| `src/keystore.ts` | Where private keys live (file / memory / bring-your-own HSM). |
+| `test/vectors/` | Cross-language conformance vectors generated by the Rust oracle. |
+
+## For auditors and agencies
+
+The trust story of this SDK is that you do **not** have to take DeFarm's word for anything —
+each claim has an artifact you can check yourself:
+
+| Claim | What to audit |
+|---|---|
+| "DeFarm cannot read sealed fields" | [`src/core/`](https://github.com/defarm-repo/defarm-sdk-ts/tree/main/src/core) — every cryptographic operation on a key, pure and network-free. Standard crypto only: HPKE (RFC 9180), HKDF/HMAC, Ed25519, JCS (RFC 8785). |
+| "The client matches the server byte-for-byte" | [`test/vectors/`](https://github.com/defarm-repo/defarm-sdk-ts/tree/main/test/vectors) — conformance vectors generated by the server's own Rust implementation, replayed on every CI run; the suite fails closed if they are missing. |
+| "Commitments don't leak low-entropy values" | The [`hiddenCommitment` reference page](https://defarm-repo.github.io/defarm-sdk-ts/functions/core.hiddenCommitment.html) — rationale generated from the implementing code, not from marketing. |
+| "Records are real without trusting DeFarm" | [`defarm-verify`](https://github.com/defarm-repo/defarm-verify) — an independent verifier (public-chain anchor, IPFS, recomputed hashes) that runs on your machine. |
+| "Keys and credentials never leave your side" | Where the proof actually lives: [`src/keystore.ts`](https://github.com/defarm-repo/defarm-sdk-ts/blob/main/src/keystore.ts) (private-key custody) and [`src/client.ts`](https://github.com/defarm-repo/defarm-sdk-ts/blob/main/src/client.ts) (every request body the SDK assembles — read it and confirm no private KEY material ever goes in — the only credential in any request body is your own password, on /auth/login). The [MCP server](https://github.com/defarm-repo/defarm-mcp) and CLI additionally refuse credentials anywhere but server-side configuration — enforced by tests. |
+
+Everything is MIT-licensed. If your audit finds something, open an issue — adversarial review
+is how every release of this SDK was built.
+
+## Verify without DeFarm
+
+The independent verifier — anchors via Horizon, snapshots via IPFS, hashes recomputed from
+scratch — is [`defarm-repo/defarm-verify`](https://github.com/defarm-repo/defarm-verify) (MIT).
+
+## License
+
+[MIT](LICENSE)

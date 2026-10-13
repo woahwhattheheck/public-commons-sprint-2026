@@ -1,0 +1,52 @@
+{
+  "applicant": {
+    "name": "WORKBOOK EXERCISE — values for software operation"
+  },
+  "contact": {
+    "email": "",
+    "replyOwner": ""
+  },
+  "team": [],
+  "services": [],
+  "laborRates": [
+    {
+      "title": "Technical engineer",
+      "loadedHourlyCents": 11000
+    },
+    {
+      "title": "Programme coordination and engagement reporting",
+      "loadedHourlyCents": 8500
+    }
+  ],
+  "supportServices": {
+    "assessment": "",
+    "coordination": "",
+    "outreach": "",
+    "reporting": ""
+  },
+  "qualifications": {
+    "community": "",
+    "outreach": "",
+    "capacity": "",
+    "response": "",
+    "governance": ""
+  },
+  "workExamples": [],
+  "languagesOtherThanEnglish": "",
+  "otherServices": "",
+  "proposalDataRestrictions": "",
+  "attestations": {
+    "authorizedSignatory": "",
+    "appendixAReviewedFrom": "",
+    "noSurveillanceBusiness": false,
+    "noExclusion": false,
+    "remitFits": false,
+    "independentAudits": false,
+    "acceptsAppendixA": false
+  },
+  "budget": {
+    "otherDirectCostsCategory": "Approved hosting and materials, at cost",
+    "otherDirectCostsCents": 500000,
+    "requestedContractCeilingCents": 7500000
+  }
+}

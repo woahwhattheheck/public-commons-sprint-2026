@@ -124,20 +124,60 @@ Preserve active compute and existing implementation ownership. Do not force work
 
 ## Complete the original five-view course with its annual scientific report
 
-The existing `source_tools/operate_annual_assessment_context.py` can now carry the already-produced annual report through its original queued rendering, full project snapshot and independent receiving sequence. This is one optional continuation of the original b9d5 project. It adds no model solve and preserves the existing annual target, assessment and microbial selections.
+The existing `source_tools/operate_annual_assessment_context.py` can now carry the already-produced annual report through its original queued rendering, full project snapshot and independent receiving sequence. This is one optional continuation of the original project designated by the existing source owner. It adds no model solve and preserves the existing annual target, assessment and microbial selections. The original course used the b9d5 project; ES9960's explicit transfer at Slack message1791896471.738389 assigns the still-unissued annual operation to C827's independent original dc92 copy. Use that actual restored project's ID and existing journal, without renaming it or overwriting the earlier b9d5 project/history.
 
-The original seventeen-file source bank supplies the assessment/annual/microbial contexts and the five saved map views containing **159, 18, 6, 4 and 1 stations**. Those views are distinct from the **five original annual-reference basins** and two scientific map figures in the completed annual basin report. Keep both sets. The original seventeen files and this annual report's source family have no overlapping paths.
+The original seventeen-file source bank supplies the assessment/annual/microbial contexts and the five saved map views containing **159, 18, 6, 4 and 1 stations**. Those views are distinct from the **five original annual-reference basins** and two scientific map figures in the completed annual basin report. Keep both sets. The annual report's data and builder sources remain separate from the original seventeen-file bank. The current twenty-file successor deliberately also carries the updated original operator driver: compose the original seventeen files first, then this complete successor so its maintained driver wins. Preserve newer unrelated operator, Study and shared formatter files.
 
 First materialize the original17 `receive_annual_source_20261013.py` through its existing ordinary file and run it into an owned source intake. Compose its full source bodies into the current application, preserving newer operator, formatter and Study code. Materialize and extract the unchanged completed annual report ZIP using its existing README; its root `sources.json` is the optional report input below. Its original inputs and generated HTML/maps/CSV/GeoJSON remain inside that complete source package.
+
+When installing the updated driver into the receiving application, preserve any unknown local successor. The following focused command accepts the original seventeen-file driver's exact bytes, its reviewed optional-report successor, C827's exact received catalogue-size correction, or the already-installed current driver, verifies the full selected source body and installs only that one known path atomically. Run it after the original seventeen-source intake and ordinary composition of the remaining current source family:
+
+```sh
+PYTHON -B - APP CURRENT_TWENTY_FILE_BANK.json <<'PY'
+import base64, hashlib, json, os, sys
+from pathlib import Path
+app = Path(sys.argv[1]).resolve()
+packet = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+path = "source_tools/operate_annual_assessment_context.py"
+rows = [row for row in packet["files"] if row["path"] == path]
+if len(rows) != 1:
+    raise ValueError("Expected one complete original annual driver")
+row = rows[0]
+body = base64.b64decode(row["content_base64"], validate=True)
+sha = hashlib.sha256(body).hexdigest()
+if len(body) != row["bytes"] or sha != row["sha256"] or sha != "8af4cdcad390812f8f38e40e41df50147e5033a0ad3060b14e5db07ddaba8f12":
+    raise ValueError("The selected annual driver differs from the reviewed successor")
+target = (app / path).resolve()
+target.relative_to(app)
+existing = target.read_bytes()
+existing_sha = hashlib.sha256(existing).hexdigest()
+if existing_sha not in {
+    "6970b516bf3dffe25f1e7f8f791b66a9519a2aa1b906c057a180d4c2b235912a",
+    "bdb25109c96d108183bcc3bc143f8cd619c722ac37d3614dd7bff4b973cb4672",
+    "3b1c2676323dbc838fa6f68b9cc2ea44e81fa2c2b3fd5a26cf32c7d4831c8908",
+    sha,
+}:
+    raise ValueError("Preserve this unknown receiving driver and send its source to the original owner")
+if existing != body:
+    temporary = target.with_name(target.name + ".annual-source.tmp")
+    temporary.write_bytes(body)
+    if target.read_bytes() != existing:
+        temporary.unlink()
+        raise ValueError("The receiving driver advanced during this source composition")
+    os.replace(temporary, target)
+print(json.dumps({"path": str(target), "bytes": len(body), "sha256": sha,
+                  "changed": existing != body}))
+PY
+```
 
 Run the same existing course with its original Workspace, output journal and exact original domain collection:
 
 ```sh
 PYTHON -B APP/source_tools/operate_annual_assessment_context.py \
   --application APP \
-  --workspace ORIGINAL_B9D5_WORKSPACE \
+  --workspace DESIGNATED_ORIGINAL_WORKSPACE \
   --output SAME_ANNUAL_OUTPUT \
-  --project-id b9d5d257-c6bb-4f07-b975-8e8c63705db3 \
+  --project-id ACTUAL_ORIGINAL_PROJECT_ID \
   --domain-collection ORIGINAL217_COLLECTION \
   --domain-source-id upstate-wbd-upstream-domain-20261012 \
   --annual-report-manifest EXTRACTED_ANNUAL_REPORT/sources.json
@@ -164,3 +204,7 @@ Without a saved or newly selected optional annual report, the original command k
 Use the populated source/report project, rather than an empty demonstration. Open every one of the five saved map PDFs and all scientific report pages, including both annual basin/component maps. Open the standalone association HTML at desktop and 390 px, use the original map/table/dropdown selection, fit and excluded-component controls, and download/open the actual CSV, JSON, GeoJSON and SVG. Open the report ZIP's contents and the independently received project with its archived application, then reopen the same maps and scientific edition.
 
 Return the first actual source/queue/render exception immediately in the existing annual receiving operation. Preserve its original task, source selection and project writer while the relevant source owner repairs that boundary. Return viewed original screenshots/PDF pages and actual native IDs through that same operation. Source checks or captured-but-unviewed screenshots do not replace looking at the outgoing product. The complete owner direction above continues to apply, including the original 14:00 UTC cutoff and priority of the actual-geography native case.
+
+## Retain the actual spatial catalog's frame limits
+
+C827's original annual execution at Slack message1791897577.386119 exposed an original first-use size mismatch: the driver requested1200px while Spatial Review advertises a1024px cap. The maintained driver now calculates width=min(1200,catalog.limits.image_width) and height=min(800,catalog.limits.image_height), then uses those same actual dimensions in all three frame requests. Original vector coordinates, scientific selections, task IDs, map counts and annual quantities remain unchanged. Resume the same progress journal and completed tasks; adopt the repaired source only at the producing worker's idle boundary. The exact C827 preimage SHA3b1c2676… is included in the focused source guard above.

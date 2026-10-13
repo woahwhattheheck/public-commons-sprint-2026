@@ -27,6 +27,10 @@ const now = () => new Date().toISOString();
 const indexName = index => String(index).padStart(6, '0');
 const count = value => Number.isSafeInteger(value) && value >= 1;
 const atomic = value => typeof value === 'string' && /^(0|[1-9][0-9]{0,38})$/.test(value) && BigInt(value) <= MAX_I128;
+function checkInspectionSignal(signal) {
+  need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+  if (signal?.aborted) throw new InputError('OBJECT_INSPECTION_ABORTED');
+}
 const codeOf = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '') ? error.code :
   /^[A-Z0-9_]{1,120}$/.test(error?.message ?? '') ? error.message : 'OBJECT_OPERATION_FAILED';
 
@@ -199,7 +203,9 @@ function chunkView(plan, job) {
     url:plan.url, responsePath:plan.responsePath, evidencePath:plan.evidencePath,
     state:job?.state ?? 'MISSING', queueState:job?.state ?? 'MISSING',
     capAllocatedAtomic:job?.attempt?.kind === 'EXECUTE' ? plan.configuration.operation.expect.maxAtomic : '0',
-    attemptId:job?.attempt?.id ?? null, originalOutcome:null, sha256:null, contentType:null};
+    attemptId:job?.attempt?.id ?? null, attemptKind:job?.attempt?.kind ?? null,
+    attemptStartedAt:job?.attempt?.startedAt ?? null,
+    originalOutcome:null, sha256:null, contentType:null};
 }
 function bindJob(plan, job) {
   const bytes = encoded(plan.configuration), owner = plan.configuration.operator;
@@ -213,7 +219,8 @@ function bindJob(plan, job) {
 
 // Stream the exact saved file through one reusable buffer. The hash binds the
 // bytes actually read, while before/after file identity catches concurrent edits.
-async function streamChunk(path, length, expectedSha256, consume = null) {
+async function streamChunk(path, length, expectedSha256, consume = null, signal) {
+  checkInspectionSignal(signal);
   const file = await open(path, constants.O_RDONLY | NOFOLLOW | (constants.O_NONBLOCK ?? 0));
   try {
     const info = await file.stat();
@@ -222,7 +229,9 @@ async function streamChunk(path, length, expectedSha256, consume = null) {
     const buffer = Buffer.allocUnsafe(Math.max(1, Math.min(65536, length)));
     let bytes = 0;
     for (;;) {
+      checkInspectionSignal(signal);
       const {bytesRead} = await file.read(buffer, 0, buffer.length, null);
+      checkInspectionSignal(signal);
       if (!bytesRead) break;
       need(bytesRead <= length - bytes, 'OBJECT_CHUNK_LENGTH_MISMATCH');
       const part = buffer.subarray(0, bytesRead);
@@ -238,7 +247,8 @@ async function streamChunk(path, length, expectedSha256, consume = null) {
     return {bytes, sha256:digest};
   } finally { await file.close(); }
 }
-async function nativeChunk(definition, plan, job, {hash, contentType, verifyBytes = true}) {
+async function nativeChunk(definition, plan, job, {hash, contentType, verifyBytes = true, signal}) {
+  checkInspectionSignal(signal);
   const whole = definition.deliveryMode === 'whole';
   bindJob(plan, job);
   need(job.attempt?.kind === 'EXECUTE', job.attempt?.kind === 'CANCELLED' ? 'OBJECT_CHUNK_CANCELLED' : 'OBJECT_NATIVE_ATTEMPT_REQUIRED');
@@ -294,7 +304,8 @@ async function nativeChunk(definition, plan, job, {hash, contentType, verifyByte
       summary.operatorReservation.reserved_atomic_units === reservation.reservedAtomicUnits,
     'OBJECT_NATIVE_RESERVATION_MISMATCH');
   } else need(reservation === null && summary.operatorReservation === null, 'OBJECT_NATIVE_FREE_RESERVATION_MISMATCH');
-  if (verifyBytes) await streamChunk(plan.responsePath, plan.length, file.sha256, part => { hash.update(part); });
+  if (verifyBytes) await streamChunk(plan.responsePath, plan.length, file.sha256, part => { hash.update(part); }, signal);
+  checkInspectionSignal(signal);
   return {...chunkView(plan, job), state:'VERIFIED', sha256:file.sha256, contentType:file.contentType,
     objectMetadata:metadata, evidenceSha256:sha(rawEvidence), nativeBuyerStatus:buyer.status,
     originalOutcome:outcome, operatorReservation:reservation,
@@ -331,21 +342,34 @@ function stopped(report, view, error) {
       evidencePath:view.evidencePath};
   }
 }
-async function inspectInternal(directory, {verifyBytes = true} = {}) {
+async function inspectInternal(directory, {verifyBytes = true, signal,
+  maxBytes = Number.MAX_SAFE_INTEGER, maxChunks = MAX_CHUNKS} = {}) {
+  checkInspectionSignal(signal);
+  need(Number.isSafeInteger(maxBytes) && maxBytes >= 0 &&
+    Number.isSafeInteger(maxChunks) && maxChunks >= 1 && maxChunks <= MAX_CHUNKS,
+    'OBJECT_INSPECTION_LIMITS_INVALID');
   absolute(directory);
   await privateDirectory(directory);
   await privateDirectory(join(directory, 'chunks'));
   await privateDirectory(join(directory, 'configs'));
   await privateDirectory(join(directory, 'assemblies'));
-  const definition = validateDefinition(await readJson(join(directory, 'session.json')), directory);
+  const sessionBytes = await readPrivate(join(directory, 'session.json'), 131072);
+  let sessionValue;
+  try { sessionValue = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(sessionBytes)); }
+  catch { throw new InputError('OBJECT_STATE_JSON_INVALID'); }
+  const definition = validateDefinition(sessionValue, directory);
+  need(definition.bytes <= maxBytes && definition.chunkCount <= maxChunks, 'OBJECT_INSPECTION_WORKLOAD_LIMIT');
+  checkInspectionSignal(signal);
   const queue = await openQueue(join(directory, 'inbox'));
   const jobs = await queue.list(), byId = new Map(jobs.map(job => [job.id,job]));
   need(jobs.length === definition.chunkCount && byId.size === definition.chunkCount, 'OBJECT_NATIVE_QUEUE_PLAN_CHANGED');
   const configEntries = (await readdir(join(directory, 'configs'))).filter(name => !name.startsWith('.object-write-'));
   need(configEntries.length === definition.chunkCount, 'OBJECT_CONFIG_PLAN_CHANGED');
   const report = baseReport(definition), hash = createHash('sha256');
+  report.sessionSha256 = sha(sessionBytes);
   let contentType, gap = false, allocated = 0n;
   for (let index = 0; index < definition.chunkCount; index++) {
+    checkInspectionSignal(signal);
     const plan = chunkPlan(definition, index), job = byId.get(sha(plan.intentId));
     const view = chunkView(plan, job);
     report.chunks.push(view);
@@ -366,12 +390,13 @@ async function inspectInternal(directory, {verifyBytes = true} = {}) {
         continue;
       }
       need(!gap, 'OBJECT_CHUNK_ORDER_INVALID');
-      const verified = await nativeChunk(definition, plan, job, {hash,contentType,verifyBytes});
+      const verified = await nativeChunk(definition, plan, job, {hash,contentType,verifyBytes,signal});
       Object.assign(view, verified);
       contentType = view.contentType;
       report.completeChunks++;
       report.downloadedBytes += plan.length;
     } catch (error) {
+      checkInspectionSignal(signal);
       stopped(report, view, error);
       gap = true;
       if (job?.lastError) view.originalExecutionError = job.lastError.code;
@@ -383,6 +408,7 @@ async function inspectInternal(directory, {verifyBytes = true} = {}) {
   finishReport(definition, report, hash, verifyBytes);
   report.assemblies = await recordedAssemblies(definition);
   report.assembly = report.assemblies.at(-1) ?? null;
+  checkInspectionSignal(signal);
   return {definition,queue,report,hash,contentType};
 }
 
@@ -560,8 +586,8 @@ export async function createObjectSession({directory,configPath,bytes,chunkBytes
 }
 
 /** Read-only progress and byte verification; no wallet, signer or operator keys. */
-export async function inspectObjectSession(directory) {
-  const {report} = await inspectInternal(directory);
+export async function inspectObjectSession(directory, {signal,maxBytes,maxChunks} = {}) {
+  const {report} = await inspectInternal(directory, {signal,maxBytes,maxChunks});
   const lock = await readLock(directory);
   if (lock) {
     const stale = await deadProcess(lock);
@@ -569,6 +595,7 @@ export async function inspectObjectSession(directory) {
       state:stale ? 'STALE' : lock.host === hostname() ? 'ACTIVE' : 'OTHER_HOST'};
     if (!stale) { report.progressStatus = report.status; report.status = 'RUNNING'; }
   }
+  checkInspectionSignal(signal);
   return report;
 }
 
@@ -668,7 +695,11 @@ export async function accountObjectSession(directory, {workspace,offset=0,limit=
   await privateDirectory(directory);
   const release=finalize?await acquireLock(directory,{kind:'FINALIZE'}):null;
   try {
-    const definition=validateDefinition(await readJson(join(directory,'session.json')),directory);
+    const sessionBytes=await readPrivate(join(directory,'session.json'),131072);
+    let sessionValue;
+    try {sessionValue=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(sessionBytes));}
+    catch {throw new InputError('OBJECT_STATE_JSON_INVALID');}
+    const definition=validateDefinition(sessionValue,directory);
     const selectedWorkspace=workspace===undefined?definition.workspace:workspace;
     need(definition.workspace===null||selectedWorkspace===definition.workspace,'OBJECT_SAVED_WORKSPACE_MISMATCH');
     if(finalize)absolute(selectedWorkspace,'OBJECT_ACCOUNTING_WORKSPACE_REQUIRED');
@@ -707,7 +738,7 @@ export async function accountObjectSession(directory, {workspace,offset=0,limit=
     }
     const next=offset+entries.length;
     return {schema:'stellar-forge.sf88.session-accounting.v1',kind:'object',directory,
-      sessionId:definition.sessionId,configurationSha256:definition.configurationSha256,
+      sessionId:definition.sessionId,sessionSha256:sha(sessionBytes),configurationSha256:definition.configurationSha256,
       deliveryMode:definition.deliveryMode,
       workspace:selectedWorkspace,mode:finalize?'FINALIZE':'VIEW',observedAt:now(),
       terms:execution(definition.config).op.expect,

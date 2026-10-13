@@ -158,18 +158,22 @@ def build(application: Path, workspace: Path, selection: dict, output: Path) -> 
                 require(all(math.isclose(a,b,rel_tol=1e-11,abs_tol=1e-9) for a,b in zip(sums,reference)),
                         'The retained full-resolution maps differ from their original native mass summary.')
                 layers=[]
-                for array in (values[0],values[1],values[2],values[0]-values[1],values[0]-values[2]):
+                for array in (values[0],values[1],values[2],values[0]-values[1],values[0]-values[2],values[2]-values[1]):
                     array=np.where(mask,array*area,0).astype('<f8')
                     layers.append(base64.b64encode(array.tobytes()).decode('ascii'))
                 a,b=t['reduction'],c['reduction']
                 ratio=a/b if a>0 and b>0 else None
                 pdata['metrics'][metric]={'label':label,'units':units,'baseline':t['baseline'],
                     'treatment':t['alternative'],'control':c['alternative'],'treatment_reduction':a,'control_reduction':b,
+                    'additional_treatment_reduction':c['alternative']-t['alternative'],
                     'cost_ratio_ceiling':ratio,'extra_cost_percent':100*(ratio-1) if ratio is not None else None,
                     'support':t['support'],'maps':{'width':shape[1],'height':shape[0],'transform':list(transform)[:6],
                     'crs':raster_crs.to_string(),'pixel_area_ha':area,'encoding':'little-endian-float64',
                     'units_per_pixel':units,'valid':base64.b64encode(mask.astype('uint8').tobytes()).decode('ascii'),
-                    'layers':layers,'originals':descriptors}}
+                    'layers':layers,'originals':descriptors,
+                    'additional_reduction':{'layer':5,'reference':'control','alternative':'treatment',
+                    'formula':'control minus treatment','positive_meaning':'Additional avoided annual export from treatment relative to control',
+                    'support':'The same original profile, reporting zone and three-run common finite mask'}}}
             profiles.append(pdata)
         for scenario in scenarios:
             retain(inside(workspace,'scenarios/'+scenario+'.json'),'scenarios/'+scenario+'.json')
@@ -192,7 +196,7 @@ def build(application: Path, workspace: Path, selection: dict, output: Path) -> 
               'scenarios':dict(zip(('baseline','treatment','control'),scenarios)),
               'profiles':profiles,'plans':plans,'files':list(files.values()),
               'method':'Compare annualized whole-scenario expenditure divided by native annual avoided mass within each original cohort. The treatment/control cost ceiling is treatment avoided mass divided by control avoided mass when both are positive. Profiles remain separate conditional cases, not probability samples.',
-              'map_method':'Full native export cells; annual per-hectare rates multiplied once by projected pixel area, then masked to the original polygon-centre and common-valid cohort support. Display cells keep the original native grid; no interpolation or resampling.'}
+              'map_method':'Full native export cells; annual per-hectare rates multiplied once by projected pixel area, then masked to the original polygon-centre and common-valid cohort support. Display cells keep the original native grid; no interpolation or resampling. The sixth view is control minus treatment: positive cells represent additional avoided annual export from treatment compared with control.'}
         source_ids=sorted((k,v['sha256']) for k,v in files.items())
         data['source_id']=digest(json.dumps({'selection':selection,'files':source_ids},sort_keys=True,separators=(',',':')).encode())
         css=(software/'desk.css').read_text();script=(software/'desk.mjs').read_text()
@@ -204,7 +208,7 @@ def build(application: Path, workspace: Path, selection: dict, output: Path) -> 
         for p in profiles:
             for metric,m in p['metrics'].items():
                 rows.append({'profile_id':p['id'],'profile_title':p['title'],'metric':metric,
-                    **{k:m[k] for k in ('units','baseline','treatment','control','treatment_reduction','control_reduction','cost_ratio_ceiling','extra_cost_percent')},
+                    **{k:m[k] for k in ('units','baseline','treatment','control','treatment_reduction','control_reduction','additional_treatment_reduction','cost_ratio_ceiling','extra_cost_percent')},
                     'common_cells':m['support']['valid_cells'],'common_area_ha':m['support']['area_ha'],
                     'support_id':m['support']['id'],'edition_id':p['edition_id'],'producer_report_id':p['producer_report_id']})
         with (stage/'all-profile-margins.csv').open('w',newline='') as handle:

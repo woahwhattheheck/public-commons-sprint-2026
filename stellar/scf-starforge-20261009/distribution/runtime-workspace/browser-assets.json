@@ -309,6 +309,27 @@
         "managed-configuration.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/grant-application-handoff.mjs",
+      [
+        "grant-application-handoff.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/output-search.mjs",
+      [
+        "output-search.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/output-search.css",
+      [
+        "output-search.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }

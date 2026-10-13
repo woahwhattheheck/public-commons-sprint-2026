@@ -619,3 +619,28 @@ The Receiving extension's `GET /api/receiving-waters/plan-map` takes `reference_
 The maintained `operator/receiving_water_operate.py` course's existing `--editable-selection` option now follows the saved revision into geographic comparison for each selected original receptor. It operates the real comparison row, fits the two saved editions, saves the original review, queues the map export, downloads it and cold-reopens the saved view. It checks the actual normalized geometry selections and file hashes; the same-plan case deduplicates bindings while preserving both visible edition styles. The course also captures desktop and narrow views for the responsible worker to open and inspect.
 
 Use the actual original Workspace, plan and already retained operation directory. Resume its original request identities after interruption. A completed existing browser course remains completed; use its existing operator and saved plan pair at the next normal map boundary when continuing this addition. An actual title-only revision is a useful same-boundary comparison case and requires no numerical model run. The recipient must open and use the map, every exported page/image and the received editable Study through the normal application, following the current owner direction above.
+
+### Open a saved plan directly from the restored project
+
+A completed editable Study or full-project handover retains its original Receiving plans inside the restored Workspace. Its original preparation result may live outside that archive and refer to the producer's former machine. Select the actual retained plan directly with the existing native owner:
+
+```sh
+ACTUAL_GIS_PYTHON -B ACTUAL_APPLICATION/operator/receiving_water_operate.py \
+  --workspace ACTUAL_RESTORED_WORKSPACE \
+  --plan-id ACTUAL_COMPLETE_SAVED_PLAN_ID \
+  --output-dir OUTSIDE_WORKSPACE_MAP_COURSE \
+  --node ACTUAL_NODE \
+  --node-modules ACTUAL_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM \
+  --editable-selection
+```
+
+Use the receiver's actual qualified Python, Node, Playwright and Chromium paths. Keep the application and Workspace from the same admitted handover, compose any newer shared source at its existing quiet boundary, and retain the existing outside-Workspace operator-state directory; pass `--operator-state` when that operation already uses an explicit one. The runner uses the original `OperatorProcess`, current browser controls, saved-map queue, downloads, independent browser reopen and service drain. A live matching operator or writer keeps ownership; do not start a second process on its state.
+
+`--plan-id`, `--preparation` and `--geographic-context` are mutually exclusive entrypoints. The direct saved-plan mode requires `--workspace` and rejects `--relationship`, which belongs to geographic context. It opens the original plan through `receiving_waters.inspect_plan`, checks its immutable identity and project, verifies every declared geometry file, requires completed state, and compares the actual plan-file identity before and after inspection. Its operation identity retains the actual restored Workspace path, plan ID, original `record_sha256`, exact plan-file bytes/SHA and installed scientific reader. It creates no substitute preparation record.
+
+If the same restored project has a completed numerical analysis of this plan, append `--analysis-id ACTUAL_SAVED_ANALYSIS_ID`. The existing admission rejects another plan's analysis or an unfinished result. `--scope-analysis-id` remains the existing optional opposite-support comparison; its saved numerical cohort is consumed unchanged. Source-only plans need neither flag nor an additional model run.
+
+The completed b9d5 utility archive retains original plan `536aa17ea037510f0996347b90cfa164b119fd56390b93c32d64a59d115f8c8c`. Its receiving operation subsequently saved title revision `6ca10c667837554cf4fee66be623709cd09d21356ba7be5df0c29b8839c69ec1` in the received project; that later edit is not a prerequisite for a fresh restore. Select the original plan actually present in the received project, and use the demonstrated pair only if both records are retained there. The existing editable course preserves that original, reopens the exact original selection in its editor, and retains any genuinely new implementation-bound successor under its own ID. Its comparison then uses that actual pair. The original saved pair can also be opened directly in Receiving waters to compare each receptor's source and contribution geometry, fit both extents, save and export the normal Spatial view, and transfer the saved review or completed map pack through the existing Study chooser.
+
+Keep the original completed report and handover intact. New source or runtime inputs receive their own operation identity and output subdirectory under the chosen outside-Workspace root. Resume only the actual matching operation; do not relabel a previous receipt. Open, LOOK at and use the resulting populated maps, desktop and narrow forms, all original export pages/images and the independently received editable project as required by the full standing owner direction above. Return the exact first native command/result or exception to the existing handoff for a concrete repair.

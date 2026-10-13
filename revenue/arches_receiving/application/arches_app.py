@@ -142,8 +142,25 @@ def main():
     run=sub.add_parser("serve");run.add_argument("--workspace",required=True);run.add_argument("--host",default="127.0.0.1");run.add_argument("--port",type=int,default=8768);run.add_argument("--token-file")
     restore=sub.add_parser("restore");restore.add_argument("archive");restore.add_argument("destination")
     export=sub.add_parser("export");export.add_argument("--workspace",required=True);export.add_argument("--output",required=True)
+    native=sub.add_parser("receive-native",help="Receive original native JSON through a pinned complete SKOS context into an existing workspace")
+    native.add_argument("--workspace",required=True);native.add_argument("--context",required=True)
+    native.add_argument("--manifest-sha256",required=True);native.add_argument("--source",action="append",required=True)
+    native.add_argument("--scope",required=True);native.add_argument("--coverage",choices=("complete","partial"),required=True)
+    native.add_argument("--actor",required=True);native.add_argument("--operation-id",required=True)
+    native.add_argument("--expected-revision",type=int,required=True);native.add_argument("--parent-release")
+    native.add_argument("--notice",action="append",default=[])
     args=p.parse_args()
     if args.command=="serve":serve(args.workspace,args.host,args.port,args.token_file)
     elif args.command=="restore":print(canonical(Workspace.restore(args.archive,args.destination)))
+    elif args.command=="receive-native":
+        from arches_native_skos import receive_candidate
+        root=pathlib.Path(args.workspace).resolve()
+        if not (root/"workspace.sqlite3").is_file():raise ValueError("Open the selected staff workspace before receiving a native edition")
+        result=receive_candidate(Workspace(root),context_directory=args.context,
+            expected_manifest_sha256=args.manifest_sha256,source_paths=args.source,
+            source_format="native_json",scope_id=args.scope,coverage=args.coverage,
+            actor=args.actor,operation_id=args.operation_id,expected_revision=args.expected_revision,
+            parent_release=args.parent_release,notice_paths=args.notice)
+        print(canonical(result))
     else:print(canonical(Workspace(args.workspace).export_workspace(args.output,[p for p in APP.iterdir() if p.name in ("arches_source.py","arches_workspace.py","arches_review_exchange.py","arches_app.py","index.html","OPERATING_GUIDE.md","ARCHES_SOURCE.md","operate.py","browser-receiving.mjs","BROWSER_RECEIVING.md","receive_public_starches.py","PUBLIC_SOURCE_RECEIVING.md","arches_native_skos.py","NATIVE_SKOS_RECEIVING.md","native_skos_receiving.py","LICENSE.txt","NOTICE.md")])))
 if __name__=="__main__":main()

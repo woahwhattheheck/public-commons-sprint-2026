@@ -21,6 +21,82 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "source_tools/geographic_programme_browser.mjs",
+    "source_tools/receive_geographic_handover_browser.mjs",
+    "source_tools/geographic_review_browser.mjs",
+    "source_tools/geographic_browser_course.mjs",
+    "source_tools/geographic_allocation_browser.mjs",
+    "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    "integration/component_fragments/geographic-handover-browser.json",
+    "model/paired_ensemble/ensemble_portable.py",
+    "integration/component_fragments/geographic-study-receiving.json",
+    "model/geographic_study_receiving.py",
+    "operator/geographic_receiving.py",
+    "operator/web/geographic_received_studies.mjs",
+    "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+    "source_tools/geographic_headwaters_handover.py",
+    "source_tools/simulated_headwaters_handover.py",
+    "model/geographic_programme.py",
+    "source_tools/adopt_geographic_headwaters_programme.py",
+    "source_tools/GEOGRAPHIC_PROGRAMME.md",
+    "operator/extensions/programme-activity.json",
+    "operator/programme_activity.py",
+    "model/compute_programme.py",
+    "model/programme_interactions.py",
+    "docs/programme-interactions.md",
+    "model/compute_programme_cli.py",
+    "model/portable.py",
+    "operator/programmes.py",
+    "operator/web/programmes.mjs",
+    "install_programmes.py",
+    "operator/web/native-interactions.mjs",
+    "PROGRAMME_INTERACTIONS.md",
+    "install_programme_interactions.py",
+    "docs/PARAMETER_CASE_CONSOLE.md",
+    "docs/PROGRAMME_CASE_CONSOLE.md",
+    "docs/PROGRAMME_LARGE_DESIGNS.md",
+    "model/delivery_catalogue.py",
+    "model/parameter_case_status.py",
+    "model/programme_case_status.py",
+    "model/programme_views.py",
+    "model/record_catalog.py",
+    "operator/web/parameter_case_console.mjs",
+    "model/programme_source_updates.py",
+    "model/PROGRAMME_SOURCE_UPDATES.md",
+    "operator/programme_source_updates.py",
+    "operator/extensions/programme-source-updates.json",
+    "operator/web/programme_source_updates.mjs",
+    "operator/programme_source_updates_patch.json",
+    "operator/install_programme_source_updates.py",
+    "operator/PROGRAMME_SOURCE_UPDATES.md",
+    "integration/component_fragments/programme-source-updates.json",
+    "integration/component_fragments/geographic-programme.json",
+    "model/native_study.py",
+    "model/fgdc_metadata.py",
+    "model/programme_reuse.py",
+    "model/native_execution.py",
+    "docs/native-interactions.md",
+    "model/interaction_dispatch.py",
+    "model/native_interactions.py",
+    "model/native_interactions_cli.py",
+    "operator/NATIVE_INTERACTIONS.md",
+    "operator/extensions/native-interactions.json",
+    "operator/install_native_interactions.py",
+    "operator/native_interactions.py",
+    "operator/web/native-interactions.css",
+    "model/PROGRAMME_NATIVE_REUSE.md",
+    "operator/programme_native_reuse_patch.json",
+    "operator/install_programme_reuse.py",
+    "integration/component_fragments/programme-native-reuse.json",
+    "source_tools/continue_programme_source_reuse.py",
+    "source_tools/PROGRAMME_SOURCE_REUSE_COURSE.md",
+    "model/geographic_study_transfer.py",
+    "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+    "source_tools/geographic_scenario_context.py",
+    "source_tools/geographic_scenario_interpretation.mjs",
+    "source_tools/geographic_headwaters_reopen.py",
+    "source_tools/receive_geographic_headwaters.py",
+    "integration/component_fragments/geographic-study-transfer.json",
     "model/geographic_siting_contrasts.py",
     "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
@@ -280,6 +356,82 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "source_tools/geographic_programme_browser.mjs",
+    "source_tools/receive_geographic_handover_browser.mjs",
+    "source_tools/geographic_review_browser.mjs",
+    "source_tools/geographic_browser_course.mjs",
+    "source_tools/geographic_allocation_browser.mjs",
+    "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    "integration/component_fragments/geographic-handover-browser.json",
+    "model/paired_ensemble/ensemble_portable.py",
+    "integration/component_fragments/geographic-study-receiving.json",
+    "model/geographic_study_receiving.py",
+    "operator/geographic_receiving.py",
+    "operator/web/geographic_received_studies.mjs",
+    "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+    "source_tools/geographic_headwaters_handover.py",
+    "source_tools/simulated_headwaters_handover.py",
+    "model/geographic_programme.py",
+    "source_tools/adopt_geographic_headwaters_programme.py",
+    "source_tools/GEOGRAPHIC_PROGRAMME.md",
+    "operator/extensions/programme-activity.json",
+    "operator/programme_activity.py",
+    "model/compute_programme.py",
+    "model/programme_interactions.py",
+    "docs/programme-interactions.md",
+    "model/compute_programme_cli.py",
+    "model/portable.py",
+    "operator/programmes.py",
+    "operator/web/programmes.mjs",
+    "install_programmes.py",
+    "operator/web/native-interactions.mjs",
+    "PROGRAMME_INTERACTIONS.md",
+    "install_programme_interactions.py",
+    "docs/PARAMETER_CASE_CONSOLE.md",
+    "docs/PROGRAMME_CASE_CONSOLE.md",
+    "docs/PROGRAMME_LARGE_DESIGNS.md",
+    "model/delivery_catalogue.py",
+    "model/parameter_case_status.py",
+    "model/programme_case_status.py",
+    "model/programme_views.py",
+    "model/record_catalog.py",
+    "operator/web/parameter_case_console.mjs",
+    "model/programme_source_updates.py",
+    "model/PROGRAMME_SOURCE_UPDATES.md",
+    "operator/programme_source_updates.py",
+    "operator/extensions/programme-source-updates.json",
+    "operator/web/programme_source_updates.mjs",
+    "operator/programme_source_updates_patch.json",
+    "operator/install_programme_source_updates.py",
+    "operator/PROGRAMME_SOURCE_UPDATES.md",
+    "integration/component_fragments/programme-source-updates.json",
+    "integration/component_fragments/geographic-programme.json",
+    "model/native_study.py",
+    "model/fgdc_metadata.py",
+    "model/programme_reuse.py",
+    "model/native_execution.py",
+    "docs/native-interactions.md",
+    "model/interaction_dispatch.py",
+    "model/native_interactions.py",
+    "model/native_interactions_cli.py",
+    "operator/NATIVE_INTERACTIONS.md",
+    "operator/extensions/native-interactions.json",
+    "operator/install_native_interactions.py",
+    "operator/native_interactions.py",
+    "operator/web/native-interactions.css",
+    "model/PROGRAMME_NATIVE_REUSE.md",
+    "operator/programme_native_reuse_patch.json",
+    "operator/install_programme_reuse.py",
+    "integration/component_fragments/programme-native-reuse.json",
+    "source_tools/continue_programme_source_reuse.py",
+    "source_tools/PROGRAMME_SOURCE_REUSE_COURSE.md",
+    "model/geographic_study_transfer.py",
+    "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+    "source_tools/geographic_scenario_context.py",
+    "source_tools/geographic_scenario_interpretation.mjs",
+    "source_tools/geographic_headwaters_reopen.py",
+    "source_tools/receive_geographic_headwaters.py",
+    "integration/component_fragments/geographic-study-transfer.json",
     "model/geographic_siting_contrasts.py",
     "model/GEOGRAPHIC_SITING_CONTRASTS.md",
     "source_tools/high_quality_water_preparation.py",
@@ -998,7 +1150,235 @@ def verify_geographic_operator_dependencies(application, pending):
         raise ValueError("Retain the allocation view in the complete original Geographic operator family")
 
 
+def verify_geographic_study_dependencies(application, pending):
+    """Retain the original editable Geographic course behind saved reports."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    helper = source("model/geographic_study_transfer.py")
+    callers = (source("model/study_transfer.py"),
+               source("model/scientific_report_study_transfer.py"))
+    if helper is None and not any(
+            body is not None and b"geographic_study_transfer" in body for body in callers):
+        return
+    members = (
+        "model/geographic_study_transfer.py",
+        "model/GEOGRAPHIC_STUDY_TRANSFER.md",
+        "model/geographic_headwaters.py",
+        "model/geographic_receiving_context.py",
+        "model/geographic_scenario_allocation.py",
+        "model/geographic_scenario_allocation_report.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/geographic_siting_contrasts.py",
+        "model/geographic_utility_groups.py",
+        "model/ensemble_study_transfer.py",
+        "model/receiving_water_report_transfer.py",
+        "model/scenario_footprint.py",
+        "model/ensembles.py",
+        "model/ensemble_operations.py",
+        "model/ensemble_report.py",
+        "source_tools/headwaters_parameter_course.py",
+        "source_tools/geographic_scenario_context.py",
+        "source_tools/geographic_scenario_interpretation.mjs",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/receive_geographic_headwaters.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    )
+    if helper is not None and b"from .compute_programme import ComputeProgrammes" in helper:
+        members += (
+            "model/compute_programme.py", "model/receptor_study_transfer.py",
+            "model/geographic_programme.py",
+        )
+    if helper is not None and b"ensemble_portable" in helper:
+        members += ("model/paired_ensemble/ensemble_portable.py",)
+    for name in (*members,
+                 "integration/component_fragments/geographic-study-transfer.json",
+                 "model/common.py", "model/native_versions.py",
+                 "model/paired_ensemble/__init__.py",
+                 "model/paired_ensemble/ensemble_store.py",
+                 "model/paired_ensemble/ensemble_workspace.py",
+                 "model/paired_ensemble/designs.py"):
+        assembled_data(application, pending, name)
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-study-transfer.json"))
+    family = fragment.get("extend_components", {}).get("study-transfer", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-study-transfer"
+            or "study-transfer" in fragment.get("components", {})
+            or not set(members).issubset(set(family.get("paths", [])))):
+        raise ValueError("Retain Geographic source history in the existing Study-transfer family")
+
+
+def verify_geographic_programme_dependencies(application, pending):
+    """Keep adopted native cases in the original Programme and source-update workflow."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    helper = source("model/geographic_programme.py")
+    provider = source("operator/geographic_preparation.py")
+    if helper is None and (provider is None or b"geographic_programme" not in provider):
+        return
+    members = (
+        "model/geographic_programme.py",
+        "source_tools/adopt_geographic_headwaters_programme.py",
+        "source_tools/GEOGRAPHIC_PROGRAMME.md",
+        "operator/extensions/programme-activity.json",
+        "operator/programme_activity.py",
+        "model/compute_programme.py",
+        "model/programme_interactions.py",
+        "docs/programme-interactions.md",
+        "model/compute_programme_cli.py",
+        "model/portable.py",
+        "operator/programmes.py",
+        "operator/web/programmes.mjs",
+        "install_programmes.py",
+        "operator/web/native-interactions.mjs",
+        "PROGRAMME_INTERACTIONS.md",
+        "install_programme_interactions.py",
+        "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PROGRAMME_CASE_CONSOLE.md",
+        "docs/PROGRAMME_LARGE_DESIGNS.md",
+        "model/delivery_catalogue.py",
+        "model/parameter_case_status.py",
+        "model/programme_case_status.py",
+        "model/programme_views.py",
+        "model/record_catalog.py",
+        "operator/web/parameter_case_console.mjs",
+        "model/programme_source_updates.py",
+        "model/PROGRAMME_SOURCE_UPDATES.md",
+        "operator/programme_source_updates.py",
+        "operator/extensions/programme-source-updates.json",
+        "operator/web/programme_source_updates.mjs",
+        "operator/programme_source_updates_patch.json",
+        "operator/install_programme_source_updates.py",
+        "operator/PROGRAMME_SOURCE_UPDATES.md",
+        "integration/component_fragments/programme-source-updates.json",
+        "integration/component_fragments/geographic-programme.json",
+        "model/native_study.py",
+        "model/fgdc_metadata.py",
+        "model/programme_reuse.py",
+        "model/native_execution.py",
+        "docs/native-interactions.md",
+        "model/interaction_dispatch.py",
+        "model/native_interactions.py",
+        "model/native_interactions_cli.py",
+        "model/native_versions.py",
+        "operator/NATIVE_INTERACTIONS.md",
+        "operator/extensions/native-interactions.json",
+        "operator/install_native_interactions.py",
+        "operator/native_interactions.py",
+        "operator/web/native-interactions.css",
+        "model/PROGRAMME_NATIVE_REUSE.md",
+        "operator/programme_native_reuse_patch.json",
+        "operator/install_programme_reuse.py",
+        "integration/component_fragments/programme-native-reuse.json",
+        "source_tools/continue_programme_source_reuse.py",
+        "source_tools/PROGRAMME_SOURCE_REUSE_COURSE.md",
+    )
+    for name in members + (
+            "model/common.py", "model/workspace.py", "model/model_selection.py",
+            "model/native_versions.py", "model/profiles.py", "model/reuse.py",
+            "model/source_refresh.py", "model/source_refresh_legacy.py",
+            "model/geographic_headwaters.py", "operator/extension_registry.py",
+            "operator/web/extension_host.mjs"):
+        assembled_data(application, pending, name)
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-programme.json"))
+    family = fragment.get("components", {}).get("geographic-programme", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-programme"
+            or not {"model/geographic_programme.py",
+                    "source_tools/adopt_geographic_headwaters_programme.py",
+                    "source_tools/GEOGRAPHIC_PROGRAMME.md"}.issubset(set(family.get("paths", [])))
+            or not {"geographic-native-receiving", "programme-activity"}.issubset(
+                set(family.get("requires", [])))):
+        raise ValueError("Retain Geographic adoption in the original Programme family")
+
+
+def verify_geographic_received_study_dependencies(application, pending):
+    """Keep the original selected Geographic receipt readable and navigable."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    reader = source("model/study_receiving.py")
+    helper = source("model/geographic_study_receiving.py")
+    if helper is None and (reader is None or b"geographic_study_receiving" not in reader):
+        return
+    members = (
+        "integration/component_fragments/geographic-study-receiving.json",
+        "model/geographic_study_transfer.py",
+        "model/geographic_study_receiving.py",
+        "operator/geographic_receiving.py",
+        "operator/web/geographic_received_studies.mjs",
+        "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+        "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_handover.py",
+        "CURRENT_OWNER_DIRECTION.md",
+    )
+    for name in members + (
+            "model/common.py", "model/study_transfer.py", "model/study_receiving.py",
+            "operator/study_receiving.py", "operator/extensions/study-transfer.json",
+            "operator/web/received_studies.mjs", "operator/geographic_preparation.py",
+            "operator/web/geographic_workbench.mjs"):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(
+        application, pending, "operator/extensions/study-transfer.json"))
+    if "geographic_received_studies.mjs" not in descriptor.get("assets", []):
+        raise ValueError("Retain the Geographic received-study view in the original Study descriptor")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-study-receiving.json"))
+    family = fragment.get("components", {}).get("geographic-study-receiving", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-study-receiving"
+            or not set(members).issubset(set(family.get("paths", [])))
+            or not {"geographic-operator", "study-transfer"}.issubset(set(family.get("requires", [])))):
+        raise ValueError("Retain the original Geographic received-study component")
+
+
+def verify_geographic_browser_dependencies(application, pending):
+    """Keep the maintained receiving browser with its original Programme chapter."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    driver = source("source_tools/receive_geographic_handover_browser.mjs")
+    chapter = source("source_tools/geographic_programme_browser.mjs")
+    if chapter is None and (driver is None or b"geographic_programme_browser.mjs" not in driver):
+        return
+    members = (
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_review_browser.mjs",
+        "source_tools/geographic_browser_course.mjs",
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs",
+        "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    )
+    for name in members + (
+            "integration/component_fragments/geographic-handover-browser.json",
+            "source_tools/receive_geographic_headwaters.py",
+            "source_tools/geographic_headwaters_handover.py",
+            "model/geographic_programme.py", "model/compute_programme.py",
+            "operator/geographic_preparation.py",
+            "operator/extensions/geographic-headwaters.json",
+            "operator/web/geographic_workbench.mjs", "CURRENT_OWNER_DIRECTION.md"):
+        assembled_data(application, pending, name)
+    driver = assembled_data(application, pending, members[0])
+    if b"geographic_programme_browser.mjs" not in driver:
+        raise ValueError("Retain the Programme chapter in the original Geographic browser")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-handover-browser.json"))
+    family = fragment.get("components", {}).get("geographic-handover-browser", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-handover-browser"
+            or not set(members).issubset(set(family.get("paths", [])))
+            or "geographic-native-receiving" not in family.get("requires", [])):
+        raise ValueError("Retain the original Geographic receiving browser component")
+
+
 def verify_composition(application, pending):
+    verify_geographic_browser_dependencies(application, pending)
+    verify_geographic_received_study_dependencies(application, pending)
+    verify_geographic_programme_dependencies(application, pending)
+    verify_geographic_study_dependencies(application, pending)
     verify_geographic_allocation_dependencies(application, pending)
     verify_geographic_operator_dependencies(application, pending)
     verify_received_study_dependencies(application, pending)
@@ -1025,7 +1405,8 @@ def verify_composition(application, pending):
                        "paired_ensemble_study_transfer", "report_changes_study_transfer",
                        "chemistry_study_transfer", "ensemble_study_transfer",
                        "gauge_study_transfer", "landcover_study_transfer",
-                       "published_review_study_transfer", "implementation_report_transfer"):
+                       "published_review_study_transfer", "implementation_report_transfer",
+                       "geographic_study_transfer"):
             if module.encode("ascii") in transfer:
                 assembled_data(application, pending, "model/" + module + ".py")
         if b"receptor_study_transfer" in transfer:

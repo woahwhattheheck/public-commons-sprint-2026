@@ -1,6 +1,6 @@
 # Receive and operate the complete geographic handover
 
-This is the existing regional course's browser continuation. It opens the **actual restored** geographic project, its original `delivery/START_HERE.html`, scientific report, map attachments and customer review. It then uses the **already running** Operator against that same restored Workspace. It starts no server, native model, source import or queued scientific operation.
+This is the existing regional course's browser continuation. It opens the **actual restored** geographic project, its original `delivery/START_HERE.html`, scientific report, map attachments and customer review. It then uses the **already running** Operator against that same restored Workspace. It starts no server, native model or source import. The optional completed-output Programme chapter uses the Operator's existing adoption action.
 
 The existing geographic caller remains `source_tools/receive_geographic_headwaters.py`. Finish its original archive and contained-application cold receiving first. This browser command belongs to the same case and receiving output; it is not a second study. Native inputs, model domain, South Carolina reporting mask and original utility focus remain separate. The tiny historical square case is not selected here.
 
@@ -19,7 +19,8 @@ Use the existing Node, Playwright module and permitted Chromium executable. Save
   "output_directory": "/ACTUAL/geographic-browser-receiving",
   "playwright_module": "/ACTUAL/node_modules/playwright/index.mjs",
   "executable": "/ACTUAL/chromium",
-  "state_file": "/ACTUAL/geographic-receiving/receiving.json"
+  "state_file": "/ACTUAL/geographic-receiving/receiving.json",
+  "programme_action": "adopt_completed"
 }
 ```
 
@@ -47,11 +48,25 @@ Screens at 1440 and390 pixels retain each scope/relationship and any zero-suppor
 
 These chapters use `geographic_browser_course.mjs` and `geographic_allocation_browser.mjs` beside the existing receiving script. The complete source assembly must include these modules, the unchanged customer-review chapter and the original component fragment. The existing actual native process continues independently; source installation takes place at its owned boundary.
 
+## Completed reference runs in the saved Programme
+
+The same receiving command now continues the Geographic case through the existing Programme desk. Set **"programme_action": "adopt_completed"** in the private input JSON for this chapter. It selects the actual outgoing delivery, refreshes the three original run states, and uses the existing **Save completed runs as a Programme** control. The maintained adoption action verifies and reuses the completed baseline, restoration and matched control. The original sensitivity plan remains in the project with its actual saved progress.
+
+When the original caller already saved a Programme before archiving, the chapter verifies the delivered geographic-programme.json against its original byte/SHA descriptor and handover-record.geographic_programme, then opens that saved Programme directly. This retained original takes precedence in both modes and does not require the sender's Operator queue.
+
+Otherwise, an already accepted operation is reopened; its original Resume control continues a failed or interrupted local operation. The browser does not create a competing request. An archived completed operation is opened through its retained result and original download controls, without depending on the sender's queue being present in the recipient's application.
+
+The chapter opens the saved Programme, downloads its exact selections, opens the nine-row N/P/sediment result catalogue and downloads every displayed original result file. It reads the three native logs, opens the existing **Update sources** form with its original unselected plan field, reloads the actual application, and reopens and downloads the same saved Programme again. The source-update work course retains responsibility for choosing an actual subsequent source edition and running that update. Existing native run, grid, scenario, source, profile and delivery identities are checked before and after this chapter, including the saved sensitivity states.
+
+The default, **"programme_action": "inspect"**, refreshes the original preview and operates the verified archived Programme or existing matching Programme operation if present. If no such operation has been saved, it records that actual preview state. Use **adopt_completed** for the complete Programme receiving course. The explicit choice is part of the original browser output binding; use a separate output directory when changing it.
+
+This chapter is **source_tools/geographic_programme_browser.mjs**, imported once by the original driver immediately after the allocation chapter. Include the current Geographic Programme provider/workbench, maintained Programme and source-update modules and their original application dependencies in the contained application. The component fragment carries the new browser module. Preserve CURRENT_OWNER_DIRECTION.md version 2026-10-13.3 in the complete handover and continuation.
+
 ## The complete recipient course
 
 The command verifies the original handover's complete file descriptors and the restored project identity. It physically opens the outgoing START_HERE page at 1440 and 390 pixels, operates the actual comparison filter and Clear, follows each unique local primary report/map/review link, retains screen captures, and verifies linked source descriptors. Original working attachments remain at their delivered relative paths. The report and customer review preserve their companion assets.
 
-The existing Geographic model case desk is then opened. The command selects the actual prepared geographic case, downloads its original case/selection/binding/assumptions/input/CSV tickets, uses its retained choices, downloads those choices, changes only the receiving browser's draft title, reopens the original choices, and verifies the original payload returns unchanged. It reads the original geometry preview, then opens the original profile, grid, all three native runs and retained logs. It never clicks Prepare, Run, Resume, or another queued mutation.
+The existing Geographic model case desk is then opened. The command selects the actual prepared geographic case, downloads its original case/selection/binding/assumptions/input/CSV tickets, uses its retained choices, downloads those choices, changes only the receiving browser's draft title, reopens the original choices, and verifies the original payload returns unchanged. It reads the original geometry preview, then opens the original profile, grid, all three native runs and retained logs. The Geographic preparation chapter preserves its original input and native run selections. The optional Programme chapter uses only the completed-output adoption operation and, when needed, that same operation's Resume control.
 
 It opens the original generated source edition, inspects each actual source file, and downloads its exact retained body through the maintained native ticket route. It opens the existing scientific delivery and walks the original file pagination and downloads every retained report/map/package link with the ticket's byte/SHA checks. Links are tracked individually; equal-byte downloads share one retained file after each actual browser download is verified. Finally it reloads the same Operator and reopens the same saved geographic case. Native source, profile, grid, scenario, run and delivery IDs must remain unchanged.
 
