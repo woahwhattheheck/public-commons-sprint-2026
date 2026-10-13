@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
+<title>Policy rollouts · OpenLineage</title>
+<link rel="stylesheet" href="./service-levels.css"><link rel="stylesheet" href="./service-policy-rollout.css">
+<script type="module" src="./service-policy-rollout.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#rollout-main">Skip to policy rollouts</a>
+<header class="app-header"><div class="identity"><span class="product-mark" aria-hidden="true">OL</span><div><p class="eyebrow">OpenLineage operations</p><h1>Policy rollouts</h1></div></div>
+<div class="header-controls"><a href="/">Workspace</a><a href="./service-levels.html">Service levels</a><span id="revision-label" class="meta">Connecting…</span><button type="button" id="refresh-button">Refresh</button><button type="button" id="connection-button" aria-haspopup="dialog">Connection</button></div></header>
+<main id="rollout-main">
+<div class="workspace-line"><p id="workspace-title">Connecting to the operations workspace</p><p id="connection-state" class="muted">Waiting for workspace</p></div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<section id="pending-panel" class="pending-panel" aria-labelledby="pending-title" hidden></section>
+<section id="summary" class="summary-grid" aria-label="Policy rollout summary"></section>
+<nav class="section-nav" aria-label="Policy rollout views"><button type="button" data-section="draft" aria-current="page">Prepare rollout</button><button type="button" data-section="history">Saved rollouts</button></nav>
+<section id="draft-panel" class="view-panel" aria-labelledby="draft-heading">
+<div class="section-heading"><div><h2 id="draft-heading">Prepare a complete policy change</h2><p class="muted">Select the original policies and jobs, review every change, then apply the complete set together.</p></div>
+<div class="button-row"><button type="button" id="new-draft">New draft</button><button type="button" id="open-drafts">Saved drafts</button><button type="button" id="download-working">Download working file</button><label class="file-button">Open working file<input type="file" id="working-file" accept=".json,application/json" data-edit></label></div></div>
+<div class="rollout-metadata"><label>Rollout title<input id="rollout-title" type="text" data-edit placeholder="Name this complete change"></label><label>Reason<textarea id="rollout-reason" rows="3" data-edit placeholder="Explain why these policy changes belong together"></textarea></label></div>
+<p id="draft-status" class="draft-status" role="status" aria-live="polite">Waiting for a working draft</p>
+<div class="section-heading"><div><h2>Selected policies <span id="selected-count" class="meta">0 / 200 policies</span></h2><p class="muted">Existing policies retain their selected original version. New policies use an observed job identity.</p></div><button id="add-sources" type="button" class="primary" data-edit>Add policies and jobs</button></div>
+<div class="button-row selection-tools"><button type="button" id="select-all-rows" data-edit>Select all rows</button><button type="button" id="clear-row-selection" data-edit>Clear selection</button><button type="button" id="bulk-button" data-edit>Edit selected settings</button></div>
+<div id="selected-policies"></div>
+<section id="policy-editor" class="policy-editor" aria-labelledby="policy-heading" hidden>
+<div class="section-heading"><div><p class="eyebrow">Selected draft row</p><h2 id="policy-heading">Policy settings</h2><p id="policy-job" class="muted"></p><p id="policy-version" class="meta"></p></div></div>
+<div class="form-grid"><label>Policy title<input id="policy-title" type="text" data-edit></label>
+<label>Owner<input id="policy-owner" type="text" data-edit></label>
+<label>Runbook URL<input id="policy-runbook" type="text" data-edit></label>
+<label>Effective from (UTC ISO timestamp)<input id="policy-effectiveFrom" type="text" data-edit></label>
+<label>Maximum completion age (seconds)<input id="policy-maxCompletionAgeSeconds" type="text" inputmode="numeric" data-edit></label>
+<label>Maximum execution duration (seconds)<input id="policy-maxDurationSeconds" type="text" inputmode="numeric" data-edit></label>
+<label>Failure window (seconds)<input id="policy-failureWindowSeconds" type="text" inputmode="numeric" data-edit></label>
+<label class="checkbox-label"><input id="policy-enabled" type="checkbox" data-edit> Policy enabled</label>
+<label class="checkbox-label"><input id="policy-monitorFailures" type="checkbox" data-edit> Monitor failures</label></div>
+<p class="field-help">Keep unfinished values here while editing. Durations use whole seconds; blank completion-age and duration fields leave that condition unset. The timestamp retains its exact UTC value.</p>
+<div id="policy-baseline"></div>
+</section>
+<section id="preview-panel" class="preview-panel" aria-labelledby="preview-heading">
+<div class="section-heading"><div><h2 id="preview-heading">Review before applying</h2><p class="muted">The preview uses one current workspace revision and the exact selected policy versions.</p></div><div class="button-row"><button type="button" id="preview-button" data-edit>Preview complete rollout</button><button type="button" id="apply-button" class="primary" data-edit>Apply reviewed rollout</button></div></div>
+<div id="preview-content" aria-live="polite"></div>
+</section></section>
+<section id="history-panel" class="view-panel" aria-labelledby="history-heading" hidden>
+<div class="section-heading"><div><h2 id="history-heading">Saved policy rollouts</h2><p class="muted">Each immutable record retains its original source selection, complete before-and-after policies and request.</p></div></div>
+<div class="filter-row"><label>Find rollout<input id="history-search" type="search" placeholder="Title, reason or rollout ID"></label></div>
+<div id="rollout-history"></div><section id="rollout-detail" class="record-detail" aria-live="polite" hidden></section>
+</section>
+<footer class="workspace-footer"><span>Service policies from the original OpenLineage workspace</span><span id="last-refreshed">Awaiting first refresh</span></footer>
+</main>
+<dialog id="connection-dialog" aria-labelledby="connection-title"><form id="connection-form">
+<header class="dialog-header"><h2 id="connection-title">Workspace connection</h2><button type="button" data-close="connection-dialog" aria-label="Close connection">×</button></header>
+<p>Reconnect to the original workspace after a server restart, then recover the saved request.</p>
+<label>Access token<input id="access-token" type="password" autocomplete="off" spellcheck="false"></label><p class="field-help">Kept for this browser tab. Leave empty for an open local connection.</p>
+<p id="connection-feedback" class="form-feedback" role="status"></p><div class="dialog-actions"><button type="button" data-close="connection-dialog">Cancel</button><button type="submit" class="primary">Connect</button></div></form></dialog>
+<dialog id="source-dialog" class="wide-dialog" aria-labelledby="source-heading">
+<header class="dialog-header"><h2 id="source-heading">Select original policies and jobs</h2><button type="button" data-close="source-dialog" aria-label="Close source selection">×</button></header>
+<label>Find job or policy<input id="source-search" type="search" placeholder="Name, namespace, policy title or owner"></label>
+<h3>Update existing policies</h3><div id="source-policies"></div><h3>Create policies for observed jobs</h3><div id="source-jobs"></div>
+<div class="dialog-actions"><button type="button" data-close="source-dialog">Cancel</button><button id="add-selected-sources" type="button" class="primary" data-edit>Add selected rows</button></div></dialog>
+<dialog id="bulk-dialog" class="wide-dialog" aria-labelledby="bulk-heading"><form id="bulk-form">
+<header class="dialog-header"><h2 id="bulk-heading">Edit selected settings</h2><button type="button" data-close="bulk-dialog" aria-label="Close common settings">×</button></header>
+<p id="bulk-selection"></p><p class="field-help">Choose each setting to change. Other fields and original versions remain as entered.</p>
+<div class="bulk-grid"><div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="owner"> Change owner</label><input id="bulk-owner" aria-label="Owner" type="text"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="runbook"> Change runbook url</label><input id="bulk-runbook" aria-label="Runbook URL" type="text"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="effectiveFrom"> Change effective from (utc iso timestamp)</label><input id="bulk-effectiveFrom" aria-label="Effective from (UTC ISO timestamp)" type="text"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="maxCompletionAgeSeconds"> Change maximum completion age (seconds)</label><input id="bulk-maxCompletionAgeSeconds" aria-label="Maximum completion age (seconds)" type="text" inputmode="numeric"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="maxDurationSeconds"> Change maximum execution duration (seconds)</label><input id="bulk-maxDurationSeconds" aria-label="Maximum execution duration (seconds)" type="text" inputmode="numeric"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="failureWindowSeconds"> Change failure window (seconds)</label><input id="bulk-failureWindowSeconds" aria-label="Failure window (seconds)" type="text" inputmode="numeric"></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="enabled"> Change policy enabled</label><select id="bulk-enabled" aria-label="Policy enabled"><option value="true">Yes</option><option value="false">No</option></select></div>
+<div class="bulk-field"><label class="checkbox-label"><input type="checkbox" data-bulk-use="monitorFailures"> Change monitor failures</label><select id="bulk-monitorFailures" aria-label="Monitor failures"><option value="true">Yes</option><option value="false">No</option></select></div></div><p id="bulk-feedback" class="form-feedback" role="status"></p>
+<div class="dialog-actions"><button type="button" data-close="bulk-dialog">Cancel</button><button type="submit" class="primary" data-edit>Use these selected settings</button></div></form></dialog>
+<dialog id="baseline-dialog" class="wide-dialog" aria-labelledby="baseline-title">
+<header class="dialog-header"><h2 id="baseline-title">Review policy versions</h2><button type="button" data-close="baseline-dialog" aria-label="Close version review">×</button></header>
+<div id="baseline-body"></div><div class="dialog-actions"><button type="button" data-close="baseline-dialog">Close</button><button type="button" id="baseline-use" class="primary">Use current version as baseline</button></div></dialog>
+<dialog id="drafts-dialog" class="wide-dialog" aria-labelledby="drafts-title"><header class="dialog-header"><h2 id="drafts-title">Saved working drafts</h2><button type="button" data-close="drafts-dialog" aria-label="Close saved drafts">×</button></header><div id="draft-list"></div></dialog>
+<dialog id="incoming-dialog" class="wide-dialog" aria-labelledby="incoming-title"><header class="dialog-header"><h2 id="incoming-title">Inspect incoming working file</h2><button type="button" data-close="incoming-dialog" aria-label="Close incoming file">×</button></header><div id="incoming-body"></div><div class="dialog-actions"><button type="button" data-close="incoming-dialog">Cancel</button><button type="button" id="receive-working" class="primary" data-edit>Open imported draft</button></div></dialog>
+</body></html>

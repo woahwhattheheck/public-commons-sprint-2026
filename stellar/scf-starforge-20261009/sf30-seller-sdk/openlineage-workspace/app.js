@@ -1,6 +1,10 @@
+import { createSchemaUI } from "./schema-ui.js";
+import { installQualityDesk } from "./quality-ui.mjs";
+import { installQualityFollowupDesk } from "./quality-followup-ui.mjs";
+
 const $ = id => document.getElementById(id);
 const KINDS = { runs: "run", jobs: "job", datasets: "dataset" };
-const LABELS = { runs: "Runs", jobs: "Jobs", datasets: "Datasets", sources: "Sources", editions: "Saved editions", reviews: "Reviews", results: "Attached results", diagnostics: "Events requiring attention" };
+const LABELS = { runs: "Runs", jobs: "Jobs", datasets: "Datasets", sources: "Sources", editions: "Saved editions", reviews: "Reviews", results: "Attached results", schema: "Schema changes", diagnostics: "Events requiring attention" };
 const DESCRIPTIONS = {
   runs: "Execution history from imported events.",
   jobs: "Named jobs and their declared data boundaries.",
@@ -9,8 +13,13 @@ const DESCRIPTIONS = {
   editions: "Named event selections for comparison and review.",
   reviews: "Recorded decisions, reasons, and their history.",
   results: "Complete result files linked to an entity and a saved edition.",
+  schema: "Compare saved schemas, inspect declared downstream effects, and resolve staff decisions.",
   diagnostics: "Original events with details to resolve before projection."
 };
+LABELS.quality = "Data quality";
+LABELS["quality-followup"] = "Quality follow-up";
+DESCRIPTIONS["quality-followup"] = "Compare saved evaluations and manage reasoned follow-up with original source and history.";
+DESCRIPTIONS.quality = "Original dataset measurements, assertion results, saved rules and review decisions.";
 const state = {
   view: null, section: "runs", edition: "", search: "", runState: "", attention: false,
   selection: null, detail: null, detailLoading: false, detailTab: "overview",
@@ -162,6 +171,16 @@ async function journal(mode, value) {
     request.onsuccess = () => {
       found = request.result;
       if (mode === "read") return;
+      if (mode === "restore" && found) {
+        const ordered = item => Array.isArray(item) ? item.map(ordered) :
+          item && typeof item === "object" ? Object.fromEntries(Object.keys(item).sort().map(key => [key, ordered(item[key])])) : item;
+        const originalInput = item => ({workspaceId: item.workspaceId, action: item.action, args: item.args});
+        if (JSON.stringify(ordered(originalInput(found))) !== JSON.stringify(ordered(originalInput(value)))) {
+          conflictMessage = "A different original request is already retained. Recover it before restoring this working copy's request.";
+          tx.abort();
+        }
+        return;
+      }
       const currentId = found?.args?.operationId;
       const requestedId = mode === "clear" ? value : value?.args?.operationId;
       const reviewedReplacement = mode === "write" && found?.status === "conflict" && value?.previousRequest?.operationId === currentId;
@@ -180,6 +199,27 @@ async function retainPending(value) {
   try { await journal("write", value); state.pending = value; }
   catch (error) { state.pending = await journal("read").catch(() => state.pending); throw error; }
   finally { renderPending(); setBusyControls(); }
+}
+async function restoreQualityPending(value) {
+  const record = item => item !== null && typeof item === "object" && !Array.isArray(item);
+  const original = structuredClone(value);
+  if (!record(original) || !["quality.followup.comparison.save", "quality.followup.save"].includes(original.action) ||
+    !record(original.args) || typeof original.args.operationId !== "string" || !original.args.operationId.trim() ||
+    !Number.isSafeInteger(original.args.expectedRevision) || original.args.expectedRevision < 0 ||
+    typeof original.workspaceId !== "string" || original.workspaceId !== state.view?.workspaceId ||
+    original.workspaceId !== state.identity?.workspaceId || state.pendingBusy)
+    throw new Error("Restore one complete original Quality request in its same connected workspace while no request is being sent.");
+  // Receiving does not send a mutation. The original panel reconciles this exact request.
+  const restored = {...original, originalStatus: original.status,
+    status: original.status === "rejected" ? "rejected" : "uncertain",
+    uncertainOutcome: original.status !== "rejected",
+    message: original.status === "rejected" ? original.message :
+      "This original request was reopened from a complete working copy. Recover the same saved request to read its outcome."};
+  const existing = await journal("restore", restored);
+  state.pending = existing ?? restored;
+  renderPending(); setBusyControls();
+  notice("The original Quality request is retained. Use its existing recovery controls; no request was sent.");
+  return structuredClone(state.pending);
 }
 async function clearPending() {
   await journal("clear", state.pending?.args?.operationId);
@@ -244,12 +284,17 @@ async function applyReviewedRequest() {
 async function sendPending() {
   const pending = state.pending;
   if (!pending || state.pendingBusy || !state.view || pending.workspaceId !== state.view.workspaceId) return null;
+  const connection = {workspaceId: state.identity?.workspaceId, instanceId: state.identity?.instanceId};
   state.pendingBusy = true; setBusyControls();
   let saved = null;
   const wasUncertain = pending.uncertainOutcome || ["uncertain", "submitting"].includes(pending.status);
   try {
     await retainPending({ ...pending, status: "submitting", message: "" });
     try {
+      if (!connection.workspaceId || !connection.instanceId || connection.workspaceId !== pending.workspaceId ||
+        state.view?.workspaceId !== connection.workspaceId || state.identity?.workspaceId !== connection.workspaceId ||
+        state.identity?.instanceId !== connection.instanceId)
+        throw new RequestError("The connected workspace changed while retaining this request. Reconnect to its original workspace and recover the saved request.");
       saved = await action(pending.action, pending.args);
       if (!saved || !Number.isSafeInteger(saved.revision)) throw new RequestError("The save response was incomplete.", 502);
     } catch (error) {
@@ -270,11 +315,13 @@ async function sendPending() {
   await refresh().catch(error => notice("Saved at revision " + saved.revision + ". " + error.message, true));
   return saved;
 }
-async function mutate(name, args, label) {
+async function mutate(name, args, label, options = {}) {
   if (state.pending || state.pendingBusy) { notice("Resolve the saved request before starting another save.", true); return null; }
   if (!state.view) throw new Error("Connect to the workspace first.");
-  await retainPending({ action: name, args: { ...args, operationId: crypto.randomUUID(), expectedRevision: state.view.revision },
-    label, workspaceId: state.view.workspaceId, createdAt: new Date().toISOString(), status: "prepared" });
+  const view = state.view, revision = options.expectedRevision ?? view.revision;
+  if (!Number.isSafeInteger(revision) || revision < 0) throw new Error("Use the original reviewed workspace revision.");
+  await retainPending({ action: name, args: { ...args, operationId: crypto.randomUUID(), expectedRevision: revision },
+    label, workspaceId: view.workspaceId, createdAt: new Date().toISOString(), status: "prepared" });
   return sendPending();
 }
 async function refresh() {
@@ -342,6 +389,10 @@ function selectEntityLink(key, label = null) {
 
 function renderCatalog() {
   if (!state.view) return;
+  const showingQuality = qualityDesk.render();
+  const showingFollowup = qualityFollowupDesk.render();
+  if (showingQuality || showingFollowup) return;
+  if (state.section === "schema") { schemaUI.render($("catalog"), $("inspector")); return; }
   const host = $("catalog"), view = state.view;
   let records = (view[state.section] ?? []).filter(matching);
   if (state.section === "runs" && state.runState) records = records.filter(row => row.state === state.runState);
@@ -470,6 +521,7 @@ function inspectorHeader(type, title, subtitle, tools = []) {
     h("p", { className: "namespace" }, subtitle), tools.length ? h("div", { className: "button-row" }, tools) : null);
 }
 function renderInspector() {
+  if (state.section === "schema") { schemaUI.renderInspector($("inspector")); return; }
   const host = $("inspector"), selected = state.selection, detail = state.detail;
   if (!selected) { host.replaceChildren(empty("Inspect a record", "Choose an item to see its original events, facets, sources, reviews, and connected data.", null, true)); return; }
   if (state.detailLoading) { host.replaceChildren(h("div", { className: "loading", role: "status" }, "Loading selected record…")); return; }
@@ -945,6 +997,9 @@ async function downloadProducerConfiguration(event) {
   finally { state.producerDownloadBusy = false; setProducerControls(); }
 }
 
+const schemaUI = createSchemaUI({ h, button, table, jsonBlock, badge, count, when, notice, action, mutate,
+  downloadJSON, downloaded, downloadObject, setBusyControls, entityName,
+  getView: () => state.view, getSearch: () => state.search, isActive: () => state.section === "schema", hasPending: () => Boolean(state.pending) });
 document.querySelectorAll("[data-close]").forEach(control => control.addEventListener("click", () => closeDialog(control.dataset.close)));
 $("import-button").addEventListener("click", openImport);
 $("save-edition-button").addEventListener("click", openEdition);
@@ -989,6 +1044,34 @@ document.querySelectorAll("[data-view]").forEach(control => control.addEventList
 $("search-input").addEventListener("input", () => { state.search = $("search-input").value; renderCatalog(); });
 $("state-filter").addEventListener("change", () => { state.runState = $("state-filter").value; renderCatalog(); });
 $("attention-filter").addEventListener("change", () => { state.attention = $("attention-filter").checked; renderCatalog(); });
+const qualityDesk = installQualityDesk({
+  getState: () => state, action, mutate, refresh, notify: notice, download: downloaded,
+  navigate(section) {
+    if (!state.view) return;
+    state.section = section; state.selection = null; state.detail = null; state.detailVersion++;
+    renderShell(); renderCatalog(); renderInspector();
+  },
+  openSource(id) {
+    state.section = "sources"; state.selection = null; state.detail = null; state.detailVersion++;
+    renderShell(); renderCatalog();
+    loadSelection({ kind: "source", id }).catch(error => notice(error.message, true));
+  }
+});
+const qualityFollowupDesk = installQualityFollowupDesk({
+  getState: () => state, action, mutate, refresh, notify: notice, download: downloaded,
+  restoreRequest: restoreQualityPending,
+  navigate(section) {
+    if (!state.view) return;
+    state.section = section; state.selection = null; state.detail = null; state.detailVersion++;
+    renderShell(); renderCatalog(); renderInspector();
+  },
+  openSource(id) {
+    state.section = "sources"; state.selection = null; state.detail = null; state.detailVersion++;
+    renderShell(); renderCatalog();
+    loadSelection({ kind: "source", id }).catch(error => notice(error.message, true));
+  }
+});
+
 async function start() {
   try {
     const saved = await journal("read");

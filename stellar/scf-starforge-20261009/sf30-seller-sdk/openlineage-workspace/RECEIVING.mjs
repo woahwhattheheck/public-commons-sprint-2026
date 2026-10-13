@@ -13,6 +13,12 @@ import { tools as nativeTools } from "./catalog.mjs";
 import { sha256 } from "./model.mjs";
 
 const SOURCE = dirname(fileURLToPath(import.meta.url));
+const RECEIVING_ACTIONS = new Set([
+  "workspace.metadata", "records.read", "object.read", "workspace.read", "source.import", "source.read",
+  "entity.read", "lineage.read", "edition.save", "edition.compare", "review.save", "result.attach",
+  "workspace.export", "export.read", "report.read", "schema.compare", "schema.impact",
+  "schema.review.save", "schema.report"
+]);
 function originalBlob(bytes) {
   return createHash("sha1").update(Buffer.from("blob " + bytes.length + "\0")).update(bytes).digest("hex");
 }
@@ -106,6 +112,22 @@ export async function receiveOriginalExamples(outputDirectory) {
       operationId: "receiving-attach-original-contract", expectedRevision: current.revision };
     const attached = await merchantCall("attach_file", { ...attachmentArgs, input: "contract", expectedSha256: attachment.sha256 });
     record("attach-complete-original-reference", attached);
+    const schemaSelection = { from: editionOne.edition.id, to: editionTwo.edition.id };
+    const schemaComparison = await merchantCall("schema.compare", schemaSelection);
+    assert.ok(schemaComparison.changes.length, "The original second example reports schema observations");
+    record("compare-original-schema-observations", schemaComparison);
+    const firstSchemaChange = schemaComparison.changes[0];
+    record("read-declared-schema-impact", await merchantCall("schema.impact", { ...schemaSelection,
+      comparisonId: schemaComparison.comparisonId, changeId: firstSchemaChange.id }));
+    const schemaReviewArgs = { ...schemaSelection, comparisonId: schemaComparison.comparisonId,
+      changeIds: [firstSchemaChange.id], reviewer: "Original receiving operator", decision: "observed",
+      reason: "Inspected the schema observation in the retained upstream example and its declared relationships.",
+      evidence: [{ kind: "source", id: second.sha256 }], operationId: "receiving-schema-review",
+      expectedRevision: (await client.metadata()).revision };
+    record("save-original-schema-review", await merchantCall("schema.review.save", schemaReviewArgs));
+    const schemaReport = await merchantCall("schema.report", { ...schemaSelection, format: "json" });
+    await fs.writeFile(join(root, "schema-report.json"), schemaReport.text, { flag: "wx", mode: 0o600 });
+    record("complete-original-schema-report", { bytes: Buffer.byteLength(schemaReport.text) });
     const beforeReplay = (await client.read()).revision;
     const previousInstance = original.identity.instanceId;
     await original.close();
@@ -123,6 +145,10 @@ export async function receiveOriginalExamples(outputDirectory) {
       mediaType: "application/json", base64: attachment.bytes.toString("base64") });
     assert.equal(attachedReplay.replayed, true);
     assert.equal(attachedReplay.result.id, attached.result.id);
+    const recoveredSchemaReview = await merchantCall("schema.review.save", schemaReviewArgs);
+    assert.equal(recoveredSchemaReview.replayed, true);
+    assert.equal((await client.read()).revision, beforeReplay);
+    record("recover-original-schema-review", recoveredSchemaReview);
     const metadata = await merchantCall("workspace.metadata");
     assert.equal(metadata.revision, beforeReplay);
     const journal = [];
@@ -168,8 +194,11 @@ export async function receiveOriginalExamples(outputDirectory) {
     assert.equal(sha256(merchantBytes), exported.id);
     await fs.writeFile(join(root, "merchant-workspace.json"), merchantBytes, { flag: "wx", mode: 0o600 });
     record("merchant-complete-export-ranges", { id: exported.id, bytes: merchantBytes.length });
-    for (const native of nativeTools) assert.equal(usedMerchantTools.has("merchant_" + native.name), true, native.name + " through the original merchant owner");
-    record("merchant-complete-native-catalog", { nativeActions: nativeTools.length, calledTools: [...usedMerchantTools].sort() });
+    const originalTools = nativeTools.filter(tool => RECEIVING_ACTIONS.has(tool.action));
+    assert.equal(originalTools.length, RECEIVING_ACTIONS.size, "The complete receiving catalog remains installed");
+    for (const native of originalTools) assert.equal(usedMerchantTools.has("merchant_" + native.name), true, native.name + " through the original merchant owner");
+    record("merchant-complete-native-catalog", { nativeActions: originalTools.length, calledTools: [...usedMerchantTools].sort(),
+      installedCatalog: nativeTools.map(tool => tool.name), extensionActions: nativeTools.filter(tool => !RECEIVING_ACTIONS.has(tool.action)).map(tool => tool.action) });
     await merchant.close(); merchant = null;
     assert.equal((await client.metadata()).revision, beforeReplay);
     record("merchant-close-preserves-original-server", { workspaceId: identity.workspaceId, revision: beforeReplay });
@@ -188,6 +217,8 @@ export async function receiveOriginalExamples(outputDirectory) {
     assert.equal(reopened.revision, beforeReplay);
     assert.deepEqual(reopened.editions, (await client.read()).editions);
     assert.deepEqual(reopened.reviews, (await client.read()).reviews);
+    assert.deepEqual(reopened.schemaReviews, (await client.read()).schemaReviews);
+    assert.deepEqual(reopened.schemaComparisons, (await client.read()).schemaComparisons);
     assert.equal(Buffer.from((await receivedClient.action("source.read", { id: attachment.sha256 })).base64, "base64").equals(attachment.bytes), true);
     record("reopen-received-original-application", { workspaceId: reopened.workspaceId, revision: reopened.revision,
       events: reopened.eventCount, jobs: reopened.jobs.length, datasets: reopened.datasets.length, runs: reopened.runs.length,

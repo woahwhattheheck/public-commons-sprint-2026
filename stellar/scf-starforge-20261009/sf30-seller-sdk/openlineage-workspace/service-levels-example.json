@@ -1,0 +1,12 @@
+{
+  "title": "Example hourly warehouse refresh",
+  "jobKey": "[\"job\",\"warehouse.example\",\"hourly_refresh\"]",
+  "owner": "Data operations",
+  "runbook": "",
+  "enabled": true,
+  "effectiveFrom": "2026-10-12T00:00:00.000Z",
+  "maxCompletionAgeSeconds": 5400,
+  "maxDurationSeconds": 1800,
+  "failureWindowSeconds": 86400,
+  "monitorFailures": true
+}
