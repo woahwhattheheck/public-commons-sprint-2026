@@ -4,8 +4,8 @@
   "files": [
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 22458,
-      "sha256": "ba6afbce79d4f2e80691a6e367bbdd63aa63dd15a97cbc4e5f3972cb7db8bf42",
+      "bytes": 23552,
+      "sha256": "d59ebeb7d3bbd30d6ab20fd74c8b513d6310b21649f5dd0665ff45a5732922e5",
       "role": "addition"
     },
     {
@@ -160,8 +160,8 @@
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 8945,
-      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
+      "bytes": 8313,
+      "sha256": "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
       "role": "native"
     },
     {
@@ -172,14 +172,14 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17979,
-      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
+      "bytes": 16428,
+      "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b",
       "role": "addition"
     },
     {
       "path": "measurement_workspace/web/workspace.css",
-      "bytes": 4996,
-      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
+      "bytes": 10857,
+      "sha256": "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
       "role": "native"
     },
     {
@@ -197,8 +197,8 @@
     {
       "path": "measurement_workspace/web/chemistry.mjs",
       "role": "native",
-      "bytes": 35156,
-      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+      "bytes": 33682,
+      "sha256": "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
     },
     {
       "path": "measurement_workspace/legacy_chemistry.py",
@@ -221,19 +221,19 @@
     {
       "path": "model/MEASUREMENTS_PORTABLE.md",
       "role": "native",
-      "bytes": 9735,
-      "sha256": "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2"
+      "bytes": 10829,
+      "sha256": "d3d21072dce0e4ed2fc548c704cf83e8b40a39d14da4c77458affcb26efd8ebe"
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "bytes": 20239,
+      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374",
       "role": "native"
     },
     {
       "path": "measurement_workspace/web/returned_reviews.mjs",
-      "bytes": 21786,
-      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "bytes": 20239,
+      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374",
       "role": "native"
     }
   ],
