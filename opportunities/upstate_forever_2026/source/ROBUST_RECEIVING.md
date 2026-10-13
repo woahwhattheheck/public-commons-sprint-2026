@@ -221,3 +221,100 @@ node source/run_robust_workbench_browser.mjs \
 ```
 
 The optional extension leaves a restored original atlas draft for review and its existing queued delivery build. The journey journal records the saved study/run/revision, explicit profile and point, source pin and actual baseline/alternative run IDs.
+
+
+## Continue an existing scientific workspace through selected-study receiving
+
+The same maintained Python driver has an existing-workspace mode. It uses an
+already completed Decision calculation and an explicitly chosen original native
+profile. It either reopens a completed Decision-bound map/client release or
+builds that release from a complete original atlas selection JSON. The original
+queue, selected-study exporter, portable receiver and registered file tickets
+perform each step.
+
+From the assembled application, select the existing native interpreter and the
+actual saved IDs:
+
+```sh
+python source/run_robust_workspace_transfer.py \
+  --workspace ORIGINAL_SCIENTIFIC_WORKSPACE \
+  --study-id ORIGINAL_SAVED_STUDY_ID \
+  --run-id ORIGINAL_COMPLETED_DECISION_RUN_ID \
+  --delivery-profile ORIGINAL_NATIVE_PROFILE_ID \
+  --delivery-id ORIGINAL_COMPLETED_DELIVERY_ID \
+  --output NEW_RECEIVING_DIRECTORY
+```
+
+For a saved frontier calculation, include `--delivery-point ZERO_BASED_INDEX`,
+including zero when that is the chosen point. To build the map/client release
+through the existing `delivery.build` action, replace `--delivery-id` with
+`--delivery-selection ORIGINAL_ATLAS_SELECTION.json`. That JSON must contain
+the actual project's map/contact/source requirements, as saved by the original
+atlas. The driver obtains the baseline, alternative and immutable
+`source_decision` from the original delivery-release route and rejects a
+conflicting supplied binding.
+
+An optional `--experiment-selection ORIGINAL_EXPERIMENT_SELECTION.json` saves
+that explicit design through the original `experiment.save` action before
+export. Use a selection containing the actual completed noncanonical
+`source_run_ids` being adopted. The driver checks the normalized list against
+the immutable plan's `source_runs`, confirms the original selections, and
+includes the unmaterialized programme with its original run dependencies.
+Canonical-only IDs are normally omitted by the experiment engine, so this
+option requires a design retaining at least one noncanonical original.
+The existing baseline, scenario, profile and axis choices remain authoritative.
+
+The continuation records the exact saved Decision revision and result, full
+study history, native selections, completed delivery record and original file
+descriptors. It verifies the retained producing-stage execution report against
+the delivery's execution digest. It then checks the selected closure includes
+the completed release and adopted originals, streams its original archive,
+receives it into the original registered workspace store and reopens the same
+Decision release route. Receiving hooks and original completed-task replay run
+before mutable SQLite readers reopen the restored store. All original
+Decision/map/client files must remain available through authenticated tickets.
+
+Add `--whole-workspace` to perform the original full-workspace backup/restore
+after the selected study. Choose `--upload-limit-gib` for the actual archive
+size and `--timeout` for observing each original queued operation. Output
+and source workspaces must be separate directory trees. Keep the retained
+output directory; rerun the identical command with `--resume` after an
+interruption. The driver reuses its immutable selection, archived bytes and
+original operation IDs, and resumes failed or interrupted original tasks.
+The operator drains active work when closing.
+
+The complete result is `native-decision-receiving.json`, alongside
+`native-receiving-selection.json`, the progress journal, frozen source
+snapshot, selected study archive and the retained operator state directory.
+The result records the actual source project, saved study/run/revision, chosen
+profile/point, adopted run IDs, delivery ID, transfer ID, native task IDs and
+restored registered workspace key.
+
+### Reopen that exact received result in the existing browser journey
+
+Start the original operator on the received workspace using the retained
+`operator-state` directory, and keep its private startup URL in the local
+URL file. The existing browser driver accepts the Python continuation's receipt:
+
+```sh
+node source/run_robust_workbench_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE \
+  --receiving-receipt RECEIVING_DIRECTORY/native-decision-receiving.json \
+  --output NEW_RECEIVED_BROWSER_DIRECTORY \
+  --video
+```
+
+This mode selects the receipt's exact restored registered workspace and opens
+its completed original map/client release. It checks all original retained
+file descriptors and downloads the Decision binding, Decision HTML report,
+client HTML report and native execution record through the visible atlas
+links, comparing actual bytes and SHA-256. The saved-release backlink must
+reopen the exact original calculation and revision. The existing profile,
+point, native-pair, draft-reload and 390-pixel journeys then run on that saved
+result. The receipt supplies the profile and point; creation/configuration and
+new frontier budget arguments belong to the separate preparation mode.
+
+The browser journal retains its original source identities, download hashes,
+screenshots and optional video, with the private operator capability redacted.
+Continue this command within the existing native receiving operation and
+publish its actual receipt and process outcome with the same operation.
