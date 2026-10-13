@@ -140,6 +140,20 @@ Each panel supplies:
 - Up to six `legend` rows with full original `label`, `receptor_id` and a
   display-only XY `anchor`.
 
+- Optional `role_labels: {contribution: text, receptor: text}` supplies the
+  authoritative producer's names for the two visual swatches. Each label is
+  nonempty text of at most 160 characters; unknown keys are rejected. Labels
+  wrap completely, with frame height adjusted to preserve every word. Omitted
+  labels retain the exact Receiving defaults and their original positions:
+  "Contribution area" and "Source / receptor".
+
+A Conservation producer may explicitly label these swatches "Original reporting
+footprint" and "Selected planning units"; those meanings must come from its
+actual saved source selection. A map role describes the drawing order/style,
+not an inferred hydrologic relationship. Optional labels do not change geometry
+roles, source identities, quantities or coordinate semantics. The source producer
+also owns its full caption, title and scope explanation.
+
 All supported GeoJSON geometry coordinates remain intact, including additional
 dimensions; this planar drawing explicitly uses XY. Coordinates must be finite,
 rings closed, geometries nonempty and the declared extent positive. The renderer

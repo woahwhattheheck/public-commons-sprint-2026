@@ -234,6 +234,9 @@
       "requires": [
         "station-geography",
         "observed-station-studies"
+      ],
+      "source_manifests": [
+        "observations/wbd_station_join_20261013/station-context.sources.json"
       ]
     }
   }

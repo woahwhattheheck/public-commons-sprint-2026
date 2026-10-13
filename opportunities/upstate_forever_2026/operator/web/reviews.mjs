@@ -158,25 +158,33 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       detail:$('[data-requirement-detail]',row).value,
     }));
   }
-  async function newReview(id,exportId=null){
-    const opening=reviewFormRequest(),requestedWorkspace=opening.workspace,catalogue=await read('catalog');
+  async function newReview(id,exportId=null,scientificRequest=null){
+    const opening=reviewFormRequest(),requestedWorkspace=opening.workspace;
+    if(scientificRequest&&scientificRequest.workspace_key!==requestedWorkspace)
+      throw Error('Open this saved scientific report in its original Workspace.');
+    const catalogue=await read('catalog');
+    const scientific=scientificRequest?await api(endpoint('/api/source-reports/scientific-edition',{
+      workspace:requestedWorkspace,id:scientificRequest.edition_id})):null;
+    if(scientific&&(scientific.workspace_key!==requestedWorkspace||scientific.edition?.id!==scientificRequest.edition_id))
+      throw Error('The saved scientific report differs from the selected original edition.');
     const original=id?(await read('review',{review_id:id})).review:null;
-    if(!opening.current())return;
+    if(!opening.current()||(scientificRequest?.isCurrent&&!scientificRequest.isCurrent()))return;
     let editor=null;
     if(requestedWorkspace!==current())throw Error('Reopen the form in the selected workspace.');
     const selection=original?.selection??{source_collection_ids:[],run_ids:[],delivery_ids:[],spatial_export_ids:[],requirements:[],notes:[]};
     const maps=catalogue.spatial_exports??[],chosenMaps=exportId?[exportId]:(selection.spatial_export_ids??[]);
     if(chosenMaps.some(key=>!maps.some(row=>row.id===key)))throw Error('Reopen the completed map export in this workspace before selecting it for review.');
-    const title=original?original.title+' — revised selection':'';
+    const title=scientific?scientific.edition.title+' — review':original?original.title+' — revised selection':'';
     const single=!exportId&&catalogue.sources.length===1?[catalogue.sources[0].id]:[];
-    openForm(original?'Create a revised review selection':'Create customer review',
-      'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
+    openForm(scientific?'Review saved scientific report':original?'Create a revised review selection':'Create customer review',
+      scientific?'Retain this exact report edition, its original figures and companions, and the review purpose. Returned feedback uses the existing Customer review history and worklist.':'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
       '<div class="form-grid">'+field('review_title','Review title',title,{required:true,wide:true,maximum:300})+
       field('review_purpose','Purpose',original?.purpose??'',{type:'textarea',required:true,wide:true,rows:3,maximum:20000,note:'Describe the decision this selected work should support.'})+'</div>'+
+      (scientific?'<section class="review-intro"><h3>'+esc(scientific.edition.title)+'</h3><p>'+scientific.edition.source_count+' original studies · '+scientific.edition.section_count+' sections · '+scientific.edition.figure_count+' figures · '+scientific.files.length+' retained files</p><p class="mono">'+esc(scientific.edition.id)+'</p><p>The complete saved edition is fixed for this review. Preparing the review does not change the report or its source ordering.</p><details><summary>Original report files</summary><ul>'+scientific.files.map(item=>'<li>'+esc(item.path)+' · '+Number(item.bytes).toLocaleString()+' bytes</li>').join('')+'</ul></details></section>':
       '<div class="review-choice-grid">'+choices('source_collection_ids','Original source editions',catalogue.sources,original?selection.source_collection_ids:single)+
       choices('run_ids','Completed model runs',catalogue.runs,selection.run_ids)+
       choices('delivery_ids','Completed deliveries',catalogue.deliveries,selection.delivery_ids)+
-      mapChoices(maps,chosenMaps)+'</div>'+
+      mapChoices(maps,chosenMaps)+'</div>')+
       '<section class="review-requirement-section"><header><div><h3>Requirements</h3><p>Retain the issuer’s source text and add the specific criteria for this selection.</p></div><div class="page-actions">'+
       (catalogue.issuer?button('issuer-load','Add issuer requirements'):'')+button('requirement-add','Add requirement')+'</div></header>'+
       '<p id="review-issuer-pin" class="note"></p><div id="review-requirement-editors">'+selection.requirements.map(requirementRow).join('')+'</div></section>'+
@@ -187,14 +195,36 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
           source_collection_ids:checkValues('source_collection_ids'),run_ids:checkValues('run_ids'),delivery_ids:checkValues('delivery_ids'),
           spatial_export_ids:checkValues('spatial_export_ids'),
           requirements:requirementValues(),notes:notes(val('review_notes'))};
-        if(!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
+        if(!scientific&&!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
         const ids=value.requirements.map(x=>x.id);
         if(new Set(ids).size!==ids.length)throw Error('Give every requirement its own ID.');
+        if(scientific){
+          const reviewSelection={title:value.title,purpose:value.purpose,requirements:value.requirements,notes:value.notes};
+          const snapshot=JSON.stringify(reviewSelection);
+          let preview;
+          try{preview=await api('/api/source-reports/review-preview',{method:'POST',body:{
+            workspace:requestedWorkspace,edition_id:scientific.edition.id,review_selection:reviewSelection}});}
+          catch(error){if(!editor.current())return;throw error;}
+          if(!editor.current())return;
+          const latest={title:val('review_title'),purpose:val('review_purpose'),requirements:requirementValues(),notes:notes(val('review_notes'))};
+          if(JSON.stringify(latest)!==snapshot)throw Error('Your review fields changed during source verification. Submit the current fields again.');
+          if(preview.workspace_key!==requestedWorkspace||preview.scientific_report_edition_id!==scientific.edition.id||
+              !/^[0-9a-f]{64}$/.test(preview.operation_id||'')||!preview.review_selection)
+            throw Error('The review preview does not identify this saved scientific report.');
+          return submitAction('source-reports.review',{edition_id:scientific.edition.id,
+            review_selection:preview.review_selection,expected_operation_id:preview.operation_id});
+        }
         await submitAction('customer.review.create',{selection:value});
       },()=>{
         editor=reviewFormSession('[name="review_title"]',requestedWorkspace);
         editor.form._reviewIssuer=catalogue.issuer;
       });
+  }
+  async function prepareScientificReportReview(value){
+    if(!value||value.workspace_key!==current()||!/^[0-9a-f]{64}$/.test(value.edition_id||''))
+      throw Error('Choose a saved scientific report in its original Workspace.');
+    return newReview(null,null,{workspace_key:value.workspace_key,edition_id:value.edition_id,
+      isCurrent:typeof value.isCurrent==='function'?value.isCurrent:null});
   }
   function loadIssuer(){
     const issuer=$('#operation-form')._reviewIssuer;
@@ -912,5 +942,5 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='compare')return compareForm();
     if(action==='template')return template(id);
   }
-  return {render,mount,detach,dispatch,taskActions,openReview,mapActions};
+  return {render,mount,detach,dispatch,taskActions,openReview,mapActions,prepareScientificReportReview};
 }

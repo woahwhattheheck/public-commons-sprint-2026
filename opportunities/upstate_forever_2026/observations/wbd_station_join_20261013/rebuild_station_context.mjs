@@ -15,8 +15,11 @@ const read=name=>{
   return fs.readFileSync(file);
 };
 const original=JSON.parse(read("model-sources.json"));
-const source=original.entries.find(e=>e.id==="upstate-observation-wbd-polygon-matches-20261013-0f34b1d5d958");
-if(!source)throw Error("Select the original complete WBD polygon table");
+const expected=JSON.parse(read("station-context.sources.json")).entries[0];
+const selected=original.entries.filter(e=>e.kind==="table"&&e.path==="derived/polygon_matches.csv"
+  &&e.sha256===expected.metadata.original_polygon_table_sha256);
+if(selected.length!==1)throw Error("Select one original complete WBD polygon table");
+const source=selected[0];
 for(const item of [source,...source.companions]){
   const body=read(item.path);
   if(hash(body)!==item.sha256 || (item.bytes!==undefined&&body.length!==item.bytes))
@@ -25,8 +28,7 @@ for(const item of [source,...source.companions]){
 const rows=parseCsv(read(source.path).toString("utf8"));
 const context=buildStationContext(rows,source.sha256);
 const output=Buffer.from(toCsv(context),"utf8");
-const expected=JSON.parse(read("station-context.sources.json")).entries[0];
-if(context.length!==184||hash(output)!==expected.sha256||output.length!==expected.bytes)
+if(context.length!==expected.metadata.row_count||hash(output)!==expected.sha256||output.length!==expected.bytes)
   throw Error("Station context differs from the retained complete source edition");
 if(args.includes("--check")){
   if(!read(expected.path).equals(output))throw Error("Saved station context differs");
