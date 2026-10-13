@@ -1,0 +1,359 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "tyk-workspace",
+  "heading": "## API portfolio and cohort commissioning with complete operator receiving",
+  "sources": [
+    {
+      "id": "tyk-native-operations",
+      "label": "Native Gateway and licensed Dashboard contract",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/NATIVE_CONTRACT.md",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "bf284695580232d1c3eb61d17d93656531101963",
+          "bytes": 41375,
+          "sha256": "cab8e944df20fbcd71f8abc06bbd510c8aa89163610a33296e0df1554774623d"
+        }
+      ]
+    },
+    {
+      "id": "tyk-native-driver",
+      "label": "Original upstream request planning and reconciliation",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/native.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "ca6d048be836aa38338a132e88e06da547340523",
+          "bytes": 47539,
+          "sha256": "74cdba498bdc11eb86c16b3aac6b060b07a1b5de37784212089df2131ab3c4f3"
+        }
+      ]
+    },
+    {
+      "id": "tyk-api-workspace",
+      "label": "Durable original workspace and native dispatch",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/model.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "0a038d0d72a2fe88e57384b81e1765c32665b961",
+          "bytes": 38015,
+          "sha256": "61aeaf4e7b3afa3bec05cb9d425e071cca4842dea68e6475e94df6850b93985e"
+        }
+      ]
+    },
+    {
+      "id": "tyk-dashboard-cohort",
+      "label": "Dashboard commissioning plan, review and source acceptance",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/commissioning.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "dc9e618035a777c5fd60b14e69202ee93fdf8f62",
+          "bytes": 12093,
+          "sha256": "ad77a1dfcc2399a8de1e122a67f4c35c5e6411272c9845c2bb9b955343a9f352"
+        }
+      ]
+    },
+    {
+      "id": "tyk-dashboard-cohort-bindings",
+      "label": "Dashboard commissioning bindings to original native requests",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/commissioning-model.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "f0ca44b48a75c9c2b46125747854b83ea52eadf6",
+          "bytes": 16089,
+          "sha256": "aefd4ab012a38810b1c5603e7db106146b56c8733b97b8ae06eae7f35b3ea28e"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-cohort",
+      "label": "Two-Gateway cohort plan and exact review criteria",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/gateway-commissioning.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "1a23990289025ed840b512420675af21ce383735",
+          "bytes": 13987,
+          "sha256": "34c312fd3ef54bd02110def185b855328311c82740081da2c8f9d91e6e057929"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-cohort-bindings",
+      "label": "Two-Gateway durable native request and recovery bindings",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/gateway-commissioning-model.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "60af588c60420a9856f97484f40dc6a26e524e87",
+          "bytes": 17564,
+          "sha256": "d266460320f5523b0d18cf5ea17a6f20de33311dbb2bb2ea21447cc299d2ffbe"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-browser",
+      "label": "Complete two-Gateway source intake and operational review",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/gateway-commissioning-browser.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "10980f692f141f49d23f3e31d3e32075d97cb735",
+          "bytes": 26830,
+          "sha256": "73ec4e7dd49904852c77ff22916e67573ec1c19503869c61acbb448981910e93"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-review-drafts",
+      "label": "Revision guarded source and review draft persistence",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/gateway-commissioning-drafts.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "68454e80c014228edf519a9a0b6334fcd465e8b1",
+          "bytes": 2033,
+          "sha256": "35cdab59d227170b4b04cb44a6d896f3571d93ca5e64892496013a03029ac2e5"
+        }
+      ]
+    },
+    {
+      "id": "tyk-workspace-actions",
+      "label": "Complete 27-action workspace contract",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/actions.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "98b22c6f45e7d79d87bd3c97f4cbd6a471d3ae87",
+          "bytes": 14029,
+          "sha256": "78265b329033ced931f5d4965d43cc369cb3bebf21d36e1b998ee48dc203d652"
+        }
+      ]
+    },
+    {
+      "id": "tyk-original-workspace-receiving",
+      "label": "Full streamed workspace export, inspection and adoption",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/delivery.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "7ba8077a10d6d064eafb98b61cf63a3029bca059",
+          "bytes": 24110,
+          "sha256": "3996865c134e353212e58c980d8dafd4f83cbadecf0aba4a1c41af05042e27e8"
+        }
+      ]
+    },
+    {
+      "id": "tyk-customer-operating",
+      "label": "Installed customer operating guide",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/tyk-merchant/OPERATING.md",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "eed26546ea4870f35432a77442bd66c324629c96",
+          "bytes": 26841,
+          "sha256": "327fd5a6a6f8b0e81d745e708fd65ed5866830e454a29ffd372d944229c953ee"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-operating",
+      "label": "Complete staging and production Gateway operator course",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/tyk-merchant/GATEWAY_COMMISSIONING.md",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "833f4de5c95721b4755d4755604165898be62456",
+          "bytes": 13524,
+          "sha256": "db1af13c97ca60bb86d1d378c178fadafddad170d92979ee56a0591c6c3e577d"
+        }
+      ]
+    },
+    {
+      "id": "tyk-customer-receiving",
+      "label": "Complete customer receiving and reopening guide",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/tyk-merchant/RECEIVING.md",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "7707bcb36d1d29088e140cf832d2d610549e29fe",
+          "bytes": 14191,
+          "sha256": "2e18f6bf3350ecdbb00b9b9c13e84145ce9fd69ddc2edf1d29daa8d854373781"
+        }
+      ]
+    },
+    {
+      "id": "tyk-typed-client",
+      "label": "Installed typed SDK and commissioning contracts",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "products/tyk-merchant/client.d.mts",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "c6d8e2f0a8a45241745030e49e0aff99933a6236",
+          "bytes": 25690,
+          "sha256": "49b44030f37db9e7525b00da77354604f3057cc9ea7113206b8e01a42d14c76b"
+        }
+      ]
+    },
+    {
+      "id": "tyk-merchant-agent-catalog",
+      "label": "Complete 33-tool merchant agent catalogue",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/catalog/tyk-workspace.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "b3bc28f0aacc43ef1905fc30c968f48f6d4537f6",
+          "bytes": 4493,
+          "sha256": "65462b9ac15c518a3965b6953c8b927e1dc437ba4be8cc16263a21fe3e76676f"
+        }
+      ]
+    },
+    {
+      "id": "tyk-selected-installation",
+      "label": "Original selected product installation guide",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/TYK_MERCHANT.md",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "b9cd631bd120fca519dbf532d770f5c16d5d6580",
+          "bytes": 7151,
+          "sha256": "1a71ab1a5e121024241d7bd08fe24b28041c642373092b4b062f8333fa3ab33a"
+        }
+      ]
+    },
+    {
+      "id": "tyk-dashboard-native-course",
+      "label": "Original complete Dashboard cohort receiving course",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/commissioning-native-journey.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "807fa3a7b94729906abbd50d3b492abdacf5827c",
+          "bytes": 18525,
+          "sha256": "faa0cd4aa9b68b154c2cc19e33c3b42b1ffcf12023fe5d438229366cadd6be05"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-native-course",
+      "label": "Original 12-API two-Gateway commissioning course",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/gateway-commissioning-native-journey.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "9c2309b09ddeb27823e795102d47295c8614f047",
+          "bytes": 20582,
+          "sha256": "b9e5f789c45d81afe1ad0fde42f017d5c7e7fccf6bf2afd4405b4b3b6cf9adb6"
+        }
+      ]
+    },
+    {
+      "id": "tyk-complete-native-course",
+      "label": "Original combined native and browser receiving programme",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/native-journey.mjs",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "35fecbc3d07a75b1c940b3b104f3b4ea97950e79",
+          "bytes": 56245,
+          "sha256": "79a7fbdaee7a1c13cd9a1397bc79c9677676ee83c1b094fc06bd3bbee8d630b1"
+        }
+      ]
+    },
+    {
+      "id": "tyk-gateway-native-host",
+      "label": "Official Gateway, Redis and upstream original host",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/gateway-native-host.py",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "d84150283e66670d54f29ed6d092ad01608f6670",
+          "bytes": 51061,
+          "sha256": "f4d1d3aee678dd8457937fa1831a937e34bb03b8eade806e9cea643ef77d374b"
+        }
+      ]
+    },
+    {
+      "id": "tyk-source-native-receiver",
+      "label": "Complete selected source and native output receiver",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/receive-source-release.py",
+      "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+      "editions": [
+        {
+          "commit": "6bca80855373234ff92d73ddddd823e58c00792a",
+          "git_blob": "c188c9d36e071ed619fef7a0ba896adc932a1176",
+          "bytes": 16600,
+          "sha256": "8651ce04f1976bef731144a53cd89744d655e2f296e18f9abae06c0c28e30b6e"
+        }
+      ]
+    }
+  ]
+}
