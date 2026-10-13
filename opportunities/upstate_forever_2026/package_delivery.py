@@ -133,7 +133,8 @@ def unavailable(detail):
             'boundary': 'The original technical audit did not complete; no technical pass or scientific acceptance is inferred.'}
 
 
-def run_original_audit(captured_manifest, index, raster_paths):
+def run_original_audit(captured_manifest, index, raster_paths, *, limits=None):
+    limits = capture_limits(limits)
     # A local XML/VRT file named .tif must not cause GDAL to resolve remote data.
     # The original audit already requires GTiff; check its container before open.
     captured = {entry['path'] for entry in index['artifacts']}
@@ -149,7 +150,7 @@ def run_original_audit(captured_manifest, index, raster_paths):
         require(spec is not None and spec.loader is not None, 'Original audit module cannot be loaded')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        result = module.inspect(captured_manifest)
+        result = module.inspect(captured_manifest, max_manifest_bytes=limits['max_manifest_bytes'])
         require(isinstance(result, dict) and result.get('status') in ('FAIL', 'TECHNICAL_PRECHECK_PASS'),
                 'Original audit returned an unsupported result')
         return result
@@ -202,7 +203,7 @@ def pack(manifest_path, output, *, limits=None):
         index['missing'].append({'roles': ['raster_companion'], 'path': 'delivery/' + relative,
                                  'reason': 'Companion exists beside a declared source raster but was not listed. Add it explicitly to project_assets and capture again.'})
     captured_manifest = output / index['manifestPath']
-    audit = run_original_audit(captured_manifest, index, raster_paths)
+    audit = run_original_audit(captured_manifest, index, raster_paths, limits=limits)
     require(companion_state(source_root, raster_paths) == companions,
             'Raster companion presence changed during packaging; choose a fresh capture')
     audit_raw = json_bytes(audit)

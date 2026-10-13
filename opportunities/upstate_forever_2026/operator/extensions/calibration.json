@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "5",
+  "version": "6",
   "order": 65,
   "assets": [
     "calibration.mjs",
-    "calibration.css"
+    "calibration.css",
+    "calibration_maps.mjs"
   ],
   "backend": {
     "module": "calibration",
@@ -22,7 +23,9 @@
       "calibration.analyze",
       "calibration.export",
       "calibration.uncertainty",
-      "calibration.uncertainty.export"
+      "calibration.uncertainty.export",
+      "calibration.maps.prepare",
+      "calibration.maps.review"
     ],
     "invoke": {
       "handler": "invoke",
@@ -95,6 +98,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/calibration/maps",
+        "operation": "maps",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -128,6 +144,16 @@
       {
         "kind": "calibration-uncertainties",
         "operation": "uncertainty",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "calibration-maps",
+        "operation": "maps",
         "handler": "read",
         "args": [
           "workspace_key",
