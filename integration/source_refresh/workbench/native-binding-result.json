@@ -1,0 +1,9 @@
+{
+  "journey": "Concrete native binding and source-preserving installer",
+  "authorization_status": 401,
+  "workspace_isolation": true,
+  "original_route_preserved": true,
+  "retained_operation_retry": true,
+  "original_backup_with_sqlite": true,
+  "repeat_install_changes": 0
+}

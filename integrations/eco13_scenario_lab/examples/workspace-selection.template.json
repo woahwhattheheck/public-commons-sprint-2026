@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.scenario-lab-workspace/v1",
+  "model_workspace": "./scientific-workspace",
+  "project_id": "upper-savannah",
+  "setup_id": "retained-ndr-sdr-320",
+  "currency": "USD",
+  "models": [
+    "ndr",
+    "sdr"
+  ],
+  "grid_id": "SET_ACTUAL_RETAINED_GRID_ID",
+  "profile_id": "SET_ACTUAL_RETAINED_PROFILE_ID",
+  "baseline": {
+    "scenario_id": "SET_ACTUAL_RETAINED_BASELINE_SCENARIO_ID"
+  },
+  "scenarios": [
+    {
+      "id": "restoration",
+      "scenario_id": "SET_ACTUAL_RETAINED_LANDCOVER_SCENARIO_ID",
+      "cost_cents": null
+    }
+  ],
+  "cases": [
+    {
+      "id": "retained-parameters"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "headwaters-parameter-course",
+  "components": {
+    "headwaters-parameter-course": {
+      "title": "Simulated headwaters native sensitivity and joint decisions",
+      "paths": [
+        "source_tools/headwaters_parameter_course.py",
+        "source/simulated_headwaters_20261013/PARAMETER_COURSE.md"
+      ],
+      "requires": [
+        "core",
+        "ensembles",
+        "paired-ensemble",
+        "retained-application-source"
+      ]
+    }
+  },
+  "required_components": [
+    "headwaters-parameter-course"
+  ]
+}

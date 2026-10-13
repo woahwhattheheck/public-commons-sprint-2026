@@ -1,0 +1,148 @@
+{
+  "schema": "upstate.paired-ensemble-source/v2",
+  "contribution": "ASTRA-ECO12-2651",
+  "predecessor_pr": 2651,
+  "predecessor_merge": "e0cea78be8352130217c871d54057b8f02fb9ed9",
+  "namespace": "model.paired_ensemble",
+  "files": {
+    "opportunities/upstate_forever_2026/PAIRED_ENSEMBLES.md": {
+      "bytes": 12057,
+      "sha256": "bc75e94aef130e4c2688dcc0369efea8d686249ff3ae7cfb19780f5a326bee16",
+      "git_blob_sha": "d32bb615b62cda0ef7d0feaf2930ff4d6d12645a"
+    },
+    "opportunities/upstate_forever_2026/checks/paired_ensemble_journey.py": {
+      "bytes": 13856,
+      "sha256": "8d4130980ecd52e8ffd08a0d41b0f0c5d9e23775ce68f6a002b49cf756c6a504",
+      "git_blob_sha": "a5543a1aeb9a968dd7403eb2c7aab727cc3c87c0"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/__init__.py": {
+      "bytes": 163,
+      "sha256": "c785415be870d7c00f0c77fd8dae2212b6f09ff82e7db2441b44054acd37553a",
+      "git_blob_sha": "ff1646f04c9c2a346debc7912ebc079ea1d2255a"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_cli.py": {
+      "bytes": 5745,
+      "sha256": "15cb199b064078a0b3a10c7e2453777a0525a62f057e7c08ae44007fa0058acc",
+      "git_blob_sha": "c704b3d3310b1e3dcc2e5fce9208911df4bf672a"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_portable.py": {
+      "bytes": 8892,
+      "sha256": "8b5c91b577276702ec212e8ac73c377ab37a53be1de6d2169edf070cb34f1121",
+      "git_blob_sha": "eb7c5865c82f5be82d502db8e26730c150491295"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_rasters.py": {
+      "bytes": 32356,
+      "sha256": "c8d978bdb493cc6b0e7a51bd668e46fa24b6e2bd24c48c464a72fd2df5709f75",
+      "git_blob_sha": "d04a0a3dd89219646e457a5d6f186639144913ee"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_report.py": {
+      "bytes": 16394,
+      "sha256": "6131e80299ddbfc5807527b8ded0f70fbde70be7720aea1586880bcaab278024",
+      "git_blob_sha": "c5473ec104e3508b494c4cf6f2036c9dc4bd5d66"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_store.py": {
+      "bytes": 3478,
+      "sha256": "68b7e3702b376036aa73e146c71904b7de0d97e7460c9781a6c0e65922fe0122",
+      "git_blob_sha": "533f2fc4c3c03e9e3d1ac7e2144dfdc78d16e968"
+    },
+    "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_workspace.py": {
+      "bytes": 10481,
+      "sha256": "e142ea9a8b7f2b545ba982668ceb543aebd23a085995c51ddc67c8a9dee07424",
+      "git_blob_sha": "cd8b53771369813f0df9481f2a2007ac43d982aa"
+    },
+    "opportunities/upstate_forever_2026/operator/install_paired_ensemble.py": {
+      "bytes": 5551,
+      "sha256": "8cbf8a302d3b9f0d3ca99ad366a90f63e0b95f3ba6acefaafe9ee16737c9a4db",
+      "git_blob_sha": "782b8af357ed4f989802f7b6e009e663ae087d9e"
+    },
+    "opportunities/upstate_forever_2026/operator/paired_ensemble.py": {
+      "bytes": 9734,
+      "sha256": "ade06db9dba23014da447f48a677e6a6674b562eab1c0d3dc7b89955e8123f24",
+      "git_blob_sha": "687b0670785838b6cdddb3d1a4fea3374550b65a"
+    },
+    "opportunities/upstate_forever_2026/operator/web/paired_ensemble.css": {
+      "bytes": 1679,
+      "sha256": "b8ac45d687ecd70e5495c2188ad163e1fb8ba7e2d1fea2b477721e3ba96489b3",
+      "git_blob_sha": "12b05dbc2fb7f2ff9e3b5ec0f9475c4e39916b7c"
+    },
+    "opportunities/upstate_forever_2026/operator/web/paired_ensemble.html": {
+      "bytes": 3524,
+      "sha256": "7dff231686280a8518f9575964c2f4edeb25807aaa98897e5b31b4a7c02adae7",
+      "git_blob_sha": "f624b8993f878eefd03da14af5ad620d764d6283"
+    },
+    "opportunities/upstate_forever_2026/operator/web/paired_ensemble.mjs": {
+      "bytes": 12037,
+      "sha256": "984974391e13945be279b62950e876e8583b6d439af9ececd87e790de4b615fd",
+      "git_blob_sha": "dff01db6e7848e000c48e315b93a23ca8f753342"
+    },
+    "opportunities/upstate_forever_2026/requirements-paired-ensemble.txt": {
+      "bytes": 123,
+      "sha256": "3414c2e9d195e3a76d4bd2c2b17bebfa0053d16f385ee40cd81de7f67de80e66",
+      "git_blob_sha": "593c06349e50c44223740bf66a7032a6996acc68"
+    }
+  },
+  "legacy_exact_sha256": {
+    "ENSEMBLES.md": "52a7eb7946cfe355a0b904f4cb26e97ba58c5686897083ed6cefc6dc4c68b9a5",
+    "checks/ensemble_journey.py": "f50b842f9472dad5c5a69f731e352247c940ecf2b6cccf6909798c47ff46283b",
+    "model/ensemble_cli.py": "15cb199b064078a0b3a10c7e2453777a0525a62f057e7c08ae44007fa0058acc",
+    "model/ensemble_portable.py": "8b5c91b577276702ec212e8ac73c377ab37a53be1de6d2169edf070cb34f1121",
+    "model/ensemble_rasters.py": "c8d978bdb493cc6b0e7a51bd668e46fa24b6e2bd24c48c464a72fd2df5709f75",
+    "model/ensemble_report.py": "6131e80299ddbfc5807527b8ded0f70fbde70be7720aea1586880bcaab278024",
+    "model/ensemble_store.py": "68b7e3702b376036aa73e146c71904b7de0d97e7460c9781a6c0e65922fe0122",
+    "model/ensemble_workspace.py": "e142ea9a8b7f2b545ba982668ceb543aebd23a085995c51ddc67c8a9dee07424",
+    "operator/ensemble.py": "d618f6b0272332aa37db9c012abeaf58e7104fe0aeec57fc27942f7fcb28b0b2",
+    "operator/install_ensemble.py": "87e37a6ec1a0e8be5cde8fb1d080696173eb90cb970713137e798ec4f7268bbc",
+    "operator/web/ensemble.css": "b8ac45d687ecd70e5495c2188ad163e1fb8ba7e2d1fea2b477721e3ba96489b3",
+    "operator/web/ensemble.html": "3dc2df2caeea69d5fe9f026615975e1718011d713ab64d1cb9c71e545f7387c3",
+    "operator/web/ensemble.mjs": "e2eed92c2ead0b7fd7f267e2cfde1f3f0d287a47a66e5944a61cfc52d8816ea1",
+    "requirements-ensemble.txt": "3414c2e9d195e3a76d4bd2c2b17bebfa0053d16f385ee40cd81de7f67de80e66"
+  },
+  "entry": "python operator/install_paired_ensemble.py --operator operator",
+  "state": "Complete namespaced source; base implementation merged in predecessor PR",
+  "coexistence": {
+    "peer_files_preserved": 14,
+    "first_install": {
+      "server_sha256": "4509fbe5b45467c62a25e0024fb9f3e87aaba69beda535611aaf5a9783e9faf1",
+      "opening_path": "/web/paired_ensemble.html",
+      "removed_exact_legacy_files": [
+        "checks/ensemble_journey.py",
+        "model/ensemble_store.py",
+        "operator/ensemble.py",
+        "operator/install_ensemble.py",
+        "operator/web/ensemble.css",
+        "operator/web/ensemble.html",
+        "operator/web/ensemble.mjs"
+      ],
+      "preserved_differing_peer_files": [
+        "ENSEMBLES.md",
+        "model/ensemble_cli.py",
+        "model/ensemble_portable.py",
+        "model/ensemble_rasters.py",
+        "model/ensemble_report.py",
+        "model/ensemble_workspace.py",
+        "requirements-ensemble.txt"
+      ],
+      "preserved_existing_source": true
+    },
+    "second_install": {
+      "server_sha256": "4509fbe5b45467c62a25e0024fb9f3e87aaba69beda535611aaf5a9783e9faf1",
+      "opening_path": "/web/paired_ensemble.html",
+      "removed_exact_legacy_files": [],
+      "preserved_differing_peer_files": [
+        "ENSEMBLES.md",
+        "model/ensemble_cli.py",
+        "model/ensemble_portable.py",
+        "model/ensemble_rasters.py",
+        "model/ensemble_report.py",
+        "model/ensemble_workspace.py",
+        "requirements-ensemble.txt"
+      ],
+      "preserved_existing_source": true
+    },
+    "coexisting_entrypoints": [
+      "model.ensemble_workspace.run_workspace",
+      "model.paired_ensemble.EnsembleWorkspace"
+    ],
+    "fixture": "Source-receiving/install layout; not original regional application execution"
+  }
+}

@@ -1,0 +1,254 @@
+[
+  {
+    "id": "tributary_a-ammonium_n-1",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-ammonium_n-3",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-ammonium_n-6",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-ammonium_n-10",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-ammonium_n-15",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-ammonium_n-20",
+    "reach": "tributary_a",
+    "species": "ammonium_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-1",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-3",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-6",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-10",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-15",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "tributary_a-nitrate_n-20",
+    "reach": "tributary_a",
+    "species": "nitrate_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-1",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-3",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-6",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-10",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-15",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-ammonium_n-20",
+    "reach": "confluence",
+    "species": "ammonium_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-1",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-3",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-6",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-10",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-15",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "confluence-nitrate_n-20",
+    "reach": "confluence",
+    "species": "nitrate_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-1",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-3",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-6",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-10",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-15",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-ammonium_n-20",
+    "reach": "reservoir",
+    "species": "ammonium_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-1",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 1,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-3",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 3,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-6",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 6,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-10",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 10,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-15",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 15,
+    "sigma_mg_l": 0.05
+  },
+  {
+    "id": "reservoir-nitrate_n-20",
+    "reach": "reservoir",
+    "species": "nitrate_n",
+    "day": 20,
+    "sigma_mg_l": 0.05
+  }
+]
