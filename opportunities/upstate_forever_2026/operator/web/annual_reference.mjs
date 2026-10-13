@@ -307,11 +307,11 @@ export function createAnnualReferences(host) {
     detach();
     root=node;workspace=current();epoch++;
     Object.assign(draft,defaults);query='';series='';page=0;
-    const savedInventory=restore();
+    const savedInventory=restore(), token=epoch, selected=workspace;
     root.addEventListener('click',click);root.addEventListener('change',change);root.addEventListener('input',input);
     render();await refresh();
-    if(savedInventory && root && current()===workspace) {
-      try {await openInventory(savedInventory);} catch(err){if(root){error=err.message;render();}}
+    if(savedInventory && still(token,selected)) {
+      try {await openInventory(savedInventory);} catch(err){if(still(token,selected)){error=err.message;render();}}
     }
   }
   function update(state) {

@@ -170,7 +170,7 @@ class AnnualReferences:
             return original
         if mode == "registered":
             source = self.sources._root_path(payload.get("root_id"), payload.get("path", ""), directory=True)
-            supplied = {name: source / name for name in ("load_est.zip", "sitegage.zip")}
+            supplied = {name: relative_file(source, name) for name in ("load_est.zip", "sitegage.zip")}
         elif mode == "uploads":
             supplied = {}
             for name, field in (("load_est.zip", "load_upload_id"), ("sitegage.zip", "site_upload_id")):
