@@ -278,7 +278,8 @@ def run(args):
     }
     required(len(configuration["huc12s"]) == len(set(configuration["huc12s"])), "Select each original HUC once")
     course = Course(args.output / "selected-huc-receiving.json", configuration)
-    app_members = ("model/observed_landcover.py", "operator/observed_landcover_operator.py",
+    app_members = ("model/observed_landcover.py", "model/observed_landcover_report.py",
+                   "operator/observed_landcover_operator.py",
                    "operator/extensions/observed-landcover.json", "operator/web/observed_landcover.mjs",
                    "operator/source_report_editions.py", "model/scientific_report_editions.py",
                    "model/observed_report_render.py", "model/observed_context.py",
