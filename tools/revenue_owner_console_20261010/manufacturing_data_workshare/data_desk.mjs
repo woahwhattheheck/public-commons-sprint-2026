@@ -31,10 +31,15 @@ function validateDesk(value){
  const verify=s=>{
   if(!s||!s.workspace||!Array.isArray(s.pending)||typeof s.unitText!=='string'||typeof s.actor!=='string'||typeof s.notes!=='string'||!s.dispositionDrafts||typeof s.dispositionDrafts!=='object'||Array.isArray(s.dispositionDrafts))throw Error('The saved desk does not contain its complete editor state.');
   const workspace=core.importWorkspace(stringify(s.workspace));
+  if(typeof s.issueQuery!=='string'||!['all',...core.DISPOSITION_STATUSES].includes(s.issueStatus)||!KINDS.includes(s.tableKind)||typeof s.selectedPending!=='string')throw Error('The retained desk filters or selected table are incomplete.');
+  for(const draft of Object.values(s.dispositionDrafts))if(!draft||typeof draft!=='object'||Array.isArray(draft)||!core.DISPOSITION_STATUSES.includes(draft.status)||typeof draft.note!=='string')throw Error('A saved decision editor is incomplete.');
+  const pendingIds=new Set();
   for(const p of s.pending){
    if(!p||typeof p.id!=='string'||!KINDS.includes(p.kind)||typeof p.name!=='string'||typeof p.csv!=='string'||!p.columns||typeof p.columns!=='object'||Array.isArray(p.columns))throw Error('An incoming source is incomplete.');
-   core.inspectCSV(p.csv,{delimiter:p.delimiter});
+   if(pendingIds.has(p.id))throw Error('Incoming source identities must be unique.');pendingIds.add(p.id);
+   core.stageImport(workspace,p);
   }
+  if(s.selectedPending&&!pendingIds.has(s.selectedPending))throw Error('The selected incoming source is absent.');
   return {...clone(s),workspace};
  };
  const result={...clone(value),current:verify(value.current)};
@@ -86,7 +91,7 @@ export function mountDataReadinessDesk(root,config={}){
   html+='<p><strong>'+esc(selected.name)+'</strong> · '+esc(LABELS[selected.kind])+' · '+bytes(selected.csv).toLocaleString()+' original bytes</p><div class="grid">';
   for(const field of definitions(selected.kind)){
    const name=fieldName(field);
-   html+='<label>'+esc(fieldLabel(field))+(field.required?' *':'')+'<select data-map="'+esc(name)+'" data-source="'+esc(selected.id)+'"><option value="">Unmapped</option>'+(['revision','parentRevision','componentRevision'].includes(name)?'<option value="__BLANK_REVISION__" '+(selected.columns[name]?.constant===''?'selected':'')+'>Explicit blank revision (no source column)</option>':'')+preview.headers.map(header=>'<option value="'+esc(header)+'" '+(selected.columns[name]===header?'selected':'')+'>'+esc(header)+'</option>').join('')+'</select></label>';
+   html+='<label>'+esc(fieldLabel(field))+(field.required?' *':'')+'<select data-map="'+esc(name)+'" data-source="'+esc(selected.id)+'"><option value="">Unmapped</option>'+(['revision','parentRevision','componentRevision'].includes(name)?'<option value="__BLANK_REVISION__" '+(selected.columns[name]?.constant===''?'selected':'')+'>Explicit blank revision (no source column)</option>':'')+preview.headers.map(header=>'<option value="'+esc('column:'+header)+'" '+(selected.columns[name]===header?'selected':'')+'>'+esc(header)+'</option>').join('')+'</select></label>';
   }
   html+='</div><p class="muted">Column matching is an operator choice. The raw CSV is retained unchanged.</p>';
   if(preview.issues?.length)html+='<p>'+preview.issues.length+' mapping/format issues; showing the first 50. The complete analysis is retained.</p>'+table(['Issue','Action'],preview.issues.slice(0,50).map(x=>[x.message,x.action]));
@@ -152,7 +157,7 @@ export function mountDataReadinessDesk(root,config={}){
    for(const row of entries)desk.incoming.push({...row,id:uid(),reason:'From '+file.name+': '+row.reason});
    changed();status('The complete incoming desk is retained below. Choose Open this desk to adopt it; current work stays selected.');
   });
-  else if(target.dataset.map&&!busy){const p=current().pending.find(x=>x.id===target.dataset.source);if(p){p.columns[target.dataset.map]=target.value==='__BLANK_REVISION__'?{constant:''}:target.value;changed();render();}}
+  else if(target.dataset.map&&!busy){const p=current().pending.find(x=>x.id===target.dataset.source);if(p){p.columns[target.dataset.map]=target.value==='__BLANK_REVISION__'&&['revision','parentRevision','componentRevision'].includes(target.dataset.map)?{constant:''}:target.value.startsWith('column:')?target.value.slice(7):'';changed();render();}}
   else if(target.dataset.decisionStatus){const id=target.dataset.decisionStatus,issue=report().issues.find(x=>x.id===id);current().dispositionDrafts[id]??={status:'open',note:issue?.disposition?.note||''};current().dispositionDrafts[id].status=target.value;changed();}
   else if(target.id==='desk-pending'){current().selectedPending=target.value;changed();render();}
   else if(target.id==='desk-table-kind'){current().tableKind=target.value;tablePage=0;changed();render();}
