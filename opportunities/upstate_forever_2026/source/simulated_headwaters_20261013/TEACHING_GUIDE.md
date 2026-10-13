@@ -175,3 +175,7 @@ The owner-directed build interval ends **13 October 2026 at 14:00 UTC (10:00 Eas
 ## Maintained application references
 
 This teaching case uses `START_HERE.md`, `operator/GUIDED_JOURNEY.md`, `operator/REHEARSAL.md`, `operator/RECEIVING.md`, `PROGRAMMES.md`, and the native model/source definitions retained with the application. Their existing controls and scientific contracts own the operations described above.
+
+## Native model definitions
+
+The retained unit conversions and dimensionless L-factor interpretation follow the original [InVEST 3.20 NDR source](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/ndr/ndr.py) and [InVEST 3.20 SDR source](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/sdr/sdr.py). Their [NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html) and [SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html) define the original inputs, raster units and watershed totals.
