@@ -105,13 +105,22 @@ def main():
                 return task
             time.sleep(0.1)
 
+    def continue_task(operator, task_id):
+        # Reopening the original operator retains these exact request IDs and
+        # marks an interrupted active step. A repeated invocation continues that
+        # saved step once; a new failure is surfaced by wait_task immediately.
+        existing = operator.task(task_id)
+        if existing["state"] in {"interrupted", "failed"}:
+            operator.resume(task_id)
+        return wait_task(operator, task_id)
+
     def action(operator, workspace, name, payload, step):
         operation_id = "ES_9960_CONTINUITY_" + step.upper()
         accepted = operator.submit(workspace, name, payload, operation_id)
         plan["steps"][step] = {"id": accepted["id"], "operation_id": operation_id,
                                "action": name, "workspace_key": workspace}
         save()
-        task = wait_task(operator, accepted["id"])
+        task = continue_task(operator, accepted["id"])
         view = operator.task_view(task["id"])
         plan["steps"][step].update(
             state=task["state"], result=task["result"],
@@ -180,10 +189,15 @@ def main():
                          {"transfer_id": transfer_id, "task_ids": [pending["id"]]},
                          route + "_resume")
         for task_id in resumed["result"]["queued"]:
-            wait_task(receiver, task_id)
+            continue_task(receiver, task_id)
         finished = receiver.task(pending["id"])
-        if finished["state"] != "complete" or len(finished["attempts"]) != 1:
-            raise ValueError("The receiving operator did not execute the original unfinished import once")
+        completed_attempts = [attempt for attempt in finished["attempts"]
+                              if attempt.get("state") == "complete"]
+        if finished["state"] != "complete" or len(completed_attempts) != 1:
+            raise ValueError("The receiving operator did not complete the original unfinished import once")
+        expected_collections = {original_complete["result"]["id"], finished["result"]["id"]}
+        if {row["id"] for row in workspace.sources()} != expected_collections:
+            raise ValueError("Receiving or continuation changed the two original source collections")
         entry = workspace._get("sources", finished["result"]["id"])["entries"][0]
         retained, _ = workspace.source_file(finished["result"]["id"], entry["id"])
         if file_digest(retained) != INPUTS["unfinished"]["sha256"]:
