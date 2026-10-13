@@ -269,3 +269,16 @@ The pure decoder was exercised on the actual retained originals:
 | Actual ZIP/gzip with lower output limits, altered local ZIP name, mixed packet editions and traversal path | Rejected at the corresponding size, identity or path check |
 
 These checks exercise the original archive and source formats in the JavaScript runtime. The Node filesystem adapter has received source review; run `inspect` followed by `extract` on the retained ZIP above when receiving it on the native host.
+
+## Recover exact repeated source text
+
+The same inspector and extractor accept `commons.exact-source-envelope/v1`. This transport can reduce repeated full source strings inside JSON and embedded applications. Recovery first restores and verifies the complete original UTF-8 text, then passes that unchanged text to the existing source-bank parser and its path, member, byte-count and hash checks.
+
+```sh
+node source_tools/source_bank_cli.mjs inspect exact-source-envelope.json
+node source_tools/source_bank_cli.mjs extract exact-source-envelope.json received-exact-source
+```
+
+The extraction destination must be new. As with other carriers, the recovery directory retains the exact incoming envelope and complete member inventory. The inventory also records the restored whole-source identity and transport sizes. Here `--sha256` continues to verify the incoming file; the envelope separately binds the original source text. The transport helper is included in the existing standalone source-bank component.
+
+For packing or recovering a complete document without interpreting its JSON/source-bank schema, use the repository's [generic exact-string command](../../../tools/slack-source-bundle/EXACT_SOURCE_TRANSPORT.md). That command restores the original file itself. No decoded source is executed.
