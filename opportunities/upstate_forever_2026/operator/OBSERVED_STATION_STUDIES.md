@@ -113,3 +113,7 @@ python -m model.observed_station_studies --workspace /mnt/data/gis12/original-wo
 ```
 
 The new root manifest binds the three additional summary tables without changing their source bytes. The gauge/catchment selection resolves through the existing canonical calibration manifest, preserving its original publisher responses and transformation records in the portable collection. The separate thirteen-gauge NWIS and NLDI studies continue to expose their full daily records and both coordinate alternatives. Include regional_station_context.sources.json alongside calibration_station_geography.sources.json in an explicit application source inventory.
+
+## Complete retained-source installation
+
+The additive installer validates and installs every primary body and companion in its selected native source manifests. If the application includes the observed hydrology report, supply its current root report recipe and source manifest together in `--source-root`; their complete source closure and calibration binding are validated before publication. `--dry-run` returns changed paths, selected native manifests and retained-source member count. Existing identical originals are reused, generated report/calibration bindings move together, and previous changed files retain the existing backup.

@@ -38,7 +38,8 @@ def _selection(args, application):
             ("calibration_geographic_support", "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json"),
             ("calibration_station_study", "calibration_station_geography.sources.json"),
             ("study_figures", "eighteenmile_scientific_figures.sources.json"),
-            ("flow_report", "observed_hydrology_context.sources.json")):
+            ("flow_report", "observed_hydrology_context.sources.json"),
+            ("flow_seasonality", "observed_flow_seasonality.sources.json")):
         context_manifest = application / relative
         if context_manifest.is_file():
             paths.append((role, context_manifest))
