@@ -396,7 +396,7 @@ export async function recoverPythonOperation(root,id) {
     return {operationId:id,resume:true};
   }finally{await lease.close();}
 }
-export async function pythonWorkspaceState(root,{runtimeId,runtimeDirectory}={}) {
+export async function pythonWorkspaceState(root,{runtimeId,runtimeDirectory}={},observations=null) {
   const binding=await pythonRuntimeBinding(runtimeDirectory,runtimeId);
   const saved=await readJSON(viewPath(runtimeDirectory),true);
   const active=await readJSON(join(runtimeDirectory,'python-runtime','active.json'),true);
@@ -408,9 +408,23 @@ export async function pythonWorkspaceState(root,{runtimeId,runtimeDirectory}={})
     const dir=operationPath(root,id),request=await readJSON(join(dir,'request.json'),true);
     if(!request || request.runtimeId!==runtimeId || !Object.hasOwn(pythonOperationFields,request.operation))continue;
     const state=await readJSON(join(dir,'state.json'),true)??{phase:'QUEUED'};
-    const active=state.phase==='RUNNING' && await operationRunning(join(dir,'worker.lock'));
+    let active,observation;
+    if(observations){
+      const retained=observations.get(id);
+      if(state.phase!=='RUNNING'){
+        active=false;observation={status:'CURRENT',source:'RETAINED',checkedAt:now()};
+      }else if(retained && retained.phase===state.phase && retained.updatedAt===state.updatedAt){
+        active=retained.workerActive??null;observation=retained.observation;
+      }else{
+        active=null;observation={status:'UNAVAILABLE',source:'RETAINED',checkedAt:now(),
+          error:{code:'RUNTIME_WORKSPACE_OBSERVATION_CHANGED',
+            message:'The original operation changed after its status observation. Refresh its retained status.'}};
+      }
+    }else active=state.phase==='RUNNING' && await operationRunning(join(dir,'worker.lock'));
     operations.push({id,operation:request.operation,createdAt:request.createdAt,...state,workerActive:active,
-      displayPhase:state.phase==='RUNNING' && !active?'INTERRUPTED':state.phase});
+      ...(observations?{observation}:{}),
+      displayPhase:state.phase==='RUNNING' && active!==true?
+        active===null?'OBSERVATION_UNAVAILABLE':'INTERRUPTED':state.phase});
   }
   operations.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   return {schema:PYTHON_SCHEMA,binding,project:PYTHON_PROJECT,

@@ -345,3 +345,10 @@ Receive the four complete reader outputs and their source pins through the
 existing saved draft, review, Page and Site operation. The current municipal
 chapter and these selected source identities travel together with every other
 accepted chapter and the original six funded packages.
+
+
+## Independent product source declarations
+
+The existing composer now receives every complete `grant-products/*.json` declaration when its accepted chapter is present in the current manuscript. This includes the existing document-processing, CFCE GiveCredit and Stellarcarbon definitions and the original Grant Reporting contribution. Product authors can add complete declarations without editing the shared customer projector.
+
+Use the same `grant-compose --manuscript` command and four-output publication. Additional received files use repeatable `--product-registration`; another complete declaration set uses `--product-registrations-directory`. The [complete declaration and receiving guide](GRANT_PRODUCT_SOURCES.md) covers original source identities, measured editions, duplicate ownership and the unchanged saved-application workflow. The [Grant Reporting chapter](GRANT_REPORTING.md) links the actual maintained capture and procedure implementation.

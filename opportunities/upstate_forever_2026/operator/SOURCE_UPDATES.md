@@ -90,3 +90,53 @@ Source comparisons retain their exact source choices. Changing editions or sourc
 ## Existing source refresh plans
 
 The common desk lists both retained source-refresh plan formats. It reopens and applies each plan through the engine that created it, preserving the original plan identity and retained progress. Printable HTML and CSV reports use the selected saved plan. Export complete study submits the original workspace backup operation and includes the model inputs, source editions, results, and update progress. Existing `/source-refresh` links, class-based clients and command-line report/export operations continue to work.
+
+## Retained requests in the current operator
+
+Source updates saves a request identity and its complete selection before submitting a plan, native preparation, model execution, land-cover comparison or complete-study export. If the connection ends before acknowledgement, **Continue a submitted selection** retrieves the same original task. A failed or interrupted acknowledged task retains the existing **Resume this operation** control. Changing the source choices creates a separate request. A fresh completed plan save captures the current native dependency snapshot; a fresh completed archive export includes the project's later work. Pending retries retain the earlier intent.
+
+The update title, source replacements, selected plan and land-cover choices survive leaving the desk and reopening the same workspace. The existing operation queue remains responsible for execution and queued cancellation. Complete exports include both immutable refresh-plan formats and their native execution state.
+
+## Operate the original source update and receiving copy
+
+The public application's complete source is maintained under
+`opportunities/upstate_forever_2026`. Use the current checkout with its original
+operator and both retained plan engines. The installer also supports receiving
+the complete component beside another current application and shares the
+existing extension-install lock.
+
+The operated browser journey takes actual retained source collections and
+optional explicit source-ID mappings:
+
+```bash
+node source/run_source_updates_browser.mjs \
+  --url-file /private/current-operator-url.txt \
+  --workspace ORIGINAL_OPERATOR_WORKSPACE_KEY \
+  --from-collection EARLIER_RETAINED_COLLECTION \
+  --to-collection REPLACEMENT_RETAINED_COLLECTION \
+  --mapping /path/to/selected-original-source-ids.json \
+  --title "Upper Savannah source update" \
+  --run-models --transfer --video \
+  --output /path/to/source-update-journey
+```
+
+The mapping is the same original-ID-to-replacement-ID object used by the desk;
+null leaves a source unmapped. Omit the argument to use the retained same-ID
+matches. Select actual study editions and inspect any concrete dependency
+message before execution. The driver operates the existing controls, first
+rejecting an identical-edition selection, then saving and preparing the real
+update, executing the native models when requested, downloading the original
+plan and HTML/CSV reports, and reopening the saved plan in a fresh browser.
+With `--transfer`, it downloads the ordinary complete archive, verifies its
+native ticket, restores that exact ZIP through the original form, and opens the
+same immutable update and progress in the independent receiving workspace.
+
+Screenshots, optional browser video, original downloads and the completed step
+journal are saved in the selected output directory. The private operator URL
+and capability are redacted. A native failure leaves its actual task identity
+and exception in that same journal and the original operator queue, so
+continuation uses the saved operation.
+
+### Existing plan bookmarks
+
+The original root-selective `/source-refresh` page remains available. Its catalogue keeps the original root-selective plans. An existing direct source-edition plan bookmark opens that exact plan in the common Source updates page, preserving its workspace; the common desk lists both formats. Direct `/web/source-refresh.html?workspace=...&plan_id=...` bookmarks also reopen the selected original plan after capability bootstrap.

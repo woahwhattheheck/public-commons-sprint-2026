@@ -1,0 +1,1394 @@
+{
+  "schema": "upstate.application-components/v1",
+  "edition": "ecosystem-sciences-2026-10-13",
+  "source_reference": "Current original component selection DATA: https://chatgpt.com/space/page_21a52f703ca4819196946d03644c4ae5 block8687dd2b-0c3a-4990-9c2f-bde6d65b74de; selected edition includes retained current operator families and original PublishedStudies family inventory.",
+  "required_components": [
+    "core",
+    "maintained-installers",
+    "annual-reference",
+    "assessment-context",
+    "calibration",
+    "conservation-catalog",
+    "conservation-design",
+    "conservation-optimization",
+    "conservation",
+    "decision-context",
+    "decisions",
+    "delivery-inspection",
+    "eco13",
+    "economic-desk",
+    "ensembles",
+    "experiment-diagnostics",
+    "gis-projects",
+    "guided-journey",
+    "investigations",
+    "keowee-method-view",
+    "landcover-ledger",
+    "map-atlas",
+    "native-run-assembly",
+    "native-run-desk",
+    "paired-ensemble",
+    "parcel-sources",
+    "profile-comparison",
+    "programme-activity",
+    "project-continuity",
+    "project-transfer",
+    "published-studies",
+    "receiving-waters",
+    "receptors",
+    "regional-soil",
+    "review-reconciliation",
+    "robust-workbench",
+    "scenario-analysis-delivery",
+    "scenario-analysis",
+    "scenario-footprint",
+    "scenario_reports",
+    "scientific-setup",
+    "source-preparation",
+    "spatial-cohorts",
+    "spatial-regions",
+    "station-geography",
+    "study-transfer",
+    "utility-cohorts",
+    "water-context",
+    "water-designations",
+    "water-quality",
+    "water_source_review",
+    "watershed-context",
+    "utility-microbial-study",
+    "native-interactions",
+    "station-assessment"
+  ],
+  "components": {
+    "core": {
+      "title": "Original scientific workspace and operator",
+      "paths": [
+        "audit.py",
+        "delivery_snapshot.py",
+        "install_extensions.py",
+        "integration/application_components.json",
+        "model/client_report.py",
+        "model/delivery.py",
+        "model/ensemble_consumers.py",
+        "model/ensemble_consumers_cli.py",
+        "model/native_study.py",
+        "model/parameter_studies.py",
+        "model/portable.py",
+        "model/raster_block_cache.py",
+        "model/record_catalog.py",
+        "model/source_lineage.py",
+        "model/station_inventory.py",
+        "model/workspace.py",
+        "native_study_audit.py",
+        "operator/PARAMETER_STUDIES.md",
+        "operator/RETAINED_CATALOG.md",
+        "operator/extension_registry.py",
+        "operator/parameter_study_api.py",
+        "operator/server.py",
+        "operator/web/app.mjs",
+        "operator/web/extension_host.mjs",
+        "operator/web/index.html",
+        "operator/web/observed_series.mjs",
+        "operator/web/parameter_studies.css",
+        "operator/web/parameter_studies.mjs",
+        "operator/web/style.css",
+        "package_delivery.py",
+        "source_tools/application_assembly.py",
+        "source_tools/application_components.py",
+        "source_tools/install_cumulative_application.py"
+      ]
+    },
+    "maintained-installers": {
+      "title": "Original component installation transforms",
+      "paths": [
+        "install_chemistry.py",
+        "install_economic_desk.py",
+        "install_experiments.py",
+        "install_gis_projects.py",
+        "install_intelligence.py",
+        "install_intelligence_operator.py",
+        "install_landcover.py",
+        "install_programmes.py",
+        "install_published_studies.py",
+        "install_source_refresh.py",
+        "install_terrain.py",
+        "operator/install_diagnostics.py",
+        "operator/install_conservation.py"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "annual-reference": {
+      "title": "annual reference",
+      "paths": [
+        "operator/extensions/annual-reference.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "assessment-context": {
+      "title": "assessment context",
+      "paths": [
+        "operator/extensions/assessment-context.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "calibration": {
+      "title": "calibration",
+      "paths": [
+        "operator/extensions/calibration.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "conservation-catalog": {
+      "title": "conservation catalog",
+      "paths": [
+        "operator/extensions/conservation-catalog.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "conservation-design": {
+      "title": "conservation design",
+      "paths": [
+        "operator/extensions/conservation-design.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "conservation-optimization": {
+      "title": "conservation optimization",
+      "paths": [
+        "operator/extensions/conservation-optimization.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "conservation": {
+      "title": "conservation",
+      "paths": [
+        "operator/extensions/conservation.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "decision-context": {
+      "title": "decision context",
+      "paths": [
+        "operator/extensions/decision-context.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "decisions": {
+      "title": "decisions",
+      "paths": [
+        "operator/extensions/decisions.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "delivery-inspection": {
+      "title": "delivery inspection",
+      "paths": [
+        "operator/extensions/delivery-inspection.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "eco13": {
+      "title": "Experiment comparisons",
+      "paths": [
+        "integrations/eco13_scenario_lab/EXPERIMENT_INTAKE.md",
+        "integrations/eco13_scenario_lab/INSTALL_RECEIVING.py",
+        "integrations/eco13_scenario_lab/README.md",
+        "integrations/eco13_scenario_lab/RETENTION.md",
+        "integrations/eco13_scenario_lab/UPSTATE_RECEIVING.md",
+        "integrations/eco13_scenario_lab/WORKSPACE.md",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/__init__.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/__main__.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/cli.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/engine.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/experiment_intake.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/native_worker.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/results.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/retention.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/spatial.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/store.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/upstate_intake.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/workspace_cli.py",
+        "integrations/eco13_scenario_lab/eco_scenario_lab/workspace_driver.py",
+        "integrations/eco13_scenario_lab/examples/objectives.json",
+        "integrations/eco13_scenario_lab/examples/project.template.json",
+        "integrations/eco13_scenario_lab/examples/revision.json",
+        "integrations/eco13_scenario_lab/examples/workspace-runs.template.json",
+        "integrations/eco13_scenario_lab/examples/workspace-selection.template.json",
+        "integrations/eco13_scenario_lab/pyproject.toml",
+        "operator/ECO13.md",
+        "operator/eco13_economics.py",
+        "operator/eco13_operator.py",
+        "operator/extensions/eco13.json",
+        "operator/web/eco13.css",
+        "operator/web/eco13.mjs",
+        "receiving/check_retention.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "revision": "fa64d7f5e80a6f7646901f9695042b83899fdb87",
+        "bank_blob": "f96274284d6b5828458fb1e6e53ae29269b32e47",
+        "payload_bytes": 613587,
+        "payload_sha256": "de03b90f48a3280ff92e1e11fc28e0ab25e89fae7dcb7215bd477d747c35fda6",
+        "matched_public_revision": "1f15842a3be060dcf5c182e5392b22a11b844bf2",
+        "receiving_edition": "complete-receiving-families-20261013-2",
+        "member_inventory": {
+          "integrations/eco13_scenario_lab/eco_scenario_lab/__init__.py": {
+            "bytes": 104,
+            "sha256": "5ff97a99b0982ecd1d5bbf1f638e23a35ffa74fb7ad10c14100d361586957204",
+            "git_blob": "bb6d11a85d4697b971fda1b36be5e6da9aa47823",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/__main__.py": {
+            "bytes": 47,
+            "sha256": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
+            "git_blob": "13be635566e79adccc98892cc67a44e636908b35",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/cli.py": {
+            "bytes": 13385,
+            "sha256": "d36281ac7e246f7aa2ac219f8504f67e2f2ce73a8f50888c8b2ad7ca348a20d0",
+            "git_blob": "08cc57654fc4c853fd42fd41be5a0169482ee702",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/engine.py": {
+            "bytes": 20659,
+            "sha256": "b0add0fb69280689d858783475ba68f3d9e3813f1b91ec83322f07c3a03f6458",
+            "git_blob": "5071595f68d9d9d92df9bc989b2050e466501f15",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/experiment_intake.py": {
+            "bytes": 16860,
+            "sha256": "31dd6abef34fd573e9612f708e43fa5a5b70a8e0a6235b823331b67007867db0",
+            "git_blob": "ac1a9e4172529fde498a5d9a3a2cf9f8533204d0",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/native_worker.py": {
+            "bytes": 2914,
+            "sha256": "5c4e1c3bbb20a442775abc2773c04a1bb5ac340723dc7f6604c6731418c2afcb",
+            "git_blob": "b6f2b936f00f21037a784ec77b58b8fae4b80910",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/results.py": {
+            "bytes": 43586,
+            "sha256": "a001a9274f635b1f5fae316cff8860e2a18c51dbbc8504cb39bad381fb840683",
+            "git_blob": "69631d5831814c397c1a4e8b0e77b85bd47649a9",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/retention.py": {
+            "bytes": 15096,
+            "sha256": "12d6736414987f00beaf984828115755545acb290d7f1331f4ecae375b682032",
+            "git_blob": "934179ef641a4943db6f565cfbad02b9acd440c1",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/spatial.py": {
+            "bytes": 9932,
+            "sha256": "e681a6002d1f3a638cdac5f69b8e0c605c8ecf2f9e38b45f69e8de610a12da1e",
+            "git_blob": "daf6273a1f33a32d989b192f7cb4d4c8bf3b78e8",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/store.py": {
+            "bytes": 18291,
+            "sha256": "0ede65e34d7728639644660fcd73b3349babd133a3300cca342f830764c603ed",
+            "git_blob": "2aebddac055d512717b933d597ff62b31db12d5a",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/upstate_intake.py": {
+            "bytes": 33221,
+            "sha256": "4c82417413690ed64ea6c65a4a447761f2c553533caa5e2f61450f7d02aa61ac",
+            "git_blob": "63f3e2c9a770e8e7b47dd5d41ce7e367628647f9",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/workspace_cli.py": {
+            "bytes": 5762,
+            "sha256": "1bd428e341306874211c17bcc8dc08febb9b21decc9d03b1eaf5a0147266b69d",
+            "git_blob": "831627d42a3195180580eb67b7cb57282778d704",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/eco_scenario_lab/workspace_driver.py": {
+            "bytes": 40486,
+            "sha256": "4d1d9f72b11efb3227575266132768224ebb91290c4de1e5c8270cf5fc4b683c",
+            "git_blob": "44bd69989adfc201b5b1436a9a9e6af1ff4fccd9",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/examples/objectives.json": {
+            "bytes": 203,
+            "sha256": "41a4ac8a33346f3aa35ab7b587e7fb8b24af9baebc4c32855cd11e5ef0ee8c29",
+            "git_blob": "e208e34312c8e530a811f5aa362ddf6ecf7f29fb",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/examples/project.template.json": {
+            "bytes": 2427,
+            "sha256": "dc187e5e19dd5eff98e76b01042a701c3074a37009776bd33e8c62d88737942a",
+            "git_blob": "7146b79e7fad2bed2d2d3ca9278ebb6b25a0314b",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/examples/revision.json": {
+            "bytes": 43,
+            "sha256": "601004443702a20c3b5cf45a49539685c1aa6723b73712ffc4a4e8777a292488",
+            "git_blob": "769ac723cfc9a645fa1207a424a11dc4d6ca33fd",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/examples/workspace-runs.template.json": {
+            "bytes": 399,
+            "sha256": "e35f8a31b8653fb0baa63eff5ba6d53da530629ed54e188991e8062c50e310e7",
+            "git_blob": "28a44234b872b0b269180812c893a84fb19daafd",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/examples/workspace-selection.template.json": {
+            "bytes": 625,
+            "sha256": "24e7ce95b7cf4de95dceeaef2429b7db76f38aa5a9b533fcd411021c67e4f951",
+            "git_blob": "6e5d6ec4c68488df0f6c43b6218892a2d14d790e",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/EXPERIMENT_INTAKE.md": {
+            "bytes": 7286,
+            "sha256": "22e411e9b38f58ad0b3be9e62eb4a084d75ab8ae68b8769b8e9548120a2341fb",
+            "git_blob": "9d2bf26c6d6a116004c51d3602d5853a47a7ff18",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/pyproject.toml": {
+            "bytes": 478,
+            "sha256": "ef0177e86a0afefb32b113c6e6972a472f20412dfa9edb9c6a13bbaa45203a5f",
+            "git_blob": "b44a955cc0dcd2e6410b17c2e88dd19794014619",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/README.md": {
+            "bytes": 13929,
+            "sha256": "237bb1229ade6eb5da185a3fe5c8998786ad023b8205c18a14ed4d85672d694f",
+            "git_blob": "c8b35484acc76eca82cc6abeab6e40f2b812da2e",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/RETENTION.md": {
+            "bytes": 9855,
+            "sha256": "fc528861b3b1cf498bc1515795079644c0bf17bf7224980e8a00a0198f7a7c5e",
+            "git_blob": "c66fd984288cc9126be90bfaa126f37c2ab3989a",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/UPSTATE_RECEIVING.md": {
+            "bytes": 13324,
+            "sha256": "ce8dcf614934c2e4bd85edcc1e87ea802248ee80a8c7be04716be1ac83f89372",
+            "git_blob": "235b0f42625c328263afcd725eb2b7867729b255",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/WORKSPACE.md": {
+            "bytes": 16577,
+            "sha256": "3e5e5d44541d0e6b1a439fa6538501260ae753a0dd86f583ad8570509814f513",
+            "git_blob": "518accac8a15a30b3d0f0ce7bcafc3b448beaf13",
+            "mode": "100644"
+          },
+          "operator/eco13_economics.py": {
+            "bytes": 9056,
+            "sha256": "4213c34da5c9dd74b6a13b55a6fbd476a5b9a0c6e643dba5d0de29a68e53a682",
+            "git_blob": "7a9bab4a2896185f7667a7eee0227a4fd713f03f",
+            "mode": "100644"
+          },
+          "operator/eco13_operator.py": {
+            "bytes": 45334,
+            "sha256": "ce621e3a86ef2e53ddb6b8afbf96b9630ec69294d4f7f2541da0b79534b434e0",
+            "git_blob": "3d6a2eb42e26dd935a6655c4a0f8222c5d0bec0c",
+            "mode": "100644"
+          },
+          "operator/ECO13.md": {
+            "bytes": 18692,
+            "sha256": "b65171087cc997bfbaf0598daef2828349af3ea1dfbfc03468a5837c30c73f18",
+            "git_blob": "f345d034b1298cb2c4c7cf13e579dacf16aca6e3",
+            "mode": "100644"
+          },
+          "operator/extensions/eco13.json": {
+            "bytes": 2825,
+            "sha256": "60b0b344df5b20c1a14717932ce48e7d9199dbb65be4c4c8b1d8cd17ef5aa5f0",
+            "git_blob": "75a0fcd2be13348b597b302b2ebd62e27c1144b7",
+            "mode": "100644"
+          },
+          "operator/web/eco13.css": {
+            "bytes": 9989,
+            "sha256": "2f33fee567bd4d6367bf7f5dcb184dd752cb49cefcc670230f9d2f4265ec5cca",
+            "git_blob": "6b8ff417b4cc24b77ba4c6c6a2982a5f75f2967c",
+            "mode": "100644"
+          },
+          "operator/web/eco13.mjs": {
+            "bytes": 48070,
+            "sha256": "45a5b18a7c965f9194eabd6396228da9551d297f619ad54990fa8135da3d9d56",
+            "git_blob": "a989d915c78cdd0b2fd0f04360bda4b17531b777",
+            "mode": "100644"
+          },
+          "receiving/check_retention.py": {
+            "bytes": 8527,
+            "sha256": "dcdb16dc38f14d691f3a63e92e3483e2a4167c1001b268d6853d08e2b00d3a7a",
+            "git_blob": "d5632a258068e1d870018938f63ba0e55be53293",
+            "mode": "100644"
+          },
+          "integrations/eco13_scenario_lab/INSTALL_RECEIVING.py": {
+            "bytes": 19934,
+            "sha256": "df98d490798fa36c3471d33536f6aa0248ce92814160d6eec713f999337f4811",
+            "git_blob": "0b50f1ff5bc2a2ead15436530b8424a2f167c222",
+            "mode": "100644"
+          }
+        }
+      },
+      "import_roots": [
+        "integrations/eco13_scenario_lab"
+      ]
+    },
+    "economic-desk": {
+      "title": "economic desk",
+      "paths": [
+        "operator/extensions/economic-desk.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "ensembles": {
+      "title": "ensembles",
+      "paths": [
+        "operator/extensions/ensembles.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "experiment-diagnostics": {
+      "title": "experiment diagnostics",
+      "paths": [
+        "operator/extensions/experiment-diagnostics.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "gis-projects": {
+      "title": "gis projects",
+      "paths": [
+        "operator/extensions/gis-projects.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "guided-journey": {
+      "title": "guided journey",
+      "paths": [
+        "operator/extensions/guided-journey.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "investigations": {
+      "title": "investigations",
+      "paths": [
+        "operator/extensions/investigations.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "keowee-method-view": {
+      "title": "keowee method view",
+      "paths": [
+        "operator/extensions/keowee-method-view.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "landcover-ledger": {
+      "title": "landcover ledger",
+      "paths": [
+        "operator/extensions/landcover-ledger.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "map-atlas": {
+      "title": "map atlas",
+      "paths": [
+        "operator/extensions/map-atlas.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "native-run-assembly": {
+      "title": "native run assembly",
+      "paths": [
+        "operator/extensions/native-run-assembly.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "native-run-desk": {
+      "title": "native run desk",
+      "paths": [
+        "operator/extensions/native-run-desk.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "paired-ensemble": {
+      "title": "paired ensemble",
+      "paths": [
+        "operator/extensions/paired-ensemble.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "parcel-sources": {
+      "title": "parcel sources",
+      "paths": [
+        "operator/extensions/parcel-sources.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "profile-comparison": {
+      "title": "profile comparison",
+      "paths": [
+        "operator/extensions/profile-comparison.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "programme-activity": {
+      "title": "programme activity",
+      "paths": [
+        "operator/extensions/programme-activity.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "project-continuity": {
+      "title": "project continuity",
+      "paths": [
+        "operator/extensions/project-continuity.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "project-transfer": {
+      "title": "project transfer",
+      "paths": [
+        "operator/extensions/project-transfer.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "published-studies": {
+      "title": "published studies",
+      "paths": [
+        "PUBLISHED_STUDIES.md",
+        "eighteenmile_chlorophyll_reconciled.sources.json",
+        "eighteenmile_lake_microcystin_reconciliation.sources.json",
+        "eighteenmile_lake_observation_report.sources.json",
+        "eighteenmile_lake_paired_analysis.sources.json",
+        "install_published_studies.py",
+        "measurement_workspace/OBSERVATION_SUPPORT.md",
+        "measurement_workspace/observation_support.py",
+        "measurement_workspace/published_studies.py",
+        "observations/eighteenmile_2023/README.md",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+        "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+        "observations/eighteenmile_2023/continuous_monthly_do.csv",
+        "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+        "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+        "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+        "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+        "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+        "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+        "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+        "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+        "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+        "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+        "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+        "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+        "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+        "observations/eighteenmile_2023/microcystin_support_20261013/original-campaign-support.json",
+        "observations/eighteenmile_2023/paired_analysis/README.md",
+        "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-pair-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-pairs.csv",
+        "observations/eighteenmile_2023/paired_analysis/chlorophyll-station-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/cross-analyte-links.csv",
+        "observations/eighteenmile_2023/paired_analysis/input-manifest.json",
+        "observations/eighteenmile_2023/paired_analysis/methods.json",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-campaign-support.csv",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-pair-summary.csv",
+        "observations/eighteenmile_2023/paired_analysis/microcystin-pairs.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+        "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+        "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
+        "observations/eighteenmile_2023/paired_analysis/paired-observations.json",
+        "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+        "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+        "observations/eighteenmile_2023/paired_analysis/source-records.csv",
+        "observations/eighteenmile_2023/reported_npdes_permits.csv",
+        "observations/eighteenmile_2023/seasonal_summaries.csv",
+        "observations/eighteenmile_2023/source_notes.json",
+        "observations/eighteenmile_2023/stations.csv",
+        "observations/eighteenmile_2023/stations.json",
+        "observations/eighteenmile_2023/study.json",
+        "observations/eighteenmile_2023/surface_ranges.csv",
+        "observations/eighteenmile_2023/table7-visual-context.csv",
+        "observations/eighteenmile_2023/table7-visual-reading.json",
+        "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_PUBLIC.md",
+        "observations/eighteenmile_2023/wqp/flow-context-public-sources.json",
+        "observations/eighteenmile_2023/wqp/flow_context.mjs",
+        "observations/eighteenmile_2023/wqp/flow_context_methods.public.json",
+        "observations/eighteenmile_2023/wqp/flow_original_source.mjs",
+        "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
+        "observations/eighteenmile_2023/wqp/originals/usgs_02186702_2023_2023.json",
+        "observations/eighteenmile_2023/wqp/reproduce_study_flow.mjs",
+        "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+        "observations/eighteenmile_2023/wqp_20261013/README.md",
+        "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+        "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+        "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+        "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+        "observations/eighteenmile_2023/wqp_20261013/source-manifest.json",
+        "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "operator/extensions/published-studies.json",
+        "operator/published_study_operator.py",
+        "operator/web/published_studies.css",
+        "operator/web/published_studies.mjs",
+        "published_studies_family.json",
+        "receive_published_studies.py",
+        "tools/attach_published_report.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "schema": "upstate.published-study-family/v1",
+        "version": "1.4.0",
+        "source_reference_base": "7161256c24314229609e1366518be32c5f32165d",
+        "external_source_edition": {
+          "files": 62,
+          "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
+          "url": "https://chatgpt.com/space/page_fb63164ad5208191b42417dd980ffb6a"
+        }
+      }
+    },
+    "receiving-waters": {
+      "title": "receiving waters",
+      "paths": [
+        "operator/extensions/receiving-waters.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "receptors": {
+      "title": "receptors",
+      "paths": [
+        "operator/extensions/receptors.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "regional-soil": {
+      "title": "regional soil",
+      "paths": [
+        "operator/extensions/regional-soil.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "review-reconciliation": {
+      "title": "review reconciliation",
+      "paths": [
+        "operator/extensions/review-reconciliation.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "robust-workbench": {
+      "title": "robust workbench",
+      "paths": [
+        "operator/extensions/robust-workbench.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "scenario-analysis-delivery": {
+      "title": "scenario analysis delivery",
+      "paths": [
+        "operator/extensions/scenario-analysis-delivery.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "scenario-analysis": {
+      "title": "scenario analysis",
+      "paths": [
+        "operator/extensions/scenario-analysis.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "scenario-footprint": {
+      "title": "scenario footprint",
+      "paths": [
+        "operator/extensions/scenario-footprint.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "scenario_reports": {
+      "title": "scenario reports",
+      "paths": [
+        "operator/extensions/scenario_reports.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "scientific-setup": {
+      "title": "scientific setup",
+      "paths": [
+        "operator/extensions/scientific-setup.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "source-preparation": {
+      "title": "source preparation",
+      "paths": [
+        "operator/extensions/source-preparation.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "spatial-cohorts": {
+      "title": "spatial cohorts",
+      "paths": [
+        "operator/extensions/spatial-cohorts.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "spatial-regions": {
+      "title": "spatial regions",
+      "paths": [
+        "operator/extensions/spatial-regions.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "station-geography": {
+      "title": "station geography",
+      "paths": [
+        "operator/extensions/station-geography.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "study-transfer": {
+      "title": "study transfer",
+      "paths": [
+        "operator/extensions/study-transfer.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "utility-cohorts": {
+      "title": "utility cohorts",
+      "paths": [
+        "operator/extensions/utility-cohorts.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "water-context": {
+      "title": "water context",
+      "paths": [
+        "operator/extensions/water-context.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "water-designations": {
+      "title": "water designations",
+      "paths": [
+        "operator/extensions/water-designations.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "water-quality": {
+      "title": "water quality",
+      "paths": [
+        "operator/extensions/water-quality.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "water_source_review": {
+      "title": "water source review",
+      "paths": [
+        "operator/extensions/water_source_review.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "watershed-context": {
+      "title": "watershed context",
+      "paths": [
+        "operator/extensions/watershed-context.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "utility-microbial-study": {
+      "title": "Utility-focus microbial native study and original source",
+      "paths": [
+        "model/UTILITY_MICROBIAL_STUDY.md",
+        "model/utility_microbial_study.py",
+        "source/ecoli_utility_context/20261013/README.md",
+        "source/ecoli_utility_context/20261013/build_ecoli_report.mjs",
+        "source/ecoli_utility_context/20261013/index.html",
+        "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv",
+        "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json",
+        "source/ecoli_utility_context/20261013/raw/stations-original.csv",
+        "source/ecoli_utility_context/20261013/raw/stations-original.geojson",
+        "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json",
+        "source/ecoli_utility_context/20261013/raw/utility-memberships.csv",
+        "source/ecoli_utility_context/20261013/results-with-provenance.csv",
+        "source/ecoli_utility_context/20261013/selected-stations.geojson",
+        "source/ecoli_utility_context/20261013/source-inputs.json",
+        "source/ecoli_utility_context/20261013/source-manifest.json",
+        "source/ecoli_utility_context/20261013/station-membership.csv",
+        "source/ecoli_utility_context/20261013/station-year-method-summary.csv",
+        "source/ecoli_utility_context/20261013/summary.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "study_merge": "4cdd1045",
+        "source_merge": "817335bc",
+        "source_pr": 2988,
+        "study_pr": 3047,
+        "receiving_edition": "complete-receiving-families-20261013-2",
+        "member_inventory": {
+          "model/utility_microbial_study.py": {
+            "bytes": 18088,
+            "sha256": "31d54f5b9b68b3e4f55673dc4749835cc712b96503845d00d29e5775e2f0d1e2",
+            "git_blob": "844fc4d0be862ca7cbb3811b8125c737215933a2",
+            "mode": "100644"
+          },
+          "model/UTILITY_MICROBIAL_STUDY.md": {
+            "bytes": 8432,
+            "sha256": "9a95c171b48bfe9ae55c1104e6ea1f48c3cb93f4e3202c93e009e31b95248cc9",
+            "git_blob": "d446c3992f7919e549c1111c5d6b8dbc62274f9c",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/README.md": {
+            "bytes": 7374,
+            "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e",
+            "git_blob": "9e364951f8bc9bca38fac2c2f35c860572e52b4c",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/build_ecoli_report.mjs": {
+            "bytes": 45810,
+            "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5",
+            "git_blob": "abfe9601fb43cc30330076cb35a99640c4cd1711",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/index.html": {
+            "bytes": 568315,
+            "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26",
+            "git_blob": "213bc27d0d01d6acd83541659fa3f4532e07d275",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/results-with-provenance.csv": {
+            "bytes": 368696,
+            "sha256": "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8",
+            "git_blob": "0333099ba74752683c8f661ada5f80a13ccd44a9",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/selected-stations.geojson": {
+            "bytes": 106741,
+            "sha256": "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907",
+            "git_blob": "47fbe7523a995ac53b4c2fb108c42f87b1c0cdcd",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/source-inputs.json": {
+            "bytes": 8181,
+            "sha256": "1f12885711f3eb070de2e05f8db9f48c8578fe33c6bd20137b8959feb35b2a28",
+            "git_blob": "c96b4360cfc99f1846b181fb61d1b617d57a6bfb",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/source-manifest.json": {
+            "bytes": 23194,
+            "sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23",
+            "git_blob": "44cabffa5024fc9dd91018064a9fd317e3e03441",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/station-membership.csv": {
+            "bytes": 6909,
+            "sha256": "a86d50fe88be52c78b667474ec015ebdbe5baac711d08da24757181b19fc8a92",
+            "git_blob": "9e0d58bcbd49bb82dfc22b598f66a9ead79d388d",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/station-year-method-summary.csv": {
+            "bytes": 9986,
+            "sha256": "fb6193f8cddfdf7be72845fb53324117d021517688569d7ee9e1cb03fc22c8d2",
+            "git_blob": "dbd306ac61089d49154707abb83217e0eba73158",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/summary.json": {
+            "bytes": 3448,
+            "sha256": "e1594c28818636785f82642e848d91e6de56f2b0b8f29dfc81281e5685c6066d",
+            "git_blob": "4c9a044f0d73d174417ab1b74868278b8bc60a4a",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/arjws-results-2021-2025-original.csv": {
+            "bytes": 68038,
+            "sha256": "5be1db109931d9e1ee8781b3beaab8db8ddbfc801a433d076de6de4eaa7372ef",
+            "git_blob": "a9fa2235acd598560805100067204dfe4dc3d3d4",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/arjws-wbd-original.json": {
+            "bytes": 183656,
+            "sha256": "51b827ba0c08ad5c7929266e7dc51c1b333b804f45c065ad16107d8757aeea6d",
+            "git_blob": "216df52828905b267f98dd1cc58cb0a0500e75b2",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-results-2021-original.csv": {
+            "bytes": 65619,
+            "sha256": "6cd6fb87b4746eff72cb88b4345d1cccb01133c953f5f281e77b92394896b93a",
+            "git_blob": "271bfa9ca4e725ec5ae272266dacc65a75206b09",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-results-2022-original.csv": {
+            "bytes": 39899,
+            "sha256": "acc3ae54de209755e9463fb82c3ca0f9d6237575b5b98f58f4690be12dc81e5c",
+            "git_blob": "1fa04f69fdbeabba0cd0ef836e1fe8eb77ba8910",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-results-2023-original.csv": {
+            "bytes": 44379,
+            "sha256": "10eba1c5f8de5d00fe2bf156340978a8d85edbe991e0ce1413af34f24c70a0c3",
+            "git_blob": "2e76934db8e0b95cc99a48879cbb8b67242d484f",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-results-2024-original.csv": {
+            "bytes": 53715,
+            "sha256": "8f6dcdaf3cb59f1e363d73391c09efcca5a51a27c84e91eb528bf1129ba04c14",
+            "git_blob": "5410c0ce61ad03008f821b91d614653889badeb4",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-results-2025-original.csv": {
+            "bytes": 73283,
+            "sha256": "6d1a0ccdda3dc49a67b636a202a80174a6dde5a15c4f8c3861cc45766b4747bc",
+            "git_blob": "76bec4023d2a6d6dfc0f155941ec375cc3190fbd",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/prwd-wbd-display.json": {
+            "bytes": 59535,
+            "sha256": "847a2608126c07b8c1327b828ffdede7fd366206d7a072777d2fe10b640d2144",
+            "git_blob": "97bb6ba7dd45589a0ae2caf373ef783160563a73",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/stations-original.csv": {
+            "bytes": 21317,
+            "sha256": "ee0b0c50f30d20b1e12b55c7964a13e10e39729f9d4dd4d07d422fd3eba7292b",
+            "git_blob": "c232ec580b92a6a5fd23063507cc803606c6f794",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/stations-original.geojson": {
+            "bytes": 46598,
+            "sha256": "1d5b9ee443eeb20bb8cd787b0e80032968d344eaaed0fce9687440e9368c2da9",
+            "git_blob": "25a9c15278bbb0f1bb7532de2b82f10d536ed9e4",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/utility-focus-profile.json": {
+            "bytes": 2169,
+            "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7",
+            "git_blob": "d6389f0c50d2c9f4e1167d8d1aa9e0f5148176c0",
+            "mode": "100644"
+          },
+          "source/ecoli_utility_context/20261013/raw/utility-memberships.csv": {
+            "bytes": 8731,
+            "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945",
+            "git_blob": "60a8a4a40b610711b70e04cae30074b440261381",
+            "mode": "100644"
+          }
+        }
+      }
+    },
+    "native-interactions": {
+      "title": "Native conservation combinations",
+      "paths": [
+        "docs/native-interactions.md",
+        "model/native_interactions.py",
+        "model/native_interactions_cli.py",
+        "operator/NATIVE_INTERACTIONS.md",
+        "operator/extensions/native-interactions.json",
+        "operator/install_native_interactions.py",
+        "operator/native_interactions.py",
+        "operator/web/native-interactions.css",
+        "operator/web/native-interactions.mjs"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "version": "1.1.0",
+        "payload_bytes": 168539,
+        "payload_sha256": "5a08675e0dd81d6ed3f0ee79c340fa24c028a082d0b4ee152a7091060ba6178a",
+        "receiving_edition": "complete-receiving-families-20261013-2",
+        "member_inventory": {
+          "model/native_interactions.py": {
+            "bytes": 66020,
+            "sha256": "d00e4a8d6fc243ec3ad111c614d236e368cf718aee1a7d9dcb4eb1dd4d6a2516",
+            "git_blob": "4271a7dd5309712c62fdef0fad2f25d2f3323ec8",
+            "mode": "100644"
+          },
+          "model/native_interactions_cli.py": {
+            "bytes": 3619,
+            "sha256": "3991e05748aca8ba7354f86b12a210cd07432ebaa68d4772f76ab3e7653de220",
+            "git_blob": "16435c4e6f7edec9a3bbc95d8acd11ec4258c722",
+            "mode": "100644"
+          },
+          "docs/native-interactions.md": {
+            "bytes": 16905,
+            "sha256": "daf5244caf2b1b2d84e026a57984bc03a342305acf10997b54ab672626eb845c",
+            "git_blob": "c6abd84433bc53d13b4f109a57a0932cd7e8bd0b",
+            "mode": "100644"
+          },
+          "operator/native_interactions.py": {
+            "bytes": 16392,
+            "sha256": "2b9c7b044a5098ccc27a5583ce3ed60beca259e2b28c7ff7e3f0d66c960c5964",
+            "git_blob": "682af3447fadd336e87d18bb6d7fec4c319070f5",
+            "mode": "100644"
+          },
+          "operator/web/native-interactions.mjs": {
+            "bytes": 34149,
+            "sha256": "4eef6fb8a8a22b053e11eb92621fa0f25179bb617d393c31a57b24033d2f36b0",
+            "git_blob": "6d278343447473d0420fe89ba2ba9f9e703ceb6e",
+            "mode": "100644"
+          },
+          "operator/web/native-interactions.css": {
+            "bytes": 3801,
+            "sha256": "451b120833758c3c11e0bb1f0684dd5cdb4adc5f8bfeef1042cf160ac2ff7ab5",
+            "git_blob": "a1085519eaa8a3de38917270cc0bd64c87db8191",
+            "mode": "100644"
+          },
+          "operator/extensions/native-interactions.json": {
+            "bytes": 2844,
+            "sha256": "d0a9e3f1486e944c4912ecc84afe578e9c6c2285def9cb3d49284012cec0b5d2",
+            "git_blob": "a52fc3b548e27426cb5ec08b897560348d15d4e0",
+            "mode": "100644"
+          },
+          "operator/install_native_interactions.py": {
+            "bytes": 7851,
+            "sha256": "03c948562c2599bd47f9dc3f5e833b8069b5d1cb3c26836efc479a8b7f35a59f",
+            "git_blob": "b4c04e26162eb1b7c457c36f5d250d93df5f3140",
+            "mode": "100644"
+          },
+          "operator/NATIVE_INTERACTIONS.md": {
+            "bytes": 7396,
+            "sha256": "0e639ba93387f311abd72bdefb186658f0f9411546261e17410f0e978e88fc78",
+            "git_blob": "76f0e1da302c2c1d10c494aa25ca7cbfc3f467a2",
+            "mode": "100644"
+          }
+        }
+      }
+    },
+    "station-assessment": {
+      "title": "Station geography and assessment context",
+      "paths": [
+        "model/assessment_context.py",
+        "model/station_assessment_context.py",
+        "model/station_geography.py",
+        "model/station_inventory.py",
+        "model/station_study.py",
+        "operator/ASSESSMENT_CONTEXT.md",
+        "operator/PREPARED_STATION_STUDY.md",
+        "operator/STATION_GEOGRAPHY.md",
+        "operator/assessment_context.py",
+        "operator/extensions/assessment-context.json",
+        "operator/extensions/station-geography.json",
+        "operator/fixtures/station_geography_actual87_ids.json",
+        "operator/install_station_geography.py",
+        "operator/station_geography.py",
+        "operator/web/assessment_context.css",
+        "operator/web/assessment_context.mjs",
+        "operator/web/station_geography.css",
+        "operator/web/station_geography.mjs",
+        "source/station-assessment-context/assessment-records-domain217.csv",
+        "source/station-assessment-context/sources.json",
+        "source_data/wqp_assessment159_additional_two_20261013/README.md",
+        "source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv",
+        "source_data/wqp_assessment159_additional_two_20261013/sources.json",
+        "source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson",
+        "source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json",
+        "source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json",
+        "source_tools/source_priority_assessment.py",
+        "source_tools/water_quality_context.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "payload_bytes": 628353,
+        "payload_sha256": "85884f9c6e2873ff72e40ce1079c5bfd6e17ca7bbc09950b08221fefbeb9b45f",
+        "component_merge": "e9679de3b2bdd104be853045fe41533aef8fa3b6",
+        "command_guide_head": "c589db201c5d9c0da7c6bd25d33e381f4228be04",
+        "receiving_edition": "complete-receiving-families-20261013-2",
+        "member_inventory": {
+          "model/assessment_context.py": {
+            "bytes": 50870,
+            "sha256": "4c0323e0ef55779bdc14ee94cb604527c4fb96bb1970007b4269c8dc8cdbd7bb",
+            "git_blob": "5ecc588d2c10bf61dcff4068fd17e99fe3cddf37",
+            "mode": "100644"
+          },
+          "model/station_assessment_context.py": {
+            "bytes": 11270,
+            "sha256": "18a93bc91076846e21b76301265685578021dcd8ec3b009c36cf985331ae3562",
+            "git_blob": "d4523677cea89156e4f5ce20b094d105a8a1019f",
+            "mode": "100644"
+          },
+          "model/station_geography.py": {
+            "bytes": 61471,
+            "sha256": "524b187ad1cd40e97801b41a5ce43fc8b75a861c16d14591034872db9b0e262f",
+            "git_blob": "2692795f073e1d4ce621f0420c9b895e59fa9693",
+            "mode": "100644"
+          },
+          "model/station_inventory.py": {
+            "bytes": 9743,
+            "sha256": "68400fc665845eec18a19f73393c7155e4fd00fbd4b88ffbb0b19cf428afc651",
+            "git_blob": "f284d8bf6755a28ea0cdf697a5f66563c142578f",
+            "mode": "100644"
+          },
+          "model/station_study.py": {
+            "bytes": 24070,
+            "sha256": "71a52d7ce7be9e7df4093c705b043721edc4d53623eebce05f2bcf99cee2d72c",
+            "git_blob": "0c70a6ae411b984c373e151cebfb08ca8eabeca7",
+            "mode": "100644"
+          },
+          "operator/ASSESSMENT_CONTEXT.md": {
+            "bytes": 14036,
+            "sha256": "7d317f9a1e392a77e44a44a11e47abb967dcd9d7cc77473619779102106b7d54",
+            "git_blob": "dbc93b000b896d0850dfb1729a174938ac681687",
+            "mode": "100644"
+          },
+          "operator/assessment_context.py": {
+            "bytes": 3817,
+            "sha256": "a03bad0032f49563041a6b2bdac41088f8f3b9c5420d4eb23e1955278bd0e93a",
+            "git_blob": "709da394c743d4b92be2149eee6d29e1b924ca8b",
+            "mode": "100644"
+          },
+          "operator/extensions/assessment-context.json": {
+            "bytes": 3081,
+            "sha256": "9a504f0a702f54c5babc2874e1731ab6c45ed8c05c0287430caac0113e20774b",
+            "git_blob": "b1951f6dd44f0fb01a4671a8025d84b06721d682",
+            "mode": "100644"
+          },
+          "operator/extensions/station-geography.json": {
+            "bytes": 2641,
+            "sha256": "c40423eeb508429f71d8a6a5497e21410abe56e7cc3107cc402e58325ef379e5",
+            "git_blob": "ae2a2024bac18336c889bf1687da3cd44644c36f",
+            "mode": "100644"
+          },
+          "operator/fixtures/station_geography_actual87_ids.json": {
+            "bytes": 4707,
+            "sha256": "abd6f362619a0ebc924b172b74370b3ffb5893f484f070229cc99d87856ba216",
+            "git_blob": "6db3cd27969e0bbd6b0094ba4a1a50e7a1748342",
+            "mode": "100644"
+          },
+          "operator/install_station_geography.py": {
+            "bytes": 5532,
+            "sha256": "a43ace7f33d339f0ebf70ce0dbbc5887a3c87017c2616865b664d11066d5a9ae",
+            "git_blob": "64d1d6c2b3292a1e2e9dfc15230a266186c54757",
+            "mode": "100644"
+          },
+          "operator/PREPARED_STATION_STUDY.md": {
+            "bytes": 17337,
+            "sha256": "7ce4ee1976824d7c5687fac9ab21a0b19b5dd42410c824b4acf8103e29fa3504",
+            "git_blob": "079595671c57368887420c594d6cd7461b173dea",
+            "mode": "100644"
+          },
+          "operator/STATION_GEOGRAPHY.md": {
+            "bytes": 13421,
+            "sha256": "10aba318a0b4af73d9c3bec7ce5e68e7151716d82a2574f7b329895b22594d45",
+            "git_blob": "96760ed7ddb6d468c7dadc31a106c4ee86eb9e93",
+            "mode": "100644"
+          },
+          "operator/station_geography.py": {
+            "bytes": 4641,
+            "sha256": "082ed8ffe00493a6c7abd5d0929252530c5618f490ae4998323d2301dc52d9ed",
+            "git_blob": "0b7906fbdca0a1a473654fc3f863f9b46d0b3e63",
+            "mode": "100644"
+          },
+          "operator/web/assessment_context.css": {
+            "bytes": 3370,
+            "sha256": "280a1f32140f3c3209d8a4a25de85d34011745fa31c16c824fbb4d0b9d9aee01",
+            "git_blob": "9ee1aacb86e0eda7cbe620f0e04a275e82af9f8b",
+            "mode": "100644"
+          },
+          "operator/web/assessment_context.mjs": {
+            "bytes": 28623,
+            "sha256": "a75df94340d7da1f89950663f832698160cac3a141ff8119e9587d0e50183066",
+            "git_blob": "d97c0cf0b66555d841364bceb918b798fb306708",
+            "mode": "100644"
+          },
+          "operator/web/station_geography.css": {
+            "bytes": 8401,
+            "sha256": "f5849bf2135c543d5a87c6fb1032eee45e24093b89086453ce6e59b69ef0faf0",
+            "git_blob": "2a0711d341216117420f3a97497d67e032e7db9e",
+            "mode": "100644"
+          },
+          "operator/web/station_geography.mjs": {
+            "bytes": 59155,
+            "sha256": "cc87990e8c69e7190aabd8e5dc22682145c578c706a6ab7285528163166c2920",
+            "git_blob": "136cca412736358dcfbd89afef2dd0c1ebb090d1",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv": {
+            "bytes": 42751,
+            "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c",
+            "git_blob": "230745a9f6f4dc7466a090b1a4bc8a0ecf75dbfd",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/README.md": {
+            "bytes": 2209,
+            "sha256": "ca70ca241bbf5d93e9bdbea04f7e9df2351e3012b400d2c5f06b16e2a6d8a46b",
+            "git_blob": "b396519494b0da92e8de616201abe271268c3750",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/sources.json": {
+            "bytes": 2222,
+            "sha256": "3cd6a6b9a7244808ca45491f45d851330b2321fb903efddcf859ba5bc1531fc6",
+            "git_blob": "441137cf7991db89ad594de6381622aef7456625",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson": {
+            "bytes": 2433,
+            "sha256": "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd",
+            "git_blob": "16befdcb0718114f9e3938d76fa6203d31065678",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json": {
+            "bytes": 2502,
+            "sha256": "72be42d0b6294b9950641cf75bd51dc0db0065bacf847bb6e0902a5ab89f943f",
+            "git_blob": "f4cfdff65c1455aa36eb16d5724b6a59145a1fe3",
+            "mode": "100644"
+          },
+          "source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json": {
+            "bytes": 12827,
+            "sha256": "eaa608090903f409ddd89ac93982c580f60da709ab09075ce5bcf97f55a0ba6b",
+            "git_blob": "19165c8303d84e36887cd8a48dd9788505e217a1",
+            "mode": "100644"
+          },
+          "source_tools/source_priority_assessment.py": {
+            "bytes": 17735,
+            "sha256": "3db31f3ba3b295bab50f1e0b7300aa47573626011f833a4d844adaa69fd35a4d",
+            "git_blob": "4dcad6db4e8c21e559a440dac068f1853364d6ca",
+            "mode": "100644"
+          },
+          "source_tools/water_quality_context.py": {
+            "bytes": 67055,
+            "sha256": "9d33bb5de79cb89ab123c00aad249d21aeefdacc45f6f5ef388ae215258029bb",
+            "git_blob": "77d0410fc9b8aebaeeb83370d33d197dacba5303",
+            "mode": "100644"
+          },
+          "source/station-assessment-context/assessment-records-domain217.csv": {
+            "bytes": 111624,
+            "sha256": "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7",
+            "git_blob": "1bf178bbcabe45165391f77cd1dc02883ca78eed",
+            "mode": "100644"
+          },
+          "source/station-assessment-context/sources.json": {
+            "bytes": 2675,
+            "sha256": "4bdbdfb0b058e50def4354c07ee9f01b2cc4ee00b7b35590b8f05131a8f17fd3",
+            "git_blob": "97a963e40fdd4fb7575044e90bd3a33db3b09720",
+            "mode": "100644"
+          }
+        }
+      }
+    }
+  }
+}
