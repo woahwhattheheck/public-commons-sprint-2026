@@ -825,3 +825,104 @@ Use the existing writers and receiving operations; the project cutoff
 remains 14:00 UTC on October 13. Open, LOOK at and operate the final
 populated product and every outgoing attachment, fixing observed defects
 in the maintained implementation.
+
+## Resume the original Workspace archive and independent receiving
+
+If the original receiving process stopped after saving its map export, continue
+its **same output directory and same Workspace**. This path reopens the retained
+operator task records and verifies the completed original report, source objects,
+selected watersheds and export files. It does not import another source, analyze
+another report, render another brief or issue another backup.
+
+Use the maintained current driver and the original paths:
+
+```sh
+python -B ACTUAL_APPLICATION/integration/run_watershed_context_operator.py \
+  --application ACTUAL_APPLICATION \
+  --workspace ACTUAL_ORIGINAL_WORKSPACE \
+  --output ACTUAL_EXISTING_RECEIVING_OUTPUT \
+  --resume --timeout 3600
+```
+
+The existing output must contain its original `operator-state/workspaces.json`
+and `operator-state/tasks/`. The original registered Workspace path must still
+match that state. The driver checks the recorded task and request digests, exact
+source object sizes and hashes, the original scientific report and priority
+selection, and every retained export descriptor. It then acquires the operator's
+existing exclusive lock. If the original process still holds the lock, this
+attempt fails without reopening tasks or changing the receiving output. Keep
+that owner and its process; do not remove its lock or start a separate backup.
+
+An output with more than one applicable retained task requires the original
+task IDs explicitly:
+
+```sh
+python -B ACTUAL_APPLICATION/integration/run_watershed_context_operator.py \
+  --application ACTUAL_APPLICATION \
+  --workspace ACTUAL_ORIGINAL_WORKSPACE \
+  --output ACTUAL_EXISTING_RECEIVING_OUTPUT \
+  --resume --timeout 3600 \
+  --backup-task ORIGINAL_BACKUP_TASK_ID \
+  --export-task ORIGINAL_COMPLETED_EXPORT_TASK_ID \
+  --restore-task ORIGINAL_RESTORE_TASK_ID
+```
+
+Read these IDs from the existing task files and their `action`, `payload`,
+`operation_id` and `result` fields. Do not invent new IDs. Omit
+`--restore-task` when the original course never submitted a restore. A retained
+restore must refer to the exact original backup bytes. If no restore was issued,
+the driver reuses the matching uploaded archive, or uploads that same verified
+backup, and records the first restore request before submitting it. Its operation
+and task identities then remain stable across another interruption.
+
+The original backup must include intermediates. A completed original archive is
+verified and reused. An interrupted task is resumed through the existing
+operator task API with its original UUID and payload; the maintained backup
+handler reuses its completed archive when one is already present. The driver
+compares the archive's original project and source/report/export members before
+receiving it into a separate Workspace. A completed restore is reopened; an
+interrupted restore follows the existing portable restore checkpoint. No
+receiving ambiguity is resolved by selecting an arbitrary task or source.
+
+### Durable recovery files
+
+The same output retains these small checkpoints beside its existing operator
+state:
+
+- `operator-tail-request.json` binds the original task identities, project,
+  source collection, report, export and complete pinned file inventory.
+- `operator-tail-restore.json` records the first restore request if the course
+  had not already issued one.
+- `operator-journey-resume.json` records the current archive, download and
+  independent receiving stage, with the exact original task IDs.
+- `operator-journey.before-resume.json` preserves an earlier journey receipt
+  before the successful resumed receipt becomes `operator-journey.json`.
+
+Completed downloads are reused only after checking their full size and SHA-256
+against the current ticket for the original saved artifact. A partial download
+created by this resume path is retained with an `.interrupted-` suffix before
+that same original file is downloaded again. The archive and original scientific
+files are not replaced.
+
+After receiving, the driver checks every pinned original file, the exact source
+collection, all original adopted reports, the selected export and its original
+map context in the separate Workspace. It downloads the reopened export files
+and map geometry through fresh verified tickets. Keep the successful receipt,
+complete archive and independently received application and Workspace together.
+
+This command finishes transfer of the **already-saved edition**. For example,
+an original v7 brief keeps its export identity when reopened under the current
+application; creating a new v8 brief is a separate explicit edition. Do not
+substitute that new render for an earlier claimed export. If the original
+operator state or source Workspace is unavailable, use an actual complete
+Workspace archive and the ordinary receiving workflow instead of reconstructing
+task history from the nine separate station-study archives.
+
+A source/API check or a complete recovery receipt does not replace inspection of
+the outgoing product. The receiving owner must open and LOOK at the actual
+populated application and each outgoing attachment at presentation width and
+390 pixels, operate the saved selection, map controls and downloads, and reopen
+the independently received Workspace. Preserve the hard-priority Upper Savannah
+native model course, original domain/reporting/utility distinctions and the
+14:00 UTC October 13 cutoff in `CURRENT_OWNER_DIRECTION.md` version
+2026-10-13.3; this continuation introduces no new model run.
