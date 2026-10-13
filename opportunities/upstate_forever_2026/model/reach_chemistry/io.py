@@ -63,6 +63,11 @@ def report(project: Project, result: dict, request: dict | None = None) -> str:
         ("Complete result JSON", "result.json"),
         ("Original chemical project", "project.json"),
         *([("Original analysis request", "request.json")] if request is not None else []),
+        *([
+            ("Final water storage CSV", "water-storage-final.csv"),
+            ("Complete water balance CSV", "water-storage-budget.csv"),
+            ("Water storage time series CSV", "water-storage-timeseries.csv"),
+        ] if 'storage' in result.get('baseline', result) else []),
     ])
 
 
@@ -92,6 +97,18 @@ def write_outputs(directory: Path, project: Project | dict, result: dict, reques
                                  **{r['species']+'_mg_l':r['mg_l'] for r in by_reach[rid]},
                                  **{r['species']+'_basis':r['basis'] for r in by_reach[rid]}}})
         if features: json_write(directory/'reach-results.geojson', {'type':'FeatureCollection','features':features})
+    if 'storage' in run:
+        atomic_write(directory/'water-storage-final.csv', csv_body(run['storage'],
+            ['reach','volume_m3','incoming_m3_day','outgoing_m3_day',
+             'storage_change_m3_day','nominal_turnover_days']))
+        atomic_write(directory/'water-storage-budget.csv', csv_body(run['storage_budgets'],
+            ['reach','initial_storage_m3','inflow_m3','outflow_m3',
+             'final_storage_m3','residual_m3','relative_residual']))
+        storage = [{'day': sample['day'], **row}
+                   for sample in run['samples'] for row in sample.get('storage', [])]
+        atomic_write(directory/'water-storage-timeseries.csv', csv_body(storage,
+            ['day','reach','volume_m3','incoming_m3_day','outgoing_m3_day',
+             'storage_change_m3_day','nominal_turnover_days']))
     if 'observations' in result:
         fields = ['id','reach','species','day','role','qualifier','observed_mg_l',
                   'predicted_mg_l','sigma_mg_l','weighted_residual']

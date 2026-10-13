@@ -183,15 +183,16 @@ def tangent_predictions(parameters: Parameters, values: np.ndarray, observations
             initial_tangents[j][p.index(row['reach'],row['species'])]=1.0
     state = np.r_[p.initial, *initial_tangents, 1.0]
     def sample(day):
+        volumes = p.state_volumes_at(day)
         for i, o in enumerate(obs):
             if o["day"] == day:
                 if "species" in o:
-                    idx = operators[i][0][0]; factor = 1000.0 / p.state_volumes[idx]
+                    idx = operators[i][0][0]; factor = 1000.0 / volumes[idx]
                     predictions[i] = state[idx] * factor
                     for j in range(count): jac[i, j] = state[(j+1)*n + idx] * factor
                 else:
                     for idx, weight in operators[i]:
-                        factor = weight * 1000.0 / p.state_volumes[idx]
+                        factor = weight * 1000.0 / volumes[idx]
                         predictions[i] += state[idx] * factor
                         for j in range(count): jac[i, j] += state[(j+1)*n + idx] * factor
                 if not np.isfinite(predictions[i]) or not np.isfinite(jac[i]).all():
@@ -231,13 +232,32 @@ def tangent_predictions(parameters: Parameters, values: np.ndarray, observations
         for j in range(count+1): blocks[-1][j] = sparse.csc_matrix((1, n))
         blocks[-1][-1] = sparse.csc_matrix((1, 1))
         H = sparse.bmat(blocks, format="csc")
+        if p.variable_storage:
+            from .storage import split_operator, matrix_at, volume_ratio, integrate_linear
+            constant, scaled = split_operator(p, op)
+            def tangent_operator(day):
+                current = matrix_at(p, constant, scaled, day)
+                changing = [row[:] for row in blocks]
+                changing[0][0] = current
+                ratios = sparse.diags(volume_ratio(p, day), format="csc")
+                for j, (derivative_A, derivative_b) in enumerate(derivatives):
+                    changing[j+1][j+1] = current
+                    parameter = parameters.rows[j]
+                    inverse = (parameter["kind"] == "reaction_rate_day"
+                               and p.reactions[parameter["target"]].get("volume_scaling") == "inverse")
+                    changing[j+1][0] = derivative_A @ ratios if inverse else derivative_A
+                return sparse.bmat(changing, format="csc")
         times = sorted(set([float(o["day"]) for o in obs if start < o["day"] <= phase["until_day"]]
                            + [float(phase["until_day"])]))
         now = start
         for end in times:
             if cancelled and cancelled(): raise Cancelled("tangent calculation cancelled")
             dt = end - now
-            state = expm_multiply(H * dt, state, traceA=float(op.A.diagonal().sum()) * (count+1) * dt)
+            if p.variable_storage:
+                state, unused_numerics = integrate_linear(
+                    tangent_operator, np.zeros_like(state), state, now, end, cancelled=cancelled)
+            else:
+                state = expm_multiply(H * dt, state, traceA=float(op.A.diagonal().sum()) * (count+1) * dt)
             if not np.isfinite(state).all(): raise ArithmeticError("non-finite tangent result")
             sample(end); now = end
         start = float(phase["until_day"])
@@ -257,7 +277,8 @@ def sensitivity(project: dict | Project, parameter_rows: list[dict], observation
                                       "elasticity": float(jac[i,j]*parameters.values[j]/predicted[i]) if predicted[i] != 0 else None}
                                      for j, q in enumerate(parameters.rows)]})
     return {"schema": "reach-chemistry-sensitivity/1", "project_sha256": p.fingerprint,
-            "method": "forward tangent equations with sparse matrix exponential",
+            "method": ("forward tangent equations with SciPy Radau and exact sparse Jacobian"
+                       if p.variable_storage else "forward tangent equations with sparse matrix exponential"),
             "parameters": parameters.rows, "rows": rows}
 
 
