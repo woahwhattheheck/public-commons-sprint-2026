@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "1.9.1",
+  "version": "2.0.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
@@ -21,7 +21,10 @@
     "actions": [
       "published-study.import",
       "published-study.export",
-      "published-study.report"
+      "published-study.report",
+      "published-study.review.save",
+      "published-study.review.export",
+      "published-study.review.import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -63,6 +66,19 @@
         ],
         "path": "/api/published-studies/context",
         "operation": "context",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/review",
+        "operation": "review",
         "handler": "read",
         "args": [
           "workspace_key",
