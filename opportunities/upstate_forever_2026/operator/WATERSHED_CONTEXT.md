@@ -146,3 +146,8 @@ New selection exports include watershed-selection-brief.html and watershed-selec
 Export RFP focus brief selects Upper Six And Twenty Creek (030601010703), Lower Six And Twenty Creek (030601010704), Choestoea Creek (030601020502) and Lower Tugaloo River (030601020507) from the parent report. This control appears when all four original HUC12s are present. Other selections keep the existing Export matching watersheds and Export this watershed paths.
 
 The current selection export identity includes brief_format alongside csv_format and csv_columns. This gives the readable brief its own retained format identity while keeping prior saved selections available. Install model/watershed_brief.py with the provider. The standalone module and actual-report command are documented in model/WATERSHED_BRIEF.md.
+
+
+### Reanalyze a received source edition
+
+The receiver keeps every original source and program file in `native_source_files` and the retained archive. Its ordinary `source_inputs` inventory contains only the executed context, optional classification coverage and optional native network under the same canonical filenames used by source import. Exact source aliases live at `source/<canonical-name>`. The core source fingerprint is therefore identical across native receiving and source import, allowing the operator to add later publisher query and geometry companions to a same-input regional report while keeping its original report bytes.
