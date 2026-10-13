@@ -6,7 +6,7 @@ The delivered record contains the published source and blank operational collect
 
 ## Source and school decisions
 
-Five current observations are Sling wet rental USD190/hour, Cherokee wet rental USD205/hour, CFI instruction USD65/hour, owner-aircraft instruction USD75/hour and discovery USD180/flight. Original URLs, units and wording are retained. The actual USD180/hour private-budget aircraft observation and USD255/hour professional compound-dual observation are disabled alternatives. They are derived from the retained source, not added to unrelated school inputs. Enabling one requires an office reason.
+Five current observations are Sling wet rental USD 190/hour, Cherokee wet rental USD 205/hour, CFI instruction USD 65/hour, owner-aircraft instruction USD 75/hour and discovery USD 180/flight. Original URLs, units and wording are retained. The actual USD 180/hour private-budget aircraft observation and USD 255/hour professional compound-dual observation are disabled alternatives. They are derived from the retained source, not added to unrelated school inputs. Enabling one requires an office reason.
 
 Compound dual includes aircraft and instruction for the same period. Its booking cannot also contain separate aircraft/instruction lines. A fixed discovery experience stands alone. Third-party medical, written-exam and examiner estimates remain in the published budgets; they do not automatically become school receivables.
 
@@ -80,7 +80,7 @@ A refund represents an actual paid-cash refund with reference/date. It cannot co
 
 The complete source includes 11 programmes and original professional phases, schedules, totals and arithmetic alternatives. Programme descriptions are guidance, not available booking slots.
 
-Printed professional phase totals sum to USD74,155; retained line amounts sum to USD74,165; separate source summary rows sum to USD72,915. All views remain available. Private training's USD180 budget remains distinct from current USD190/205 rates. Medical, written, spin, logbook and readiness statuses require school-entered observations.
+Printed professional phase totals sum to USD 74,155; retained line amounts sum to USD 74,165; separate source summary rows sum to USD 72,915. All views remain available. Private training's USD 180 budget remains distinct from current USD 190/205 rates. Medical, written, spin, logbook and readiness statuses require school-entered observations.
 
 Progress retains student, programme/phase, item, status, actual date, optional minutes, evidence and reviewer. Planned entries are useful without claiming completed qualifications.
 
