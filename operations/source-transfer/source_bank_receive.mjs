@@ -33,7 +33,7 @@ function parseArgs(argv){
     if(key==='--bank')options.banks.push({file:value,parts:[]});
     else if(key==='--part'){const item=options.banks.at(-1);if(!item)throw Error('--part must follow its --bank');item.parts.push(value);}
     else if(key==='--expect'){const item=options.banks.at(-1);if(!item||item.sha256||!/^[a-f0-9]{64}$/.test(value))throw Error('--expect must follow its --bank');item.sha256=value;}
-    else {const names={'--application':'application','--source-prefix':'sourcePrefix','--output':'output','--operation-id':'operationId'};if(!names[key]||options[names[key]]&&names[key]!=='sourcePrefix')throw Error('Unknown/repeated option: '+key);options[names[key]]=value;}
+    else {const names={'--application':'application','--source-prefix':'sourcePrefix','--output':'output','--operation-id':'operationId','--artifacts-output':'artifactsOutput'};if(!names[key]||options[names[key]]&&names[key]!=='sourcePrefix')throw Error('Unknown/repeated option: '+key);options[names[key]]=value;}
   }
   if(!options.application||!options.banks.length||options.banks.some(b=>!b.sha256)||(!options.plan&&!options.output))throw Error(usage);
   return options;
@@ -75,6 +75,13 @@ function decodeDocuments(documents,expectedSha){
   if(sha(bytes)!==expectedSha)throw Error('Decoded source-bank SHA256 differs');
   return textDecoder.decode(bytes);
 }
+function decodeCarrier(container){
+  if(container.original_bytes!==undefined)return codec.decodeText(container,{maxBytes:MAX,maxCompressedBytes:MAX});
+  if(container.encoding!=='gzip+base64'||container.decoded_schema!=='commons.source-bank/v1'||!Number.isSafeInteger(container.decoded_bytes)||container.decoded_bytes<0||container.decoded_bytes>MAX||typeof container.decoded_sha256!=='string'||!/^[a-f0-9]{64}$/.test(container.decoded_sha256)||typeof container.data!=='string'||container.data.length>Math.ceil(MAX/3)*4)throw Error('Invalid complete source carrier');
+  const compressed=Buffer.from(container.data,'base64');if(compressed.toString('base64')!==container.data)throw Error('Source carrier base64 is not canonical');
+  const bytes=zlib.gunzipSync(compressed,{maxOutputLength:MAX});if(bytes.length!==container.decoded_bytes||sha(bytes)!==container.decoded_sha256)throw Error('Decoded carrier identity differs');
+  return textDecoder.decode(bytes);
+}
 function loadBank(item){
   const files=[item.file,...item.parts],documents=files.map(file=>textDecoder.decode(readRegular(file)));
   let container;try{container=JSON.parse(documents[0]);}catch{}
@@ -88,7 +95,7 @@ function loadBank(item){
     if(candidates.length===1)container=candidates[0];
   }
   let body;
-  if(files.length===1&&container?.schema==='commons.artifact-base64/v1')body=codec.decodeText(container,{maxBytes:MAX,maxCompressedBytes:MAX});
+  if(files.length===1&&container?.schema==='commons.artifact-base64/v1')body=decodeCarrier(container);
   else if(files.length===1&&container?.schema==='commons.source-bank/v1')body=documents[0];
   else body=decodeDocuments(documents,item.sha256);
   const actual=identify(body);if(actual.sha256!==item.sha256)throw Error('Decoded bank SHA256 differs: '+item.file);
@@ -101,6 +108,28 @@ function enumerateFiles(root){
   }
   visit(root);return found;
 }
+function collectArtifacts(loaded){
+  const artifacts=new Map();
+  for(const entry of loaded){
+    if(entry.bank.artifacts!==undefined&&!Array.isArray(entry.bank.artifacts))throw Error('bank.artifacts must be an array');
+    for(const artifact of entry.bank.artifacts||[]){
+      const p=artifact?.path;
+      if(typeof p!=='string'||!p||p.includes('\\')||p.includes('\0')||/^[A-Za-z]:/.test(p)||p.startsWith('/')||p.split('/').some(s=>!s||s==='.'||s==='..'))throw Error('Unsafe artifact path');
+      if(typeof artifact.content!=='string')throw Error('Artifact content must be exact UTF-8 text: '+p);
+      const actual=identify(artifact.content);if(actual.bytes!==artifact.bytes||actual.sha256!==artifact.sha256)throw Error('Artifact identity differs: '+p);
+      if(artifacts.has(p)&&artifacts.get(p).content!==artifact.content)throw Error('Conflicting artifact bodies: '+p);
+      artifacts.set(p,{path:p,content:artifact.content,...actual});
+    }
+  }
+  return [...artifacts.values()];
+}
+function outside(parent,candidate){const r=path.relative(parent,candidate);return r==='..'||r.startsWith('..'+path.sep)||path.isAbsolute(r);}
+function freshOutput(requested,application){
+  const absolute=path.resolve(requested),parent=fs.realpathSync(path.dirname(absolute)),output=path.join(parent,path.basename(absolute));
+  if(!outside(application,output))throw Error('Output must be outside the original application');
+  if(fs.existsSync(output))throw Error('Output already exists: '+output);
+  return output;
+}
 function run(options){
   const application=fs.realpathSync(options.application);if(!fs.statSync(application).isDirectory())throw Error('--application must be a directory');
   const loaded=options.banks.map(loadBank),composer=createSourceBankComposer({identity:identify}),prefix=options.sourcePrefix.replace(/\/$/,''),current=Object.create(null);
@@ -112,12 +141,11 @@ function run(options){
       if(fs.existsSync(dest)){const bytes=readRegular(dest);current[local]={content:textDecoder.decode(bytes),mode:fs.statSync(dest).mode&0o777};}
     }
   }
-  const plan=composer.compose({banks:loaded.map(x=>x.bank),current,sourcePrefix:prefix});
-  const receipt={schema:'commons.source-receiving/v1',operation_id:options.operationId||null,application,banks:loaded.map(x=>x.receipt),changes:plan.changes.map(({content,...rest})=>rest),steps:plan.steps};
+  const plan=composer.compose({banks:loaded.map(x=>x.bank),current,sourcePrefix:prefix}),artifacts=collectArtifacts(loaded);
+  const receipt={schema:'commons.source-receiving/v1',operation_id:options.operationId||null,application,banks:loaded.map(x=>x.receipt),changes:plan.changes.map(({content,...rest})=>rest),steps:plan.steps,artifacts:artifacts.map(({content,...rest})=>rest)};
   if(options.plan){console.log(JSON.stringify({...receipt,state:'planned'},null,2));return;}
-  const requested=path.resolve(options.output),parent=fs.realpathSync(path.dirname(requested)),output=path.join(parent,path.basename(requested)),relative=path.relative(application,output);
-  if(relative===''||(!relative.startsWith('..'+path.sep)&&relative!=='..'&&!path.isAbsolute(relative)))throw Error('Output must be outside the original application');
-  if(fs.existsSync(output))throw Error('Output already exists: '+output);
+  const output=freshOutput(options.output,application),artifactOutput=options.artifactsOutput?freshOutput(options.artifactsOutput,application):null;
+  if(artifactOutput&&(!outside(output,artifactOutput)||!outside(artifactOutput,output)))throw Error('Source and artifact output directories must be separate');
   const originals=enumerateFiles(application);
   // mkdir is the exclusive claim. All source-bank and anchor checks precede it.
   fs.mkdirSync(output,{mode:0o700});
@@ -135,11 +163,19 @@ function run(options){
       fs.writeFileSync(target,change.content,{encoding:'utf8',flag:'wx',mode});
       const bytes=readRegular(target);if(bytes.length!==change.bytes||sha(bytes)!==change.sha256)throw Error('Written source differs: '+change.path);
     }
-    console.log(JSON.stringify({...receipt,state:'source-staged',output,copied_files:copied,changed_files:plan.changes.length},null,2));
+    if(artifactOutput){
+      fs.mkdirSync(artifactOutput,{mode:0o700});
+      for(const artifact of artifacts){
+        const target=path.join(artifactOutput,...artifact.path.split('/'));fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o700});
+        fs.writeFileSync(target,artifact.content,{encoding:'utf8',flag:'wx',mode:0o600});
+        const bytes=readRegular(target);if(bytes.length!==artifact.bytes||sha(bytes)!==artifact.sha256)throw Error('Written artifact differs: '+artifact.path);
+      }
+    }
+    console.log(JSON.stringify({...receipt,state:'source-staged',output,copied_files:copied,changed_files:plan.changes.length,artifact_output:artifactOutput,extracted_artifacts:artifactOutput?artifacts.length:0},null,2));
   }catch(error){
     // The exclusive new output remains available for diagnosis. The original
     // application and Workspace are never changed by this receiver.
-    error.message+='; incomplete fresh output: '+output;throw error;
+    error.message+='; incomplete fresh output: '+output+(artifactOutput?'; artifact output: '+artifactOutput:'');throw error;
   }
 }
 try{const options=parseArgs(process.argv.slice(2));if(options)run(options);}catch(error){console.error(error.message);process.exitCode=1;}

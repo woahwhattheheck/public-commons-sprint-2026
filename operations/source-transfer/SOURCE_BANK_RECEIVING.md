@@ -52,7 +52,13 @@ node source_bank_receive.mjs \
 
 Keep repository-relative source paths intact when the application imports supporting `business/` or `host/` modules outside its `tools/` directory. In that layout use the source-family root as `--application` and omit `--source-prefix`. The existing separate Workspace is supplied to the original application launcher afterward.
 
-A single full gzip carrier in a Markdown JSON fence is also accepted. Only carrier JSON scaffolding may have rich-text nonbreaking spaces normalized; the compressed source text is decoded and bound to its original SHA. Source bodies are never reformatted.
+A single full gzip carrier in a Markdown JSON fence is also accepted. Both the original_bytes/original_sha256/content_base64 form and the existing decoded_bytes/decoded_sha256/data form are checked against their declared complete source identity and the required --expect SHA. Only carrier JSON scaffolding may have rich-text nonbreaking spaces normalized; the compressed source text is decoded and bound to its original SHA. Source bodies are never reformatted.
+
+## Extract the original operation inputs
+
+If a source bank contains an `artifacts` array, use `--artifacts-output /absolute/path/to/fresh/private-inputs` to write those exact UTF-8 members separately from the staged application. Every artifact must carry a safe relative path, complete content, byte count and SHA256. Duplicate paths with different bodies are rejected before writing. The output directory must be new, outside the original application, and separate from the source output. Files are created with private permissions and reread after writing.
+
+These are the retained original input and onward exchange files for the existing application operation. The receiver validates and extracts them; the original application's normal import/receiving commands apply the chosen records to its Workspace. In plan mode the intended artifact identities are listed alongside the source changes.
 
 ## Bank contract
 
