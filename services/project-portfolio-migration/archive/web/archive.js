@@ -109,7 +109,12 @@ export function createArchivePanel(C) {
     lock();
   }
   function tableView(node,columns,rows,{inspect=true}={}) {
-    const holder=el("div",undefined,"table-scroll"),table=el("table"),head=el("thead"),tr=el("tr"),body=el("tbody");
+    const holder=el("div",undefined,"table-scroll archive-table-region"),table=el("table"),head=el("thead"),tr=el("tr"),body=el("tbody");
+    const labels={"archive-counts":"Reporting table row counts","archive-totals":"Exact measure totals","archive-table-view":"Selected original reporting rows","archive-query-view":"Original query preview"};
+    holder.tabIndex=0;holder.setAttribute("role","region");
+    holder.setAttribute("aria-label",labels[node.id]||(columns.includes("period_key")?"Native period totals":columns.includes("capture_id")?"Native calculation captures":"Original reporting rows"));
+    table.style.minWidth=String((columns.length+(inspect?1:0))*9)+"rem";
+    table.style.tableLayout="fixed";
     for(const name of columns)tr.append(el("th",name));if(inspect)tr.append(el("th","Full row"));head.append(tr);
     for(const row of rows){
       const values=Array.isArray(row)?row:columns.map(x=>row[x]),line=el("tr");
