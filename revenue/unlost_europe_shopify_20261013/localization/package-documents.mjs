@@ -2,7 +2,7 @@ import Core from '../runtime/tools/revenue_owner_console_20261010/lead_fulfillme
 import Sha from '../runtime/host/connected_sha256.cjs';
 import Zip from '../runtime/host/connected_zip.cjs';
 import Gzip from '../runtime/host/connected_gzip.cjs';
-import {renderCustomerPackagePanel} from './customer-package-panel.mjs';
+import {renderCustomerDocumentViewer} from './customer-document-viewer.mjs';
 
 export function buildPackageDocuments(working) {
  const packId=working?.pack?.id;
@@ -36,7 +36,7 @@ export function buildPackageDocuments(working) {
   const trailer=new DataView(gzip.buffer);trailer.setUint32(gzip.length-8,Zip.crc32(input),true);trailer.setUint32(gzip.length-4,input.length,true);
   if(Zip.utf8Text(Gzip.gunzipBytes(gzip,{expected_bytes:input.length,max_output_bytes:input.length}).data)!==raw)throw Error('The complete document envelope did not reopen');
   const envelope={payload:Zip.base64(gzip),bytes:input.length,sha256:Sha.sha256Bytes(input).sha256};
-  const html=renderCustomerPackagePanel({customer:archive.title,envelope});
+  const html=renderCustomerDocumentViewer({customer:archive.title,rootId:'unlost-'+kind+'-complete-customer-packages',envelope});
   const identity=Sha.sha256Utf8(html);if(identity.bytes>256*1024)throw Error('Keep each complete edition within the existing Page limit');
   const panelName='Unlost-complete-'+kind+'-documents.html';
   outputs[archive.name]=data;outputs[panelName]=html;
