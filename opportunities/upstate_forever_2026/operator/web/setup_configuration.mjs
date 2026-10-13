@@ -67,7 +67,9 @@ export function compareConfigurations(before,after){
  if(!before||!after)return {available:false,changes:[],reason:'The earlier retained setup has no captured configuration sheet. Its original profile/table remain available; no unchanged-value conclusion has been made.'};
  const changes=[],add=(kind,key,label,a,b,units=null)=>{if(canonical(a)!==canonical(b))changes.push({kind,key,label,before:a,after:b,units});};
  const left=new Map(arr(before.parameters).map(row=>[row.target,row])),right=new Map(arr(after.parameters).map(row=>[row.target,row]));
- for(const key of new Set([...left.keys(),...right.keys()])){const a=left.get(key),b=right.get(key);add('parameter',key,b?.label||a?.label,a?.value,b?.value,b?.units||a?.units);add('model-selection',key,'Grid uses '+key,a?.selected_for_grid,b?.selected_for_grid);}
+ for(const key of new Set([...left.keys(),...right.keys()])){const a=left.get(key),b=right.get(key);add('parameter',key,b?.label||a?.label,a?.value,b?.value,b?.units||a?.units);add('model-selection',key,'Grid uses '+key,a?.selected_for_grid,b?.selected_for_grid);add('method',key+':units','Units for '+key,a?.units,b?.units);add('method',key+':reference','Method reference for '+key,a?.reference,b?.reference);}
+ add('model-selection','grid-models','Selected grid models',before.selected_models,after.selected_models);
+ add('model-selection','profile-models','Saved profile models',before.profile_models,after.profile_models);
  const arows=indexedRows(before),brows=indexedRows(after),labels=new Map(arr(after.table.column_descriptions).map(row=>[row.name,row]));
  for(const code of new Set([...arows.keys(),...brows.keys()])){const a=arows.get(code),b=brows.get(code);
   for(const name of new Set([...before.table.columns,...after.table.columns])){const meta=labels.get(name);add('coefficient',code+':'+name,'Land cover '+code+' · '+(meta?.label||name),own(a,name)?a[name]:undefined,own(b,name)?b[name]:undefined,meta?.units);}

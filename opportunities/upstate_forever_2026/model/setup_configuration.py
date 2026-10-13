@@ -15,15 +15,6 @@ from . import experiment_profiles
 from .model_selection import selected
 
 SCHEMA = "upstate.setup-configuration/v1"
-OBSERVATION_FIELDS = (
-    "id", "line", "station_id", "catchment_id", "parameter", "species",
-    "original_parameter", "value_text", "unit", "qualifier", "period_start",
-    "period_end", "measurement_support", "quantity_basis", "time_support",
-    "coverage_days", "expected_days", "coverage_complete", "method",
-    "uncertainty", "source_records", "admitted", "issues",
-    "native_comparison_issues", "comparison_units", "annual_mass",
-)
-
 
 def profile_configuration(workspace, profile, active_models):
     path, entry = workspace.source_file(
@@ -95,10 +86,8 @@ def observation_configuration(record):
         "context_count": record["context_count"], "row_count": len(record["rows"]),
         "original": copy.deepcopy(record["original"]),
         "support_summary": copy.deepcopy(record.get("support_summary")),
-        "support_rows": [
-            {key: copy.deepcopy(row[key]) for key in OBSERVATION_FIELDS if key in row}
-            for row in record["rows"]
-        ],
+        "columns": copy.deepcopy(record.get("columns", [])),
+        "support_rows": copy.deepcopy(record["rows"]),
     }
 
 
