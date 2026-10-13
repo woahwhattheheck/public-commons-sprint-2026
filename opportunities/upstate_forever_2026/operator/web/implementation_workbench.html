@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Upper Savannah implementation and field monitoring</title>
-<style>html{background:#eceef0}body{margin:20px auto;max-width:1500px;padding:0 12px}#implementation-root{border:1px solid #cbd0d5;background:white}@media(max-width:800px){body{margin:0;padding:0}#implementation-root{border:0}}.iw{--iw-ink:#222529;--iw-muted:#62676d;--iw-border:#cfd2d5;--iw-bg:#fff;--iw-soft:#f3f4f5;color:var(--iw-ink);background:var(--iw-bg);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1500px;margin:0 auto;min-width:0}.iw *{box-sizing:border-box}.iw button,.iw input,.iw select,.iw textarea{font:inherit}.iw button{border:1px solid #aeb3b8;background:#fff;color:#202327;min-height:36px;padding:6px 12px;border-radius:3px;cursor:pointer}.iw button:hover{background:#eef0f2;border-color:#737b82}.iw button:focus-visible,.iw input:focus-visible,.iw select:focus-visible,.iw textarea:focus-visible,.iw a:focus-visible{outline:2px solid #313b45;outline-offset:2px}.iw button:disabled{cursor:wait;opacity:.6}.iw .iw-primary{background:#2b3035;border-color:#2b3035;color:#fff}.iw .iw-primary:hover{background:#111417}.iw .iw-remove{margin-left:auto;border-style:dashed}.iw a{color:#253b50;text-decoration:underline;text-underline-offset:2px}.iw h2{font-size:25px;font-weight:650;line-height:1.2;margin:3px 0 7px;letter-spacing:-.4px}.iw h3{font-size:17px;font-weight:650;margin:0}.iw p{margin:9px 0 17px}.iw-header{display:flex;justify-content:space-between;gap:24px;padding:25px 26px 15px;border-bottom:1px solid var(--iw-border)}.iw-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.1px;color:#555d66;margin:0!important}.iw-muted{color:var(--iw-muted)}.iw-header .iw-muted{margin:0;font-size:12px}.iw-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.iw-toolbar{display:flex;align-items:end;gap:15px;padding:16px 26px;border-bottom:1px solid var(--iw-border);background:#f8f8f9;flex-wrap:wrap}.iw-toolbar .iw-field:first-child{flex:1;min-width:210px;max-width:500px}.iw-field{display:flex;flex-direction:column;gap:5px;font-size:12px;min-width:0}.iw-field>span{font-weight:650;color:#42484e}.iw input,.iw select,.iw textarea{background:#fff;border:1px solid #b7bdc3;border-radius:3px;color:#20252a;min-height:37px;padding:7px 9px;max-width:100%;width:100%}.iw textarea{min-height:86px;resize:vertical}.iw small{display:block;font-size:11px;line-height:1.45;color:var(--iw-muted);margin-top:3px;overflow-wrap:anywhere}.iw-notice{margin:0!important;padding:10px 26px;background:#f3f4f5;border-bottom:1px solid var(--iw-border);font-size:12px}.iw-error{background:#f6f3f1;border:1px solid #8c7664;border-left:4px solid #675243;padding:12px;margin:12px 20px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 system-ui;max-height:280px;overflow:auto}.iw-tabs{display:flex;gap:0;border-bottom:1px solid #bbc1c6;padding:0 20px;overflow-x:auto}.iw-tabs button{white-space:nowrap;border:0;border-radius:0;padding:13px 14px;background:transparent;border-bottom:3px solid transparent;font-size:13px}.iw-tabs button[aria-current=page]{border-bottom-color:#242a30;background:#f6f7f8;font-weight:700}.iw-body{padding:24px 26px;min-height:380px}.iw-section-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:8px 0 14px;flex-wrap:wrap}.iw-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));border:1px solid var(--iw-border);margin:20px 0 28px;background:#fafafa}.iw-stats>div{padding:17px;border-right:1px solid #dedfe1}.iw-stats span{display:block;font-size:11px;color:#606970}.iw-stats strong{font-size:24px;display:block;font-weight:600;letter-spacing:-.5px;margin-top:3px}.iw-two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:26px}.iw-two h3{margin-bottom:12px}.iw-table-wrap{overflow:auto;max-width:100%;border:1px solid var(--iw-border);margin-bottom:24px}.iw table{border-collapse:collapse;width:100%;font-size:12px;text-align:left}.iw th{font-weight:650;white-space:nowrap;background:#f0f2f3;padding:9px 11px;border-bottom:1px solid #c5cbcf;color:#41484f}.iw td{padding:10px 11px;border-bottom:1px solid #e0e3e5;vertical-align:top;overflow-wrap:anywhere;min-width:60px}.iw tr:last-child td{border-bottom:0}.iw tbody tr:hover{background:#fafafa}.iw td button{font-size:11px;min-height:29px;padding:4px 8px;max-width:300px;text-align:left;margin-bottom:4px}.iw td code{font-size:10px;display:block;max-width:380px;max-height:80px;overflow:auto;white-space:pre-wrap;word-break:break-word}.iw-state{font-size:11px;border:1px solid #c3c8cc;background:#f3f4f5;border-radius:2px;padding:2px 5px;white-space:nowrap}.iw progress{width:95px;height:7px;accent-color:#59626a;appearance:auto}.iw-empty{padding:22px 15px;background:#fafafa;border:1px dashed #c9ced2;color:#626a72;font-size:13px}.iw-issue-list{padding:0;list-style:none}.iw-issue-list li{display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #e0e3e5}.iw-issue-list span{font-size:12px}.iw-footer{display:flex;justify-content:space-between;gap:20px;padding:14px 26px;border-top:1px solid var(--iw-border);color:#687179;font-size:10px;overflow-wrap:anywhere}.iw-dialog{border:1px solid #777f86;border-radius:4px;padding:24px;max-width:820px;width:calc(100% - 32px);max-height:90vh;overflow:auto;color:#222529;box-shadow:0 12px 50px #0003}.iw-dialog::backdrop{background:#20262d70}.iw-dialog h3{font-size:20px;margin-bottom:18px}.iw-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.iw-form-grid>p,.iw-form-grid>small,.iw-form-grid>details{grid-column:1/-1}.iw-form-grid details{font-size:11px;max-height:150px;overflow:auto}.iw-dialog-actions{display:flex;gap:8px;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid var(--iw-border)}.iw-dialog .iw-error{margin:0 0 15px}.iw-json{font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:65vh;overflow:auto;background:#f6f7f8;padding:12px}.iw-hint{font-size:12px;color:#62676d}.iw-workbench-host{min-width:0;width:100%}@media(max-width:800px){.iw-header{padding:18px;display:block}.iw-header>.iw-actions{margin-top:16px}.iw-toolbar{padding:14px 18px}.iw-body{padding:18px}.iw-two{grid-template-columns:1fr}.iw-tabs{padding:0 8px}.iw-tabs button{padding:11px}.iw-footer{padding:12px 18px;display:block}.iw-stats{grid-template-columns:repeat(2,1fr)}.iw-stats strong{font-size:21px}.iw-form-grid{grid-template-columns:1fr}.iw-dialog{padding:18px}.iw-section-head>.iw-actions{width:100%}.iw-section-head>.iw-actions button{flex:1}.iw-table-wrap{margin-bottom:20px}.iw-issue-list li{display:block}.iw-issue-list span{display:block;margin-top:6px}}@media print{.iw-header .iw-actions,.iw-toolbar,.iw-tabs,.iw-footer,dialog{display:none!important}.iw-body{padding:0}.iw button{display:none!important}.iw-table-wrap{overflow:visible}.iw table{font-size:10px}.iw tr{break-inside:avoid}.iw th{background:#eee!important}.iw{max-width:none}.iw h3{break-after:avoid}}</style></head><body>
+<style>html{background:#eceef0}body{margin:20px auto;max-width:1500px;padding:0 12px}#implementation-root{border:1px solid #cbd0d5;background:white}@media(max-width:800px){body{margin:0;padding:0}#implementation-root{border:0}}.iw{--iw-ink:#222529;--iw-muted:#62676d;--iw-border:#cfd2d5;--iw-bg:#fff;--iw-soft:#f3f4f5;color:var(--iw-ink);background:var(--iw-bg);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1500px;margin:0 auto;min-width:0}.iw *{box-sizing:border-box}.iw button,.iw input,.iw select,.iw textarea{font:inherit}.iw button{border:1px solid #aeb3b8;background:#fff;color:#202327;min-height:36px;padding:6px 12px;border-radius:3px;cursor:pointer}.iw button:hover{background:#eef0f2;border-color:#737b82}.iw button:focus-visible,.iw input:focus-visible,.iw select:focus-visible,.iw textarea:focus-visible,.iw a:focus-visible{outline:2px solid #313b45;outline-offset:2px}.iw button:disabled{cursor:wait;opacity:.6}.iw .iw-primary{background:#2b3035;border-color:#2b3035;color:#fff}.iw .iw-primary:hover{background:#111417}.iw .iw-remove{margin-left:auto;border-style:dashed}.iw a{color:#253b50;text-decoration:underline;text-underline-offset:2px}.iw h2{font-size:25px;font-weight:650;line-height:1.2;margin:3px 0 7px;letter-spacing:-.4px}.iw h3{font-size:17px;font-weight:650;margin:0}.iw p{margin:9px 0 17px}.iw-header{display:flex;justify-content:space-between;gap:24px;padding:25px 26px 15px;border-bottom:1px solid var(--iw-border)}.iw-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.1px;color:#555d66;margin:0!important}.iw-muted{color:var(--iw-muted)}.iw-header .iw-muted{margin:0;font-size:12px}.iw-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.iw-toolbar{display:flex;align-items:end;gap:15px;padding:16px 26px;border-bottom:1px solid var(--iw-border);background:#f8f8f9;flex-wrap:wrap}.iw-toolbar .iw-field:first-child{flex:1;min-width:210px;max-width:500px}.iw-field{display:flex;flex-direction:column;gap:5px;font-size:12px;min-width:0}.iw-field>span{font-weight:650;color:#42484e}.iw input,.iw select,.iw textarea{background:#fff;border:1px solid #b7bdc3;border-radius:3px;color:#20252a;min-height:37px;padding:7px 9px;max-width:100%;width:100%}.iw textarea{min-height:86px;resize:vertical}.iw small{display:block;font-size:11px;line-height:1.45;color:var(--iw-muted);margin-top:3px;overflow-wrap:anywhere}.iw-notice{margin:0!important;padding:10px 26px;background:#f3f4f5;border-bottom:1px solid var(--iw-border);font-size:12px}.iw-error{background:#f6f3f1;border:1px solid #8c7664;border-left:4px solid #675243;padding:12px;margin:12px 20px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 system-ui;max-height:280px;overflow:auto}.iw-tabs{display:flex;gap:0;border-bottom:1px solid #bbc1c6;padding:0 20px;overflow-x:auto}.iw-tabs button{white-space:nowrap;border:0;border-radius:0;padding:13px 14px;background:transparent;border-bottom:3px solid transparent;font-size:13px}.iw-tabs button[aria-current=page]{border-bottom-color:#242a30;background:#f6f7f8;font-weight:700}.iw-body{padding:24px 26px;min-height:380px}.iw-section-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:8px 0 14px;flex-wrap:wrap}.iw-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));border:1px solid var(--iw-border);margin:20px 0 28px;background:#fafafa}.iw-stats>div{padding:17px;border-right:1px solid #dedfe1}.iw-stats span{display:block;font-size:11px;color:#606970}.iw-stats strong{font-size:24px;display:block;font-weight:600;letter-spacing:-.5px;margin-top:3px}.iw-two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:26px}.iw-two h3{margin-bottom:12px}.iw-table-wrap{overflow:auto;max-width:100%;border:1px solid var(--iw-border);margin-bottom:24px}.iw table{border-collapse:collapse;width:100%;font-size:12px;text-align:left}.iw th{font-weight:650;white-space:nowrap;background:#f0f2f3;padding:9px 11px;border-bottom:1px solid #c5cbcf;color:#41484f}.iw td{padding:10px 11px;border-bottom:1px solid #e0e3e5;vertical-align:top;overflow-wrap:anywhere;min-width:60px}.iw tr:last-child td{border-bottom:0}.iw tbody tr:hover{background:#fafafa}.iw td button{font-size:11px;min-height:29px;padding:4px 8px;max-width:300px;text-align:left;margin-bottom:4px}.iw td code{font-size:10px;display:block;max-width:380px;max-height:80px;overflow:auto;white-space:pre-wrap;word-break:break-word}.iw-state{font-size:11px;border:1px solid #c3c8cc;background:#f3f4f5;border-radius:2px;padding:2px 5px;white-space:nowrap}.iw progress{width:95px;height:7px;accent-color:#59626a;appearance:auto}.iw-empty{padding:22px 15px;background:#fafafa;border:1px dashed #c9ced2;color:#626a72;font-size:13px}.iw-issue-list{padding:0;list-style:none}.iw-issue-list li{display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #e0e3e5}.iw-issue-list span{font-size:12px}.iw-footer{display:flex;justify-content:space-between;gap:20px;padding:14px 26px;border-top:1px solid var(--iw-border);color:#687179;font-size:10px;overflow-wrap:anywhere}.iw-dialog{border:1px solid #777f86;border-radius:4px;padding:24px;max-width:820px;width:calc(100% - 32px);max-height:90vh;overflow:auto;color:#222529;box-shadow:0 12px 50px #0003}.iw-dialog::backdrop{background:#20262d70}.iw-dialog h3{font-size:20px;margin-bottom:18px}.iw-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.iw-form-grid>p,.iw-form-grid>small,.iw-form-grid>details{grid-column:1/-1}.iw-form-grid details{font-size:11px;max-height:150px;overflow:auto}.iw-dialog-actions{display:flex;gap:8px;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid var(--iw-border)}.iw-dialog .iw-error{margin:0 0 15px}.iw-json{font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:65vh;overflow:auto;background:#f6f7f8;padding:12px}.iw-hint{font-size:12px;color:#62676d}.iw-workbench-host{min-width:0;width:100%}.iw-form-grid>.iw-source-preview{grid-column:1/-1;min-width:0}.iw-source-preview h4{margin:0 0 12px;font-size:15px}.iw-source-preview>.iw-field{margin-bottom:12px}.iw-source-row{padding:12px 0;border-top:1px solid var(--iw-border)}.iw-source-choice{display:flex;align-items:flex-start;gap:10px;cursor:pointer;min-height:44px}.iw-source-choice>input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:3px 0}.iw-source-choice>span{min-width:0;overflow-wrap:anywhere}.iw-source-meta{display:block;font-size:12px;line-height:1.5;margin-top:3px;color:#62676d}.iw-form-grid .iw-source-row details,.iw-form-grid .iw-source-context{max-height:none;font-size:12px}.iw-source-row .iw-json,.iw-source-context .iw-json{max-height:240px}.iw-source-row[hidden]{display:none}.iw-evidence-preview{display:block;max-width:100%;max-height:65vh;object-fit:contain;margin:12px auto}.iw-file-choices{margin:0;border:1px solid var(--iw-border);padding:12px;min-width:0}.iw-file-choices legend{font-size:13px;padding:0 4px}.iw-file-choices .iw-source-choice{padding:5px 0}.iw-file-choices small{display:block;overflow-wrap:anywhere}@media(max-width:800px){.iw-header{padding:18px;display:block}.iw-header>.iw-actions{margin-top:16px}.iw-toolbar{padding:14px 18px}.iw-body{padding:18px}.iw-two{grid-template-columns:1fr}.iw-tabs{padding:0 8px}.iw-tabs button{padding:11px}.iw-footer{padding:12px 18px;display:block}.iw-stats{grid-template-columns:repeat(2,1fr)}.iw-stats strong{font-size:21px}.iw-form-grid{grid-template-columns:1fr}.iw-dialog{padding:18px}.iw-section-head>.iw-actions{width:100%}.iw-section-head>.iw-actions button{flex:1}.iw-table-wrap{margin-bottom:20px}.iw-issue-list li{display:block}.iw-issue-list span{display:block;margin-top:6px}}@media print{.iw-header .iw-actions,.iw-toolbar,.iw-tabs,.iw-footer,dialog{display:none!important}.iw-body{padding:0}.iw button{display:none!important}.iw-table-wrap{overflow:visible}.iw table{font-size:10px}.iw tr{break-inside:avoid}.iw th{background:#eee!important}.iw{max-width:none}.iw h3{break-after:avoid}}</style></head><body>
 <div id="implementation-root"></div><noscript>This field workbench uses JavaScript for local plan editing and exports.</noscript>
 <script>const IMPLEMENTATION_CORE = (() => {
 const SCHEMA = 'upstate.implementation-plan/v1';
@@ -172,6 +172,7 @@ function validatePlan(plan){
   }
   for(const row of rows.activities){
     const p='activities.'+(row.id||'?');reference(row,'visit_id','visits',p,true);reference(row,'site_id','sites',p,true);
+    stringList(row,'evidence_refs',p,false,true);
     if(!['sample','measurement','inspection','photo'].includes(row.kind))add(p+'.kind','Choose sample, measurement, inspection or photo.');
     string(row,'notes',p);for(const key of ['sample_id','method','custody_ref'])string(row,key,p,false,true);
     dateField(row,'collected_at',p,false,true);
@@ -285,7 +286,22 @@ function updateRow(plan,collection,row){
   const issues=validatePlan(p);if(issues.length)throw Error(issues.map(x=>x.path+': '+x.message).join('\n'));
   return p;
 }
+function implementationSourceRefs(row){
+  if(!row||typeof row!=='object')return [];
+  const refs=[];
+  for(const key of ['source_link_id','audit_source_link_id','source_ref','custody_ref'])if(typeof row[key]==='string')refs.push(row[key]);
+  if(Array.isArray(row.evidence_refs))refs.push(...row.evidence_refs);
+  for(const key of ['original_source','lab_source']){const source=row[key];if(source&&typeof source==='object')for(const field of ['source_link_id','audit_source_link_id','source_ref'])if(typeof source[field]==='string')refs.push(source[field]);}
+  const response=row.form_response,fields=response?.template?.fields,answers=response?.answers;
+  if(Array.isArray(fields)&&answers&&typeof answers==='object')for(const field of fields){if(!field||typeof field!=='object')continue;const answer=answers[field.key];if(field.type==='attachment_ref'&&typeof answer==='string')refs.push(answer);if(field.type==='attachment_refs'){if(Array.isArray(answer))refs.push(...answer);else if(Array.isArray(answer?.references))refs.push(...answer.references);}}
+  return [...new Set(refs.filter(value=>typeof value==='string'))];
+}
 function deleteRow(plan,collection,id){
+  if(collection==='source_links'){
+    const linked=[];
+    for(const name of [...COLLECTIONS,'field12_lab_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
+    if(linked.length)throw Error('This source is still linked. Update its original associations first.\n'+linked.join('\n'));
+  }
   const p=clone(plan);p[collection]=p[collection].filter(x=>x.id!==id);
   const issues=validatePlan(p);if(issues.length)throw Error('This record is still referenced. Update its linked records first.\n'+issues.map(x=>x.path+': '+x.message).join('\n'));
   return p;
@@ -361,9 +377,22 @@ function economicSourceReports(plan, table) {
   return {ids,html:parts.length?'<section><h2>Selected economic scenarios</h2>'+parts.join('')+'</section>':''};
 }
 
+function briefingFollowupReport(plan,table){
+ if(!plan.briefing_imports?.length)return '';
+ const group=rows=>rows.filter(([,value])=>value!==null&&value!==undefined&&value!=='').map(([label,value])=>label+': '+String(value)).join('\n');
+ const rows=plan.tasks.filter(t=>t.briefing_entry).map(t=>{
+  const e=t.briefing_entry,c=e.source_context||{},b=c.report_binding||{},s=c.slide||{};
+  return [group([['Work',t.title],['Task ID',t.id]]),group([['Owner',t.assignee],['Status',t.status]]),t.source_due_date||'',group([['Entry kind',e.kind],['Report',b.title],['Page',s.title],['Page ID',s.id]]),b.report_sha256,e.source_link_id];
+ });
+ return '<section><h2>Report review follow-up</h2><p>Source due dates are deadlines recorded in the original meeting notes. They do not set working durations or move scientific report dates. Current task owners and status include subsequent edits.</p>'+
+ table(['Work','Current owner and status','Source due date','Original report context','Original report SHA256','Original notes source'],rows)+
+ '<details><summary>Received meetings and preserved local differences</summary><pre>'+esc(JSON.stringify(plan.briefing_imports,null,2))+'</pre></details></section>';
+}
+
 function reportHtml(plan,asOf=today()){
   const summary=summarize(plan,asOf);
   const text=value=>value===null||value===undefined?'':typeof value==='object'?JSON.stringify(value):String(value);
+  const group=rows=>rows.filter(([,value])=>value!==null&&value!==undefined&&value!==''&&(!Array.isArray(value)||value.length)).map(([label,value])=>label+': '+text(value)).join('\n');
   const table=(head,rows)=>'<div class="scroll"><table><thead><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+esc(text(v))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   const fieldRecords=plan.activities.filter(a=>a.form_response!==null&&a.form_response!==undefined).map(activity=>{
     const response=activity.form_response;
@@ -379,21 +408,22 @@ function reportHtml(plan,asOf=today()){
     });
     return '<section class="field-record"><h3>'+esc(template.label||template.id||'Structured field record')+'</h3><p class="meta">Activity '+esc(activity.id)+' · visit '+esc(activity.visit_id)+' · site '+esc(activity.site_id)+'<br>Template '+esc(template.id||'')+' · version '+esc(template.version??'')+' · catalog '+esc(response.catalog_id||'')+' · version '+esc(response.catalog_version??'')+'<br>Recorded '+esc(response.recorded_at||'')+'</p>'+table(['Field','Field key','Type','Original response','Numeric value','Original unit'],rows)+'<details><summary>Complete retained form record and template</summary><pre>'+esc(JSON.stringify(response,null,2))+'</pre></details></section>';
   }).join('');
-  const css='body{font:14px/1.5 system-ui,sans-serif;color:#202124;margin:32px;max-width:1200px}h1{font-size:28px}h2{font-size:19px;margin-top:32px}h3{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #c9cbce;text-align:left;padding:7px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#f1f2f3}.scroll{overflow:auto}.meta{color:#575b60}.stats{display:flex;gap:24px;flex-wrap:wrap}.stats b{display:block;font-size:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:12px 0}.field-record{margin-bottom:24px}@media print{body{margin:10mm}thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}h2,h3{break-after:avoid}}';
+  const css='body{font:14px/1.5 system-ui,sans-serif;color:#202124;margin:32px;max-width:1200px}h1{font-size:28px}h2{font-size:19px;margin-top:32px}h3{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #c9cbce;text-align:left;padding:7px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#f1f2f3}.scroll{overflow:auto}.meta{color:#575b60}.stats{display:flex;gap:24px;flex-wrap:wrap}.stats b{display:block;font-size:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:12px 0}.field-record{margin-bottom:24px}@media print{body{margin:10mm;max-width:none}table{font-size:10px;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}h2,h3{break-after:avoid}}';
   let html='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(plan.title)+' — implementation report</title><style>'+css+'</style><body><h1>'+esc(plan.title)+'</h1><p class="meta">Implementation and field monitoring · '+esc(plan.id)+' · native revision '+esc(plan.revision)+' · as of '+esc(asOf)+'</p><p>'+esc(plan.description)+'</p><div class="stats"><span><b>'+summary.tasks.complete+' / '+summary.tasks.total+'</b>Tasks complete</span><span><b>'+money(summary.budget.budget)+'</b>Budget</span><span><b>'+money(summary.budget.commitment)+'</b>Commitments</span><span><b>'+money(summary.budget.actual)+'</b>Actual costs</span><span><b>'+summary.field.observations+'</b>Recorded results</span></div>';
   const economics=economicSourceReports(plan,table);
   html+=economics.html;
+  html+=briefingFollowupReport(plan,table);
   const otherCandidates=plan.candidates.filter(c=>!economics.ids.has(c.id));
-  if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['ID','Candidate','Original candidate area (ha)','Reporting footprint (ha)','Area basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[c.id,c.label,c.area_ha??'',c.reporting_area_ha??'',c.area_basis||'',c.source,c.modeled_benefits||[]]));
-  html+='<h2>Assigned implementation work</h2>'+table(['Task','Candidate','Owner','Status','Start','Last working date','Progress','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [t.title,t.candidate_id||'',t.assignee||'',t.status,s.start||'',s.last_work_date||'',t.progress_pct+'%',t.notes||'',t.evidence_refs||[]];}));
+  if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['Candidate','Original areas and basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[group([['Name',c.label],['ID',c.id]]),group([['Candidate area (ha)',c.area_ha],['Reporting footprint (ha)',c.reporting_area_ha],['Area basis',c.area_basis]]),c.source,c.modeled_benefits||[]]));
+  html+='<h2>Assigned implementation work</h2>'+table(['Task and candidate','Owner','Status and progress','Working dates','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [group([['Task',t.title],['Task ID',t.id],['Candidate',t.candidate_id]]),t.assignee||'',group([['Status',t.status],['Progress',t.progress_pct+'%']]),group([['Start',s.start],['Last working date',s.last_work_date]]),t.notes||'',t.evidence_refs||[]];}));
   if(summary.schedule.issues.length)html+='<h2>Dates to complete</h2><ul>'+summary.schedule.issues.map(i=>'<li>'+esc(i.task_id+': '+i.message)+'</li>').join('')+'</ul>';
   html+='<h2>Cost ledger (USD)</h2>'+table(['Kind','Item','Task','Amount','Date','Reference'],plan.budget_lines.map(b=>[b.kind,b.label,b.task_id||'',money(b.amount_minor),b.date||'',b.reference||'']));
   html+='<h2>Sites and monitoring questions</h2>'+table(['Site','Coordinates','Candidate','Source'],plan.sites.map(s=>[s.label,[s.latitude,s.longitude].filter(x=>x!==null&&x!==undefined).join(', '),s.candidate_id||'',s.source_ref||'']));
-  html+=table(['Plan','Objective','Sites','Parameters','Method','Frequency','Notes'],plan.monitoring_plans.map(m=>[m.title,m.objective,(m.site_ids||[]).join('\n'),(m.parameters||[]).join('\n'),m.method_ref||'',m.frequency||'',m.notes||'']));
-  html+='<h2>Visits</h2>'+table(['ID','Site','Planned','Actual','Observer','Status','Notes','Evidence references'],plan.visits.map(v=>[v.id,v.site_id,v.planned_date||'',v.visited_at||'',v.observer||'',v.status,v.notes||'',v.evidence_refs||[]]));
-  html+='<h2>Sample and measurement activities</h2>'+table(['Activity','Visit','Site','Kind','Sample','Collected','Method','Custody','Related task','Notes'],plan.activities.map(a=>[a.id,a.visit_id,a.site_id,a.kind,a.sample_id||'',a.collected_at||'',a.method||'',a.custody_ref||'',a.implementation_task_id||'',a.notes||'']));
+  html+=table(['Monitoring plan','Objective','Sites','Parameters','Method and frequency','Notes'],plan.monitoring_plans.map(m=>[group([['Title',m.title],['ID',m.id]]),m.objective,(m.site_ids||[]).join('\n'),(m.parameters||[]).join('\n'),group([['Method',m.method_ref],['Frequency',m.frequency]]),m.notes||'']));
+  html+='<h2>Visits</h2>'+table(['Visit and site','Planned date','Actual timestamp','Observer and status','Notes','Evidence references'],plan.visits.map(v=>[group([['Visit',v.id],['Site',v.site_id]]),v.planned_date||'',v.visited_at||'',group([['Observer',v.observer],['Status',v.status]]),v.notes||'',v.evidence_refs||[]]));
+  html+='<h2>Sample and measurement activities</h2>'+table(['Activity and sample','Collection and site','Method','Custody and related work','Notes','Evidence references'],plan.activities.map(a=>[group([['Activity',a.id],['Kind',a.kind],['Sample',a.sample_id]]),group([['Collected',a.collected_at],['Visit',a.visit_id],['Site',a.site_id]]),a.method||'',group([['Custody',a.custody_ref],['Task',a.implementation_task_id]]),a.notes||'',a.evidence_refs||[]]));
   if(fieldRecords)html+='<h2>Structured field form records</h2>'+fieldRecords;
-  html+='<h2>Original field and laboratory results</h2><p>Each result retains its original text, unit, fraction, chemical basis and detection conditions. Modeled quantities remain with their original selected source record.</p>'+table(['Result ID','Activity','Parameter','Original result','Value','Unit','Basis','Fraction','Type / qualifier','Detection limit (original unit)','Quantitation limit (original unit)','Method','Quality','Notes'],plan.observations.map(o=>[o.id,o.activity_id,o.parameter,o.original_text,o.value??'',o.unit||'',o.basis||'',o.fraction||'',o.result_type+' / '+(o.qualifier||''),o.detection_limit??'',o.quantitation_limit??'',o.method||'',o.qa_status||'',o.notes||'']));
+  html+='<h2>Original field and laboratory results</h2><p>Each result retains its original text, unit, fraction, chemical basis and detection conditions. Modeled quantities remain with their original selected source record.</p>'+table(['Result and activity','Parameter and definition','Original result','Type and original limits','Quality','Notes'],plan.observations.map(o=>[group([['Result',o.id],['Activity',o.activity_id]]),group([['Parameter',o.parameter],['Basis',o.basis],['Fraction',o.fraction],['Method',o.method]]),group([['Original text',o.original_text],['Numeric value',o.value],['Unit',o.unit]]),group([['Type',o.result_type],['Qualifier',o.qualifier],['Detection limit (original unit)',o.detection_limit],['Quantitation limit (original unit)',o.quantitation_limit]]),o.qa_status||'',o.notes||'']));
   html+='<h2>Retained source references</h2>'+table(['ID','Kind','Title','Reference'],plan.source_links.map(s=>[s.id,s.kind,s.label,s.reference||'']))+'<h2>Working calendar</h2><p>ISO weekdays: '+esc(plan.working_days.join(', '))+'. Holidays: '+esc(plan.holidays.join(', ')||'None recorded')+'. Task durations use working days; zero-day tasks are milestones.</p></body></html>';
   return html;
 }
@@ -405,7 +435,7 @@ function fieldSheetHtml(plan,visitId){
   return '<!doctype html><html lang="en"><meta charset="utf-8"><title>'+esc(site?.label||visit.site_id)+' field sheet</title><style>body{font:14px/1.5 system-ui;margin:25px}h1{font-size:22px}dl{display:grid;grid-template-columns:150px 1fr}dt{font-weight:600}dd{margin:0}section{margin-top:20px;border-bottom:1px solid #777;min-height:55px}h2{font-size:14px;margin:0}@media print{section{break-inside:avoid}}</style><body><h1>Field visit · '+esc(site?.label||visit.site_id)+'</h1><dl><dt>Plan</dt><dd>'+esc(plan.title+' · '+plan.id+' · revision '+plan.revision)+'</dd><dt>Visit</dt><dd>'+esc(visit.id)+'</dd><dt>Planned date</dt><dd>'+esc(visit.planned_date||'')+'</dd><dt>Coordinates</dt><dd>'+esc([site?.latitude,site?.longitude].filter(x=>x!==null&&x!==undefined).join(', '))+'</dd><dt>Assigned observer</dt><dd>'+esc(visit.observer||'')+'</dd><dt>Question</dt><dd>'+esc(monitor?.objective||'')+'</dd><dt>Parameters</dt><dd>'+esc((monitor?.parameters||[]).join(', '))+'</dd><dt>Method reference</dt><dd>'+esc(monitor?.method_ref||'')+'</dd></dl><p>'+esc(visit.notes||'')+'</p>'+empty.map(t=>'<section><h2>'+esc(t)+'</h2></section>').join('')+'</body></html>';
 }
 
-return {SCHEMA,COLLECTIONS,clone,esc,today,uid,civil,dateText,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,deleteRow,rowsCsv,csvPlan,safeLink,reportHtml,fieldSheetHtml};
+return {SCHEMA,COLLECTIONS,clone,esc,today,uid,civil,dateText,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,implementationSourceRefs,deleteRow,rowsCsv,csvPlan,safeLink,briefingFollowupReport,reportHtml,fieldSheetHtml};
 })();
 const IMPLEMENTATION_FORMS = (() => {
 const {clone,esc,uid,today,civil,parseMoney,applyMethod,updateRow} = IMPLEMENTATION_CORE;
@@ -437,6 +467,36 @@ function catalogNumber(item,text){
   return value;
 }
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+
+function sourceSelectionFields(workbench,choices){
+  const draft=workbench.selectionDraft||{},preview=draft.preview,selected=new Set(draft.selected_ids||[]);
+  let body=field('Original saved selection',select('source_choice',choices,draft.choice||'','required'));
+  if(!choices.length)return body+'<p>No saved source selection is available yet. Save a community or conservation plan in its existing desk, then reopen this picker.</p>';
+  body+='<p>Choose the original work or planning units to attach. Each selected row keeps its original status, quantities and source context.</p>';
+  if(draft.loading)return body+'<p role="status" aria-live="polite">Reading the original saved selection…</p>';
+  if(draft.error)return body+'<div class="iw-source-preview"><p class="iw-error" role="alert">'+esc(draft.error)+'</p>'+button('source-preview-retry','Read source again')+'</div>';
+  if(!preview)return body+'<p role="status">Choose a saved selection to preview its original rows.</p>';
+  const rows=preview.rows||[];
+  body+='<div class="iw-source-preview"><h4>'+esc(preview.title||'Original source rows')+'</h4>';
+  if(draft.notice)body+='<p class="iw-notice" role="status">'+esc(draft.notice)+'</p>';
+  if(!rows.length)return body+'<p role="status">This source contains no importable rows. Choose another saved selection.</p></div>';
+  body+=field('Find source rows',input('source_filter',draft.filter||'','search','autocomplete="off"'))+
+    '<div class="iw-actions">'+button('source-select-visible','Select visible rows')+button('source-clear','Clear selection')+'</div>'+
+    '<p data-source-selection-count aria-live="polite">'+selected.size+' of '+rows.length+' rows chosen.</p>'+
+    '<p data-source-no-selection class="iw-hint" '+(selected.size?'hidden':'')+'>Choose at least one row. Proposed work can be chosen explicitly; its original proposed status is retained.</p>'+
+    '<p data-source-no-matches class="iw-hint" hidden>No source rows match this search.</p>'+
+    '<div class="iw-source-rows">';
+  for(const row of rows){
+    const chosen=selected.has(row.id),context=row.source_context||{},status=row.status||'Status not supplied';
+    const area=[row.area_ha===null||row.area_ha===undefined?'':'Whole unit: '+row.area_ha+' ha',row.reporting_area_ha===null||row.reporting_area_ha===undefined?'':'Reporting area: '+row.reporting_area_ha+' ha'].filter(Boolean).join(' · ');
+    const summary=typeof row.context_summary==='string'?row.context_summary:'';
+    const search=[row.label,row.status,summary,JSON.stringify(context)].filter(Boolean).join(' ').toLocaleLowerCase();
+    body+='<div class="iw-source-row" data-source-row data-source-search="'+esc(search)+'"><label class="iw-source-choice"><input type="checkbox" name="source_row" value="'+esc(row.id)+'" '+(chosen?'checked':'')+'><span><strong>'+esc(row.label)+'</strong><span class="iw-source-meta">'+esc(status)+(area?' · '+esc(area):'')+'</span>'+(summary?'<span class="iw-source-meta">'+esc(summary)+'</span>':'')+'</span></label><details><summary>Original source context</summary><pre class="iw-json">'+esc(JSON.stringify({id:row.id,...context},null,2))+'</pre></details></div>';
+  }
+  body+='</div><details class="iw-source-context"><summary>Saved selection reference</summary><pre class="iw-json">'+esc(JSON.stringify({title:preview.title,kind:preview.kind,source_id:preview.source_id,reference:preview.source_ref,context:preview.context||{}},null,2))+'</pre></details></div>';
+  return body;
+}
+
 function openImplementationDialog(kind,id){
     const p=this.plan,row=id?clone(p[kind].find(r=>r.id===id)):null;
     const title=kind==='settings'?'Plan settings':kind==='method'?'Add a complete method workflow':kind==='source-import'?'Import a saved native selection':kind==='field-form'?'Record a structured field visit':(row?'Edit ':'Add ')+(LABELS[kind]||kind);
@@ -451,7 +511,7 @@ function openImplementationDialog(kind,id){
       body=sel('Method','method_id',this.catalog.method_templates.map(m=>[m.id,m.label]),this.catalog.method_templates[0]?.id)+sel('Candidate','candidate_id',refs('candidates'),'')+'<p>Named steps and dependencies will be added. Enter local durations, assignments and estimates in the work plan.</p>';
     }else if(kind==='source-import'){
       const choices=[...(this.selectionChoices?.conservation_portfolios||[]).map(x=>['conservation_portfolio:'+x.id,'Conservation · '+x.title]),...(this.selectionChoices?.community_plans||[]).map(x=>['community_plan:'+x.id,'Community · '+x.title])];
-      body=field('Original saved selection',select('source_choice',choices,choices[0]?.[0]||'','required'))+(choices.length?'':'<p>No saved source selection is available yet. Save the original community or conservation plan in its existing desk, then reopen this picker.</p>')+ta('Specific selected IDs (optional)','selected_ids','','Separate IDs with commas or new lines. Leave empty to use the original selected rows.')+'<p>The native importer reads the retained original source and carries its complete snapshot into this plan.</p>';
+      body=sourceSelectionFields(this,choices);
     }else if(kind==='field-form'){
       const template=this.catalog.field_forms.find(f=>f.id===this.activeFormId)||this.catalog.field_forms[0];
       if(!template)throw Error('No field form templates are installed.');
@@ -468,7 +528,12 @@ function openImplementationDialog(kind,id){
         }else if(item.type==='date')body+=f(item.label,name,'','date',required);
         else if(item.type==='monitoring_plan_ref')body+=field(item.label,select(name,refs('monitoring_plans'),'',required),'Choose a monitoring plan containing this visit site.');
         else if(item.type==='activity_refs')body+=field(item.label,area(name,'',required),'Existing activity IDs, one per line. Each activity must belong to the selected visit.')+'<details><summary>Available activity IDs</summary><ul>'+p.activities.map(a=>'<li><code>'+esc(a.id)+'</code> · '+esc(a.sample_id||a.kind)+' · '+esc(a.visit_id)+'</li>').join('')+'</ul></details>';
-        else body+=field(item.label,area(name,'',required),item.type==='attachment_refs'?'Existing file or photograph references, one per line.':item.type==='attachment_ref'?'Record the original file, procedure or photograph reference.':'');
+        else if(item.type==='attachment_refs'){
+          const files=p.source_links.filter(link=>link.kind==='local_file');
+          body+='<fieldset class="iw-field iw-file-choices"><legend>'+esc(item.label)+'</legend>'+(files.length?files.map(link=>'<label class="iw-source-choice"><input type="checkbox" name="'+esc(name)+'" value="'+esc(link.id)+'"><span>'+esc(link.label||link.original_filename)+'<small>'+esc(link.original_filename||link.id)+'</small></span></label>').join(''):'<p>No original files attached. Add files from the visit or Handover view before completing this field.</p>')+(item.required?'<small>Choose at least one attached file.</small>':'')+'</fieldset>';
+        }else if(item.type==='attachment_ref'){
+          body+=field(item.label,input(name,'','text',required+' list="'+esc(name)+'__files"')+'<datalist id="'+esc(name)+'__files">'+p.source_links.map(link=>'<option value="'+esc(link.id)+'">'+esc(link.label)+'</option>').join('')+'</datalist>','Choose an original source reference or enter the documented procedure/reference.');
+        }else body+=field(item.label,area(name,'',required));
       }
     }else if(kind==='tasks'){
       const r=row||{title:'',candidate_id:'',phase:'prepare',assignee:'',status:'planned',duration_days:null,depends_on:[],progress_pct:0,notes:''};
@@ -498,7 +563,9 @@ function openImplementationDialog(kind,id){
       if(row)body=f('Title','label',row.label,'text','required')+'<details><summary>Original source reference</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details>';
       else body=f('Title','label','','text','required')+sel('Source kind','kind',[['record','Record'],['guidance','Guidance'],['dataset','Dataset'],['plan','Plan'],['method','Method']],'record')+f('Original reference','reference','','text','required');
     }
-    this.dialog('<form data-impl-form="'+esc(kind)+'" data-id="'+esc(id||'')+'"><h3>'+esc(title)+'</h3><div class="iw-form-grid">'+body+'</div><div class="iw-dialog-actions"><button type="submit" class="iw-primary">'+(kind==='source-import'?'Import original selection':'Save')+'</button>'+button('close-dialog','Cancel')+(row&&!['candidates','source_links'].includes(kind)?button('delete','Remove record','data-collection="'+kind+'" data-id="'+esc(id)+'"','iw-remove'):'')+'</div></form>');
+    const unavailable=kind==='source-import'&&(!this.selectionDraft?.preview||this.selectionDraft.loading||!(this.selectionDraft.selected_ids||[]).length);
+    this.dialog('<form data-impl-form="'+esc(kind)+'" data-id="'+esc(id||'')+'"><h3>'+esc(title)+'</h3><div class="iw-form-grid">'+body+'</div><div class="iw-dialog-actions"><button type="submit" class="iw-primary" '+(unavailable?'disabled':'')+'>'+(kind==='source-import'?'Import chosen rows':'Save')+'</button>'+button('close-dialog','Cancel')+(row&&!['candidates','source_links'].includes(kind)?button('delete','Remove record','data-collection="'+kind+'" data-id="'+esc(id)+'"','iw-remove'):'')+'</div></form>');
+    if(kind==='source-import')this.syncSourceSelection?.();
   }
 async function saveImplementationForm(form){
     const kind=form.dataset.implForm,id=form.dataset.id,values=Object.fromEntries(new FormData(form)),v=n=>values[n]||'',existing=id?clone(this.plan[kind].find(r=>r.id===id)):null;
@@ -513,7 +580,7 @@ async function saveImplementationForm(form){
       if(taskId&&!this.plan.tasks.some(t=>t.id===taskId))throw Error('Select a work task in this plan.');
       const p=clone(this.plan),activityId=uid('field-activity'),answers={},rawAnswers={},observations=[];
       for(const item of template.fields){
-        const key='answer__'+item.key,raw=v(key),text=raw.trim(),unitRaw=v(key+'__unit'),unit=unitRaw.trim();
+        const key='answer__'+item.key,raw=item.type==='attachment_refs'?new FormData(form).getAll(key).map(String).join('\n'):v(key),text=raw.trim(),unitRaw=v(key+'__unit'),unit=unitRaw.trim();
         rawAnswers[item.key]=raw;
         if(item.type==='quantity')rawAnswers[item.key+'__unit']=unitRaw;
         if(item.required&&!text)throw Error('Complete '+item.label+'.');
@@ -538,15 +605,28 @@ async function saveImplementationForm(form){
               const linked=p.activities.find(a=>a.id===reference);
               if(!linked||linked.visit_id!==visit.id||linked.site_id!==visit.site_id)throw Error('Activity '+reference+' must exist at this visit and site.');
             }
+            if(item.type==='attachment_refs'&&references.some(reference=>!p.source_links.some(link=>link.id===reference&&link.kind==='local_file')))throw Error('Choose attached original files for '+item.label+'.');
             answers[item.key]={references,original_text:raw};
           }else answers[item.key]=raw;
           observations.push({id:uid('field-result'),activity_id:activityId,parameter:item.label,result_type:'text',value:null,original_text:raw,unit:'',method:'Field form '+template.id+' '+template.version,qa_status:'field_record',notes:''});
         }
       }
-      p.activities.push({id:activityId,visit_id:visit.id,site_id:visit.site_id,kind:activityKind,sample_id:sampleId,collected_at:v('collected_at'),method:'Field form '+template.id+' '+template.version,notes:'',implementation_task_id:taskId,form_response:{catalog_id:this.catalog.id,catalog_version:this.catalog.version,template:clone(template),answers,raw_answers:rawAnswers,recorded_at:new Date().toISOString()}});
+      p.activities.push({id:activityId,visit_id:visit.id,site_id:visit.site_id,kind:activityKind,sample_id:sampleId,collected_at:v('collected_at'),method:'Field form '+template.id+' '+template.version,notes:'',implementation_task_id:taskId,evidence_refs:[...new Set(Object.values(answers).flatMap(answer=>Array.isArray(answer?.references)?answer.references.filter(reference=>p.source_links.some(link=>link.id===reference&&link.kind==='local_file')):[]))],form_response:{catalog_id:this.catalog.id,catalog_version:this.catalog.version,template:clone(template),answers,raw_answers:rawAnswers,recorded_at:new Date().toISOString()}});
       p.observations.push(...observations);this.commitLocal(p,'Structured field activity and original results recorded.');return;
     }
-    if(kind==='source-import'){if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');await this.queue('implementation.selection.import',{id:this.plan.id,expected_revision:this.plan.revision,source_id:v('source_choice').slice(v('source_choice').indexOf(':')+1),kind:v('source_choice').split(':')[0],...(v('selected_ids')?{selected_ids:list(v('selected_ids'))}:{})});return;}
+    if(kind==='source-import'){
+      if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');
+      const draft=this.selectionDraft,preview=draft?.preview;
+      if(!preview||draft.loading||draft.choice!==v('source_choice'))throw Error('Read the selected source before choosing its rows.');
+      const selectedIds=[...new Set(new FormData(form).getAll('source_row').map(String))],available=new Set(preview.rows.map(row=>row.id));
+      if(!selectedIds.length)throw Error('Choose at least one original source row to import.');
+      if(selectedIds.some(key=>!available.has(key)))throw Error('The selected rows differ from the current source preview. Read the source again.');
+      if(!/^[a-f0-9]{64}$/.test(preview.source_digest||''))throw Error('The source preview did not return its retained edition. Read the source again.');
+      await this.queue('implementation.selection.import',{id:this.plan.id,expected_revision:this.plan.revision,source_id:preview.source_id,kind:preview.kind,selected_ids:selectedIds,expected_source_digest:preview.source_digest});
+      if(this.gone)return;
+      this.selectionDraft=null;this.selectionPreviewTurn++;
+      this.root.querySelector('dialog[open]')?.close();this.render();return;
+    }
     const row=existing||{id:uid(kind.replaceAll('_','-'))};
     if(kind==='tasks')Object.assign(row,{title:v('title').trim(),candidate_id:v('candidate_id')||null,phase:v('phase'),assignee:v('assignee'),status:v('status'),duration_days:v('duration_days')===''?null:finite(v('duration_days'),'Duration'),depends_on:list(v('depends_on')),progress_pct:finite(v('progress_pct'),'Progress')??0,notes:v('notes'),evidence_refs:row.evidence_refs||[]});
     if(kind==='tasks'){if(v('start_not_before'))row.start_not_before=v('start_not_before');else delete row.start_not_before;if(row.status==='complete')row.progress_pct=100;}
@@ -560,7 +640,53 @@ async function saveImplementationForm(form){
     if(kind==='source_links'){if(existing)row.label=v('label').trim();else Object.assign(row,{label:v('label').trim(),kind:v('kind'),reference:v('reference')});}
     this.commitLocal(updateRow(this.plan,kind,row));
   }
-return {openImplementationDialog,saveImplementationForm};
+function implementationSourceChoices(){
+    return [...(this.selectionChoices?.conservation_portfolios||[]).map(row=>({choice:'conservation_portfolio:'+row.id,kind:'conservation_portfolio',id:row.id})),...(this.selectionChoices?.community_plans||[]).map(row=>({choice:'community_plan:'+row.id,kind:'community_plan',id:row.id}))];
+  }
+async function previewImplementationSource(choice){
+    if(!this.native)throw Error('Open this picker in the native workspace containing the original source.');
+    const source=this.sourceChoices().find(row=>row.choice===choice),previous=this.selectionDraft;
+    const draft={choice:source?.choice||'',loading:!!source,preview:null,selected_ids:[],filter:previous?.choice===choice?previous.filter||'':'',error:'',notice:''};
+    this.selectionDraft=draft;
+    const request=++this.selectionPreviewTurn,turn=this.generation,planId=this.plan.id;
+    this.openDialog('source-import');
+    if(!source)return;
+    const current=()=>!this.gone&&turn===this.generation&&this.plan?.id===planId&&request===this.selectionPreviewTurn&&this.selectionDraft===draft&&!!this.root.querySelector('dialog[open] [data-impl-form="source-import"]');
+    try{
+      const result=await this.read('/api/implementation/selection-preview',{kind:source.kind,source_id:source.id});
+      if(!current())return;
+      const preview=result.preview||result,ids=new Set();
+      if(preview.schema!=='upstate.implementation-selection-preview/v1'||preview.kind!==source.kind||preview.source_id!==source.id||!/^[a-f0-9]{64}$/.test(preview.source_digest||'')||!Array.isArray(preview.rows))throw Error('The original source preview is incomplete. Read the saved selection again.');
+      for(const row of preview.rows){
+        if(!row||typeof row.id!=='string'||!row.id||typeof row.label!=='string'||!row.label||ids.has(row.id))throw Error('The original source preview contains an invalid or duplicate row.');
+        ids.add(row.id);
+      }
+      const same=previous?.choice===choice&&previous.preview?.source_digest===preview.source_digest;
+      draft.preview=preview;draft.loading=false;
+      draft.selected_ids=same?(previous.selected_ids||[]).filter(id=>ids.has(id)):preview.rows.filter(row=>row.default_selected===true).map(row=>row.id);
+      if(previous?.preview&&!same)draft.notice='The saved source edition changed. Review its current rows and choose the work to import.';
+      this.openDialog('source-import');
+    }catch(error){
+      if(!current())return;
+      draft.loading=false;draft.error=error?.message||String(error);this.openDialog('source-import');
+    }
+  }
+function syncImplementationSource(){
+    const form=this.root.querySelector('dialog[open] [data-impl-form="source-import"]'),draft=this.selectionDraft;
+    if(!form||!draft)return;
+    const available=new Set((draft.preview?.rows||[]).map(row=>row.id));
+    draft.selected_ids=[...form.querySelectorAll('input[name="source_row"]:checked')].map(input=>input.value).filter(id=>available.has(id));
+    draft.filter=form.elements.source_filter?.value||'';
+    const query=draft.filter.trim().toLocaleLowerCase();let visible=0;
+    for(const row of form.querySelectorAll('[data-source-row]')){row.hidden=!!query&&!row.dataset.sourceSearch.includes(query);if(!row.hidden)visible++;}
+    const count=form.querySelector('[data-source-selection-count]');if(count)count.textContent=draft.selected_ids.length+' of '+available.size+' rows chosen'+(query?' · '+visible+' visible':'')+'.';
+    const empty=form.querySelector('[data-source-no-selection]');if(empty)empty.hidden=draft.selected_ids.length>0;
+    const noMatches=form.querySelector('[data-source-no-matches]');if(noMatches)noMatches.hidden=visible>0||available.size===0;
+    const submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=!draft.preview||draft.loading||!!this.pending||draft.selected_ids.length===0;
+  }
+
+
+return {openImplementationDialog,saveImplementationForm,implementationSourceChoices,previewImplementationSource,syncImplementationSource};
 })();
 const IMPLEMENTATION_RESULTS = (() => {
 /** Review original plan observations at field/laboratory scale, native or offline. */
@@ -864,9 +990,634 @@ const briefingFollowup={render,act,change,validateReceipt,finish};
 
 return {briefingFollowup};
 })();
+const IMPLEMENTATION_EVIDENCE = (() => {
+/* ES-FIELD12: exact offline field evidence and complete portable handover.
+ * Original records remain in the implementation plan. IndexedDB stores bytes only.
+ * ZIP format and native consumer: upstate.implementation-evidence/v1.
+ */
+const EVIDENCE_SCHEMA = "upstate.implementation-evidence/v1";
+const EVIDENCE_LIMITS = Object.freeze({
+  maxFiles: 128, maxFileBytes: 64 * 1024 * 1024,
+  maxTotalBytes: 128 * 1024 * 1024, maxPlanBytes: 16 * 1024 * 1024,
+  maxManifestBytes: 1024 * 1024
+});
+const HEX = /^[a-f0-9]{64}$/;
+const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+function fail(message, details) {
+  const error = new Error(message);
+  error.name = "ImplementationEvidenceError";
+  if (details !== undefined) error.details = details;
+  throw error;
+}
+function object(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(label + " must be an object");
+  return value;
+}
+function integer(value, label, maximum = Number.MAX_SAFE_INTEGER) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) fail(label + " is outside its supported range");
+  return value;
+}
+function limitsFrom(overrides = {}) {
+  const result = { ...EVIDENCE_LIMITS };
+  for (const key of Object.keys(result)) if (own(overrides, key)) {
+    integer(overrides[key], key, result[key]);
+    if (!overrides[key]) fail(key + " must be positive");
+    result[key] = overrides[key];
+  }
+  return result;
+}
+function evidenceSafeBasename(filename) {
+  return String(filename).replace(/[^A-Za-z0-9_.-]/gu, "_").slice(0, 120).replace(/^\.+/u, "") || "attachment";
+}
+function originalName(value) {
+  if (typeof value !== "string" || !value || value.length > 1024 || value === "." || value === ".." || /[\\/\u0000]/u.test(value)) fail("Original filename must be an ordinary file name");
+  return value;
+}
+function mediaType(value) {
+  if (value === undefined || value === null || value === "") return "application/octet-stream";
+  if (typeof value !== "string" || value.length > 255 || /[\r\n\u0000]/u.test(value)) fail("Invalid evidence media type");
+  return value;
+}
+function planIdentifier(plan) {
+  object(plan, "Implementation plan");
+  if (typeof plan.id !== "string" || !/^[A-Za-z0-9_-]{1,160}$/u.test(plan.id)) fail("Implementation plan needs its original safe ID");
+  if (!Array.isArray(plan.source_links)) fail("Implementation plan needs its original source_links array");
+  return plan.id;
+}
+function canonicalReference(planId, hash, filename) {
+  return "implementation/plans/" + planId + "/attachments/" + hash + "-" + evidenceSafeBasename(filename);
+}
+function asBytes(value) {
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  fail("Expected original binary bytes");
+}
+async function readBytes(value, maximum) {
+  if (value && typeof value.arrayBuffer === "function") {
+    if (typeof value.size === "number") integer(value.size, "File size", maximum);
+    value = await value.arrayBuffer();
+  }
+  const bytes = asBytes(value);
+  integer(bytes.byteLength, "Binary size", maximum);
+  return bytes;
+}
+function utf8(value) {
+  if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(value);
+  const out = [];
+  for (const char of value) {
+    let n = char.codePointAt(0);
+    if (n >= 0xd800 && n <= 0xdfff) n = 0xfffd;
+    if (n < 128) out.push(n);
+    else if (n < 2048) out.push(192 | n >> 6, 128 | n & 63);
+    else if (n < 65536) out.push(224 | n >> 12, 128 | n >> 6 & 63, 128 | n & 63);
+    else out.push(240 | n >> 18, 128 | n >> 12 & 63, 128 | n >> 6 & 63, 128 | n & 63);
+  }
+  return new Uint8Array(out);
+}
+function decodeUtf8(bytes) {
+  if (typeof TextDecoder !== "undefined") {
+    try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+    catch (_) { fail("Evidence JSON or path is not valid UTF-8"); }
+  }
+  const parts = [];
+  let batch = [];
+  for (let i = 0; i < bytes.length;) {
+    let n = bytes[i++], need = 0, minimum = 0;
+    if (n < 128) {}
+    else if (n >= 194 && n <= 223) { n &= 31; need = 1; minimum = 128; }
+    else if (n >= 224 && n <= 239) { n &= 15; need = 2; minimum = 2048; }
+    else if (n >= 240 && n <= 244) { n &= 7; need = 3; minimum = 65536; }
+    else fail("Evidence JSON or path is not valid UTF-8");
+    if (i + need > bytes.length) fail("Truncated UTF-8 evidence data");
+    for (let j = 0; j < need; j++) {
+      const v = bytes[i++];
+      if ((v & 192) !== 128) fail("Evidence JSON or path is not valid UTF-8");
+      n = n * 64 + (v & 63);
+    }
+    if (n < minimum || n > 0x10ffff || (n >= 0xd800 && n <= 0xdfff)) fail("Invalid UTF-8 code point");
+    batch.push(String.fromCodePoint(n));
+    if (batch.length >= 4096) { parts.push(batch.join("")); batch = []; }
+  }
+  parts.push(batch.join(""));
+  return parts.join("");
+}
+function jsonBytes(value) {
+  let encoded;
+  try { encoded = JSON.stringify(value, null, 2); }
+  catch (_) { fail("Implementation plan must be ordinary JSON without cyclic references"); }
+  if (encoded === undefined) fail("Missing JSON document");
+  return utf8(encoded + "\n");
+}
+function parseJson(bytes, label) {
+  try { return object(JSON.parse(decodeUtf8(bytes)), label); }
+  catch (error) {
+    if (error.name === "ImplementationEvidenceError") throw error;
+    fail(label + " is not valid JSON");
+  }
+}
+/* Original-byte SHA-256. The fallback is used by the pure V8 carrier check. */
+function sha256Fallback(input) {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const size = Math.ceil((input.length + 9) / 64) * 64;
+  const data = new Uint8Array(size);
+  data.set(input); data[input.length] = 128;
+  const view = new DataView(data.buffer);
+  const bits = input.length * 8;
+  view.setUint32(size - 8, Math.floor(bits / 4294967296), false);
+  view.setUint32(size - 4, bits >>> 0, false);
+  const w = new Uint32Array(64), r = (x, n) => x >>> n | x << 32 - n;
+  for (let offset = 0; offset < size; offset += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(offset + i * 4, false);
+    for (let i = 16; i < 64; i++) {
+      const a = w[i - 15], b = w[i - 2];
+      w[i] = (w[i - 16] + (r(a,7) ^ r(a,18) ^ a >>> 3) + w[i - 7] + (r(b,17) ^ r(b,19) ^ b >>> 10)) >>> 0;
+    }
+    let [a,b,c,d,e,f,g,hh] = h;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (hh + (r(e,6) ^ r(e,11) ^ r(e,25)) + (e & f ^ ~e & g) + K[i] + w[i]) >>> 0;
+      const t2 = ((r(a,2) ^ r(a,13) ^ r(a,22)) + (a & b ^ a & c ^ b & c)) >>> 0;
+      hh=g; g=f; f=e; e=(d+t1)>>>0; d=c; c=b; b=a; a=(t1+t2)>>>0;
+    }
+    [a,b,c,d,e,f,g,hh].forEach((value,index) => { h[index] = (h[index] + value) >>> 0; });
+  }
+  return h.map(value => value.toString(16).padStart(8,"0")).join("");
+}
+async function evidenceSha256(value) {
+  const bytes = asBytes(value);
+  if (typeof globalThis.crypto?.subtle?.digest === "function") {
+    const result = new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", bytes));
+    return Array.from(result, value => value.toString(16).padStart(2, "0")).join("");
+  }
+  return sha256Fallback(bytes);
+}
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n=0;n<256;n++) { let c=n; for(let k=0;k<8;k++) c=c&1?0xedb88320^(c>>>1):c>>>1; table[n]=c>>>0; }
+  return table;
+})();
+function evidenceCrc32(bytes) {
+  let crc = 0xffffffff;
+  for (const value of asBytes(bytes)) crc = CRC_TABLE[(crc ^ value) & 255] ^ crc >>> 8;
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function safeArchivePath(name) {
+  if (typeof name !== "string" || !name || name.length > 512 || !/^[A-Za-z0-9_.\/-]+$/u.test(name)
+      || name.startsWith("/") || name.endsWith("/") || name.includes("\\")
+      || name.split("/").some(part => !part || part === "." || part === "..")) fail("Unsafe evidence archive path");
+  return name;
+}
+function requireDigest(value, label) {
+  if (typeof value !== "string" || !HEX.test(value)) fail(label + " needs its complete lowercase SHA-256");
+  return value;
+}
+function collectLocalLinks(plan, limits) {
+  const id = planIdentifier(plan), seen = new Set(), result = [];
+  for (const source of plan.source_links) {
+    object(source, "Source link");
+    if (typeof source.id !== "string" || !source.id || seen.has(source.id)) fail("Source link IDs must be unique");
+    seen.add(source.id);
+    if (source.kind !== "local_file") continue;
+    requireDigest(source.sha256, "File source");
+    integer(source.size_bytes, "Evidence file size", limits.maxFileBytes);
+    originalName(source.original_filename);
+    mediaType(source.media_type);
+    const prefix="implementation/plans/"+id+"/attachments/", reference=source.reference;
+    if(typeof reference!=="string"||!reference.startsWith(prefix))fail("Evidence reference leaves the original plan bank",{source_id:source.id});
+    const name=reference.slice(prefix.length);
+    if(!/^[A-Za-z0-9_.-]+$/u.test(name)||!name.startsWith(source.sha256+"-")||name.length<=65)fail("Evidence reference differs from its original content identity",{source_id:source.id});
+    result.push(source);
+  }
+  if (result.length > limits.maxFiles) fail("Too many evidence files");
+  const paths=new Map(result.map(source=>["evidence/"+source.sha256+"/"+evidenceSafeBasename(source.original_filename),source.size_bytes]));
+  const total = [...paths.values()].reduce((sum, count) => sum + count, 0);
+  integer(total, "Total evidence size", limits.maxTotalBytes);
+  return result;
+}
+function assertVault(vault) {
+  if (!vault || typeof vault.get !== "function" || typeof vault.putMany !== "function") fail("Open the evidence file store before using original files");
+  return vault;
+}
+async function exactStoredFile(source, vault, limits) {
+  const value = await vault.get(source.sha256);
+  if (value === undefined || value === null) fail("Original evidence bytes are missing", {missing_source_ids:[source.id]});
+  const bytes = asBytes(value.bytes ?? value);
+  if (bytes.length !== source.size_bytes || bytes.length > limits.maxFileBytes || await evidenceSha256(bytes) !== source.sha256) fail("Stored evidence differs from its original file", {source_id:source.id});
+  return bytes;
+}
+async function openEvidenceVault(options = {}) {
+  const idb = options.indexedDB ?? globalThis.indexedDB;
+  if (!idb || typeof idb.open !== "function") fail("This browser does not provide persistent IndexedDB file storage");
+  const name = options.databaseName || "upstate-implementation-evidence-v1";
+  const database = await new Promise((resolve, reject) => {
+    const request = idb.open(name, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains("files")) request.result.createObjectStore("files", {keyPath:"sha256"});
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open evidence file storage"));
+    request.onblocked = () => reject(new Error("Close another upgrading fieldwork tab and reopen evidence storage"));
+  });
+  database.onversionchange = () => database.close();
+  const limits = limitsFrom(options.limits);
+  return {
+    async get(hash) {
+      requireDigest(hash, "Stored evidence");
+      return new Promise((resolve,reject) => {
+        const tx = database.transaction("files","readonly"), req = tx.objectStore("files").get(hash);
+        let result;
+        req.onsuccess = () => { result = req.result; };
+        tx.oncomplete = () => resolve(result ? new Uint8Array(result.bytes) : null);
+        tx.onerror = () => reject(tx.error || new Error("Could not read evidence file"));
+        tx.onabort = tx.onerror;
+      });
+    },
+    async has(hash) { return (await this.get(hash)) !== null; },
+    async putMany(records) {
+      if (!Array.isArray(records) || records.length > limits.maxFiles) fail("Invalid evidence file batch");
+      let total=0;
+      const prepared = [], seen = new Set();
+      for (const row of records) {
+        object(row,"Evidence file"); requireDigest(row.sha256,"Evidence file");
+        const bytes = asBytes(row.bytes);
+        integer(bytes.length,"Evidence file size",limits.maxFileBytes);
+        if (row.size_bytes !== bytes.length || await evidenceSha256(bytes) !== row.sha256) fail("File bytes do not match the evidence manifest");
+        if (seen.has(row.sha256)) continue;
+        seen.add(row.sha256); total += bytes.length;
+        integer(total,"Evidence batch size",limits.maxTotalBytes);
+        prepared.push({sha256:row.sha256,size_bytes:bytes.length,bytes:bytes.slice().buffer});
+      }
+      if (!prepared.length) return;
+      await new Promise((resolve,reject) => {
+        const tx=database.transaction("files","readwrite");
+        tx.oncomplete=resolve;
+        tx.onerror=()=>reject(tx.error || new Error("Could not retain original evidence; check browser storage capacity"));
+        tx.onabort=tx.onerror;
+        try { const store=tx.objectStore("files"); for(const row of prepared) store.put(row); }
+        catch(error) { try { tx.abort(); } catch(_) {} reject(error); }
+      });
+    },
+    close() { database.close(); }
+  };
+}
+async function captureEvidence(plan, file, options = {}) {
+  const limits=limitsFrom(options.limits), vault=assertVault(options.vault);
+  const links=collectLocalLinks(plan,limits), id=planIdentifier(plan);
+  if (!file || typeof file.arrayBuffer !== "function") fail("Choose an original file from this device");
+  const filename=originalName(file.name), bytes=await readBytes(file,limits.maxFileBytes);
+  if (typeof file.size === "number" && bytes.length !== file.size) fail("Original file size changed during capture");
+  const hash=await evidenceSha256(bytes), sourceId="file_"+hash.slice(0,24);
+  const existing=plan.source_links.find(source=>source.id===sourceId);
+  if (existing && (existing.kind!=="local_file" || existing.sha256!==hash || existing.size_bytes!==bytes.length)) fail("An existing source ID conflicts with these original bytes");
+  if (!existing) {
+    if (links.length >= limits.maxFiles) fail("Too many evidence files");
+    integer(links.reduce((sum,row)=>sum+row.size_bytes,0)+bytes.length,"Total evidence size",limits.maxTotalBytes);
+  }
+  const link=existing || {
+    id:sourceId,kind:"local_file",label:options.label || filename,
+    reference:canonicalReference(id,hash,filename),sha256:hash,size_bytes:bytes.length,
+    original_filename:filename,media_type:mediaType(file.type)
+  };
+  await vault.putMany([{sha256:hash,size_bytes:bytes.length,bytes}]);
+  return {source_link:JSON.parse(JSON.stringify(link)),deduplicated:!!existing};
+}
+function previewMedia(bytes) {
+  if (bytes.length >= 8 && [137,80,78,71,13,10,26,10].every((n,i)=>bytes[i]===n)) return "image/png";
+  if (bytes.length >= 3 && bytes[0]===255 && bytes[1]===216 && bytes[2]===255) return "image/jpeg";
+  if (bytes.length >= 6 && ["GIF87a","GIF89a"].includes(String.fromCharCode(...bytes.subarray(0,6)))) return "image/gif";
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.subarray(0,4))==="RIFF" && String.fromCharCode(...bytes.subarray(8,12))==="WEBP") return "image/webp";
+  return null;
+}
+async function inspectEvidence(plan, options = {}) {
+  const limits=limitsFrom(options.limits), vault=assertVault(options.vault);
+  const result=[];
+  for (const source of collectLocalLinks(plan,limits)) {
+    const stored=await vault.get(source.sha256);
+    if (stored===undefined || stored===null) result.push({source_link:source,available:false,previewable:false});
+    else {
+      const bytes=asBytes(stored.bytes ?? stored);
+      const valid=bytes.length===source.size_bytes && await evidenceSha256(bytes)===source.sha256;
+      result.push({source_link:source,available:valid,previewable:valid && !!previewMedia(bytes),...(valid?{}:{error:"Stored file differs from its source record"})});
+    }
+  }
+  return result;
+}
+async function getEvidenceFile(source, options = {}) {
+  object(source,"Evidence source"); requireDigest(source.sha256,"Evidence source");
+  integer(source.size_bytes,"Evidence file size",limitsFrom(options.limits).maxFileBytes);
+  originalName(source.original_filename);
+  const bytes=await exactStoredFile(source,assertVault(options.vault),limitsFrom(options.limits));
+  const type=mediaType(source.media_type), preview=previewMedia(bytes);
+  return {bytes,blob:typeof Blob!=="undefined"?new Blob([bytes],{type}):null,
+    filename:source.original_filename,media_type:type,previewable:!!preview,preview_media_type:preview};
+}
+async function createEvidencePreview(source, options = {}) {
+  const file=await getEvidenceFile(source,options);
+  if (!file.previewable) return null;
+  if (typeof Blob==="undefined" || typeof globalThis.URL?.createObjectURL!=="function") fail("Image preview is unavailable in this browser");
+  const url=globalThis.URL.createObjectURL(new Blob([file.bytes],{type:file.preview_media_type}));
+  let active=true;
+  return {url,media_type:file.preview_media_type,revoke(){if(active){active=false;globalThis.URL.revokeObjectURL(url);}}};
+}
+function downloadEvidenceBlob(blob, filename) {
+  if (!blob || typeof document==="undefined" || typeof globalThis.URL?.createObjectURL!=="function") fail("File download needs an ordinary browser document");
+  const url=globalThis.URL.createObjectURL(blob), anchor=document.createElement("a");
+  anchor.href=url;
+  anchor.download=String(filename || "fieldwork-evidence.zip").replace(/[\u0000-\u001f/\\]/gu,"_").replace(/^\.+/u,"") || "attachment";
+  anchor.style.display="none";
+  document.body.appendChild(anchor);
+  try { anchor.click(); } finally { anchor.remove(); setTimeout(()=>globalThis.URL.revokeObjectURL(url),30000); }
+}
+/* Stored ZIP only: no compression, encryption, ZIP64, descriptors or hidden members. */
+function writeEvidenceZip(entries) {
+  if (!Array.isArray(entries) || entries.length>130) fail("Invalid evidence ZIP member count");
+  const seen=new Set(), rows=[];
+  let localSize=0, centralSize=0;
+  for(const entry of entries){
+    const path=safeArchivePath(entry.path);
+    if(seen.has(path)) fail("Duplicate evidence ZIP path");
+    seen.add(path);
+    const name=utf8(path), bytes=asBytes(entry.bytes);
+    if(name.length>65535 || bytes.length>0xffffffff) fail("Evidence ZIP member is too large");
+    const row={name,bytes,offset:localSize,crc:evidenceCrc32(bytes)};
+    rows.push(row); localSize+=30+name.length+bytes.length; centralSize+=46+name.length;
+  }
+  if(localSize+centralSize+22>0xffffffff) fail("Evidence ZIP is too large");
+  const out=new Uint8Array(localSize+centralSize+22), view=new DataView(out.buffer);
+  let p=0;
+  for(const row of rows){
+    view.setUint32(p,0x04034b50,true);view.setUint16(p+4,20,true);view.setUint16(p+6,0x800,true);
+    view.setUint16(p+8,0,true);view.setUint16(p+10,0,true);view.setUint16(p+12,33,true);
+    view.setUint32(p+14,row.crc,true);view.setUint32(p+18,row.bytes.length,true);view.setUint32(p+22,row.bytes.length,true);
+    view.setUint16(p+26,row.name.length,true);view.setUint16(p+28,0,true);
+    out.set(row.name,p+30);out.set(row.bytes,p+30+row.name.length);p+=30+row.name.length+row.bytes.length;
+  }
+  for(const row of rows){
+    view.setUint32(p,0x02014b50,true);view.setUint16(p+4,20,true);view.setUint16(p+6,20,true);
+    view.setUint16(p+8,0x800,true);view.setUint16(p+10,0,true);view.setUint16(p+12,0,true);view.setUint16(p+14,33,true);
+    view.setUint32(p+16,row.crc,true);view.setUint32(p+20,row.bytes.length,true);view.setUint32(p+24,row.bytes.length,true);
+    view.setUint16(p+28,row.name.length,true);view.setUint16(p+30,0,true);view.setUint16(p+32,0,true);
+    view.setUint16(p+34,0,true);view.setUint16(p+36,0,true);view.setUint32(p+38,0,true);view.setUint32(p+42,row.offset,true);
+    out.set(row.name,p+46);p+=46+row.name.length;
+  }
+  view.setUint32(p,0x06054b50,true);view.setUint16(p+4,0,true);view.setUint16(p+6,0,true);
+  view.setUint16(p+8,rows.length,true);view.setUint16(p+10,rows.length,true);
+  view.setUint32(p+12,centralSize,true);view.setUint32(p+16,localSize,true);view.setUint16(p+20,0,true);
+  return out;
+}
+function readEvidenceZip(input, options = {}) {
+  const bytes=asBytes(input), limits=limitsFrom(options.limits);
+  const maxArchive=limits.maxTotalBytes+limits.maxPlanBytes+limits.maxManifestBytes+262144;
+  integer(bytes.length,"Evidence ZIP size",maxArchive);
+  if(bytes.length<22) fail("Truncated evidence ZIP");
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength), end=bytes.length-22;
+  const u16=p=>view.getUint16(p,true), u32=p=>view.getUint32(p,true);
+  if(u32(end)!==0x06054b50 || u16(end+4)!==0 || u16(end+6)!==0 || u16(end+20)!==0) fail("Unsupported ZIP end record");
+  const count=u16(end+10), centralSize=u32(end+12), centralOffset=u32(end+16);
+  if(count!==u16(end+8) || count<2 || count>limits.maxFiles+2 || centralOffset+centralSize!==end) fail("Invalid evidence ZIP directory");
+  const result=new Map();let p=centralOffset, nextLocal=0, total=0;
+  for(let i=0;i<count;i++){
+    if(p+46>end || u32(p)!==0x02014b50) fail("Truncated evidence ZIP directory");
+    const flags=u16(p+8), method=u16(p+10), crc=u32(p+16), packed=u32(p+20), size=u32(p+24);
+    const nameSize=u16(p+28), extraSize=u16(p+30), commentSize=u16(p+32), offset=u32(p+42);
+    if((flags!==0 && flags!==0x800) || method!==0 || packed!==size || extraSize || commentSize || u16(p+34)!==0 || u16(p+6)>20) fail("Evidence ZIP must use plain stored files");
+    if(!nameSize || p+46+nameSize>end) fail("Truncated evidence ZIP name");
+    const path=safeArchivePath(decodeUtf8(bytes.subarray(p+46,p+46+nameSize)));
+    if(result.has(path)) fail("Duplicate evidence ZIP member");
+    const maximum=path==="manifest.json"?limits.maxManifestBytes:path==="plan.json"?limits.maxPlanBytes:limits.maxFileBytes;
+    integer(size,"Evidence ZIP member size",maximum);
+    if(path!=="manifest.json" && path!=="plan.json") {total+=size;integer(total,"Total evidence size",limits.maxTotalBytes);}
+    if(offset!==nextLocal || offset+30>centralOffset || u32(offset)!==0x04034b50) fail("Evidence ZIP has hidden or overlapping data");
+    const localName=u16(offset+26), localExtra=u16(offset+28), dataStart=offset+30+localName+localExtra;
+    if(u16(offset+4)>20 || u16(offset+6)!==flags || u16(offset+8)!==method || u32(offset+14)!==crc
+      || u32(offset+18)!==size || u32(offset+22)!==size || localExtra || localName!==nameSize
+      || dataStart+size>centralOffset || decodeUtf8(bytes.subarray(offset+30,offset+30+localName))!==path) fail("Evidence ZIP local record differs from directory");
+    const data=bytes.subarray(dataStart,dataStart+size);
+    if(evidenceCrc32(data)!==crc) fail("Evidence ZIP CRC differs from its original bytes",{path});
+    result.set(path,data);nextLocal=dataStart+size;p+=46+nameSize;
+  }
+  if(p!==end || nextLocal!==centralOffset || !result.has("manifest.json") || !result.has("plan.json")) fail("Evidence ZIP members do not form a complete handover");
+  return result;
+}
+async function exportEvidenceBundle(plan, options = {}) {
+  const limits=limitsFrom(options.limits), vault=assertVault(options.vault), sources=collectLocalLinks(plan,limits);
+  const planBytes=jsonBytes(plan);
+  integer(planBytes.length,"Plan JSON size",limits.maxPlanBytes);
+  const planHash=await evidenceSha256(planBytes), files=[], entries=[], missing=[], included=new Set();
+  for(const source of sources){
+    let bytes;
+    try { bytes=await exactStoredFile(source,vault,limits); }
+    catch(error) {
+      if(error.details?.missing_source_ids) {missing.push(source.id);continue;}
+      throw error;
+    }
+    const path="evidence/"+source.sha256+"/"+evidenceSafeBasename(source.original_filename);
+    files.push({source_id:source.id,source_ref:source.reference,path,original_filename:source.original_filename,
+      media_type:mediaType(source.media_type),size_bytes:source.size_bytes,sha256:source.sha256});
+    if(!included.has(path)){entries.push({path,bytes});included.add(path);}
+  }
+  if(missing.length) fail("Receive the original files before exporting the complete fieldwork handover",{missing_source_ids:missing});
+  const manifest={schema:EVIDENCE_SCHEMA,created_at:options.createdAt || new Date().toISOString(),
+    plan:{id:plan.id,path:"plan.json",sha256:planHash,size_bytes:planBytes.length},files};
+  if(typeof manifest.created_at!=="string" || !Number.isFinite(Date.parse(manifest.created_at))) fail("Invalid handover creation date");
+  const manifestBytes=jsonBytes(manifest);
+  integer(manifestBytes.length,"Manifest JSON size",limits.maxManifestBytes);
+  const bytes=writeEvidenceZip([{path:"manifest.json",bytes:manifestBytes},{path:"plan.json",bytes:planBytes},...entries]);
+  return {bytes,blob:typeof Blob!=="undefined"?new Blob([bytes],{type:"application/zip"}):null,
+    filename:"fieldwork-"+plan.id+".zip",manifest,sha256:await evidenceSha256(bytes)};
+}
+async function importEvidenceBundle(input, options = {}) {
+  const limits=limitsFrom(options.limits), vault=assertVault(options.vault);
+  const maximum=limits.maxTotalBytes+limits.maxPlanBytes+limits.maxManifestBytes+262144;
+  const bytes=await readBytes(input,maximum), entries=readEvidenceZip(bytes,{limits});
+  const manifest=parseJson(entries.get("manifest.json"),"Evidence manifest");
+  if(manifest.schema!==EVIDENCE_SCHEMA) fail("Unsupported fieldwork evidence schema");
+  const descriptor=object(manifest.plan,"Plan descriptor");
+  requireDigest(descriptor.sha256,"Plan JSON");
+  if(descriptor.path!=="plan.json" || descriptor.size_bytes!==entries.get("plan.json").length
+    || await evidenceSha256(entries.get("plan.json"))!==descriptor.sha256) fail("Plan JSON differs from its manifest");
+  const plan=parseJson(entries.get("plan.json"),"Implementation plan");
+  if(planIdentifier(plan)!==descriptor.id) fail("Plan ID differs from its manifest");
+  const links=collectLocalLinks(plan,limits);
+  if(!Array.isArray(manifest.files) || manifest.files.length!==links.length) fail("Every local evidence source must have its original descriptor");
+  const indexed=new Map(links.map(link=>[link.id,link])), seen=new Set(), paths=new Set(["manifest.json","plan.json"]), batch=[];
+  for(const row of manifest.files){
+    object(row,"Evidence member");
+    const source=indexed.get(row.source_id);
+    if(!source || seen.has(row.source_id)) fail("Evidence member has an unknown or duplicate source ID");
+    seen.add(row.source_id);
+    const path="evidence/"+source.sha256+"/"+evidenceSafeBasename(source.original_filename);
+    if(row.path!==path || row.source_ref!==source.reference || row.original_filename!==source.original_filename
+      || row.media_type!==mediaType(source.media_type) || row.sha256!==source.sha256 || row.size_bytes!==source.size_bytes) fail("Evidence member differs from its retained source link",{source_id:row.source_id});
+    const original=entries.get(path);
+    if(!original || original.length!==source.size_bytes || await evidenceSha256(original)!==source.sha256) fail("Evidence bytes differ from their original source",{source_id:row.source_id});
+    paths.add(path);batch.push({sha256:row.sha256,size_bytes:row.size_bytes,bytes:original});
+  }
+  if(paths.size!==entries.size||[...entries.keys()].some(path=>!paths.has(path)))fail("The evidence ZIP contains unlisted members");
+  await vault.putMany(batch);
+  return {plan,manifest,files:manifest.files.map(row=>({...row})),sha256:await evidenceSha256(bytes)};
+}
+
+return {EVIDENCE_SCHEMA,EVIDENCE_LIMITS,evidenceSafeBasename,evidenceSha256,evidenceCrc32,openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,downloadEvidenceBlob,writeEvidenceZip,readEvidenceZip,exportEvidenceBundle,importEvidenceBundle};
+})();
+const IMPLEMENTATION_EVIDENCE_UI = (() => {
+const {clone,esc,validatePlan,implementationSourceRefs} = IMPLEMENTATION_CORE;
+const {openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,exportEvidenceBundle,importEvidenceBundle,downloadEvidenceBlob} = IMPLEMENTATION_EVIDENCE;
+const button=(action,label,extra='')=>'<button type="button" data-iw-evidence="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
+const byId=(plan,id)=>(plan.source_links||[]).find(row=>row.id===id);
+const fileRows=plan=>(plan.source_links||[]).filter(row=>row.kind==='local_file');
+const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const size=n=>Number.isFinite(n)?n.toLocaleString()+' bytes':'Size unavailable';
+const title=(collection,row)=>collection==='tasks'?row.title:collection==='visits'?(row.planned_date||row.visited_at||'Visit')+' · '+row.id:row.sample_id||row.id;
+function assertValid(plan){const errors=validatePlan(plan);if(errors.length)throw Error(errors.map(e=>e.path+': '+e.message).join('\n'));}
+
+function attachImplementationEvidence(workbench){return new EvidencePanel(workbench);}
+class EvidencePanel {
+  constructor(w){
+    this.w=w;this.vaultPromise=null;this.available=new Map();this.busy=false;this.preview=null;this.closed=false;
+    this.click=e=>{const b=e.target.closest('[data-iw-evidence]');if(!b||!w.root.contains(b))return;e.preventDefault();this.run(()=>this.act(b)).catch(error=>w.fail(error));};
+    this.change=e=>{if(e.target.matches('[data-iw-evidence-bundle]')){const f=e.target.files?.[0];e.target.value='';if(f)this.run(()=>this.openBundle(f)).catch(error=>w.fail(error));}};
+    this.submit=e=>{if(e.target.matches('[data-iw-evidence-form]')){e.preventDefault();this.run(()=>this.capture(e.target)).catch(error=>w.fail(error));}};
+    this.close=()=>this.revokePreview();
+    w.root.addEventListener('click',this.click);w.root.addEventListener('change',this.change);w.root.addEventListener('submit',this.submit);w.root.addEventListener('close',this.close,true);
+  }
+  async vault(){if(!this.vaultPromise)this.vaultPromise=openEvidenceVault().catch(error=>{this.vaultPromise=null;throw error;});return this.vaultPromise;}
+  async run(fn){if(this.busy)throw Error('The current file operation is still running.');this.busy=true;this.w.root.setAttribute('aria-busy','true');try{return await fn();}finally{this.busy=false;this.w.root.removeAttribute('aria-busy');}}
+  stamp(){return {generation:this.w.generation,plan:clone(this.w.plan)};}
+  unchanged(stamp){return !this.closed&&!this.w.gone&&this.w.generation===stamp.generation&&equal(this.w.plan,stamp.plan);}
+  requireUnchanged(stamp){if(!this.unchanged(stamp))throw Error('The plan changed while the file operation ran. Original files are retained; reopen the selected plan before continuing.');}
+  beforeRender(){this.revokePreview();}
+  revokePreview(){if(this.preview){this.preview.revoke();this.preview=null;}}
+  recordButton(collection,id){return button('add','Files','data-collection="'+esc(collection)+'" data-id="'+esc(id)+'"');}
+  body(){
+    const w=this.w,rows=fileRows(w.plan);
+    return '<section class="iw-evidence"><div class="iw-section-head"><h3>Original files and complete handover</h3>'+button('add','Add original files')+'</div><p>Keep photographs, laboratory reports and working documents with their work records. A complete file package includes this plan and every original attachment.</p><div class="iw-actions">'+button('export','Export plan + files ZIP')+button('open','Open plan + files ZIP')+button('check','Check file availability')+(w.native?button('native-export','Native plan + files ZIP')+button('native-save','Save plan + files to native'):'')+'</div>'+w.table(['Original file','Linked records','Stored in this browser',''],rows.map(link=>[
+      '<b>'+esc(link.label||link.original_filename)+'</b><small>'+esc(link.original_filename||link.id)+' · '+esc(size(link.size_bytes))+'</small>',
+      this.references(link.id).map(esc).join('<br>')||'Plan source register',
+      esc(this.available.get(link.id)===true?'Available':this.available.get(link.id)===false?'Original file needed':'Unchecked'),
+      button('download','Download original','data-id="'+esc(link.id)+'"')+button('preview','Preview image','data-id="'+esc(link.id)+'"')
+    ]),'No original files attached.')+'<p class="iw-muted">JSON retains file metadata and record links. The ZIP carries the original file bytes as well. Browser storage may be cleared; export the complete package after fieldwork.</p><input hidden type="file" accept=".zip,application/zip" data-iw-evidence-bundle>'+(w.native?this.nativeDownloads():'')+'</section>';
+  }
+  nativeDownloads(){
+    const rows=(this.w.downloads||[]).filter(row=>typeof row.url==='string'&&/^\/api\/file\/[A-Za-z0-9_-]+$/.test(row.url));
+    return rows.length?'<h4>Saved native downloads</h4>'+this.w.table(['File','Size',''],rows.map(row=>[esc(row.label||row.filename),esc(size(row.bytes)),'<a href="'+esc(row.url)+'" download="'+esc(row.filename||'download')+'">Download</a>'])):'';
+  }
+  references(id){
+    const result=[];for(const collection of ['tasks','visits','activities','observations','sites','monitoring_plans','candidates'])for(const row of this.w.plan[collection]||[])if(implementationSourceRefs(row).includes(id))result.push(collection.replaceAll('_',' ')+' · '+(row.label||row.title||row.sample_id||row.id));
+    for(const row of this.w.plan.field12_lab_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original laboratory import · '+(row.operation_id||row.id||'retained revision'));
+    return result;
+  }
+  openCapture(collection='',id=''){
+    const w=this.w,choices=[['','Plan source register']];
+    for(const key of ['tasks','visits','activities'])for(const row of w.plan[key])choices.push([key+':'+row.id,key.replace(/s$/,'')+' · '+title(key,row)]);
+    const selected=collection&&id?collection+':'+id:'';
+    this.revokePreview();w.dialog('<form data-iw-evidence-form><h3>Add original files</h3><div class="iw-form-grid"><label class="iw-field"><span>Files</span><input type="file" name="evidence_files" multiple required><small>Choose original photographs, laboratory reports or documents. Files retain their original bytes.</small></label><label class="iw-field"><span>Attach to</span><select name="evidence_target">'+choices.map(([value,label])=>'<option value="'+esc(value)+'" '+(value===selected?'selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label><label class="iw-field"><span>Label (optional)</span><input name="evidence_label"><small>For several files, the original filename is included in each label.</small></label></div><div class="iw-actions"><button type="submit">Attach files to draft</button><button type="button" data-impl="close-dialog">Cancel</button></div><p class="iw-muted">Save the draft after attaching files. Use the complete ZIP for transfer to another browser or workstation.</p></form>');
+  }
+  async capture(form){
+    const files=Array.from(form.elements.evidence_files.files||[]);if(!files.length)throw Error('Choose at least one original file.');
+    const stamp=this.stamp(),next=clone(stamp.plan),vault=await this.vault(),label=form.elements.evidence_label.value.trim(),target=form.elements.evidence_target.value;
+    let record=null;if(target){const at=target.indexOf(':'),collection=target.slice(0,at),id=target.slice(at+1);if(!['tasks','visits','activities'].includes(collection))throw Error('Choose a task, visit or activity.');record=next[collection].find(row=>row.id===id);if(!record)throw Error('The selected record is no longer in this plan.');}
+    for(const file of files){
+      const captured=await captureEvidence(next,file,{vault,label:label?(files.length>1?label+' · '+file.name:label):undefined});
+      const old=byId(next,captured.source_link.id);if(!old)next.source_links.push(captured.source_link);
+      if(record){if(!record.evidence_refs)record.evidence_refs=[];if(!record.evidence_refs.includes(captured.source_link.id))record.evidence_refs.push(captured.source_link.id);}
+      this.available.set(captured.source_link.id,true);
+    }
+    this.requireUnchanged(stamp);if(!form.isConnected||!form.closest('dialog')?.open)throw Error('Original bytes are retained. Reopen Add original files to attach them to this draft.');this.w.root.querySelector('dialog[open]')?.close();this.w.commitLocal(next,files.length+' original file'+(files.length===1?'':'s')+' attached to the draft. Save or export the complete file package.');
+  }
+  async check(){
+    const stamp=this.stamp(),rows=await inspectEvidence(stamp.plan,{vault:await this.vault()});if(!this.unchanged(stamp))return;
+    for(const row of rows)this.available.set(row.source_link.id,row.available);
+    this.w.message=rows.every(row=>row.available)?'All attached original files are available in this browser.':rows.filter(row=>!row.available).length+' original files are needed. Open the complete ZIP or add the matching original files.';
+    this.w.render();
+  }
+  async original(id,preview=false){
+    const link=byId(this.w.plan,id);if(!link||link.kind!=='local_file')throw Error('Choose a retained original file.');
+    const stamp=this.stamp(),vault=await this.vault();await this.ensureAvailable([link],stamp);
+    if(preview){
+      const result=await createEvidencePreview(link,{vault});if(!this.unchanged(stamp)||this.w.root.querySelector('dialog[open]')){result?.revoke();throw Error('Close the current record before opening an image preview.');}if(!result){this.w.status('This file is available as an original download. Image previews support PNG, JPEG, GIF and WebP.');return;}
+      this.revokePreview();this.preview=result;
+      this.w.dialog('<h3>'+esc(link.label||link.original_filename)+'</h3><img class="iw-evidence-preview" src="'+esc(result.url)+'" alt="'+esc(link.label||link.original_filename)+'"><p>'+esc(link.original_filename)+' · '+esc(size(link.size_bytes))+'</p><div class="iw-actions">'+button('download','Download original','data-id="'+esc(id)+'"')+'<button type="button" data-impl="close-dialog">Close</button></div>');
+    }else{const file=await getEvidenceFile(link,{vault});this.requireUnchanged(stamp);downloadEvidenceBlob(file.blob,file.filename);}
+  }
+  async exportBrowser(){
+    const stamp=this.stamp();assertValid(stamp.plan);await this.ensureAvailable(fileRows(stamp.plan),stamp);
+    const bundle=await exportEvidenceBundle(stamp.plan,{vault:await this.vault()});this.requireUnchanged(stamp);downloadEvidenceBlob(bundle.blob,bundle.filename);this.w.status('Complete plan and original files exported in '+bundle.filename+'.');
+  }
+  async openBundle(file){
+    if(this.w.pending)throw Error('Finish the retained native operation before opening a file package.');
+    const stamp=this.stamp(),result=await importEvidenceBundle(file,{vault:await this.vault()});this.requireUnchanged(stamp);this.adopt(result.plan);
+    for(const link of fileRows(result.plan))this.available.set(link.id,true);
+    this.w.message='Complete plan and '+result.manifest.files.length+' original files opened. The originating native revision is retained.';this.w.tab='handover';this.w.render();
+  }
+  adopt(document){
+    assertValid(document);const w=this.w,existing=w.offlineCopies[document.id];
+    if(existing?.dirty&&!equal(existing.document,document))w.preserveDraft(existing.document,'before-file-package-import');
+    w.closeSampleQC?.();w.cache();w.generation++;w.downloads=[];w.reports=[];w.plan=clone(document);w.nativePlan=null;w.importedFile=true;w.dirty=true;w.pending=null;w.history=[];
+    w.briefingIntake=null;w.labIntake=null;w.labDispatch=null;w.observationFlow=null;w.observationReceipts=clone(existing?.observationReceipts||[]);w.resultView={};w.selectionDraft=null;w.selectionPreviewTurn++;w.cache();
+  }
+  async act(b){
+    const action=b.dataset.iwEvidence;
+    if(action==='add'){this.openCapture(b.dataset.collection,b.dataset.id);return;}
+    if(action==='open'){this.w.root.querySelector('[data-iw-evidence-bundle]').click();return;}
+    if(action==='check'){await this.check();return;}
+    if(action==='download'||action==='preview'){await this.original(b.dataset.id,action==='preview');return;}
+    if(action==='export'){await this.exportBrowser();return;}
+    if(action==='native-save'){await this.saveNative();return;}
+    if(action==='native-export'){if(this.w.dirty||!this.w.nativePlan)throw Error('Save this native plan and its field changes before exporting its retained file package.');await this.w.queue('implementation.evidence.export',{id:this.w.plan.id,revision:this.w.plan.revision});return;}
+  }
+  async ensureAvailable(links,stamp){const rows=await inspectEvidence(stamp.plan,{vault:await this.vault()});const wanted=new Set(links.map(link=>link.id)),missing=rows.filter(row=>wanted.has(row.source_link.id)&&!row.available);if(missing.length)await this.hydrateNative(missing.map(row=>row.source_link),stamp);}
+  async hydrateNative(links,stamp){
+    const w=this.w;if(!w.native)throw Error('Original files needed: '+links.map(link=>link.original_filename||link.id).join(', ')+'. Open their complete ZIP or attach the matching originals.');
+    let downloads=w.downloads||[];
+    if(links.some(link=>!downloads.some(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes))){
+      const detail=await w.read('/api/implementation/detail',{id:stamp.plan.id,...(stamp.plan.revision>0?{revision:stamp.plan.revision}:{})});this.requireUnchanged(stamp);downloads=detail._downloads||[];w.downloads=downloads;
+    }
+    const vault=await this.vault();
+    for(const link of links){
+      const ticket=downloads.find(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes);
+      if(!ticket||typeof ticket.url!=='string'||!/^\/api\/file\/[A-Za-z0-9_-]+$/.test(ticket.url))throw Error('Original file needed: '+(link.original_filename||link.id)+'. Open its complete ZIP or attach the matching original.');
+      let response=await fetch(ticket.url,{credentials:'same-origin'});if(response.status===401){await w.host.api('/api/session',{method:'POST',body:{}});this.requireUnchanged(stamp);response=await fetch(ticket.url,{credentials:'same-origin'});}if(!response.ok)throw Error('The native original file could not be downloaded ('+response.status+'). Reopen the authenticated workspace and try again.');
+      const bytes=await response.arrayBuffer();this.requireUnchanged(stamp);
+      if(bytes.byteLength!==link.size_bytes)throw Error('The downloaded file size differs from its original source record.');
+      const captured=await captureEvidence(stamp.plan,new File([bytes],link.original_filename,{type:link.media_type||'application/octet-stream'}),{vault});
+      if(captured.source_link.sha256!==link.sha256||captured.source_link.size_bytes!==link.size_bytes)throw Error('The downloaded file differs from its original source record.');
+      this.available.set(link.id,true);
+    }
+  }
+  async saveNative(){
+    const w=this.w;if(!w.native)throw Error('Open the native workspace to save a native file package.');
+    if(w.pending)throw Error('Finish the retained native operation before saving the file package.');
+    const stamp=this.stamp();assertValid(stamp.plan);await this.ensureAvailable(fileRows(stamp.plan),stamp);
+    const bundle=await exportEvidenceBundle(stamp.plan,{vault:await this.vault()});this.requireUnchanged(stamp);
+    const file=new File([bundle.blob],bundle.filename,{type:'application/zip'});
+    const upload=await w.host.api('/api/upload',{method:'POST',raw:file,filename:file.name});this.requireUnchanged(stamp);
+    if(!upload||typeof upload.id!=='string')throw Error('The native upload did not return a retained file ID.');
+    await w.queue('implementation.evidence.import',{id:stamp.plan.id,upload_id:upload.id});
+  }
+  async saveIfNeeded(){
+    const w=this.w;if(!w.native||!fileRows(w.plan).length)return false;
+    const saved=new Map(fileRows(w.nativePlan||{}).map(link=>[link.id,link]));
+    if(!w.importedFile&&fileRows(w.plan).every(link=>{const old=saved.get(link.id);return old&&old.reference===link.reference&&old.sha256===link.sha256&&old.size_bytes===link.size_bytes;}))return false;
+    await this.run(()=>this.saveNative());return true;
+  }
+  detach(){this.closed=true;this.revokePreview();this.w.root.removeEventListener('click',this.click);this.w.root.removeEventListener('change',this.change);this.w.root.removeEventListener('submit',this.submit);this.w.root.removeEventListener('close',this.close,true);this.vaultPromise?.then(vault=>vault.close()).catch(()=>{});}
+}
+
+return {attachImplementationEvidence};
+})();
 const IMPLEMENTATION_UI = (() => {
 const {SCHEMA,COLLECTIONS,clone,esc,today,uid,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,deleteRow,csvPlan,reportHtml,fieldSheetHtml,safeLink} = IMPLEMENTATION_CORE;
-const {openImplementationDialog,saveImplementationForm} = IMPLEMENTATION_FORMS;
+const {openImplementationDialog,saveImplementationForm,implementationSourceChoices,previewImplementationSource,syncImplementationSource} = IMPLEMENTATION_FORMS;
+const {attachImplementationEvidence} = IMPLEMENTATION_EVIDENCE_UI;
 const {briefingFollowup} = IMPLEMENTATION_BRIEFING;
 const {normalizeResultsView,reviewResults,renderResults,resultInspectionHtml,inspectResult,matchingResultsCsv,matchingResultsDocument} = IMPLEMENTATION_RESULTS;
 const TABS=[['overview','Overview'],['tasks','Work plan'],['budget','Costs'],['sites','Sites & monitoring'],['field','Field records'],['outcomes','Outcomes'],['sources','Source selections'],['handover','Handover']];
@@ -889,15 +1640,16 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
+    this.onInput=e=>{if(e.target.name==='source_filter')this.syncSourceSelection();};
     this.onOutcomeInput=e=>{if(e.target.matches('[data-outcome-control]'))this.outcomeController?.capture();};
     this.onResultsKey=e=>{if(e.key==='Enter'&&e.target.matches('[data-result-filter="query"]')){e.preventDefault();this.change(e).catch(x=>this.fail(x));}};
     this.onSubmit=e=>{if(e.target.matches('[data-impl-form]')){e.preventDefault();this.saveForm(e.target).catch(x=>this.fail(x));}};
-    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);this.root.addEventListener('input',this.onOutcomeInput);
+    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('input',this.onInput);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);this.root.addEventListener('input',this.onOutcomeInput);
     this.beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',this.beforeUnload);
-    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.readEconomic();
+    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.evidence=attachImplementationEvidence(this);this.readEconomic();
   }
   async start(){
     this.render();
@@ -1171,6 +1923,7 @@ class ImplementationWorkbench {
     this.plan=clone(next);this.plan.updated_at=new Date().toISOString();this.dirty=true;this.cache();this.message=message;this.error='';this.render();
   }
   async queue(action,payload){
+    if(['implementation.plan.create','implementation.plan.save','implementation.plan.import'].includes(action)&&this.evidence&&await this.evidence.saveIfNeeded())return;
     if(this.pending)throw Error('The previous plan operation is still retained. Open its task or retry its original operation before starting another.');
     const issues=validatePlan(this.plan);if(issues.length)throw Error(issues.map(x=>x.path+': '+x.message).join('\n'));
     this.pending={id:null,operation_id:uid('implementation-op'),action,payload:clone(payload),snapshot:clone(this.plan),plan_id:this.plan.id};
@@ -1262,9 +2015,9 @@ class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;this.closeSampleQC();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;this.closeSampleQC();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
-    if(this.gone)return;this.closeSampleQC();const p=this.plan;
+    if(this.gone)return;this.closeSampleQC();this.evidence?.beforeRender();const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
@@ -1283,7 +2036,7 @@ class ImplementationWorkbench {
     }
     if(this.tab==='tasks'){
       const schedule=new Map((stats?.schedule.tasks||[]).map(t=>[t.id,t]));
-      return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)];}));
+      return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)+this.evidence.recordButton('tasks',t.id)];}));
     }
     if(this.tab==='budget'){
       return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
@@ -1294,16 +2047,19 @@ class ImplementationWorkbench {
     if(this.tab==='outcomes')return this.outcomePanel();
     if(this.tab==='field'){
       const show=(collection,heads,cells,label)=>'<div class="iw-section-head"><h3>'+label+'</h3><div class="iw-actions">'+this.addButton(collection)+button('csv','Export','data-collection="'+collection+'"')+'</div></div>'+this.table(heads,p[collection].map(cells));
-      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)],'Samples and activities')+renderResults(this);
+      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
     }
     if(this.tab==='sources'){
       return briefingFollowup.render(this)+'<div class="iw-section-head"><h3>Conservation and intervention selections</h3><div class="iw-actions">'+(this.native?button('source-import','Import native selection','','iw-primary'):'')+this.addButton('candidates','Add source-linked candidate')+'</div></div><p class="iw-muted">Selected rows retain the original scientific source and model references. Community-area totals stay with their original area; source snapshots can be inspected below.</p>'+this.table(['Candidate','Whole area (ha)','Source / native identity','Retained quantities',''],p.candidates.map(c=>[esc(c.label),esc(c.area_ha??''),'<code>'+esc(textObject(c.source))+'</code>','<code>'+esc(textObject(c.modeled_benefits||[]))+'</code>',button('inspect','Inspect source','data-collection="candidates" data-id="'+esc(c.id)+'"')]))+'<div class="iw-section-head"><h3>Source register</h3>'+this.addButton('source_links')+'</div>'+this.table(['Reference','Kind','Location',''],p.source_links.map(s=>{const link=safeLink(s.reference);return [esc(s.label),esc(s.kind),link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.reference)+'</a>':esc(format(s.reference)),button('inspect','Inspect','data-collection="source_links" data-id="'+esc(s.id)+'"')];}));
     }
     if(this.tab==='handover'){
-      return '<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div>'+this.retainedReports()+'<h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
+      return this.evidence.body()+'<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div>'+this.retainedReports()+'<h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
     }
     return '';
   }
+  sourceChoices(){return implementationSourceChoices.call(this);}
+  async previewSourceSelection(choice){return previewImplementationSource.call(this,choice);}
+  syncSourceSelection(){return syncImplementationSource.call(this);}
   async act(b){
     if(b.dataset.impl.startsWith('briefing-')){await briefingFollowup.act(this,b);return;}
     const action=b.dataset.impl;
@@ -1332,18 +2088,32 @@ class ImplementationWorkbench {
     if(action==='refresh-result'){await this.update(this.lastState||this.host.getState?.()||{});return;}
     if(action==='tab'){this.tab=b.dataset.tab;this.render();return;}
     if(action==='new'){this.cache();this.generation++;this.history=[];this.downloads=[];this.reports=[];this.plan=makePlan();this.briefingIntake=null;this.labIntake=null;this.labDispatch=null;this.resultView=normalizeResultsView();this.observationFlow=null;this.observationReceipts=[];this.nativePlan=null;this.importedFile=false;this.dirty=true;this.pending=null;this.message='New plan created. Choose Plan settings, then import a selection or add a method workflow.';this.cache();this.render();return;}
-    if(action==='save'){if(this.native){const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});}else{this.cache();this.status('Draft saved in this browser. Export JSON for a portable copy.');}return;}
+    if(action==='save'){if(await this.evidence.saveIfNeeded())return;if(this.native){const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});}else{this.cache();this.status('Draft saved in this browser. Export JSON for a portable copy.');}return;}
     if(action==='export-json'){download(this.plan.id+'.json',JSON.stringify(this.plan,null,2)+'\n','application/json');this.message='Complete plan JSON exported.';this.render();return;}
     if(action==='report'){download(this.plan.id+'-report-'+this.asOf+'.html',reportHtml(this.plan,this.asOf),'text/html');return;}
     if(action==='csv'){download(this.plan.id+'-'+b.dataset.collection+'.csv',csvPlan(this.plan,b.dataset.collection,this.asOf),'text/csv;charset=utf-8');return;}
     if(action==='field-sheet'){download(this.plan.id+'-'+b.dataset.id+'-field-sheet.html',fieldSheetHtml(this.plan,b.dataset.id),'text/html');return;}
     if(action==='import'){this.root.querySelector('[data-impl-file]').click();return;}
     if(action==='reopen'){await this.openPlan(this.plan.id,true);return;}
-    if(action==='close-dialog'){this.root.querySelector('dialog').close();if(this.native)await this.update(this.lastState||this.host.getState?.()||{});return;}
+    if(action==='close-dialog'){this.selectionPreviewTurn++;this.root.querySelector('dialog').close();if(this.native)await this.update(this.lastState||this.host.getState?.()||{});return;}
     if(action==='settings'){this.openDialog('settings');return;}
     if(action==='method'){if(!this.catalog)throw Error('The methods catalog is still loading. Reopen this view after it is available.');this.openDialog('method');return;}
     if(action==='field-form'){if(!this.catalog)throw Error('The field forms catalog is still loading.');this.openDialog('field-form');return;}
-    if(action==='source-import'){const turn=this.generation,id=this.plan.id,choices=await this.read('/api/implementation/selections');if(this.gone||turn!==this.generation||this.plan.id!==id||this.root.querySelector('dialog[open]'))return;this.selectionChoices=choices;this.openDialog('source-import');return;}
+    if(action==='source-import'){
+      if(!this.native)throw Error('Native source selections are available in their original workspace.');
+      if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');
+      if(this.pending)throw Error('Finish the retained plan operation before importing another source selection.');
+      const turn=this.generation,id=this.plan.id,choices=await this.read('/api/implementation/selections');
+      if(this.gone||turn!==this.generation||this.plan.id!==id||this.root.querySelector('dialog[open]'))return;
+      this.selectionChoices=choices;this.selectionDraft=null;
+      await this.previewSourceSelection(this.sourceChoices()[0]?.choice||'');return;
+    }
+    if(action==='source-preview-retry'){await this.previewSourceSelection(this.selectionDraft?.choice||'');return;}
+    if(action==='source-select-visible'||action==='source-clear'){
+      const form=this.root.querySelector('dialog[open] [data-impl-form="source-import"]');if(!form)return;
+      for(const row of form.querySelectorAll('[data-source-row]')){const input=row.querySelector('input[name="source_row"]');if(input&&(action==='source-clear'||!row.hidden))input.checked=action!=='source-clear';}
+      this.syncSourceSelection();return;
+    }
     if(action==='native-report'){if(this.dirty)throw Error('Save the native revision before creating its report package.');await this.queue('implementation.plan.report',{id:this.plan.id,revision:this.plan.revision,as_of:this.asOf});return;}
     if(action==='add'||action==='edit'){this.openDialog(b.dataset.collection,b.dataset.id);return;}
     if(action==='inspect'){const row=this.plan[b.dataset.collection].find(x=>x.id===b.dataset.id);this.dialog('<h3>Retained original record</h3><pre class="iw-json">'+esc(JSON.stringify(row,null,2))+'</pre><div class="iw-actions">'+button('close-dialog','Close')+'</div>');return;}
@@ -1363,6 +2133,8 @@ class ImplementationWorkbench {
     }
     if(e.target.dataset.implChange==='plan'){await this.openPlan(e.target.value);return;}
     if(e.target.dataset.implChange==='asof'){this.asOf=e.target.value||today();this.render();return;}
+    if(e.target.name==='source_choice'){await this.previewSourceSelection(e.target.value);return;}
+    if(e.target.name==='source_row'||e.target.name==='source_filter'){this.syncSourceSelection();return;}
     if(e.target.name==='fieldform_template'){this.activeFormId=e.target.value;this.openDialog('field-form');return;}
     if(e.target.name==='result_type'){
       const form=e.target.form,value=form.elements.value;if(value){value.disabled=e.target.value!=='numeric';if(value.disabled)value.value='';}

@@ -4,12 +4,18 @@ import inspect
 from .monitoring_common import ContractError
 from .monitoring_workspace import MonitoringWorkspace
 
-READS = {"context.catalog", "context.list", "context.get", "context.preview", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
-WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "export"}
+READS = {"context.catalog", "context.list", "context.get", "context.preview", "campaign.fieldwork.preview-return", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
+WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "campaign.fieldwork.return", "export"}
 
 def invoke(workspace, action, params, *, export_root=None):
     if not isinstance(params, dict): raise ContractError("Monitoring parameters must be a JSON object")
     service = MonitoringWorkspace(workspace, export_root=export_root)
+    if action in {"campaign.fieldwork.preview-return", "campaign.fieldwork.return"}:
+        from .monitoring_field_return import preview, receive
+        function = preview if action.endswith("preview-return") else receive
+        try: inspect.signature(function).bind(service, **params)
+        except TypeError as exc: raise ContractError(str(exc)) from exc
+        return function(service, **params)
     if action == "campaign.fieldwork":
         from .monitoring_implementation import receive
         try: inspect.signature(receive).bind(service, **params)

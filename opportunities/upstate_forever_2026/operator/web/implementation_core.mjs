@@ -164,6 +164,7 @@ export function validatePlan(plan){
   }
   for(const row of rows.activities){
     const p='activities.'+(row.id||'?');reference(row,'visit_id','visits',p,true);reference(row,'site_id','sites',p,true);
+    stringList(row,'evidence_refs',p,false,true);
     if(!['sample','measurement','inspection','photo'].includes(row.kind))add(p+'.kind','Choose sample, measurement, inspection or photo.');
     string(row,'notes',p);for(const key of ['sample_id','method','custody_ref'])string(row,key,p,false,true);
     dateField(row,'collected_at',p,false,true);
@@ -277,7 +278,22 @@ export function updateRow(plan,collection,row){
   const issues=validatePlan(p);if(issues.length)throw Error(issues.map(x=>x.path+': '+x.message).join('\n'));
   return p;
 }
+export function implementationSourceRefs(row){
+  if(!row||typeof row!=='object')return [];
+  const refs=[];
+  for(const key of ['source_link_id','audit_source_link_id','source_ref','custody_ref'])if(typeof row[key]==='string')refs.push(row[key]);
+  if(Array.isArray(row.evidence_refs))refs.push(...row.evidence_refs);
+  for(const key of ['original_source','lab_source']){const source=row[key];if(source&&typeof source==='object')for(const field of ['source_link_id','audit_source_link_id','source_ref'])if(typeof source[field]==='string')refs.push(source[field]);}
+  const response=row.form_response,fields=response?.template?.fields,answers=response?.answers;
+  if(Array.isArray(fields)&&answers&&typeof answers==='object')for(const field of fields){if(!field||typeof field!=='object')continue;const answer=answers[field.key];if(field.type==='attachment_ref'&&typeof answer==='string')refs.push(answer);if(field.type==='attachment_refs'){if(Array.isArray(answer))refs.push(...answer);else if(Array.isArray(answer?.references))refs.push(...answer.references);}}
+  return [...new Set(refs.filter(value=>typeof value==='string'))];
+}
 export function deleteRow(plan,collection,id){
+  if(collection==='source_links'){
+    const linked=[];
+    for(const name of [...COLLECTIONS,'field12_lab_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
+    if(linked.length)throw Error('This source is still linked. Update its original associations first.\n'+linked.join('\n'));
+  }
   const p=clone(plan);p[collection]=p[collection].filter(x=>x.id!==id);
   const issues=validatePlan(p);if(issues.length)throw Error('This record is still referenced. Update its linked records first.\n'+issues.map(x=>x.path+': '+x.message).join('\n'));
   return p;
@@ -353,21 +369,22 @@ function economicSourceReports(plan, table) {
   return {ids,html:parts.length?'<section><h2>Selected economic scenarios</h2>'+parts.join('')+'</section>':''};
 }
 
-
 export function briefingFollowupReport(plan,table){
  if(!plan.briefing_imports?.length)return '';
+ const group=rows=>rows.filter(([,value])=>value!==null&&value!==undefined&&value!=='').map(([label,value])=>label+': '+String(value)).join('\n');
  const rows=plan.tasks.filter(t=>t.briefing_entry).map(t=>{
   const e=t.briefing_entry,c=e.source_context||{},b=c.report_binding||{},s=c.slide||{};
-  return [t.id,t.title,t.assignee,t.status,t.source_due_date||'',e.kind,b.title,s.title,s.id,b.report_sha256,e.source_link_id];
+  return [group([['Work',t.title],['Task ID',t.id]]),group([['Owner',t.assignee],['Status',t.status]]),t.source_due_date||'',group([['Entry kind',e.kind],['Report',b.title],['Page',s.title],['Page ID',s.id]]),b.report_sha256,e.source_link_id];
  });
  return '<section><h2>Report review follow-up</h2><p>Source due dates are deadlines recorded in the original meeting notes. They do not set working durations or move scientific report dates. Current task owners and status include subsequent edits.</p>'+
- table(['Task ID','Work','Current owner','Current status','Source due date','Original entry kind','Original report','Report page','Page ID','Original report SHA256','Original notes source'],rows)+
+ table(['Work','Current owner and status','Source due date','Original report context','Original report SHA256','Original notes source'],rows)+
  '<details><summary>Received meetings and preserved local differences</summary><pre>'+esc(JSON.stringify(plan.briefing_imports,null,2))+'</pre></details></section>';
 }
 
 export function reportHtml(plan,asOf=today()){
   const summary=summarize(plan,asOf);
   const text=value=>value===null||value===undefined?'':typeof value==='object'?JSON.stringify(value):String(value);
+  const group=rows=>rows.filter(([,value])=>value!==null&&value!==undefined&&value!==''&&(!Array.isArray(value)||value.length)).map(([label,value])=>label+': '+text(value)).join('\n');
   const table=(head,rows)=>'<div class="scroll"><table><thead><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+esc(text(v))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   const fieldRecords=plan.activities.filter(a=>a.form_response!==null&&a.form_response!==undefined).map(activity=>{
     const response=activity.form_response;
@@ -383,22 +400,22 @@ export function reportHtml(plan,asOf=today()){
     });
     return '<section class="field-record"><h3>'+esc(template.label||template.id||'Structured field record')+'</h3><p class="meta">Activity '+esc(activity.id)+' · visit '+esc(activity.visit_id)+' · site '+esc(activity.site_id)+'<br>Template '+esc(template.id||'')+' · version '+esc(template.version??'')+' · catalog '+esc(response.catalog_id||'')+' · version '+esc(response.catalog_version??'')+'<br>Recorded '+esc(response.recorded_at||'')+'</p>'+table(['Field','Field key','Type','Original response','Numeric value','Original unit'],rows)+'<details><summary>Complete retained form record and template</summary><pre>'+esc(JSON.stringify(response,null,2))+'</pre></details></section>';
   }).join('');
-  const css='body{font:14px/1.5 system-ui,sans-serif;color:#202124;margin:32px;max-width:1200px}h1{font-size:28px}h2{font-size:19px;margin-top:32px}h3{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #c9cbce;text-align:left;padding:7px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#f1f2f3}.scroll{overflow:auto}.meta{color:#575b60}.stats{display:flex;gap:24px;flex-wrap:wrap}.stats b{display:block;font-size:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:12px 0}.field-record{margin-bottom:24px}@media print{body{margin:10mm}thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}h2,h3{break-after:avoid}}';
+  const css='body{font:14px/1.5 system-ui,sans-serif;color:#202124;margin:32px;max-width:1200px}h1{font-size:28px}h2{font-size:19px;margin-top:32px}h3{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #c9cbce;text-align:left;padding:7px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#f1f2f3}.scroll{overflow:auto}.meta{color:#575b60}.stats{display:flex;gap:24px;flex-wrap:wrap}.stats b{display:block;font-size:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:12px 0}.field-record{margin-bottom:24px}@media print{body{margin:10mm;max-width:none}table{font-size:10px;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}h2,h3{break-after:avoid}}';
   let html='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(plan.title)+' — implementation report</title><style>'+css+'</style><body><h1>'+esc(plan.title)+'</h1><p class="meta">Implementation and field monitoring · '+esc(plan.id)+' · native revision '+esc(plan.revision)+' · as of '+esc(asOf)+'</p><p>'+esc(plan.description)+'</p><div class="stats"><span><b>'+summary.tasks.complete+' / '+summary.tasks.total+'</b>Tasks complete</span><span><b>'+money(summary.budget.budget)+'</b>Budget</span><span><b>'+money(summary.budget.commitment)+'</b>Commitments</span><span><b>'+money(summary.budget.actual)+'</b>Actual costs</span><span><b>'+summary.field.observations+'</b>Recorded results</span></div>';
   const economics=economicSourceReports(plan,table);
   html+=economics.html;
   html+=briefingFollowupReport(plan,table);
   const otherCandidates=plan.candidates.filter(c=>!economics.ids.has(c.id));
-  if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['ID','Candidate','Original candidate area (ha)','Reporting footprint (ha)','Area basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[c.id,c.label,c.area_ha??'',c.reporting_area_ha??'',c.area_basis||'',c.source,c.modeled_benefits||[]]));
-  html+='<h2>Assigned implementation work</h2>'+table(['Task','Candidate','Owner','Status','Start','Last working date','Progress','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [t.title,t.candidate_id||'',t.assignee||'',t.status,s.start||'',s.last_work_date||'',t.progress_pct+'%',t.notes||'',t.evidence_refs||[]];}));
+  if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['Candidate','Original areas and basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[group([['Name',c.label],['ID',c.id]]),group([['Candidate area (ha)',c.area_ha],['Reporting footprint (ha)',c.reporting_area_ha],['Area basis',c.area_basis]]),c.source,c.modeled_benefits||[]]));
+  html+='<h2>Assigned implementation work</h2>'+table(['Task and candidate','Owner','Status and progress','Working dates','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [group([['Task',t.title],['Task ID',t.id],['Candidate',t.candidate_id]]),t.assignee||'',group([['Status',t.status],['Progress',t.progress_pct+'%']]),group([['Start',s.start],['Last working date',s.last_work_date]]),t.notes||'',t.evidence_refs||[]];}));
   if(summary.schedule.issues.length)html+='<h2>Dates to complete</h2><ul>'+summary.schedule.issues.map(i=>'<li>'+esc(i.task_id+': '+i.message)+'</li>').join('')+'</ul>';
   html+='<h2>Cost ledger (USD)</h2>'+table(['Kind','Item','Task','Amount','Date','Reference'],plan.budget_lines.map(b=>[b.kind,b.label,b.task_id||'',money(b.amount_minor),b.date||'',b.reference||'']));
   html+='<h2>Sites and monitoring questions</h2>'+table(['Site','Coordinates','Candidate','Source'],plan.sites.map(s=>[s.label,[s.latitude,s.longitude].filter(x=>x!==null&&x!==undefined).join(', '),s.candidate_id||'',s.source_ref||'']));
-  html+=table(['Plan','Objective','Sites','Parameters','Method','Frequency','Notes'],plan.monitoring_plans.map(m=>[m.title,m.objective,(m.site_ids||[]).join('\n'),(m.parameters||[]).join('\n'),m.method_ref||'',m.frequency||'',m.notes||'']));
-  html+='<h2>Visits</h2>'+table(['ID','Site','Planned','Actual','Observer','Status','Notes','Evidence references'],plan.visits.map(v=>[v.id,v.site_id,v.planned_date||'',v.visited_at||'',v.observer||'',v.status,v.notes||'',v.evidence_refs||[]]));
-  html+='<h2>Sample and measurement activities</h2>'+table(['Activity','Visit','Site','Kind','Sample','Collected','Method','Custody','Related task','Notes'],plan.activities.map(a=>[a.id,a.visit_id,a.site_id,a.kind,a.sample_id||'',a.collected_at||'',a.method||'',a.custody_ref||'',a.implementation_task_id||'',a.notes||'']));
+  html+=table(['Monitoring plan','Objective','Sites','Parameters','Method and frequency','Notes'],plan.monitoring_plans.map(m=>[group([['Title',m.title],['ID',m.id]]),m.objective,(m.site_ids||[]).join('\n'),(m.parameters||[]).join('\n'),group([['Method',m.method_ref],['Frequency',m.frequency]]),m.notes||'']));
+  html+='<h2>Visits</h2>'+table(['Visit and site','Planned date','Actual timestamp','Observer and status','Notes','Evidence references'],plan.visits.map(v=>[group([['Visit',v.id],['Site',v.site_id]]),v.planned_date||'',v.visited_at||'',group([['Observer',v.observer],['Status',v.status]]),v.notes||'',v.evidence_refs||[]]));
+  html+='<h2>Sample and measurement activities</h2>'+table(['Activity and sample','Collection and site','Method','Custody and related work','Notes','Evidence references'],plan.activities.map(a=>[group([['Activity',a.id],['Kind',a.kind],['Sample',a.sample_id]]),group([['Collected',a.collected_at],['Visit',a.visit_id],['Site',a.site_id]]),a.method||'',group([['Custody',a.custody_ref],['Task',a.implementation_task_id]]),a.notes||'',a.evidence_refs||[]]));
   if(fieldRecords)html+='<h2>Structured field form records</h2>'+fieldRecords;
-  html+='<h2>Original field and laboratory results</h2><p>Each result retains its original text, unit, fraction, chemical basis and detection conditions. Modeled quantities remain with their original selected source record.</p>'+table(['Result ID','Activity','Parameter','Original result','Value','Unit','Basis','Fraction','Type / qualifier','Detection limit (original unit)','Quantitation limit (original unit)','Method','Quality','Notes'],plan.observations.map(o=>[o.id,o.activity_id,o.parameter,o.original_text,o.value??'',o.unit||'',o.basis||'',o.fraction||'',o.result_type+' / '+(o.qualifier||''),o.detection_limit??'',o.quantitation_limit??'',o.method||'',o.qa_status||'',o.notes||'']));
+  html+='<h2>Original field and laboratory results</h2><p>Each result retains its original text, unit, fraction, chemical basis and detection conditions. Modeled quantities remain with their original selected source record.</p>'+table(['Result and activity','Parameter and definition','Original result','Type and original limits','Quality','Notes'],plan.observations.map(o=>[group([['Result',o.id],['Activity',o.activity_id]]),group([['Parameter',o.parameter],['Basis',o.basis],['Fraction',o.fraction],['Method',o.method]]),group([['Original text',o.original_text],['Numeric value',o.value],['Unit',o.unit]]),group([['Type',o.result_type],['Qualifier',o.qualifier],['Detection limit (original unit)',o.detection_limit],['Quantitation limit (original unit)',o.quantitation_limit]]),o.qa_status||'',o.notes||'']));
   html+='<h2>Retained source references</h2>'+table(['ID','Kind','Title','Reference'],plan.source_links.map(s=>[s.id,s.kind,s.label,s.reference||'']))+'<h2>Working calendar</h2><p>ISO weekdays: '+esc(plan.working_days.join(', '))+'. Holidays: '+esc(plan.holidays.join(', ')||'None recorded')+'. Task durations use working days; zero-day tasks are milestones.</p></body></html>';
   return html;
 }

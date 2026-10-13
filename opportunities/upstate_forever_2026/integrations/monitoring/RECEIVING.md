@@ -206,3 +206,22 @@ and independent Workspace receiving course uses the maintained backup producer.
 Add `"archive_scope": "selected"` to the same original receiving selection to create an original selected-study archive from its saved campaign and optional observational context. The existing receiver keeps one receipt/output lock, restores the archive through the original Workspace writer, compares the same native records, appends its independent receiving revision, and verifies retained campaign/replay identities again. The default remains `"complete"`. Use a new output directory when changing this explicit selection.
 
 The Monitoring browser now offers **Transfer editable study** alongside existing exports and report controls. Its original Study transfer preview includes the full parent/event/source dependency closure and related completed Monitoring report. The exact workflow and current source composition are in [MONITORING_STUDY_TRANSFER.md](../../model/MONITORING_STUDY_TRANSFER.md).
+
+
+## Original campaign into fieldwork and independent receiving
+
+The maintained source inventory includes `model/monitoring_packet.py` and `source_tools/receive_monitoring_fieldwork.py`. The packet helper streams and verifies the original source members while retaining the same deterministic campaign package. The standalone current-source installer also requires the existing generic Implementation receiver and native study verification helper; the cumulative application supplies them with their original owners.
+
+Use the actual saved campaign and selected revision from the existing course:
+
+```sh
+python -B source_tools/receive_monitoring_fieldwork.py \\
+  --workspace ACTUAL_SENDER_WORKSPACE \\
+  --operation OUTSIDE_WORKSPACE_OPERATION/monitoring-fieldwork \\
+  --campaign-id ACTUAL_CAMPAIGN_ID \\
+  --revision-id ACTUAL_CAMPAIGN_REVISION_ID
+```
+
+The original Monitoring receiving receipt's `campaign_id` and `campaign_revision_id` belong to its sender Workspace. For its independently received copy, use `received.workspace` with `independent_revision`. This continuation uses the selected original campaign through the native Implementation handoff, report retention, whole-Workspace capture and independent exact-revision reopening. The managed original campaign package is verified again after restore. Reuse the same operation directory to continue an interrupted reply; each later intentional selection receives its own operation directory.
+
+In the operator, choose **Monitoring design → Campaign fieldwork → Update fieldwork from this revision → Open saved fieldwork**. Original dates, source station locations, recorded samples, planning budget and campaign history remain attached. Fieldwork edits survive later campaign refreshes. [The native fieldwork receiving guide](../../docs/IMPLEMENTATION_NATIVE_RECEIVING.md) covers complete outputs and recovery.

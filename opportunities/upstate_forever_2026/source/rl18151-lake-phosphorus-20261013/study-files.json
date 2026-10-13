@@ -74,13 +74,13 @@
     },
     {
       "path": "import_rl18151.py",
-      "bytes": 4776,
-      "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+      "bytes": 10927,
+      "sha256": "99ffdda790f8f2896319eab97b994c942ebdaeb72ac2c4dc323d3ae77de0d9bd"
     },
     {
       "path": "observed-report.json",
-      "bytes": 14430,
-      "sha256": "a3c311f92c06e9eecc01b15019139ce7fbfd1c137505f91c097c2647ca6383e1"
+      "bytes": 15226,
+      "sha256": "a74e17899482229f4110a8395983dca4c696d4265c84d07c2fb18dcbb4484d1f"
     },
     {
       "path": "original-join-census.json",
@@ -183,14 +183,19 @@
       "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
     },
     {
+      "path": "RL_NATIVE_RECEIVING.md",
+      "bytes": 5488,
+      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+    },
+    {
       "path": "SOURCE_CAPTURE.md",
       "bytes": 3129,
       "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
     },
     {
       "path": "sources.json",
-      "bytes": 37597,
-      "sha256": "a5735803cf7db14c6650268988cf5d5e29a2202e6c9b209ab76312cabc70c58f"
+      "bytes": 38487,
+      "sha256": "72a5d67dd32fcb257a188aad4048323d9068a98c0d493bd1f61d87c78ee2019c"
     },
     {
       "path": "supplemental-requests.json",

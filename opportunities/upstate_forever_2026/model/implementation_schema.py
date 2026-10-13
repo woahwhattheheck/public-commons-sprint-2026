@@ -445,6 +445,8 @@ def validate_plan(document: dict) -> dict:
         string(row, "notes", path)
         for key in ("sample_id", "method", "custody_ref"):
             string(row, key, path, required=False, nonempty=True)
+        if "evidence_refs" in row:
+            string_list(row, "evidence_refs", path, unique=True)
         date_field(row, "collected_at", path, timestamp=True)
         if row.get("kind") == "sample" and not row.get("sample_id"):
             error(path + ".sample_id", "a sample activity requires the original sample ID")

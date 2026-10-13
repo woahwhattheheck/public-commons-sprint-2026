@@ -82,7 +82,13 @@ async function rehearsalOpenControl(control){
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
 const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args)});
-const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection)});
+async function openScientificReport(selection){
+ if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
+ detailDialog.close();detailContext=null;
+ navigate('sources');
+ return sourceReports.openForSources(selection,$('#content'));
+}
+const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection)});
 const deliveryInspection=attachDeliveryInspection({getState:()=>state,api,endpoint,openItem,toast,
@@ -96,12 +102,7 @@ const journeyForm=async open=>{await open();return {operation_id:formContext?.op
 const extensions=createExtensionHost({
  openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
- openScientificReport:async selection=>{
-   if(selection?.workspace_key!==workspace)throw Error('Open scientific report sources in their original Workspace.');
-   detailDialog.close();detailContext=null;
-   navigate('sources');
-   return sourceReports.openForSources(selection,$('#content'));
- },
+ openScientificReport,
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,sourceForm,

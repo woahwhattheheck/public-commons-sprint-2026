@@ -19,9 +19,11 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-monitoring-report-7"
+PREFIX = "waterlink-receiving-waters-scientific-source-8"
 REQUIRED = (
     "model/receiving_waters.py",
+    "model/spatial_esri.py",
+    "source/capture_upstream_network.py",
     "model/receiving_water_spatial.py",
     "model/receiving_water_delivery.py",
     "model/receiving_water_cli.py",
@@ -71,13 +73,23 @@ MONITORING_REPORT_REQUIRED = (
     "operator/web/monitoring-report.mjs",
     "model/observed_context.py",
 )
+RECEIVING_REPORT_REQUIRED = (
+    "model/receiving_water_report_source.py",
+    "model/receiving_water_report_cli.py",
+    "model/RECEIVING_WATER_REPORT_SOURCE.md",
+    "operator/receiving_water_report_native.py",
+    "operator/extensions/receiving-water-report.json",
+    "operator/web/receiving_water_report.mjs",
+    "integration/component_fragments/receiving-water-report.json",
+)
 MONITORING_ACTIONS = {
     "monitoring.network.import", "monitoring.design", "monitoring.frontier",
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4 descriptor, before the priority-source workflow.
-DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c"}
+# Exact retained version 4 and 5 descriptors, before this report-source workflow.
+DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
+                           "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -195,7 +207,7 @@ def allow_browser_assets(text):
     if not isinstance(names, set) or not all(isinstance(name, str) for name in names):
         raise ValueError("The operator static allowlist must contain original file names")
     additions = {"receiving_waters.mjs", "receiving_waters.css", "receiving_water_spatial.mjs",
-                 "receiving_water_monitoring.mjs"}
+                 "receiving_water_monitoring.mjs", "receiving_water_report.mjs"}
     if additions <= names:
         return text
     replacement = "{" + ", ".join(repr(name) for name in sorted(names | additions)) + "}"
@@ -259,6 +271,8 @@ def join_registry_app(text):
         "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast}",
         "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,"
         "navigate,openDelivery:selection=>deliveryForm(undefined,selection)}",
+        "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,"
+        "navigate,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport}",
     )
     for context in contexts:
         original = "const receivingWaters=attachReceivingWaters(" + context + ");\n"
@@ -472,12 +486,19 @@ def join_portable(text):
         'held(root / ".receiving-water-monitoring.lock", blocking=False)',
     )
 
-    return replace_once(
+    text = replace_once(
         text,
         '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n',
         '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n'
         '            stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))\n',
         'held(root / ".monitoring-report-source.lock", blocking=False)',
+    )
+    return replace_once(
+        text,
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n',
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n'
+        '            stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))\n',
+        'held(root / ".receiving-water-report-source.lock", blocking=False)',
     )
 
 
@@ -648,7 +669,11 @@ def install(root, *, check=False):
         raise ValueError("Complete the existing shared extension host's server and browser join before composing receiving waters")
     if not registry:
         raise ValueError("Install the current shared extension host before the receiving-water monitoring workflow")
-    required = REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED + MONITORING_REPORT_REQUIRED
+    if ("openScientificReport" not in original_app
+            or "sourceReports.openForSources(" not in original_app):
+        raise ValueError("Receive the current shared scientific report composer and its source-selection host capability")
+    required = (REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
+                + MONITORING_REPORT_REQUIRED + RECEIVING_REPORT_REQUIRED)
     for relative in required:
         path = root / relative
         if not path.is_file():
@@ -689,6 +714,27 @@ def install(root, *, check=False):
     report_client = (root / "operator/web/monitoring-report.mjs").read_text(encoding="utf-8")
     if "export function attachMonitoringReport(node, context, workspaceKey)" not in report_client:
         raise ValueError("Receive the current Monitoring scientific report browser helper")
+    water_report = json.loads((root / "operator/extensions/receiving-water-report.json").read_bytes())
+    water_backend = water_report.get("backend") or {}
+    water_route = {"methods": ["GET"], "path": "/api/receiving-water-report",
+                   "handler": "read", "args": ["operator", "workspace_key", "payload"]}
+    if (water_report.get("schema") != "upstate.operator-extension/v1"
+            or water_report.get("id") != "receiving-water-report"
+            or water_report.get("client")
+            or "receiving.water.plan" not in water_report.get("requires_actions", [])
+            or "receiving_water_report.mjs" not in water_report.get("assets", [])
+            or water_backend.get("module") != "receiving_water_report_native"
+            or "receiving.water.report.prepare" not in water_backend.get("actions", [])
+            or water_backend.get("invoke") != {"handler": "perform", "args": ["operator", "task"]}
+            or water_route not in water_backend.get("routes", [])
+            or water_backend.get("state") != {"key": "receiving_water_reports",
+                "handler": "snapshot", "args": ["operator", "workspace_key"]}
+            or water_backend.get("decorate_task") != {"handler": "decorate_task", "args": ["operator", "task"]}
+            or water_backend.get("verify_workspace") != {"handler": "verify_workspace", "args": ["workspace"]}):
+        raise ValueError("Receive the complete registered receiving-water report provider")
+    water_client = (root / "operator/web/receiving_water_report.mjs").read_text(encoding="utf-8")
+    if "export function attachReceivingWaterReport(context)" not in water_client:
+        raise ValueError("Receive the maintained receiving-water scientific report controls")
     migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
                               run_name="_original_monitoring_migration")
     removers = {"operator/server.py": migration["remove_server"],
@@ -731,7 +777,10 @@ def install(root, *, check=False):
             previous = json.loads(json.dumps(template))
             previous["version"] = "2"
             previous["assets"] = [name for name in previous["assets"]
-                                  if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs"}]
+                                  if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
+                                                  "receiving_water_report.mjs"}]
+            previous["client"]["requires"] = [name for name in previous["client"]["requires"]
+                                               if name != "openScientificReport"]
             previous["backend"]["actions"] = [name for name in previous["backend"]["actions"]
                                                 if name != "receiving.water.monitoring"]
             previous["backend"]["routes"] = [route for route in previous["backend"]["routes"]

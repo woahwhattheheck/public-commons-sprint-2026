@@ -1,0 +1,100 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "a74f-regional-source-composition",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3374",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
+        "integration/component_fragments/a74f-regional-source-composition.json"
+      ]
+    },
+    "gauge-support": {
+      "paths": [
+        "model/gauge_support.py",
+        "operator/gauge_support.py",
+        "operator/extensions/gauge-support.json",
+        "operator/web/gauge_support.css",
+        "operator/web/gauge_support.mjs",
+        "source_tools/receive_gauge_support.py",
+        "operator/GAUGE_SUPPORT.md",
+        "operator/install_gauge_support.py",
+        "model/gauge_report_context.py"
+      ]
+    },
+    "regional-soil": {
+      "paths": [
+        "source_tools/soil_sources.py",
+        "source_tools/SOIL_SOURCE.md",
+        "source_tools/soil_region.py",
+        "source_tools/soil_coverage.py",
+        "source_tools/SOIL_COVERAGE.md",
+        "source_tools/SOIL_REGION.md",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.body",
+        "source/soil-interpretation-20261012/soil-erodibility-rule-form.capture.json",
+        "operator/regional_soil.py",
+        "operator/web/source_workbench.mjs",
+        "operator/web/regional_soil.mjs",
+        "operator/extensions/regional-soil.json",
+        "operator/REGIONAL_SOIL_DESK.md",
+        "model/rasters.py"
+      ]
+    },
+    "source-preparation": {
+      "paths": [
+        "source/annual-nlcd-native-20261013/receive.py",
+        "source/annual-nlcd-native-20261013/receiving.json",
+        "source/annual-nlcd-native-20261013/decode_png.mjs",
+        "source/annual-nlcd-native-20261013/write_geotiff.mjs",
+        "source/annual-nlcd-native-20261013/source/plan.json",
+        "source/annual-nlcd-native-20261013/source/validation.json",
+        "source/annual-nlcd-native-20261013/source/class-area.csv",
+        "source/annual-nlcd-native-20261013/source/style.sld",
+        "source/annual-nlcd-native-20261013/source/source-entry.json",
+        "source/annual-nlcd-native-20261013/source/source-manifest.json",
+        "source/annual-nlcd-native-20261013/README.md",
+        "source/annual-nlcd-native-20261013/source/land-cover.tif"
+      ],
+      "source_manifests": [
+        "source/annual-nlcd-native-20261013/source/source-manifest.json"
+      ]
+    },
+    "annual-reference": {
+      "paths": [
+        "source/annual-reference-assessment-20261013/README.md",
+        "source/annual-reference-assessment-20261013/annual-reference-assessment-summary.json",
+        "source/annual-reference-assessment-20261013/annual-reference-station-memberships.csv",
+        "source/annual-reference-assessment-20261013/assessment-geography-context.geojson",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-context.json",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-records.csv",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-stations.csv",
+        "source/annual-reference-assessment-20261013/sources.json"
+      ],
+      "source_manifests": [
+        "source/annual-reference-assessment-20261013/sources.json"
+      ]
+    },
+    "assessment-context": {
+      "paths": [
+        "source/annual-reference-assessment-20261013/README.md",
+        "source/annual-reference-assessment-20261013/annual-reference-assessment-summary.json",
+        "source/annual-reference-assessment-20261013/annual-reference-station-memberships.csv",
+        "source/annual-reference-assessment-20261013/assessment-geography-context.geojson",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-context.json",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-records.csv",
+        "source/annual-reference-assessment-20261013/assessment-native-huc-stations.csv",
+        "source/annual-reference-assessment-20261013/sources.json"
+      ],
+      "source_manifests": [
+        "source/annual-reference-assessment-20261013/sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "gauge-support",
+    "regional-soil",
+    "source-preparation",
+    "annual-reference",
+    "assessment-context"
+  ]
+}
