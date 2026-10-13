@@ -282,6 +282,27 @@ class GeographyPreparation(SourcePreparation):
                 "report": report, "source": record["source"],
                 "figures": figures, "_downloads": files}
 
+    def _programme_operations(self, workspace_key, workspace, case):
+        retained = []
+        for record in self._records(workspace):
+            result = record.get("result") or {}
+            if (record.get("project_id") != workspace.project["id"]
+                    or record.get("action") != "geography.adopt-programme"
+                    or result.get("geographic_id") != case["id"]
+                    or not result.get("programme_id")):
+                continue
+            path = self._record_path(workspace, record["task_id"])
+            retained.append({"id": record["task_id"], "action": record["action"],
+                "workspace": workspace_key, "state": record["state"],
+                "created_at": record["created_at"], "restored": True,
+                "payload": {"case_id": case["id"],
+                            "delivery_id": result.get("existing_delivery_id")},
+                "result": {"programme_id": result["programme_id"],
+                           "programme_state": result["programme_state"]},
+                "_downloads": [self.operator._ticket(workspace_key, path,
+                    describe_file(workspace.root, path), "Original Programme operation")]})
+        return retained
+
     def read(self, workspace, operation, value=None):
         ws, value = self.operator.ws(workspace), value or {}
         if operation == "catalog":
@@ -301,7 +322,8 @@ class GeographyPreparation(SourcePreparation):
             if operation == "allocation":
                 return self._allocation(workspace, ws, found, value.get("allocation_id"))
             return {"case": found, "_downloads": self._case_downloads(workspace, ws, found),
-                    "allocation_editions": self._allocation_editions(ws, found)}
+                    "allocation_editions": self._allocation_editions(ws, found),
+                    "programme_operations": self._programme_operations(workspace, ws, found)}
         if operation not in {"progress", "result"}:
             self._fail("GEOGRAPHY_READ", "Choose the geographic catalogue, preview, saved case or operation.")
         task_id = identifier(value.get("task_id"))

@@ -190,9 +190,10 @@ export function createGeographicWorkbench(host) {
 
   function programmeTasks(){
     const id=openedCase?.case?.id;
-    return list(host.getState()?.tasks).filter(task=>task.action==="geography.adopt-programme"&&
-      task.payload?.case_id===id&&(!task.workspace||task.workspace===workspace))
-      .sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+    const rows=new Map(list(openedCase?.programme_operations).map(task=>[task.id,task]));
+    for(const task of list(host.getState()?.tasks).filter(task=>task.action==="geography.adopt-programme"&&
+      task.payload?.case_id===id&&(!task.workspace||task.workspace===workspace)))rows.set(task.id,{...rows.get(task.id),...task,restored:false});
+    return [...rows.values()].sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
   }
   function programmeSection(){
     const deliveries=list(host.getState()?.data?.deliveries);
@@ -229,9 +230,9 @@ export function createGeographicWorkbench(host) {
       const id=task.result?.programme_id;
       return '<p><strong>'+esc(task.state)+'</strong> · '+esc(task.result?.programme_state||task.created_at||"")+
         (task.error?.message?' · '+esc(task.error.message):"")+'</p><div class="geo-actions">'+
-        '<button type="button" data-geo-programme-task="'+esc(task.id)+'">Open original operation</button>'+
+        (task.restored?list(task._downloads).filter(file=>String(file.url).startsWith("/api/file/")).map(file=>'<a href="'+esc(file.url+(file.url.includes("?")?"&":"?")+"download=1")+'" download>Download original operation</a>').join(""):'<button type="button" data-geo-programme-task="'+esc(task.id)+'">Open original operation</button>')+
         (id?'<button type="button" data-action="programme-open" data-id="'+esc(id)+'">Open saved Programme</button>':"")+
-        (["failed","interrupted","cancelled"].includes(task.state)?'<button type="button" data-geo-programme-resume="'+esc(task.id)+'">Resume original operation</button>':"")+'</div>';
+        (!task.restored&&["failed","interrupted","cancelled"].includes(task.state)?'<button type="button" data-geo-programme-resume="'+esc(task.id)+'">Resume original operation</button>':"")+'</div>';
     }).join("")+'</div>';
     target.innerHTML=content;
   }
