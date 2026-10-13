@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import queue
 import re
+import runpy
 import shutil
 import signal
 import socket
@@ -185,6 +186,12 @@ def resolve_selection(args, application):
         "project_id": project["id"], "python": str(executable), "native": native,
         "port": port, "source_manifests": [str(p) for p in manifests],
         "source_roots": [str(p) for p in roots]}
+    requested_origin = getattr(args, "advertised_origin", None)
+    if requested_origin is None:
+        requested_origin = profile.get("advertised_origin")
+    if requested_origin is not None:
+        policy = runpy.run_path(str(root / "operator" / "origin_policy.py"))
+        selection["advertised_origin"] = policy["advertised_origin"](requested_origin)
     return selection, state, project
 
 
@@ -198,6 +205,8 @@ def save_profile(filename, selection):
         "native": selection["native"], "port": selection["port"],
         "source_manifests": [_portable(p, root) for p in selection["source_manifests"]],
         "source_roots": [_portable(p, root) for p in selection["source_roots"]]}
+    if selection.get("advertised_origin") is not None:
+        value["advertised_origin"] = selection["advertised_origin"]
     _write(path, value, exclusive=True)
     return path
 
@@ -210,6 +219,8 @@ def command_for(selection):
     for path in selection["source_roots"]:
         arguments.extend(["--source-root", path])
     arguments.extend(["--port", str(selection["port"])])
+    if selection.get("advertised_origin") is not None:
+        arguments.extend(["--advertised-origin", selection["advertised_origin"]])
     if selection["native"]:
         invocation = root / "source_tools/native_runtime/invocation.py"
         if not invocation.is_file():
@@ -256,6 +267,9 @@ def _request(url, route):
 
 def verify_session(receipt, selection):
     value = _request(receipt["operator_url"], "/api/whoami")
+    if value.get("advertised_origin") != selection.get("advertised_origin"):
+        raise RuntimeError("The running operator has a different advertised origin. "
+                           "Use its original launch selection or close it from its owning terminal.")
     expected_key = _digest({"directory": selection["workspace"]})
     rows = value.get("workspaces", [])
     if (not isinstance(rows, list) or value.get("default_workspace") != expected_key
@@ -504,6 +518,7 @@ def main(application, argv=None):
     parser.add_argument("--source-manifest", action="append", default=None)
     parser.add_argument("--source-root", action="append", default=None)
     parser.add_argument("--port", type=int)
+    parser.add_argument("--advertised-origin", help="Exact canonical HTTPS origin; saved without credentials in the launch profile")
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--adopt-session", type=Path, help="Private original server startup JSON; reuse that running operator without claiming its runtime configuration")
     parser.add_argument("--status", action="store_true", help="Check existing local session; never starts a process or prints its credential")
