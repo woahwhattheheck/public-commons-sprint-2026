@@ -1559,7 +1559,10 @@
             "mode": "100644"
           }
         }
-      }
+      },
+      "source_manifests": [
+        "source/ecoli_utility_context/20261013/source-manifest.json"
+      ]
     },
     "native-interactions": {
       "title": "Native conservation combinations",
@@ -1869,7 +1872,11 @@
             "mode": "100644"
           }
         }
-      }
+      },
+      "source_manifests": [
+        "source/station-assessment-context/sources.json",
+        "source_data/wqp_assessment159_additional_two_20261013/sources.json"
+      ]
     },
     "extension-startup": {
       "title": "Maintained extension startup",
