@@ -1,0 +1,140 @@
+# Native assessment coverage in client delivery
+
+Open the completed station and watershed comparison, retain its original sources in the Workspace, and include its scientific interpretation in the existing ordered client delivery.
+
+The package combines the completed original point/polygon calculation with the maintained assessment explorer. It preserves 159 station identities, 192 assessment records, the original 217-HUC calculation reference, five annual-reference catchments and eleven original annual targets. The existing native result supplies every geographic membership and boundary distance.
+
+## Open and import
+
+The complete generated edition is under:
+
+```text
+results/native-assessment-delivery-20261013/
+```
+
+Open `association/OPEN_ASSESSMENT_ASSOCIATIONS.html` for the interactive report. Use **Physical station coverage** to select the actual ARJWS/PRWD catchment or any of the five annual-reference basins. Inspect original coordinates, containing watersheds and boundary distances, select native stations across filters, and export source-bound native JSON/CSV. Each station opens its original assessment records in the existing explorer below.
+
+The assessment explorer compares assessment and station publisher HUCs, source editions and programme associations and exports selected original records. The saved HTML retains both native-station and assessment-record review states. The printable report contains the full 159-station physical inventory, the 192-record assessment inventory and comparison tables.
+
+Use the existing **Sources → Source reports** controls to preview and import the bundled `sources.json`. The manifest registers thirteen typed sources:
+
+| Source group | Entries | Existing application use |
+| --- | ---: | --- |
+| Completed native geography and assessment joins | 4 | Spatial Review and original station/assessment lookup |
+| Original station, coordinate-context and assessment editions | 7 | Native Station geography and original assessment context |
+| Interactive native assessment report | 1 | Source reports preview, original details and selected-record export |
+| Scientific interpretation recipe | 1 | Ordered Maps and delivery report selection |
+
+The original seven-source station edition preserves the three primary native location sources, the separate optional 73-location coordinate context, its original assessment table and the two complete normalized assessment editions. Primary native locations still comprise 152 Atlas stations, five selected stations from the WQP eight-location source, and two from the additional WQP source.
+
+For a portable transfer, import `native-assessment-delivery.zip` through the existing source-upload operation. It contains the root source manifest, all thirteen entries and their retained companion closure. The original application-relative source directories survive extraction, including native record pointers and the annual source README's relative links.
+
+To import an extracted edition from the application root:
+
+```bash
+python -B -m model.cli --workspace /absolute/workspace source-import /absolute/native-assessment-delivery/sources.json
+```
+
+## Add the interpretation to a client deliverable
+
+Open the imported interactive document in **Source reports**. Its linked scientific report is:
+
+**Physical assessment coverage, utility selection and annual references**
+
+Source ID:
+
+```text
+native-assessment-observed-bef411c2954fc3e7deb6
+```
+
+Select **Prepare scientific report** in the document’s scientific-sources section. The existing **Prepare a scientific report** composer opens with this source selected. Set **Report title (optional)**, use **Add a saved scientific study** and **Add study** for other relevant sources, and arrange them with **Earlier**, **Later** and **Remove**. Choose **Preview selected sources**, then **Prepare PDF, HTML and data**. An unchanged saved edition offers **Reopen existing report**.
+
+Under **Saved scientific reports**, use **Open saved report** to inspect the result. Its existing actions include **Prepare complete report ZIP**, **Back up Workspace with this report** and **Use these studies in another report**. This provides the source-only client report directly from the original source collection.
+
+For a combined scenario deliverable, choose the adjacent **Open Maps and delivery**, select this scientific source in the ordered list and use the actual saved baseline/scenario plus relevant study sources. The maintained consumer renders the same recipe’s narrative, tables and retained links into the existing HTML, Markdown, PDF and portable delivery outputs.
+
+The earlier publisher-association report and whole-source coverage report remain separately available. Their denominators answer different source-selection questions. This native edition adds the completed geographic result to the same fixed published cohort of 192 records at 159 sites.
+
+## Results to explain during review
+
+All 159 original points fall within exactly one of the 217 original watershed polygons. All 152 reported station-publisher HUC12 assignments agree with the containing polygon; seven station sources report HUC8 without HUC12. The completed geometry supplies their physical HUC12 while the original reported attributes remain intact.
+
+The 192 assessment-edition records comprise 186 matching and six differing publisher HUC12 assignments. The six differences belong to July 2026 records. RS-06190 also has a separate 2024 record that agrees with geometry.
+
+| Utility selection basis | ARJWS stations / records | PRWD stations / records |
+| --- | ---: | ---: |
+| Original point/polygon membership | 6 / 10 | 18 / 22 |
+| Station publisher HUC12 | 6 / 10 | 17 / 19 |
+| Assessment publisher HUC12 | 6 / 10 | 17 / 21 |
+
+The physical utility union contains 24 distinct stations and 32 records.
+
+RS-21014 is physically within Little Beaverdam Creek, HUC12 030601020506, and PRWD's upstream selection. Its station source supplies HUC8 03060102; all three original 2024 assessment records publish the matching HUC12. The native point is 351.42 m from the containing watershed and utility outer boundary.
+
+SV-809 is physically within Lower Tugaloo River, HUC12 030601020507, matching its station publisher. Its July 2026 E. coli record publishes 030601010305. Physical PRWD selection includes this retained record, with the original assessment attribution still displayed.
+
+### Annual-reference coverage
+
+| Original catchment | COMID | Selected stations | Assessment records | Annual targets |
+| --- | --- | ---: | ---: | --- |
+| Chattooga near Clayton | 6269342 | 1 | 1 | TN, TP, TSS |
+| Broad near Bell | 6280111 | 0 | 0 | TP, TSS |
+| Stevens Creek | 11730084 | 18 | 20 | TN, TP |
+| Savannah at Jackson | 22724211 | 159 | 192 | TN, TP |
+| Savannah at Cohens | 22726623 | 159 | 192 | TN, TP |
+
+The three tributary catchments are mutually disjoint and wholly contained within both downstream basins. Jackson is itself contained in Cohens. Keep these relationships in the existing calibration and validation grouping; their overlapping assessment coverage must retain its selection basis.
+
+Broad's zero concerns this selected South Carolina assessment cohort. Stevens Creek's selected assessments include bacterial and biological concerns, while its annual targets concern nutrients. Chattooga and Broad provide sediment targets, but those targets are not measurements of the Upper Three And Twenty Creek priority area.
+
+Annual targets retain reference year 2012 and the source-global 1 October 1999–30 September 2014 horizon. The 2024 assessment edition covers 2018–2022; July 2026 TMDL status remains a separate edition. Annual TN/TP use original `ACTUAL` values in kg/year. Sediment uses `ACTUAL_MT` in metric tonnes/year. Original prediction fields remain distinct.
+
+Use the existing **Annual load observations** desk and its maintained calibration actions for the target/catchment workflow. The report package preserves all five original basin bodies, original national target tables, component-selection metadata and source dictionaries beside the completed comparisons.
+
+## Reproduce the complete report package
+
+From a complete current application source:
+
+```bash
+node source_tools/native_assessment_delivery_cli.mjs \
+  --application /absolute/current/application \
+  --output /absolute/new/native-assessment-delivery
+```
+
+To import that completed package immediately into an existing Workspace:
+
+```bash
+node source_tools/native_assessment_delivery_cli.mjs \
+  --application /absolute/current/application \
+  --output /absolute/new/native-assessment-delivery \
+  --workspace /absolute/workspace \
+  --python python3
+```
+
+The output directory must be new. The CLI reads the completed native source manifest, the original seven-entry station manifest, the exact original assessment sources and the original annual source cohort. It reads the original three assessment inputs from `results/assessment-association-review-20261013/inputs/`, already retained by that report’s source manifest. It verifies all declared identities and native record pointers before writing the complete output. Optional Workspace import uses the original `model.cli source-import` operation.
+
+Required maintained source files:
+
+- `native_assessment_reviewer.mjs`: native station coverage filters, original source detail, selection exports and assessment-explorer handoff.
+- `native_assessment_geography.mjs`: binds the completed native schema to original station/assessment identities.
+- `native_assessment_delivery.mjs`: composes the scientific recipe, original source closure and thirteen-entry import.
+- `assessment_association_report.mjs`, `assessment_association_reviewer.mjs` and `assessment_association_package.mjs`: existing report, interactive review and ZIP composition.
+- `station_assessment_identity.mjs` and `archive_codec.mjs`: existing original-identity join and byte codec.
+
+The ordinary association-report CLI also accepts the completed native context with its existing `--geography` argument. Its original no-geography workflow remains reproducible from the same source inputs.
+
+## Source identities and geographic interpretation
+
+The native context is `upstate.assessment-native-huc-context/v1`, retained at `source/annual-reference-assessment-20261013/assessment-native-huc-context.json`. Its exact completed output SHA256 is:
+
+```text
+bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360
+```
+
+The binder checks original station source ID/body hash/native feature ID/CRS/coordinates and all 192 source-bound assessment tuples. The final composer resolves every original normalized-record pointer, preserves the original publisher table text and retains the original coordinate capture source entries. All five original annual basin identities and eleven copied target records remain attached to the completed result.
+
+The native operation's `input_sha256` is retained under its original name and meaning. It is separate from the association report identity. The polygon archive, decoded polygon member, coordinate operations, native runtime and original source locators retain their source-specific identities in the completed native result.
+
+The original native calculation used explicit always-XY coordinate transforms and exact covers predicates in EPSG:5070. PROJ operation accuracy describes the transformation; it is not a measured station-position or watershed-boundary error bound. The native result reports no geometry corrections, no snapping and no tested membership within the summed reported transformation accuracy of a boundary.
+
+Displayed annual values use two decimal places and areas three. Original JSON and CSV members preserve full precision. The package contains the completed scientific result and all retained record/coordinate/annual sources used for review; the original equipped operation retains the 217-HUC polygon archive identified in that result.
