@@ -18,6 +18,7 @@ from .common import (atomic_bytes, atomic_json, describe_file, digest, file_dige
                      held, identifier, now, read_json, relative_file, verify_file)
 from . import ensemble_consumers, ensemble_flow_support, ensemble_references
 from . import ensemble_scientific_figures
+from . import ensemble_coefficient_evidence as coefficient_sources
 
 VERSION = 2
 DIRECTORY = "ensemble-scientific-sources"
@@ -275,7 +276,7 @@ def _sections(plan, basis, result, observed, uncertainty):
     return title, sections
 
 
-def _package(workspace, directory, plan, state, basis, result, observed, uncertainty):
+def _package(workspace, directory, plan, state, basis, result, observed, uncertainty, coefficient_records=()):
     def saved(kind, key):
         value = workspace._get(kind, identifier(key))
         _copy(workspace, describe_file(workspace.root, workspace.root / kind / (key + ".json")),
@@ -341,6 +342,7 @@ def _package(workspace, directory, plan, state, basis, result, observed, uncerta
                                "source_collection_id": collection_id,
                                "title": entry.get("title", source_id), "uri": entry.get("uri", ""),
                                "vintage": entry.get("vintage", ""), "body_sha256": entry["body"]["sha256"]})
+    source_records.extend(coefficient_records)
     atomic_json(directory / "original-source-editions.json", source_records, immutable=True)
     _csv(directory, "candidate-metrics.csv", _metric_rows(result),
          ["run_id", "profile_id", "rank", "parameter", "units", "objective_score",
@@ -395,10 +397,23 @@ def _source_manifest(directory, title, selection, sections, graphics):
 
 
 def latest(workspace, consumer_id):
-    """Read the prepared source for the consumer's current immutable result IDs."""
+    """Read the prepared source for the current result and its explicit source choice."""
     selection, unused, state, basis, result, observed, uncertainty = _retained(workspace, consumer_id)
-    directory = workspace.root / DIRECTORY / digest(selection)
-    path = directory / "operation.json"
+    pointer = workspace.root / "ensemble-consumer-results" / identifier(consumer_id) / "latest-scientific-source.json"
+    key = digest(selection)
+    if pointer.exists():
+        chosen = read_json(pointer)
+        if chosen.get("consumer_id") != consumer_id:
+            raise ValueError("Scientific source pointer names another original consumer")
+        candidate = read_json(workspace.root / DIRECTORY / identifier(chosen["source_operation_id"]) / "operation.json")
+        original = candidate.get("selection", {})
+        if digest(original) != candidate.get("id") or candidate.get("consumer_id") != consumer_id:
+            raise ValueError("Scientific source pointer changed its original operation")
+        # New results do not inherit the previous result's evidence choice.
+        if {name: value for name, value in original.items() if name != "coefficient_evidence"} == selection:
+            key = candidate["id"]
+            selection = original
+    path = workspace.root / DIRECTORY / key / "operation.json"
     if not path.exists():
         return None
     operation = read_json(path)
@@ -408,7 +423,8 @@ def latest(workspace, consumer_id):
         verify_file(workspace.root, item)
     if operation.get("source"):
         workspace.source_file(operation["source"]["source_collection_id"], operation["source"]["source_id"])
-    return operation
+    source_current = coefficient_sources.current(workspace, selection.get("coefficient_evidence"))
+    return {**operation, "source_state": "current" if source_current else "stale"}
 
 
 def delivery_selection(source, previous=None):
@@ -468,11 +484,14 @@ def _render(workspace, directory, operation, source_records):
     return release
 
 
-def prepare(workspace, consumer_id, *, render=True):
+def prepare(workspace, consumer_id, *, render=True, coefficient_evidence=None):
     """Package, register and optionally render the original saved scientific result."""
     if not isinstance(render, bool):
         raise ValueError("Render must be true or false")
     selection, plan, state, basis, result, observed, uncertainty = _retained(workspace, consumer_id)
+    if coefficient_evidence is not None:
+        selection["coefficient_evidence"] = coefficient_sources.bind(
+            workspace, coefficient_evidence, coefficient_sources.consumer_context(workspace, plan["id"]))
     key = digest(selection)
     directory = workspace.root / DIRECTORY / key
     directory.mkdir(parents=True, exist_ok=True)
@@ -499,7 +518,11 @@ def prepare(workspace, consumer_id, *, render=True):
                         verify_file(source_directory, member)
                     source_records = read_json(source_directory / "original-source-editions.json")
                 else:
-                    source_records = _package(workspace, source_directory, plan, state, basis, result, observed, uncertainty)
+                    coefficients = coefficient_sources.collect(workspace, source_directory,
+                                                                 selection.get("coefficient_evidence"))
+                    source_records = _package(workspace, source_directory, plan, state, basis, result,
+                                              observed, uncertainty, coefficient_records=coefficients["source_records"])
+                    sections.extend(coefficients["sections"])
                     graphics = ensemble_scientific_figures.write(
                         source_directory, plan, basis, result, observed, uncertainty)
                     sections.append(["Scientific figure source and coverage", [
@@ -524,6 +547,10 @@ def prepare(workspace, consumer_id, *, render=True):
                     workspace.root, source_directory / recipe["figure_spec"])
                 operation["files"]["figure_coordinates"] = describe_file(
                     workspace.root, source_directory / ensemble_scientific_figures.INDEX)
+                for name in ("ensemble_coefficient_manifest", "ensemble_coefficient_cells"):
+                    path = coefficient_sources.MANIFEST if name.endswith("manifest") else coefficient_sources.CELLS
+                    if selection.get("coefficient_evidence") is not None:
+                        operation["files"][name] = describe_file(workspace.root, source_directory / path)
                 atomic_json(operation_path, operation)
             else:
                 workspace.source_file(operation["source"]["source_collection_id"], SOURCE_ID)
@@ -536,9 +563,14 @@ def prepare(workspace, consumer_id, *, render=True):
             operation.pop("error", None)
             operation["updated_at"] = now()
             atomic_json(operation_path, operation)
+            atomic_json(workspace.root / "ensemble-consumer-results" / plan["id"] / "latest-scientific-source.json",
+                        {"consumer_id": plan["id"], "source_operation_id": key})
             return operation
         except BaseException as error:
             operation.update(state="source_ready" if operation.get("source") else "failed",
                              error={"type": type(error).__name__, "message": str(error)}, updated_at=now())
             atomic_json(operation_path, operation)
+            if operation.get("source"):
+                atomic_json(workspace.root / "ensemble-consumer-results" / plan["id"] / "latest-scientific-source.json",
+                            {"consumer_id": plan["id"], "source_operation_id": key})
             raise

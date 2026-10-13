@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "ensembles",
   "title": "Scenario sensitivity",
-  "version": "4.6",
+  "version": "4.7",
   "order": 50,
   "assets": [
     "ensembles.mjs"
@@ -144,6 +144,19 @@
         ],
         "path": "/api/ensembles/study-source",
         "operation": "study-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/coefficient-evidence",
+        "operation": "coefficient-evidence",
         "handler": "read",
         "args": [
           "workspace_key",
