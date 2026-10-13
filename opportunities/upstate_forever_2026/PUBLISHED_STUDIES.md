@@ -347,6 +347,6 @@ Queued imports and exports keep their task and operation identities when the des
 
 The [stream observations guide](measurement_workspace/STREAM_OBSERVATIONS.md#sampling-coverage-and-original-network-context) describes the original nutrient and sampling-coverage reports, their separate percentile methods, upstream/downstream source identities and complete export/reopen path. Original report titles, the physical study, all current source registrations and the complete scientific companion tree remain part of this edition.
 
-## Paired sensitivity companion (1.7.2)
+## Paired sensitivity companion (1.8.1)
 
 The original stream study now retains its complete paired-sampling sensitivity report through the same context registry. Its 116 comparisons and 148 selections preserve station/analyte cohorts, source-row membership, censored interval bounds and the original parent report. Open **Eighteenmile paired sampling sensitivity**, inspect an original selection, then use the existing report/complete-study exports. The complete rebuilding layout and both original source manifests reopen together. See the [stream guide](measurement_workspace/STREAM_OBSERVATIONS.md#paired-sampling-sensitivity-in-the-retained-study) for the exact source and offline command.

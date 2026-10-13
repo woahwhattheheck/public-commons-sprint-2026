@@ -20,6 +20,7 @@ from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      verify_file, selected_models, required_roles, output_models)
 from .profiles import NDR_KEYS, SDR_KEYS, checked_parameters
 from . import rasters
+from .native_versions import model_versions, comparison_versions
 from .native_execution import storage_exhausted
 
 SELECTION_SCHEMA = "upstate.experiment-selection/v1"
@@ -103,11 +104,107 @@ def _apply(profile, changes):
     return value
 
 
+
+def _source_profile_in_design(workspace, selection, base, profile_id, models):
+    """Match one retained source profile without expanding a factorial design."""
+    profile = _profile_models(workspace._get("profiles", profile_id), models)
+    if profile_id in {base["id"], *selection["profile_ids"]}:
+        return True
+    axes = selection["axes"]
+    overrides = {axis["path"]: _parameter(profile, axis["path"])
+                 for axis in axes
+                 if _parameter(profile, axis["path"]) != _parameter(base, axis["path"])}
+    if not overrides or _derived_profile(base, overrides, axes)["id"] != profile_id:
+        return False
+    return next(_matching_raw_positions(selection, base, overrides), None) is not None
+
+
+def _source_binding(run, canonical_selection):
+    """Freeze a complete original source under its actual immutable run identity."""
+    original = run["selection"]
+    if run.get("id") != digest(original):
+        raise ValueError("The retained native source selection differs from its run ID")
+    if run.get("state") != "complete":
+        raise ValueError("Complete a noncanonical original source before adopting it into an experiment")
+    models = selected_models(original)
+    versions = model_versions(run, models)
+    if any(row["comparison_version"] != INVEST_VERSION for row in versions.values()):
+        raise ValueError("Every adopted producing model must use the supported native version "
+                         + INVEST_VERSION + "; inspect the original completed-stage provenance")
+    artifacts = {}
+    for name in output_models(models):
+        artifact = run.get("artifacts", {}).get(name)
+        if (not isinstance(artifact, dict) or not isinstance(artifact.get("path"), str)
+                or type(artifact.get("bytes")) is not int or artifact["bytes"] < 1):
+            raise ValueError("The completed native source lacks its original " + name + " descriptor")
+        identifier(artifact.get("sha256"))
+        artifacts[name] = copy.deepcopy(artifact)
+    return {
+        "schema": "upstate.experiment-native-source/v1",
+        "canonical_run_id": digest(canonical_selection),
+        "run_id": run["id"], "selection": copy.deepcopy(original),
+        "models": list(models),
+        "producing_versions": {model: versions[model]["comparison_version"] for model in models},
+        "artifacts": artifacts,
+    }
+
+
+def _source_runs(workspace, selection, baseline, base):
+    """Resolve explicit source cells once; ordinary canonical identities stay unchanged."""
+    models = selected_models(baseline["selection"])
+    allowed_scenarios = {baseline["selection"]["scenario_id"], *selection["scenario_ids"]}
+    sources = {baseline["id"]: baseline}
+    for key in _ids(selection.get("source_run_ids", []), "Original source run IDs"):
+        if key not in sources:
+            sources[key] = workspace.inspect_run(key)
+    seen, retained = {}, []
+    for key, run in sources.items():
+        original = run["selection"]
+        if (digest(original) != key
+                or original["grid_id"] != baseline["selection"]["grid_id"]
+                or selected_models(original) != models
+                or original["scenario_id"] not in allowed_scenarios
+                or not _source_profile_in_design(
+                    workspace, selection, base, original["profile_id"], models)):
+            raise ValueError("An original source run is outside the selected experiment's grid, models or cases: " + key)
+        canonical_selection = _run_selection(
+            original["grid_id"], original["profile_id"], original["scenario_id"], models)
+        canonical_id = digest(canonical_selection)
+        if canonical_id in seen and seen[canonical_id] != key:
+            raise ValueError("Choose one original native source for each experiment profile/scenario case")
+        seen[canonical_id] = key
+        if key != canonical_id:
+            retained.append(_source_binding(run, canonical_selection))
+    return sorted(retained, key=lambda row: row["canonical_run_id"])
+
+
+def _validate_sources(workspace, plan):
+    """Reopen the exact saved originals without changing a retained plan or source."""
+    selected = plan["selection"]
+    retained = plan.get("source_runs", [])
+    if not retained and "source_run_ids" not in selected:
+        return
+    baseline = workspace.inspect_run(plan["baseline"]["run_id"])
+    base = workspace._get("profiles", plan["baseline"]["profile_id"])
+    actual = _source_runs(workspace, selected, baseline, base)
+    if (not retained or actual != retained
+            or selected.get("source_run_ids") != sorted(row["run_id"] for row in actual)):
+        raise ValueError("The experiment's frozen original source bindings differ from the retained runs")
+
+
+def _adopted_selection(plan, canonical_selection):
+    key = digest(canonical_selection)
+    for source in plan.get("source_runs", []):
+        if source["canonical_run_id"] == key:
+            return copy.deepcopy(source["selection"]), copy.deepcopy(source)
+    return canonical_selection, None
+
+
 def _normalise(workspace, selected):
     if not isinstance(selected, dict):
         raise ValueError("Supply an experiment selection object")
     unknown = set(selected) - {"schema", "title", "reason", "baseline_run_id",
-                               "scenario_ids", "profile_ids", "design", "axes"}
+                               "scenario_ids", "profile_ids", "design", "axes", "source_run_ids"}
     if unknown:
         raise ValueError("Unknown experiment fields: " + ", ".join(sorted(unknown)))
     if selected.get("schema", SELECTION_SCHEMA) != SELECTION_SCHEMA:
@@ -116,7 +213,9 @@ def _normalise(workspace, selected):
     base_selection = baseline["selection"]
     models = selected_models(base_selection)
     if base_selection.get("invest_version") != INVEST_VERSION:
-        raise ValueError("Select a baseline from the current native model version")
+        _source_binding(baseline, _run_selection(
+            base_selection["grid_id"], base_selection["profile_id"],
+            base_selection["scenario_id"], models))
     grid = workspace.get_grid(base_selection["grid_id"])
     if not set(models).issubset(selected_models(grid["spec"])):
         raise ValueError("The reference run selects native models outside its retained grid")
@@ -175,6 +274,14 @@ def _normalise(workspace, selected):
         "baseline_run_id": baseline["id"], "scenario_ids": scenario_ids,
         "profile_ids": profile_ids, "design": design, "axes": normal_axes,
     }
+    requested_sources = _ids(selected.get("source_run_ids", []), "Original source run IDs")
+    if requested_sources:
+        selection["source_run_ids"] = requested_sources
+    sources = _source_runs(workspace, selection, baseline, base_profile)
+    if sources:
+        selection["source_run_ids"] = sorted(row["run_id"] for row in sources)
+    else:
+        selection.pop("source_run_ids", None)
     # This also rejects nonfinite values in retained metadata before publication.
     canonical(selection)
     return selection, baseline, base_profile, base_scenario
@@ -391,7 +498,9 @@ def preview(workspace, selection):
                  "scenario_id": baseline["selection"]["scenario_id"],
                  "grid_id": baseline["selection"]["grid_id"]}
     _retain_model_choice(reference, models)
+    sources = _source_runs(workspace, selection, baseline, base)
     return {
+        **({"source_runs": sources} if sources else {}),
         "schema": "upstate.experiment-preview/v1", "selection": selection,
         "baseline": reference, "models": list(models),
         "pollutants": list(output_models(models)),
@@ -415,10 +524,12 @@ def _plan(workspace, key):
         raise ValueError("The experiment selection differs from the retained workspace")
     reference = workspace.inspect_run(plan["baseline"]["run_id"])
     selected = reference["selection"]
-    if (selected.get("invest_version") != INVEST_VERSION
-            or any(selected[name] != plan["baseline"][name]
-                   for name in ("grid_id", "profile_id", "scenario_id"))):
+    if (any(selected[name] != plan["baseline"][name]
+            for name in ("grid_id", "profile_id", "scenario_id"))
+            or (selected.get("invest_version") != INVEST_VERSION
+                and reference["id"] not in plan["selection"].get("source_run_ids", []))):
         raise ValueError("The experiment reference differs from its retained native selection")
+    _validate_sources(workspace, plan)
     active = selected_models(selected)
     if ("models" in plan["baseline"]
             and selected_models(plan["baseline"]) != active):
@@ -449,6 +560,8 @@ def prepare(workspace, selection):
     plan = {"schema": PLAN_SCHEMA, "workspace_id": workspace.project["id"],
             "selection": proposed["selection"], "baseline": proposed["baseline"],
             "counts": proposed["counts"]}
+    if proposed.get("source_runs"):
+        plan["source_runs"] = proposed["source_runs"]
     key = digest(plan)
     directory = _directory(workspace, key)
     directory.mkdir(parents=True, exist_ok=True)
@@ -482,13 +595,23 @@ def _run_selection(grid_id, profile_id, scenario_id, models=None):
 def _case_definition(plan, option, scenario, ordinal):
     baseline = plan["baseline"]
     models = selected_models(baseline)
-    own_baseline = digest(_run_selection(
+    baseline_selection, baseline_source = _adopted_selection(plan, _run_selection(
         baseline["grid_id"], option["id"], baseline["scenario_id"], models))
+    own_baseline = digest(baseline_selection)
     is_baseline = scenario["id"] == baseline["scenario_id"]
     kind = ("reference" if option["id"] == baseline["profile_id"] else "parameter") if is_baseline else "landcover"
-    run_selection = _run_selection(baseline["grid_id"], option["id"], scenario["id"], models)
+    run_selection, native_source = _adopted_selection(
+        plan, _run_selection(baseline["grid_id"], option["id"], scenario["id"], models))
     run_id = digest(run_selection)
     paired_baseline = baseline["run_id"] if is_baseline else own_baseline
+    if is_baseline:
+        baseline_source = next((copy.deepcopy(row) for row in plan.get("source_runs", [])
+                                if row["run_id"] == paired_baseline), None)
+    adopted = {}
+    if native_source is not None:
+        adopted["native_source"] = native_source
+    if baseline_source is not None:
+        adopted["native_baseline_source"] = baseline_source
     identity = {"run_id": run_id, "baseline_run_id": paired_baseline, "kind": kind}
     original = {}
     case_identity = identity
@@ -503,7 +626,7 @@ def _case_definition(plan, option, scenario, ordinal):
                     "source_selection": source_selection}
     return {
         "schema": CASE_SCHEMA, "id": digest(case_identity), "ordinal": ordinal,
-        **identity, **original, "profile_id": option["id"], "profile_title": option["profile"]["title"],
+        **identity, **original, **adopted, "profile_id": option["id"], "profile_title": option["profile"]["title"],
         "scenario_id": scenario["id"], "scenario_title": scenario["title"],
         "selection": run_selection, "models": list(models),
         "pollutants": list(output_models(models)), "state": "pending", "changes": option["changes"],
@@ -531,6 +654,9 @@ def _retained_case(directory, expected):
     fields = ("schema", "id", "run_id", "baseline_run_id", "kind", "profile_id",
               "scenario_id", "selection", "ordinal")
     if all(value.get(field) == expected[field] for field in fields):
+        if any(value.get(field) != expected.get(field)
+               for field in ("native_source", "native_baseline_source")):
+            raise ValueError("The retained experiment case changed its frozen native source")
         return {**expected, **value}
     if "source_selection" in expected:
         original = {**expected, "run_id": expected["source_run_id"],
@@ -676,6 +802,15 @@ def expanded_cases(workspace, experiment_id, offset=0, limit=100):
 
 
 def _prepare_case_run(workspace, case, option):
+    if case.get("native_source") is not None:
+        run = workspace.inspect_run(case["run_id"])
+        selected = run["selection"]
+        canonical_selection = _run_selection(selected["grid_id"], selected["profile_id"],
+                                             selected["scenario_id"], selected_models(selected))
+        if (_source_binding(run, canonical_selection) != case["native_source"]
+                or selected != case["selection"]):
+            raise ValueError("The adopted original native run differs from its saved experiment case")
+        return run
     if option["derived"]:
         path = workspace.root / "profiles" / (option["id"] + ".json")
         profile = (workspace._get("profiles", option["id"]) if path.exists()
@@ -791,10 +926,19 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
 
 def _records(directory):
     result = []
+    plan = read_json(directory / "plan.json")
+    if digest(plan) != directory.name:
+        raise ValueError("The original experiment plan identity changed")
+    source_runs = {row["run_id"]: row for row in plan.get("source_runs", [])}
     lineage_keys = ("source_run_id", "source_baseline_run_id", "source_selection")
     for path in (directory / "cases").glob("*.json"):
         value = read_json(path)
         identity = {key: value[key] for key in ("run_id", "baseline_run_id", "kind")}
+        for field, run_field in (("native_source", "run_id"),
+                                 ("native_baseline_source", "baseline_run_id")):
+            expected_source = source_runs.get(value[run_field])
+            if value.get(field) != expected_source:
+                raise ValueError("A retained experiment case differs from its frozen original native source")
         retained_lineage = [key in value for key in lineage_keys]
         if any(retained_lineage):
             if not all(retained_lineage):
@@ -1084,6 +1228,8 @@ def execute(workspace, experiment_id, *, completed_only=False):
                     reference = workspace.inspect_run(case["baseline_run_id"])
                     if reference["state"] != "complete":
                         raise RuntimeError("The paired baseline is unfinished; the alternative native outputs are retained")
+                    producing_versions = comparison_versions(
+                        [reference, run], selected_models(case["selection"]))
                     comparison = None
                     if reference["id"] != run["id"]:
                         comparison = workspace.compare_runs([reference["id"], run["id"]])
@@ -1093,6 +1239,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
                                 comparison_id=comparison["id"] if comparison else None,
                                 native_completed_at=run["completed_at"],
                                 native_runtime=run.get("runtime"),
+                                native_versions=producing_versions,
                                 native_stage_reuse={model: stage["reused_from"]
                                     for model, stage in run.get("stages", {}).items()
                                     if stage.get("reused_from")},

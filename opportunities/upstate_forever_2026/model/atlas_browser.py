@@ -220,6 +220,9 @@ def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="deliver
                                 download=PurePosixPath(item["path"]).suffix.lower() not in (".pdf", ".html"))
                            for name, item in state.get("files", {}).items()
                            if name.startswith("source_report_") and item["path"] in members)
+    briefing = state.get("files", {}).get("client_report_briefing") or {}
+    briefing_link = (_link(briefing["path"], "Open customer briefing")
+                     if briefing.get("path") in members else "")
     script_hash = base64.b64encode(hashlib.sha256(SCRIPT.encode("utf-8")).digest()).decode("ascii")
     policy = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-" + script_hash +
               "'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'")
@@ -233,7 +236,7 @@ def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="deliver
                   "Explore the " + str(len(families)) + " map families, selected alternatives and original source context.") +
             '</p><div class="actions">' + _link(atlas["file"]["path"], "Open complete atlas") +
             _link(atlas["file"]["path"], "Download atlas PDF", download=True) +
-            _link(manifest["report_pdf"], "Open scientific report") +
+            _link(manifest["report_pdf"], "Open scientific report") + briefing_link +
             _link(manifest_path, "Download delivery inventory" if manifest_path != "delivery.json"
                   else "Download delivery manifest", download=True) +
             '</div></header><main><section aria-labelledby="edition"><h2 id="edition">This atlas edition</h2>'

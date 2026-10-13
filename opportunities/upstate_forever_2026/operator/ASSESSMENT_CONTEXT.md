@@ -4,10 +4,6 @@ This desk connects retained assessment records, original watershed geography and
 original parcel studies. It creates two saved products: a source-bound assessment
 context edition, and an independent parcel geographic-association result.
 
-Needs expert review: interpreting an assessment listing and its relationship to
-land-management decisions requires the original assessment scope, status and
-geographic relationship.
-
 ## Geographic meaning
 
 A context polygon describes where selected original assessment records are
@@ -50,14 +46,22 @@ The maintained extension registry discovers these six files:
 Restart the maintained operator after source installation. Open **Assessment
 context**.
 
-1. Select a completed station-geography edition, its original assessment table,
-   and an original watershed source retained by that edition.
-2. Select exact original causes, impaired uses, counties or assessment editions.
-   An empty filter includes all original values. For another inventory, use
-   **Original field bindings** to choose the actual column names.
+1. Select a completed station-geography edition and an original watershed source
+   retained by that edition. The desk initially selects every retained assessment
+   inventory. Keep all three inventories for the 164-station / 293-record study,
+   or select an explicit subset.
+2. Select exact original causes, uses, support values, counties or assessment
+   editions. An empty filter includes all original values. All filter conditions
+   match the same original record. A literal combined use such as `AL, REC`
+   remains one source value. Each selected inventory has its own original field
+   bindings and source metadata. Missing support remains unknown and can be
+   selected explicitly as an unreported original field.
 3. Choose the published-watershed or computed-membership relationship. The
    original assessment file SHA locks the known 2026 draft's title, status,
-   vintage and public reference. The context title is independently editable.
+   vintage and public reference. Other inventories retain their original manifest
+   title, publication status, vintage and reference whenever provided; original
+   row bindings preserve their more specific edition metadata. The context title
+   remains independently editable.
 4. Prepare the context through the original operator task queue. Inspect its
    map, original rows, source details, unresolved locations, multiple memberships,
    association differences and original edition/cause/use groups.
@@ -66,7 +70,9 @@ context**.
 6. Inspect original parcel IDs, reporting area, union context overlap area and
    fraction, boundary-only contacts, original attributes and linked assessment
    rows. Search the complete result or download the filtered parcel CSV.
-7. Reopen either saved product from its edition selector. Download complete
+7. Reopen either saved product from its edition selector or completed task's
+   **Open assessment context result** button. Use **Use this saved selection for
+   a new context** to restore every original inventory, binding and filter. Download complete
    JSON, GeoJSON, CSV, HTML and ZIP exports. Both context and parcel packages have
    their own receiving controls in the same desk.
 
@@ -102,14 +108,22 @@ use/impaired_use, source_vintage, publication_status and source_uri. These exact
 column-name defaults follow the current source producer. If the station edition
 already carries assessment_records, their original record ID, edition source ID
 and original publisher SHA remain attached. Group identities include that source
-identity, evidence kind, assessment period and status date. Every per-row value
-remains in the canonical result and source details. Empty original values remain
+identity, evidence kind, assessment period and status date. Authoritative native producer publication status, source vintage and original
+source URI take precedence when supplied; explicit original-field bindings
+serve inventories without those producer values. The exact known draft retains
+its canonical 2026 edition label, while the original source-vintage description
+remains in native_assessment. Every per-row value remains in the canonical result
+and source details. Empty original values remain
 empty. Fields not supplied by the source use the explicitly selected inventory
 metadata, whose scope remains visible.
 
-Rows are identified by their retained source reference and original row number.
+Rows retain their original row number and a stable `assessment_row_id` derived
+from the original inventory body SHA256 and source position. Destination Workspace
+collection IDs do not enter that identity. A row number repeated in another
+inventory cannot collapse a record, polygon membership or parcel association.
 The same station and cause in two editions remain two original records. Aggregate
-groups include each row's assessment metadata, edition, cause and impaired use.
+groups include each row's assessment metadata, edition, cause, use and original
+support. Each group also retains its exact stable row IDs.
 Whole-study and polygon station counts are distinct IDs, while original assessment
 row counts retain all editions. Polygon properties carry inventory labels and
 the full assessment_groups_json; an inventory label does not replace the
@@ -148,6 +162,13 @@ Use identifiers returned by catalog and options, not example placeholders:
 }
 ```
 
+The single-inventory selection above remains accepted for existing callers.
+New saved selections carry an `inventories` array, each member containing the
+original `table` reference, `fields`, `assessment` metadata and original body
+SHA256. The top-level relationship and filters apply to the selected original
+rows together. The operator constructs this selection directly from the retained
+study options, so no source references need to be typed by hand.
+
 Each table must already be an original site_tables selection in the station
 edition. Each watershed source must already be selected there. Exact source
 SHA256 values and the station edition bind the context selection. A source,
@@ -171,7 +192,8 @@ The saved result distinguishes:
 - Union area of all selected context polygon intersections within that clipped
   parcel, divided by the clipped parcel area.
 - Individual parcel/context relationships, each with its original watershed
-  reference, station IDs, assessment row numbers, overlap area and fraction.
+  reference, station IDs, stable assessment row IDs, original row numbers,
+  overlap area and fraction.
 - Positive-area overlap, boundary-only contact and no selected intersection.
 
 Overlapping context polygons are unioned within each parcel before its area and
@@ -218,8 +240,12 @@ inventory mismatches. Nested original files are retained even when their names
 coincide with contribution-owned top-level metadata.
 
 The context receiver imports original station sources using the maintained
-station receiver, resolves the same source IDs and original hashes, and rebuilds
-the editable context with destination collection IDs.
+station receiver, resolves every selected inventory and watershed by the same source IDs and
+original hashes, and rebuilds
+the editable context with destination collection IDs. Its package retains an
+ordered inventory-source identity list. The receiver preserves the old single
+inventory package format as well as the current multi-inventory format. Stable
+assessment row IDs remain identical after rebinding.
 
 The parcel receiver retains the complete original result and archive, receives
 its original context, imports the original parcel/reporting sources, and records
@@ -282,3 +308,51 @@ the complete parcel package and reopen it through receive-parcels. Compare
 original parcel IDs, row links, relationship areas and source hashes. Reopen
 the saved editions in the maintained operator. This acceptance belongs to the
 same original source operation; no alternate artificial study is required.
+
+
+## Complete all-editions study
+
+The maintained prepared-study catalogue retains three separate choices: the
+2026 draft inventory (101 rows at 87 stations), the two published inventories
+(192 rows at 159 stations), and their union (293 rows at 164 stations). The union
+keeps the five draft-only stations; it does not relabel draft rows as published.
+
+Open the saved 164-station study in this desk and leave its three inventories
+selected. The source rows retain the published 2024 listing, July 28, 2026 TMDL
+attainment status and 2026 draft inventory as separate original sources.
+Geographic context follows the selected relationship, while both original
+published and computed polygon associations remain exported.
+
+Support belongs to the original cause, use and edition. For example, a station
+may retain a BIO / AL assessment and a fully supported ECOLI / REC record from
+another edition. Selecting ECOLI and fully_supported must match one record; it
+cannot combine the cause from one record with support from another. An inventory
+without a use_support field retains an unreported value. Published source
+publication_status and per-record use_support are separate concepts.
+
+Complete CSV and JSON exports include assessment_row_id, the original row number,
+cause, use, support, edition metadata, publisher record ID, original inventory
+reference and untouched original fields. Watershed and parcel products carry
+assessment_row_ids alongside their original row-number displays. Distinct row
+counts use those stable identities across inventories.
+
+### One native receiving journey
+
+Use the existing source operation and actual saved 164-station edition:
+
+1. Open Assessment context; select the study and its three original inventories.
+2. Build all editions, then inspect the actual summary, original groups and map.
+3. Restore the saved selection, choose an original cause/use/support/edition
+   combination and build a separate saved context.
+4. Export the complete all-editions ZIP and receive it in the existing receiving
+   Workspace. Compare each assessment_row_id, original record and geographic
+   association before and after rebinding.
+5. If an actual parcel study is retained, calculate its independent associations
+   and compare linked row IDs and overlap values after portable receiving.
+6. Reopen both results from their completed tasks after leaving the desk.
+
+The expected 293-row inventory total describes the full unfiltered source study.
+A context with fewer rows must retain its exact filter and inventory selection;
+the result is never padded with missing records.
+
+The saved report and operator show each original edition reference as its own source link. A context spanning multiple original references uses its stable `urn:upstate:assessment-context:<build_id>` as the derived source URI and preserves the individual references in `metadata.original_source_references`.

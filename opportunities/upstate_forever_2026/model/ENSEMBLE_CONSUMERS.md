@@ -366,3 +366,54 @@ The consumer saves readable companions under ensemble-flow-reports and resumable
 preparation under ensemble-flow-operations. Every published descriptor is
 Workspace-relative. Original source bodies, the scientific handoff, the linked
 context and its report travel in the maintained complete Workspace backup.
+
+## Saved calibration in the complete scientific report
+
+A saved annual-reference calibration can now be prepared as an original scientific source in the same Workspace. This carries its actual candidate ranking, physical catchment quantities, declared objective, original observation rows, source periods, selected spatial holdout, source-error sensitivity, and any exact-period daily-flow support into the maintained scientific formatter.
+
+Open the saved calibration from **Scenario sensitivity → saved scientific results**. Choose **Prepare scientific report**. The original Operations queue packages and registers the source, then writes PDF, offline HTML, Markdown, structured report data and a ZIP containing every report source companion. Reopen that same saved result for its downloads. **Include in delivery** refreshes the actual source catalogue and opens the existing delivery form with this report selected. Its ordinary run and source selectors remain available. Other scientific sources can be selected in their intended order.
+
+The equivalent current CLI is:
+
+```sh
+"$ACTUAL_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$ACTUAL_WORKSPACE" \
+  scientific-source --consumer-id "$ACTUAL_SAVED_CONSUMER_ID"
+```
+
+Use `--source-only` to register the complete typed document independently of PDF rendering. The source remains available if a rendering dependency needs repair; rerun the same command to complete the original preparation. This command uses original completed calibration IDs and source records. It does not launch another native model study.
+
+The original source lives under `ensemble-scientific-sources/<source-operation-id>/source/`. Its native manifest is `sources.json`, its typed recipe is `scientific-report.json`, and the operation returns actual source collection/document IDs. The entry uses `kind: document`, role `OBSERVED_CONTEXT`, and `metadata.report_schema: upstate.observed-report/v1`; therefore the existing ordered scientific-source picker and collector consume it directly.
+
+### Preserve an existing delivery's scientific source choices
+
+Compose this source into a retained delivery selection with:
+
+```sh
+"$ACTUAL_PYTHON" -B -m model.ensemble_consumers_cli --workspace "$ACTUAL_WORKSPACE" \
+  scientific-selection --consumer-id "$ACTUAL_SAVED_CONSUMER_ID" \
+  --selection "$ACTUAL_EXISTING_DELIVERY_SELECTION" --output "$ACTUAL_NEW_SELECTION"
+```
+
+The result appends the exact collection/document pair once, preserves the existing ordered scientific source list and other selections, sets the legacy primary role to the first selected source, and removes the prior source binding so the maintained delivery producer can bind the new complete selection. Omit `--selection` for a source-only prefill. A partial native NDR or SDR calibration remains a valid scientific source; the main full-model delivery form continues to require its actual complete delivery runs.
+
+Existing extension consumers can open the same form through
+`host.openExtension("ensembles", "scientificDelivery", {workspace_key, consumer_id, delivery_selection})`.
+The optional `delivery_selection` preserves the caller's existing sources. The current shared host supplies `refresh` and `openDelivery`; no second report picker or queue is introduced.
+
+### Original numerical interpretation
+
+The producer reads the immutable `calibrations`, `calibration-plans`, `observations`, original observation-comparisons, and optional `calibration-uncertainties` records. It retains all candidates in full structured data and CSV. Printed physical quantities carry their original units. Residual means predicted annual mass minus observed annual mass. The candidate-selection objective is the original dimensionless equal-spatial-group normalized squared error, with its saved constituent weights and normalization. The held-out validation and source-error sensitivity retain their original methods and selected candidate.
+
+The report includes actual candidate failures, excluded reference rows and pending study members. A saved result with no eligible candidates still produces its actual source-status and support report. It does not manufacture a selected profile or physical prediction.
+
+When selected, exact-flow context is revalidated against the original annual import, observation/preparation identities, native record IDs, flow stations, series and exclusive period ends. Its report tables retain numeric/requested daily counts, outside-source days, approved/estimated/provisional qualifiers, covered-days volume and complete-period volume. Qualifier categories retain their original meanings and can overlap. The original annual-load estimator and calibration weighting are unchanged. Complete source-response bodies, station-date availability, binding JSON and source tables are companions of the same typed document.
+
+### Source closure, export and reopening
+
+The prepared source includes the original saved handoff, calibration plan/result, optional uncertainty, original observation data/metadata, native run/grid/profile/scenario records, original observation comparisons, annual-import documents, selected catchment and biophysical-source primary bodies and all their companions, and the complete selected flow-support source edition. Tables and linked records are emitted through the same original collector as the other selected scientific reports.
+
+PDF, HTML, Markdown and `report-data.json` use the same ordered typed blocks. Their ZIP retains all collector-copied original members and relative links. Full precision remains in the original JSON and CSV; display formatting is the maintained report formatter's responsibility. The preparation preserves a completed source separately from rendering, so rendering can resume against the same source IDs. Its report cache is tied to the actual bound source, collector source hash and formatter source hash.
+
+The existing portable Workspace backup recursively includes the original source objects, `ensemble-scientific-sources`, annual-reference operations, flow support and saved calibration records. Restore with the maintained Workspace receiver, reopen the same saved consumer and choose its existing source/report. Every retained file descriptor is relative to the receiving Workspace; no old container path is needed to open the source. A newly selected uncertainty result produces its own source identity while the earlier exported edition remains available.
+
+This section describes the source-exact integration. The original equipped receiving operation7208/4610 runs the actual Python/report journey against its retained Workspace and reports the first native exception for repair.
