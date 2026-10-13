@@ -3,13 +3,13 @@
   "files": [
     {
       "path": "pmrs_cloud_gateway.py",
-      "bytes": 27750,
-      "sha256": "9a6ca36f8714b36141ebe1c397420bc87d1ec064ff7be2488a4990d18a086b3a"
+      "bytes": 27983,
+      "sha256": "2ca49c934b1e421a528bd296e8bd2c65cea803751dc4ca0395f6ae40ccbba3f4"
     },
     {
       "path": "connector/apiDefinition.swagger.json",
-      "bytes": 14252,
-      "sha256": "ae77e8a5b4390d0d7ce5c3380c51ef45622b89082d76918b02bd417cc466d444"
+      "bytes": 14457,
+      "sha256": "36395a8e38cddc16bc0c80f8bb9c3d6fdf29a3cbd1bab9f0207ceca6ec622504"
     },
     {
       "path": "connector/apiProperties.json",
@@ -18,18 +18,18 @@
     },
     {
       "path": "flows/capture.clientdata.json",
-      "bytes": 8896,
-      "sha256": "eed4be355f3108d69497966ad78d12fe974f0064034e6e74b5a2229950fbf432"
+      "bytes": 8951,
+      "sha256": "c45f3cb693e5ec5006fac916b6cd840a168846a12e5893bf5f561c63258fe652"
     },
     {
       "path": "flows/prepare.clientdata.json",
-      "bytes": 8896,
-      "sha256": "8dfd5af97d8f9f07bedd15d850a07ddb018b622426b5655e7d603ec69d37db1c"
+      "bytes": 8951,
+      "sha256": "2f12e98434d65181a9bc7689c92690cc4ee8069d91c10b4e9943d738bfeefd1a"
     },
     {
       "path": "flows/delivery.clientdata.json",
-      "bytes": 8897,
-      "sha256": "725ca18570e10783f34bdbc2f77f371c4e8f20b524ff532140caa2dd6d26a2af"
+      "bytes": 8952,
+      "sha256": "b2a49e3b0cc8ba6581b067857019e8d9b319f43b096d2df93351a88286d535c0"
     },
     {
       "path": "pmrs_cloud_deploy.py",
@@ -38,8 +38,8 @@
     },
     {
       "path": "pmrs_cloud_client.py",
-      "bytes": 9619,
-      "sha256": "35f5202729309091200e503b3b3cf3b6af0d4b31165df9ca6962a15cf97dfac2"
+      "bytes": 12300,
+      "sha256": "84b362675a908bdf03f7b163ad609269cf4fe87658b06fa9d95dbf46fcca1075"
     },
     {
       "path": "README.md",
@@ -53,13 +53,13 @@
     },
     {
       "path": "DEPLOYMENT.md",
-      "bytes": 9483,
-      "sha256": "054d0eba5b5a54aef78901cd859e6c32543c93362125d1d5b4df36e0230dabe0"
+      "bytes": 9649,
+      "sha256": "11aeeb094211ab6eab85b2b039658636c57843197e247e1298500caa7f5a50e0"
     },
     {
       "path": "OPERATIONS.md",
-      "bytes": 7672,
-      "sha256": "98a732a4a5594f37692a23972dbb909abe05296864367abeca26d70f5f89b3fe"
+      "bytes": 8067,
+      "sha256": "15fd6f0838408de438c726a2b86d51853e7086e2e3fac9798312997eb8ba762d"
     },
     {
       "path": "RECEIVING.md",

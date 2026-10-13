@@ -12,7 +12,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from pmrs_cloud_gateway import CallerError, need, private_file, NoRedirect, MAX_BODY, decode
+from pmrs_cloud_gateway import CallerError, need, private_file, NoRedirect, MAX_BODY, decode, UUID
 from pmrs_cloud_deploy import body, save, locked, now, parse
 
 def request(origin, credentials, method, path, payload, ca_file=None):
@@ -54,18 +54,25 @@ def run(args):
     credentials = parse(private_file(Path(args.credentials).absolute()))
     need(args.principal in credentials, "PRINCIPAL", "Select an existing caller principal.")
     with locked(directory / ".client.lock"):
-        raw_command = Path(args.command_file).read_bytes() if args.command_file else None
+        raw_command = None
+        if args.command_file:
+            original_file = Path(args.command_file)
+            need(original_file.is_file() and not original_file.is_symlink()
+                 and original_file.stat().st_size <= MAX_BODY,
+                 "COMMAND_FILE", "Select a complete regular original command file within 2 MiB.")
+            with original_file.open("rb") as stream: raw_command = stream.read(MAX_BODY + 1)
+            need(len(raw_command) <= MAX_BODY, "COMMAND_LIMIT", "The original command grew beyond 2 MiB.")
         if raw_command is not None:
             need(len(raw_command) <= MAX_BODY, "COMMAND_LIMIT", "The original command exceeds 2 MiB.")
             original = decode(raw_command)
             identifier = original.get("id") if isinstance(original, dict) else None
-            need(isinstance(identifier, str), "COMMAND", "Select the complete original command file.")
+            need(isinstance(identifier, str) and UUID.fullmatch(identifier), "COMMAND", "Select the complete original UUIDv4 command file.")
             selected = {"kind": "command", "id": identifier, "principal": args.principal,
-                        "origin": args.origin.rstrip("/"), "command_sha256": hashlib.sha256(raw_command).hexdigest(),
+                        "origin": args.origin.rstrip("/"), "workspace_id": args.workspace_id, "command_sha256": hashlib.sha256(raw_command).hexdigest(),
                         "group": args.group}
         else:
             selected = {"kind": args.resource, "id": args.identifier, "principal": args.principal,
-                        "origin": args.origin.rstrip("/")}
+                        "origin": args.origin.rstrip("/"), "workspace_id": args.workspace_id}
         journal_path = directory / "client.json"
         journal = parse(journal_path.read_bytes()) if journal_path.exists() else {
             "schema": "commons.pmrs-caller-receiving.v1", "selected": selected, "attempts": []}
@@ -75,13 +82,7 @@ def run(args):
             if original_path.exists():
                 need(original_path.read_bytes() == raw_command, "COMMAND_CHANGED", "Original command bytes changed.")
             else: save(original_path, raw_command)
-        path = ("/v1/" + args.group if raw_command is not None else
-                "/v1/" + {"command": "commands", "delivery": "deliveries", "record": "records"}[args.resource]
-                + "/" + urllib.parse.quote(args.identifier, safe=""))
-        payload = {"command_json": raw_command.decode("utf-8"), "resume_interrupted": args.resume_interrupted} if raw_command is not None else None
-        method = "POST" if payload is not None else "GET"
-        deadline = time.monotonic() + args.wait_seconds
-        while True:
+        def perform(method, path, payload):
             number = len(journal["attempts"]) + 1
             attempt = {"number": number, "method": method, "path": path, "started_at": now(),
                        "state": "DISPATCHING", "resume_interrupted": args.resume_interrupted if payload else False}
@@ -96,20 +97,51 @@ def run(args):
             journal["latest"] = attempt.copy()
             save(journal_path, body(journal))
             result = parse(raw)
-            if status == 200 and isinstance(result, dict) and isinstance(result.get("native_json"), str):
-                native = result["native_json"].encode("utf-8")
-                need(hashlib.sha256(native).hexdigest() == result.get("native_sha256"),
-                     "NATIVE_DIGEST", "The exact native response digest differs.")
-                native_name = "native-" + str(number).zfill(6) + ".json"
-                save(directory / native_name, native)
-                attempt["native_file"] = native_name
-                attempt["native_sha256"] = result["native_sha256"]
-                journal["workspace_id"] = result.get("workspace_id")
-                journal["original_state"] = result.get("state")
-                journal["delivery_state"] = result.get("delivery_state", "")
-            save(journal_path, body(journal))
             need(status == 200, "CALLER_REFUSED", "The selected caller returned an original refusal; inspect the saved complete response.", status,
                  response_file=str(directory / response_name))
+            need(isinstance(result, dict) and result.get("workspace_id") == args.workspace_id,
+                 "WORKSPACE_CHANGED", "This response belongs to another original workspace; retain the selected workspace.", 409)
+            need(isinstance(result.get("native_json"), str), "NATIVE_RESPONSE", "The complete native response text is missing.", 502)
+            native = result["native_json"].encode("utf-8")
+            need(hashlib.sha256(native).hexdigest() == result.get("native_sha256"),
+                 "NATIVE_DIGEST", "The exact native response digest differs.")
+            native_name = "native-" + str(number).zfill(6) + ".json"
+            save(directory / native_name, native)
+            attempt["native_file"] = native_name
+            attempt["native_sha256"] = result["native_sha256"]
+            native_value = parse(native)
+            need(isinstance(native_value, dict) and native_value.get("ok") is True,
+                 "NATIVE_RESPONSE", "The original native response has no successful envelope.", 502)
+            native_value = native_value.get("value")
+            if path == "/v1/health":
+                need(isinstance(native_value, dict) and
+                     native_value.get("workspace", {}).get("workspace_id") == args.workspace_id,
+                     "WORKSPACE_CHANGED", "The actual native health belongs to another workspace.", 409)
+            else:
+                expected_id = selected["id"]
+                response_id = ("command_id" if selected["kind"] == "command" else
+                               "delivery_id" if selected["kind"] == "delivery" else "record_id")
+                need(result.get(response_id) == expected_id and isinstance(native_value, dict)
+                     and native_value.get("id") == expected_id,
+                     "ORIGINAL_ID_CHANGED", "The received response belongs to another original command or record.", 409)
+                if raw_command is not None:
+                    need(result.get("kind") == original.get("kind") == native_value.get("kind"),
+                         "ORIGINAL_KIND_CHANGED", "The native command kind differs from the retained original.", 409)
+            journal["workspace_id"] = args.workspace_id
+            journal["original_state"] = result.get("state")
+            journal["delivery_state"] = result.get("delivery_state", "")
+            save(journal_path, body(journal))
+            return result, response_name
+        # Establish the chosen native workspace before any new or resumed mutation.
+        perform("GET", "/v1/health", None)
+        path = ("/v1/" + args.group if raw_command is not None else
+                "/v1/" + {"command": "commands", "delivery": "deliveries", "record": "records"}[args.resource]
+                + "/" + urllib.parse.quote(args.identifier, safe=""))
+        payload = {"workspace_id": args.workspace_id, "command_json": raw_command.decode("utf-8"), "resume_interrupted": args.resume_interrupted} if raw_command is not None else None
+        method = "POST" if payload is not None else "GET"
+        deadline = time.monotonic() + args.wait_seconds
+        while True:
+            result, response_name = perform(method, path, payload)
             if result.get("stop_polling") is not False or args.wait_seconds == 0 or time.monotonic() >= deadline:
                 return {"result_directory": str(directory), "state": result.get("state"),
                         "delivery_state": result.get("delivery_state"), "command_id": result.get("command_id"),
@@ -123,6 +155,7 @@ def run(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--origin", required=True); p.add_argument("--credentials", required=True)
+    p.add_argument("--workspace-id", required=True, help="The actual original workspace UUID from the private native entry.")
     p.add_argument("--principal", choices=["capture", "prepare", "delivery"], required=True)
     p.add_argument("--output", required=True); p.add_argument("--ca-file")
     p.add_argument("--command-file"); p.add_argument("--group", choices=["capture", "prepare", "delivery"])
@@ -132,6 +165,7 @@ def main():
     p.add_argument("--wait-seconds", type=int, default=0)
     args = p.parse_args()
     try:
+        need(UUID.fullmatch(args.workspace_id), "WORKSPACE_ID", "Retain the actual original workspace UUIDv4.")
         need(0 <= args.wait_seconds <= 3600, "WAIT", "Select a polling window from zero to 3600 seconds.")
         need((bool(args.command_file) and bool(args.group) and not args.resource and not args.identifier)
              or (not args.command_file and not args.group and bool(args.resource) and bool(args.identifier)

@@ -29,7 +29,7 @@ An existing QUEUED, RUNNING or terminal command is returned as it stands. An INT
 | Prepare/review | mapping, reconcile, target-review, export | Original selected records and complete local handover |
 | Delivery/recovery | deliver, recover, continue-delivery | Existing reviewed conditional target request and its original row states |
 
-Each flow first checks the selected live workspace. It submits once with its automatic mutation retry disabled, retains the returned command ID, and polls that exact ID every ten seconds while it is running. The one-hour polling window can end while the native command is still active; the result directs the operator to read the same command. The original service keeps working.
+Each flow first checks the selected live workspace and binds its expected workspace_id into the actual submit body. The caller checks that body identity before any native dispatch, preserving the selection across a restart between requests. It submits once with its automatic mutation retry disabled, retains the returned command ID, and polls that exact ID every ten seconds while it is running. The one-hour polling window can end while the native command is still active; the result directs the operator to read the same command. The original service keeps working.
 
 A flow's wrapper COMPLETE is a computation result, not a claim that every delivery row was applied. Always inspect delivery_state and the complete native_json. AWAITING_OPERATOR preserves the original uncertainty, conflict or refusal. Use the original native operator to inspect the actual review, current row, observed result, request bytes and reviewer decision. Explicit acceptance of an observation remains in the original operator; the cloud caller does not expose accept-observation.
 
@@ -43,12 +43,13 @@ Use the complete client to exercise the actual TLS caller while retaining every 
 
     python3 -B pmrs_cloud_client.py \
       --origin https://ACTUAL_CERTIFICATE_HOST:9443 \
+      --workspace-id ACTUAL_ORIGINAL_WORKSPACE_UUID \
       --credentials /ABSOLUTE/PRIVATE/caller-configuration/connection-credentials.json \
       --principal capture --group capture \
       --command-file /ABSOLUTE/PRIVATE/original-capture-command.json \
       --output /ABSOLUTE/PRIVATE/capture-receiving --wait-seconds 600
 
-The client freezes original-command.json, records each transport attempt before dispatch, saves every complete response and verifies/saves the native_json bytes against native_sha256. Original states FAILED, CANCELLED or INTERRUPTED return exit code3 after saving their result. A provider/caller refusal returns2 with the saved response path.
+The client binds the expected --workspace-id before any mutation, validates every original response ID/kind, freezes original-command.json, records each transport attempt before dispatch, saves every complete response and verifies/saves the native_json bytes against native_sha256. Original states FAILED, CANCELLED or INTERRUPTED return exit code3 after saving their result. A provider/caller refusal returns2 with the saved response path.
 
 After an unknown response, re-run the same command/output or read its exact original UUID. To resume an actual INTERRUPTED command, add --resume-interrupted to that same original command invocation after the provider deadline. No automatic recovery POST occurs during polling.
 
@@ -56,6 +57,7 @@ Read an existing command, record or delivery with a separate exact-view receivin
 
     python3 -B pmrs_cloud_client.py \
       --origin https://ACTUAL_CERTIFICATE_HOST:9443 \
+      --workspace-id ACTUAL_ORIGINAL_WORKSPACE_UUID \
       --credentials /ABSOLUTE/PRIVATE/caller-configuration/connection-credentials.json \
       --principal prepare --resource record --identifier ORIGINAL_RECORD_SHA256 \
       --output /ABSOLUTE/PRIVATE/original-record-receiving

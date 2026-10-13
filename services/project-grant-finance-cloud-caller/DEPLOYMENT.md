@@ -55,7 +55,7 @@ For a later connector update, first use paconn download to retain its actual dep
 
 Copy bindings.example.json to a private working file and fill every field with the actual selections. environment_id supports the normal GUID and Default-GUID forms. organization_url is the actual HTTPS Dataverse origin from Developer resources, without /api/data. Select the existing unmanaged solution unique name, not its display label.
 
-public_host and workspace_id must match caller.json. The generated flows read ReadHealth and verify this exact workspace before any command submission. Use the actual connector API name and all three existing connection references.
+public_host and workspace_id must match caller.json. The generated flows read ReadHealth and verify this exact workspace, then bind the same expected workspace_id into the actual submit body. The caller checks that identity before native dispatch, including after a service restart between the health read and submit. Use the actual connector API name and all three existing connection references.
 
     python3 -B pmrs_cloud_deploy.py prepare \
       --bindings /ABSOLUTE/PRIVATE/actual-bindings.json \

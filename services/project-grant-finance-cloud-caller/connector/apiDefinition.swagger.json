@@ -477,6 +477,7 @@
     "CommandRequest": {
       "type": "object",
       "required": [
+        "workspace_id",
         "command_json"
       ],
       "properties": {
@@ -488,6 +489,10 @@
           "type": "boolean",
           "default": false,
           "description": "Explicitly resume the identical interrupted command after its provider retry time."
+        },
+        "workspace_id": {
+          "type": "string",
+          "description": "The expected original workspace UUID. The caller verifies it before any native dispatch."
         }
       }
     },
