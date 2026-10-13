@@ -15,7 +15,10 @@ const uuid=x=>{need(typeof x==='string'&&UUID.test(x),'Keep the original request
 const sha=x=>{need(typeof x==='string'&&SHA.test(x),'Keep the original complete SHA256 identity.');return x;};
 const whole=(x,min,max)=>{need(Number.isSafeInteger(x)&&x>=min&&x<=max,'Keep the original whole source count.');return x;};
 const query=(route,value)=>route+'?'+new URLSearchParams(value).toString();
+const followingFields=['installationId','baseRevision','expectedBaseSha256','expectedRevision','expectedInstallationSha256','expectedVersion'];
 const fields={
+ 'following-compare':['requestId','priorPreparationId','laterPreparationId',...followingFields],
+ 'following-prepare':['requestId','comparisonId','basisSha256','choices','reviewer','note',...followingFields],
  catalogue:['requestId','archiveId'],
  inspect:['requestId','archiveId','programmeId','programmeRevision','expectedProgrammeSha256','expectedBasisSha256'],
  template:['requestId','inspectionId','seedId','commissioningId','nativeCaseId','expectedVersion'],
@@ -43,9 +46,18 @@ export function planFlowableSourceOperation(action,input){
  }else if(Object.hasOwn(fields,action)){
   exact(input,['caseId','body']);exact(input.body,fields[action],fields[action].filter(k=>k!=='attachments'));
   const body=json(input.body);uuid(body.requestId);
-  for(const k of ['archiveId','seedId','bindingsId','commissioningId','expectedProgrammeSha256','expectedBasisSha256'])
+  for(const k of ['archiveId','seedId','bindingsId','commissioningId','expectedProgrammeSha256','expectedBasisSha256','expectedBaseSha256','expectedInstallationSha256','basisSha256'])
    if(body[k]!==undefined)sha(body[k]);
-  if(body.inspectionId!==undefined)uuid(body.inspectionId);
+  for(const k of ['inspectionId','priorPreparationId','laterPreparationId','comparisonId'])if(body[k]!==undefined)uuid(body[k]);
+  if(body.installationId!==undefined)need(/^installation-[a-f0-9]{32}$/.test(body.installationId),'Select the same original Installation.');
+  for(const k of ['baseRevision','expectedRevision'])if(body[k]!==undefined)whole(body[k],1,500);
+  if(body.baseRevision!==undefined)need(body.baseRevision<=body.expectedRevision,'The base cannot follow the current Installation.');
+  if(action==='following-prepare'){
+   need(plain(body.choices)&&Object.values(body.choices).every(v=>['KEEP_CURRENT','TAKE_LATER','USE_BASELINE','ACCEPT_LATER_SOURCE'].includes(v)),
+    'Retain every explicit original following decision by its exact row key.');
+   for(const k of ['reviewer','note'])need(typeof body[k]==='string'&&body[k].trim()&&body[k].length<=(k==='reviewer'?500:16000)&&!body[k].includes('\0'),
+    'Retain the original following reviewer and reason.');
+  }
   if(body.programmeRevision!==undefined)whole(body.programmeRevision,1,Number.MAX_SAFE_INTEGER);
   if(body.expectedVersion!==undefined)whole(body.expectedVersion,1,10000000);
   if(body.nativeCaseId!==undefined)need(body.nativeCaseId===input.caseId,'Retain the same original case selection.');

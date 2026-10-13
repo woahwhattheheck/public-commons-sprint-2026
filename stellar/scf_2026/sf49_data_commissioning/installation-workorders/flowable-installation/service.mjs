@@ -8,6 +8,8 @@ import {regular,operationLease} from '../../../../scf-starforge-20261009/distrib
 import {readProfile} from '../profiles.mjs';
 import {bindingTemplate} from '../prepare-core.mjs';
 import {commercialWorkshare} from '../commercial-workshare-core.mjs';
+import {compareFlowableInstallationFollowing} from '../flowable-installation-following-core.mjs';
+import {prepareFlowableInstallationFollowing,reopenFlowableInstallationPreparation,inspectFlowableFollowingLineage} from '../flowable-installation-following.mjs';
 import {prepareFlowableInstallation,reopenFlowableInstallation} from '../flowable-installation.mjs';
 import {catalogueFlowableInstallationSource,inspectFlowableInstallationSource} from '../flowable-installation-source.mjs';
 import {settleFlowableInstallationFile as settle,retainFlowableInstallationFile as exactWrite} from '../flowable-installation-receiving.mjs';
@@ -247,6 +249,78 @@ export async function createFlowableInstallationService({directory,signal}={}){
      preview:prepared.preview,selections:prepared.selections},selections:prepared.selections});
   });
  }
+
+ function followingSelection(input,priorPreparationId,laterPreparationId){
+  return{priorPreparationId:uuid(priorPreparationId),laterPreparationId:uuid(laterPreparationId),
+   installationId:input.installationId,baseRevision:input.baseRevision,expectedBaseSha256:input.expectedBaseSha256,
+   expectedRevision:input.expectedRevision,expectedInstallationSha256:input.expectedInstallationSha256,expectedVersion:input.expectedVersion};
+ }
+ async function preparationFor(requestId,initialOnly=false){
+  const saved=await get(uuid(requestId));
+  need(saved.status==='COMPLETE'&&(saved.type==='prepare'||!initialOnly&&saved.type==='following-prepare'),
+   'Select a complete retained '+(initialOnly?'later original':'prior')+' preparation.');
+  const path=join(root,'requests',requestId,'preparation');
+  need(saved.readyReceiving?.preparationDirectory===path,'Keep the original owned complete preparation directory.');
+  const prepared=await reopenFlowableInstallationPreparation({directory:path,signal});
+  need(prepared.preparationSha256===saved.preparationSha256&&same(prepared.document,saved.installation.document)&&
+   same(prepared.source,saved.source),'The original complete preparation differs from its saved result.');
+  return prepared;
+ }
+ async function followingCompare(input){
+  const selection=followingSelection(input,input.priorPreparationId,input.laterPreparationId);
+  const request={schema:SCHEMA+'.request',type:'following-compare',requestId:uuid(input.requestId),...selection,native:input.native};
+  need(encode(request).length<=MAX_JSON,'Retain the full original native snapshot within the existing 8 MiB input allowance.',413);
+  return transaction(request,async()=>{
+   const prior=await preparationFor(selection.priorPreparationId),later=await preparationFor(selection.laterPreparationId,true);
+   const lineage=await inspectFlowableFollowingLineage(prior,later,signal);
+   const comparison=inputReview(()=>compareFlowableInstallationFollowing({prior,later,native:input.native,selection,lineage}));
+   return result('following-compare',input.requestId,
+    [await retainFile('report','FLOWABLE_FOLLOWING_COMPARISON.json',encode(comparison))],
+    {comparison,basisSha256:comparison.basisSha256,source:input.native.source,
+     priorPreparationId:selection.priorPreparationId,laterPreparationId:selection.laterPreparationId});
+  });
+ }
+ async function followingPrepare(input){
+  const original=await get(uuid(input.comparisonId));
+  need(original.status==='COMPLETE'&&original.type==='following-compare','Open the complete original following comparison.');
+  const selection=followingSelection(input,original.request.priorPreparationId,original.request.laterPreparationId);
+  need(same(selection,original.comparison.selection)&&same(input.native,original.comparison.native)&&
+   input.basisSha256===original.comparison.basisSha256,'The source comparison or current saved native edition changed.',409);
+  const review={basisSha256:input.basisSha256,choices:input.choices,reviewer:input.reviewer,note:input.note};
+  const request={schema:SCHEMA+'.request',type:'following-prepare',requestId:uuid(input.requestId),
+   comparisonId:input.comparisonId,...selection,...review,native:input.native};
+  need(encode(request).length<=MAX_JSON,'Retain the full original native snapshot and choices within 8 MiB.',413);
+  return transaction(request,async(folder)=>{
+   const prior=await preparationFor(selection.priorPreparationId),later=await preparationFor(selection.laterPreparationId,true);
+   const preparedDirectory=join(folder,'preparation'),prepared=await prepareFlowableInstallationFollowing({
+    directory:preparedDirectory,priorPreparationDirectory:prior.directory,laterPreparationDirectory:later.directory,
+    native:input.native,selection,review,signal});
+   const files=[],seen=new Set();
+   for(const item of [...prepared.inputs,...prepared.outputs,{name:'prepare-request.json'},{name:'preparation.json'}]){
+    if(seen.has(item.name))continue;seen.add(item.name);
+    // Nested preparations retain their original source kind and byte allowance.
+    // Following request metadata may contain the complete native snapshot and review.
+    const relative=item.name.replace(/^(?:(?:prior|later)\/)+/,'');
+    const fixed={'source/seed.json':'seed','source/bindings.json':'bindings','source/profile.json':'profile',
+     'source/commissioning.json':'commissioning','source/attachments.json':'request','derived-bindings.json':'bindings'};
+    const kind=fixed[relative]??(relative.endsWith('.ndjson')?'archive':relative.startsWith('attachments/')?'attachment':
+     relative.startsWith('delivery/files/')?'source':relative==='installation-input.json'?'installation':
+     relative==='installation-preview-input.json'?'preview':relative==='WORKORDER.md'?'workorder':'preparation');
+    const bytes=await regular(join(preparedDirectory,item.name),maximum(kind));
+    if(item.sha256)need(bytes.length===item.bytes&&hash(bytes)===item.sha256,'A complete following source member differs.');
+    files.push(await retainFile(kind,item.name,bytes));
+   }
+   const laterSaved=await get(selection.laterPreparationId);
+   return result('following-prepare',input.requestId,files,{comparisonId:input.comparisonId,inspectionId:laterSaved.inspectionId,archiveId:laterSaved.archiveId,
+    priorPreparationId:selection.priorPreparationId,laterPreparationId:selection.laterPreparationId,
+    source:prepared.source,workshareCaseId:prepared.workshareCaseId,archive:prepared.source.archive,
+    preparationSha256:prepared.preparationSha256,following:prepared.following,comparison:prepared.comparison,review:prepared.review,
+    readyReceiving:{preparationDirectory:preparedDirectory,expectedPreparationSha256:prepared.preparationSha256},
+    installation:{source:prepared.installationSource,workshareCaseId:prepared.workshareCaseId,document:prepared.document,
+     preview:prepared.preview,selections:prepared.selections},selections:prepared.selections});
+  });
+ }
+
  async function list({offset=0,limit=100}={}){
   need(Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=200,'Choose a complete request page.');
   const ids=(await readdir(join(root,'requests'))).filter(x=>UUID.test(x)).sort(),rows=[];
@@ -267,6 +341,6 @@ export async function createFlowableInstallationService({directory,signal}={}){
   const promise=Promise.resolve().then(()=>fn(...args));accepted.add(promise);
   promise.then(()=>accepted.delete(promise),()=>accepted.delete(promise));return promise;
  };
- return Object.freeze({directory:root,...Object.fromEntries(Object.entries({importFile,importStream,catalogue,inspect,template,prepare,get,list,file,sourceFile})
+ return Object.freeze({directory:root,...Object.fromEntries(Object.entries({importFile,importStream,catalogue,inspect,template,prepare,followingCompare,followingPrepare,get,list,file,sourceFile})
   .map(([key,fn])=>[key,owned(fn)])),close(){closing=true;return stopped??=Promise.allSettled([...accepted]).then(()=>active);}});
 }
