@@ -4,11 +4,13 @@
   "description": "Receive complete acquired event windows, continue original Analysis work, and hand the whole customer result into its existing Installation.",
   "commands": {
     "mcp-analysis-events": "stellar-forge/mcp-paid-agent/native-analysis-events-download.mjs",
-    "mcp-analysis-event-installation": "stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs"
+    "mcp-analysis-event-installation": "stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs",
+    "event-workbook-columns": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns-cli.mjs"
   },
   "commandDescriptions": {
     "mcp-analysis-events": "Receive original event files, inspect and resume the complete customer delivery, and reopen all files offline",
-    "mcp-analysis-event-installation": "Prepare and independently reopen a complete event customer Installation with every original file"
+    "mcp-analysis-event-installation": "Prepare and independently reopen a complete event customer Installation with every original file",
+    "event-workbook-columns": "Prepare, inspect and independently reopen complete customer worksheet choices for the original Event programme"
   },
   "exports": {
     "./buyer/mcp/analysis-events": "./source/stellar-forge/mcp-paid-agent/native-analysis-events.mjs",
@@ -26,11 +28,13 @@
       "types": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation.d.mts",
       "import": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs"
     },
-    "./buyer/mcp/analysis-events-installation-core": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation-core.mjs"
+    "./buyer/mcp/analysis-events-installation-core": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation-core.mjs",
+    "./buyer/event-workbook-columns": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns.mjs"
   },
   "supportFiles": [
     "stellar-forge/mcp-paid-agent/ANALYSIS_EVENTS.md",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/webhook-event-analysis.json",
-    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/WEBHOOK_EVENT_ANALYSIS.md"
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/WEBHOOK_EVENT_ANALYSIS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md"
   ]
 }

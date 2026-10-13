@@ -134,3 +134,48 @@ export function inspectEventFieldValues(source,path,{offset=0,limit=25}={}) {
  need(bytes(JSON.stringify(result))<=48*1024*1024,'This complete field-value page exceeds 48 MiB. Request a smaller page; all original source files remain retained.');
  return result;
 }
+
+/** Compare exact cumulative editions, and separately measure only newly accepted events. */
+export const EVENT_MAPPING_COMPARISON='stellar-forge.event-feed-mapping-comparison.v1';
+export function compareEventMappings(before,after,previousMapping,mapping) {
+ const window=compareEventExports(before,after),prior=normalizeEventMapping(previousMapping),next=normalizeEventMapping(mapping);
+ const oldCatalogue=inspectEventFields(before),currentCatalogue=inspectEventFields(after);
+ const fresh={...after,events:after.events.filter(event=>event.sequence>before.manifest.throughSequence)};
+ const addedCatalogue=inspectEventFields(fresh);
+ const indexed=rows=>new Map(rows.map(row=>[row.pointer,row]));
+ const oldPaths=indexed(oldCatalogue.fields),currentPaths=indexed(currentCatalogue.fields),addedPaths=indexed(addedCatalogue.fields);
+ const counts=(row,total)=>({events:total,present:row?.present??0,missing:total-(row?.present??0),
+  types:Object.fromEntries(STATES.map(kind=>[kind,row?.types[kind]??0]))});
+ const coverage=path=>({before:counts(oldPaths.get(path),before.events.length),
+  after:counts(currentPaths.get(path),after.events.length),added:counts(addedPaths.get(path),fresh.events.length)});
+ const fields=[...new Set([...oldPaths.keys(),...currentPaths.keys()])].sort().map(path=>{
+  const value=coverage(path),previousKinds=STATES.filter(kind=>value.before.types[kind]>0);
+  return {pointer:path,...value,new_path:!oldPaths.has(path),
+   absent_in_added:fresh.events.length>0&&value.before.present>0&&value.added.present===0,
+   added_kinds:STATES.filter(kind=>value.added.types[kind]>0&&!previousKinds.includes(kind))};
+ });
+ const oldNames=new Map(prior.fields.map(field=>[field.name,field])),nextNames=new Map(next.fields.map(field=>[field.name,field]));
+ const names=[...new Set([...prior.fields.map(field=>field.name),...next.fields.map(field=>field.name)])];
+ const mapped_fields=names.map(name=>{
+  const old=oldNames.get(name),current=nextNames.get(name);
+  const change=!old?'added':!current?'removed':old.pointer!==current.pointer?'repointed':'unchanged';
+  const selected=current?coverage(current.pointer):null,earlier=old?coverage(old.pointer):null,reasons=[];
+  if(change!=='unchanged')reasons.push('MAPPING_'+change.toUpperCase());
+  if(current){
+   if(selected.after.present===0)reasons.push('PATH_UNOBSERVED');
+   if(fresh.events.length&&selected.added.present===0)reasons.push('ABSENT_IN_ADDED_EVENTS');
+   if(fresh.events.length&&selected.before.present>0&&selected.before.missing===0&&selected.added.missing>0)
+    reasons.push('NEW_MISSING_VALUES');
+   if(STATES.some(kind=>selected.added.types[kind]>0&&selected.before.types[kind]===0))
+    reasons.push('NEW_JSON_KINDS');
+  }
+  return {name,before_pointer:old?.pointer??null,after_pointer:current?.pointer??null,change,
+   previous_path:earlier,selected_path:selected,review_reasons:reasons};
+ });
+ const original=source=>({edition_id:source.edition_id,source:source.source,original_files:source.original_files});
+ const value={schema:EVENT_MAPPING_COMPARISON,previous:original(before),current:original(after),window,
+  previous_mapping:prior,previous_mapping_sha256:sha(stable(prior)),mapping:next,mapping_sha256:sha(stable(next)),
+  field_count:fields.length,fields,mapped_fields,required_decisions:mapped_fields.filter(row=>row.review_reasons.length).map(row=>row.name)};
+ need(bytes(JSON.stringify(value))<=24*1024*1024,'The complete cross-edition field comparison exceeds 24 MiB. Keep the original sources and use a smaller useful subscription.');
+ return {...value,comparison_sha256:sha(stable(value))};
+}
