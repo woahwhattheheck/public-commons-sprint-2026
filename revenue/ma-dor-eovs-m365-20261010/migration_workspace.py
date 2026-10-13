@@ -8,6 +8,7 @@ from pathlib import Path
 from migration_store import Store, MigrationError, canonical, identity, parse_json, text, identifier, integer, page
 from migration_formats import FORMATS, FIELDS, CLASSIFICATIONS, import_source, source_description, row_description
 from migration_reconcile import CHECKS, reconcile, compare_reconciliations
+import migration_cases
 
 EVIDENCE_FIELDS = ("path","expected_target_path","size_bytes","content_sha256","principals","label","classified_at","migrated_at")
 MUTATIONS = ("workspace.update","source.import","round.create","mapping.create","evidence.link","reconciliation.create",
@@ -16,6 +17,9 @@ READS = ("schema","state","entity.list","source.list","source.get","source.rows"
          "mapping.list","mapping.get","mapping.rows","evidence_link.list","evidence_link.get",
          "reconciliation.list","reconciliation.get","reconciliation.items","reconciliation.compare",
          "correction.list","correction.get","correction.history","operation.get","events","delivery.list","delivery.get")
+
+MUTATIONS = MUTATIONS + migration_cases.MUTATIONS
+READS = READS + migration_cases.READS
 
 def schema():
     return {
@@ -28,7 +32,8 @@ def schema():
                         "capture_kinds":["customer_export","local_reference","public_reference"],
                         "optional":["task_id","round_label","job_id","snapshot_id","report_set_id","producer","observed_at","captured_at",
                                     "scan_job_id","scan_cycle_id","scan_mode","policy_only","encoding","delimiter","note"]},
-      "entity_kinds":["source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit"],
+      "entity_kinds":["source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit"]+list(migration_cases.ENTITY_KINDS),
+      "case_migration":migration_cases.schema(),
       "mapping_kinds":["identity","principal","status","evidence"],
       "mapping_entry_fields":{
           "identity":["source_row_id","target_row_id","reason"],
@@ -337,7 +342,17 @@ def _workspace_update(store, op):
     return body
 
 class MigrationWorkspace(Store):
+    def __init__(self, directory, *, create=False, title="Migration workbench"):
+        super().__init__(directory,create=create,title=title)
+        try:
+            migration_cases.ensure(self)
+        except BaseException:
+            self.close()
+            raise
+
     def _handler(self, operation):
+        if operation in migration_cases.HANDLERS:
+            return lambda op:migration_cases.HANDLERS[operation](self,op)
         handlers = {"workspace.update":_workspace_update,"source.import":import_source,"round.create":_round,
                     "mapping.create":_mapping,"evidence.link":_evidence_link,"reconciliation.create":reconcile,
                     "correction.create":_correction_create,"correction.update":_correction_update}
@@ -370,6 +385,8 @@ class MigrationWorkspace(Store):
                 return prepare_delivery(self,p)
             if operation in MUTATIONS:
                 return self.execute(operation,p,self._handler(operation))
+            if operation in migration_cases.READS:
+                return migration_cases.read(self,operation,p)
             if operation=="schema":
                 return schema()
             if operation=="state":
@@ -426,6 +443,7 @@ class MigrationWorkspace(Store):
     def entity_list(self, p):
         kind = p.get("kind")
         kinds = ("source","round","mapping","evidence_link","reconciliation","correction","delivery","workspace_edit")
+        kinds = kinds + migration_cases.ENTITY_KINDS
         if kind not in kinds:
             raise MigrationError("ENTITY_KIND", "Choose an advertised retained entity kind", {"kinds":list(kinds)})
         offset,limit = page(p)
@@ -537,6 +555,10 @@ class MigrationWorkspace(Store):
 
     def _iter_export(self, kind, entity_id, *, format="ndjson"):
         """Bounded file delivery through the original database; caller keeps this workspace open."""
+        if kind.startswith("case."):
+            from migration_reports import iter_case_export
+            yield from iter_case_export(self,kind,entity_id,format=format)
+            return
         if format not in ("ndjson","csv"):
             raise MigrationError("EXPORT_FORMAT", "Choose ndjson or csv")
         if kind=="mapping" and format=="csv":

@@ -159,7 +159,7 @@
     {
       "path": "integrations/monitoring/source_adoption.json",
       "bytes": 19002,
-      "sha256": "6e3e2377a3eaadc306a3ac018546217ed50600e3692df859cb4ec21dcadec2fa",
+      "sha256": "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -263,8 +263,8 @@
     },
     {
       "path": "operator/monitoring.py",
-      "bytes": 212,
-      "sha256": "756860261381fafce976f73c4995d0e4d17bd91dc955f0c0ad5fc81d228a9738",
+      "bytes": 217,
+      "sha256": "5a03358a60f0ca0899499ffeb082fea556aca89d83a4b6b2230f5d3f5139d920",
       "predecessor_sha256": [
         "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
       ]
