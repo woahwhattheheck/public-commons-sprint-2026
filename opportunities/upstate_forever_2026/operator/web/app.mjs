@@ -218,6 +218,10 @@ function mountPortfolioDetail(){
 }
 function render(){
   if(!state)return;
+  // Cumulative lifecycle: detach only desks outside the selected view.
+  if(view!=="experiments")experiments.detach();
+  if(view!=="programmes")programmes.detach();
+  if(!extensions.hasView(view))extensions.detach();
   if(view!=='sources')sourceReports.detach();
   if(view!=='portfolios')portfolio.detach();
   mountPortfolioDetail();
@@ -1219,6 +1223,8 @@ async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ experiments.detach();
+ programmes.detach();
  workspaceRevision++;
  workspaceFinder.reset();
  sourceReports.reset();
