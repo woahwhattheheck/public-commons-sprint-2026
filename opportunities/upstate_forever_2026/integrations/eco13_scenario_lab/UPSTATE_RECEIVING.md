@@ -26,7 +26,7 @@ The receipt returns original_experiment_id, page_count, original_cases, adopted_
 
 The status view distinguishes planned original runs, observed native runs, original case states and selected model slots. A combined NDR/SDR case has two model slots while retaining its one original run identity. Pending cases remain visible in that status view.
 
-**What Bryce says:** “This is the experiment we already ran. The comparison keeps its original cases and results, and shows which parts are ready.”
+**Suggested demonstration narration:** “This is the experiment we already ran. The comparison keeps its original cases and results, and shows which parts are ready.”
 
 ## Review the result and its scientific coverage
 
@@ -42,7 +42,7 @@ The native source defines change as alternative minus baseline, and avoided expo
 
 Parameter changes have their own comparison rows. Read parameter effects separately from land-cover intervention effects, and retain the distinction when both change. Rankings compare compatible case/metric groups using the same units, grid, support and original baseline identity. Those groups remain separate in the received report. A selected outcome with no shared valid cells keeps the affected alternative outside that cost screen, while the other complete alternatives remain usable.
 
-**What Bryce says:** “These rows tell us what changed, where it changed and which model produced it. The assumptions and original baseline stay visible.”
+**Suggested demonstration narration:** “These rows tell us what changed, where it changed and which model produced it. The assumptions and original baseline stay visible.”
 
 ## Add explicit costs and objectives
 
@@ -85,7 +85,7 @@ PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab compare 
 
 INTEGER is the explicit budget in cents. Omit --budget-cents when no budget is intended. Read each selected metric's reported direction and the explicit cost comparison. Inspect each compatible comparison group before making a planning choice.
 
-**What Bryce says:** “These are the modeled outcomes with the costs and objectives we chose. We can change the planning assumptions and reopen the resulting comparison.”
+**Suggested demonstration narration:** “These are the modeled outcomes with the costs and objectives we chose. We can change the planning assumptions and reopen the resulting comparison.”
 
 ## Export the retained edition
 
@@ -101,7 +101,7 @@ PYTHONPATH=.:integrations/eco13_scenario_lab python -m eco_scenario_lab export N
 
 Open the report and comparison table. Check the actual study and scenario labels, selected model families, units, spatial coverage, currency and original identities. Keep the readable report, editable project and retained original files together in the exported package.
 
-**What Bryce says:** “The handover includes the report, comparison data and the editable project that produced this view.”
+**Suggested demonstration narration:** “The handover includes the report, comparison data and the editable project that produced this view.”
 
 ## Receive and reopen the independent copy
 
@@ -117,7 +117,7 @@ Open NEW_RECEIVED/reports/index.html. The retained source snapshot supports this
 
 Make a recipient-owned planning edit with the same compare options, then reopen the report. Use --clear-budget to remove only the saved budget ceiling, or --reset-report-options to clear the saved planning-view choices. If new report options are invalid, the complete prior report edition is restored. Keep the original comparison and received directories distinct.
 
-**What Bryce says:** “This is the transferred working copy. Its saved data lets the recipient inspect the same results and continue the planning comparison.”
+**Suggested demonstration narration:** “This is the transferred working copy. Its saved data lets the recipient inspect the same results and continue the planning comparison.”
 
 ## Continue the science in the original operator
 
@@ -125,7 +125,7 @@ Return to the original application's normal opening route and Workspace. Open th
 
 As more cases finish, receive the updated original experiment into a new comparison edition. Keep the earlier edition so the changed case coverage and outputs remain explainable. For the screenshare, open one completed received report and the original operator's current live state. Record the actual opening, receiving and export timings from that operated edition.
 
-**What Bryce says:** “The original application continues the model work. Each finished case can enter the comparison with its original history.”
+**Suggested demonstration narration:** “The original application continues the model work. Each finished case can enter the comparison with its original history.”
 
 ## Native integration and saved selection
 
@@ -157,7 +157,7 @@ An existing original operator can pass its Workspace object directly:
 from eco_scenario_lab.upstate_intake import adopt_workspace
 
 received = adopt_workspace(
-    operator.ws,
+    operator.ws(workspace_key),
     experiment_id,
     destination,
     project_id=project_id,

@@ -7,16 +7,17 @@ This desk joins the complete ECO13 0.1.2 native experiment receiver to the exist
 Receive these complete additive source files under the existing application root:
 
 - operator/eco13_operator.py
+- operator/eco13_economics.py
 - operator/extensions/eco13.json
 - operator/web/eco13.mjs
 - operator/web/eco13.css
 - operator/ECO13.md
 
-This complete application-root bank includes the ECO13 package at integrations/eco13_scenario_lab/eco_scenario_lab/ together with all five operator files. Use the guarded receiving installer F0C8SCNDS3B with this bank and the existing Upper Savannah application root as its target. It verifies every listed source file, compiles changed Python without importing the scientific runtime, and installs the joined update as one guarded operation. The earlier package-only source is F0C8924E6K1; this composition includes the successor receiver F0C8QCAANH0. Preserve the existing ED6E workspace_driver.py, workspace_cli.py, WORKSPACE.md and both workspace example files.
+The complete application-root source includes the ECO13 package at integrations/eco13_scenario_lab/eco_scenario_lab/ together with all six operator files, the Workspace bridge, its selection templates and the storage guide. For a source-bank delivery, decode installer_source.content_base64 to INSTALL_RECEIVING.py and run it with the saved source bank and the existing Upper Savannah application root. The guarded installer verifies incoming source identities, compiles changed Python without importing scientific modules and preserves unrelated installed files. Selected source files use an operation-local hash cache and independent copies; reused native stages retain requested_arguments, and paired availability requires positive paired-cell support. The saved receiving-storage.json records actual copy and reuse counters. The existing receiving/check_retention.py provides the focused storage receiving command.
 
-The installed original ECSA ExtensionRegistry discovers operator/extensions/eco13.json on operator startup. Its current shared installer joins the registry, original serial queue, static asset delivery, state updates and navigation to the existing server and browser. Receive the five new files themselves through the current source assembler; the shared installer does not substitute for receiving their source.
+The installed original ExtensionRegistry discovers operator/extensions/eco13.json on operator startup. Its current shared installer joins the registry, original serial queue, static asset delivery, state updates and navigation to the existing server and browser. Receive the six new files themselves through the current source assembler; the shared installer does not substitute for receiving their source.
 
-Use the same configured scientific Workspace, original operator state and existing GIS interpreter when restarting the maintained operator to pick up the new installed registration. The original startup URL connects the authenticated browser. Experiment comparisons appears beside Experiments. GET /api/extensions lists the eco13 registration, its four actions, three reads and any concrete import or asset issue.
+Use the same configured scientific Workspace, original operator state and existing GIS interpreter when restarting the maintained operator to pick up the new installed registration. The original startup URL connects the authenticated browser. Experiment comparisons appears beside Experiments. GET /api/extensions lists the eco13 registration, its four actions, four reads and any concrete import or asset issue.
 
 For a complete original scientific-application archive, the maintained model.portable application inventory must include integrations/eco13_scenario_lab in addition to its model/operator/source files. The saved comparison records themselves live inside the original scientific Workspace and are already carried by its recursive inventory. The current CLOUD-INTEGRATION portable-source owner is composing this exact runtime path into the cumulative application.
 
@@ -30,13 +31,13 @@ The receiving source may be complete or partial. The saved comparison exposes th
 
 The finished task opens a saved comparison. Read its original experiment ID, source Workspace identity, selected models, original planned case/run counts and case/model slot counts. Original Workspace identity is preserved as its source string; the application uses a separate registered workspace key for its own HTTP routes and task queue.
 
-### What Bryce can say
+### Suggested demonstration narration
 
 “Open the saved experiment we have already run. Keep its current native results together and show me which alternatives have a usable paired comparison.”
 
 ## Read the current result
 
-The in-app table reads the saved report through paged authenticated routes. Switch between alternative outcomes, parameter/reference outcomes and unfinished cases. Scenario and metric filters, plus profile and result text search select rows from that same retained report; they do not issue native jobs.
+The in-app table reads the saved report through paged authenticated routes. Switch between alternative outcomes, parameter/reference outcomes and unfinished cases. Scenario and metric filters, plus profile and result text search, select rows from that same retained report; they do not issue native jobs.
 
 Alternative outcome rows keep the original profile, alternative, case, baseline/run and reporting-grid IDs. Nitrogen, phosphorus and sediment retain their source physical units. Change is alternative minus paired baseline; positive avoided export means less modeled export. Read paired cells, reporting cells, coverage fraction and paired-support identity with the quantity.
 
@@ -46,7 +47,7 @@ An unfinished row includes the original case/run state and whether its native mo
 
 The complete standalone HTML report, full JSON, CSV files, original receiving plan, native slot states and saved report choices are available through the original verified file tickets. Download the HTML to use its complete offline filtering, pagination and printing. The in-app table provides those retained outcomes through the original operator API.
 
-### What Bryce can say
+### Suggested demonstration narration
 
 “Show nutrient and sediment responses separately. Keep the paired footprint and the unfinished model states visible while we compare the alternatives.”
 
@@ -62,7 +63,7 @@ Save report creates a new retained edition linked by source_record_id. Existing 
 
 The reset control restores the receiving plan's original costs and clears saved objective/budget choices. It creates another explicit report edition.
 
-### What Bryce can say
+### Suggested demonstration narration
 
 “Use these actual intervention costs and these selected water-quality outcomes. Save this budget view as its own edition so we can reopen it beside the previous choice.”
 
@@ -76,7 +77,7 @@ The received edition preserves original experiment, source Workspace, native mod
 
 Full scientific Workspace backup carries the saved desk records along with the original project. A complete application backup also carries the installed ECO13 runtime through the maintained application inventory described above.
 
-### What Bryce can say
+### Suggested demonstration narration
 
 “Export this edition, receive it into a fresh saved comparison, and reopen the same costs, objectives, budget and native outcomes.”
 
@@ -86,9 +87,23 @@ When the selected scientific Workspace still contains the matching original expe
 
 After native results advance, return to Experiment comparisons and receive a new snapshot from that same saved experiment. Earlier comparison and report editions remain available. The current result can be compared with the prior saved view while preserving their individual source capture times.
 
-### What Bryce can say
+### Suggested demonstration narration
 
 “Open the same original experiment and continue its unfinished native cases. When it has new results, receive a fresh comparison and keep the earlier edition.”
+
+## Continue into an existing native zone report
+
+Choose **Find native zone reports** from a saved experiment comparison. The source reader checks existing completed S1 reports in the same scientific application against the saved experiment's exact original native run pairs. It matches the original source Workspace, reporting grid, baseline and alternative run IDs, parameter profiles, scenario identities and modeled metrics.
+
+Each matching report retains its own title, source hash, native run population, real reporting zones and common-support availability. Choose one of its available zones to open **Economic desk**. The existing Economic desk loads that original report and zone, captures sourced implementation costs and criteria, and uses its own original economic.draft.save and economic.edition.build queue actions.
+
+The comparison's grid totals stay in this saved edition. The selected native zone report uses its original all-run common valid-cell population. These are distinct retained physical populations even when they come from the same model runs. No costs or totals are transferred automatically between their reporting footprints.
+
+Source discovery is lazy and pages through existing saved report directories, 25 at a time by default. The directory-list fingerprint prevents later pages from being appended to an obsolete first page. If the native report collection changes, the browser reloads source discovery. An unavailable or changed original report is identified in the source issues while other saved reports remain available.
+
+### Suggested demonstration narration
+
+“Find the completed watershed reports for these exact original model runs. Open the actual reporting zone in the Economic desk, then use its own sourced cost assumptions and retained common footprint.”
 
 ## Exact original-operator interface
 
@@ -99,6 +114,7 @@ All reads include the currently selected original workspace key.
 | GET /api/eco13/catalog | Original saved experiment catalogue, saved comparison/report summaries, per-record issues and page limit |
 | GET /api/eco13/record?record_id=ID | Saved edition, scenario costs, actual objective pairs, selected report choices, original ranking, file tickets and original-experiment continuation |
 | GET /api/eco13/rows?record_id=ID&kind=outcomes&offset=0&limit=100 | Paged exact saved outcomes; kind also accepts parameters or incomplete |
+| GET /api/eco13/economic-sources?record_id=ID&offset=0&limit=25 | Existing source-matched native reports and their original reporting zones |
 
 The rows route accepts scenario_id, metric, case_id and q. A page contains at most 250 records and returns total and next_offset. Native metric rows and incomplete availability records retain the field names generated by the current scenario workbench.
 
@@ -113,9 +129,9 @@ Submit through POST /api/actions with workspace, action, payload and the origina
 
 Completed task results contain record_id, report_status and summary; export also supplies archive. Task decoration supplies the registered _item binding for eco13-records, the desk-specific _eco13 continuation, and the original _downloads tickets. A completed receiving task can carry a partial report_status when native science remains unfinished.
 
-The source uses the installed eco_scenario_lab.upstate_intake.adopt_workspace, results comparison/cost/ranking/report operations, and store export/receive functions. It preserves the current native r7 inspect/read_summary contract from F0C8S2V4D0R. Source-native run IDs, percent changes, paired support and model completion rules stay with those original implementations.
+The provider uses the installed eco_scenario_lab.upstate_intake.adopt_workspace, the existing comparison/cost/ranking/report operations and the store export/receive functions. It calls the original model.experiments inspect/read_summary interfaces. Native run IDs, percent changes, paired support and model completion rules remain attached to those original results.
 
-The A73C owner confirmed the complete maintained successor of model/experiments.py at 56,729 bytes, SHA256 03e0c194040ded574d1e739e99ef03e1408c22995c9659714e5fd114e402f72f, immutable Git blob b5bbd93181384678d71a5fb4c760c129345579d1 in woahwhattheheck/public-commons-sprint-2026. Its recovered-case reader now binds the complete historical source_* lineage, verifies source_selection against source_run_id, and verifies the current selection against its current run_id. The owner adopted that full successor into the shared composition. The provider continues to call the original inspect/read_summary interfaces; it retains original experiment and case identities. Owner confirmation: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791857149838699.
+The reviewed model/experiments.py source is 56,729 bytes, SHA256 03e0c194040ded574d1e739e99ef03e1408c22995c9659714e5fd114e402f72f, Git blob b5bbd93181384678d71a5fb4c760c129345579d1 in woahwhattheheck/public-commons-sprint-2026. Its recovered-case reader binds the historical source_* lineage, verifies source_selection against source_run_id, and verifies the current selection against its current run_id. Receiving retains those original experiment and case identities while preserving subsequent compatible native-engine improvements.
 
 ## Retained storage and recovery
 
@@ -126,3 +142,9 @@ The native receiver requires a new destination outside the original scientific W
 Report editions use separate report files and saved choices. A failed new report operation leaves the prior published edition available. Retried operations recover their own retained staging and original source selection. Original queue resume and cancellation controls remain in the task interface.
 
 Portable exports use the original operator's outputs directory and verified download tickets. This keeps generated ZIPs outside the scientific Workspace while the underlying saved comparison records remain available for subsequent export or native project backup.
+
+## Cross-desk source contract
+
+The maintained operator/web/extension_host.mjs exposes openExtension and verifies the selected original Workspace while loading the registered controller. The reviewed host source is 16,710 bytes, SHA256 f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf. The Economic desk exports openReport({report_id,zone_id}); model.decision_analysis.inspect_scenario_report reads and verifies its original upstate.scenario-decisions/v1 source report. This desk uses those existing public module interfaces.
+
+The economic-sources response returns listing_sha256, total_report_directories, scanned, next_offset, adapter_available, reports, skipped and issues. Send the first listing_sha256 on subsequent pages; a changed collection returns HTTP409 / ECO13_SOURCE_COLLECTION_CHANGED. Each report retains report_id, report_sha256, baseline_run_id, run_ids, matched_alternatives and actual zones. Open only a selected zone with common_support_available using host.openExtension("economic-desk","openReport",{report_id,zone_id}). This read operation does not create a new report or queue a model run.
