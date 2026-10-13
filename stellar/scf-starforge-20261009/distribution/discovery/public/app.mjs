@@ -68,6 +68,12 @@ function selectItem(id, focus = false) {
     const actions = node('div', undefined, 'detail-actions');
     const copyLink = node('button', 'Copy result link'); copyLink.type = 'button';
     copyLink.addEventListener('click', () => copy(location.href, copyLink)); actions.append(copyLink);
+    const planLink = node('a', 'Add to operating plan');
+    planLink.href = '/operating-plan.html?add=' + encodeURIComponent(item.id);
+    actions.append(planLink);
+    const supportLink = node('a', 'Select for Support procedure');
+    supportLink.href = '/operating-plan.html?prepare=support&supportRegistration=' + encodeURIComponent(item.id);
+    actions.append(supportLink);
     panel.append(actions);
     if (item.helpArgv) {
       heading(panel, 'Open native command help');
