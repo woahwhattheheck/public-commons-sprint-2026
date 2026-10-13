@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "6365351c33adc0f016409094db5320a45dd4d37e",
+  "source_reference_base": "b8915539fdf33057ba616aaf5a0fdd06243dc53b",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application. Received Studies exposes exact saved Published-review source cards, native editor navigation, original selected-record/interpretation/review ZIP downloads and explicit report replace/append. The complete original source binding and filters are checked before direct editor navigation; current local draft/lifecycle takes precedence over delayed replies. The maintained installer composes the original received-study registration and declared assets without removing peer handlers. The outgoing exact product and every delivered attachment must be opened, visually inspected and used under the owner rule in operator/RECEIVED_PUBLISHED_REVIEWS.md; preserve the October13 14:00UTC cutoff. Captured external saved reviews can be explicitly admitted through the original importer and editor; original source bindings and admission provenance remain portable with later selected reviews. Carry CURRENT_OWNER_DIRECTION.md version 2026-10-13.3 and application AGENTS into the existing native course. The Three and Twenty Creek 2026 builtin retains the unchanged 57-file original source edition and all242 selected ResultIdentifiers, with explicit agreeing activity/characteristic weighting for142 measurements. Full raw-ID exports and grouped source provenance remain distinct. The maintained native receiving course continues this exact study through saved review and project restore. ECSA4100 recipient review rendering and current guarded shared-Study hooks remain exact. The original historical Three and Twenty study retains all73 source members and1502 original results; generated metadata binds its one source-owned statistical exclusion to original index/hash/row/ResultIdentifier. Native summaries use1501 eligible rows, while original chronology and source exports retain1502. Canonical and eligible counts remain separate from agreeing activity weighting; native selected report/exclusions and complete saved study remain portable. The SV-833 successor opts into agreeing original activity weighting:610 rawIDs/576 canonical/575 eligible after one exact source-owned pH exclusion. Import generates a new study version; completed earlier operations and original scientific/report/hydrology bodies remain unchanged. The original four-station hydrologic context is retained by all three related Three and Twenty observation studies when installed. Receive its complete35-source delivery; native Sources retains the manifest and33 companions, including all rebuild inputs. Use all original source hyperlinks, map controls and downloads in the actual desktop/narrow app and cold reopened Study/Workspace.",
   "external_source_edition": {
     "files": 62,
@@ -233,8 +233,8 @@
     },
     {
       "path": "model/published_review_admission.py",
-      "bytes": 15582,
-      "sha256": "5bb53a2b2a8343a6bb37912bbff138df94139d9350907521c17b71203378f073"
+      "bytes": 20702,
+      "sha256": "d82269ce9e44d743d5cce23545a722031b9c2b7e2637746b9d2c010a5ada3fdd"
     },
     {
       "path": "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
@@ -253,8 +253,8 @@
     },
     {
       "path": "model/received_published_reviews.py",
-      "bytes": 5238,
-      "sha256": "58ae8cca41c6c5dca377ab9bfdd76eb547625cc7320c58db436925db10e1ccb4"
+      "bytes": 5461,
+      "sha256": "fe264c146cd7c61da1f7586b2aee829d7516a940c652ba44e65d638c4f4adb03"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -1693,13 +1693,13 @@
     },
     {
       "path": "operator/RECEIVED_PUBLISHED_REVIEWS.md",
-      "bytes": 19930,
-      "sha256": "55d7ea7011c86b3888cff737102a2cfbd028f8c1a3778bb576780da3691a9ad6"
+      "bytes": 22805,
+      "sha256": "a54d8e2540e681940266bbc0747913e8f719d2f93af43f538654e1a4dd44c298"
     },
     {
       "path": "operator/received_published_reviews.py",
-      "bytes": 669,
-      "sha256": "cfa59736840d706eced4b01df7045204db008929e1569c566e8f35b0388fa477"
+      "bytes": 1323,
+      "sha256": "1c38dae186d8d1b91c1613cae752a3a18cd8a42a6cb35db75a3060889ae4e84c"
     },
     {
       "path": "operator/SELECTED_MICROBIAL_STUDY.md",

@@ -143,6 +143,52 @@ existing standing rule below remains in full force. Record any concrete defect
 and repair it in the maintained original path; no parallel approval gate or
 broad test suite is introduced.
 
+## Received review metadata and original file verification
+
+Received Studies lists all matching local admissions in one pass for the current
+Study. The first metadata read of each admission still runs the original complete
+receipt, source, captured review and archive validation. Later refreshes may reuse
+only that small validated summary while every dependency remains the same:
+receipt, plan, native review, archive, source collection, recipe body and all
+original companions. Each check retains the original contained regular-file and
+no-symlink rules and compares device, inode, length, modification time and change
+time. A changed or missing dependency discards the cached summary and invokes the
+original reader again; errors do not become cached successes.
+
+This is an in-process metadata optimization, not a new declaration that original
+file bytes have been verified. Cache entries hold independent canonical bytes,
+with a maximum of 128 admissions and 8 MiB across their summaries and dependency
+signatures. Eviction, process restart or a larger valid entry uses the original
+full validation path. These cache budgets do not limit an admissible review,
+source archive or operation.
+
+Full admission opening, explicit import, selected Study capture and verification
+keep their original validation paths. In particular, selected Study capture still
+uses the raw retained records and does not materialize source views. Listing
+download links checks the original retained path, declared SHA-256 and exact
+length, then creates the existing authenticated file ticket. The unchanged
+download transport authorizes the Workspace, opens the actual file, verifies its
+SHA-256 whenever its full file signature has changed, checks stability and serves
+that same opened file. A listed link does not stand in for successful download
+verification.
+
+### Continue the existing native receiving course
+
+Use the existing F942 received-review operation and its actual Workspace. Open
+the received Study, refresh it twice, and confirm the original source cards,
+admission IDs and full saved filter arrays remain available. Open the admitted
+review through its original public read route, then download the retained review
+archive and readable source attachments through their ordinary tickets. Reopen
+the editable Study through the maintained receiving path. Preserve the actual
+returned IDs and any exception; do not manufacture performance timings or claim
+a native execution from source inspection.
+
+The producing worker must inspect the exact rendered received cards and all
+outgoing attachments at desktop and narrow sizes, operate the critical controls,
+downloads and reopen path, and repair any observed defect. Continue this work
+inside the existing operation and current owner direction below; no new model run,
+shared controller, polling loop or broad test suite is required.
+
 ## Active owner direction carried with this source
 
 Read the complete application-root `CURRENT_OWNER_DIRECTION.md`, version
