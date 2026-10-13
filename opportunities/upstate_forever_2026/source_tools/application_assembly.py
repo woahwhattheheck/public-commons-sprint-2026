@@ -930,8 +930,11 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
     complete_map = base.get("schema") == MAP_SCHEMA and base.get("kind") == MAP_KIND
     recovered_map = (document_schema(base) == "upstate.source-map/v1"
                      and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
-    if not (complete_map or recovered_map):
-        raise ValueError("First layer must be a complete application map or recovered application source")
+    native_map = (document_schema(base) == "upstate.complete-application-transport/v1"
+                  and {"model/workspace.py", "operator/server.py"} <= set(layers[0].files))
+    if not (complete_map or recovered_map or native_map):
+        raise ValueError("First layer must be a complete application map, native transport, "
+                         "or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
     files, metadata, changes, externals, references = {}, {}, [], {}, {}
