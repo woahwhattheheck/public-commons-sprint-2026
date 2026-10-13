@@ -120,6 +120,11 @@ def _sections(report):
         "changed area and original class mix may differ even when the complete selection was matched. "
         "Each table keeps its own geographic relationship and quantity scope. Overlapping polygons, "
         "nested protection areas and family unions must not be summed.",
+        "Two utility-union views are retained. Original Receiving utility subjects use their "
+        "own evaluated contribution masks and pairwise native quantities. Profile-mask allocation "
+        "rows separately OR the original anchor masks and retain categorical allocation and "
+        "three-run valid-cell counts. Do not add these overlapping views or treat their supports "
+        "as interchangeable; exact masks and native identities remain in the complete source.",
         "R denotes the retained restoration; C denotes the retained control. Delta is R minus C "
         "for changed land-cover hectares only. Primary allocation counts use finite land-cover "
         "cells common to baseline, R and C within the original region mask.",
