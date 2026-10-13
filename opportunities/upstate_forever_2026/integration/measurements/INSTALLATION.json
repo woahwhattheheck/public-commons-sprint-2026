@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-scientist-source-returns-20261013",
+  "edition": "complete-measurements-observed-benchmarks-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -60,49 +60,15 @@
       "original_complete_source": "F0C8GJ12S31",
       "browser_source": "F0C8XNG07QA",
       "cohort_rows": 533
+    },
+    "observed_benchmarks": {
+      "operation_id": "ECO-OBSERVED-BENCHMARKS-3459-20261013",
+      "base_commit": "ebacc524221be985edcc16852855c51c02c29357",
+      "guide": "measurement_workspace/OBSERVED_BENCHMARKS.md",
+      "native_rendered": false
     }
   },
   "files": [
-    {
-      "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6093,
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
-    },
-    {
-      "path": "MEASURED_CHEMISTRY.md",
-      "bytes": 16738,
-      "sha256": "f299673aeeb705317a79dd5ce222fa86ea1b78f911d92125ffb6db15533ccc50"
-    },
-    {
-      "path": "MEASURED_OBSERVATIONS.md",
-      "bytes": 10936,
-      "sha256": "7cbb239a2b62751166a16307cf6667fce5a953ba724e01e4abd1dbae1bc4ef86"
-    },
-    {
-      "path": "MEASUREMENT_COLLECTIONS.md",
-      "bytes": 10308,
-      "sha256": "32dcaf647941c7149bf8a7ab2dab31a5f3eb6fec51b4a257440d7a5a100f611f"
-    },
-    {
-      "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 23552,
-      "sha256": "d59ebeb7d3bbd30d6ab20fd74c8b513d6310b21649f5dd0665ff45a5732922e5"
-    },
-    {
-      "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 9350,
-      "sha256": "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11"
-    },
-    {
-      "path": "MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 10267,
-      "sha256": "6965cdbaa3f2f04395b3abea18c217be0dbde1a4d5d5892b7a46e8f7f7fcb10d"
-    },
-    {
-      "path": "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json",
-      "bytes": 1723,
-      "sha256": "ff2cd42b579127ac1ce31e9762414fa34dbf84a1a3bd24bd6db96c4229c82076"
-    },
     {
       "path": "checks/measurement_returned_reviews_operator.py",
       "bytes": 17796,
@@ -117,6 +83,11 @@
       "path": "checks/returned_review_journey.mjs",
       "bytes": 10088,
       "sha256": "6f901f4e0eaa7e1721e73db53b9eb4eae1521f1652b62976f0ea73ced5435152"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 6093,
+      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
     },
     {
       "path": "install_measurement_large_files.py",
@@ -149,6 +120,11 @@
       "sha256": "a2f5db4eba22ad8b0a230b2f04a9fc626f17ccaa9137b6516e5dad7bb16e2282"
     },
     {
+      "path": "integration/component_fragments/measurement-observed-benchmarks.json",
+      "bytes": 1526,
+      "sha256": "0e053006a6830079466f165906ad17fc8c728a9c586539c301239c979cfee71f"
+    },
+    {
       "path": "integration/component_fragments/measurement-returned-reviews-native.json",
       "bytes": 937,
       "sha256": "e16de5a4089e4c9789065aa82193a422b6b262b26f2d6ce985be87c50fe6e761"
@@ -159,9 +135,49 @@
       "sha256": "65c0f064c6e9dfefbca981ff729f151d843ade2db77875943c6ede53c7bdc8cd"
     },
     {
+      "path": "MEASURED_CHEMISTRY.md",
+      "bytes": 16738,
+      "sha256": "f299673aeeb705317a79dd5ce222fa86ea1b78f911d92125ffb6db15533ccc50"
+    },
+    {
+      "path": "MEASURED_OBSERVATIONS.md",
+      "bytes": 10936,
+      "sha256": "7cbb239a2b62751166a16307cf6667fce5a953ba724e01e4abd1dbae1bc4ef86"
+    },
+    {
+      "path": "MEASUREMENT_COLLECTIONS.md",
+      "bytes": 10308,
+      "sha256": "32dcaf647941c7149bf8a7ab2dab31a5f3eb6fec51b4a257440d7a5a100f611f"
+    },
+    {
+      "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
+      "bytes": 9350,
+      "sha256": "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11"
+    },
+    {
+      "path": "MEASUREMENT_LARGE_FILES.md",
+      "bytes": 23552,
+      "sha256": "d59ebeb7d3bbd30d6ab20fd74c8b513d6310b21649f5dd0665ff45a5732922e5"
+    },
+    {
+      "path": "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json",
+      "bytes": 1723,
+      "sha256": "ff2cd42b579127ac1ce31e9762414fa34dbf84a1a3bd24bd6db96c4229c82076"
+    },
+    {
+      "path": "MEASUREMENT_RETURNED_REVIEWS.md",
+      "bytes": 10267,
+      "sha256": "6965cdbaa3f2f04395b3abea18c217be0dbde1a4d5d5892b7a46e8f7f7fcb10d"
+    },
+    {
       "path": "measurement_workspace/ATOMIC_SNAPSHOT.md",
       "bytes": 3580,
       "sha256": "218fa461e7e7dbb4061c79dd05a9d1ceb91079e6862d583d0514cf0c0e128a4c"
+    },
+    {
+      "path": "measurement_workspace/chemistry.py",
+      "bytes": 40609,
+      "sha256": "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef"
     },
     {
       "path": "measurement_workspace/DAILY_FLOW_STUDIES.md",
@@ -174,34 +190,19 @@
       "sha256": "598f4c07cfdaa4d7a735bffca805158626016895e38cdca5aa9e7be8b0d4930b"
     },
     {
-      "path": "measurement_workspace/LEGACY_CHEMISTRY.md",
-      "bytes": 9345,
-      "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f"
+      "path": "measurement_workspace/engine/benchmark_reports.mjs",
+      "bytes": 9782,
+      "sha256": "09947f61e240696abf43d41617814dd92f10aa45f75f62e0bfdb55ce7c4eb643"
     },
     {
-      "path": "measurement_workspace/OBSERVATION_CONTEXT.md",
-      "bytes": 4030,
-      "sha256": "86285ecaa5c10738294c50899eb24849d9b1ce2d0a4c9bd475bc935cd3bee2b0"
+      "path": "measurement_workspace/engine/benchmark_workspace.mjs",
+      "bytes": 27122,
+      "sha256": "ddaacf48dda75079262c3e580f90376fe2db8f0ce7232177d18086d3b667656d"
     },
     {
-      "path": "measurement_workspace/READABLE_RESULTS.md",
-      "bytes": 7043,
-      "sha256": "1c2ce92f1a1b27a53a6cc39632a0dad64aa279d6f6adbb64dc03b75aae05c883"
-    },
-    {
-      "path": "measurement_workspace/SOURCE_HANDBACK.md",
-      "bytes": 11272,
-      "sha256": "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
-    },
-    {
-      "path": "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
-      "bytes": 17423,
-      "sha256": "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
-    },
-    {
-      "path": "measurement_workspace/chemistry.py",
-      "bytes": 40609,
-      "sha256": "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef"
+      "path": "measurement_workspace/engine/benchmarks.mjs",
+      "bytes": 14692,
+      "sha256": "eb871980f85c27f8ce7f1cc797ae6fd1fcd6ab07222b5c2a69fc464b3bbb4d4f"
     },
     {
       "path": "measurement_workspace/engine/calibration.mjs",
@@ -215,8 +216,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 12025,
-      "sha256": "a3974570b007b83a99cc35961fae5ef11a8a7a02bf2953c28be3062fbf7dedc2"
+      "bytes": 13204,
+      "sha256": "3aef55b9b9553ac0fd76ecd028d7da064c982a5145f7e516100ad32e39205afe"
     },
     {
       "path": "measurement_workspace/engine/collection_zip.mjs",
@@ -265,8 +266,8 @@
     },
     {
       "path": "measurement_workspace/engine/http.mjs",
-      "bytes": 12290,
-      "sha256": "d91bde5a6302492127804c13798b752b879aed79df73e65055be7716689a2419"
+      "bytes": 13043,
+      "sha256": "a5517dfa93558403e75745ab98f476660f23f2ce74df5e97df023eef9d02d81a"
     },
     {
       "path": "measurement_workspace/engine/intake.mjs",
@@ -285,8 +286,8 @@
     },
     {
       "path": "measurement_workspace/engine/large_delivery.mjs",
-      "bytes": 28600,
-      "sha256": "f48f15c1682af0f6c439b5f866e8dbc91ac8b09d60d8379caf660037ea61f90c"
+      "bytes": 28739,
+      "sha256": "60075b257d2ad2414116b959079378d8d402c927765012fe540c7390409cabfe"
     },
     {
       "path": "measurement_workspace/engine/large_http.mjs",
@@ -344,11 +345,6 @@
       "sha256": "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea"
     },
     {
-      "path": "measurement_workspace/engine/source_handback.mjs",
-      "bytes": 24201,
-      "sha256": "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
-    },
-    {
       "path": "measurement_workspace/engine/source_handback_cli.mjs",
       "bytes": 1642,
       "sha256": "0f56facc55e6e9b4d5f7455a87c2dd0dcdd2e644f543058d08192838301ae27d"
@@ -369,6 +365,11 @@
       "sha256": "88f85d5f989b7614f40e14649307dc63890b5150a84a0d47d45d422192ead872"
     },
     {
+      "path": "measurement_workspace/engine/source_handback.mjs",
+      "bytes": 24201,
+      "sha256": "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
+    },
+    {
       "path": "measurement_workspace/engine/source_reconciliation.mjs",
       "bytes": 18043,
       "sha256": "3e1812e964df450f3cd357d8fa0b3ff4d770d7329ea1d93894a98abeb18eaad7"
@@ -380,8 +381,8 @@
     },
     {
       "path": "measurement_workspace/engine/workspace.mjs",
-      "bytes": 23713,
-      "sha256": "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6"
+      "bytes": 23827,
+      "sha256": "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48"
     },
     {
       "path": "measurement_workspace/extension.py",
@@ -399,14 +400,49 @@
       "sha256": "307f98afc3ccbecb294bb18cf4d4b1fe3a0e4b05bc3f4390883169178407e056"
     },
     {
+      "path": "measurement_workspace/LEGACY_CHEMISTRY.md",
+      "bytes": 9345,
+      "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f"
+    },
+    {
       "path": "measurement_workspace/legacy_chemistry.py",
       "bytes": 18503,
       "sha256": "bfb2ddf892170abf3157819844d36687930785dd23c225872cbfd3214e2b02aa"
     },
     {
+      "path": "measurement_workspace/OBSERVATION_CONTEXT.md",
+      "bytes": 4030,
+      "sha256": "86285ecaa5c10738294c50899eb24849d9b1ce2d0a4c9bd475bc935cd3bee2b0"
+    },
+    {
+      "path": "measurement_workspace/OBSERVED_BENCHMARKS.md",
+      "bytes": 21542,
+      "sha256": "ba68da187551579836b5b5299c61393a745559626f91ee948332ad60a7e0d242"
+    },
+    {
       "path": "measurement_workspace/operator.py",
-      "bytes": 10766,
-      "sha256": "17bcf6d9aab974c3722b1e1bf78a55ce5151623dc3ec07f4addd5d054af0b27c"
+      "bytes": 10798,
+      "sha256": "eb924b30be7b5b7b527655036287698bce49705e769858a4e9fd472fefb09921"
+    },
+    {
+      "path": "measurement_workspace/READABLE_RESULTS.md",
+      "bytes": 7043,
+      "sha256": "1c2ce92f1a1b27a53a6cc39632a0dad64aa279d6f6adbb64dc03b75aae05c883"
+    },
+    {
+      "path": "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
+      "bytes": 17423,
+      "sha256": "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
+    },
+    {
+      "path": "measurement_workspace/SOURCE_HANDBACK.md",
+      "bytes": 11272,
+      "sha256": "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+    },
+    {
+      "path": "measurement_workspace/web/benchmarks.mjs",
+      "bytes": 33585,
+      "sha256": "269b0fa7d2570325fa987c0b98f798859a04149bec2b073d95539e24be7c143a"
     },
     {
       "path": "measurement_workspace/web/chemistry.mjs",
@@ -420,8 +456,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 8271,
-      "sha256": "00a35730b8f0f891826927d923dabcb48b44c9fe6f7d7c4555185fa67c2bfea3"
+      "bytes": 9427,
+      "sha256": "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e"
     },
     {
       "path": "measurement_workspace/web/flow_editions.css",
@@ -480,13 +516,13 @@
     },
     {
       "path": "measurement_workspace/web/workspace.css",
-      "bytes": 13428,
-      "sha256": "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36"
+      "bytes": 16530,
+      "sha256": "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220"
     },
     {
       "path": "measurement_workspace/web/workspace.js",
-      "bytes": 28462,
-      "sha256": "63e38301e08256c1140cad505312cdb0a8bc9880b3f1cf3b9bc99024cf025d53"
+      "bytes": 30009,
+      "sha256": "19ad95139b181e31289e6dc76d827d0ad81cfb247715133cb82ed6bda39bfca4"
     },
     {
       "path": "model/MEASUREMENTS_PORTABLE.md",
@@ -504,24 +540,9 @@
       "sha256": "6d629814e4d97d39cd23ebb17b308176592102f8f2090132868a0e217ce4ae6a"
     },
     {
-      "path": "operator/MEASURED_CHEMISTRY.md",
-      "bytes": 10515,
-      "sha256": "bc0be0e63d82023510886feb69dbcd5d74f665718e16b629a0d578488606b6b4"
-    },
-    {
-      "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 13212,
-      "sha256": "795e4e19cce0c4049006cfabdd7ab0b2f9ad4e8d1d0b1500367ae299cc35bade"
-    },
-    {
-      "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 10618,
-      "sha256": "408b9b39254d2f0bad3b177b2f3051ce7e5a89d4cf33c3743ad04ee4a2c97fe3"
-    },
-    {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2160,
-      "sha256": "0d74d3c6105d115cbc27098d04f351d4623d01b5591ea8f7da5e9995ef21477f"
+      "bytes": 2182,
+      "sha256": "d75fb8fea67a665fc3e984bbe144544e2f45fc01751a65bc6b4da5795b951458"
     },
     {
       "path": "operator/extensions/measurement-returned-reviews-native.json",
@@ -534,9 +555,29 @@
       "sha256": "76402fc675cc41c04f78156fe1ad93c00a8f7782afdbc7fb7fc17cb08b7197b4"
     },
     {
+      "path": "operator/MEASURED_CHEMISTRY.md",
+      "bytes": 10515,
+      "sha256": "bc0be0e63d82023510886feb69dbcd5d74f665718e16b629a0d578488606b6b4"
+    },
+    {
       "path": "operator/measurement_returned_reviews_native.py",
       "bytes": 19789,
       "sha256": "35d281cf3572650fc479143146f358cf7c317add533d981dc152e43b25202432"
+    },
+    {
+      "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
+      "bytes": 10618,
+      "sha256": "408b9b39254d2f0bad3b177b2f3051ce7e5a89d4cf33c3743ad04ee4a2c97fe3"
+    },
+    {
+      "path": "operator/MEASUREMENTS_INSTALLATION.md",
+      "bytes": 13212,
+      "sha256": "795e4e19cce0c4049006cfabdd7ab0b2f9ad4e8d1d0b1500367ae299cc35bade"
+    },
+    {
+      "path": "operator/web/benchmarks.mjs",
+      "bytes": 33585,
+      "sha256": "269b0fa7d2570325fa987c0b98f798859a04149bec2b073d95539e24be7c143a"
     },
     {
       "path": "operator/web/flow_editions.css",
@@ -574,19 +615,19 @@
       "sha256": "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b"
     },
     {
+      "path": "operator/web/measured_observations_extension.mjs",
+      "bytes": 9476,
+      "sha256": "21aa79ec6326366e8f01074213338ab02e4bcc67fb7fcabc5eb01677ad67171d"
+    },
+    {
       "path": "operator/web/measured_observations.css",
-      "bytes": 13428,
-      "sha256": "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36"
+      "bytes": 16530,
+      "sha256": "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220"
     },
     {
       "path": "operator/web/measured_observations.mjs",
-      "bytes": 28480,
-      "sha256": "050a92f504747a8af5eb4a293099bdb9a29e99e65bacea19dcb9e01e12e8c74a"
-    },
-    {
-      "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 8320,
-      "sha256": "2e8a342d1e54d0b2b340f71cb74030fe0f757d4f725eabf460904f5e30cd35f2"
+      "bytes": 30027,
+      "sha256": "5d5c8a163ab6ff1f1fdb4b0c24cae5884e6d83083a3c8c7e66689f009168590a"
     },
     {
       "path": "operator/web/measured_results.mjs",
@@ -619,9 +660,54 @@
       "sha256": "ea44cd53d2d07710dff71e92fa759a0d0ba4e319fd5440df3384c64ce78a2930"
     },
     {
-      "path": "source/MEASURED_CHEMISTRY_RECEIVING.md",
-      "bytes": 14195,
-      "sha256": "6ce4c211a91336c094a123b295731ccd1a177ed293235af7a071592f05c26ad3"
+      "path": "source_tools/capture_wqp_edition.py",
+      "bytes": 8903,
+      "sha256": "72aca089811176b08f08f8119670dc4bf2c13753b71fb4a6fd8cd6ca0c5637df"
+    },
+    {
+      "path": "source_tools/flow_editions.mjs",
+      "bytes": 4062,
+      "sha256": "899cd5e848b49e6f3387a847a749abefcdb9f4471993868764ba5d6991b1b4d6"
+    },
+    {
+      "path": "source_tools/FLOW_STUDY_LOADS.md",
+      "bytes": 5867,
+      "sha256": "9886bb254092188766d5c56084409575f7da79a0a131eb8167e479004aabd926"
+    },
+    {
+      "path": "source_tools/observed_loads.cjs",
+      "bytes": 25837,
+      "sha256": "77bdbb75929383c7b491d639180f18c43c8ab4f9ae8a672837d8465aee3249ff"
+    },
+    {
+      "path": "source_tools/OBSERVED_LOADS.md",
+      "bytes": 10957,
+      "sha256": "1392dd8a10e8b60f44b270cbc2bc7108fb8bac4fc6f1727e58e0ec83548ede06"
+    },
+    {
+      "path": "source_tools/prepare_observed_loads.mjs",
+      "bytes": 5683,
+      "sha256": "b8dbd908ab44a7adf16536981e5e75a6695edd90bcaf2666ac3bd42589b9e464"
+    },
+    {
+      "path": "source_tools/prepare_wqp_measurement_collection.mjs",
+      "bytes": 15076,
+      "sha256": "39b427912f7f0cd011e264fbd71f58a11ccb3243ced1b363808f09980b1a56b8"
+    },
+    {
+      "path": "source_tools/print_measurement_return.py",
+      "bytes": 9841,
+      "sha256": "395f43610cdf838a4c64926091ee49025ecada3c7b2ece3a078f9de586b388b4"
+    },
+    {
+      "path": "source_tools/receive_flow_delivery.py",
+      "bytes": 2961,
+      "sha256": "ca9a262ed46d5563c96f142545e4e0e773bd3e9a689af3b18f806a288d58349b"
+    },
+    {
+      "path": "source_tools/WQP_OFFICIAL_EDITION.md",
+      "bytes": 11137,
+      "sha256": "3eef87cd33d5baa7fd944d95e43c6134e11380a96c6efe487f7a3c8535b46c11"
     },
     {
       "path": "source/daily-flow-editions-20261013/2026-input.json",
@@ -632,11 +718,6 @@
       "path": "source/daily-flow-editions-20261013/2026-original-source-receipt.json",
       "bytes": 6033,
       "sha256": "20b2f8447c5e97cbb3f5dfb12ddcb30f5f3b7cddac506c02b2f16e219894ec11"
-    },
-    {
-      "path": "source/daily-flow-editions-20261013/README.md",
-      "bytes": 7152,
-      "sha256": "99b797fc2a79b50336597630969446ef32641e5eb8c476d5f9d76159af25bbdc"
     },
     {
       "path": "source/daily-flow-editions-20261013/comparable-calendar-windows.csv",
@@ -764,9 +845,19 @@
       "sha256": "49109fb908d00e307ec4caf3581dd6567e71a4f840d1db4549ad6e01d1d669e5"
     },
     {
+      "path": "source/daily-flow-editions-20261013/README.md",
+      "bytes": 7152,
+      "sha256": "99b797fc2a79b50336597630969446ef32641e5eb8c476d5f9d76159af25bbdc"
+    },
+    {
       "path": "source/daily-flow-editions-20261013/scientific-execution.json",
       "bytes": 8670,
       "sha256": "2ffbe1c9b6919bb89a90b3731a586fc54475f5c94434b71d33428cb1e7349aca"
+    },
+    {
+      "path": "source/MEASURED_CHEMISTRY_RECEIVING.md",
+      "bytes": 14195,
+      "sha256": "6ce4c211a91336c094a123b295731ccd1a177ed293235af7a071592f05c26ad3"
     },
     {
       "path": "source/observed-load-integration-20261013/flow-study-load-contract.json",
@@ -777,56 +868,6 @@
       "path": "source/run_measured_chemistry_receiving.py",
       "bytes": 34879,
       "sha256": "cfcdb9ec23abfc783aea59b255f1a376cc7700958c1ab5783cb6c7f944d3f558"
-    },
-    {
-      "path": "source_tools/FLOW_STUDY_LOADS.md",
-      "bytes": 5867,
-      "sha256": "9886bb254092188766d5c56084409575f7da79a0a131eb8167e479004aabd926"
-    },
-    {
-      "path": "source_tools/OBSERVED_LOADS.md",
-      "bytes": 10957,
-      "sha256": "1392dd8a10e8b60f44b270cbc2bc7108fb8bac4fc6f1727e58e0ec83548ede06"
-    },
-    {
-      "path": "source_tools/WQP_OFFICIAL_EDITION.md",
-      "bytes": 11137,
-      "sha256": "3eef87cd33d5baa7fd944d95e43c6134e11380a96c6efe487f7a3c8535b46c11"
-    },
-    {
-      "path": "source_tools/capture_wqp_edition.py",
-      "bytes": 8903,
-      "sha256": "72aca089811176b08f08f8119670dc4bf2c13753b71fb4a6fd8cd6ca0c5637df"
-    },
-    {
-      "path": "source_tools/flow_editions.mjs",
-      "bytes": 4062,
-      "sha256": "899cd5e848b49e6f3387a847a749abefcdb9f4471993868764ba5d6991b1b4d6"
-    },
-    {
-      "path": "source_tools/observed_loads.cjs",
-      "bytes": 25837,
-      "sha256": "77bdbb75929383c7b491d639180f18c43c8ab4f9ae8a672837d8465aee3249ff"
-    },
-    {
-      "path": "source_tools/prepare_observed_loads.mjs",
-      "bytes": 5683,
-      "sha256": "b8dbd908ab44a7adf16536981e5e75a6695edd90bcaf2666ac3bd42589b9e464"
-    },
-    {
-      "path": "source_tools/prepare_wqp_measurement_collection.mjs",
-      "bytes": 15076,
-      "sha256": "39b427912f7f0cd011e264fbd71f58a11ccb3243ced1b363808f09980b1a56b8"
-    },
-    {
-      "path": "source_tools/print_measurement_return.py",
-      "bytes": 9841,
-      "sha256": "395f43610cdf838a4c64926091ee49025ecada3c7b2ece3a078f9de586b388b4"
-    },
-    {
-      "path": "source_tools/receive_flow_delivery.py",
-      "bytes": 2961,
-      "sha256": "ca9a262ed46d5563c96f142545e4e0e773bd3e9a689af3b18f806a288d58349b"
     }
   ],
   "predecessors": {
@@ -837,12 +878,14 @@
       "d8ea3122b23b821106330dc4d93cfad61c2c52fe5e4eb054bd91496e932fa8f2",
       "a15e758a73cfed827f78f6b23bd0df040e8d21feaa2712767ebf88ef11e4fbfb",
       "2a9e04c4a8c5afb1e27921b53e31136a0d89127c048501ea0cb4e23a6c66d2c5",
-      "f09749366a116d330681f2e90093616f56767e099e0348524cdec607c9ba4b90"
+      "f09749366a116d330681f2e90093616f56767e099e0348524cdec607c9ba4b90",
+      "d91bde5a6302492127804c13798b752b879aed79df73e65055be7716689a2419"
     ],
     "measurement_workspace/engine/workspace.mjs": [
       "ae27aeaf1c57d67b71699a99c5894c00c209a15139c74c27cc0a90b3af7999d3",
       "108b2d92ee97d986162909cb36613879e69ac12398f9d402638aba5d7c0712b6",
-      "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f"
+      "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f",
+      "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6"
     ],
     "measurement_workspace/extension.py": [
       "5a0c67271d01b4b32e3ca97c637b8d2adf71da97d288a442272fd98acfb57ef6",
@@ -854,21 +897,24 @@
       "b0e5112d3a7f17b920fe36468a99649f9801ef79818356cfb2e9fc1d36c54cbf",
       "05c7a3e4e45ae89de3c8a27cd819c337c3ba5fe5e20e9496584844d66051ab80",
       "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
-      "7f94db4b1de020b61a5fe6b4536e271110a8cc6cae26129afbac7d96bc4e6131"
+      "7f94db4b1de020b61a5fe6b4536e271110a8cc6cae26129afbac7d96bc4e6131",
+      "00a35730b8f0f891826927d923dabcb48b44c9fe6f7d7c4555185fa67c2bfea3"
     ],
     "operator/extensions/measured-observations.json": [
       "4995708ba0285439ab85d0a0d5af614d1b1aca9d6240f22246a53e54b400315e",
       "9e1dea1fe923ced0b452104fb1640b4e051585bd80500c277ff5c6f08f216fe7",
       "70b84f908e8aa8d48bfec814f4a5f01f83c1f6cc5bf420ddeb2daa5514a768f6",
       "4e2a0a5d3337bd6fbef13278e2ad4112e6660d08a1dc21d3aa4b2962d709f59d",
-      "09164dad0bfc36ce28cadcd901a7109845ef0448a9cc192c5837afe1f792f6b2"
+      "09164dad0bfc36ce28cadcd901a7109845ef0448a9cc192c5837afe1f792f6b2",
+      "0d74d3c6105d115cbc27098d04f351d4623d01b5591ea8f7da5e9995ef21477f"
     ],
     "operator/web/measured_observations_extension.mjs": [
       "53956ef94c20be2083e3ecfb6389dc9352ccea1e52b42e60e487c65d083a2d48",
       "2a4b47fa4d34e54ddc7e928932b036e7f6f27143da64e5aef3bb625043e65e95",
       "eb87b2fa8832a0245291176cf7a1bc6baad9029f597f5c12864e87ec01567048",
       "e9c156bcf97225c8debda52fa2e1553a0af80e4e237e06350e0bd27613d068b3",
-      "94deae59dc244f1d18822336b47cc2bc937aee5939acdf74fed94009f79d9b14"
+      "94deae59dc244f1d18822336b47cc2bc937aee5939acdf74fed94009f79d9b14",
+      "2e8a342d1e54d0b2b340f71cb74030fe0f757d4f725eabf460904f5e30cd35f2"
     ],
     "MEASURED_CHEMISTRY.md": [
       "a9d47546de0a79b85d9c86621bd55d4325d9c257b953ad48774fa7a3e264db15",
@@ -920,7 +966,8 @@
       "3ca590c7321151db63d72eb02b080641cd921325d992e486a37173d8f6bbf5a5",
       "d24cab14e5f37954eeef37634f6ad3b5ee60003ca1a2d1b6ae041d245c41590c",
       "7fcf6463e8d141b5087b820587dfb6fc8f2c5eac4d101975be98376b46c8748a",
-      "02dd78e1d5a3efbb361344677f7e2dbc3499f4069d5a94dac8a026248e7716a0"
+      "02dd78e1d5a3efbb361344677f7e2dbc3499f4069d5a94dac8a026248e7716a0",
+      "6362435703fc01930e44426162e73866b0703cb582d6e676c5415180891f7a08"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -960,7 +1007,8 @@
       "3046cc593cdb9da8a5ec0b47ea5ac561cac8e7d43392d350811165ef6b77d617",
       "5c65ff1f51263baf7a9f4a0a0f229c3d52e920ee2a0ac4a01bcb7004f3750295",
       "7d64e93baf163a2d85f6682a8b08d592dcea71687f1431ae3f5cc31032ea2f3d",
-      "f7202b9bfad0de7dbaec5fb50e62e9afed4d604eacd23e6c391ced3cbe70f4bf"
+      "f7202b9bfad0de7dbaec5fb50e62e9afed4d604eacd23e6c391ced3cbe70f4bf",
+      "a3974570b007b83a99cc35961fae5ef11a8a7a02bf2953c28be3062fbf7dedc2"
     ],
     "measurement_workspace/engine/collections.mjs": [
       "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e"
@@ -970,7 +1018,8 @@
       "7c3bbd9e0972c2a1e1f6b8f2ac5d36d8dcee87e1d5183db2a77f9875e70310ca",
       "58e93de11ee97b2b291921f7aaa398a3639e1b8107442744e2099ed7a1fd44a7",
       "167551d9554484aa15976c61ded9f9883c5fadeab599513a995aa7f32340ffaa",
-      "3e5a7d8c45e335f1fe5c8ba727595a6370c02997fd855d117913666428cec155"
+      "3e5a7d8c45e335f1fe5c8ba727595a6370c02997fd855d117913666428cec155",
+      "17bcf6d9aab974c3722b1e1bf78a55ce5151623dc3ec07f4addd5d054af0b27c"
     ],
     "measurement_workspace/web/collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2"
@@ -984,12 +1033,14 @@
     "measurement_workspace/web/workspace.css": [
       "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
       "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
-      "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856"
+      "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856",
+      "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36"
     ],
     "measurement_workspace/web/workspace.js": [
       "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
       "613461d995686675c929163d86538dfe15c44efe2f4672c3a362a9daf01c822c",
-      "33eb45479e46769c395495fe1cdd0fc926b38f691cd0323e35c9972908afb986"
+      "33eb45479e46769c395495fe1cdd0fc926b38f691cd0323e35c9972908afb986",
+      "63e38301e08256c1140cad505312cdb0a8bc9880b3f1cf3b9bc99024cf025d53"
     ],
     "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py": [
       "6d629814e4d97d39cd23ebb17b308176592102f8f2090132868a0e217ce4ae6a"
@@ -997,12 +1048,14 @@
     "operator/web/measured_observations.css": [
       "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
       "149c076998da792e0fc17177c770f175d2d94d440d4e2ffa4f2e08aa6c44a99d",
-      "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856"
+      "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856",
+      "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36"
     ],
     "operator/web/measured_observations.mjs": [
       "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
       "eae577919775a92e61861d9d06fb49684a21699482d09346700f3963c417d5f5",
-      "f16a8349f8c22975c33902228cad9299e56dd5c50f0960d1de8a95f5228ff8f1"
+      "f16a8349f8c22975c33902228cad9299e56dd5c50f0960d1de8a95f5228ff8f1",
+      "050a92f504747a8af5eb4a293099bdb9a29e99e65bacea19dcb9e01e12e8c74a"
     ],
     "operator/web/measured_collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2"
