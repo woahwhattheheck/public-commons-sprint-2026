@@ -47,7 +47,7 @@ let journal=fs.existsSync(journalPath)?read(journalPath):{
 insist(journal.operation_id===OP&&journal.workspace_id===design.workspace_id,'The retained browser operation belongs to another case');
 function save(){atomic(journalPath,bytes(journal));}
 function step(name,value){journal.steps[name]={completed_at:new Date().toISOString(),...value};save();}
-save();
+if(journal.status!=='COMPLETE')save();
 let server,context,baseURL,routeError=null;
 const runtimeModules=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
 insist(runtimeModules,'Use the existing primary Playwright runtime');
@@ -56,8 +56,8 @@ const {chromium}=require('playwright');
 const chromiumPath=process.env.FSU_CHROMIUM;
 insist(chromiumPath&&fs.existsSync(chromiumPath),'Supply the retained existing Chromium executable');
 
-async function startServer(){
- server=spawn(PYTHON,[path.join(SOURCE,'cli.py'),'--workspace',path.join(ROOT,'workspace'),'serve','--port','0'],{
+async function startServer(workspaceDirectory=path.join(ROOT,'workspace')){
+ server=spawn(PYTHON,[path.join(SOURCE,'cli.py'),'--workspace',workspaceDirectory,'serve','--port','0'],{
   cwd:SOURCE,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']
  });
  let stderr='';
@@ -174,39 +174,210 @@ async function download(page,button,label){
  const retained=retain(file,data);fs.unlinkSync(temporary);journal.downloads[label]={...retained,suggested_filename:value.suggestedFilename()};save();await idle(page);
  return retained;
 }
-async function captureViews(page,label){
- const original=page.viewportSize();
- try{
-  for(const width of [1440,390]){
-   await page.setViewportSize({width,height:1000});
-   await page.evaluate(()=>document.fonts.ready);
-   const raw=await page.screenshot({fullPage:true,animations:'disabled'}),hash=sha(raw);
-   const item={...retain(path.join(OUT,'visuals',label+'-'+width+'-'+hash.slice(0,12)+'.png'),raw),
-    label,viewport:{width,height:1000},url:page.url(),captured_at:new Date().toISOString()};
-   journal.visuals??=[];
-   if(!journal.visuals.some(row=>row.label===label&&row.viewport?.width===width&&row.sha256===hash))journal.visuals.push(item);
-   save();
+
+function applicationSources(){
+ const result={};
+ const accept=/\.(py|mjs|js|css|html|json|md)$/i;
+ function visit(absolute,relative){
+  if(!fs.existsSync(absolute))return;
+  const info=fs.lstatSync(absolute);
+  insist(!info.isSymbolicLink(),'Use the retained regular application source: '+relative);
+  if(info.isDirectory()){
+   for(const entry of fs.readdirSync(absolute).sort())if(!['__pycache__','node_modules','.git'].includes(entry))visit(path.join(absolute,entry),relative+'/'+entry);
+  }else if(info.isFile()&&accept.test(relative)){
+   const raw=fs.readFileSync(absolute);
+   result[relative]={bytes:raw.length,sha256:sha(raw)};
   }
- }finally{if(original)await page.setViewportSize(original);}
+ }
+ for(const name of ['core.py','cli.py','server.py','AGENTS.md','CLAUDE.md','GEMINI.md',
+                    'web','receiving','classification','publisher_intake','market_structure'])visit(path.join(SOURCE,name),name);
+ for(const name of ['fsu-original-operator.mjs','fsu_original_native.py']){
+  const raw=fs.readFileSync(path.join(HERE,name));result['receiving-driver/'+name]={bytes:raw.length,sha256:sha(raw)};
+ }
+ insist(result['core.py']&&result['server.py']&&result['web/app.js'],'Retain the complete selected application before opening the completed case');
+ return result;
 }
-async function captureDownloadedReports(){
- const page=await context.newPage();
- try{
-  for(const [label,download]of Object.entries(journal.downloads)){
-   if(!label.endsWith('.html'))continue;
-   const raw=fs.readFileSync(download.path);insist(sha(raw)===download.sha256,'The saved printable report changed: '+label);
-   await page.goto(pathToFileURL(download.path).href,{waitUntil:'load'});
-   await captureViews(page,label.replace(/\.html$/,''));
+function relativeDescriptor(base,file){
+ const raw=fs.readFileSync(file),relative=path.relative(base,file);
+ insist(relative&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative),'Keep the visual attachment inside its original edition');
+ return {path:relative.split(path.sep).join('/'),bytes:raw.length,sha256:sha(raw)};
+}
+async function closeNativeBrowser(){
+ if(context){const selected=context;context=null;await selected.close();}
+ if(server){
+  const selected=server;server=null;
+  if(selected.exitCode===null&&selected.signalCode===null){
+   await new Promise(resolve=>{
+    let timer;
+    const done=()=>{clearTimeout(timer);resolve();};
+    selected.once('exit',done);selected.kill('SIGTERM');
+    timer=setTimeout(()=>{if(selected.exitCode===null&&selected.signalCode===null)selected.kill('SIGKILL');},5000);
+   });
   }
- }finally{await page.close();}
+ }
 }
+async function inspectCompletedCase(original){
+ const completedFile=path.join(OUT,'browser-result.json'),completedRaw=fs.readFileSync(completedFile);
+ const journalRaw=fs.readFileSync(journalPath),resultPath=path.join(OUT,'RESULT.json'),resultRaw=fs.readFileSync(resultPath);
+ insist(stable(read(completedFile))===stable(journal.completed_result),'Use the original completed browser result');
+ const selection={
+  schema:'fsu.completed-case-visual-selection.v1',operation_id:OP,workspace_id:design.workspace_id,
+  source_commit:COMMIT,application_sources:applicationSources(),browser_result_sha256:sha(completedRaw),
+  native_result_sha256:sha(resultRaw),linked_handoff:original.linked_handoff,
+  linked_annual_review:original.linked_annual_review,accepted_analysis_id:design.analysis_id,
+  accepted_review_id:design.accepted_review_id,viewports:[1440,390]
+ };
+ const edition=sha(Buffer.from(stable(selection))),directory=path.join(OUT,'visual-editions',edition);
+ fs.mkdirSync(directory,{recursive:true});
+ const requestPath=path.join(directory,'selection.json');
+ retain(requestPath,bytes(selection));
+ const completedPath=path.join(directory,'visual-edition.json');
+ const verifyHistorical=()=>{
+  insist(fs.readFileSync(completedFile).equals(completedRaw),'The original completed browser result changed during visual continuation');
+  insist(fs.readFileSync(journalPath).equals(journalRaw),'The original completed browser journal changed during visual continuation');
+  insist(fs.readFileSync(resultPath).equals(resultRaw),'The original native completion changed during visual continuation');
+ };
+ const inspectSaved=value=>{
+  insist(value.selection_sha256===edition&&stable(value.selection)===stable(selection),'The saved visual edition selects another source or case');
+  for(const item of value.files){
+   insist(typeof item.path==='string'&&item.path&&!item.path.includes('\\')&&!path.isAbsolute(item.path)&&
+    !item.path.split('/').some(part=>part==='..'||part==='.'||!part),'The visual attachment path differs');
+   const file=path.resolve(directory,item.path);
+   insist(file.startsWith(directory+path.sep)&&fs.lstatSync(file).isFile()&&!fs.lstatSync(file).isSymbolicLink(),'Retain each original visual attachment');
+   const raw=fs.readFileSync(file);insist(raw.length===item.bytes&&sha(raw)===item.sha256,'A completed visual attachment changed: '+item.path);
+  }
+ };
+ if(fs.existsSync(completedPath)){
+  const saved=read(completedPath);inspectSaved(saved);verifyHistorical();
+  return {...original,visual_edition:{id:edition,path:completedPath,index:path.join(directory,'index.html'),sha256:sha(fs.readFileSync(completedPath)),reopened:true}};
+ }
+ const progressPath=path.join(directory,'progress.json'),files=new Map(),views=[],downloads={},pageErrors=[],blockedRequests=[];
+ const progress=(phase,details={})=>atomic(progressPath,bytes({schema:'fsu.completed-case-visual-progress.v1',operation_id:OP,edition,phase,at:new Date().toISOString(),...details}));
+ const add=file=>{const entry=relativeDescriptor(directory,file);files.set(entry.path,entry);return entry;};
+ const saveAttachment=(relative,raw)=>{const file=path.join(directory,relative);retain(file,raw);return add(file);};
+ async function capture(page,label){
+  const previous=page.viewportSize();
+  try{
+   for(const width of selection.viewports){
+    await page.setViewportSize({width,height:1000});await page.evaluate(()=>document.fonts.ready);
+    const raw=await page.screenshot({fullPage:true,animations:'disabled'}),entry=saveAttachment('screens/'+label+'-'+width+'-'+sha(raw).slice(0,16)+'.png',raw);
+    views.push({label,viewport:{width,height:1000},file:entry});
+    progress('rendering',{last_view:label,viewport:width});
+   }
+  }finally{if(previous)await page.setViewportSize(previous);}
+ }
+ async function downloadExisting(page,title,label){
+  const event=page.waitForEvent('download',{timeout:30000});
+  await page.getByRole('button',{name:title,exact:true}).click();
+  const item=await event,temp=path.join(directory,'.download-'+crypto.randomUUID()+'.part');
+  try{
+   await item.saveAs(temp);const raw=fs.readFileSync(temp);
+   const old=original.browser?.downloads?.[label]||journal.completed_result.downloads?.[label];
+   if(old&&!label.endsWith('.html'))insist(raw.length===old.bytes&&sha(raw)===old.sha256,'The original completed download changed: '+label);
+   // A changed renderer may create a successor HTML body; the original download stays untouched.
+   const entry=saveAttachment('downloads/'+sha(raw)+'-'+label,raw);
+   downloads[label]={...entry,suggested_filename:item.suggestedFilename()};
+  }finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}
+ }
+ async function browserFor(workspacePath,profileSuffix){
+  baseURL=await startServer(workspacePath);
+  const tmp=path.join(ROOT,'tmp');fs.mkdirSync(tmp,{recursive:true});
+  context=await chromium.launchPersistentContext(path.join(ROOT,'visual-browser-'+edition.slice(0,16)+'-'+profileSuffix),{
+   executablePath:chromiumPath,headless:true,viewport:{width:1440,height:1000},acceptDownloads:true,
+   args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'],
+   env:{...process.env,TMPDIR:process.env.TMPDIR||tmp}
+  });
+  const page=context.pages()[0]||await context.newPage();page.setDefaultTimeout(30000);
+  page.on('pageerror',error=>pageErrors.push({phase:profileSuffix,message:error.message}));
+  await context.route('**/api/**',async route=>{
+   if(['GET','HEAD','OPTIONS'].includes(route.request().method()))return route.continue();
+   blockedRequests.push({method:route.request().method(),path:new URL(route.request().url()).pathname});
+   return route.abort('blockedbyclient');
+  });
+  await page.goto(baseURL,{waitUntil:'domcontentloaded'});
+  await page.locator('#nav [data-view="receiving"]').waitFor({state:'visible'});
+  const actual=await get('/api/state');insist(stable(actual.workspace)===stable(original.workspace),'The completed receiving workspace changed');
+  return page;
+ }
+ try{
+  progress('opening-original-completed-case');
+  let page=await browserFor(path.join(ROOT,'workspace'),'original');
+  const actual=await get('/api/document/analysis/'+design.analysis_id);
+  insist(actual.result_sha256===design.analysis_sha256&&actual.reviews.at(-1).id===design.accepted_review_id,'Original accepted pricing changed');
+  await page.locator('#nav [data-view="reports"]').click();
+  await page.locator('[data-action="review-analysis"][data-id="'+design.analysis_id+'"]').click();
+  await page.locator('#review-form').waitFor({state:'visible'});
+  insist(await page.locator('#review-form').getAttribute('data-sha')===design.analysis_sha256,'The visible accepted pricing differs');
+  await capture(page,'original-accepted-pricing');
+  await reopen(page,original.linked_handoff.id);
+  for(const [title,label]of [['Download CSV','linked-handback.csv'],['Download TSV','linked-handback.tsv'],['Download complete handoff JSON','linked-handback.json'],['Download printable receiving report','linked-handback-report.html']])await downloadExisting(page,title,label);
+  await capture(page,'linked-handback');
+  await reopen(page,original.linked_annual_review.id);
+  for(const [title,label]of [['Download complete annual review JSON','linked-annual-review.json'],['Download printable annual report','linked-annual-report.html']])await downloadExisting(page,title,label);
+  await capture(page,'linked-annual-review');
+  const reportPage=await context.newPage();
+  try{
+   for(const [label,item]of Object.entries(downloads))if(label.endsWith('.html')){
+    await reportPage.goto(pathToFileURL(path.join(directory,item.path)).href,{waitUntil:'load'});
+    await capture(reportPage,label.replace(/\.html$/,''));
+   }
+  }finally{await reportPage.close();}
+  await closeNativeBrowser();
+  progress('opening-restored-native-archive');
+  page=await browserFor(path.join(ROOT,'independent-receiving'),'restored');
+  await reopen(page,original.linked_handoff.id);await capture(page,'restored-linked-handback');
+  await reopen(page,original.linked_annual_review.id);await capture(page,'restored-linked-annual-review');
+  const reopenedAnnual=await get('/api/extensions/receiving/document/annual-review/'+original.linked_annual_review.id);
+  insist(reopenedAnnual.sha256===original.linked_annual_review.sha256,'The reopened archive selected another annual review');
+  await closeNativeBrowser();
+  insist(!blockedRequests.length,'The read-only visual continuation attempted a business POST; inspect its original control');
+  insist(!pageErrors.length,'The rendered completed product raised a page error: '+pageErrors.map(row=>row.message).join('; '));
+  verifyHistorical();
+  insist(stable(applicationSources())===stable(selection.application_sources),'The application source changed while its outgoing screens were inspected');
+  const instructionPath=path.join(SOURCE,'AGENTS.md');
+  const instructions=fs.readFileSync(instructionPath),instructionSource=selection.application_sources['AGENTS.md'];
+  insist(instructionSource&&instructions.length===instructionSource.bytes&&sha(instructions)===instructionSource.sha256,
+   'The current producer instruction bytes differ from the selected application source');
+  saveAttachment('PRODUCER_INSPECTION.md',instructions);
+  const htmlEscape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const link=(label,href)=>'<a href="'+htmlEscape(href)+'">'+htmlEscape(label)+'</a>';
+  const guide='# FSU completed case: populated visual continuation\n\nThis edition reopens the original accepted pricing, linked handback, annual review and independently restored native backup through the existing application. It retains new exact report downloads and real 1440/390-pixel screens alongside the original completion.\n\nOpen index.html and LOOK at the actual images and exact downloaded reports. Open the CSV/TSV/JSON attachments and the restored native workspace in their recipient-facing application. Operate the real controls and fix visible defects in the current source. PRODUCER_INSPECTION.md carries the complete owner rule. Rendering does not record that a human or model viewed the images; the producing worker performs that step.\n\nOriginal completion: ../../RESULT.json\nOriginal browser completion: ../../browser-result.json\nNative archive: ../../native-backup/workspace.zip\nCurrent source: '+COMMIT+'\nVisual edition: '+edition+'\n';
+  saveAttachment('README.md',Buffer.from(guide));
+  const rows=Object.entries(downloads).map(([label,item])=>'<tr><td>'+link(label,item.path)+'</td><td>'+item.bytes+'</td><td class="hash">'+item.sha256+'</td></tr>').join('');
+  const images=views.map(view=>'<details><summary>'+htmlEscape(view.label)+' · '+view.viewport.width+' px</summary><figure>'+link('Open exact screenshot',view.file.path)+'<img src="'+htmlEscape(view.file.path)+'" alt="'+htmlEscape(view.label)+'"></figure></details>').join('');
+  const html='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FSU completed receiving case</title><style>body{font:16px/1.5 system-ui,sans-serif;color:#171717;background:#fff;max-width:1150px;margin:auto;padding:24px}h1,h2{line-height:1.25}a{color:inherit;text-decoration:underline}.scroll{overflow:auto}table{border-collapse:collapse;width:100%}th,td{padding:10px;text-align:left;border:1px solid #ccc;vertical-align:top}.hash{font:12px/1.4 monospace;overflow-wrap:anywhere}figure{margin:28px 0;border-top:1px solid #bbb;padding-top:12px}figcaption{font-weight:600}img{display:block;max-width:100%;height:auto;margin-top:10px}li{margin:8px 0}@media(max-width:600px){body{padding:14px}table{min-width:560px}}</style><h1>FSU completed receiving case</h1><p>Original accepted annual consensus: USD 35,200 / 37,950 / 43,950. The source supplies no effective date.</p><p>This visual edition reopens the original receiving records and native archive. Open the exact reports and attachments below; inspect them in normal use.</p><ul><li>'+link('Complete native workspace ZIP','../../native-backup/workspace.zip')+'</li><li>'+link('Original completed result','../../RESULT.json')+'</li><li>'+link('Current producing-worker inspection course','PRODUCER_INSPECTION.md')+'</li></ul><h2>Original receiving exports and current printable reports</h2><div class="scroll"><table><thead><tr><th>Attachment</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody>'+rows+'</tbody></table></div><h2>Populated original and reopened workspace</h2>'+images+'</html>';
+  // An interrupted, unpublished edition may replace only its own index. Completed editions return above.
+  insist(!fs.existsSync(completedPath),'The completed visual edition must remain immutable');
+  const indexFile=path.join(directory,'index.html');atomic(indexFile,Buffer.from(html));add(indexFile);
+  context=await chromium.launchPersistentContext(path.join(ROOT,'visual-index-'+edition.slice(0,16)),{
+   executablePath:chromiumPath,headless:true,viewport:{width:1440,height:1000},
+   args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']
+  });
+  const indexPage=context.pages()[0]||await context.newPage();
+  await indexPage.goto(pathToFileURL(indexFile).href,{waitUntil:'load'});
+  await capture(indexPage,'outgoing-attachment-index');await closeNativeBrowser();
+  verifyHistorical();
+  const result={schema:'fsu.completed-case-visual-edition.v1',status:'RENDERED',selection_sha256:edition,selection,
+   created_at:new Date().toISOString(),files:[...files.values()].sort((a,b)=>a.path.localeCompare(b.path)),
+   views,downloads,original_records_preserved:true,restored_workspace_opened:true,
+   page_errors:pageErrors,blocked_requests:blockedRequests,
+   producer_action:'Open index.html; LOOK at the actual images and reports, open all relevant attachments, operate the restored product, and repair visible defects before presenting it.'};
+  retain(completedPath,bytes(result));inspectSaved(result);
+  progress('rendered',{result:relativeDescriptor(directory,completedPath)});
+  return {...original,visual_edition:{id:edition,path:completedPath,index:indexFile,sha256:sha(fs.readFileSync(completedPath)),reopened:false}};
+ }catch(error){
+  progress('interrupted',{error:error.stack||String(error),page_errors:pageErrors,blocked_requests:blockedRequests});
+  throw error;
+ }finally{await closeNativeBrowser();verifyHistorical();}
+}
+
 async function run(){
  if(journal.status==='COMPLETE'){
   const file=path.join(OUT,'browser-result.json');
   insist(journal.completed_result,'Original complete progress has no retained result');
   if(fs.existsSync(file))insist(fs.readFileSync(file).equals(bytes(journal.completed_result)),'Completed browser result changed');
   else atomic(file,bytes(journal.completed_result));
-  return native('finalize');
+  return inspectCompletedCase(native('finalize'));
  }
  baseURL=await startServer();
  fs.mkdirSync(path.join(ROOT,'tmp'),{recursive:true});
@@ -236,12 +407,11 @@ async function run(){
   insist(enabled,'The cached receiving controls stayed disabled after original pricing navigation');
   step('detached_receiving_return',{original_review_id:design.origin.id,prior_analysis_id:design.origin.prior_analysis_id,controls_enabled:enabled});
  }
- if(!journal.steps.accepted_analysis_reopened||!journal.visuals?.some(row=>row.label==='original-accepted-pricing')){
+ if(!journal.steps.accepted_analysis_reopened){
   await page.locator('#nav [data-view="reports"]').click();
   await page.locator('[data-action="review-analysis"][data-id="'+design.analysis_id+'"]').click();
   await page.locator('#review-form').waitFor({state:'visible'});
   insist(await page.locator('#review-form').getAttribute('data-sha')===design.analysis_sha256,'The visible review no longer binds the original accepted result');
-  await captureViews(page,'original-accepted-pricing');
   step('accepted_analysis_reopened',{analysis_id:design.analysis_id,accepted_review_id:design.accepted_review_id});
  }
  await receiving(page,'delivery');
@@ -262,7 +432,6 @@ async function run(){
  for(const [title,label]of [['Download CSV','linked-handback.csv'],['Download TSV','linked-handback.tsv'],['Download complete handoff JSON','linked-handback.json'],['Download printable receiving report','linked-handback-report.html']]){
   if(!journal.downloads[label])await download(page,page.getByRole('button',{name:title,exact:true}),label);
  }
- await captureViews(page,'linked-handback');
  if(!journal.linked_annual_review){
   await receiving(page,'annual');
   await page.getByLabel('Previous receiving edition',{exact:true}).selectOption(design.previous_handoff.id);await idle(page);
@@ -283,8 +452,6 @@ async function run(){
  const annual=await get('/api/extensions/receiving/document/annual-review/'+journal.linked_annual_review.id);
  insist(annual.sha256===journal.linked_annual_review.sha256&&annual.previous.id===design.previous_handoff.id&&annual.current.id===journal.linked_handoff.id,'Reopened annual receiving selected a different edition');
  step('saved_history_reopened',{annual_review_id:annual.id,previous_handoff:annual.previous.id,current_handoff:annual.current.id});
- await captureViews(page,'linked-annual-review');
- await captureDownloadedReports();
  for(const [label,kind,id]of [['linked-handback.csv','handoff-csv',handoff.id],['linked-handback.tsv','handoff-tsv',handoff.id],['linked-handback.json','handoff-json',handoff.id],['linked-annual-review.json','annual-review',annual.id]]){
   const response=await context.request.get(baseURL+'/api/extensions/receiving/download/'+kind+'/'+id);
   insist(response.ok(),'Native original download failed: '+label);
@@ -298,12 +465,16 @@ async function run(){
   steps:journal.steps,downloads:journal.downloads,visuals:journal.visuals||[],retained_requests:Object.keys(journal.requests).length,page_errors:journal.errors};
  atomic(path.join(OUT,'browser-result.json'),bytes(result));
  journal.completed_result=result;journal.status='COMPLETE';save();
- await context.close();context=null;
- server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));server=null;
- return native('finalize');
+ await closeNativeBrowser();
+ return inspectCompletedCase(native('finalize'));
 }
 try{const result=await run();process.stdout.write(JSON.stringify(result)+'\n');}
-catch(error){journal.errors.push({at:new Date().toISOString(),phase:'continuation',message:error.stack||String(error)});save();process.stderr.write((error.stack||String(error))+'\n');process.exitCode=1;}
+catch(error){
+ const entry={at:new Date().toISOString(),phase:journal.status==='COMPLETE'?'completed-visual-continuation':'continuation',message:error.stack||String(error)};
+ if(journal.status==='COMPLETE')retain(path.join(OUT,'completed-continuation-errors',entry.at.replace(/[:.]/g,'-')+'-'+sha(bytes(entry)).slice(0,12)+'.json'),bytes(entry));
+ else{journal.errors.push(entry);save();}
+ process.stderr.write((error.stack||String(error))+'\n');process.exitCode=1;
+}
 finally{
  if(context)await context.close().catch(()=>{});
  if(server&&server.exitCode===null){server.kill('SIGTERM');await new Promise(resolve=>{server.once('exit',resolve);setTimeout(()=>{if(server.exitCode===null)server.kill('SIGKILL');resolve();},5000);});}
