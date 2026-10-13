@@ -12,7 +12,8 @@
         "operator/web/run_revision.css",
         "operator/RUN_REVISIONS.md",
         "operator/server.py",
-        "operator/web/app.mjs"
+        "operator/web/app.mjs",
+        "source_tools/RUN_REVISION_REGIONAL_RECEIVING.md"
       ],
       "requires": [
         "core",
