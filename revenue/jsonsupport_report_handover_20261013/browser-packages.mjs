@@ -8,7 +8,7 @@ import {fileURLToPath,pathToFileURL} from "node:url";
 import {gunzipSync} from "node:zlib";
 import Zip from "./runtime/host/connected_zip.cjs";
 import {DEFINITIONS,receiveOriginalPackages,buildCustomerDocuments} from "./package-documents.mjs";
-import {documentPreview} from "./vendor/customer-package-panel.mjs";
+import {previewReportDocument} from "./vendor/compact-customer-document-viewer.mjs";
 const require=createRequire(import.meta.url),here=path.dirname(fileURLToPath(import.meta.url));
 const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
 function installedPlaywright(selected){
@@ -56,7 +56,7 @@ async function run(){
  const save=()=>fs.writeFileSync(path.join(out,"run.json"),JSON.stringify(result,null,2)+"\n");
  const event=(stage,details={})=>{result.events.push({stage,...details});save();console.log(JSON.stringify({stage,...details}));};
  const origin="https://original-customer-package.invalid",routes=new Map([["/",html]]);
- for(const [i,p]of packages.entries())for(const m of Zip.readStoredZip(new Uint8Array(p.archive)))routes.set("/documents/"+i+"/"+encodeURIComponent(m.name),documentPreview(m.name,Zip.utf8Text(m.data)));
+ for(const [i,p]of packages.entries())for(const m of Zip.readStoredZip(new Uint8Array(p.archive)))routes.set("/documents/"+i+"/"+encodeURIComponent(m.name),previewReportDocument(m.name,Zip.utf8Text(m.data)));
  const owned=new Set();let browser;
  save();
  try{
@@ -90,8 +90,17 @@ async function run(){
      await section.locator("select").selectOption(f.name);await section.getByRole("button",{name:"Open document",exact:true}).click();
      await page.waitForFunction(({name})=>document.getElementById("status").textContent.startsWith("Opened "+name+"."),{name:f.name});
      const member=members.find(m=>m.name===f.name);if(!member||member.bytes!==f.bytes||hash(member.data)!==f.sha256)throw Error("Downloaded original member differs.");
-     const expectedPreview=documentPreview(f.name,Zip.utf8Text(member.data));
+     const expectedPreview=previewReportDocument(f.name,Zip.utf8Text(member.data));
      if(await page.locator("#preview").getAttribute("srcdoc")!==expectedPreview)throw Error("The actual selected document preview differs.");
+     if(/^report-(?:sample|paid)\/app\.html$/.test(f.name)){
+      const frame=page.frameLocator("#preview");await frame.locator('body[data-jsonsupport-report-opening="complete"]').waitFor({state:"visible"});
+      await frame.getByRole("heading",{name:"Open the working desk",exact:true}).waitFor();
+      if(await frame.locator("body > ul > li").count()!==p.quantity)throw Error("Report preview agency scope differs.");
+      await frame.locator("summary").click();await frame.locator("details[open] pre").waitFor();
+      const previewLayout=await frame.locator("body").evaluate(()=>({width:innerWidth,documentWidth:document.documentElement.scrollWidth}));
+      if(previewLayout.documentWidth>previewLayout.width+1)throw Error("Embedded report opening overflows.");
+      await capture(page,i+"-report-opening");
+     }
      await download(section.getByRole("button",{name:"Download document",exact:true}),i+"-"+f.name,f);
      const documentPage=await context.newPage();documentPage.on("pageerror",e=>result.browser_errors.push(e.message));
      const reopened=await documentPage.goto(origin+"/documents/"+i+"/"+encodeURIComponent(f.name));if(await reopened.text()!==expectedPreview)throw Error("The served original document bytes differ.");await documentPage.locator("body").waitFor();

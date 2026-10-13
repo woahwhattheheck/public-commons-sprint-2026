@@ -163,18 +163,18 @@
   "views": {
     "combined": {
       "name": "JSON-Support-report-complete-packages.html",
-      "bytes": 347394,
-      "sha256": "46e8bed71fde56641fb9ebc4db7af1aef8a9d2b9be4fa555def13e8b4d22e60b"
+      "bytes": 350224,
+      "sha256": "41963144ef6dcba51cdb152fcd825aa4b938168d1ae16d0443ef9083afe62850"
     },
     "sample": {
       "name": "JSON-Support-report-sample-complete-package.html",
-      "bytes": 174160,
-      "sha256": "c065cd7e66bafadd36ac3b807231b6d1bd5f37d459905b65fb941d58abc5ce76"
+      "bytes": 176990,
+      "sha256": "a2e827fd95d86f7e1fc826167b9975f7a4a086a33d012045faabd0639281cc45"
     },
     "paid": {
       "name": "JSON-Support-report-paid-complete-package.html",
-      "bytes": 190348,
-      "sha256": "7a82696ee00226ca0ba73fddcca13d282b0c219c5befe8ffe69490206f68e948"
+      "bytes": 193178,
+      "sha256": "5c750947ee7f3f3d90e46cf585497e2809c8264b678bbbf44f7ebac1d0f39fe8"
     }
   },
   "actual_model_operations": {

@@ -248,8 +248,8 @@
     },
     {
       "path": "vendor/compact-customer-document-viewer.mjs",
-      "bytes": 861,
-      "sha256": "598aedee3bdc78148151bbcd702765e075bd927f0450a213534a19543cf23994"
+      "bytes": 4393,
+      "sha256": "e7359c4db680928b62b86cd04d9a41bcde950902b8ba95a5e15bad6cbdc9a6be"
     },
     {
       "path": "package-documents.mjs",
@@ -263,23 +263,23 @@
     },
     {
       "path": "browser-packages.mjs",
-      "bytes": 10235,
-      "sha256": "ae7c328435b6defbd449b35190073ab36a6ad72d022ba941d7319636cc54edaf"
+      "bytes": 11087,
+      "sha256": "e84baa7d6545be7f761ba9c024c9043bd879e9e6f7b11fb296b2eb0cd731b959"
     },
     {
       "path": "customer/JSON-Support-report-complete-packages.html",
-      "bytes": 347394,
-      "sha256": "46e8bed71fde56641fb9ebc4db7af1aef8a9d2b9be4fa555def13e8b4d22e60b"
+      "bytes": 350224,
+      "sha256": "41963144ef6dcba51cdb152fcd825aa4b938168d1ae16d0443ef9083afe62850"
     },
     {
       "path": "customer/JSON-Support-report-sample-complete-package.html",
-      "bytes": 174160,
-      "sha256": "c065cd7e66bafadd36ac3b807231b6d1bd5f37d459905b65fb941d58abc5ce76"
+      "bytes": 176990,
+      "sha256": "a2e827fd95d86f7e1fc826167b9975f7a4a086a33d012045faabd0639281cc45"
     },
     {
       "path": "customer/JSON-Support-report-paid-complete-package.html",
-      "bytes": 190348,
-      "sha256": "7a82696ee00226ca0ba73fddcca13d282b0c219c5befe8ffe69490206f68e948"
+      "bytes": 193178,
+      "sha256": "5c750947ee7f3f3d90e46cf585497e2809c8264b678bbbf44f7ebac1d0f39fe8"
     },
     {
       "path": "customer/report-sample/app.html",
@@ -309,7 +309,7 @@
     {
       "path": "delivery/receipt.json",
       "bytes": 6562,
-      "sha256": "5c0656256372d70dbc8aa3ac847f6d09ccc754727005bb96d6cce7a1d825e49b"
+      "sha256": "5b3e5c3fface0e4eda510175a30650562591385c193d41a69563b72e55733d58"
     },
     {
       "path": "adapter-authored-receiving.mjs",
