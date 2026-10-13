@@ -223,7 +223,7 @@ def validate(value):
         raise ValueError("Select the complete original rehearsal receiving input")
     expected = {"schema", "operation_id", "workspace_directory", "output_directory",
                 "rehearsal", "fresh_run_ids", "step_notes", "task_timeout_seconds", "browser",
-                "programme_receiving", "customer_review", "fieldwork_receiving"}
+                "programme_receiving", "customer_review", "fieldwork_receiving", "qc_comparison_receiving"}
     if set(value) - expected:
         raise ValueError("Unexpected receiving input fields: " + ", ".join(sorted(set(value) - expected)))
     if not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", value.get("operation_id", "")):
@@ -275,6 +275,14 @@ def validate(value):
     if "fieldwork_receiving" in value:
         from source_tools.simulated_fieldwork_recording import validate_choice as validate_fieldwork
         validate_fieldwork(value["fieldwork_receiving"])
+    if "qc_comparison_receiving" in value:
+        from source_tools.simulated_qc_comparison_recording import validate_choice as validate_comparison
+        validate_comparison(value["qc_comparison_receiving"])
+        field = value.get("fieldwork_receiving")
+        comparison = value["qc_comparison_receiving"]
+        if not field or any(comparison[key] != field[other] for key, other in (
+                ("field_operation_id", "operation_id"), ("plan_id", "plan_id"), ("project_id", "project_id"))):
+            raise ValueError("Record this comparison with its original completed field chapter")
     return value
 
 
@@ -823,6 +831,12 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
             from source_tools.simulated_fieldwork_recording import verify_choice as verify_fieldwork
             fieldwork_choice = verify_fieldwork(Workspace(value["workspace_directory"]), output,
                                                value["fieldwork_receiving"])
+        comparison_choice = None
+        if value.get("qc_comparison_receiving") is not None:
+            from model.workspace import Workspace
+            from source_tools.simulated_qc_comparison_recording import verify_choice as verify_comparison
+            comparison_choice = verify_comparison(Workspace(value["workspace_directory"]), output,
+                                                   value["qc_comparison_receiving"])
         complete_path = output / "results" / "complete.json"
         native_path = output / "results" / "native.json"
         saved_complete = read_json(complete_path) if complete_path.exists() else None
@@ -875,6 +889,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                     config["customer_review"] = customer_choice
                 if fieldwork_choice is not None:
                     config["fieldwork_receiving"] = fieldwork_choice
+                if comparison_choice is not None:
+                    config["qc_comparison_receiving"] = comparison_choice
                 browser_input = output / "private" / "browser-input.json"
                 publish(browser_input, canonical(config) + b"\n", immutable=False)
                 child = run_browser_child([browser["node"], str(APP / "operator" / "rehearsal_browser.mjs"),

@@ -8,7 +8,8 @@
         "docs/SIMULATED_QC_COMPARISON.md",
         "source_tools/simulated_qc_comparison_browser.mjs",
         "docs/SIMULATED_QC_COMPARISON_BROWSER.md",
-        "integration/component_fragments/simulated-qc-comparison.json"
+        "integration/component_fragments/simulated-qc-comparison.json",
+        "source_tools/simulated_qc_comparison_recording.py"
       ]
     }
   },
