@@ -73,7 +73,7 @@ def final_jobs():
             result.append({**item, "id": item["id"].replace("-before", "-after"), "phase": "after"})
     return result
 
-def lookup_job(kind, pins, identity=None):
+def lookup_job(kind, pins, identity=None, geometry_limit=2000):
     pins = list(pins)
     check(pins and len(pins) <= BATCH and len(set(pins)) == len(pins) and
           all(isinstance(pin, str) and KEY.fullmatch(pin) for pin in pins),
@@ -86,12 +86,14 @@ def lookup_job(kind, pins, identity=None):
         return job(identity, "county-assessment", "county-assessment-json", url,
                    requestedPins=pins, kind=kind)
     check(kind == "geometry", "CAPTURE_KIND", "Select County assessment or original parcel geometry.")
+    check(type(geometry_limit) is int and 1 <= geometry_limit <= 2000,
+          "CAPTURE_GEOMETRY_LIMIT", "Use the original selected layer record limit.")
     where = "pin IN (" + ",".join("'" + pin + "'" for pin in pins) + ")"
     url = GEOMETRY + "/query?" + urlencode({"f": "geojson", "where": where,
         "outFields": "*", "returnGeometry": "true", "outSR": 4326,
-        "orderByFields": "OBJECTID_1", "resultRecordCount": 2000})
+        "orderByFields": "OBJECTID_1", "resultRecordCount": geometry_limit})
     return job(identity, "pittsburgh-parcels", "pittsburgh-parcels-geojson", url,
-               requestedPins=pins, kind=kind, coordinateReferenceSystem="EPSG:4326")
+               requestedPins=pins, kind=kind, recordLimit=geometry_limit, coordinateReferenceSystem="EPSG:4326")
 
 def union_selection(csv_sources):
     selected, invalid = set(), 0
@@ -118,6 +120,8 @@ def metadata_identity(item, body):
     if item["sourceId"] == "pittsburgh-parcels":
         check(isinstance(value, dict) and not value.get("error") and isinstance(value.get("fields"), list),
               "CAPTURE_METADATA", "Retain the original successful parcel layer description.")
+        check(type(value.get("maxRecordCount")) is int and value["maxRecordCount"] > 0,
+              "CAPTURE_GEOMETRY_LIMIT", "Retain the original layer response limit.")
         return {key: value.get(key) for key in
             ("id", "name", "type", "fields", "objectIdField", "maxRecordCount", "extent",
              "editingInfo", "currentVersion", "advancedQueryCapabilities")}
@@ -153,7 +157,7 @@ def response_summary(item, body):
               "CAPTURE_GEOMETRY", "The publisher did not return an original GeoJSON FeatureCollection.")
         records = value["features"]
         truncated = value.get("exceededTransferLimit") is True or (
-            len(records) >= 2000 and value.get("exceededTransferLimit") is not False)
+            len(records) >= item.get("recordLimit", 2000) and value.get("exceededTransferLimit") is not False)
     if truncated:
         check(len(item["requestedPins"]) > 1, "CAPTURE_DENSE_KEY",
               "One parcel exceeds a complete original response; retain this response for explicit publisher review.",
