@@ -1,0 +1,289 @@
+{
+  "schema": "tjlabs.business-central-dynaway-contracts.v1",
+  "edition": "2026-10-13",
+  "status": "Documentation-bound preparation contracts. Native target metadata, source exports and receipts complete the tenant binding.",
+  "master": {
+    "fixedAssets": {
+      "relativeCollection": "api/v2.0/companies({companyId})/fixedAssets",
+      "nativeIdentity": "id (GUID)",
+      "businessIdentity": "number",
+      "fields": [
+        "id",
+        "number",
+        "displayName",
+        "fixedAssetLocationCode",
+        "fixedAssetLocationId",
+        "classCode",
+        "subclassCode",
+        "blocked",
+        "serialNumber",
+        "employeeNumber",
+        "employeeId",
+        "underMaintenance",
+        "lastModifiedDateTime"
+      ],
+      "sources": [
+        "MS-FA",
+        "MS-FA-PATCH"
+      ],
+      "coverage": "Master card only. Resolve additional fields against actual installed metadata; preserve their original bytes."
+    },
+    "maintenanceAssets": {
+      "relativeCollection": "api/dynaway/eam/v1.0/companies({companyId})/assets",
+      "nativeIdentity": "id (GUID)",
+      "businessIdentity": "assetNo",
+      "hierarchy": "parentAssetNo",
+      "financialLink": "fixedAssetNumber",
+      "sources": [
+        "DYN-ASSETS"
+      ],
+      "financialLinkCardinality": "Several maintenance assets may relate to one financial fixed asset; no financial balance duplication."
+    }
+  },
+  "costLines": {
+    "resource": {
+      "input": [
+        "resourceId",
+        "sequence",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "workTypeId",
+        "workTypeCode",
+        "quantity",
+        "qtyToConsume"
+      ],
+      "response": [
+        "id",
+        "documentId",
+        "sequence",
+        "resourceId",
+        "no",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "workTypeId",
+        "workTypeCode",
+        "quantity",
+        "qtyToConsume",
+        "qtyConsumed",
+        "startingDate",
+        "startingTime",
+        "endingDate",
+        "endingTime"
+      ],
+      "relativeCollection": "api/dynaway/eam/v1.0/companies({companyId})/workOrders({workOrderId})/workOrderResourceLines",
+      "nativeKey": [
+        "companyId",
+        "documentId",
+        "id"
+      ],
+      "amountStatus": "Documented create/read sample does not establish full actual line cost.",
+      "sources": [
+        "DYN-RESOURCES"
+      ]
+    },
+    "item": {
+      "input": [
+        "itemId",
+        "sequence",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "quantity",
+        "qtyToConsume"
+      ],
+      "response": [
+        "id",
+        "documentId",
+        "sequence",
+        "itemId",
+        "no",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "quantity",
+        "qtyToConsume",
+        "qtyConsumed"
+      ],
+      "relativeCollection": "api/dynaway/eam/v1.0/companies({companyId})/workOrders({workOrderId})/workOrderItemLines",
+      "nativeKey": [
+        "companyId",
+        "documentId",
+        "id"
+      ],
+      "amountStatus": "Documented create/read sample does not establish full actual line cost.",
+      "sources": [
+        "DYN-ITEMS"
+      ]
+    },
+    "expense": {
+      "input": [
+        "expenseId",
+        "sequence",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "vendorId",
+        "vendorCode",
+        "quantity",
+        "expectedUnitCostLCY",
+        "qtyToConsume"
+      ],
+      "response": [
+        "id",
+        "documentId",
+        "sequence",
+        "expenseId",
+        "no",
+        "description",
+        "unitOfMeasureId",
+        "unitOfMeasureCode",
+        "vendorId",
+        "vendorNo",
+        "expectedUnitCostLCY",
+        "quantity",
+        "qtyToConsume",
+        "qtyConsumed",
+        "startingDate",
+        "startingTime",
+        "endingDate",
+        "endingTime"
+      ],
+      "relativeCollection": "api/dynaway/eam/v1.0/companies({companyId})/workOrders({workOrderId})/workOrderExpenseLines",
+      "nativeKey": [
+        "companyId",
+        "documentId",
+        "id"
+      ],
+      "amountStatus": "expectedUnitCostLCY is expected local-currency unit cost; actual cost is separately sourced.",
+      "sources": [
+        "DYN-EXPENSES"
+      ]
+    }
+  },
+  "postedLedger": {
+    "relativeCollection": "api/dynaway/eamAnalytics/v1.0/companies({companyId})/woLedgerEntries",
+    "response": [
+      "id",
+      "postingDate",
+      "planNo",
+      "fixedAssetNo",
+      "type",
+      "number",
+      "description",
+      "quantity",
+      "unitOfMeasureCode",
+      "locationCode",
+      "resourceWorkTypeCode",
+      "itemSerialNo",
+      "itemLotNo",
+      "expenseVendorNo",
+      "expenseExpectedLineCostLCY",
+      "expenseExpectedUnitCostLCY",
+      "expenseActualLineCostLCY",
+      "billToCustomerNo",
+      "billable"
+    ],
+    "nativeKey": [
+      "companyId",
+      "id"
+    ],
+    "planIdentity": "planNo is a maintenance-plan number, not a work-order header GUID.",
+    "costCaution": "expenseActualLineCostLCY, expenseExpectedLineCostLCY and expenseExpectedUnitCostLCY are separate measures. Missing resource/item actual amounts remain missing. Bind LCY to the selected company currency.",
+    "sources": [
+      "DYN-LEDGER"
+    ]
+  },
+  "allocation": {
+    "canonicalColumns": [
+      "company_id",
+      "work_order_id",
+      "line_id",
+      "line_kind",
+      "asset_id",
+      "fixed_asset_id",
+      "project_id",
+      "project_task_id",
+      "dimension_set_id",
+      "currency",
+      "quantity",
+      "unit_code",
+      "cost_amount",
+      "cost_basis",
+      "posting_date",
+      "native_record_id",
+      "native_document_id",
+      "source_reference"
+    ],
+    "nativeFieldPolicy": "These are workspace mapping labels, not asserted provider JSON keys. Retain actual supplier/export field names and explicit mappings.",
+    "conservationKey": [
+      "company_id",
+      "source_cost_identity",
+      "currency",
+      "cost_basis"
+    ],
+    "formula": "Sum of explicitly reviewed allocation amounts equals the exact original signed cost amount.",
+    "quantityPolicy": "Quantity/UoM is a separate axis; allocation amount does not change consumed quantity.",
+    "sourcePolicy": "Actual, expected, budget and capitalized values stay distinct. Divisions/dimensions do not create legal companies.",
+    "sources": [
+      "DYN-PROJECTS",
+      "DYN-DIMENSIONS",
+      "DYN-LEDGER"
+    ]
+  },
+  "actions": {
+    "prepare": "Original source selection, native field mapping and reviewed cost allocation.",
+    "post": "Separate native action with retained request and original line/document identities; reconcile outcome before retrying an uncertain post.",
+    "close": "Separate operational state from posting.",
+    "patch": "Use current captured ETag where the API supports it; return native conflict for fresh comparison.",
+    "sources": [
+      "DYN-POST",
+      "MS-FA-PATCH"
+    ]
+  },
+  "documentationDiscrepancies": [
+    {
+      "source": "MS-FA-PATCH",
+      "finding": "Example id values are business-number strings despite GUID type in MS-FA; sample includes acquisition/depreciation fields absent from the resource table.",
+      "resolution": "Use actual API Overview/$metadata and returned schema. Do not copy example IDs or infer financial book support."
+    },
+    {
+      "source": "DYN-POST",
+      "finding": "Published bound-action URI omits the closing company parenthesis.",
+      "resolution": "Resolve exact published bound action from installed metadata. No executable URL is constructed from the malformed example."
+    }
+  ],
+  "tenantSelectionFields": [
+    "tenantId",
+    "environment",
+    "companyId",
+    "companyName",
+    "LCYCode",
+    "BCVersion",
+    "DynawayVersion",
+    "API metadata identity",
+    "source filters",
+    "observation interval",
+    "native permission set",
+    "installed import-template identity"
+  ],
+  "readbackFields": [
+    "operation ID",
+    "source bytes/hash",
+    "selected tenant/environment/company",
+    "native URI/action",
+    "request hash",
+    "original record IDs",
+    "before/after ETag",
+    "HTTP status",
+    "request/correlation ID",
+    "provider response bytes/hash",
+    "posted ledger IDs",
+    "reviewed allocation reconciliation"
+  ],
+  "unresolvedTenantFacts": [
+    "Current Port systems, data volumes, configured companies/divisions/dimensions, enabled Dynaway modules and project flags await issued RFP/tenant evidence.",
+    "A vendor feature page or historical financial policy does not establish the Port's current configuration."
+  ]
+}
