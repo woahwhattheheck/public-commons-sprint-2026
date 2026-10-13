@@ -110,6 +110,8 @@
     "stellar-forge/developer-site/GRANT_CLICKHOUSE_ACCEPTANCE_WORKBENCH.md",
     "stellar-forge/developer-site/grant-products/clickhouse-acceptance-workbench.json",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/clickhouse-acceptance-workbench.json",
-    "products/clickhouse-acceptance-workbench/PACKAGE_README.md"
+    "products/clickhouse-acceptance-workbench/PACKAGE_README.md",
+    "products/clickhouse-acceptance-workbench/source-observer.mjs",
+    "products/clickhouse-acceptance-workbench/source-editions.mjs"
   ]
 }

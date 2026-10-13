@@ -257,3 +257,35 @@ Include this complete instruction in delegated assignments and the active owner-
 
 Owner instruction and coordinated propagation: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791881496221999
 Canonical attachment/media clarification: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791885532614949
+
+
+## Resume a retained native operation after a receiver-source correction
+
+A receiver repair is a new observer of the same original operation. Keep the original reference request, source directory, configuration, fixture directory, credentials, binary, operation selection and every completed native/browser/archive result. The current complete source authority admits each whole chronological source edition; repeated maintenance of one path never combines an old receiver with a newer manifest.
+
+For an interrupted original reference, select its original Node24 executable and run the maintained source command:
+
+```sh
+node products/clickhouse-acceptance-workbench/source-observer.mjs prepare \
+  --reference-request /absolute/original/reference-request.json \
+  --id original-intake-observer \
+  --reason "Continue the original 06b intake with its exact retained source copy"
+
+node products/clickhouse-acceptance-workbench/source-observer.mjs run \
+  --descriptor /absolute/original/operation/merchant-reference/source-observers/original-intake-observer/request.json
+
+```
+
+The first command takes the original controller and receiving leases, binds the existing operation/configuration/Node and original fixture command, and saves a complete separate observer edition. The descriptor path is returned. Repeating preparation with the same ID and reason reuses the saved timestamp, snapshot and source selection. Retain its whole directory: the descriptor, preparation, original operation preimage, complete 57-file observer source, fixture observations and final completion. The source copy contains the two receiving helpers, authority and all 54 workbench members. It remains executable after the installed product advances.
+
+The run command uses the same fixture, original native binary and selected environment. Only the receiver entry point changes, under the explicit saved descriptor. The fixture retains its exact original command/seed/input/worker binding, records the actual observer command separately and uses the original baseline working directory. The receiver dynamically opens the original baseline server and browser modules; its CLI, reference files, archive source and manifest also use that same baseline. The original H1/H2/H3 archives remain exact. The repaired observer and its complete source are delivered alongside them.
+
+Each actual receiver entry records its descriptor identity beside the original state without replacing selection, source-manifest.json or completed phases. A finished native result plus a finished fixture returns the stored result without restarting the database. If the receiver finished but the fixture's closing observation was interrupted, the same fixture reopens its native source, verifies the original three rows, reuses the completed receiver and closes; it dispatches no new transfer/verification job. Interrupted attempts and prior fixture results remain retained.
+
+For the existing Merchant continuation, add `--source-observer ABS_REQUEST_JSON` to the original complete receiving command when an explicit observer must finish its reference. A result-only receive admits the exact retained manifest through the whole chronological authority and includes every actually admitted observer's full source and fixture history in the complete handover. Merely preparing a descriptor does not establish that an observer ran.
+
+The original preparation/runtime receipts remain bound to their exact source editions. The standalone observer can finish the original native operation without changing those receipts. The current managed customer application is prepared and installed through its own existing complete source/runtime workflow; its current receipt must match that installed edition. Preserve earlier PREPARED, runtime, installation and reference records as original history rather than relabeling them. The original native owner retains the database, process and actual receiving course.
+
+Inspect the exact resumed customer application, desktop and narrow browser journey, all original downloads and fresh source/project reopening. Return the actual native/browser result and complete observer directory to the same original operation before marking that course complete.
+
+The observer admission is specific to this reviewed correction: original manifest 7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb or319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0 to observer manifest 42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f. Its exact changed-member descriptors are saved in the request. Only receiving/receive.mjs, reference/fixture.py, SOURCE_MANIFEST.json and the already retained web/app.mjs difference can occur; the original baseline web application still executes unchanged. Runtime/server/core-workspace/native-runtime changes are outside this observer transition. A later source repair requires its own reviewed exact transition; historical complete-source receiving remains available independently.

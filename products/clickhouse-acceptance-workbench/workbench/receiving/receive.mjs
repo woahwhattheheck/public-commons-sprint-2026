@@ -6,11 +6,11 @@ import { randomUUID,randomBytes,createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { spawn } from 'node:child_process';
-import { createApplicationServer } from '../commissioning/server.mjs';
+
 import { acquireWorkspaceLease,privateDirectory } from '../vendor/sling/vendor/stellar-expert/store.mjs';
 import { atomicBytes,atomicJson,identity,canonical,requireValue,sha,now,safeRelative,collectSourceFiles,fsyncDirectory } from '../vendor/sling/core/common.mjs';
 import { hashFile } from '../vendor/sling/core/objects.mjs';
-import { runBrowserJourney } from './browser.mjs';
+
 
 const SOURCE=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const STREAM='["starforge_example","transfers"]';
@@ -29,8 +29,8 @@ const row=(rows,id,label)=>{const found=rows.find(x=>x.id===id);requireValue(fou
 function fileInfo(path){return{path,...hashFile(path)};}
 function localFile(path,root){const rel=relative(root,path).split('\\').join('/');safeRelative(rel);return rel;}
 function verify(path,expected){const actual=hashFile(path);requireValue(actual.bytes===expected.bytes&&actual.sha256===expected.sha256,'RECEIVING_FILE_CHANGED','The selected complete file differs from its retained identity.',409,{file:basename(path)});return actual;}
-function verifySource(root,manifestPath){
-  requireValue(resolve(root)===SOURCE&&realpathSync(root)===SOURCE,'SOURCE_MODULE_BINDING','Invoke the receiver from the same complete source tree being verified.',409);
+function verifySource(root,manifestPath,{moduleBound=true}={}){
+  requireValue((!moduleBound||resolve(root)===SOURCE)&&realpathSync(root)===resolve(root),'SOURCE_MODULE_BINDING','Invoke the receiver from the same complete source tree being verified.',409);
   const selectedManifest=resolve(manifestPath),manifest=read(selectedManifest);
   requireValue(Array.isArray(manifest.files)&&manifest.files.length>0,'SOURCE_MANIFEST','Supply the complete original source manifest.');
   const names=new Set(),declared=new Map();
@@ -55,8 +55,8 @@ function summary(view){
     cutoverCount:view.cutovers.length,reviewCount:view.reviews.length,handoffIds:view.handoffs.map(x=>x.id),historyCount:view.history.length};
 }
 class Programme{
-  constructor(options,source,config,lease){
-    this.options=options;this.source=source;this.config=config;this.lease=lease;this.root=resolve(options.directory);this.apps=new Map();this.closing=null;
+  constructor(options,source,config,lease,execution){
+    this.options=options;this.source=source;this.sourceRoot=resolve(options.source);this.execution=execution;this.config=config;this.lease=lease;this.root=resolve(options.directory);this.apps=new Map();this.closing=null;
     this.statePath=join(this.root,'operation.json');
     const selected={schema:SCHEMA,sourceManifest:source.identity,config:hashFile(resolve(options.config)),node:{executable:process.execPath,version:process.version},expectedRows:3};
     if(existsSync(this.statePath)){this.state=read(this.statePath);requireValue(canonical(this.state.selection)===canonical(selected),'RECEIVING_SELECTION_CHANGED','The original programme has another complete source/configuration.',409);requireValue(options.resume||this.state.status==='complete','RESUME_REQUIRED','Continue this original programme with --resume.',409);}
@@ -78,7 +78,7 @@ class Programme{
   async startHost(name,{native=false}={}){
     if(this.apps.has(name))return this.apps.get(name);
     const directory=join(this.root,'workspaces',name);
-    const app=await createApplicationServer({directory,authFile:this.authPath,python:this.options.python??'python3',sourceRoot:SOURCE,sourceFiles:this.source.files});
+    const app=await this.execution.createApplicationServer({directory,authFile:this.authPath,python:this.options.python??'python3',sourceRoot:this.sourceRoot,sourceFiles:this.source.files});
     const host={name,directory,app};this.apps.set(name,host);
     try{
       const info=await app.listen({host:'127.0.0.1',port:this.state.ports[name]??0});
@@ -137,7 +137,7 @@ class Programme{
     requireValue(completed.complete&&completed.bytes===info.bytes&&completed.sha256===info.sha256,'UPLOAD_IDENTITY','Original completed upload differs.',409);return{uploadId,...info};
   }
   async retain(host,projectId,key,referencePath,{title,role,url='',notes=''}){
-    const local=join(this.root,'intake',referencePath);atomicBytes(local,readFileSync(join(SOURCE,referencePath)),{immutable:true});
+    const local=join(this.root,'intake',referencePath);atomicBytes(local,readFileSync(join(this.sourceRoot,referencePath)),{immutable:true});
     const uploaded=await this.upload(host,'source-'+key,local,referencePath.endsWith('.csv')?'text/csv':'application/json');
     const value=await this.action(host,projectId,'retain-'+key,'source.retain',{uploadId:uploaded.uploadId,title,role,url,notes});
     return{sourceId:value.result.sourceId,referencePath,...hashFile(local)};
@@ -251,7 +251,7 @@ class Programme{
   }
   async cli(name,command,extra=[]){
     const out=join(this.root,'cli',name+'.stdout.json'),err=join(this.root,'cli',name+'.stderr.txt'),receipt=join(this.root,'cli',name+'.receipt.json');
-    const argv=[join(SOURCE,'cli.mjs'),command,...extra],retirementPath=join(this.root,'cli',name+'.retirement-pending.json');
+    const argv=[join(this.sourceRoot,'cli.mjs'),command,...extra],retirementPath=join(this.root,'cli',name+'.retirement-pending.json');
     const finishRetirement=()=>{
       const selected=read(retirementPath),r=selected.receipt;
       requireValue(selected.schema==='tjlabs.sling-cli-observation-retirement.v1'&&canonical(r.argv)===canonical(argv)&&r.exitCode!==0,'CLI_RECEIVING','Retire only this exact original failed read-only observation.',409);
@@ -292,7 +292,7 @@ class Programme{
     }
     atomicJson(join(this.root,'cli',name+'.request.json'),{executable:process.execPath,argv},{immutable:true});
     const startedAt=now(),tempOut=out+'.pending-'+randomUUID(),tempErr=err+'.pending-'+randomUUID(),fds=[openSync(tempOut,'wx',0o600),openSync(tempErr,'wx',0o600)];
-    let exitCode,signal;try{({exitCode,signal}=await new Promise((yes,no)=>{const child=spawn(process.execPath,argv,{cwd:SOURCE,stdio:['ignore',fds[0],fds[1]]});child.once('error',no);child.once('exit',(exitCode,signal)=>yes({exitCode,signal}));}));for(const fd of fds)fsyncSync(fd);}finally{for(const fd of fds)closeSync(fd);}
+    let exitCode,signal;try{({exitCode,signal}=await new Promise((yes,no)=>{const child=spawn(process.execPath,argv,{cwd:this.sourceRoot,stdio:['ignore',fds[0],fds[1]]});child.once('error',no);child.once('exit',(exitCode,signal)=>yes({exitCode,signal}));}));for(const fd of fds)fsyncSync(fd);}finally{for(const fd of fds)closeSync(fd);}
     renameSync(tempOut,out);renameSync(tempErr,err);const result={executable:process.execPath,argv,startedAt,completedAt:now(),exitCode,signal,stdout:hashFile(out),stderr:hashFile(err)};atomicJson(receipt,result,{immutable:true});
     requireValue(exitCode===0,'CLI_RECEIVING','The original CLI reopen did not complete.',409,{command,name,exitCode});return{...result,value:read(out)};
   }
@@ -346,7 +346,7 @@ class Programme{
       });
       const merchant=await this.phase('06b-original-read-source',async()=>{
         const file=join(this.root,'intake','reference','merchant-source.json');
-        atomicBytes(file,readFileSync(join(SOURCE,'reference','merchant-source.json')),{immutable:true});
+        atomicBytes(file,readFileSync(join(this.sourceRoot,'reference','merchant-source.json')),{immutable:true});
         const original=read(file),upload=await this.upload(primary,'merchant-source',file,'application/json');
         const retainedMerchant=await this.action(primary,projectId,'merchant-retain','source.retain',{uploadId:upload.uploadId,title:'Original native named-query source',role:'merchant_original',url:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/'+EXPECTED_SOURCE+'/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/examples/source.json',notes:'Unchanged complete original source, queries, parameters and typed limits.'});
         const target=this.config.tables[0].target[1],edits=[{queryId:'transfers',find:'FROM transfers WHERE',replace:'FROM '+target+' WHERE',expectedOccurrences:1,reason:'Review the same original named query against the exact fully compared candidate.'}];
@@ -359,8 +359,8 @@ class Programme{
         return{sourceIds:[retainedMerchant.result.sourceId,source.id,change.id],output,record,nativeReviewRequired:true};
       });
       const h1=await this.phase('07-first-complete-handoff',()=>this.handoff(primary,projectId,'H1','Complete original acceptance and rollback edition'));
-      const browserArgs={sourceRoot:SOURCE,sourceManifestSha256:this.source.identity.sha256,operator:this.operator,viewer:this.viewer,projectId,sourceIds:[retained.sourceId,...merchant.sourceIds],planIds:[plan.planId],jobIds:[transfer.jobId,verification.job.jobId],comparisonIds:[comparison.comparisonId,verification.comparisonId],handoffIds:[h1.handoffId],expectedRows:3,playwright:this.options.playwright,chromium:this.options.chromium,resume:this.options.resume===true};
-      const browserPrimary=await this.phase('08-primary-operator',async()=>this.bindBrowserResult(await runBrowserJourney({...browserArgs,directory:join(this.root,'browser','primary'),origin:primary.origin,phase:'primary'})));
+      const browserArgs={sourceRoot:this.sourceRoot,sourceManifestSha256:this.source.identity.sha256,operator:this.operator,viewer:this.viewer,projectId,sourceIds:[retained.sourceId,...merchant.sourceIds],planIds:[plan.planId],jobIds:[transfer.jobId,verification.job.jobId],comparisonIds:[comparison.comparisonId,verification.comparisonId],handoffIds:[h1.handoffId],expectedRows:3,playwright:this.options.playwright,chromium:this.options.chromium,resume:this.options.resume===true};
+      const browserPrimary=await this.phase('08-primary-operator',async()=>this.bindBrowserResult(await this.execution.runBrowserJourney({...browserArgs,directory:join(this.root,'browser','primary'),origin:primary.origin,phase:'primary'})));
       const h2=await this.phase('09-reviewed-handoff',()=>this.handoff(primary,projectId,'H2','Complete operator-reviewed acceptance edition'));
       const receiving=await this.startHost('receiving');
       const fresh=await this.phase('10-fresh-receiving',async()=>{
@@ -370,7 +370,7 @@ class Programme{
         const consumer=await this.consumer(receiving,projectId,'fresh',3,cutover.final.selection);
         return{result:imported.result,audit,consumer};
       });
-      const browserReceiving=await this.phase('11-received-operator',async()=>this.bindBrowserResult(await runBrowserJourney({...browserArgs,directory:join(this.root,'browser','receiving'),origin:receiving.origin,phase:'receiving'})));
+      const browserReceiving=await this.phase('11-received-operator',async()=>this.bindBrowserResult(await this.execution.runBrowserJourney({...browserArgs,directory:join(this.root,'browser','receiving'),origin:receiving.origin,phase:'receiving'})));
       const returned=await this.phase('12-returned-prefixes',async()=>{
         await this.action(receiving,projectId,'receiving-review','review.record',{subjectId:verification.comparisonId,decision:'received',notes:'Reviewed original complete typed data, native response files, consumer declarations and immutable history on the fresh receiving host.'});
         const h3=await this.handoff(receiving,projectId,'H3','Returned original customer review');
@@ -405,11 +405,33 @@ class Programme{
   }
 }
 export async function main(argv=process.argv.slice(2)){
-  const options=flags(argv),source=verifySource(resolve(options.source),resolve(options['source-manifest'])),config=read(resolve(options.config));
+  const options=flags(argv);let observer=null,source;
+  if(options['source-observer']){
+    const {admitSourceObserver}=await import('../../source-observer.mjs');
+    observer=admitSourceObserver(resolve(options['source-observer']),{options,executingRoot:SOURCE});
+    requireValue(options.resume||observer.state.status==='complete','RESUME_REQUIRED','Continue the selected original operation explicitly.',409);
+    source=verifySource(resolve(options.source),resolve(options['source-manifest']),{moduleBound:false});
+  }else source=verifySource(resolve(options.source),resolve(options['source-manifest']));
+  const config=read(resolve(options.config)),execution={
+    ...(await import(pathToFileURL(join(resolve(options.source),'commissioning','server.mjs')).href)),
+    ...(await import(pathToFileURL(join(resolve(options.source),'receiving','browser.mjs')).href))
+  };
   requireValue(Number(process.versions.node.split('.')[0])>=24,'NODE_RUNTIME','Select the original Node24+ interpreter.');
   requireValue(config.schema==='altinity.acceptance-input.v1'&&config.tables.length===1&&canonical(config.tables[0].source)===canonical(['starforge_example','transfers']),'REFERENCE_INPUT','Select the complete original three-row source reference.');
   requireValue(existsSync(resolve(options.playwright))&&existsSync(resolve(options.chromium)),'BROWSER_RUNTIME','Select actual existing browser runtime paths.');
   const directory=await privateDirectory(resolve(options.directory),{create:true}),lease=await acquireWorkspaceLease(join(directory,'receiving.lock'));
-  let programme;try{programme=new Programme(options,source,config,lease);return await programme.run();}finally{if(programme)await programme.close();if(!programme||programme.apps.size===0)await lease.close();}
+  let programme;try{
+    if(observer){
+      // The original source, phase results and native job selection stay intact.
+      // The separate immutable observer request and complete source are retained
+      // by the original fixture/controller before this receiver can dispatch.
+      const live=read(join(directory,'operation.json'));requireValue(live.id===observer.value.operationId&&canonical(live.selection.sourceManifest)===canonical(source.identity),'SOURCE_OBSERVER_BINDING','Continue the same original operation and source.',409);
+      const binding={id:observer.value.id,request:{path:observer.path,...observer.identity},baselineManifest:source.identity,observerManifest:observer.value.observer.manifest};
+      const retained=(live.sourceObservers??[]).find(value=>value.id===binding.id);
+      requireValue(!retained||canonical(retained)===canonical(binding),'SOURCE_OBSERVER_BINDING','Retain the exact original actual observer entry.',409);
+      if(!retained){live.sourceObservers=[...(live.sourceObservers??[]),binding];atomicJson(join(directory,'operation.json'),live);}
+    }
+    programme=new Programme(options,source,config,lease,execution);return await programme.run();
+  }finally{if(programme)await programme.close();if(!programme||programme.apps.size===0)await lease.close();}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(error=>{process.stderr.write(JSON.stringify({error:error.code??'RECEIVING_FAILED',message:error.message,details:error.details??{}})+'\n');process.exitCode=1;});
