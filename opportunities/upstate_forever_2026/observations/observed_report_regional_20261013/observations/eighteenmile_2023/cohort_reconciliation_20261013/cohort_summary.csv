@@ -1,0 +1,6 @@
+site_id,cohort_n,mean,sample_sd,minimum,maximum,units,published_mean,published_sd,published_minimum,published_maximum,published_n_reported,rounded_mean_sd_match,rounded_range_match
+SV-268,15,7.406666666666666,8.036293270146974,1.19,28.59,ug/L,7.4,8,1.2,28.6,15,true,true
+SV-838,15,24.097333333333335,8.583679253316117,12.35,38.88,ug/L,24.1,8.6,12.4,38.9,15,true,true
+SV-839,15,15.415333333333335,7.429484568419329,7.52,31.25,ug/L,15.4,7.4,7.5,31.3,15,true,true
+SV-374,15,10.675333333333333,4.264115829749915,5.59,18.72,ug/L,10.7,4.3,5.6,18.7,4,true,true
+SV-840,15,6.065333333333333,1.7513214058723394,3.36,8.55,ug/L,6.1,1.8,3.4,8.6,4,true,true

@@ -594,6 +594,20 @@ def context_desks_join(root, records, *, application_source=None):
         records.append({"component": "Station geography", "result": result,
                         "original_source_manifests": source_records})
 
+    observed_station_path = "operator/install_observed_station_studies.py"
+    if (root / observed_station_path).is_file():
+        observed_station = module(root, observed_station_path)
+        complete("Original observation station studies", observed_station["FILES"])
+        manifests = (
+            "observations/station_context.sources.json",
+            "calibration_station_geography.sources.json",
+            "regional_station_context.sources.json",
+        )
+        source_records = [manifest(name) for name in manifests if (root / name).is_file()]
+        result = observed_station["install"](root, root)
+        records.append({"component": "Original observation station studies",
+                        "result": result, "original_source_manifests": source_records})
+
     soil = (
         "source_tools/soil_sources.py", "source_tools/soil_region.py",
         "source_tools/soil_coverage.py", "source_tools/SOIL_SOURCE.md",
