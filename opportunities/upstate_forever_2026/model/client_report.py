@@ -15,14 +15,14 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .common import INVEST_VERSION
-from . import native_study
+from . import native_study, scenario_treatment_report
 from .robust_decisions.eco_robust import decision_delivery
 from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-observed-figures-15"
+REPORT_EDITION = "2026-10-13-client-report-treatment-response-16"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -533,6 +533,9 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         scenario_paragraphs.append("This edition contains the selected baseline. The same workspace retains explicit alternatives as they are selected for a later delivery edition.")
     sections.append(_section("alternatives", "Land-cover alternatives and modeled change",
                              scenario_paragraphs, scenario_tables))
+    sections.extend(scenario_treatment_report.client_sections(
+        scenario_summary, baseline_run_id=baseline["id"],
+        alternative_run_ids=[run["id"] for run in alternatives]))
 
     sections.append(_section("atlas", "Map decision guide" if study_mode else "Seven-map decision guide", [
         "Use the map titles, legends, scale bars and north arrows in the accompanying publication PDFs. The current-export maps show physical annual quantities; the combined planning map uses the saved normalization and weights. The future-map files retain each selected alternative.",
