@@ -53,7 +53,7 @@ export function attachAssessmentContext(host){
    '<label>Original watershed source<select required data-ac-watershed>'+opts(list(options?.watershed_sources).map(r=>({...r,id:key(r.reference)})),key(draft.watershed_source),r=>r.title)+'</select></label>'+
    '<label>Association used for context<select data-ac-field="relationship_basis"><option value="published_watershed" '+(draft.relationship_basis==='published_watershed'?'selected':'')+'>Original assessment watershed label</option>'+
    '<option value="station_membership" '+(draft.relationship_basis==='station_membership'?'selected':'')+'>Computed station / polygon membership</option></select></label></div>'+
-   '<p class="ac-explanation">Both associations remain in every result row. A watershed provides geographic context for the selected records. The result retains draft status and does not assign an impairment designation to the whole polygon.</p>'+
+   '<p class="ac-explanation">Both associations remain in every result row. A watershed provides geographic context for the selected records. The result retains each source edition and status; a station listing supplies geographic context for the polygon.</p>'+
    '<details><summary>Original field bindings</summary><div class="ac-fields">'+['watershed','cause','use','county','assessment_edition','assessment_title','assessment_status','assessment_vintage','assessment_reference'].map(f=>'<label>'+esc(f)+' field<select '+(['watershed','cause','use'].includes(f)?'required':'')+' data-ac-binding="'+f+'">'+
       '<option value="">'+(['watershed','cause','use'].includes(f)?'Choose…':'Omit')+'</option>'+list(t?.fields).map(v=>'<option value="'+esc(v)+'" '+(draft.fields[f]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>').join('')+'</div></details>'+
    '<div class="ac-fields">'+filterInput('causes','cause','Original causes')+filterInput('uses','use','Original impaired uses')+filterInput('counties','county','Original counties')+filterInput('editions','assessment_edition','Original assessment editions')+'</div>'+
@@ -117,7 +117,7 @@ export function attachAssessmentContext(host){
    '<div class="ac-table-wrap"><table><thead><tr><th>Station / original row</th><th>Original cause / use / edition</th><th>Published watershed</th><th>Computed membership</th><th>Source detail</th></tr></thead><tbody>'+
    shown.map(r=>'<tr><td>'+esc(r.station_id)+'<small>row '+r.row_number+' · '+esc(r.location_status)+'</small></td><td>'+esc(r.cause)+' / '+esc(r.impaired_use)+
     '<small>'+esc(r.assessment_edition??'')+' · '+esc(r.assessment?.status)+' · '+esc(r.assessment?.vintage)+'</small></td><td>'+esc(r.original_watershed_value)+'<small>'+esc(r.geographic_status)+'</small></td><td>'+list(r.computed_memberships).map(m=>esc(m.watershed_id)+' ('+esc(m.relation)+')').join('<br>')+
-    '<small>'+(r.association_agreement===true?'Associations agree':r.association_agreement===false?'Associations differ':'Comparison unresolved')+'</small></td><td><details><summary>Original fields and references</summary><pre>'+esc(JSON.stringify({assessment:r.assessment,edition:r.assessment_edition,original:r.original,source:r.source_ref,computed:r.computed_memberships},null,2))+'</pre></details></td></tr>').join('')+
+    '<small>'+(r.association_agreement===true?'Associations agree':r.association_agreement===false?'Associations differ':'Comparison unresolved')+'</small></td><td><details><summary>Original fields and references</summary><pre>'+esc(JSON.stringify({assessment:r.assessment,edition:r.assessment_edition,original_edition_source:r.original_edition_source,assessment_record_id:r.assessment_record_id,original:r.original,source:r.source_ref,computed:r.computed_memberships},null,2))+'</pre></details></td></tr>').join('')+
    '</tbody></table></div><div class="ac-toolbar">'+btn('previous','Previous',page===0?'disabled':'')+'<span>Page '+(page+1)+' of '+Math.max(1,Math.ceil(filtered.length/40))+'</span>'+
    btn('next','Next',(page+1)*40>=filtered.length?'disabled':'')+'</div>';
  }
@@ -192,7 +192,7 @@ export function attachAssessmentContext(host){
  }
  function exportRows(){
   const headers=['station_id','row_number','cause','impaired_use','original_watershed_value','location_status','watershed_status','geographic_status','association_agreement','association_status',
-    'published_polygon_ids','computed_polygon_ids','selected_polygon_ids','assessment','assessment_edition','source_ref','original'];
+    'published_polygon_ids','computed_polygon_ids','selected_polygon_ids','assessment','assessment_edition','assessment_record_id','original_edition_source','source_ref','original'];
   const cell=v=>{let t=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const text=[headers.join(','),...rows().map(r=>headers.map(k=>cell(r[k])).join(','))].join('\r\n')+'\r\n';
   const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');

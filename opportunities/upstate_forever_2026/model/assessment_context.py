@@ -73,8 +73,14 @@ def _rows(study, table):
             if not isinstance(ref.get("original"), dict) or type(ref.get("row_number")) is not int:
                 raise ValueError("Original assessment rows need their retained row numbers and fields")
             identity = (_key(ref), ref["row_number"])
+            linked=[item for item in station.get("assessment_records",[])
+                    if _key(item.get("inventory_source_ref",{}))==_key(ref)
+                    and item.get("inventory_source_ref",{}).get("row_number")==ref["row_number"]]
+            native={key:linked[0].get(key) for key in
+                    ("assessment_record_id","source_id","source_sha256","source_vintage",
+                     "publication_status","evidence_kind","source_uri")} if len(linked)==1 else {}
             row = {"station_id": station["station_id"], "row_number": ref["row_number"],
-                   "original": _copy(ref["original"]), "source_ref": {k:v for k,v in ref.items() if k != "original"},
+                   "original": _copy(ref["original"]), "native_assessment":native, "source_ref": {k:v for k,v in ref.items() if k != "original"},
                    "location_status": station["status"], "watershed_status": station["watershed_status"],
                    "computed_memberships": _copy(station.get("watersheds", []))}
             if identity in records and canonical(records[identity]) != canonical(row):
@@ -90,10 +96,15 @@ def options(workspace, geography_id, table=None):
         records = _rows(study, reference)
         fields = sorted({key for row in records for key in row["original"]})
         values = {key: sorted({_field(row["original"].get(key)) for row in records}) for key in fields}
-        defaults = {key: name for key,name in (("watershed","huc12"),("cause","cause"),
-                    ("use","impaired_use"),("county","county"),("assessment_edition","assessment_edition"),
-                    ("assessment_title","assessment_title"),("assessment_status","assessment_status"),
-                    ("assessment_vintage","assessment_vintage"),("assessment_reference","assessment_reference")) if name in fields}
+        aliases={"watershed":("publisher_huc12","huc12"),"cause":("cause_code","cause_raw","cause"),
+                 "use":("use","impaired_use"),"county":("county",),
+                 "assessment_edition":("assessment_edition","source_vintage"),
+                 "assessment_title":("assessment_title",),
+                 "assessment_status":("assessment_status","publication_status"),
+                 "assessment_vintage":("assessment_vintage","source_vintage"),
+                 "assessment_reference":("assessment_reference","source_uri")}
+        defaults={key:next(name for name in names if name in fields)
+                  for key,names in aliases.items() if any(name in fields for name in names)}
         tables.append({"reference": _source_ref(reference), "title": binding.get("title"),
                        "uri": binding.get("uri"), "vintage": binding["source_metadata"].get("vintage"),
                        "source_sha256": binding["source_sha256"], "row_count": len(records),
@@ -186,7 +197,8 @@ def _assessment_groups(rows):
     groups={}
     for row in rows:
         identity={"assessment":row["assessment"],"edition":row["assessment_edition"],
-                  "cause":row["cause"],"impaired_use":row["impaired_use"]}
+                  "cause":row["cause"],"impaired_use":row["impaired_use"],
+                  "original_edition_source":row["original_edition_source"]}
         key=digest(identity)
         group=groups.setdefault(key,{"id":key,**_copy(identity),"station_ids":set(),"row_numbers":[]})
         group["station_ids"].add(row["station_id"]);group["row_numbers"].append(row["row_number"])
@@ -280,6 +292,9 @@ def build(workspace, value):
                     else {name:(row["original"][fields["assessment_"+name]]
                                 if "assessment_"+name in fields else selection["assessment"][name])
                           for name in ("title","status","vintage","reference")}),
+                "original_edition_source":{name:row["original"].get(name,row["native_assessment"].get(name))
+                    for name in ("source_id","source_sha256","evidence_kind","assessment_period","status_date")},
+                "assessment_record_id":row["original"].get("id",row["native_assessment"].get("assessment_record_id")),
                 "assessment_edition":row["original"].get(fields.get("assessment_edition"))
                                      if fields.get("assessment_edition") else None,
                 "geographic_status":"unmatched" if not chosen else "multiple" if len(chosen)>1 else "matched",
@@ -356,7 +371,8 @@ def build(workspace, value):
             "station_id","row_number","cause","impaired_use","original_watershed_value",
             "location_status","watershed_status","geographic_status","association_agreement","association_status",
             "computed_boundary_or_overlap","published_polygon_ids","computed_polygon_ids",
-            "selected_polygon_ids","computed_memberships","assessment","assessment_edition","source_ref","original"]),immutable=True)
+            "selected_polygon_ids","computed_memberships","assessment","assessment_edition","assessment_record_id",
+            "original_edition_source","native_assessment","source_ref","original"]),immutable=True)
         atomic_bytes(destination/"watershed-context.csv",_csv(summaries,[
             "context_id","watershed_id","station_count","assessment_row_count","causes","uses",
             "station_ids","assessment_row_numbers","assessment_groups","source_ref"]),immutable=True)

@@ -96,7 +96,13 @@ from physical PDF pages 67–71. The lock applies only to this original file has
 Other inventories can bind original per-row assessment_edition, assessment_title,
 assessment_status, assessment_vintage and assessment_reference fields. The field
 selectors accept actual original column names. Exact matching names are suggested
-when present; different names are selected explicitly. Every per-row value
+when present; different names are selected explicitly. Maintained station-assessment
+inventories additionally recognize publisher_huc12/huc12, cause_code/cause_raw/cause,
+use/impaired_use, source_vintage, publication_status and source_uri. These exact
+column-name defaults follow the current source producer. If the station edition
+already carries assessment_records, their original record ID, edition source ID
+and original publisher SHA remain attached. Group identities include that source
+identity, evidence kind, assessment period and status date. Every per-row value
 remains in the canonical result and source details. Empty original values remain
 empty. Fields not supplied by the source use the explicitly selected inventory
 metadata, whose scope remains visible.
