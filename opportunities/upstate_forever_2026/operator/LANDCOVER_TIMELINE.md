@@ -39,6 +39,18 @@ The existing verified report iframe, original download tickets and **Prepare sci
 
 The separate input-selection file preserves unfinished operator fields. It does not replace the complete scientific project archive. Original Workspace receiving verifies the retained file identities and source bindings.
 
+## Use the whole-history map in the retained report
+
+The complete portable report keeps its existing watershed map and original reference-versus-comparison selector. **Map metric** now groups the three original comparison metrics separately from nine complete-history quantities: stable class, any change, return to initial class, final class observed at least twice, final class observed only once, changes wholly within forest, any forest entry, any forest exit and returned forest membership.
+
+Every whole-history map uses the actual timeline row for that original zone and all selected years on common valid support. The selected comparison continues to control the paired tables; changing it does not change a whole-history metric. Read the map's visible explanation and the selected year sequence before interpreting it. The original comparison statistics and ledger remain labeled separately.
+
+The map legend reports hectares or percentages explicitly. Its shade range follows the visible watershed search. A measured zero stays zero; unavailable values use diagonal hatch. **Selected map values for every visible watershed** exposes the exact value and original zone identifier/name, even when display geometry is unavailable. Use a polygon or a table row to select the same original reporting area in the full timeline account. These map controls do not change the saved calculation or its exported GIS rasters.
+
+Final-class retention means at least two trailing selected observations, never uninterrupted elapsed years. Forest entry, exit and returned membership overlap. Keep that interpretation when printing or exporting the report; do not sum these quantities as disjoint classes.
+
+In the original receiving course, open the extracted report at the actual desktop and narrow widths. Select a return-to-initial metric and a final-class metric; compare their displayed zone values with that zone's retained timeline summary and CSV. Select each forest crossing metric and read its overlap explanation. Change the reference/comparison selection while a whole-history map is active: the map's values must stay bound to all observations while the paired tables change. Filter by an original zone name, select its polygon/table row, and clear the search. Reopen the full retained ledger in the same report and verify that available metrics follow its actual history. Open an ordinary two-date ledger too: only the original three metrics are offered. View the real map, print output and accompanying downloaded GIS/CSV files; source checks do not replace that operation.
+
 ## Cumulative installation
 
 The WO-07 model arm owns calculation/source/Workspace/report integration. This operator arm supplies the full existing JavaScript and CSS, versioned extension descriptor and this guide. The original landcover_operator.py remains byte-identical because its existing catalog/input/edition/report/action routes already return the full verified report.
