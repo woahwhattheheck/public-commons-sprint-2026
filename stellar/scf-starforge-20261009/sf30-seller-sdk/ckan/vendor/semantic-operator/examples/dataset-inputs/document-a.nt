@@ -1,0 +1,2 @@
+_:same <http://www.w3.org/2000/01/rdf-schema#label> "First authored document" .
+_:same <http://www.w3.org/ns/prov#used> <https://dcat.example.org/Dataset> .

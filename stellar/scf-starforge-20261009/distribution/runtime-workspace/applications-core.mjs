@@ -320,15 +320,34 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
   need(reviewed.applicationId === applicationId, 'APPLICATION_REVIEW_CHANGED');
   const id = applicationId ? recordId(applicationId) : digest(requestId).slice(0, 24), directory = directoryFor(root, id);
   try { await makePrivate(directory); } catch (error) { if (error.code !== 'EEXIST') throw error; await privateDirectory(directory); }
-  for (const name of ['runs', 'revisions']) {
+  for (const name of ['runs', 'revisions', 'save-requests']) {
     try { await makePrivate(join(directory, name)); } catch (error) { if (error.code !== 'EEXIST') throw error; }
   }
   const lease = await operationLease(join(directory, 'application.lock'));
   try {
     const previous = await readJSON(join(directory, 'application.json'), true), requestHash = hash({ requestId, reviewId, applicationId });
+    const retainRequest = async value => {
+      if (!value?.saveRequestId) return;
+      const path = join(directory, 'save-requests', operationId(value.saveRequestId) + '.json');
+      try { await saveJSON(path, value); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        const retained = await readJSON(path);
+        need(retained.id === value.id && retained.saveRequestHash === value.saveRequestHash &&
+          retained.revision === value.revision, 'APPLICATION_SAVE_ID_REUSED');
+      }
+    };
+    const recorded = await readJSON(join(directory, 'save-requests', requestId + '.json'), true);
+    if (recorded) {
+      need(recorded.id === id && recorded.saveRequestId === requestId &&
+        recorded.saveRequestHash === requestHash, 'APPLICATION_SAVE_ID_REUSED');
+      return { ...recorded, saveReplayed: true,
+        saveSuperseded: previous?.saveRequestId !== requestId, currentRevision: previous?.revision ?? null };
+    }
     if (previous?.saveRequestId === requestId) {
       need(previous.saveRequestHash === requestHash, 'APPLICATION_SAVE_ID_REUSED');
-      return previous;
+      await retainRequest(previous);
+      return { ...previous, saveReplayed: true, saveSuperseded: false, currentRevision: previous.revision };
     }
     const receiving = await workspaceReceivingState(root);
     need(receiving?.mode !== 'new-host' || reviewed.receivingId === receiving.receivingId,
@@ -353,7 +372,11 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
     const value = { schema: SCHEMA, id, ...body, revision, createdAt: previous?.createdAt ?? now(), updatedAt: now(),
       saveRequestId: requestId, saveRequestHash: requestHash, reviewId };
     try { await saveJSON(join(directory, 'revisions', revision + '.json'), value); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+    // Retain the previous accepted request before replacing the current value.
+    // This also recovers an earlier save interrupted before its receipt write.
+    await retainRequest(previous);
     await saveJSON(join(directory, 'application.json'), value, true);
+    await retainRequest(value);
     return value;
   } finally { await lease.close(); }
 }

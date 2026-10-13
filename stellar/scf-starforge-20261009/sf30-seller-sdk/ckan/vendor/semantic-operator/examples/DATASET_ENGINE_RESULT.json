@@ -1,0 +1,205 @@
+{
+  "schema": "commons-semantic-dataset-execution-receipt/1",
+  "status": "complete",
+  "observation_source": "Exact final output of original exec session 75354; no operation replay",
+  "process": {
+    "session_id": 75354,
+    "exit_code": 0,
+    "final_output_chunk": "7ba3d5"
+  },
+  "operation_journal": "/workspace/scratch/cf0907e204c9/saic-dataset-engine-operation/operation.json",
+  "source": {
+    "manifest_blob": "9069b16898ca5fb7c264138a54067af92a7506ed",
+    "engine_blob": "1e679d4208c18f8be86341119d056a9fbe30af17",
+    "guide_blob": "ea858da97414fb06f869752606f7a51ac3fb4936",
+    "operation_blob": "19c071f3e9071226a150518c1026a728998ce59a",
+    "receiving_inputs_blob": "89de57fa2e479ee971eb0ed87ae999ff8cce4d6e"
+  },
+  "runtime": {
+    "versions": {
+      "PyLD": "3.3.0",
+      "cachetools": "7.2.1",
+      "frozendict": "2.4.7",
+      "lxml": "6.1.1",
+      "rdflib": "7.6.0",
+      "pyshacl": "0.40.1",
+      "owlrl": "7.6.2"
+    },
+    "pyld_wheel_sha256": "58aa63542a5989431426bdfef932db0d1b974e2928e179f74d5a903804de9692",
+    "receipt": "/dev/shm/cf0907-saic-dataset-runtime/runtime-receipt.json"
+  },
+  "steps": [
+    {
+      "step": "original-w3c-inspection",
+      "outcome": "complete",
+      "quads": 97,
+      "graphs": 2
+    },
+    {
+      "step": "baseline",
+      "outcome": "complete",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "corrected",
+      "outcome": "complete",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "catalogue-reuse",
+      "outcome": "complete",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "local-jsonld",
+      "outcome": "complete",
+      "quads": 2,
+      "graphs": 4
+    },
+    {
+      "step": "document-scopes",
+      "outcome": "complete",
+      "quads": 4,
+      "graphs": 1
+    },
+    {
+      "step": "reviewed-csv-destination",
+      "outcome": "complete",
+      "quads": 19,
+      "graphs": 7
+    },
+    {
+      "step": "cross-graph-query",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "retained-default",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "explicit-selected-union",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "bound-named-membership",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "selected-empty-graph",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "shacl-per_graph",
+      "outcome": "nonconforming",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "shacl-union",
+      "outcome": "conforms",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "shacl-corrected",
+      "outcome": "conforms",
+      "quads": 17,
+      "graphs": 6
+    },
+    {
+      "step": "compare-within_graph",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    },
+    {
+      "step": "compare-union",
+      "outcome": "complete",
+      "quads": null,
+      "graphs": null
+    }
+  ],
+  "result": {
+    "status": "complete",
+    "operation": "/dev/shm/cf0907-saic-dataset-engine-operation/operation.json",
+    "baseline": {
+      "data_model": "dataset",
+      "dataset_sha256": "d355fce75354384adb61fe8ae461ee7fd8c8c0509ef478b183d073a6277e891f",
+      "nquads_sha256": "04244db099c170eaa0a3a5d21764292180406e58c6a84be987b498210a8a7da1",
+      "quad_count": 17,
+      "graph_count": 6,
+      "named_graph_count": 5,
+      "empty_graph_count": 2,
+      "canonicalization": {
+        "algorithm": "URDNA2015",
+        "implementation": "PyLD",
+        "version": "3.3.0",
+        "profile": "commons-semantic-dataset-inventory/1"
+      },
+      "source_count": 1,
+      "rdf_source_count": 1,
+      "mapping_count": 0,
+      "mapped_rows": 0,
+      "null_fields_skipped": 0,
+      "ill_typed_literal_occurrences": 0,
+      "provenance_complete": true,
+      "native_outcome": "complete",
+      "engine_versions": {
+        "rdflib": "7.6.0",
+        "pyshacl": "0.40.1",
+        "PyLD": "3.3.0"
+      },
+      "engine_source_sha256": "5d039e3e59dd6be9974fe321f3e22c02583d35d00d4f48e14dcd8e689a9c900d",
+      "supporting_engine_source_sha256": "2352dbbf58e79f7aa98791a3abe3ec35df3fabdba95a1c66efaf836b25135d5f"
+    },
+    "corrected": {
+      "data_model": "dataset",
+      "dataset_sha256": "e0e8937c0a618b705cc098b3051855067ff4e21010cb2d2d821c1c69d4cd5a63",
+      "nquads_sha256": "81bfb64590f495509350b009ba21d4db1605987b5ee6306046efb5c50b43f921",
+      "quad_count": 17,
+      "graph_count": 6,
+      "named_graph_count": 5,
+      "empty_graph_count": 2,
+      "canonicalization": {
+        "algorithm": "URDNA2015",
+        "implementation": "PyLD",
+        "version": "3.3.0",
+        "profile": "commons-semantic-dataset-inventory/1"
+      },
+      "source_count": 1,
+      "rdf_source_count": 1,
+      "mapping_count": 0,
+      "mapped_rows": 0,
+      "null_fields_skipped": 0,
+      "ill_typed_literal_occurrences": 0,
+      "provenance_complete": true,
+      "native_outcome": "complete",
+      "engine_versions": {
+        "rdflib": "7.6.0",
+        "pyshacl": "0.40.1",
+        "PyLD": "3.3.0"
+      },
+      "engine_source_sha256": "5d039e3e59dd6be9974fe321f3e22c02583d35d00d4f48e14dcd8e689a9c900d",
+      "supporting_engine_source_sha256": "2352dbbf58e79f7aa98791a3abe3ec35df3fabdba95a1c66efaf836b25135d5f"
+    },
+    "jobs_complete": 17,
+    "checks_complete": 14,
+    "provider_calls": 0,
+    "browser_runs": 0,
+    "stores_created": 0
+  },
+  "artifact_custody": "The original complete operation journal and per-job output files remain in the retained operation directory; this compact receipt does not replace them."
+}

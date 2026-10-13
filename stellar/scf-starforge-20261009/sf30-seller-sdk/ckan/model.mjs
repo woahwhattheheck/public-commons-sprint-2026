@@ -11,6 +11,11 @@ import { compileQueries, readCkanSourceFile } from './declaration.mjs';
 import { bindCkanCapture, projectCkanValue } from './source.mjs';
 import { describeCkanSemantics, projectCkanSemantics, checkCkanSemanticReview, compareCkanSemantics } from './semantics.mjs';
 import { createCkanReviewedRefreshes } from './reviewed-refresh.mjs';
+import { createDcatWorkspace, validateDcatState } from './dcat-workspace.mjs';
+import { createDcatSemanticWorkspace } from './dcat-semantic.mjs';
+import { createCkanCapturePlans } from './capture-plans.mjs';
+import { createCkanRemoteWorkspace } from './remote-workspace.mjs';
+import { interruptDcatAcquisitions } from './dcat-acquisition.mjs';
 import { openCkanPublisher } from './publisher/model.mjs';
 import { exportCkanMerchantPackage, stageCkanMerchantRelease, readCkanMerchantBuyerOffer,
   prepareCkanMerchantBuyer } from './publisher/release.mjs';
@@ -64,7 +69,7 @@ function columnSuggestions(capture) {
       sample: nonnull.slice(0, 3).map(sampleValue) };
   });
 }
-export async function openCkanWorkbench({ directory, create = false, origin, authTokenEnv, environment = process.env } = {}) {
+export async function openCkanWorkbench({ directory, create = false, origin, sourceKind, authTokenEnv, environment = process.env } = {}) {
   directory = resolve(directory);
   if (create && await exists(join(directory, 'workbench.json'))) throw fault('CKAN_PROJECT_EXISTS');
   await privateDirectory(dirname(directory));
@@ -75,8 +80,11 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
   const persist = () => atomicJson(directory, 'workbench.json', state);
   try {
     if (create) {
-      const checked = captureSelection({ catalogOrigin: origin, packageId: 'initial', resourceId: 'initial', authTokenEnv });
-      state = { schema: 'stellar-forge.ckan-workbench.v1', catalogOrigin: checked.catalogOrigin,
+      const kind = sourceKind ?? 'ckan';
+      if (!['ckan', 'dcat-us'].includes(kind)) throw fault('CATALOG_SOURCE_KIND_INVALID');
+      const checked = kind === 'dcat-us' ? { catalogOrigin: catalogOrigin(origin) } :
+        captureSelection({ catalogOrigin: origin, packageId: 'initial', resourceId: 'initial', authTokenEnv });
+      state = { schema: 'stellar-forge.ckan-workbench.v1', sourceKind: kind, catalogOrigin: checked.catalogOrigin,
         ...(authTokenEnv ? { authTokenEnv } : {}), createdAt: stamp(), updatedAt: stamp(),
         editions: [], sources: [], publications: [], exports: [], buyerRequests: [], refreshes: [], operation: null };
       for (const name of ['editions', 'sources', 'publications', 'datasets', 'merchant-packages', 'buyer-requests'])
@@ -89,12 +97,21 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
     if (state.refreshes === undefined) state.refreshes = [];
     if (!Array.isArray(state.refreshes)) throw fault('CKAN_PROJECT_INVALID');
     catalogOrigin(state.catalogOrigin);
+    if (state.sourceKind === undefined) state.sourceKind = 'ckan';
+    if (!['ckan', 'dcat-us'].includes(state.sourceKind)) throw fault('CATALOG_SOURCE_KIND_INVALID');
+    if (sourceKind && state.sourceKind !== sourceKind) throw fault('CKAN_PROJECT_BINDING_CHANGED');
+    validateDcatState(state.dcat);
     if (origin && catalogOrigin(origin) !== state.catalogOrigin || authTokenEnv && authTokenEnv !== state.authTokenEnv)
       throw fault('CKAN_PROJECT_BINDING_CHANGED');
     if (state.operation?.state === 'RUNNING') {
       state.operation.state = 'INTERRUPTED'; state.operation.error = 'PROCESS_INTERRUPTED';
       for (const edition of state.editions) if (edition.state === 'CAPTURING') edition.state = 'INTERRUPTED';
       for (const refresh of state.refreshes) if (refresh.state === 'PREPARING') refresh.state = 'INTERRUPTED';
+      for (const review of state.dcat?.reviews ?? []) if (review.status === 'PREPARING') review.status = 'INTERRUPTED';
+      await persist();
+    }
+    if ((state.dcat?.acquisitions ?? []).some(row => row.status === 'FETCHING' || row.receiptNeedsRecovery)) {
+      await interruptDcatAcquisitions(directory, state.dcat);
       await persist();
     }
     const find = (collection, value) => {
@@ -193,8 +210,19 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
     }
     const reviewedRefreshes = createCkanReviewedRefreshes({ directory, state, find, selectedCapture,
       launch, persist, createSource: createSourceSelection });
+    const capturePlans = await createCkanCapturePlans({ directory, state, launch, persist, capture,
+      prepareRefresh: reviewedRefreshes.prepareRefresh });
+    const dcat = createDcatWorkspace({ directory, state, launch, persist, environment });
+    const remote = await createCkanRemoteWorkspace({ directory, state, launch, persist, environment,
+      assertSource: source => reviewedRefreshes.assertRefreshPublicationSource(source) });
+    const semantic = await createDcatSemanticWorkspace({ directory, state, dcat, launch, persist, environment });
+    if (create) await persist();
     const api = {
       ...reviewedRefreshes,
+      ...capturePlans,
+      ...dcat,
+      ...semantic.api,
+      ...remote,
       directory,
       status: () => structuredClone({ ...state, directory, active: active ? active.operation.id : null }),
       async search(input = {}) {
@@ -222,6 +250,14 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       resumeCapture(value, limits = {}) {
         const entry = find('editions', value);
         if (entry.state === 'COMPLETE') throw fault('CKAN_EDITION_ALREADY_COMPLETE', 'This retained edition is complete; start a new capture to refresh it.');
+        if (entry.capturePlanRunId) {
+          const run = state.capturePlans.runs.find(row => row.id === entry.capturePlanRunId);
+          if (!run || run.editionId !== entry.id) throw fault('CKAN_CAPTURE_PLAN_EDITION_CHANGED');
+          if (!object(limits) || Object.entries(limits).some(([key, value]) =>
+            !['maxRows', 'maxBytes'].includes(key) || value !== entry.limits[key]))
+            throw fault('CKAN_CAPTURE_PLAN_LIMITS_PINNED', 'Resume this original capture plan run with its retained limits; save a new plan version to change future captures.');
+          return capturePlans.resumeCapturePlanRun(run.id, { expectedIntentSha256: run.intentSha256 });
+        }
         return launch('resume edition', (signal, progress) => { entry.limits = { ...entry.limits, ...limits }; return capture(entry, signal, progress); });
       },
       importCapture(filename, { expectedManifestSha256 } = {}) {
@@ -427,7 +463,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       cancel() { if (!active) throw fault('CKAN_NO_ACTIVE_OPERATION'); active.controller.abort(); return { cancelling: active.operation.id }; },
       async close() {
         if (closed) return; closed = true; active?.controller.abort();
-        try { await active?.completion; } finally { await release(); }
+        try { await active?.completion; } finally { await semantic.close(); await release(); }
       },
     };
     return api;

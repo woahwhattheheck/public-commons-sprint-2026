@@ -1,0 +1,2091 @@
+@prefix adms: <http://www.w3.org/ns/adms#> .
+@prefix cnt: <http://www.w3.org/2011/content#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dcat-us: <http://resources.data.gov/ontology/dcat-us#> .
+@prefix dcat-us-shp: <http://resources.data.gov/shapes/dcat-us#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dqv: <http://www.w3.org/ns/dqv#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix locn: <http://www.w3.org/ns/locn#> .
+@prefix org: <http://www.w3.org/ns/org#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix sdmx-attribute: <http://purl.org/linked-data/sdmx/2009/attribute#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix spdx: <http://spdx.org/rdf/terms#> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix shp: <http://resources.data.gov/shapes/dcat-us#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+<http://resources.data.gov/shapes/dcat-us>
+    a <http://www.w3.org/2002/07/owl#Ontology> ;
+    <http://purl.org/dc/terms/title> "DCAT-US 3.0 generated SHACL shapes" ;
+    <http://purl.org/dc/terms/description> "Generated from the DCAT-US 3.0 JSON Schema definitions. Do not edit by hand: edit the schema and regenerate." .
+
+shp:AccessRestrictionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat-us:AccessRestriction ;
+    sh:name "AccessRestriction" ;
+    sh:description "Rules or indicators that describe who can access a resource" ;
+    sh:property [
+        sh:path dcat-us:restrictionNote ;
+        sh:name "restriction note" ;
+        sh:description "A note related to the access restriction" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:restrictionStatus ;
+        sh:name "restriction status" ;
+        sh:description "The indication of whether or not there are access restrictions on the item, consider using a controlled vocabulary such as https://www.archives.gov/research/catalog/lcdrg/authority-lists/access-restriction-status" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:specificRestriction ;
+        sh:name "specific restriction" ;
+        sh:description "Authority, code list entry, or policy reference that defines the specific access restriction; consider using a controlled vocabulary such as the NARA https://www.archives.gov/research/catalog/lcdrg/authority-lists/specific-access-restriction" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:ActivityShape
+    a sh:NodeShape ;
+    sh:targetClass prov:Activity ;
+    sh:name "Activity" ;
+    sh:description "An activity related to creating, changing, or using a resource" ;
+    sh:property [
+        sh:path dcterms:type ;
+        sh:name "category" ;
+        sh:description "List of categories for the Activity" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:name "label" ;
+        sh:description "A human-readable label for the activity" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:AddressShape
+    a sh:NodeShape ;
+    sh:targetClass locn:Address ;
+    sh:name "Address" ;
+    sh:description "A single physical address" ;
+    sh:property [
+        sh:path vcard:country-name ;
+        sh:name "country" ;
+        sh:description "The country of the Address" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:locality ;
+        sh:name "locality" ;
+        sh:description "The city of the Address" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:postal-code ;
+        sh:name "postal code" ;
+        sh:description "The postal code of the Address" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:region ;
+        sh:name "administrative area" ;
+        sh:description "The administrative area of the Address. Depending on the country, this corresponds to a province, a county, a region, or a state" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:street-address ;
+        sh:name "street address" ;
+        sh:description "The street name and civic number of an Address" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:AgentShape
+    a sh:NodeShape ;
+    sh:targetClass foaf:Agent ;
+    sh:name "Agent" ;
+    sh:description "A person, organization, software agent, or other entity involved with a resource" ;
+    sh:property [
+        sh:path foaf:name ;
+        sh:name "name" ;
+        sh:description "The name of the agent" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:AttributionShape
+    a sh:NodeShape ;
+    sh:targetClass prov:Attribution ;
+    sh:name "Attribution" ;
+    sh:description "A responsibility that an agent has for a resource" ;
+    sh:property [
+        sh:path prov:agent ;
+        sh:name "agent" ;
+        sh:description "The agent that plays a role in the resource" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat:hadRole ;
+        sh:name "role" ;
+        sh:description "The function of an entity or agent with respect to another entity or resource" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Role ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:CUIRestrictionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat-us:CuiRestriction ;
+    sh:name "CUIRestriction" ;
+    sh:description "Information describing Controlled Unclassified Information (CUI) restrictions for a resource" ;
+    sh:property [
+        sh:path dcat-us:cuiBannerMarking ;
+        sh:name "CUI banner marking" ;
+        sh:description "CUI (Controlled Unclassified Information) banner marking is required for any unclassified information that is deemed sensitive and requires protection; see information at https://www.archives.gov/cui/registry/category-marking-list" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:designationIndicator ;
+        sh:name "CUI designation indicator" ;
+        sh:description "Agency that designated the information as CUI; include at least \"Controlled by:\" and, when possible, contact information" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:requiredIndicatorPerAuthority ;
+        sh:name "required indicator per authority" ;
+        sh:description "List of free-text required indicators from the applicable authority (for example, category descriptions or distribution statements)" ;
+        sh:datatype xsd:string ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:CatalogShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Catalog ;
+    sh:name "DCAT-US 3 Catalog" ;
+    sh:description "A curated collection of metadata about datasets, data services, or other resources" ;
+    sh:property [
+        sh:path dcterms:accessRights ;
+        sh:name "access rights" ;
+        sh:description "Information about whether the catalog is publicly accessible, restricted, or not public" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:catalog ;
+        sh:name "Related catalogs" ;
+        sh:description "List of related catalogs that are useful in the context of this catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Catalog ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:type ;
+        sh:name "category" ;
+        sh:description "List of high-level categories for the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:conformsTo ;
+        sh:name "schema version" ;
+        sh:description "Standard, schema, profile, or model that this catalog follows" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:contactPoint ;
+        sh:name "Contact points" ;
+        sh:description "Contact information people can use to ask questions or send feedback about the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class vcard:Kind ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:creator ;
+        sh:name "creator" ;
+        sh:description "Person or organization responsible for creating the catalog metadata" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Agent ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:dataset ;
+        sh:name "dataset" ;
+        sh:description "List of datasets included in the catalog. Use this together with service so the catalog is not empty." ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:hasPart ;
+        sh:name "has part" ;
+        sh:description "List of catalogs that are contained within this catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Catalog ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path foaf:homepage ;
+        sh:name "homepage" ;
+        sh:description "Main public web page for the catalog, usually an HTML page" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Document ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "Main unique identifier for the catalog, such as a URI or another persistent identifier" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "release date" ;
+        sh:description "Date when the catalog was formally issued, such as its initial publication date" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:keyword ;
+        sh:name "keyword/tag" ;
+        sh:description "List of keywords or tags describing the catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:language ;
+        sh:name "language" ;
+        sh:description "Language codes used for catalog metadata text (such as titles and descriptions), using ISO 639-1 codes like en or es" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LinguisticSystem ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:license ;
+        sh:name "license" ;
+        sh:description "License that governs how the catalog can be used or reused" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LicenseDocument ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "update/modification date" ;
+        sh:description "Most recent date when the catalog content changed, not just catalog-record metadata" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:publisher ;
+        sh:name "publisher" ;
+        sh:description "Person or organization responsible for publishing and making the catalog available" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path prov:qualifiedAttribution ;
+        sh:name "qualified attribution" ;
+        sh:description "List of agents with specific responsibilities for the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class prov:Attribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:record ;
+        sh:name "catalog record" ;
+        sh:description "A catalog record describing how a single resource (such as a dataset or data service) is registered in the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:CatalogRecord ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rights ;
+        sh:name "rights" ;
+        sh:description "Rights statements about the catalog that are not already covered by license or accessRights, such as copyright or policy restrictions" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rightsHolder ;
+        sh:name "rights holder" ;
+        sh:description "Organizations that hold rights in the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class org:Organization ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:service ;
+        sh:name "service" ;
+        sh:description "List of data services included in the catalog. Use this together with dataset so the catalog is not empty." ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:DataService ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:spatial ;
+        sh:name "spatial/geographic coverage" ;
+        sh:description "Geographic area covered by the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Location ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:subject ;
+        sh:name "subject" ;
+        sh:description "List of subjects of the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:temporal ;
+        sh:name "temporal coverage" ;
+        sh:description "Time periods covered by the catalog" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:PeriodOfTime ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:theme ;
+        sh:name "theme/category" ;
+        sh:description "List of themes or categories for the catalog. A catalog can have more than one theme." ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:themeTaxonomy ;
+        sh:name "themes" ;
+        sh:description "Controlled vocabulary or taxonomy used to classify catalog resources, such as datasets and services" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:ConceptScheme ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:CatalogRecordShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:CatalogRecord ;
+    sh:name "CatalogRecord" ;
+    sh:description "A record in a catalog, describing the registration of a single resource" ;
+    sh:property [
+        sh:path dcterms:conformsTo ;
+        sh:name "application profile" ;
+        sh:description "An Application Profile that the Catalog Record's metadata conforms to" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "Descriptions" ;
+        sh:description "A list of free-text accounts of the catalog record" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "listing date" ;
+        sh:description "List of dates on which the catalog record was included in the catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:language ;
+        sh:name "language" ;
+        sh:description "Language code used in catalog record metadata text, using ISO 639-1 values such as en or es, full list can be seen at https://id.loc.gov/vocabulary/iso639-1.html" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LinguisticSystem ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "update/modification date" ;
+        sh:description "The most recent date on which the catalog record was changed or modified" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path foaf:primaryTopic ;
+        sh:name "primary topic" ;
+        sh:description "A link to the Dataset, Data service or Catalog described in the Catalog Record" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Resource ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcterms:source ;
+        sh:name "source metadata" ;
+        sh:description "The original metadata that was used in creating metadata for the items in the catalog record, either a URL referencing the source metadata or a string of the source metadata itself" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Resource ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:status ;
+        sh:name "change type" ;
+        sh:description "The status of the catalog record in the context of editorial flow of the dataset and data service descriptions" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "A name given to the Catalog Record" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:ChecksumShape
+    a sh:NodeShape ;
+    sh:targetClass spdx:Checksum ;
+    sh:name "Checksum" ;
+    sh:description "A mechanism that can be used to verify that the contents of a distribution have not changed" ;
+    sh:property [
+        sh:path spdx:algorithm ;
+        sh:name "algorithm" ;
+        sh:description "The algorithm used to produce the checksum" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class spdx:ChecksumAlgorithm ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path spdx:checksumValue ;
+        sh:name "checksum value" ;
+        sh:description "A lower case hexadecimal encoded digest value produced using a specific algorithm" ;
+        sh:datatype xsd:hexBinary ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:ConceptSchemeShape
+    a sh:NodeShape ;
+    sh:targetClass skos:ConceptScheme ;
+    sh:name "ConceptScheme" ;
+    sh:description "A controlled vocabulary or other list of approved terms for a concept" ;
+    sh:property [
+        sh:path dcterms:created ;
+        sh:name "creation date" ;
+        sh:description "The date on which the Concept Scheme was first created" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "A description of the concept scheme" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "publication date" ;
+        sh:description "The date of formal issuance (e.g., publication) of the concept scheme" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "update/modification date" ;
+        sh:description "The most recent date at which the concept scheme was changed or modified" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "The title of the concept scheme" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat:version ;
+        sh:name "version info" ;
+        sh:description "A version number or other version designation of the concept scheme" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:DataServiceShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:DataService ;
+    sh:name "DataService" ;
+    sh:description "A service that provides access to data or data processing functions" ;
+    sh:property [
+        sh:path dcat-us:accessRestriction ;
+        sh:name "access restriction" ;
+        sh:description "List of access restrictions related to the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:AccessRestriction ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:accessRights ;
+        sh:name "access rights" ;
+        sh:description "Information about whether the data service is publicly accessible, restricted, or not public" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:type ;
+        sh:name "category" ;
+        sh:description "List of high-level categories for the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:conformsTo ;
+        sh:name "conforms to" ;
+        sh:description "List of general standards or specifications that the Data Service endpoints implement" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:contactPoint ;
+        sh:name "contact point" ;
+        sh:description "Contact information for questions about the Data Service. Include an email address that is continuously monitored" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class vcard:Kind ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcterms:created ;
+        sh:name "creation date" ;
+        sh:description "The date on which the Data Service was first created" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:creator ;
+        sh:name "creator" ;
+        sh:description "List of agents primarily responsible for producing the Data Service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:cuiRestriction ;
+        sh:name "CUI restriction" ;
+        sh:description "Controlled Unclassified Information restriction related to the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:CuiRestriction ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the data service" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:endpointDescription ;
+        sh:name "endpoint description" ;
+        sh:description "List of endpoint descriptions with operations and parameters (for example, OpenAPI or similar service documentation)" ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:endpointURL ;
+        sh:name "endpoint URL" ;
+        sh:description "A list of root locations or primary endpoints of the service (a Web-resolvable IRI)" ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dqv:hasQualityMeasurement ;
+        sh:name "quality measurement" ;
+        sh:description "Quality measurements for the data service (for example, availability, response time, or reliability)" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dqv:QualityMeasurement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique identifier for the Data Service, e.g. the URI or other unique identifier in the context of the Catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:keyword ;
+        sh:name "keyword/tag" ;
+        sh:description "List of keywords or tags describing the data service" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:language ;
+        sh:name "language" ;
+        sh:description "ISO 639-1 language code values supported by the data service, such as en or es, full list can be seen at https://id.loc.gov/vocabulary/iso639-1.html" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LinguisticSystem ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:license ;
+        sh:name "license" ;
+        sh:description "License that governs how the data service can be used or reused" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LicenseDocument ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "update/modification date" ;
+        sh:description "The most recent date on which the Data Service was changed or modified" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:publisher ;
+        sh:name "publisher" ;
+        sh:description "Person or organization responsible for publishing and making the data service available" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path prov:qualifiedAttribution ;
+        sh:name "qualified attribution" ;
+        sh:description "List of agents with specific responsibilities for the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class prov:Attribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rights ;
+        sh:name "rights" ;
+        sh:description "Rights statements not already covered by license or accessRights, such as copyright or policy restrictions" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rightsHolder ;
+        sh:name "rights holder" ;
+        sh:description "A list of Agents (organizations) holding rights on the Data Service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class org:Organization ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:servesDataset ;
+        sh:name "serves dataset" ;
+        sh:description "List of datasets this service provides access to" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:spatial ;
+        sh:name "spatial/geographic coverage" ;
+        sh:description "A geographic region that is covered by the Data Service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Location ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:spatialResolutionInMeters ;
+        sh:name "spatial resolution in meters" ;
+        sh:description "The minimum spatial separation resolvable in a Data Service, measured in meters" ;
+        sh:datatype xsd:decimal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:temporal ;
+        sh:name "temporal coverage" ;
+        sh:description "Time periods covered by the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:PeriodOfTime ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:temporalResolution ;
+        sh:name "temporal resolution" ;
+        sh:description "The minimum time period resolvable by the Data Service" ;
+        sh:datatype xsd:duration ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:theme ;
+        sh:name "theme/category" ;
+        sh:description "List of themes or categories for the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the data service" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:useRestriction ;
+        sh:name "use restriction" ;
+        sh:description "List of use restrictions related to the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:UseRestriction ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path prov:wasUsedBy ;
+        sh:name "was used by" ;
+        sh:description "List of activities that used or tested the data service" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class prov:Activity ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:DatasetShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Dataset ;
+    sh:name "Dataset" ;
+    sh:description "A collection of data published or curated by one provider" ;
+    sh:property [
+        sh:path dcat-us:accessRestriction ;
+        sh:name "access restriction" ;
+        sh:description "List of access restrictions related to the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:AccessRestriction ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:accessRights ;
+        sh:name "access rights" ;
+        sh:description "Information about whether the dataset is publicly accessible, restricted, or not public" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:accrualPeriodicity ;
+        sh:name "frequency" ;
+        sh:description "The frequency at which the Dataset is updated" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Frequency ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:type ;
+        sh:name "category" ;
+        sh:description "List of high-level categories for the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:conformsTo ;
+        sh:name "conforms to" ;
+        sh:description "List of standards, schemas, or profiles the dataset follows" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:contactPoint ;
+        sh:name "contact point" ;
+        sh:description "A contact point for questions about the Dataset (single contact or list). Include an email address that is continuously monitored" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class vcard:Kind ;
+        sh:minCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcterms:contributor ;
+        sh:name "contributor" ;
+        sh:description "List of agents contributing to the Dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:creator ;
+        sh:name "creator" ;
+        sh:description "Person or organization responsible for creating the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:cuiRestriction ;
+        sh:name "CUI restriction" ;
+        sh:description "Controlled Unclassified Information restriction related to the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:CuiRestriction ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:describedBy ;
+        sh:name "data dictionary" ;
+        sh:description "A distribution describing the Data Dictionary for this dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Distribution ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat:distribution ;
+        sh:name "dataset distribution" ;
+        sh:description "List of available distributions for the dataset. This can be omitted when no distribution is available yet." ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Distribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dqv:hasQualityMeasurement ;
+        sh:name "quality measurement" ;
+        sh:description "List of quality measurements for the dataset (for example, completeness, accuracy, or timeliness) beyond spatial or temporal resolution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dqv:QualityMeasurement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:hasVersion ;
+        sh:name "has version" ;
+        sh:description "List of related Datasets that are a version, edition, or adaptation of the described Dataset" ;
+        sh:nodeKind sh:Literal ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique identifier for the Dataset, e.g. the URI or other unique identifier in the context of the Catalog" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path schema:image ;
+        sh:name "image" ;
+        sh:description "Thumbnail image illustrating the dataset, especially useful for visual data such as maps, photos, or video" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:isReferencedBy ;
+        sh:name "is referenced by" ;
+        sh:description "List of links to related resources, such as publications, that reference, cite, or otherwise point to the Dataset" ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "release date" ;
+        sh:description "Date when the dataset was first published. If the exact publication date is unknown, use the date it was first referenced in the catalog." ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:keyword ;
+        sh:name "keyword/tag" ;
+        sh:description "List of keywords or tags describing the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:landingPage ;
+        sh:name "landing page" ;
+        sh:description "A web page from the original data provider that gives access to the Dataset, its Distributions, and related information" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Document ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:language ;
+        sh:name "language" ;
+        sh:description "ISO 639-1 language code values used in the dataset text or metadata, such as en or es, full list can be seen at https://id.loc.gov/vocabulary/iso639-1.html" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LinguisticSystem ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:liabilityStatement ;
+        sh:name "liability statement" ;
+        sh:description "A liability statement about the dataset that may clarify limitations of responsibility, qualifications on the accuracy, reliability, and completeness of the data, or absence of endorsement by the data publisher or provider, among other considerations" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:LiabilityStatement ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:license ;
+        sh:name "license" ;
+        sh:description "License that governs how the dataset can be used or reused" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LicenseDocument ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:metadataDistribution ;
+        sh:name "metadata distribution" ;
+        sh:description "Distribution of the original metadata document this dataset was derived from" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Distribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "last modified" ;
+        sh:description "Most recent date when the dataset's actual data changed, not just metadata" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:identifier ;
+        sh:name "other identifier" ;
+        sh:description "Additional identifiers for the dataset besides the main identifier, such as a DOI or other persistent ID" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class adms:Identifier ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path foaf:page ;
+        sh:name "documentation" ;
+        sh:description "List of pages or documents about this dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Document ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:provenance ;
+        sh:name "provenance" ;
+        sh:description "List of statements about the lineage of a Dataset, including any changes in its ownership or custody since its creation that may be significant for its authenticity, integrity, or interpretation" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:ProvenanceStatement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:publisher ;
+        sh:name "publisher" ;
+        sh:description "Organization responsible for publishing and making the dataset available" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:purpose ;
+        sh:name "purpose" ;
+        sh:description "The purpose of the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path prov:qualifiedAttribution ;
+        sh:name "qualified attribution" ;
+        sh:description "List of agents with specific responsibilities for the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class prov:Attribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:qualifiedRelation ;
+        sh:name "qualified relation" ;
+        sh:description "Detailed relationship between the dataset and another resource, including the role of that relationship" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Relationship ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:relation ;
+        sh:name "related resource" ;
+        sh:description "List of links to related resources when the relationship is not otherwise specified" ;
+        sh:nodeKind sh:IRI ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rights ;
+        sh:name "rights" ;
+        sh:description "Rights statements not already covered by license or accessRights, such as copyright or policy restrictions" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:sample ;
+        sh:name "sample" ;
+        sh:description "List of sample distributions for the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Distribution ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path skos:scopeNote ;
+        sh:name "usage note" ;
+        sh:description "usage note for the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:source ;
+        sh:name "data source" ;
+        sh:description "List of related Datasets from which the described Dataset is derived" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:spatial ;
+        sh:name "spatial/geographic coverage" ;
+        sh:description "A geographic region or regions that are covered by the Dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Location ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:spatialResolutionInMeters ;
+        sh:name "Spatial resolution (meters)" ;
+        sh:description "Smallest spatial distance between data points, in meters, represented as a single value" ;
+        sh:datatype xsd:decimal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:status ;
+        sh:name "lifecycle status" ;
+        sh:description "Lifecycle status of the dataset, such as completed, deprecated, under development, or withdrawn" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:subject ;
+        sh:name "subject" ;
+        sh:description "List of primary subjects for the dataset, usually narrower than broad theme categories" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:temporal ;
+        sh:name "temporal coverage" ;
+        sh:description "Time periods covered by the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:PeriodOfTime ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:temporalResolution ;
+        sh:name "temporal resolution" ;
+        sh:description "Smallest time interval between data points, using xsd:duration format (for example, P1D)" ;
+        sh:datatype xsd:duration ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:theme ;
+        sh:name "theme/category" ;
+        sh:description "List of themes or categories for the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:useRestriction ;
+        sh:name "use restriction" ;
+        sh:description "List of use restrictions related to the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:UseRestriction ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:version ;
+        sh:name "version" ;
+        sh:description "The version indicator (name or identifier) of a resource" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:versionNotes ;
+        sh:name "version notes" ;
+        sh:description "Notes describing how this version differs from earlier versions of the dataset" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path prov:wasGeneratedBy ;
+        sh:name "was generated by" ;
+        sh:description "List of activities that generated, or provide the business context for the creation of the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class prov:Activity ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:DatasetSeriesShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:DatasetSeries ;
+    sh:name "DatasetSeries" ;
+    sh:description "A group of related datasets that are published separately" ;
+    sh:property [
+        sh:path dcterms:accrualPeriodicity ;
+        sh:name "frequency" ;
+        sh:description "The frequency at which the Dataset Series is updated. This is the series update frequency, not necessarily each dataset's frequency" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Frequency ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:contactPoint ;
+        sh:name "contact point" ;
+        sh:description "List of contacts people can use to ask questions or send feedback about the dataset series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class vcard:Kind ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the dataset series" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat:first ;
+        sh:name "first" ;
+        sh:description "The first dataset in an ordered dataset series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "release date" ;
+        sh:description "Date when the Dataset Series was formally established or published, not the release date of the oldest dataset in the series" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:last ;
+        sh:name "last" ;
+        sh:description "The last dataset in an ordered dataset series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "update/modification date" ;
+        sh:description "Most recent date when the Dataset Series changed, not the modified date of the newest dataset in the series" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:publisher ;
+        sh:name "publisher" ;
+        sh:description "Organization responsible for maintaining the Dataset Series as a coherent series; this may differ from publishers of individual datasets" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Agent ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:seriesMember ;
+        sh:name "series member" ;
+        sh:description "List of members of the Dataset Series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Dataset ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:spatial ;
+        sh:name "spatial/geographic coverage" ;
+        sh:description "A geographic region that is covered by the Dataset Series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Location ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:temporal ;
+        sh:name "temporal coverage" ;
+        sh:description "Time periods covered by the dataset series" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:PeriodOfTime ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the dataset series" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:DistributionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    sh:name "Distribution" ;
+    sh:description "A specific representation of a dataset, such as a file, feed, or API response" ;
+    sh:property [
+        sh:path dcat-us:accessRestriction ;
+        sh:name "access restriction" ;
+        sh:description "List of access restrictions related to the distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:AccessRestriction ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:accessRights ;
+        sh:name "access rights" ;
+        sh:description "Information about whether the distribution is publicly accessible, restricted, or not public" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:accessService ;
+        sh:name "access service" ;
+        sh:description "A data service that gives access to the distribution of the dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:DataService ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:accessURL ;
+        sh:name "access URL" ;
+        sh:description "URL for indirect access to the Distribution (for example, a landing page, API docs, or request form), not a direct file download" ;
+        sh:nodeKind sh:IRI ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:byteSize ;
+        sh:name "byte size" ;
+        sh:description "The size of a Distribution in bytes" ;
+        sh:datatype xsd:nonNegativeInteger ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path cnt:characterEncoding ;
+        sh:name "character encoding" ;
+        sh:description "List of character encodings used in the Distribution, using IANA character set names (for example, UTF-8)" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path spdx:checksum ;
+        sh:name "checksum" ;
+        sh:description "Checksum used to verify that the downloadable file content has not changed" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class spdx:Checksum ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:compressFormat ;
+        sh:name "compression format" ;
+        sh:description "The format of the file in which the data is contained in a compressed form, e.g. to reduce the size of the downloadable file" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:MediaType ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:conformsTo ;
+        sh:name "linked schemas" ;
+        sh:description "List of standards, schemas, or reference systems the Distribution follows (prefer stable URIs when available)" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:cuiRestriction ;
+        sh:name "CUI restriction" ;
+        sh:description "Controlled Unclassified Information restriction related to the distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:CuiRestriction ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:describedBy ;
+        sh:name "data dictionary" ;
+        sh:description "A distribution containing the Data Dictionary for this distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Distribution ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the distribution" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:downloadURL ;
+        sh:name "download URL" ;
+        sh:description "Direct URL to a downloadable file for the Distribution; use accessURL for indirect access" ;
+        sh:nodeKind sh:IRI ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:format ;
+        sh:name "format" ;
+        sh:description "A human-readable description of the file format of the Distribution that provides useful information that might not be apparent from mediaType" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:MediaType ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dqv:hasQualityMeasurement ;
+        sh:name "quality measurement" ;
+        sh:description "Quality measurements for the distribution (for example, completeness, accuracy, or timeliness)" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dqv:QualityMeasurement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique identifier for the Distribution (e.g. DOI, ISBN)" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path schema:image ;
+        sh:name "image" ;
+        sh:description "A link to a thumbnail picture illustrating the content of the distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class schema:ImageObject ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "release date" ;
+        sh:description "The date of formal issuance (e.g., publication) of the Distribution" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:language ;
+        sh:name "language" ;
+        sh:description "ISO 639-1 language code values used in the distribution metadata text, such as en or es, full list can be seen at https://id.loc.gov/vocabulary/iso639-1.html" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:license ;
+        sh:name "license" ;
+        sh:description "License that governs how the distribution can be used or reused" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:LicenseDocument ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:mediaType ;
+        sh:name "media type" ;
+        sh:description "MIME type of the Distribution (for example, text/csv or application/json), from the IANA media types registry: https://www.iana.org/assignments/media-types/media-types.xhtml" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:MediaType ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "last modified" ;
+        sh:description "The most recent date on which the Distribution was changed or modified" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:packageFormat ;
+        sh:name "packaging format" ;
+        sh:description "The format of the file in which one or more data files are grouped together, e.g. to enable a set of related files to be downloaded together" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:MediaType ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path foaf:page ;
+        sh:name "documentation" ;
+        sh:description "A page or document about this Distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class foaf:Document ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:representationTechnique ;
+        sh:name "representation technique" ;
+        sh:description "Method or schema used to structure the distribution content (for example, CSV convention, XML schema, or spatial representation type)" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:rights ;
+        sh:name "rights" ;
+        sh:description "Rights statements not already covered by license or accessRights, such as copyright or policy restrictions" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:RightsStatement ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:spatialResolutionInMeters ;
+        sh:name "Spatial resolution (meters)" ;
+        sh:description "The minimum spatial separation resolvable in a dataset distribution, measured in meters" ;
+        sh:datatype xsd:decimal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path adms:status ;
+        sh:name "lifecycle status" ;
+        sh:description "The status of the distribution in the context of maturity lifecycle" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:temporalResolution ;
+        sh:name "termporal resolution" ;
+        sh:description "The minimum time period resolvable in the dataset distribution" ;
+        sh:datatype xsd:duration ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the distribution" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:useRestriction ;
+        sh:name "use restriction" ;
+        sh:description "List of use restrictions related to the distribution" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat-us:UseRestriction ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:DocumentShape
+    a sh:NodeShape ;
+    sh:targetClass foaf:Document ;
+    sh:name "Document" ;
+    sh:description "A publication or other document related to a resource" ;
+    sh:property [
+        sh:path dcterms:abstract ;
+        sh:name "abstract" ;
+        sh:description "Text abstract of the Document" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:bibliographicCitation ;
+        sh:name "bibliographic citation" ;
+        sh:description "Bibliographic citation as text" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "conforms to" ;
+        sh:description "List of standards or specifications the document follows" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:Standard ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:creator ;
+        sh:name "author" ;
+        sh:description "The individual(s) responsible for creating the Document" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class org:Organization ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the document" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique identifier for the Document (e.g. DOI, ISBN)" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "publication date" ;
+        sh:description "Publication date of the Document" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:mediaType ;
+        sh:name "media type" ;
+        sh:description "The file format of the Document as defined in the official register of media types managed by IANA: https://www.iana.org/assignments/media-types/media-types.xhtml" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcterms:MediaType ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dc:publisher ;
+        sh:name "publisher" ;
+        sh:description "The organization(s) that published the Document" ;
+        sh:nodeKind sh:Literal ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "The title of the Document" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:KindShape
+    a sh:NodeShape ;
+    sh:targetClass vcard:Kind ;
+    sh:name "Kind" ;
+    sh:description "Contact information for an individual or entity" ;
+    sh:property [
+        sh:path vcard:address ;
+        sh:name "address" ;
+        sh:description "The address of the contact" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class vcard:Address ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:family-name ;
+        sh:name "family name" ;
+        sh:description "The family name of the contact" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:fn ;
+        sh:name "formatted name" ;
+        sh:description "The formatted text of the name of the contact" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path vcard:given-name ;
+        sh:name "given name" ;
+        sh:description "The given name of the contact" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:hasEmail ;
+        sh:name "Email" ;
+        sh:description "Email address for the contact in mailto: format (for example, mailto:support@example.gov)" ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path vcard:organization-name ;
+        sh:name "organization name" ;
+        sh:description "The name of the organization to contact" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:tel ;
+        sh:name "telephone" ;
+        sh:description "The telephone number for the contact" ;
+        sh:nodeKind sh:IRI ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path vcard:title ;
+        sh:name "position title" ;
+        sh:description "The position role of the person to contact" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:LocationShape
+    a sh:NodeShape ;
+    sh:targetClass dcterms:Location ;
+    sh:name "Location" ;
+    sh:description "A named place or geographic area" ;
+    sh:property [
+        sh:path dcat:bbox ;
+        sh:name "bounding box" ;
+        sh:description "Bounding box for the location, described in WKT, GeoJSON, or GML format" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:centroid ;
+        sh:name "centroid" ;
+        sh:description "The geographic center (centroid) of a location described in WKT, GeoJSON, or GML format" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path locn:geometry ;
+        sh:name "geometry" ;
+        sh:description "Associates a location with a corresponding geometry described in WKT, GeoJSON, or GML format" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class locn:Geometry ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique geographic identifier for the Location, e.g., the URI or other unique identifier in the context of the relevant gazetteer" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path skos:inScheme ;
+        sh:name "gazetteer" ;
+        sh:description "The gazetteer to which the location belongs" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:ConceptScheme ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:MetricShape
+    a sh:NodeShape ;
+    sh:targetClass dqv:Metric ;
+    sh:name "Metric" ;
+    sh:description "A standard used to measure one aspect of data quality" ;
+    sh:property [
+        sh:path skos:definition ;
+        sh:name "definition" ;
+        sh:description "Definition of the metric." ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dqv:expectedDataType ;
+        sh:name "expected datatype" ;
+        sh:description "Represents the expected data type for the metric's observed value (e.g., xsd:boolean, xsd:double etc...)" ;
+        sh:datatype xsd:anySimpleType ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dqv:inDimension ;
+        sh:name "in dimension" ;
+        sh:description "Represents the dimensions a quality metric, certificate and annotation allow a measurement of." ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dqv:Dimension ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:OrganizationShape
+    a sh:NodeShape ;
+    sh:targetClass org:Organization ;
+    sh:name "Organization" ;
+    sh:description "An organization involved with a resource, including parent or child organizations" ;
+    sh:property [
+        sh:path skos:altLabel ;
+        sh:name "alternative label" ;
+        sh:description "alternative name (trading name, colloquial name) for an organization" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path foaf:name ;
+        sh:name "name" ;
+        sh:description "The full name of the Organization" ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path skos:notation ;
+        sh:name "notation" ;
+        sh:description "List of abbreviations or codes from code lists for an organization (e.g. DOI, DOD)" ;
+        sh:datatype xsd:string ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:name "preferred label" ;
+        sh:description "Preferred or legal name of the organization" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path org:subOrganizationOf ;
+        sh:name "suborganization of" ;
+        sh:description "Represents hierarchical containment of Organizations or OrganizationalUnits; indicates an Organization which contains this Organization" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class org:Organization ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:PeriodOfTimeShape
+    a sh:NodeShape ;
+    sh:targetClass dcterms:PeriodOfTime ;
+    sh:name "PeriodOfTime" ;
+    sh:description "Information about a specific time period with a start- and/or end-time" ;
+    sh:property [
+        sh:path dcat:endDate ;
+        sh:name "end date" ;
+        sh:description "The end date of the period of time" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat:startDate ;
+        sh:name "start date" ;
+        sh:description "The start date of the period of time" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:QualityMeasurementShape
+    a sh:NodeShape ;
+    sh:targetClass dqv:QualityMeasurement ;
+    sh:name "QualityMeasurement" ;
+    sh:description "A measurement of a resource against a specific quality metric" ;
+    sh:property [
+        sh:path dqv:isMeasurementOf ;
+        sh:name "is measurement of" ;
+        sh:description "The metric being observed" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dqv:Metric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sdmx-attribute:unitMeasure ;
+        sh:name "unit of measure" ;
+        sh:description "Unit of measure associated with the value" ;
+        sh:nodeKind sh:IRI ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dqv:value ;
+        sh:name "value" ;
+        sh:description "The value computed by metric" ;
+        sh:nodeKind sh:Literal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:RelationshipShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Relationship ;
+    sh:name "Relationship" ;
+    sh:description "Additional information about how one resource is related to another" ;
+    sh:property [
+        sh:path dcat:hadRole ;
+        sh:name "role" ;
+        sh:description "The function of an entity or agent with respect to a dataset" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class dcat:Role ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcterms:relation ;
+        sh:name "relation" ;
+        sh:description "The entity related to the dataset. This string should unambiguously identify the related resource using an appropriate identifier." ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] .
+
+shp:StandardShape
+    a sh:NodeShape ;
+    sh:targetClass dcterms:Standard ;
+    sh:name "Standard" ;
+    sh:description "A standard or specification that another resource conforms to" ;
+    sh:property [
+        sh:path dcterms:created ;
+        sh:name "creation date" ;
+        sh:description "The date on which the Standard has been first created" ;
+        sh:datatype xsd:date ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:description ;
+        sh:name "description" ;
+        sh:description "Plain-language summary of the standard" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:identifier ;
+        sh:name "identifier" ;
+        sh:description "The unique identifier for the Standard, e.g. the URI or other unique identifier in the context of the Catalog" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path skos:inScheme ;
+        sh:name "in scheme" ;
+        sh:description "The reference register to which the Standard belongs" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:ConceptScheme ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:issued ;
+        sh:name "issued" ;
+        sh:description "The date of formal issuance (e.g., publication) of the Standard" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:name "last modified" ;
+        sh:description "The most recent date on which the Standard was changed or modified" ;
+        sh:datatype xsd:date ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:name "title" ;
+        sh:description "Human-readable title of the standard" ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+
+shp:UseRestrictionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat-us:UseRestriction ;
+    sh:name "UseRestriction" ;
+    sh:description "Rules or legal limits on how a resource may be used" ;
+    sh:property [
+        sh:path dcat-us:restrictionNote ;
+        sh:name "restriction note" ;
+        sh:description "Significant information pertaining to the use or reproduction of the data" ;
+        sh:nodeKind sh:Literal ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:restrictionStatus ;
+        sh:name "restriction status" ;
+        sh:description "Indication of whether or not there are use restrictions on the archival materials, consider using a controlled vocabulary such as https://www.archives.gov/research/catalog/lcdrg/authority-lists/use-restriction-status" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dcat-us:specificRestriction ;
+        sh:name "specific restriction" ;
+        sh:description "Authority, code list entry, or policy reference that defines the specific use restriction; consider using a controlled vocabulary such as the NARA https://www.archives.gov/research/catalog/lcdrg/authority-lists/specific-use-restriction" ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:class skos:Concept ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+    ] .
+

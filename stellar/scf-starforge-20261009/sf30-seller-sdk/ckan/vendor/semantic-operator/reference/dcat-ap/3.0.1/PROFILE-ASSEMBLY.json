@@ -1,0 +1,25 @@
+{
+  "schema": "commons-semantic-reference-profile/1",
+  "retrieved_at": "2026-10-12 04:06:23 UTC",
+  "repo": "SEMICeu/DCAT-AP",
+  "commit": "4470b8ea907b7eb9ec55ab22befd1ecd2210ff32",
+  "source_index_blob": "b35f139624e4cc5a550992756c7c62bbd99cff20",
+  "source_url": "https://semiceu.github.io/DCAT-AP/releases/3.0.1/",
+  "primary_shape_modules": [
+    "shapes.ttl",
+    "range.ttl",
+    "mdr-vocabularies.shape.ttl"
+  ],
+  "optional_recommended_module": "shapes_recommended.ttl",
+  "vocabulary_import_manifests": [
+    "imports.ttl",
+    "mdr_imports.ttl"
+  ],
+  "deprecated_terms_profile": "deprecateduris.ttl",
+  "notes": [
+    "The specification explicitly links html/shacl modules and describes the generated shacl/dcat-ap-SHACL.ttl as an additional constraint-ID design.",
+    "Do not union these modules merely to repair dangling IRIs in the separate generated family. Preserve both original families; select a documented profile for a new validation job.",
+    "Import manifests contain owl:imports for explicit source acquisition. Existing operator import/network prohibition remains unchanged; retain manifests and add actual captured vocabulary sources as selected ontology inputs.",
+    "The files carry some 3.0.0 namespace IRIs internally despite residing in the official 3.0.1 release; preserve source bytes exactly."
+  ]
+}
