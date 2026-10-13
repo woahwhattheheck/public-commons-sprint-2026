@@ -1,6 +1,9 @@
 """Original-workspace integration and recoverable revision-bound calculations."""
 from __future__ import annotations
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 from pathlib import Path
 from contextlib import contextmanager
 from .store import Conflict, Store

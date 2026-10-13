@@ -15,6 +15,7 @@ from pathlib import Path
 import queue
 import re
 import shutil
+import signal
 import socket
 import stat
 import subprocess
@@ -321,9 +322,90 @@ def _collect(process, lines):
     try:
         assert process.stdout is not None
         for line in process.stdout:
-            lines.put(line)
+            # Record readiness before the main thread can dequeue or interrupt.
+            if not _launcher_signal_ready(process, line):
+                lines.put(line)
     finally:
         lines.put(None)
+
+
+
+def _launcher_signal_ready(process, line):
+    """Accept a handler acknowledgement only from this launcher-owned child."""
+    if os.name != "nt":
+        return False
+    try:
+        value = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    if (isinstance(value, dict)
+            and value.get("schema") == "upstate.workbench-launch-signals/v1"
+            and value.get("pid") == process.pid
+            and value.get("key") == getattr(process, "_workbench_signal_key", None)
+            and value.get("signal") == "SIGBREAK"):
+        process._workbench_drain_ready = True
+        return True
+    return False
+
+
+def _close_owned(process, lines):
+    """Drain the actual child, including cancellation before its first receipt.
+
+    Windows terminate() is TerminateProcess. CTRL_BREAK is used only after this
+    child's installed Python handler has acknowledged the launch nonce. The
+    collector keeps draining stdout while the original operator finishes work.
+    """
+    requested = False
+    explained = False
+    while process.poll() is None:
+        try:
+            if not requested:
+                if os.name != "nt":
+                    process.terminate()
+                    requested = True
+                elif getattr(process, "_workbench_drain_ready", False):
+                    try:
+                        process.send_signal(signal.CTRL_BREAK_EVENT)
+                    except OSError as error:
+                        if process.poll() is not None:
+                            break
+                        print("The console shutdown signal could not be delivered: " + str(error)
+                              + ". This launcher is still monitoring its own operator. "
+                              "Close it normally from its owning console.", flush=True)
+                    # One attempt; never repeatedly signal a live process.
+                    requested = True
+                elif not explained:
+                    print("Waiting for this operator to install its startup shutdown handler. "
+                          "Keep this terminal open.", flush=True)
+                    explained = True
+            try:
+                line = lines.get(timeout=.5)
+            except queue.Empty:
+                continue
+            if line is None:
+                # EOF can precede final process exit; wait without spinning.
+                try:
+                    process.wait(timeout=.5)
+                except subprocess.TimeoutExpired:
+                    pass
+            elif not _launcher_signal_ready(process, line):
+                # A cancelled startup can still produce its private receipt.
+                # Do not print that credential while reporting shutdown.
+                try:
+                    value = json.loads(line)
+                except (ValueError, TypeError):
+                    value = None
+                if not isinstance(value, dict) or "operator_url" not in value:
+                    if line.strip():
+                        print(line.rstrip(), flush=True)
+        except KeyboardInterrupt:
+            print("Shutdown is already in progress. Keep this terminal open until the "
+                  "original operator finishes its active task.", flush=True)
+        except OSError:
+            if process.poll() is not None:
+                break
+            raise
+    return process.wait()
 
 
 def start(selection, state):
@@ -338,13 +420,36 @@ def start(selection, state):
             environment.setdefault("GDAL_DATA", str(runtime / "share/gdal"))
     # Plain opening intentionally does not claim native readiness. Native mode
     # delegates all interpreter/GDAL/PROJ selection to the maintained invocation.
-    process = subprocess.Popen(command + arguments, cwd=selection["application"],
-        env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace", bufsize=1)
+    signal_key = os.urandom(24).hex() if os.name == "nt" else None
+    if signal_key is not None:
+        arguments += ["--launcher-signals", signal_key]
+    process = None
     lines = queue.Queue()
-    threading.Thread(target=_collect, args=(process, lines), daemon=True).start()
     errors = []
+    deferred_interrupt = []
+    def defer_interrupt(signum, frame):
+        deferred_interrupt.append((signum, frame))
     try:
+        # Defer the ordinary Ctrl+C handler only while creating our child and
+        # starting its collector. Otherwise Popen can return into an interrupted
+        # assignment, leaving a real child without its owning cleanup path.
+        previous = None
+        if (threading.current_thread() is threading.main_thread()
+                and signal.getsignal(signal.SIGINT) is signal.default_int_handler):
+            previous = signal.signal(signal.SIGINT, defer_interrupt)
+        try:
+            process = subprocess.Popen(command + arguments, cwd=selection["application"],
+                env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace", bufsize=1,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0)
+            process._workbench_signal_key = signal_key
+            process._workbench_drain_ready = False
+            threading.Thread(target=_collect, args=(process, lines), daemon=True).start()
+        finally:
+            if previous is not None:
+                signal.signal(signal.SIGINT, previous)
+        if deferred_interrupt:
+            raise KeyboardInterrupt
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             try:
@@ -355,6 +460,8 @@ def start(selection, state):
                 continue
             if line is None:
                 break
+            if _launcher_signal_ready(process, line):
+                continue
             try:
                 receipt = json.loads(line)
             except ValueError:
@@ -366,6 +473,8 @@ def start(selection, state):
                 errors = errors[-12:]
                 continue
             _session_url(receipt["operator_url"])
+            if os.name == "nt" and not process._workbench_drain_ready:
+                raise RuntimeError("Receive the matching maintained server lifecycle source before opening on Windows")
             key = verify_session(receipt, selection)
             record = {"schema": SESSION_SCHEMA, "hostname": socket.gethostname(),
                 "pid": process.pid, "selection": selection, "workspace_key": key,
@@ -374,10 +483,8 @@ def start(selection, state):
         raise RuntimeError("The original operator did not start. Preserve any existing owning process; "
             "check its terminal and the selected Python/application.\n" + "\n".join(errors))
     except BaseException:
-        if process.poll() is None:
-            process.terminate()
-            # The original operator drains its active task. Never force-kill it.
-            process.wait()
+        if process is not None:
+            _close_owned(process, lines)
         raise
 
 
@@ -463,11 +570,10 @@ def main(application, argv=None):
         if process is not None:
             if process.poll() is None:
                 print("Waiting for the original operator to finish its active task and close.", flush=True)
-                process.terminate()
-                # Preserve actual native jobs; operator.close owns graceful drain.
-                process.wait()
+                _close_owned(process, lines)
             if session_file and record:
                 with contextlib.suppress(OSError, ValueError):
-                    current = _json(session_file)
-                    if current.get("operator_url") == record.get("operator_url"):
-                        session_file.unlink()
+                    with _launch_lock(state):
+                        current = _json(session_file)
+                        if current.get("operator_url") == record.get("operator_url"):
+                            session_file.unlink()

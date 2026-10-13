@@ -5,11 +5,14 @@ maintained parameter-study engine. These projections only serve navigation.
 """
 from __future__ import annotations
 
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 import json
 import os
 
-from .common import digest, identifier
+from .common import digest, identifier, _open_original
 from .model_selection import run_models, selected, validate_completed_run
 from .native_execution import _active
 from .native_versions import model_versions, version_label
@@ -34,7 +37,8 @@ def _number(value, name, default, maximum=None):
 
 def _study_active(directory):
     try:
-        fd = os.open(directory / ".experiment.lock", os.O_RDONLY | os.O_NOFOLLOW)
+        fd = _open_original(directory / ".experiment.lock", os.O_RDONLY |
+                            getattr(os, "O_NOFOLLOW", 0))
     except FileNotFoundError:
         return False
     try:

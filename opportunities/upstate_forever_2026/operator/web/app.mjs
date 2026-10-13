@@ -1,5 +1,6 @@
 // ES-SUPERVISION-20261012
 import {attachNativeJobs} from './jobs.mjs';
+import {attachStartupGuide} from './startup_guide.mjs';
 import {attachWorkspaceFinder} from './workspace_finder.mjs';
 import {attachDeliveryInspection} from './delivery_inspection.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
@@ -59,6 +60,7 @@ const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 const scientificInspection=createScientificInspection({getState:()=>state,getWorkspace:()=>workspace,reportError:globalError});
 scientificInspection.installStyles(document);
+const startupGuide=attachStartupGuide();
 
 const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const scenarioInputReview=createScenarioInputReview({getState:()=>state,esc,number,button,table,short,when,runTitle,nativeModels});
@@ -351,6 +353,7 @@ async function refresh({force=false}={}){
     workspaceFinder.update(state);
     const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
+    startupGuide.observe(state,teamPerson);
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
     if(['runs','scenarios','comparisons','spatial_exports','deliveries'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&((kind==='deliveries'?deliveryChanged(row,detailContext):row.state!==detailContext.state)||(['runs','scenarios','comparisons'].includes(kind)&&detailContext.footprintRevision!==scenarioInputReview.revision())))await openItem(kind,row.id,false);}
   }catch(error){
@@ -1550,6 +1553,7 @@ async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ startupGuide.suspend();
  experiments.detach();
  programmes.detach();
  workspaceRevision++;
@@ -1687,6 +1691,7 @@ $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.ta
 window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
 window.addEventListener('online',()=>refresh({force:true}));
 function showConnection(message='Open your private access link or paste it below.'){
+ startupGuide.suspend();
  connectionEpoch++;itemRequest++;workspaceFinder.reset();
  nativeJobs.detach();rehearsal.detach();extensions.detach();spatialWorkspace.suspend();
  programmes.detach();community.detach();customerReviews.detach();experiments.detach();
