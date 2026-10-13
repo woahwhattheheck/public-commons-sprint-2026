@@ -19,8 +19,8 @@
   "files": [
     {
       "path": "mep-migration.html",
-      "bytes": 110082,
-      "sha256": "43f3fa4d9157e495ff581f42fd4b6d80171eb4f4966b0eac25670bcd61732fd6"
+      "bytes": 110711,
+      "sha256": "df9df4b68bd5c65ae198f501fc9fbdfde2a399287ebbc45b0ef7bd15ebf3b15c"
     },
     {
       "path": "examples/worked-migration.json",

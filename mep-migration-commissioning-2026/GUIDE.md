@@ -18,7 +18,7 @@ Obtain authorized source exports from the operator. Keep customer, site and job 
 
 A selected file is pending until Save original succeeds. Files are limited to 8 MiB and 10,000 data rows per original. For JSON, supply the array path as a JSON array of object keys, for example ["export","jobs"]; use [] only for a top-level array. Records must be flat. The original JSON numeric tokens are retained as exact strings, including long identifiers, decimals and exponent notation. Mapping exponent notation to a decimal field requires an explicit translation into the agreed decimal string; no automatic arithmetic or rounding is performed. The original source text remains unchanged.
 
-The complete original text, including BOM and line endings, remains downloadable under its original filename. CSV headers are trimmed for mapping and must be unique after trimming; original headers and fields are retained. Do not rewrite the input just to make an unclear row disappear.
+Original intake reads the file bytes and decodes strict UTF-8 while preserving a leading BOM and line endings. It compares every re-encoded byte before accepting the selection. Invalid UTF-8 is rejected without substitution; export an explicit UTF-8 edition from the source system and retain the original separately. The complete accepted original remains downloadable under its original filename. CSV headers are trimmed for mapping and must be unique after trimming; original headers and fields are retained. Do not rewrite the input just to make an unclear row disappear.
 
 When an export is corrected, add the changed original with its earlier source edition selected. Repeated identical source bytes within the same company/entity/kind point to the original instead of creating a duplicate.
 

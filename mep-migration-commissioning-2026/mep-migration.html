@@ -155,7 +155,7 @@ function latestReceipt(w,deliveryId){return w.receipts.filter(x=>x.deliveryId===
 function nativeFor(w,recordId,targetSystem){
  const record=get(w,'records',recordId);let selected=null;
  for(const receipt of w.receipts){const delivery=get(w,'deliveries',receipt.deliveryId);if(delivery.programmeId!==record.programmeId||delivery.targetSystem!==targetSystem)continue;const row=receipt.rows.find(x=>x.recordId===recordId);
-  if(row&&(!selected||receipt.createdRevision>selected.createdRevision))selected={...row,receiptId:receipt.id,deliveryId:delivery.id,observedAt:receipt.observedAt,createdRevision:receipt.createdRevision};
+  if(row?.supplied&&(!selected||receipt.createdRevision>selected.createdRevision))selected={...row,receiptId:receipt.id,deliveryId:delivery.id,observedAt:receipt.observedAt,createdRevision:receipt.createdRevision};
  }return selected;
 }
 function reviewDelivery(w,input){
@@ -190,9 +190,12 @@ function reviewReceipt(w,input){
  });
  const nativeIds=new Map();
  for(const r of w.records.filter(r=>r.programmeId===delivery.programmeId&&r.entity===delivery.entity)){
-  const state=nativeFor(w,r.id,delivery.targetSystem);if(state?.status==='accepted'&&!rows.some(row=>row.recordId===r.id))nativeIds.set(state.nativeId,r.id);
+  const state=rows.find(row=>row.recordId===r.id&&row.supplied)??nativeFor(w,r.id,delivery.targetSystem);
+  if(state?.status!=='accepted'||!state.nativeId)continue;
+  const previous=nativeIds.get(state.nativeId);
+  if(previous&&previous!==r.id)issues.push(issue('NATIVE_ID_COLLISION','This native ID is already assigned to another staged record.',state.rowId));
+  else nativeIds.set(state.nativeId,r.id);
  }
- for(const row of rows.filter(x=>x.status==='accepted'&&x.nativeId)){const previous=nativeIds.get(row.nativeId);if(previous&&previous!==row.recordId)issues.push(issue('NATIVE_ID_COLLISION','This native ID is already assigned to another staged record.',row.rowId));else nativeIds.set(row.nativeId,row.recordId);}
  const counts={rows:rows.length,accepted:rows.filter(x=>x.status==='accepted').length,rejected:rows.filter(x=>x.status==='rejected').length,unknown:rows.filter(x=>x.status==='unknown').length,issues:issues.length};
  return finishReview({schema:'commons.mep-migration.receipt-review.v1',revision:w.revision,programmeId:delivery.programmeId,entity:delivery.entity,deliveryId:delivery.id,deliverySha256:hash(delivery),evidenceFileId:evidence.id,evidenceSha256:evidence.sha256,observedAt,reference,notes,priorReceiptId:prior?.id??'',rows,issues,counts});
 }
@@ -538,7 +541,7 @@ function decisions(f){return [...f.querySelectorAll("[data-decision-row]")].map(
 function outcomes(f){return [...f.querySelectorAll("[data-outcome-row]")].map(row=>({rowId:row.dataset.rowId,status:row.querySelector('[name="status"]').value,nativeId:row.querySelector('[name="nativeId"]').value,reason:row.querySelector('[name="reason"]').value})).filter(x=>x.status);}
 function refreshBatch(input,formId){if(!discard(formId))return;try{const r=C.reviewBatch(w,input);batchReview={input,result:r,ready:!r.issues.length};dirty.clear();flash="Review updated. Every row needs an explicit decision.";render();}catch(e){setMessage(e.message,true);}}
 async function readSource(file){const generation=++fileEpoch,selectedProgramme=programmeId,selectedWorkspace=w.id,edit=epoch;pendingSource=null;const btn=get("source-form")?.querySelector('button[type="submit"]');if(btn)btn.disabled=true;get("source-file-status").textContent="Reading selected original…";
-try{if(!file||file.size>8*1024*1024)throw Error("Choose an original file no larger than 8 MiB.");const text=await file.text();if(generation!==fileEpoch)return;if(programmeId!==selectedProgramme||w.id!==selectedWorkspace||epoch!==edit)throw Error("The programme or source form changed while reading. Select the original again.");pendingSource={name:file.name,text,format:/\.json$/i.test(file.name)?"json":"csv"};const f=get("source-form");if(!f)return;f.elements.name.value=file.name;f.elements.format.value=pendingSource.format;get("source-file-status").textContent=file.name+" · "+file.size+" bytes selected. Save original to retain.";dirty.add("source-form");epoch++;}
+try{if(!file||file.size>8*1024*1024)throw Error("Choose an original file no larger than 8 MiB.");const originalBytes=new Uint8Array(await file.arrayBuffer());if(generation!==fileEpoch)return;if(originalBytes.byteLength!==file.size)throw Error("The original file byte count changed while reading. Select it again.");let text;try{text=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(originalBytes);}catch{throw Error("The original source is not valid UTF-8. Export a UTF-8 edition from its source system and retain the original separately; no replacement characters were imported.");}const encoded=new TextEncoder().encode(text);if(encoded.byteLength!==originalBytes.byteLength||encoded.some((byte,i)=>byte!==originalBytes[i]))throw Error("The selected source could not be preserved byte-for-byte as UTF-8. No source was imported.");if(programmeId!==selectedProgramme||w.id!==selectedWorkspace||epoch!==edit)throw Error("The programme or source form changed while reading. Select the original again.");pendingSource={name:file.name,text,format:/\.json$/i.test(file.name)?"json":"csv"};const f=get("source-form");if(!f)return;f.elements.name.value=file.name;f.elements.format.value=pendingSource.format;get("source-file-status").textContent=file.name+" · "+file.size+" bytes selected. Save original to retain.";dirty.add("source-form");epoch++;}
 catch(e){if(generation===fileEpoch){pendingSource=null;setMessage(e.message,true);if(get("source-file-status"))get("source-file-status").textContent="No valid pending original.";}}
 finally{if(generation===fileEpoch){if(btn)btn.disabled=!pendingSource;const picker=get("source-file");if(picker)picker.value="";}}}
 async function readWorkspace(file){const generation=++workspaceEpoch,rev=w.revision,edit=++epoch;incoming=null;const view=get("incoming-review"),status=get("workspace-file-status");if(!view||!status)return;view.innerHTML="";status.textContent="Reading and validating…";

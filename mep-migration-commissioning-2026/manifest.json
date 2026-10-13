@@ -6,8 +6,8 @@
   "files": [
     {
       "path": "mep-migration.html",
-      "bytes": 110082,
-      "sha256": "43f3fa4d9157e495ff581f42fd4b6d80171eb4f4966b0eac25670bcd61732fd6"
+      "bytes": 110711,
+      "sha256": "df9df4b68bd5c65ae198f501fc9fbdfde2a399287ebbc45b0ef7bd15ebf3b15c"
     },
     {
       "path": "examples/worked-migration.json",
@@ -582,12 +582,12 @@
     {
       "path": "examples/manifest.json",
       "bytes": 24183,
-      "sha256": "cb3e308b31c06a53e41c3cb620203a27bef504a8e5e6db2d6251161f171f845a"
+      "sha256": "e1d968aeab7386fa6ab3cd1359bf29ef6aea94d64a6af0d44aae379721f5c0a7"
     },
     {
       "path": "mep-migration-core.cjs",
-      "bytes": 51831,
-      "sha256": "2d33fa3b77ec4b6bcc728acdb3f9cfeec672af521ab08dc354959c3e6bdddc47"
+      "bytes": 51776,
+      "sha256": "f36b835d4f5ab38d33f2c2fcfc9947bb0591cd5fcfd43fafa641a7616f97d2bf"
     },
     {
       "path": "mep-migration-examples.cjs",
@@ -601,8 +601,8 @@
     },
     {
       "path": "mep-migration-ui.js",
-      "bytes": 36370,
-      "sha256": "511290f13d231490f1ed3c5e21b1643f2a1354e08f24e591e1ba70132eab6e78"
+      "bytes": 37054,
+      "sha256": "7eecb3dbdfcd59dbb841b037e2d252f472aa65e008e6e44a77e0e4fd4ba4f7fe"
     },
     {
       "path": "mep-migration.template.html",
@@ -611,8 +611,8 @@
     },
     {
       "path": "GUIDE.md",
-      "bytes": 12068,
-      "sha256": "aa680b33dd8eb58ecffd9d51771171ece9c5e9404c4d9bc9306dd5c0fd9f68ee"
+      "bytes": 12356,
+      "sha256": "210ecbf981d59b1ce4fbe27875014e02e75a1b93e565561a821c79249a186294"
     },
     {
       "path": "source-refresh.json",
@@ -636,13 +636,13 @@
     },
     {
       "path": "API.md",
-      "bytes": 9675,
-      "sha256": "31d44333251cb84041f9fc8ad409a983e3e3e6bc1a8d5f4f3693c050684845dd"
+      "bytes": 9806,
+      "sha256": "89d39009d1776c924691d05346fb556c0beb77271acf6e3fa188f5c29acfecca"
     },
     {
       "path": "README.md",
-      "bytes": 7542,
-      "sha256": "5ccbabad7e860bcda81e016583cf625771ac76d9b06ab338ac530b59e79a941d"
+      "bytes": 7864,
+      "sha256": "32e707a86df699de62e22191a1a00e1d190f04b20bfe961de512a599b490464d"
     },
     {
       "path": "LICENSE",
