@@ -19,9 +19,10 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-scientific-source-8"
+PREFIX = "waterlink-receiving-waters-editable-study-9"
 REQUIRED = (
     "model/receiving_waters.py",
+    "model/receiving_water_accounting.py",
     "model/spatial_esri.py",
     "source/capture_upstream_network.py",
     "model/receiving_water_spatial.py",
@@ -101,15 +102,27 @@ RECEIVING_REPORT_REQUIRED = (
     "model/RECEIVING_WATER_REPORT_MAPS.md",
     "integration/component_fragments/receiving-water-report-maps.json",
 )
+STUDY_TRANSFER_REQUIRED = (
+    "model/study_transfer.py",
+    "model/study_delivery_transfer.py",
+    "model/study_report_transfer.py",
+    "operator/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.mjs",
+    "operator/web/extensions/study_transfer.css",
+    "operator/RECEIVING_WATER_STUDY_TRANSFER.md",
+    "integration/component_fragments/receiving-water-study-navigation.json",
+)
 MONITORING_ACTIONS = {
     "monitoring.network.import", "monitoring.design", "monitoring.frontier",
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4–6 descriptors, before registered report task controls.
+# Exact retained version 4–7 descriptors before direct editable-study navigation.
 DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
                            "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
-                           "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813"}
+                           "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813",
+                           "b76e245f56122f0bed0ed6053ed8bbeac7dee1db30caa4b45779a6fc3ccce6ca"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -697,7 +710,7 @@ def install(root, *, check=False):
     if "task._extension_task_actions?.extension_id" not in extension_host:
         raise ValueError("Receive the current shared host with registered backend task-result navigation")
     required = (REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
-                + MONITORING_REPORT_REQUIRED + RECEIVING_REPORT_REQUIRED)
+                + MONITORING_REPORT_REQUIRED + RECEIVING_REPORT_REQUIRED + STUDY_TRANSFER_REQUIRED)
     for relative in required:
         path = root / relative
         if not path.is_file():
@@ -759,6 +772,27 @@ def install(root, *, check=False):
     water_client = (root / "operator/web/receiving_water_report.mjs").read_text(encoding="utf-8")
     if "export function attachReceivingWaterReport(context)" not in water_client:
         raise ValueError("Receive the maintained receiving-water scientific report controls")
+    study_descriptor = json.loads((root / "operator/extensions/study-transfer.json").read_bytes())
+    if (study_descriptor.get("schema") != "upstate.operator-extension/v1"
+            or study_descriptor.get("id") != "study-transfer"
+            or study_descriptor.get("backend", {}).get("module") != "study_transfer"
+            or "study.export" not in study_descriptor.get("backend", {}).get("actions", [])
+            or study_descriptor.get("client", {}).get("module") != "/web/extensions/study_transfer.mjs"):
+        raise ValueError("Receive the maintained Study transfer provider and browser")
+    study_tree = ast.parse((root / "model/study_transfer.py").read_text(encoding="utf-8"))
+    root_declaration = next((node.value for node in study_tree.body
+                             if isinstance(node, ast.Assign)
+                             and any(isinstance(target, ast.Name) and target.id == "ROOT_KINDS"
+                                     for target in node.targets)), None)
+    root_names = {node.value for node in ast.walk(root_declaration)
+                  if isinstance(node, ast.Constant) and isinstance(node.value, str)} if root_declaration is not None else set()
+    if not {"receiving-water-plans", "receiving-water-analyses"} <= root_names:
+        raise ValueError("Receive Study transfer with original receiving-water plan and analysis roots")
+    study_client = (root / "operator/web/extensions/study_transfer.mjs").read_text(encoding="utf-8")
+    if ("openForStudies" not in study_client
+            or "receiving-water-plans" not in study_client
+            or "receiving-water-analyses" not in study_client):
+        raise ValueError("Receive the current Study transfer browser with direct original study selection")
     migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
                               run_name="_original_monitoring_migration")
     removers = {"operator/server.py": migration["remove_server"],
@@ -805,7 +839,7 @@ def install(root, *, check=False):
                                   if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
                                                   "receiving_water_report.mjs"}]
             previous["client"]["requires"] = [name for name in previous["client"]["requires"]
-                                               if name != "openScientificReport"]
+                                               if name not in {"openScientificReport", "openExtension"}]
             previous["backend"]["actions"] = [name for name in previous["backend"]["actions"]
                                                 if name != "receiving.water.monitoring"]
             previous["backend"]["routes"] = [route for route in previous["backend"]["routes"]
