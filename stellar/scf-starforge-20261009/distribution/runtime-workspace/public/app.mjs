@@ -1,3 +1,4 @@
+import { createOperationHistoryView } from './operation-history.mjs';
 import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 import { createRuntimeTransferView } from './transfer.mjs';
 import { createWorkspaceReceivingView } from './workspace-receiving.mjs';
@@ -14,7 +15,8 @@ let token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname); }
 let state, selectedId = null, profileReview = null, selectedArchive = null, handoff = null;
 let loading = false, refreshAgain = false, view = 'runtime', logSelection = null, initial = true;
-let archiveSelectionGeneration = 0, logRequestGeneration = 0;
+let archiveSelectionGeneration = 0, logRequestGeneration = 0, loadedOperationDetail = null;
+const operationDetail = name => ['managed', 'images', 'transfers', 'source-builds'].includes(name) ? 'full' : 'summary';
 const pendingKey = () => 'starforge-runtime-pending-request-' + state?.workspaceId;
 function message(text = '') { $('message').textContent = text; $('message').hidden = !text; }
 function error(value) {
@@ -36,11 +38,14 @@ function prefs() {
   if (!state) return;
   try { localStorage.setItem('starforge-runtime-' + state.workspaceId, JSON.stringify({ selectedId, view, logSelection })); } catch {}
 }
-function switchView(name) {
+function switchView(name, { refreshState = true } = {}) {
   view = name;
   document.querySelectorAll('[data-pane]').forEach(node => { node.hidden = node.dataset.pane !== name; });
   document.querySelectorAll('[data-view]').forEach(node => { if (node.dataset.view === name) node.setAttribute('aria-current', 'page'); else node.removeAttribute('aria-current'); });
   prefs();
+  if (refreshState && state && loadedOperationDetail !== operationDetail(name)) {
+    refresh({ quiet: true }).catch(error); return;
+  }
   if (name === 'managed') managed.refresh().catch(error);
   if (name === 'applications') applications.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
@@ -125,19 +130,16 @@ function renderRuntime() {
   setOptions($('compare-after'), peers.map(item => ({ id: item.id, label: item.label })), 'Choose a runtime');
   renderInspection(); updateControls();
 }
-function renderOperations() {
-  $('operation-count').textContent = String(state.operations.length);
+function renderOperationCards(jobs, list, selectedOperationId) {
   const selectedLog = logSelection?.operationId;
-  const list = $('operations'), signature = JSON.stringify([state.operations, selectedLog]);
-  if (list.dataset.rendered === signature) return;
-  list.dataset.rendered = signature;
   const expanded = new Set([...list.querySelectorAll('article[data-operation-id]')]
     .filter(article => article.querySelector('details')?.open).map(article => article.dataset.operationId));
   list.replaceChildren();
-  if (!state.operations.length) { list.append(make('p', 'Operations appear here when you inspect, prepare, install, upgrade or recover.', 'empty')); return; }
-  for (const job of state.operations) {
+  if (!jobs.length) { list.append(make('p', 'Operations appear here when you inspect, prepare, install, upgrade or recover.', 'empty')); return; }
+  for (const job of jobs) {
     const article = make('article', undefined, 'operation'), title = make('div', undefined, 'section-title');
     article.dataset.operationId = job.id;
+    if (job.id === selectedOperationId) article.setAttribute('aria-current', 'true');
     title.append(make('h3', job.operation.charAt(0).toUpperCase() + job.operation.slice(1)), make('span', job.displayPhase, 'status'));
     article.append(title, make('p', (job.createdAt ? new Date(job.createdAt).toLocaleString() + ' · ' : '') + job.id, 'muted'));
     for (const [label, path] of [['Runtime output', job.targetDirectory], ['Image context', job.contextDirectory],
@@ -158,6 +160,8 @@ function renderOperations() {
       ? imageOperationRecovery(job)
       : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
+    const complete = make('button', 'Open complete operation'); complete.type = 'button';
+    complete.addEventListener('click', () => operationHistoryView.choose(job.id).catch(error)); actions.append(complete);
     if (job.applicationId) {
       const openApplication = make('button', 'Open application'); openApplication.type = 'button';
       openApplication.addEventListener('click', () => applications.choose(job.applicationId).catch(error));
@@ -223,6 +227,7 @@ function renderOperations() {
     list.append(article);
   }
 }
+function renderOperations() { operationHistoryView.update(logSelection); }
 function connectionStatus() {
   const ids = state.operations.filter(job => job.observation?.status === 'UNAVAILABLE').map(job => job.id);
   const unavailable = ids.length;
@@ -248,27 +253,35 @@ async function refresh({ quiet = false } = {}) {
   loading = true;
   const requestedId = selectedId, requestedToken = token, requestedView = view;
   try {
-    let value = await api(query('/api/state', { runtimeId: selectedId }));
+    let detailMode = operationDetail(view);
+    let value = await api(query('/api/state', { runtimeId: selectedId, operationDetail: detailMode }));
     if (selectedId !== requestedId || token !== requestedToken) { refreshAgain = true; return; }
     if (initial) {
       initial = false;
       try {
         const saved = JSON.parse(localStorage.getItem('starforge-runtime-' + value.workspaceId) ?? 'null');
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
-          selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
+          selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId, operationDetail: detailMode }));
         }
         if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds', 'workspace-backups', 'operating-procedures'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
+    }
+    if (detailMode !== operationDetail(view)) {
+      detailMode = operationDetail(view);
+      const receivingId = selectedId;
+      value = await api(query('/api/state', { runtimeId: receivingId, operationDetail: detailMode }));
+      if (selectedId !== receivingId) { refreshAgain = true; return; }
     }
     if (token !== requestedToken) { refreshAgain = true; return; }
     if (state?.workspaceId === value.workspaceId) {
       // Preserve a newer direct operation refresh while the larger snapshot was loading.
       const current = new Map(state.operations.map(job => [job.id, job]));
       value.operations = value.operations.map(job =>
-        (current.get(job.id)?.observation?.checkedAt ?? '') > (job.observation?.checkedAt ?? '') ? current.get(job.id) : job);
+        (current.get(job.id)?.observation?.checkedAt ?? '') > (job.observation?.checkedAt ?? '') &&
+        (detailMode !== 'full' || loadedOperationDetail === 'full') ? current.get(job.id) : job);
     }
-    state = value; selectedId = value.selected?.id ?? selectedId;
+    state = value; loadedOperationDetail = detailMode; selectedId = value.selected?.id ?? selectedId;
     connectionStatus();
     $('workspace-location').textContent = value.directory;
     $('runtime-home').textContent = 'New runtime directories: ' + value.runtimeHome;
@@ -310,7 +323,7 @@ async function refresh({ quiet = false } = {}) {
 async function chooseRuntime(id) {
   selectedId = id; handoff = null; $('handoff').hidden = true; $('comparison').hidden = true;
   updateControls();
-  switchView('runtime'); prefs(); await refresh();
+  switchView('runtime', { refreshState: false }); prefs(); await refresh();
 }
 function invalidateReview() {
   profileReview = null; $('profile-review').hidden = true; updateControls();
@@ -372,7 +385,8 @@ async function showOperationResult(result, scope) {
   if (!scope.current()) return false;
   if (result.cacheTransferId) await transfers.choose(result.cacheTransferId);
   if (!scope.current()) return false;
-  switchView('operations'); await refresh();
+  switchView('operations', { refreshState: false }); await refresh();
+  if (scope.current() && result.operationId) await operationHistoryView.choose(result.operationId);
   return scope.current();
 }
 async function operation(value) {
@@ -533,10 +547,13 @@ const python = createPythonWorkspaceView({ api, getState: () => state, operation
     return value;
   },
 });
+const operationHistoryView = createOperationHistoryView({ root: $('operations'), count: $('operation-count'),
+  api, getState: () => state, renderCards: renderOperationCards, openLog, error });
 window.addEventListener('hashchange', () => {
   if (!location.hash) return;
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, '', location.pathname);
+  operationHistoryView.reset(); loadedOperationDetail = null;
   images.reset();
   managed.reset();
   applications.reset();

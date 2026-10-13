@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from '../model.mjs';
 import { startRuntimeWorkspace } from '../server.mjs';
 import { readJSON, saveJSON, privateDirectory, operationLease } from '../storage.mjs';
+import { receiveOperationHistory } from './OPERATION_HISTORY_RECEIVE.mjs';
 import { APPLICATION_INPUT_CHUNK_BYTES } from '../application-inputs.mjs';
 import { readApplicationInputSetDirectory,runApplicationInputSetCommand } from '../application-input-sets-cli.mjs';
 import { applicationInputSetJSON,applicationInputSetPath } from '../public/application-input-set-format.mjs';
@@ -296,6 +297,21 @@ try {
       'Restored application lost the selected input or original revision.');
     return {workspaceId:state.workspaceId,setId:begun.setId,original:state.source,
       selected,applicationId:app.id,revision:app.revision,backup:completed.result,restore:restored.result};
+  });
+  await step('receive_original_operation_history',async()=>{
+    const {chromium}=await import(pathToFileURL(join(options['--playwright-root'],'playwright','index.mjs')));
+    server=await startRuntimeWorkspace({directory:paths.workspace,port:0});
+    const tmp=join(root,'browser-tmp');await mkdir(tmp,{recursive:true,mode:0o700});
+    browser=await chromium.launch({executablePath:options['--chromium'],headless:true,
+      env:{...process.env,TMPDIR:tmp},args:['--no-sandbox','--disable-dev-shm-usage']});
+    try {
+      const context=await browser.newContext({viewport:{width:1360,height:950},acceptDownloads:true});
+      const page=await context.newPage();await page.goto(server.url);
+      await page.locator('#workspace-location').filter({hasText:paths.workspace}).waitFor();
+      return await receiveOperationHistory({page,model,outputDirectory:outputs});
+    } finally {
+      await browser.close();browser=null;await server.close();server=null;
+    }
   });
   attempt.phase='COMPLETE';attempt.completedAt=new Date().toISOString();await checkpoint();
   await saveJSON(join(outputs,'COMPLETE_RECEIVING.json'),state.steps.reopen_full_original_inputs_and_application.result);

@@ -44,6 +44,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
+    ['/operation-history.mjs', 'operation-history.mjs', 'text/javascript; charset=utf-8'],
+    ['/operation-history-model.mjs', 'operation-history-model.mjs', 'text/javascript; charset=utf-8'],
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
     ['/workbook-results.mjs', 'workbook-results.mjs', 'text/javascript; charset=utf-8'],
@@ -254,9 +256,17 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         params(url, []); return send(200, await model.imagesState());
       }
       if (req.method === 'GET' && url.pathname === '/api/state')
-        return send(200, await model.state(params(url, ['runtimeId'])));
+        return send(200, await model.state(params(url, ['runtimeId', 'operationDetail'])));
       if (req.method === 'GET' && url.pathname === '/api/catalog') {
         const value = params(url, ['archiveId']); return send(200, await model.catalog(value.archiveId));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/operations') {
+        const value = params(url, ['query', 'filter', 'runtimeId', 'limit', 'cursor']);
+        if (value.limit !== undefined) {
+          need(/^(?:[1-9][0-9]?|100)$/.test(value.limit), 'RUNTIME_OPERATION_HISTORY_LIMIT_INVALID');
+          value.limit = Number(value.limit);
+        }
+        return send(200, await model.operationHistory(value));
       }
       if (req.method === 'GET' && url.pathname === '/api/operation-status')
         return send(200, await model.operationStatus(params(url, ['operationId'])));
