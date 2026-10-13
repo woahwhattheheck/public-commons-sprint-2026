@@ -17,8 +17,9 @@ import zipfile
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      held, identifier, now, read_json, relative_file, verify_file)
 from . import ensemble_consumers, ensemble_flow_support, ensemble_references
+from . import ensemble_scientific_figures
 
-VERSION = 1
+VERSION = 2
 DIRECTORY = "ensemble-scientific-sources"
 SOURCE_ID = "saved-calibration-scientific-report"
 ROLE = "OBSERVED_CONTEXT"
@@ -355,12 +356,14 @@ def _package(workspace, directory, plan, state, basis, result, observed, uncerta
     return source_records
 
 
-def _source_manifest(directory, title, selection, sections):
+def _source_manifest(directory, title, selection, sections, graphics):
     members = [describe_file(directory, path) for path in sorted(directory.rglob("*"))
                if path.is_file() and path not in {directory / "scientific-report.json", directory / "sources.json"}]
     recipe = {"schema": RECIPE_SCHEMA, "title": title,
               "edition": "saved-calibration-" + selection["calibration_id"],
               "basis": selection, "sections": sections,
+              "figure_spec": graphics["figure_spec"], "figures": graphics["figures"],
+              "figure_coverage": graphics["coverage"],
               "inputs": members, "source_links": [item["path"] for item in members]}
     recipe["sections"].append(["Complete original records and report data", [
         {"kind": "links", "items": [
@@ -368,6 +371,10 @@ def _source_manifest(directory, title, selection, sections):
             {"title": "All original candidate predictions and support", "path": "candidate-predictions.csv"},
             {"title": "Original admitted and context reference records", "path": "original-reference-records.csv"},
             {"title": "Original source editions", "path": "original-source-editions.json"},
+            {"title": "Complete original figure coordinates and source pointers",
+             "path": graphics["coordinate_index"]},
+            {"title": "Scientific figure specification and original support",
+             "path": graphics["figure_spec"]},
             {"title": "Saved calibration result", "path": "original/calibrations/" + selection["calibration_id"] + ".json"},
         ]},
     ]])
@@ -418,12 +425,13 @@ def delivery_selection(source, previous=None):
 
 
 def _render(workspace, directory, operation, source_records):
-    from . import observed_context, scientific_report
+    from . import observed_context, scientific_report, scientific_figures
     selection = delivery_selection(operation["source"])
     selection["observed_context_binding"] = observed_context.bind(workspace, selection)
     signature = {"source_binding": selection["observed_context_binding"],
                  "formatter_sha256": file_digest(Path(scientific_report.__file__)),
-                 "collector_sha256": file_digest(Path(observed_context.__file__))}
+                 "collector_sha256": file_digest(Path(observed_context.__file__)),
+                 "figure_renderer_sha256": file_digest(Path(scientific_figures.__file__))}
     output = directory / "reports" / digest(signature)
     output.mkdir(parents=True, exist_ok=True)
     receipt = output / "release.json"
@@ -492,12 +500,30 @@ def prepare(workspace, consumer_id, *, render=True):
                     source_records = read_json(source_directory / "original-source-editions.json")
                 else:
                     source_records = _package(workspace, source_directory, plan, state, basis, result, observed, uncertainty)
-                    _source_manifest(source_directory, title, selection, sections)
+                    graphics = ensemble_scientific_figures.write(
+                        source_directory, plan, basis, result, observed, uncertainty)
+                    sections.append(["Scientific figure source and coverage", [
+                        "Figures use the saved producer quantities and original source-day counts. "
+                        "Each physical constituent keeps its own unit; validation support, source "
+                        "periods and original objective bounds remain explicit. The coordinate CSV "
+                        "and full specification retain the original record pointers and omitted values.",
+                        _table(["Figure", "Original data records", "Omitted coordinate records"],
+                            [[figure["title"], figure["source_record_count"], len(figure["omitted_records"])]
+                             for figure in read_json(source_directory / graphics["figure_spec"])["figures"]]),
+                        _text(graphics["coverage"]),
+                    ]])
+                    _source_manifest(source_directory, title, selection, sections, graphics)
                 collection = workspace.import_sources(manifest_path)
                 operation.update(title=title, source={"source_collection_id": collection["id"], "source_id": SOURCE_ID},
                                  state="source_ready", source_records=source_records)
                 operation["files"]["source_manifest"] = describe_file(workspace.root, source_directory / "sources.json")
                 operation["files"]["source_recipe"] = describe_file(workspace.root, source_directory / "scientific-report.json")
+                recipe = read_json(source_directory / "scientific-report.json")
+                operation["figure_count"] = len(recipe.get("figures", []))
+                operation["files"]["figure_specification"] = describe_file(
+                    workspace.root, source_directory / recipe["figure_spec"])
+                operation["files"]["figure_coordinates"] = describe_file(
+                    workspace.root, source_directory / ensemble_scientific_figures.INDEX)
                 atomic_json(operation_path, operation)
             else:
                 workspace.source_file(operation["source"]["source_collection_id"], SOURCE_ID)
