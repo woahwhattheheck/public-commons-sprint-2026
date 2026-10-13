@@ -27,15 +27,15 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "index.html",
-          "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72"
+          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -123,15 +123,15 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "index.html",
-          "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72"
+          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -217,15 +217,15 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "index.html",
-          "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72"
+          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -311,15 +311,15 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "index.html",
-          "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72"
+          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -407,15 +407,15 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "index.html",
-          "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72"
+          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -497,17 +497,17 @@
       "title": "Utility-focus E. coli · original observation map and record explorer",
       "kind": "document",
       "path": "index.html",
-      "sha256": "4c3ce019164bef173aba5be57b82ff2bf00282f002052a80af76e20bcba5ca72",
+      "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26",
       "uri": "https://www.waterqualitydata.us/",
       "vintage": "2021–2025 observations; source capture 2026-10-13",
       "companions": [
         {
           "path": "README.md",
-          "sha256": "75e7a906e7cd3506e2109a8264aac2c3d6452d7a7ad74b8f1a9b485256947028"
+          "sha256": "ac740a16a79bcf835f98e10e0330bf0e1d6f69d2e0354b8932f5586d43ffbc0e"
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "8558c98679276c8a39bf4d14c4dae8de61065d914f22414b4c4257da2d0e467c"
+          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
