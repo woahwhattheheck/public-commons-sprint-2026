@@ -168,6 +168,19 @@ export function previewCostWorksheet(input,{filename='',source,draft}={}) {
       seen.add(row.run_id);
       if(row.label!==known.get(row.run_id).label)throw Error('The scenario label differs from the original run; retain both the exported label and run ID.');
       const before=copy(draft.costs?.[row.run_id]||{}),after=cleanCost(row.value,before,zone,source);
+      if(Object.prototype.hasOwnProperty.call(row.value,'quantity_estimate')){
+        const estimate=row.value.quantity_estimate,context=estimate?.context,quantityBinding=context?.binding;
+        if(estimate?.schema!=='upstate.economic-quantity-estimate/v1'||!Array.isArray(estimate.lines)||
+           context?.schema!=='upstate.economic-quantity-source/v1'||!plain(quantityBinding))
+          throw Error('The reviewed quantity estimate must retain its complete source-bound working record.');
+        for(const [key,value]of Object.entries(bound))
+          if(quantityBinding[key]!==value)throw Error('The quantity estimate '+key+' differs from this worksheet.');
+        const alternative=known.get(row.run_id);
+        if(quantityBinding.run_id!==row.run_id||quantityBinding.scenario_id!==alternative.scenario_id||
+           quantityBinding.profile_id!==alternative.profile_id)
+          throw Error('The quantity estimate belongs to another original modeled alternative.');
+        after.quantity_estimate=copy(estimate);
+      }
       const metadata=value=>Object.fromEntries(Object.entries(value).filter(([key])=>!editable.includes(key)&&key!=='worksheetBinding'));
       const metadataBefore=metadata(before),metadataAfter=metadata(after);
       const metadataChanged=JSON.stringify(metadataBefore)!==JSON.stringify(metadataAfter);
