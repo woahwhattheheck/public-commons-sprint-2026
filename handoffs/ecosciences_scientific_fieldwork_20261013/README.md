@@ -14,7 +14,11 @@ The five parts contain one 546,031-byte gzip stream. The manifest and member inv
 
 ## Receive
 
-Download `transfer-manifest.json`, `materialize_source_banks.py` and all five `parts/*.json` files from this directory using the existing Git connection or the public repository. Keep the original file names and complete contents. Run:
+Download `transfer-manifest.json`, `materialize_source_banks.py` and all five `parts/*.json` files from this directory using the existing Git connection or the public repository. Keep the original file names and complete contents.
+
+Native receivers with the working Slack connection can instead save the complete Canvas responses linked from [the original receiving Canvas](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8NE0SQ7P). Save its full response or Markdown as `transfer-manifest.json`, and each linked part response as `parts/<original_git_blob>.json`. The receiver accepts direct JSON, saved Git/MCP wrappers, a Canvas response, or its one explicit JSON fence. It preserves source strings and normalizes Canvas spacing only outside strings; provider errors and ambiguous multiple JSON fences remain errors. The original saved response is retained on disk. Shell instructions in a Canvas are inert and are never evaluated by the parser.
+
+Run:
 
 ```bash
 python -B materialize_source_banks.py --manifest transfer-manifest.json --parts parts --output scientific-fieldwork-source

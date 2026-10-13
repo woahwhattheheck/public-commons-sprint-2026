@@ -69,3 +69,16 @@ The additive model API is model.parameter_report_source.catalog, preview, prepar
 Use a real saved native study with both completed and pending cases, multiple reporting areas when available, and its actual difference maps. Operate the exact current application at desktop and narrow widths: open the report form, search beyond its first case page, select across pages, change between all/explicit choices, select areas/pollutants, prepare, open the exact task source in the composer, render all offered formats, follow original map/source links, then reopen the Workspace and earlier source task. Inspect the actual PDF pages and original report links as well as populated/empty/error states. Retain the original study and source IDs in the existing native operation's response.
 
 Source and V8 controller checks support this implementation; actual rendered desktop/mobile/report inspection belongs to the equipped receiving application.
+
+
+## Original-result figures
+
+Prepared sources include separate monochrome figures for each selected reporting area, pollutant and original unit. Each page shows at most twelve original cases, with a position-to-case key immediately after the figure. One panel shows the original baseline/case annual masses on that pair's valid cells; the next shows the retained case-minus-baseline change around a visible zero line. Cases are points rather than a connected trend.
+
+Changed support has a separate marker and legend entry. Each figure includes the original independent baseline and case cell counts, paired cells and paired area. Matching counts alone do not establish identical geography across different cases. The paired values retain their original comparison support; the original full totals remain distinct in the numeric report.
+
+Undefined values have no plotted point. The coverage record retains the exact field, original case and source-row pointer for each omission. A page containing only undefined original values produces no empty quantitative plot; those cases remain in the report's original tables and coverage files.
+
+The shared scientific renderer uses the same numeric figure specification for vector PDF graphics and ordinary report exports; standalone SVGs remain source companions. The complete coordinate CSV and JSON retain the original result SHA256, selected-results SHA256, source JSON pointer, case/profile/run identities, parameter assignments and support metadata. Ordinal case positions and padded axis bounds are presentation metadata. No fitting, interpolation, averaging, physical conversion or probabilistic interval is introduced.
+
+Inspect each actual PDF/HTML figure, case key and support table at receiving. Check units, zero line, undefined coverage, changed-support markers, page boundaries and original source links. Open the standalone SVG, coordinate CSV/JSON and original numeric result from the delivered source before approving that outgoing report. Earlier prepared sources remain independently reopenable; preparing under the figure edition creates another source operation from the same original scientific result.

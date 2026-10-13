@@ -169,6 +169,7 @@
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
+        "model/parameter_scientific_figures.py",
         "model/parameter_views.py",
         "model/record_catalog.py",
         "operator/NATIVE_JOBS.md",
@@ -286,6 +287,7 @@
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
+        "model/parameter_scientific_figures.py",
         "model/parameter_views.py",
         "model/programme_case_status.py",
         "model/programme_views.py",
@@ -352,6 +354,7 @@
     "parameter_case_browsing": "6d064f826c624363c4268576be945ee434ae8724",
     "parameter_installed_result_console": "c0c76a776ab80b5a52f515fdccebc0f98c7611db",
     "utility_source_review": "85441320d77b99465d7b4f82947d01bbc0180206",
-    "parameter_scientific_reports": "97fdd7ab82676b8ca1c52bd311186c541eb94d44"
+    "parameter_scientific_reports": "97fdd7ab82676b8ca1c52bd311186c541eb94d44",
+    "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f"
   }
 }

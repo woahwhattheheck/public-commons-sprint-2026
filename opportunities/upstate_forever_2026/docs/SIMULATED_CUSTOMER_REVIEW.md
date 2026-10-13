@@ -213,6 +213,16 @@ For this simulated case, use the original field and customer IDs returned in the
 
 Operate the retained review and worklist filters, full detail, history, package downloads, response/handback receiving and local-desk reopening through their existing controls. Save and reopen an unfinished response or engineering draft without losing its wording. Perform any authored teaching mutation only in this explicitly simulated case, retaining the original predecessor and operation IDs. Open the actual downloaded HTML and received package, follow its original/revised evidence, and inspect the complete exported CSV/JSON beyond the visible page. Record the exact application source, saved case IDs, output file identities and viewed screenshots in the same receiving operation so a source defect can be repaired directly.
 
+## Recorded response import and recovery
+
+The existing customer recording chapter operates the original review desk with the six saved case identities. After downloading its explicitly simulated local response, it opens that exact JSON through **Import response**, inspects the matching imported reviewer and wording, and uses **Undo draft replacement** to restore the local notes that preceded the import.
+
+The same chapter then imports the actual downloaded original response record. Because that record belongs to the earlier predecessor, the desk presents it as an **Imported response reference** in **Responses** and keeps the current local draft. **Download full record** must return that unchanged original record. The chapter also selects the retained case manifest as an invalid response file, inspects the real error, and confirms that the current draft remains intact. Finally, it reimports and reopens the original downloaded teaching draft.
+
+These interactions use the existing case files and browser-local teaching response. The native original review, recorded customer response and engineering handback keep their existing identities. The parent continues to own the recording page, browser, stop callback, output and video; this chapter runs within that same recording.
+
+An interrupted chapter retains its completed source phases, downloaded files, screenshots and failed action. Its original response-file identities are checked again before continuation. The producing worker must look at the actual matching-import, Undo, historical-reference, invalid-file and reopened-draft screenshots, operate the controls and inspect the re-downloaded full record as part of the current desktop and narrow customer course. Capturing those files alone does not establish readiness.
+
 ## Integration, source and validation
 
 The additive fragment defines the simulated-customer-review component and requires the existing eco13 and implementation families. It carries this module and guide while preserving the shared catalogue, original review UI, field engine and case driver. The cumulative installer reads fragments through its maintained loader.

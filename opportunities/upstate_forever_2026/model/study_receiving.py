@@ -17,6 +17,7 @@ from .portable_implementation import report_edition
 from . import gauge_study_receiving
 from . import ensemble_study_receiving
 from . import report_review_study_receiving
+from . import report_changes_study_transfer
 from . import observation_comparability_study_transfer as comparability_transfer
 from . import observed_landcover_receiving
 from . import study_report_transfer
@@ -56,6 +57,7 @@ def _summary(value):
         **gauge_study_receiving.summary(identity),
         **ensemble_study_receiving.summary(identity),
         **report_review_study_receiving.summary(identity),
+        **report_changes_study_transfer.receiving_summary(identity),
         **comparability_transfer.summary(identity),
         **observed_landcover_receiving.summary(identity),
     }
@@ -156,6 +158,7 @@ def detail(workspace, key):
     gauge_study_receiving.augment(closure, retained, result)
     ensemble_study_receiving.augment(closure, retained, result)
     report_review_study_receiving.augment(closure, retained, result)
+    report_changes_study_transfer.augment_receiving(closure, retained, result)
     comparability_transfer.augment(closure, retained, result)
     observed_landcover_receiving.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.

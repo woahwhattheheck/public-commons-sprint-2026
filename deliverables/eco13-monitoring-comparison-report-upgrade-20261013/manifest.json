@@ -708,6 +708,13 @@
         "sha256": "c5acff552d59c0b55d4bda1a63f96241b7cc260ee068d9dd5ed7a741e92d7270",
         "source_path": "opportunities/upstate_forever_2026/source_tools/application_components.py",
         "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
+      },
+      {
+        "path": "bootstrap/source_tools/component_fragments.py",
+        "bytes": 11389,
+        "sha256": "c7bba0e5e275c3b76e162cc03bcc49e64ab177b2a12469447d3bdb7bcb099e98",
+        "source_path": "opportunities/upstate_forever_2026/source_tools/component_fragments.py",
+        "source_commit": "39a1b704557493ed5b4dc495a7e5fa47362d18df"
       }
     ]
   },

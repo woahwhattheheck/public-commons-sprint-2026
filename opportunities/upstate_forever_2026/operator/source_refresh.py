@@ -9,7 +9,7 @@ from model import source_refresh
 # Retain the original SourceRefresh transport and its native handler binding.
 from source_refresh_legacy import Response, encoded, dispatch, extend_handler
 
-ACTIONS = {"source.refresh.plan", "source.refresh.apply", "source.refresh.landcover"}
+ACTIONS = {"source.refresh.plan", "source.refresh.apply", "source.refresh.landcover", "source.refresh.report_source"}
 PAGES = {
     "/web/source-refresh.html": ("source-refresh.html", "text/html; charset=utf-8"),
     "/web/source-refresh.mjs": ("source-refresh.mjs", "text/javascript; charset=utf-8"),
@@ -55,9 +55,7 @@ def _selection(value):
     return result
 
 def state(workspace):
-    return {"project": workspace.project, "sources": workspace.sources(),
-            "plans": source_refresh.list_plans(workspace),
-            "landcover_changes": workspace._list("landcover-changes")}
+    return {"project": workspace.project, "sources": workspace.sources(), **updates(workspace)}
 
 def _landcover(operator, task):
     from source_tools.landcover_change import compare_landcover
@@ -131,6 +129,9 @@ def _landcover(operator, task):
 def invoke(operator, task):
     ws = operator.ws(task["workspace"])
     value = task["payload"]
+    if task["action"] == "source.refresh.report_source":
+        from model.source_refresh_report_source import prepare
+        return prepare(ws, value)
     if task["action"] == "source.refresh.plan":
         return source_refresh.save_plan(ws, _selection(value))
     if task["action"] == "source.refresh.apply":
@@ -149,8 +150,10 @@ def invoke(operator, task):
 
 def updates(workspace):
     """Contribute only owned records; the original state already has sources."""
+    from model.source_refresh_report_source import list_sources
     return {"plans": source_refresh.list_plans(workspace),
-            "landcover_changes": workspace._list("landcover-changes")}
+            "landcover_changes": workspace._list("landcover-changes"),
+            "report_sources": list_sources(workspace)}
 
 def read(workspace, operation, payload):
     """Explicit bindings for the cumulative operator's authenticated routes."""

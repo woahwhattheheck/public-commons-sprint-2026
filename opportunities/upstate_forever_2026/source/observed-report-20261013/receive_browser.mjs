@@ -1,7 +1,25 @@
 #!/usr/bin/env node
 /** Reopen an actual received scientific report through its original Sources desk. */
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
 import { runAssessmentReceivingChapter } from './assessment_browser.mjs';
+
+// The installed application can be separate from the runtime's Node packages.
+// Resolve the application's normal package first; use the explicit runtime-owned
+// module directory only when that package cannot be resolved.
+const requirePackage = createRequire(import.meta.url);
+let playwrightModule;
+try {
+  playwrightModule = requirePackage.resolve('playwright');
+} catch (error) {
+  if (error.code !== 'MODULE_NOT_FOUND') throw error;
+  const directory = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
+  if (!directory) throw new Error(
+    'Install Playwright for this application or set CODEX_PRIMARY_RUNTIME_NODE_MODULES ' +
+    'to the existing runtime Node module directory.', { cause: error });
+  playwrightModule = requirePackage.resolve(resolve(directory, 'playwright'));
+}
+const { chromium } = requirePackage(playwrightModule);
+
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { resolve, join, relative } from 'node:path';

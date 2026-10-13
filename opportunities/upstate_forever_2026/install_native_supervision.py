@@ -16,6 +16,7 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
            "model/parameter_case_status.py", "model/parameter_result_query.py",
            "model/parameter_views.py", "model/parameter_report_source.py",
+           "model/parameter_scientific_figures.py",
            "model/record_catalog.py", "model/delivery_catalogue.py",
            "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
            "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
@@ -123,6 +124,12 @@ PREVIOUS.setdefault("install_native_supervision.py", []).append("9b08d1f5948f687
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("688262affddfa5f272899f86a7493882f4edecdbf151c2690e11c3d740178577")
 PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("8e4d1cd5a2bef6230f300ac464bb1571918ac26a1dd78611075fd51d7c7126ec")
 PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("969d015c10dd831c59612da02d999e4044117041f2c085a3e604e620cbef5d6a")
+
+# Exact published Parameter scientific-source editions before original-row figures (PR3991).
+PREVIOUS.setdefault("model/parameter_report_source.py", []).append("7f87a4e78b874c0fb8cde7adcb963ae55303aa8785f9c92df4fdfab35b1d27eb")
+PREVIOUS.setdefault("docs/PARAMETER_SCIENTIFIC_REPORTS.md", []).append("616d07853a6f08e9ac9521188ef196828bbe8ea79aec838f7cd852bff36bbd83")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("f2f60806e318161e5d0a3db80913522b1850566166266524535b7401dcd1d6c3")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("885d966bae05c7e5528ffc285bdf4128445f41b16c693aff86c6331f67f3a9e7")
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
@@ -541,7 +548,9 @@ def retained_reader_dependencies(application):
         "model/parameter_exports.py": ("member_descriptors",),
         "model/ensemble_scientific_source.py": ("_member", "_copy", "_text", "_render",
                                                "delivery_selection"),
-        "model/observed_context.py": ("source_choices", "collect"),
+        "model/observed_context.py": ("source_choices", "collect", "_figure_detail_tables"),
+        "model/ensemble_scientific_figures.py": ("_number", "_axis", "_domain", "_svg"),
+        "model/scientific_figures.py": ("_validate_figure",),
         "model/observed_report_render.py": ("prepare", "render"),
     }
     bodies, records = {}, {}

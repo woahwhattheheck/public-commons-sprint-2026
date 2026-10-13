@@ -104,6 +104,8 @@ def _source(closure, choice, expected_source):
     landcover_study_transfer.include_source(closure, collection_id, entry)
     from . import chemistry_study_transfer
     chemistry_study_transfer.include_source(closure, collection_id, entry)
+    from . import source_refresh_report_transfer
+    source_refresh_report_transfer.include_source(closure, collection_id, entry)
     from . import observation_comparability_study_transfer
     observation_comparability_study_transfer.include_source(closure, collection_id, entry)
     return {

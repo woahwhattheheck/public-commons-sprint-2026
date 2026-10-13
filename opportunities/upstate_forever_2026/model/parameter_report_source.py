@@ -16,11 +16,12 @@ from . import parameter_studies, ensemble_scientific_source as shared
 from .parameter_result_query import DEFAULT_RESULTS
 from .parameter_exports import member_descriptors, MEMBER_SCHEMA
 from .parameter_views import DEFAULT_VIEWS
+from . import parameter_scientific_figures as figures
 
 DIRECTORY = "parameter-report-sources"
 SCHEMA = "upstate.parameter-report-source/v1"
 SOURCE_ID = "saved-parameter-study"
-EDITION = 1
+EDITION = 2
 
 
 def _choices(value, available, label):
@@ -311,11 +312,26 @@ def _sections(selected, rows, ranges):
 
 
 def _recipe(directory, selected, rows, ranges):
+    graphics = figures.write(directory, selected, rows)
+    sections = _sections(selected, rows, ranges)
+    sections.append(["Original figure coverage", [
+        "Figures preserve each original pair separately. Undefined quantities have no plotted point. "
+        "Full geographic support and original case/profile/run keys accompany each figure.",
+        _table(["Selected rows", "Figures", "Plotted values", "Undefined values"], [[
+            graphics["coverage"][name] for name in (
+                "selected_rows", "figure_count", "plotted_values", "undefined_values")]]),
+        {"kind": "links", "items": [
+            {"title": "Exact physical coordinates and original source pointers", "path": figures.COORDINATES},
+            {"title": "Original figure specification and case keys", "path": figures.SPEC},
+            {"title": "Undefined-value coverage and source rows", "path": figures.COVERAGE}]},
+    ]])
     members = [describe_file(directory, path) for path in sorted(directory.rglob("*"))
                if path.is_file() and path not in {directory / "sources.json", directory / "scientific-report.json"}]
     recipe = {"schema": shared.RECIPE_SCHEMA, "title": selected["selection"]["title"],
               "edition": selected["selection"]["expected_artifact_sha256"],
-              "basis": selected, "sections": _sections(selected, rows, ranges),
+              "basis": selected, "sections": sections,
+              "figure_spec": graphics["figure_spec"], "figures": graphics["figures"],
+              "figure_coverage": graphics["coverage"],
               "inputs": members, "source_links": [row["path"] for row in members]}
     atomic_json(directory / "scientific-report.json", recipe, immutable=True)
     atomic_json(directory / "sources.json", {
@@ -382,7 +398,9 @@ def prepare(workspace, value, *, render=True):
     state = parameter_studies._read(workspace, key)
     identity = {"schema": SCHEMA, "selection": selected["selection"],
                 "export_manifest": state.get("artifacts", {}).get("export_manifest"),
-                "producer_sha256": file_digest(Path(__file__))}
+                "producer_sha256": file_digest(Path(__file__)),
+                "figure_helper_sha256": file_digest(Path(figures.__file__)),
+                "figure_svg_helper_sha256": file_digest(Path(figures.drawing.__file__))}
     operation_id = digest(identity)
     directory = workspace.root / DIRECTORY / operation_id
     directory.mkdir(parents=True, exist_ok=True)
@@ -424,7 +442,10 @@ def prepare(workspace, value, *, render=True):
                 operation["files"].update(operation["report"]["files"])
                 operation["state"] = "complete"
             for name, path in (("source_manifest", "sources.json"), ("selected_rows", "selected-results.json"),
-                               ("selected_csv", "selected-results.csv"), ("report_recipe", "scientific-report.json")):
+                               ("selected_csv", "selected-results.csv"), ("report_recipe", "scientific-report.json"),
+                               ("figure_specification", figures.SPEC), ("figure_coordinates", figures.COORDINATES),
+                               ("figure_coordinates_json", "parameter-figure-coordinates.json"),
+                               ("figure_coverage", figures.COVERAGE)):
                 operation["files"][name] = describe_file(workspace.root, source / path)
             operation["delivery_selection"] = shared.delivery_selection(operation["source"])
             operation.pop("error", None)
