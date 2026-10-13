@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: MIT */
+/* Plain industrial controls scoped to the original Learning panel. */
+.learning-exchange{margin-top:2rem;padding-top:1.5rem;border-top:2px solid #30343a;color:#1b1e22}
+.learning-exchange h3,.learning-exchange h4{font-weight:650;line-height:1.35}
+.learning-exchange h4{margin:1.25rem 0 .6rem}
+.learning-exchange p{max-width:95ch;line-height:1.55}
+.learning-exchange .muted{color:#555b63}
+.learning-exchange details{margin:.8rem 0;border:1px solid #c9cdd2;padding:.75rem}
+.learning-exchange summary{cursor:pointer;font-weight:600}
+.learning-exchange label{display:flex;flex-direction:column;gap:.4rem;min-width:0;font-size:.92rem}
+.learning-exchange input,.learning-exchange select,.learning-exchange textarea,.learning-exchange button{font:inherit;color:inherit;border:1px solid #858b94;border-radius:2px;background:#fff;padding:.55rem .7rem;box-sizing:border-box;max-width:100%}
+.learning-exchange textarea{resize:vertical;min-height:5.5rem}
+.learning-exchange input[type=checkbox]{align-self:flex-start;width:1.1rem;height:1.1rem}
+.learning-exchange button{background:#f1f2f3;cursor:pointer;min-height:2.5rem}
+.learning-exchange button:hover:not(:disabled){background:#e2e5e8}
+.learning-exchange button:disabled{opacity:.5;cursor:default}
+.learning-exchange :focus-visible{outline:2px solid #171a1f;outline-offset:3px}
+.learning-exchange .exchange-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1rem 0}
+.learning-exchange .exchange-grid label:has(textarea){grid-column:1/-1}
+.learning-exchange .exchange-toolbar{display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;margin:1rem 0}
+.learning-exchange .exchange-toolbar label{flex:1 1 22rem}
+.learning-exchange .exchange-notice{border-left:3px solid #737981;padding:.65rem .9rem;background:#f4f5f6;white-space:pre-wrap;overflow-wrap:anywhere;min-height:1.5rem}
+.learning-exchange .exchange-notice.error,.learning-exchange .exchange-conflict{border-left:4px solid #24282e;background:#eceeef;padding:.75rem;font-weight:600}
+.learning-exchange .exchange-action{overflow-x:auto;margin:1rem 0}
+.learning-exchange table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:720px;font-size:.9rem}
+.learning-exchange th,.learning-exchange td{border:1px solid #c9cdd2;padding:.6rem;text-align:left;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}
+.learning-exchange thead{background:#edefF1}
+.learning-exchange th{font-weight:600}
+.learning-exchange pre{white-space:pre-wrap;overflow-wrap:anywhere;font: .85rem/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f5f6f7;padding:1rem;max-height:38rem;overflow:auto;margin:.6rem 0}
+.learning-exchange .exchange-context{border:1px solid #c9cdd2;padding:.6rem;min-height:4rem}
+.learning-exchange .exchange-rebase{display:grid;gap:1rem;border:1px solid #858b94;padding:1rem}
+.learning-exchange .exchange-operation{border-top:1px solid #c9cdd2;padding:1rem 0}
+.learning-exchange [hidden]{display:none!important}
+@media(max-width:720px){.learning-exchange .exchange-grid{grid-template-columns:1fr}.learning-exchange .exchange-toolbar{align-items:stretch}.learning-exchange .exchange-toolbar button{flex:1 1 12rem}.learning-exchange .exchange-toolbar label{flex-basis:100%}}
+@media print{.learning-exchange button,.learning-exchange input[type=file]{display:none}.learning-exchange pre{max-height:none;overflow:visible}.learning-exchange .exchange-action{overflow:visible}.learning-exchange table{min-width:0}}
