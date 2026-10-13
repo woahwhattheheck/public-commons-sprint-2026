@@ -278,7 +278,8 @@
         "source/hydrology-huc05-07-20261013/source-manifest.json",
         "source_tools/NLDI_SPLIT_CAPTURE.md",
         "source_tools/calibration_assembly.py",
-        "source_tools/capture_nldi_split.py"
+        "source_tools/capture_nldi_split.py",
+        "model/calibration_execution.py"
       ],
       "requires": [
         "core"
@@ -3520,6 +3521,7 @@
         "model/client_economics.py",
         "model/client_report.py",
         "model/delivery_archive.py",
+        "model/native_process_figures.py",
         "model/native_process_report.py",
         "model/native_versions.py",
         "model/observations.py",

@@ -2,14 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "monitoring",
   "title": "Monitoring design",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "order": 85,
   "assets": [
     "monitoring.mjs",
     "monitoring-component.mjs",
     "monitoring.css",
     "monitoring-observed.mjs",
-    "monitoring_fieldwork.mjs"
+    "monitoring_fieldwork.mjs",
+    "monitoring_field_return.mjs"
   ],
   "backend": {
     "module": "monitoring_native",
@@ -23,7 +24,8 @@
       "monitoring.export",
       "monitoring.context.prepare",
       "monitoring.context.export",
-      "monitoring.campaign.fieldwork"
+      "monitoring.campaign.fieldwork",
+      "monitoring.campaign.fieldwork.return"
     ],
     "invoke": {
       "handler": "perform",

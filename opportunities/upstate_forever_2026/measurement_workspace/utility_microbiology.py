@@ -226,6 +226,10 @@ def build_files(application=None):
         notes.append({"code": "TEMPORAL_AND_FLOW_CONTEXT",
             "context": "The retained complete temporal explorer preserves the author's original station, calendar, method, comment-sensitivity and same-station flow analyses. Its original analytical edition and three original inputs remain together; the native observed-report selection binds a separate path-derived recipe to these exact source bodies.",
             "report_path": temporal["report_path"]})
+        if temporal.get("gallery_path") is not None:
+            notes.append({"code": "ORIGINAL_SCIENTIFIC_FIGURES",
+                "context": "The original figure gallery retains complete sampling-coverage, calendar-support and same-station flow panels with exact source-point identities and vector downloads. It uses the author's full-source scope; primary study filters do not recalculate its original panels.",
+                "report_path": temporal["gallery_path"]})
     files = {"original/" + name: data for name, data in originals.items()}
     if temporal is not None:
         for name, body in temporal["files"].items():
@@ -281,6 +285,8 @@ def build_files(application=None):
                 "source_csv_sha256": captures["raw/stations-original.csv"]["sha256"]}})
     if temporal is not None:
         entries.extend([temporal["report_entry"], temporal["recipe_entry"]])
+        if temporal.get("gallery_entry") is not None:
+            entries.append(temporal["gallery_entry"])
         summary = json.loads(files["source-summary.json"])
         summary["temporal_analysis"] = temporal["provenance"]
         files["source-summary.json"] = _json(summary)
@@ -308,6 +314,12 @@ def build_files(application=None):
             "The separately bound observed-report recipe is available to the ordinary scientific delivery picker, "
             "including ordered multi-report deliveries.\n"
         ).encode("utf-8")
+        if temporal.get("gallery_path") is not None:
+            files["README.md"] += (
+                "\nThe original scientific-figure gallery is retained at " + temporal["gallery_path"] +
+                ". Its own document source includes the complete vector, point-table and reproduction companions. "
+                "Open or export this original source to keep its relative downloads together.\n"
+            ).encode("utf-8")
     return files
 
 

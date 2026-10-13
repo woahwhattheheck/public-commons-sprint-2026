@@ -5,6 +5,7 @@ import re
 
 from implementation_operator import ImplementationOperator
 from model import implementation_qc as qc
+from model import implementation_qc_actions as qca
 from model.implementation_schema import ImplementationError
 from model.common import digest
 
@@ -12,6 +13,9 @@ ACTIONS = {
     "save": "implementation.qc.save",
     "source": "implementation.qc.source",
     "export": "implementation.qc.export",
+    "actions-save": "implementation.qc.actions.save",
+    "actions-source": "implementation.qc.actions.source",
+    "actions-export": "implementation.qc.actions.export",
 }
 
 
@@ -35,9 +39,17 @@ class ImplementationQC(ImplementationOperator):
         value = self._parameters(payload or {})
         ws = self.operator.ws(workspace)
         try:
+            if operation == "actions-validate":
+                return {"workspace_key": workspace, "preview": qca.validate_selection(ws, value.get("selection", value))}
+            if operation == "actions-preview":
+                return {"workspace_key": workspace, "preview": qca.preview(ws, value.get("selection", value))}
             if operation == "preview":
                 return {"workspace_key": workspace, "review": qc.preview(ws, value.get("selection", value))}
             plan_id = self._id(value.get("plan_id"))
+            if operation == "actions":
+                return {"workspace_key": workspace, **qca.context(ws, plan_id, value.get("report_id"))}
+            if operation == "actions-inspect":
+                return self._decorate(workspace, qca.inspect(ws, plan_id, value.get("action_report_id")))
             if operation == "records":
                 revision = self._integer(value.get("revision"), "revision")
                 plan = self.store(workspace).get(plan_id, revision)
@@ -68,7 +80,21 @@ class ImplementationQC(ImplementationOperator):
         workspace, value = task["workspace"], self._parameters(task["payload"])
         ws = self.operator.ws(workspace)
         try:
-            if action == ACTIONS["save"]:
+            if action == ACTIONS["actions-save"]:
+                result = qca.save(ws, value.get("selection", value))
+            elif action in (ACTIONS["actions-source"], ACTIONS["actions-export"]):
+                plan_id = self._id(value.get("plan_id"))
+                action_report_id = value.get("action_report_id")
+                if action == ACTIONS["actions-source"]:
+                    result = qca.scientific_source(ws, plan_id, action_report_id)
+                else:
+                    result = qca.inspect(ws, plan_id, action_report_id)
+                    task_id = task["id"]
+                    if not isinstance(task_id, str) or not re.fullmatch(r"[a-f0-9]{64}", task_id):
+                        raise ImplementationError("Use the original native task ID.")
+                    destination = self.operator.root / "outputs" / "implementation-qc-actions" / workspace / (task_id + ".zip")
+                    result["archive"] = qca.export(ws, plan_id, action_report_id, destination)
+            elif action == ACTIONS["save"]:
                 result = qc.save(ws, value.get("selection", value))
             else:
                 plan_id = self._id(value.get("plan_id"))
@@ -88,6 +114,7 @@ class ImplementationQC(ImplementationOperator):
 
     def _archive_download(self, task, archive):
         """Read only the current operator output, with exact original transfer lineage."""
+        family = "implementation-qc-actions" if task["action"].startswith("implementation.qc.actions.") else "implementation-qc"
         pattern = re.compile(r"[a-f0-9]{64}")
         def identity(workspace, task_id, request):
             if not all(isinstance(v, str) and pattern.fullmatch(v) for v in (workspace, task_id, request)):
@@ -114,10 +141,10 @@ class ImplementationQC(ImplementationOperator):
         if not path.is_absolute() or ".." in path.parts:
             raise ImplementationError("The retained QC archive path is invalid.")
         matched = next((pair for pair in [current] + originals
-            if tuple(path.parts[-4:]) == ("outputs", "implementation-qc", pair[0], pair[1] + ".zip")), None)
+            if tuple(path.parts[-4:]) == ("outputs", family, pair[0], pair[1] + ".zip")), None)
         if matched is None:
             raise ImplementationError("The archive path differs from its original QC task.")
-        own = self.operator.root / "outputs" / "implementation-qc"
+        own = self.operator.root / "outputs" / family
         # A transferred sender path is metadata, not permission to read a receiver's unrelated path.
         if not path.is_relative_to(own):
             if matched not in originals:
@@ -137,7 +164,9 @@ class ImplementationQC(ImplementationOperator):
         if task.get("action") not in ACTIONS.values() or task.get("state") != "complete":
             return task
         result = task.get("result") or {}
-        current = qc.inspect(self.operator.ws(task["workspace"]), result["plan_id"], result["report_id"])
+        followup = task["action"].startswith("implementation.qc.actions.")
+        current = (qca.inspect(self.operator.ws(task["workspace"]), result["plan_id"], result["action_report_id"])
+                   if followup else qc.inspect(self.operator.ws(task["workspace"]), result["plan_id"], result["report_id"]))
         decorated = self._decorate(task["workspace"], current)
         task["_downloads"] = decorated["_downloads"]
         if result.get("archive"):
@@ -149,8 +178,10 @@ class ImplementationQC(ImplementationOperator):
                 task["_qc_export"] = {
                     "state": "reexport_required",
                     "message": "The complete QC report is retained in this received project. Create a new local ZIP from the saved report.",
-                    "action": "implementation.qc.export",
-                    "payload": {"plan_id": result["plan_id"], "report_id": result["report_id"]},
+                    "action": ACTIONS["actions-export" if followup else "export"],
+                    "payload": {"plan_id": result["plan_id"],
+                                ("action_report_id" if followup else "report_id"):
+                                result["action_report_id" if followup else "report_id"]},
                 }
         task["_item"] = {"kind": "implementation_plans", "id": result["plan_id"]}
         return task
