@@ -1,3 +1,4 @@
+import {createQuantityEditor} from './economic_quantity_editor.mjs';
 import {createEconomicRecoveryStore} from './economic_request_store.mjs';
 /** Native report and sourced cost intake for the retained economic desk. */
 import {exportCostWorksheet,previewCostWorksheet,applyCostWorksheet} from './economic_cost_worksheet.mjs';
@@ -35,7 +36,7 @@ export function attachEconomicDesk(host) {
   let editionEpoch=0,implementationOptions=null,implementationRun='';
   let requestedEdition=null,mountReady=null;
   let comparisonEditor=null,comparisonOpening=null,requestedComparison=null;
-  let recoveryStore=null;
+  let recoveryStore=null,quantityEditor=null;
   let recoveryBlocked='',storageIssue='',lastReceipt=null,retiredRequest=null,taskTimer=null,taskReading=false,requestSending=false,mountTurn=0;
   const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
   const copy=value=>JSON.parse(JSON.stringify(value));
@@ -55,6 +56,7 @@ export function attachEconomicDesk(host) {
     for(const control of frame?.querySelectorAll('[data-submit]')||[])control.disabled=frozen||!source?.alternatives?.length||!selectedZone?.common_support_available;
     for(const control of frame?.querySelectorAll('[data-inputs] input,[data-inputs] textarea,[data-inputs] select,[data-inputs] button,[data-report],[data-zone],[data-cost-worksheet]')||[])control.disabled=frozen||(control.dataset.econ==='worksheet-apply'&&!!worksheetPreview?.errors?.length);
     for(const control of frame?.querySelectorAll('[data-econ="refresh"],[data-econ="edit-edition"],[data-econ="open-draft"],[data-econ="implementation-choose"],[data-econ="implementation-open"],[data-econ="client-report"]')||[])control.disabled=frozen;
+    quantityEditor?.refreshDisabled();
   }
   function recoverySnapshot() {
     return {schema:'upstate.economic-browser-state/v2',workspace_key:workspace,draft:copy(draft),pendingRequest:pending?copy(pending):null,pendingId:pending?.id||null,lastReceipt:lastReceipt?copy(lastReceipt):null,retiredRequest:retiredRequest?copy(retiredRequest):null,openEditionId};
@@ -215,10 +217,11 @@ export function attachEconomicDesk(host) {
   }
   function blank(reportId='',zoneId='') {
     return {reportId,reportSha:'',zoneId,title:'',currency:'USD',capital_limit:'',
-      annualized_limit:'',targets:{},costs:{},costWorksheets:[],notes:'',originalReportId:'',originalZoneId:'',originalSelection:null};
+      annualized_limit:'',targets:{},costs:{},costWorksheets:[],quantityEstimates:[],quantityEditor:{run_id:'',footprint_id:'',active_id:'',choices:[]},notes:'',originalReportId:'',originalZoneId:'',originalSelection:null};
   }
   function current() {
     if(!draft||!frame)return draft;
+    quantityEditor?.capture();
     for(const input of frame.querySelectorAll('[data-field]')){
       const name=input.dataset.field;
       if(name.startsWith('target:'))draft.targets[name.slice(7)]=input.value;
@@ -242,9 +245,11 @@ export function attachEconomicDesk(host) {
     state.annualized_limit=selected.budget?.annualized_limit??'';
     state.targets={...selected.targets};state.notes=(selected.notes||[]).join('\n');
     state.costWorksheets=JSON.parse(JSON.stringify(selected.cost_worksheets||[]));
+    state.quantityEstimates=copy(selected.quantity_estimates||[]);
+    state.quantityEditor=copy(selected.quantity_editor||{run_id:'',footprint_id:'',active_id:'',choices:[]});
     for(const cost of selected.costs||[]){
       state.costs[cost.run_id]={
-        originalCost:JSON.parse(JSON.stringify(cost)),enabled:true,currency:cost.currency,capital:cost.capital,
+        originalCost:JSON.parse(JSON.stringify(cost)),quantity_estimate:cost.quantity_estimate?copy(cost.quantity_estimate):undefined,enabled:true,currency:cost.currency,capital:cost.capital,
         annual_operating:cost.annual_operating,horizon_years:cost.horizon_years,
         discount_percent:Number(cost.discount_rate)*100,
         source_title:cost.source?.title||'',source_uri:cost.source?.uri||'',
@@ -293,7 +298,7 @@ export function attachEconomicDesk(host) {
       else if(scope==='reporting-zone')note='Cost footprint: an implementation estimate explicitly scoped to '+zone.title+'. '+note;
       else if(scope!=='retained')throw Error('Choose the cost footprint for '+label+'.');
       costs.push({
-        ...original,run_id:runId,currency:value.currency||currency,
+        ...original,...(value.quantity_estimate?{quantity_estimate:copy(value.quantity_estimate)}:{}),run_id:runId,currency:value.currency||currency,
         capital:number(value.capital,label+' upfront cost'),
         annual_operating:number(value.annual_operating,label+' annual operating cost'),
         horizon_years:number(value.horizon_years,label+' horizon',{positive:true}),
@@ -305,6 +310,8 @@ export function attachEconomicDesk(host) {
       comparison_id:zone.comparison_id,costs,targets:{},notes:draft.notes.split('\n').filter(line=>line.trim())};
     if(draft.costWorksheets?.length)selection.cost_worksheets=JSON.parse(JSON.stringify(draft.costWorksheets));
     else delete selection.cost_worksheets;
+    if(draft.quantityEstimates?.length){selection.quantity_estimates=copy(draft.quantityEstimates);selection.quantity_editor=copy(draft.quantityEditor||{});}
+    else{delete selection.quantity_estimates;delete selection.quantity_editor;}
     delete selection.budget;
     const budget={...(retained.budget||{}),currency};
     let hasBudgetLimit=false;
@@ -419,6 +426,7 @@ export function attachEconomicDesk(host) {
     }finally{if(valid(token))setBusy(false);}
   }
   function renderInputs() {
+    quantityEditor?.close();quantityEditor=null;
     const box=node('[data-inputs]'),zone=source?.zones.find(row=>row.zone_id===draft?.zoneId);
     box.hidden=!zone;
     if(!zone)return;
@@ -443,11 +451,26 @@ export function attachEconomicDesk(host) {
       field('Upfront budget limit','capital_limit',draft.capital_limit,'number','min="0" step="any" placeholder="No upfront limit"')+
       field('Annualized budget limit','annualized_limit',draft.annualized_limit,'number','min="0" step="any" placeholder="No annualized limit"')+
       metricFields+'</div>'+retainedTargets+'<p class="econ-note">Empty budget or target fields leave that criterion open. Costs use the actual intervention footprint; the reporting zone’s area does not prorate them.</p></section>'+
-      '<section class="econ-card"><h3>3. Whole-scenario cost sources</h3><p>Keep a scenario’s cost unchecked until its full implementation estimate is available. Assistance and payment schedules are funding contributions; retain those references in notes instead of entering them as implementation cost. Enter explicit zero values where the estimate has no upfront or annual cost. The physical edition remains useful with every cost unchecked.</p>'+worksheetControls()+rows+
+      '<section class="econ-card"><h3>3. Whole-scenario cost sources</h3><p>Keep a scenario’s cost unchecked until its full implementation estimate is available. Assistance and payment schedules are funding contributions; retain those references in notes instead of entering them as implementation cost. Enter explicit zero values where the estimate has no upfront or annual cost. The physical edition remains useful with every cost unchecked.</p>'+worksheetControls()+rows+'<section class="econ-card" data-quantity-editor></section>'+
       '<label class="econ-notes"><span>Working notes carried with this edition</span><textarea data-field="notes" rows="3">'+escape(draft.notes)+'</textarea></label>'+
       '<div class="econ-actions">'+button('preview','Calculate decision preview','data-submit')+button('save-draft','Save inputs to workspace','data-submit')+button('build','Build and open complete edition','data-submit class="econ-primary"')+'</div>'+
       '<p class="econ-note">Every candidate remains one complete modeled scenario. Nitrogen, phosphorus and sediment keep their own units.</p></section>';
-    renderWorksheetPreview();setBusy(busy);
+    renderWorksheetPreview();
+    quantityEditor=createQuantityEditor(node('[data-quantity-editor]'),{
+      get:()=>({source,draft,workspace,locked:busy||!!pending||!!recoveryBlocked}),
+      active:()=>!!frame&&workspace===getState()?.workspace_key,
+      changed:()=>{preview=null;node('[data-preview]').hidden=true;remember();},
+      load:values=>api(url('/api/economic-desk/quantity-source',values)),
+      download:downloadWorksheet,
+      review:async(content,estimate)=>{
+        current();const expected=JSON.stringify(draft),token=epoch,selectedDraft=draft;
+        const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content));
+        if(!valid(token)||draft!==selectedDraft||JSON.stringify(current())!==expected||pending||recoveryBlocked||busy)return;
+        worksheetPreview=previewCostWorksheet(content,{filename:'quantity-estimate-'+estimate.id+'.json',source,draft});
+        worksheetPreview.sha256=Array.from(new Uint8Array(hash),value=>value.toString(16).padStart(2,'0')).join('');
+        renderWorksheetPreview();message('Review the sourced quantity totals in the original worksheet preview before applying them.');
+      }
+    });setBusy(busy);
   }
   function renderSaved(value=catalog) {
     if(!value)return;
@@ -778,6 +801,7 @@ export function attachEconomicDesk(host) {
   function detach() {
     if(frame&&requestedComparison){const request=requestedComparison;requestedComparison=null;request.reject(Error('The Economic desk closed before the saved comparison opened.'));}
     comparisonEditor?.close();comparisonEditor=null;
+    quantityEditor?.close();quantityEditor=null;
     clearTimeout(taskTimer);mountTurn++;taskReading=false;requestSending=false;
     if(frame)rejectSavedEdition(Error('The Economic desk closed before the retained edition opened.'));
     mountReady=null;
