@@ -26,7 +26,7 @@ import zipfile
 
 SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 CHUNK = 1024 * 1024
 
 
@@ -568,6 +568,39 @@ def inventory(root: Path) -> dict:
     return result
 
 
+
+def attachment_metadata(manifest: dict, attachment: dict) -> dict:
+    """Recover explicit attachment types, including retained version 1.2 requests.
+
+    The request is authoritative only when the original logical identity,
+    metadata, primary and ordered companions match the retained attachment.
+    """
+    matches = [row for row in (manifest.get("source_request") or {}).get("attachments", [])
+               if row.get("id") == attachment.get("id")]
+    if len(matches) > 1:
+        raise ValueError("The received attachment has duplicate original request identities")
+    requested = matches[0] if matches else None
+    if requested is not None:
+        expected = [(row["path"], row["bytes"], row["sha256"])
+                    for row in [requested["file"], *requested.get("companions", [])]]
+        actual = [(row.get("source_path"), row["bytes"], row["sha256"])
+                  for row in attachment["files"]]
+        if actual != expected or attachment.get("source", {}) != requested.get("source", {}):
+            raise ValueError("The received attachment differs from its original source binding")
+    metadata = {}
+    for name in ("kind", "units"):
+        if name in attachment:
+            if requested is not None and name in requested and attachment[name] != requested[name]:
+                raise ValueError("The received attachment changed its original " + name)
+            metadata[name] = attachment[name]
+        elif requested is not None and name in requested:
+            metadata[name] = requested[name]
+    metadata.setdefault("kind", "document")
+    if metadata["kind"] not in {"table", "document"}:
+        raise ValueError("The received attachment declares an unsupported source kind")
+    return metadata
+
+
 def verify(root: Path | str, *, native: bool = True) -> dict:
     root = Path(root).resolve(strict=True)
     inv, manifest = load(root/"inventory.json"), load(root/"project.json")
@@ -588,6 +621,8 @@ def verify(root: Path | str, *, native: bool = True) -> dict:
         raise ValueError("Package has missing or untracked files")
     for r in inv["files"]:
         checked(root,r)
+    for attachment in manifest.get("attachments", []):
+        attachment_metadata(manifest, attachment)
     tree = ET.parse(root/"project.qgs")
     byid = {l["key"]:l for l in manifest["layers"]}
     maps = tree.findall("./projectlayers/maplayer")
@@ -639,9 +674,9 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
     source_root, destination = Path(source_root).resolve(strict=True), Path(destination).resolve()
     if destination.is_relative_to(source_root) and destination == source_root:
         raise ValueError("Export to a separate directory")
-    identities = [l["id"] for l in spec["layers"]]
+    identities = [item["id"] for item in [*spec["layers"], *spec.get("attachments", [])]]
     if len(set(identities)) != len(identities) or any(not isinstance(x,str) or not x for x in identities):
-        raise ValueError("Choose unique, nonempty logical layer identities")
+        raise ValueError("Choose unique, nonempty logical layer and attachment identities")
     selection_id = fingerprint({"request":spec,"builder_version":VERSION})
     stage = destination.parent / ("."+destination.name+"-"+selection_id[:16]+".building")
     started = time.monotonic()
@@ -729,6 +764,9 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
                 raise ValueError("Focus layer is not selected")
             attachments=[]
             for item in spec.get("attachments",[]):
+                kind = item.get("kind", "document")
+                if kind not in {"table", "document"}:
+                    raise ValueError("An attached source must declare table or document kind")
                 files=[]
                 original_documents=[item["file"]]+item.get("companions",[])
                 common=os.path.commonpath([str(PurePosixPath(r["path"]).parent) for r in original_documents])
@@ -742,7 +780,11 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
                     target=stage/"documents"/group/rel
                     copy_checked(source_root,rec,target)
                     files.append({**record(stage,target),"source_path":rec["path"]})
-                attachments.append({"id":item["id"],"title":item["title"],"files":files,"source":item.get("source",{})})
+                attachment = {"id": item["id"], "title": item["title"], "kind": kind,
+                              "files": files, "source": item.get("source", {})}
+                if "units" in item:
+                    attachment["units"] = item["units"]
+                attachments.append(attachment)
             manifest={"schema":SCHEMA,"builder_version":VERSION,"selection_id":selection_id,
                       "edition_id":selection_id,"title":spec["title"],"project_crs":project_crs,
                       "extent":_bounds_union(focus or layers),"layers":layers,"attachments":attachments,
