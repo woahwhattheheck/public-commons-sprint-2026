@@ -53,7 +53,33 @@ export interface FlowableSourceList extends GrantObject {
  offset:number;limit:number;total:number;nextOffset:number|null;
  rows:Array<{requestId:string;type:string;status:'PENDING'|'COMPLETE';request:FlowableSourceRequest;files:FlowableSourceFile[]}>;
 }
+
+/** The current native writer supplies and freezes the complete saved rows. */
+export interface FlowableFollowingInstallationSelection extends FlowableSourceRequest {
+ installationId:string;baseRevision:number;expectedBaseSha256:string;
+ expectedRevision:number;expectedInstallationSha256:string;expectedVersion:number;
+}
+export interface FlowableFollowingComparisonInput extends FlowableFollowingInstallationSelection {
+ priorPreparationId:string;laterPreparationId:string;
+}
+export type FlowableFollowingChoice='KEEP_CURRENT'|'TAKE_LATER'|'USE_BASELINE'|'ACCEPT_LATER_SOURCE';
+export interface FlowableFollowingPreparationInput extends FlowableFollowingInstallationSelection {
+ comparisonId:string;basisSha256:string;choices:Record<string,FlowableFollowingChoice>;reviewer:string;note:string;
+}
+export interface FlowableFollowingNative extends GrantObject {
+ source:GrantObject;baseline:GrantObject;current:GrantObject;
+ baselinePreparation:{requestId:string;preparationSha256:string;document:GrantObject};
+}
+export interface FlowableFollowingComparison extends FlowableSourceResult {
+ nativeSource:GrantObject;comparison:GrantObject;
+}
+export interface FlowableFollowingPreparation extends FlowableSourcePreparation {
+ following:GrantObject;
+}
+
 export interface FlowableSourceInputs {
+ 'following-compare':{caseId:string;body:FlowableFollowingComparisonInput};
+ 'following-prepare':{caseId:string;body:FlowableFollowingPreparationInput};
  import:{caseId:string;requestId:string;kind:FlowableSourceKind;name:string;bytes:Buffer|Uint8Array;sha256:string};
  catalogue:{caseId:string;body:FlowableSourceCatalogueInput};
  inspect:{caseId:string;body:FlowableSourceInspectionInput};
@@ -68,6 +94,8 @@ export interface FlowableSourceInputs {
  'source-file-describe':{caseId:string;inspectionId:string;path:string};
 }
 export interface FlowableSourceResponses {
+ 'following-compare':GrantJsonResponse<FlowableFollowingComparison>;
+ 'following-prepare':GrantJsonResponse<FlowableFollowingPreparation>;
  import:GrantJsonResponse<FlowableSourceResult & {file:FlowableSourceFile}>;
  catalogue:GrantJsonResponse<FlowableSourceCatalogue>;
  inspect:GrantJsonResponse<FlowableSourceResult>;
