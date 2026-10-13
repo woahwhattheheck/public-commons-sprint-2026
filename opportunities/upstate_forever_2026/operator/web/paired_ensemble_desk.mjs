@@ -21,6 +21,32 @@ const options = (rows, placeholder) => '<option value="">'+esc(placeholder)+'</o
   rows.map(row=>'<option value="'+esc(row.id)+'">'+esc(row.title||row.spec?.title||short(row.id))+'</option>').join('');
 const pathMember = value => String(value).split('/').map(encodeURIComponent).join('/');
 
+
+// All views consume the same retained per-model catalogue as the Python binder.
+const producingModel = output => output === 'sediment_export' ? 'sdr' : 'ndr';
+function nativeOutputIssue(runs, output) {
+  const model=producingModel(output);
+  if(!runs.length)return 'Select original native pairs.';
+  if(runs.some(run=>!run?.available_pollutants?.includes(output)))
+    return 'The output is absent from a selected original run.';
+  const versions=runs.map(run=>run.native_model_versions?.[model]?.comparison_version);
+  if(versions.some(version=>!version))
+    return model.toUpperCase()+' producing version is unavailable in a selected run.';
+  const distinct=[...new Set(versions)];
+  return distinct.length===1?'':model.toUpperCase()+' producing versions differ: '+distinct.join(' versus ')+'.';
+}
+function nativeRunLabel(run) {
+  const bases={completed_stage_runtime:'completed stage',observed_run_fallback:'observed run fallback',
+    requested_legacy:'requested legacy'};
+  return Object.entries(run?.native_model_versions||{}).map(([model,info])=>
+    model.toUpperCase()+' '+(info.comparison_version||'unavailable')+
+    ' ('+(bases[info.basis]||'basis unavailable')+')').join('; ')||'Producing runtime unavailable';
+}
+function selectedNativeRuns(runs, pairs) {
+  const byId=new Map(runs.map(run=>[run.id,run]));
+  return pairs.flatMap(pair=>[byId.get(pair.baseline_run_id),byId.get(pair.alternative_run_id)]);
+}
+
 export function attachPairedEnsembles(context) {
   const document = context.document || globalThis.document;
   const {api, getState, toast} = context;
@@ -114,9 +140,9 @@ export function attachPairedEnsembles(context) {
       '<label>Scientific question<textarea name="purpose" rows="2" required>How does this land-cover alternative change physical export across the selected profiles?</textarea></label></div>'+
       '<div class="pe-fields pe-contrast"><label>Original grid<select name="grid"></select></label>'+
       '<label>Baseline scenario<select name="baseline"></select></label>'+
-      '<label>Alternative scenario<select name="alternative"></select></label>'+
-      '<label>Native model version<select name="native_version"></select></label></div>'+
-      '<p data-pe-grid class="pe-meta"></p><p data-pe-pair-status role="status"></p><div data-pe-pairs></div>'+
+      '<label>Alternative scenario<select name="alternative"></select></label></div>'+
+      '<p>Run choices show the version that produced each model output. Each selected quantity must use the same producing version across all included runs.</p>'+
+      '<p data-pe-grid class="pe-meta"></p><p data-pe-pair-status role="status"></p><p data-pe-version-status role="status"></p><div data-pe-pairs></div>'+
       '<fieldset class="pe-quantities"><legend>Physical outputs present in every selected pair</legend>'+
       Object.keys(names).map(name=>'<label><input type="checkbox" name="pollutant" value="'+name+'"> '+names[name]+'</label>').join('')+'</fieldset>'+
       '<div class="pe-fields"><label>Pixel support<select name="support">'+Object.entries(supportNames).map(([id,label])=>'<option value="'+id+'">'+esc(label)+'</option>').join('')+'</select>'+
@@ -168,7 +194,6 @@ export function attachPairedEnsembles(context) {
     field('design').innerHTML=options((result.designs||[]).filter(row=>row.alternative_scenario_ids.length),'Choose native pairs below');
     for(const [name,selected] of Object.entries(savedDraft?.fields||{}))if(field(name))field(name).value=selected;
     if(!value('grid')&&result.grids.length===1)field('grid').value=result.grids[0].id;
-    versions();
     designs();
     choices=new Map(savedDraft?.choices||[]);
     imported=savedDraft?.imported||null;
@@ -177,12 +202,6 @@ export function attachPairedEnsembles(context) {
       node.checked=!node.disabled&&(savedDraft?.pollutants?.includes(node.value)??true);
     renderProducts(result.products||[]);
     notify(result.saved_view_error||'Original run catalogue loaded.',!!result.saved_view_error);
-  }
-  function versions() {
-    const previous=value('native_version')||savedDraft?.fields?.native_version;
-    const versions=[...new Set((catalog?.runs||[]).filter(row=>row.selection.grid_id===value('grid')).map(row=>row.selection.invest_version))].sort();
-    field('native_version').innerHTML=versions.map(id=>'<option value="'+esc(id)+'">'+esc(id)+'</option>').join('');
-    if(versions.includes(previous))field('native_version').value=previous;
   }
   function designs() {
     const previous=value('design_scenario')||savedDraft?.fields?.design_scenario;
@@ -196,8 +215,8 @@ export function attachPairedEnsembles(context) {
   }
   function renderPairs(preserve=false) {
     if(!catalog)return;
-    const grid=value('grid'), baseline=value('baseline'), alternative=value('alternative'), native=value('native_version');
-    const runs=catalog.runs.filter(row=>row.selection.grid_id===grid&&row.selection.invest_version===native&&[baseline,alternative].includes(row.selection.scenario_id));
+    const grid=value('grid'), baseline=value('baseline'), alternative=value('alternative');
+    const runs=catalog.runs.filter(row=>row.selection.grid_id===grid&&[baseline,alternative].includes(row.selection.scenario_id));
     const ids=[...new Set(runs.map(row=>row.selection.profile_id))].sort((a,b)=>profileName(a).localeCompare(profileName(b))||a.localeCompare(b));
     const prior=preserve?choices:new Map();choices=new Map();pairRows=[];
     for(const id of ids){
@@ -206,12 +225,17 @@ export function attachPairedEnsembles(context) {
       const after=ranked(all.filter(row=>row.state==='complete'&&row.selection.scenario_id===alternative));
       if(!baseline||!alternative||baseline===alternative)continue;
       const previous=prior.get(id),ready=before.length>0&&after.length>0;
-      choices.set(id,{baseline:before.some(row=>row.id===previous?.baseline)?previous.baseline:before[0]?.id,
-        alternative:after.some(row=>row.id===previous?.alternative)?previous.alternative:after[0]?.id,
+      let suggested=[before[0],after[0]],best=-1;
+      for(const first of before)for(const second of after){
+        const count=Object.keys(names).filter(name=>!nativeOutputIssue([first,second],name)).length;
+        if(count>best){suggested=[first,second];best=count;}
+      }
+      choices.set(id,{baseline:before.some(row=>row.id===previous?.baseline)?previous.baseline:suggested[0]?.id,
+        alternative:after.some(row=>row.id===previous?.alternative)?previous.alternative:suggested[1]?.id,
         included:ready&&(previous?.included??true)});
       pairRows.push({id,before,after,all,ready});
     }
-    const runOptions=(rows,selected)=>rows.map(row=>'<option value="'+row.id+'"'+(row.id===selected?' selected':'')+'>'+short(row.id)+' · '+row.available_pollutants.map(id=>names[id]).join(', ')+'</option>').join('');
+    const runOptions=(rows,selected)=>rows.map(row=>'<option value="'+row.id+'"'+(row.id===selected?' selected':'')+'>'+short(row.id)+' · '+row.available_pollutants.map(id=>names[id]).join(', ')+' · '+esc(nativeRunLabel(row))+'</option>').join('');
     query('[data-pe-pairs]').innerHTML=pairRows.length?table(['Include','Parameter profile','Baseline native run','Alternative native run'],pairRows.map(row=>{
       const choice=choices.get(row.id);
       const missing=side=>row.all.filter(run=>run.selection.scenario_id===(side==='before'?baseline:alternative)).map(run=>run.state).join(', ')||'missing';
@@ -219,7 +243,7 @@ export function attachPairedEnsembles(context) {
         '<th scope="row">'+esc(profileName(row.id))+'<small><code>'+short(row.id)+'</code></small></th>'+
         '<td>'+(row.before.length?'<select data-pe-run="baseline" data-profile="'+row.id+'" aria-label="Baseline for '+esc(profileName(row.id))+'">'+runOptions(row.before,choice.baseline)+'</select>':esc(missing('before')))+'</td>'+
         '<td>'+(row.after.length?'<select data-pe-run="alternative" data-profile="'+row.id+'" aria-label="Alternative for '+esc(profileName(row.id))+'">'+runOptions(row.after,choice.alternative)+'</select>':esc(missing('after')))+'</td></tr>';
-    })):'<p>Choose a grid, two distinct scenarios, and their native model version. Completed runs will appear under their original parameter profile.</p>';
+    })):'<p>Choose a grid and two distinct scenarios. Completed runs will appear under their original parameter profile with their producing model versions.</p>';
     const gridRecord=catalog.grids.find(row=>row.id===grid);
     query('[data-pe-grid]').textContent=gridRecord?'Original grid '+gridRecord.id:'';
     field('planned').value=Math.max(Number(value('planned'))||1,ids.length,imported?.planned_member_count||0);
@@ -233,12 +257,11 @@ export function attachPairedEnsembles(context) {
   }
   function updateQuantities(initial=false) {
     const selected=selectedPairs();
-    let common=new Set(Object.keys(names));
-    for(const pair of selected){
-      const before=catalog.runs.find(row=>row.id===pair.baseline_run_id);
-      const after=catalog.runs.find(row=>row.id===pair.alternative_run_id);
-      common=new Set([...common].filter(id=>before?.available_pollutants.includes(id)&&after?.available_pollutants.includes(id)));
-    }
+    const originalRuns=selectedNativeRuns(catalog.runs,selected);
+    const reasons=Object.fromEntries(Object.keys(names).map(name=>[name,nativeOutputIssue(originalRuns,name)]));
+    const common=new Set(Object.keys(names).filter(name=>!reasons[name]));
+    query('[data-pe-version-status]').textContent=selected.length?
+      [...new Set(Object.entries(reasons).filter(([,reason])=>reason).map(([name,reason])=>names[name]+': '+reason))].join(' '):'';
     for(const node of root.querySelectorAll('[name="pollutant"]')){
       const eligible=selected.length>0&&common.has(node.value),wasDisabled=node.disabled;
       node.disabled=!eligible;
@@ -255,7 +278,7 @@ export function attachPairedEnsembles(context) {
     const pairs=selectedPairs();
     if(!pairs.length)throw Error('Select at least one completed same-profile native pair.');
     const pollutants=[...root.querySelectorAll('[name="pollutant"]:checked')].filter(node=>!node.disabled).map(node=>node.value);
-    if(!pollutants.length)throw Error('Select a physical output present in every selected pair.');
+    if(!pollutants.length)throw Error('Select a physical output with matching producing versions in every selected pair.');
     const title=value('title').trim(),purpose=value('purpose').trim();
     if(!title||!purpose)throw Error('Describe the analysis title and scientific question.');
     const parts=value('quantiles').split(',').map(part=>part.trim());
@@ -289,14 +312,19 @@ export function attachPairedEnsembles(context) {
       planned:selected.planned_member_count??selected.pairs.length,memory:selected.memory_mb??256,
       tile:selected.tile_size??256,handles:selected.max_open_datasets??48};
     for(const [name,content] of Object.entries(mapping))if(field(name))field(name).value=content;
-    versions();field('native_version').value=before.selection.invest_version;
     choices=new Map(selected.pairs.map(pair=>[pair.profile_id,{baseline:pair.baseline_run_id,alternative:pair.alternative_run_id,included:true}]));
     for(const run of catalog.runs)if(!choices.has(run.selection.profile_id))choices.set(run.selection.profile_id,{included:false});
     renderPairs(true);
     const actual=selectedPairs();
     if(actual.length!==selected.pairs.length||actual.some(pair=>!selected.pairs.some(wanted=>wanted.profile_id===pair.profile_id&&wanted.baseline_run_id===pair.baseline_run_id&&wanted.alternative_run_id===pair.alternative_run_id)))
       throw Error('The original selected native pair is unavailable. Refresh its retained run state before resuming.');
-    for(const node of root.querySelectorAll('[name="pollutant"]'))node.checked=!node.disabled&&(selected.pollutants||Object.keys(names)).includes(node.value);
+    const retainedOutputs=selected.pollutants||Object.keys(names);
+    const retainedRuns=selectedNativeRuns(catalog.runs,selected.pairs);
+    for(const output of retainedOutputs){
+      const issue=nativeOutputIssue(retainedRuns,output);
+      if(issue)throw Error((names[output]||output)+': '+issue+' The retained selection is unchanged.');
+    }
+    for(const node of root.querySelectorAll('[name="pollutant"]'))node.checked=retainedOutputs.includes(node.value);
     for(const name of Object.keys(names))field('threshold_'+name).value=selected.improvement_thresholds?.[name]??'';
     imported={...(imported||{}),description:selected.input_description||null};
     version++;captureDraft();
@@ -307,8 +335,9 @@ export function attachPairedEnsembles(context) {
     const result=await api(url('/api/paired-ensemble/cohort',{design_id,scenario_id},key),{signal:reads.signal});
     if(!current(token,key)||revision!==version)return;
     query('[data-pe-design-status]').textContent=result.selected_member_count+' complete pairs of '+result.planned_member_count+' planned profiles.';
+    const incompatible=Object.entries(result.incompatible_pollutants||{}).map(([name,reason])=>(names[name]||name)+': '+reason).join(' ');
     if(!result.ready){
-      notify(result.selected_member_count?'Completed pairs need a common physical output before analysis.':'These original native cases are still unfinished. Open Scenario sensitivity to run or resume this design.');
+      notify(incompatible||(result.selected_member_count?'Completed pairs need a common physical output before analysis.':'These original native cases are still unfinished. Open Scenario sensitivity to run or resume this design.'));
       return;
     }
     imported={design_id,planned_member_count:result.planned_member_count,description:result.selection.input_description};
@@ -316,7 +345,7 @@ export function attachPairedEnsembles(context) {
     const pending=result.pending_members||[];
     query('[data-pe-design-status]').textContent=result.selected_member_count+' complete pairs of '+result.planned_member_count+' planned profiles.'+
       (pending.length?' Pending profiles: '+pending.map(row=>row.label+' ('+row.baseline_state+' / '+row.alternative_state+')').join('; '):'');
-    notify('Completed original design pairs loaded. Review the outputs and support rule, then build.');
+    notify('Completed original design pairs loaded. Review the outputs and support rule, then build.'+(incompatible?' '+incompatible:''));
   }
   async function preview() {
     const token=epoch,key=workspace,revision=version,selected=selection();
@@ -327,6 +356,7 @@ export function attachPairedEnsembles(context) {
       '<p>'+number(result.members)+' selected profiles of '+number(result.planned_member_count)+' planned; '+
       result.pollutants.map(name=>esc(names[name])).join(', ')+'.</p>'+
       '<p>'+esc(result.effect_direction)+'. '+esc(supportNames[result.support])+'.</p>'+
+      '<details><summary>Producing model versions and original runtime records</summary><pre>'+esc(JSON.stringify(result.native_version_provenance,null,2))+'</pre></details>'+
       '<details><summary>Profiles, source references and original grid</summary><pre>'+esc(JSON.stringify(result.source_references,null,2))+'</pre></details></div>';
     notify('Source binding is ready for this selection.');
   }
@@ -613,9 +643,8 @@ export function attachPairedEnsembles(context) {
     if(node.dataset.peProfile){const row=choices.get(node.dataset.peProfile);if(row)row.included=node.checked;updateQuantities();}
     else if(node.dataset.peRun){const row=choices.get(node.dataset.profile);if(row)row[node.dataset.peRun]=node.value;updateQuantities();}
     else if(node.name==='design')designs();
-    else if(['grid','baseline','alternative','native_version'].includes(node.name)){
+    else if(['grid','baseline','alternative'].includes(node.name)){
       imported=null;field('planned').value=1;
-      if(node.name==='grid')versions();
       renderPairs(false);
       query('[data-pe-design-status]').textContent='';
     }
