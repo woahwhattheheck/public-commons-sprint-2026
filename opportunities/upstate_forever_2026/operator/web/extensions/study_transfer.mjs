@@ -9,7 +9,8 @@ const ROOTS = [
 const rootLabels = Object.fromEntries(ROOTS);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
-  staging:'Preparing original study files', archiving:'Writing and verifying archive',
+  staging:'Preparing original study files', investigations:'Saving investigation history',
+  archiving:'Writing and verifying archive',
   publishing:'Saving archive', complete:'Ready', failed:'Needs attention',
   interrupted:'Interrupted', cancelled:'Cancelled'
 };
@@ -42,7 +43,9 @@ export function attachStudyTransfer(host) {
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
   let taskSignature='',lastError='',requestSerial=0;
   let pendingSubmission=null;
-  let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:null;
+  let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
+    typeof host.openExtension==='function'?
+      selection=>host.openExtension('project-transfer','openForStudy',selection):null;
   const requests=new Set();
   const workspaceNow=()=>host.getWorkspace?.()??host.getState()?.workspace_key??null;
   const current=stamp=>root&&stamp.epoch===epoch&&stamp.workspace===workspace&&workspace===workspaceNow();
