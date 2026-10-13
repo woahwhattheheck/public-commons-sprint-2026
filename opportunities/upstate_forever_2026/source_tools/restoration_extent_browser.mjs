@@ -17,8 +17,17 @@ async function verify(item){const body=await fs.readFile(path.join(out,item.path
 let prior;try{prior=JSON.parse(await fs.readFile(path.join(out,'result.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
 if(prior){if(prior.state!=='complete'||prior.selection_sha256!==selectionSHA)throw Error('This browser output belongs to another original selected study.');for(const file of prior.files)await verify(file);process.stdout.write(JSON.stringify(prior)+'\n');process.exit(0);}
 const ownerPath=path.join(out,'.browser-owner.json');let owner;
+async function proc(pid){try{const text=await fs.readFile('/proc/'+pid+'/stat','utf8'),fields=text.slice(text.lastIndexOf(')')+2).split(' ');return {pid:Number(pid),state:fields[0],pgid:Number(fields[2]),start_ticks:fields[19]};}catch(e){if(e.code==='ENOENT'||e.code==='ESRCH')return null;throw e;}}
+try{
+ const old=JSON.parse(await fs.readFile(ownerPath,'utf8'));
+ if(old.selection_sha256!==selectionSHA||!Number.isInteger(old.pid)||!old.start_ticks)throw Error('Retain the exact original browser owner identity.');
+ const live=await proc(old.pid);if(live&&live.start_ticks===old.start_ticks&&live.state!=='Z')throw Error('The original browser is still alive.');
+ if(!live||live.start_ticks===old.start_ticks)for(const name of await fs.readdir('/proc'))if(/^\d+$/.test(name)){const member=await proc(name);if(member&&member.pgid===old.pid&&member.state!=='Z')throw Error('The original browser process group still owns this continuation.');}
+ await fs.rename(ownerPath,path.join(out,attempt+'-retired-owner.json'));
+}catch(e){if(e.code!=='ENOENT')throw e;}
 try{owner=await fs.open(ownerPath,'wx',0o600);}catch(e){throw Error('The existing browser course has an owner file. Reconcile that exact original process before continuation: '+e.message);}
-await owner.writeFile(JSON.stringify({pid:process.pid,selection_sha256:selectionSHA}));
+const self=await proc(process.pid);
+await owner.writeFile(JSON.stringify({pid:process.pid,start_ticks:self.start_ticks,selection_sha256:selectionSHA}));
 let chromium;
 let context=null,closePromise=null,interrupted=false,routeError=null,closed=false;
 const files=[],observations=[],errors=[];

@@ -205,7 +205,7 @@ export function createRestorationExtents(host){
   const target=$('#extent-report-output');if(!target)return;
   if(!report){target.innerHTML='<p>No response report has been retained. Complete the original selected native runs, then build a report. Their actual states stay visible above.</p>';return;}
   const groups=new Map();for(const row of report.curves){const key=row.pollutant+' · '+row.units;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
-  target.innerHTML='<h3>Retained native response report</h3><p>'+esc(report.title)+' · <code>'+esc(report.id)+'</code></p><div class="extent-tools">'+(report._downloads||[]).map(x=>'<a href="'+esc(x.url)+(x.url.includes('?')?'&':'?')+'download=1" download>'+esc(x.filename||x.artifact_id)+'</a>').join('')+'</div><p>Lines connect discrete original scenarios, without fitting a response model. Negative reduction means increased export. Placement alternatives are not additive.</p>'+[...groups].map(([name,rows])=>'<section><h4>'+esc(name)+'</h4>'+plot(rows)+'</section>').join('')+'<h4>Exact native values and common support</h4>'+reportTable(report.curves,[['placement_title','Placement'],['width_m','Width each side (m)'],['changed_area_ha','Changed ha'],['corridor_area_ha','Corridor ha'],['native_export','Native export'],['export_reduction','Signed reduction'],['units','Units'],['percent_reduction','Reduction %'],['common_valid_cells','Common cells'],['common_area_ha','Common ha'],['common_coverage_fraction','Common coverage'],['status','Status']])+'<h4>Marginal response</h4>'+reportTable(report.marginals,[['placement_id','Placement'],['pollutant','Pollutant'],['from_width_m','From width'],['to_width_m','To width'],['additional_changed_area_ha','Additional changed ha'],['additional_export_reduction','Additional reduction'],['marginal_reduction_per_ha','Reduction / additional ha'],['units','Units'],['status','Status']])+'<dl>'+Object.entries(report.interpretation).map(([k,v])=>'<dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl><details><summary>Complete original report and source identities</summary><pre>'+esc(JSON.stringify(report,null,2))+'</pre></details>';
+  target.innerHTML='<h3>Retained native response report</h3><p>'+esc(report.title)+' · <code>'+esc(report.id)+'</code></p><div class="extent-tools">'+(report._downloads||[]).map(x=>'<a href="'+esc(x.url)+(x.url.includes('?')?'&':'?')+'download=1" download>'+esc(x.filename||x.artifact_id)+'</a>').join('')+'</div><p>Lines connect discrete original scenarios, without fitting a response model. Negative reduction means increased export. Placement alternatives are not additive.</p>'+[...groups].map(([name,rows])=>'<section><h4>'+esc(name)+'</h4>'+plot(rows)+'</section>').join('')+'<h4>Exact native values and common support</h4>'+reportTable(report.curves,[['placement_title','Placement'],['pollutant','Pollutant'],['width_m','Width each side (m)'],['changed_area_ha','Changed ha'],['corridor_area_ha','Corridor ha'],['native_export','Native export'],['export_reduction','Signed reduction'],['units','Units'],['percent_reduction','Reduction %'],['common_valid_cells','Common cells'],['common_area_ha','Common ha'],['common_coverage_fraction','Common coverage'],['status','Status']])+'<h4>Marginal response</h4>'+reportTable(report.marginals,[['placement_id','Placement'],['pollutant','Pollutant'],['from_width_m','From width'],['to_width_m','To width'],['additional_changed_area_ha','Additional changed ha'],['additional_export_reduction','Additional reduction'],['marginal_reduction_per_ha','Reduction / additional ha'],['units','Units'],['status','Status']])+'<dl>'+Object.entries(report.interpretation).map(([k,v])=>'<dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl><details><summary>Complete original report and source identities</summary><pre>'+esc(JSON.stringify(report,null,2))+'</pre></details>';
  }
  async function openStudy(id){
   const e=epoch,w=workspace,owner=working,seq=++selectionEpoch,value=await host.api(endpoint('/api/restoration-extents/inspect',{id}));
@@ -226,6 +226,9 @@ export function createRestorationExtents(host){
    if(!active(e,w)||working!==owner||owner.pending!==pending)throw Error('The current working copy changed before dispatch.');
    result=await host.api('/api/actions',{method:'POST',body:clone(pending.request)});
    taskMatch(result,pending.request);
+   attempt.raw_result=clone(result);owner.sequence++;await remember(owner);
+   const confirmed=await host.api('/api/restoration-extents/task?'+new URLSearchParams({workspace:w,id:result.id}));
+   taskMatch(confirmed,pending.request,result.id,result);result=confirmed;
   }catch(err){
    attempt.state=attempt.state==='DISPATCHING'?'RETURN_UNCERTAIN':'NOT_DISPATCHED';attempt.error=err.message;pending.last_error=err.message;
    owner.updated_at=new Date().toISOString();owner.sequence++;remember(owner).catch(()=>{});
@@ -255,7 +258,7 @@ export function createRestorationExtents(host){
   try{
    for(const row of owner.tasks){
     if(!['queued','running','interrupted','failed','cancelled','complete'].includes(row.task.state))continue;
-    const value=await host.api(endpoint('/api/task',{id:row.task.id}));if(!active(e,w)||working!==owner)return;
+    const value=await host.api(endpoint('/api/restoration-extents/task',{id:row.task.id}));if(!active(e,w)||working!==owner)return;
     taskMatch(value,row.request,row.task.id,row.task);
     if(canonical(row.task)!==canonical(value)){row.task=value;modified=true;}
    }
@@ -272,6 +275,9 @@ export function createRestorationExtents(host){
   try{
    owner.history.push({kind:'resume-original-task',task_id:id,request:clone(row.request),observed_at:new Date().toISOString()});changed();
    await durable();if(!active(e,w)||working!==owner)return;
+   const original=await host.api('/api/restoration-extents/task?'+new URLSearchParams({workspace:w,id}));
+   taskMatch(original,row.request,id,row.task);
+   if(!active(e,w)||working!==owner)return;
    const result=await host.api('/api/task/resume',{method:'POST',body:{id}});
    taskMatch(result,row.request,id,row.task);row.task=result;owner.updated_at=new Date().toISOString();owner.sequence++;
    try{await remember(owner);}catch{download(JSON.stringify(owner,null,2)+'\n','Restoration_Complete_Resume_Return.json');}

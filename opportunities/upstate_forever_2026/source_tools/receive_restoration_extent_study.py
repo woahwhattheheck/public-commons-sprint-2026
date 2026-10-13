@@ -7,6 +7,9 @@ worker scheduler, or automatic scientific parameter selection.
 from __future__ import annotations
 import argparse
 import contextlib
+import fcntl
+import time
+import uuid
 import hashlib
 import json
 import os
@@ -27,20 +30,125 @@ from model import portable, restoration_extent_studies as engine
 from restoration_extent_cli import Client, selection, submit, wait_task, run_study
 
 SCHEMA = "upstate.restoration-extent-original-course/v1"
-EXCLUDED = {".git", "__pycache__", ".pytest_cache", "node_modules"}
-
 def source_manifest(application):
-    rows = []
-    for path in sorted(application.rglob("*")):
-        relative = path.relative_to(application)
-        if any(part in EXCLUDED for part in relative.parts):
+    # Bind exactly the maintained source cohort carried by the original backup.
+    return [describe_file(application, path) for path in portable._application(application)]
+
+def process_identity(pid, *, with_argv=True):
+    try:
+        raw = Path("/proc", str(pid), "stat").read_text()
+        fields = raw[raw.rfind(")") + 2:].split()
+        argv = Path("/proc", str(pid), "cmdline").read_bytes().split(b"\0") if with_argv else []
+        return {"pid": pid, "start_ticks": fields[19], "state": fields[0],
+                "pgid": int(fields[2]), "argv": [x.decode("utf-8") for x in argv if x]}
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+def owned_process(record):
+    actual = process_identity(record["pid"])
+    if actual is None or actual["start_ticks"] != record["start_ticks"] or actual["state"] == "Z":
+        return None
+    if actual["pgid"] != record["pid"] or (actual["argv"] != record["argv"] and not (
+            actual["argv"][:5] == record["launcher_prefix"] and len(actual["argv"]) == 7
+            and json.loads(actual["argv"][5]) == record["launch_record"]
+            and json.loads(actual["argv"][6]) == record["argv"])):
+        raise ValueError("Original owned process identity changed; do not signal another process.")
+    return actual
+
+def group_alive(record):
+    leader = process_identity(record["pid"], with_argv=False)
+    if leader and leader["start_ticks"] != record["start_ticks"]:
+        return False  # The PID has been reused after the original group ended.
+    for folder in Path("/proc").iterdir():
+        if not folder.name.isdigit():
             continue
-        if path.is_symlink():
-            raise ValueError("Select an ordinary immutable application copy: " + str(relative))
-        if path.is_file():
-            rows.append({"path": relative.as_posix(), "bytes": path.stat().st_size,
-                         "sha256": file_digest(path)})
-    return rows
+        actual = process_identity(int(folder.name), with_argv=False)
+        if actual and actual["pgid"] == record["pid"] and actual["state"] != "Z":
+            return True
+    return False
+
+def reconcile_children(output, binding):
+    folder = output / "private" / "children"
+    rows = [read_json(path) for path in sorted(folder.glob("*.json"))] if folder.exists() else []
+    for row in rows:
+        if row.get("binding_sha256") != digest(binding):
+            raise ValueError("Retain the exact original child/source binding before continuation.")
+    browsers = [row for row in rows if row["role"] == "browser"]
+    if any(owned_process(row) or group_alive(row) for row in browsers):
+        raise ValueError("The original owned browser or its process group is still alive; retain that run.")
+    for row in rows:
+        if row["role"] != "receiver" or not owned_process(row):
+            continue
+        # Only this exact recorded private receiver can be drained; its browser is terminal.
+        os.kill(row["pid"], signal.SIGTERM)
+        deadline = time.monotonic() + 30
+        while owned_process(row):
+            if time.monotonic() >= deadline:
+                raise ValueError("The original private receiver is still draining; preserve its lease.")
+            time.sleep(.1)
+
+@contextlib.contextmanager
+def course_lease(output, binding):
+    file = output / ".restoration-course.lock"
+    owner = output / "private" / "course-owner.json"
+    fd = os.open(file, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            if not owner.is_file():
+                raise ValueError("The original course lease is owned; reconcile its retained process first.")
+            prior = read_json(owner)
+            actual = process_identity(prior["pid"])
+            if actual and actual["start_ticks"] == prior["start_ticks"] and actual["state"] != "Z":
+                raise ValueError("The original course parent is still alive; retain its operation.")
+            if prior.get("binding_sha256") != digest(binding):
+                raise ValueError("The original course lease belongs to another exact source/input binding.")
+            reconcile_children(output, binding)
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # A dead Node can leave its own browser children after losing the parent fd.
+        reconcile_children(output, binding)
+        current = process_identity(os.getpid())
+        atomic_json(owner, {**current, "binding_sha256": digest(binding)})
+        yield fd
+    finally:
+        # Closing this copy does not release the inherited open description.
+        os.close(fd)
+
+_CHILD_BOOTSTRAP = r"""
+import json,os,sys
+from pathlib import Path
+target=Path(sys.argv[1]);record=json.loads(sys.argv[2]);argv=json.loads(sys.argv[3])
+raw=Path('/proc/self/stat').read_text();fields=raw[raw.rfind(')')+2:].split()
+launch_record=dict(record)
+record.update(pid=os.getpid(),start_ticks=fields[19],argv=argv,
+              launcher_prefix=[sys.executable,'-B','-c',record.pop('bootstrap'),str(target)],
+              launch_record=launch_record)
+body=(json.dumps(record,sort_keys=True,separators=(',',':'))+'\n').encode()
+temporary=target.with_name(target.name+'.pending')
+fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+with os.fdopen(fd,'wb') as stream:
+    stream.write(body);stream.flush();os.fsync(stream.fileno())
+os.rename(temporary,target)
+fd=os.open(target.parent,os.O_RDONLY|os.O_DIRECTORY)
+try:os.fsync(fd)
+finally:os.close(fd)
+os.execvpe(argv[0],argv,os.environ)
+"""
+
+def owned_popen(command, role, output, binding, lease_fd, **kwargs):
+    folder = output / "private" / "children"
+    folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+    record_path = folder / (role + "-" + uuid.uuid4().hex + ".json")
+    # The immutable pre-exec receipt includes the exact launcher without recursive arguments.
+    record = {"schema": "upstate.restoration-owned-process/v1", "role": role,
+              "binding_sha256": digest(binding), "argv": command,
+              "lease": str(output / ".restoration-course.lock"), "bootstrap": _CHILD_BOOTSTRAP}
+    launcher = [sys.executable, "-B", "-c", _CHILD_BOOTSTRAP, str(record_path),
+                json.dumps(record), json.dumps(command)]
+    # /proc cmdline during this short bootstrap is accepted by its fixed prefix and exact record path.
+    process = subprocess.Popen(launcher, pass_fds=(lease_fd,), start_new_session=True, **kwargs)
+    return process, record_path
 
 def disjoint(*roots):
     for index, first in enumerate(roots):
@@ -130,7 +238,7 @@ def archive_case(output, names):
     return destination
 
 @contextlib.contextmanager
-def received_server(application, workspace, private, output):
+def received_server(application, workspace, private, output, binding, lease_fd):
     """One source-native receiver. Its process owns only the cold received copy."""
     private.mkdir(parents=True, exist_ok=True, mode=0o700)
     connection = private / "connection.json"
@@ -138,9 +246,9 @@ def received_server(application, workspace, private, output):
     port = read_json(port_file)["port"] if port_file.exists() else 0
     # Execute the received original server, not the donor imported module graph.
     log = (private / "server.stderr.log").open("ab")
-    process = subprocess.Popen([sys.executable, "-B", str(application / "operator/server.py"),
+    process, _ = owned_popen([sys.executable, "-B", str(application / "operator/server.py"),
         "--workspace", str(workspace), "--operator-state", str(private / "operator-state"),
-        "--port", str(port)], stdout=subprocess.PIPE, stderr=log)
+        "--port", str(port)], "receiver", output, binding, lease_fd, stdout=subprocess.PIPE, stderr=log)
     try:
         if process.stdout is None:
             raise RuntimeError("Original received server has no startup return.")
@@ -172,7 +280,7 @@ def received_server(application, workspace, private, output):
         if code not in (0, -signal.SIGTERM):
             raise RuntimeError("Original received server did not close cleanly; its private log is retained.")
 
-def browse(args, output, original_connection, receiving_connection, configuration):
+def browse(args, output, original_connection, receiving_connection, configuration, lease_fd):
     config_path = output / "Browser_Continuation.json"
     # Connection capabilities live outside the deliverable. Only stable IDs are frozen here.
     keep(config_path, configuration)
@@ -190,7 +298,8 @@ def browse(args, output, original_connection, receiving_connection, configuratio
                "--browser", args.browser, "--playwright", args.playwright,
                "--profile", str(output / "private/browser-profile")]
     with (output / "browser.stdout.log").open("ab") as stdout, (output / "browser.stderr.log").open("ab") as stderr:
-        process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+        process, _ = owned_popen(command, "browser", output, configuration["binding"], lease_fd,
+                                  stdout=stdout, stderr=stderr)
         try:
             code = process.wait()
         except BaseException:
@@ -234,7 +343,7 @@ def run(args):
         "workspace_key": workspace_key, "definition_file_sha256": hashlib.sha256(raw).hexdigest(),
         "definition_sha256": digest(definition), "application_source_sha256": digest(source)}
     output.mkdir(parents=True, exist_ok=True)
-    with held(output / ".restoration-course.lock", blocking=False):
+    with course_lease(output, binding) as lease_fd:
         keep(output / "binding.json", binding)
         keep(output / "Application_Source_Manifest.json", source)
         atomic_bytes(output / "Original_Authored_Definition.json", raw, immutable=True)
@@ -311,10 +420,10 @@ def run(args):
             "author_workspace": operator.workspace,
             "receiver_workspace": digest({"directory": str(receiver_workspace.resolve())})}
         if (output / "browser/result.json").exists():
-            browser = browse(args, output, args.connection.resolve(), output / "private/connection.json", browser_config)
+            browser = browse(args, output, args.connection.resolve(), output / "private/connection.json", browser_config, lease_fd)
         else:
-            with received_server(receiver_source, receiver_workspace, output / "private", output) as receiver_connection:
-                browser = browse(args, output, args.connection.resolve(), receiver_connection, browser_config)
+            with received_server(receiver_source, receiver_workspace, output / "private", output, binding, lease_fd) as receiver_connection:
+                browser = browse(args, output, args.connection.resolve(), receiver_connection, browser_config, lease_fd)
         names = ["binding.json", "Application_Source_Manifest.json", "Original_Authored_Definition.json",
                  "Prepared_Original_Study.json", "Original_Stream_Field_Preview.json",
                  "Native_Run_Receipts.json", "Completed_Original_Study.json",

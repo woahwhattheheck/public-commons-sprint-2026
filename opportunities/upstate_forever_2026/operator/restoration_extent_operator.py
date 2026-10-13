@@ -5,7 +5,7 @@ TokenJunkieLabs. Scientific preparation/accounting remains in the original model
 from __future__ import annotations
 import copy
 from pathlib import Path
-from model.common import identifier, read_json, relative_file, file_digest, atomic_bytes, describe_file, verify_file
+from model.common import identifier, read_json, relative_file, file_digest, atomic_bytes, describe_file, verify_file, digest
 import restoration_extent_reports as readable
 from model import restoration_extent_studies as studies
 
@@ -103,6 +103,21 @@ def _tickets(operator, workspace_key, value):
 
 
 def read(operator, workspace_key, operation, payload):
+    if operation == "task":
+        original = operator.task(identifier(payload.get("id")))
+        if (original["workspace"] != workspace_key
+                or original["action"] not in ACTIONS | {"run.start"}):
+            raise ValueError("Choose an original restoration/native task in this Workspace.")
+        expected = digest({k: original[k] for k in ("workspace", "action", "payload")})
+        if original.get("request_sha256") != expected:
+            raise ValueError("The original task's source request digest is invalid.")
+        # Hash the original Python record, preserving its numeric representation.
+        # The original view owns all download/native-job decoration.
+        current = operator.task_view(original["id"])
+        if any(current.get(k) != original.get(k) for k in
+               ("id", "workspace", "operation_id", "action", "payload", "request_sha256")):
+            raise ValueError("The original task binding changed during receiving.")
+        return current
     if operation == "catalog":
         return catalog(operator, workspace_key)
     if operation == "source-fields":
