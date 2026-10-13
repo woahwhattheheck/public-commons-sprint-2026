@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "catchment-interpretation",
+  "components": {
+    "catchment-interpretation": {
+      "title": "Whole-catchment annual yields and original spatial-dependence reporting",
+      "paths": [
+        "model/catchment_interpretation.py",
+        "model/CATCHMENT_INTERPRETATION.md",
+        "model/observation_diagnostics.py",
+        "model/calibration_maps.py",
+        "model/calibration_review.py",
+        "model/calibration_report_source.py"
+      ],
+      "requires": [
+        "core",
+        "calibration",
+        "scientific-report-editions"
+      ]
+    }
+  },
+  "extend_components": {
+    "core": {
+      "paths": [
+        "model/catchment_interpretation.py",
+        "model/CATCHMENT_INTERPRETATION.md"
+      ]
+    }
+  },
+  "required_components": [
+    "catchment-interpretation"
+  ],
+  "source_reference": "Existing original observation comparisons, calibration spatial groups and scientific report consumers"
+}
