@@ -14,7 +14,7 @@
       "companions": [
         {
           "path": "README.md",
-          "sha256": "ccfe101d62f990d50fa675e91b5e45a39ce9fa16dc0bd6fe14b80277224b58cf"
+          "sha256": "0d24fc223e5238549348dd4af64dfe7318c9ff3866e20658e397333b00f5fe2b"
         },
         {
           "path": "analysis_core.mjs",
@@ -30,7 +30,7 @@
         },
         {
           "path": "explorer.html",
-          "sha256": "6f03fe164c9dcfd8c079b3acf974d5b1e6fc69f3ba336ea1c62b1fd511617ed6"
+          "sha256": "21f925946d0d10cea1e4dd3edbc9e46164fbba81f098f7346d51a071aad42ed6"
         },
         {
           "path": "explorer.mjs",
