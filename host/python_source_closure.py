@@ -368,6 +368,7 @@ class Collector:
         self.files, self.aliases, self.queue, self.visited = {}, {}, [], set()
         self.resolved, self.external, self.computed, self.errors = [], [], [], []
         self.references, self.module_cache = 0, {}
+        self.namespace_directories = set()
         self.dynamic = {(r["source"], r["line"], r["column"]): r for r in spec.get("dynamic_imports", [])}
         self.used_dynamic = set()
         if python_environment is None:
@@ -445,6 +446,8 @@ class Collector:
                     result = {"kind": "missing", "module": name, "missing": prefix, "parents": bodies}
                 self.module_cache[name] = result
                 return result
+            if found["kind"] == "namespace":
+                self.namespace_directories.update(found["locations"])
             if "path" in found:
                 body = {"path": found["path"], "module": prefix,
                         "package": prefix if found["kind"] == "package" else prefix.rpartition(".")[0]}
@@ -651,6 +654,7 @@ class Collector:
                  {"positions": [list(key) for key in sorted(unused)]})
         unmapped = sum(not row["mapped"] for row in self.computed)
         directories = set(root for root in self.spec["module_roots"] if root != ".")
+        directories.update(self.namespace_directories)
         for row in self.resolved:
             directories.update(row.get("namespace_locations", []))
         for name in list(self.files) + list(directories):
