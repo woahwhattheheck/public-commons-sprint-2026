@@ -1,6 +1,7 @@
 import {createPublishedReviewReports} from "./published_review_reports.mjs";
 import {createPublishedMicrobialSelection} from "./published_microbial_selection.mjs";
 import {createPublishedOriginalReports} from "./published_original_reports.mjs";
+import {createPublishedInterpretation} from "./published_interpretation.mjs";
 
 const PARAMETERS = {
   total_phosphorus: "Total phosphorus", total_nitrogen: "Total nitrogen",
@@ -71,6 +72,11 @@ export function createPublishedStudiesDesk(host) {
   const originalReports = createPublishedOriginalReports(host, {
     context: () => ({workspace, study_id:complete?.record?.study_id, version_id:complete?.record?.version_id, view:viewGeneration}),
     exportComplete: value => queue("published-study.export", value),
+  });
+  const monitoringInterpretation = createPublishedInterpretation(host, {
+    context: () => ({workspace, busy, view:viewGeneration, complete, selection:copy(selection), sourceRoots:arr(catalog?.source_roots)}),
+    api: (path, body) => api(path, body),
+    queue: (action, payload) => queue(action, payload),
   });
   function originalReportLink(item, title) {
     return item?.path && item.preview_url
@@ -216,6 +222,7 @@ export function createPublishedStudiesDesk(host) {
   function renderReview() {
     if (!node) return;
     microbialSelection.update();
+    monitoringInterpretation.update();
     const control = find("[data-ps-review]");
     const reviews = arr(catalog?.reviews);
     control.innerHTML = '<option value="">Choose a saved review</option>' + reviews.map(item =>
@@ -381,6 +388,7 @@ export function createPublishedStudiesDesk(host) {
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
       '<button type="button" data-ps-action="export" disabled>Export complete study</button></div></section>' +
 
+      '<section data-ps-monitoring-interpretation aria-label="Monitoring interpretation"></section>' +
       '<section class="ps-reviews" aria-label="Saved study reviews"><h2>Study reviews</h2>' +
       '<div class="ps-review-open"><label>Saved review<select data-ps-review><option value="">Choose a saved review</option></select></label>' +
       '<button type="button" data-ps-action="open-review" disabled>Open review</button>' +
@@ -802,6 +810,7 @@ export function createPublishedStudiesDesk(host) {
       pending.delete(task.id); operationIds.delete(entry.key);
       if (!node || workspace !== entry.workspace || host.getWorkspace() !== entry.workspace) continue;
       relevant = true;
+      if (monitoringInterpretation.completed(task, entry)) continue;
       microbialSelection.completed(task, entry);
       if (taskCanSelect(entry) && entry.action === "published-study.microbial-selection.prepare") {
         selection = emptySelection(); tab = "observed"; savedReview = null; reviewChoice = "";
@@ -809,7 +818,7 @@ export function createPublishedStudiesDesk(host) {
         interpretationMatches = true;
       }
       if (reviewReports.completed(task, entry)) continue;
-      if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source"].includes(entry.action)) preferred = task.result;
+      if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source","published-study.interpretation.export"].includes(entry.action)) preferred = task.result;
     }
     if (!relevant) return;
     status("Study task completed. " + (preferred ? "" : "Saved results are available in the catalogue and task."));
@@ -823,7 +832,7 @@ export function createPublishedStudiesDesk(host) {
       viewGeneration === expectedView && host.getWorkspace() === expectedWorkspace;
     const key = canonical({workspace,action,payload});
     if (!operationIds.has(key)) operationIds.set(key, "published-study-" + crypto.randomUUID());
-    if (!["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source"].includes(action)) ++editGeneration;
+    if (!["published-study.export","published-study.report","published-study.review.export","published-study.review.prepare-source","published-study.interpretation.export"].includes(action)) ++editGeneration;
     const entry = {action,key,workspace:expectedWorkspace,view:expectedView,edit:editGeneration};
     busy = true; renderCatalog(); renderReview(); status("Queueing study task…");
     try {
@@ -926,6 +935,7 @@ export function createPublishedStudiesDesk(host) {
 
   function update(state = host.getState()) {
     if (!node || host.getWorkspace() !== workspace) return;
+    monitoringInterpretation.update(state);
     const relevant = tasksFrom(state).filter(task => String(task.action || "").startsWith("published-study."));
     const stamp = relevant.map(task => task.id + ":" + task.state).sort().join("|");
     if (stamp === taskStamp) return; taskStamp = stamp;
@@ -963,6 +973,7 @@ export function createPublishedStudiesDesk(host) {
     frame(); renderGeographic();
     originalReports.mount(find("[data-ps-original-report-view]"));
     microbialSelection.mount(find("[data-ps-microbial-selection]"));
+    monitoringInterpretation.mount(find("[data-ps-monitoring-interpretation]"));
     node.addEventListener("click",click,{signal:events.signal});
     node.addEventListener("submit",submit,{signal:events.signal});
     node.addEventListener("input",event => {
@@ -983,7 +994,7 @@ export function createPublishedStudiesDesk(host) {
     renderReview(); update(state); refreshCatalog();
   }
   function detach() {
-    remember(); reviewReports.detach(); microbialSelection.detach(); originalReports.detach();
+    remember(); reviewReports.detach(); microbialSelection.detach(); originalReports.detach(); monitoringInterpretation.detach();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
     ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null; directReviewOpening = null;
     if (node) node.classList.remove("published-studies-desk");
