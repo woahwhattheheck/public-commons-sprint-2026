@@ -201,8 +201,9 @@ def _manifest_from_archive(archive):
     if not isinstance(entries, list) or not entries:
         raise ValueError("Delivery contains no complete file inventory")
     profile = value.get("application_profile")
-    roster = APPLICATION_FILES if profile == APPLICATION_PROFILE else LEGACY_APPLICATION_FILES
-    if profile not in (None, APPLICATION_PROFILE):
+    roster = (APPLICATION_FILES if profile == APPLICATION_PROFILE else
+              CASE_APPLICATION_FILES if profile == CASE_APPLICATION_PROFILE else LEGACY_APPLICATION_FILES)
+    if profile not in (None, CASE_APPLICATION_PROFILE, APPLICATION_PROFILE):
         raise ValueError("Unsupported application source profile")
     expected = {"delivery.json"}
     for entry in entries:
