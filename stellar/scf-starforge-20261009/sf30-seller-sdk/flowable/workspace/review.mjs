@@ -2,7 +2,8 @@
 const ref=(role,reference,extra={})=>reference?{role,reference,...extra}:null;
 const summary=state=>state?{
   connectionId:state.connectionId,observedAt:state.observedAt,
-  ...Object.fromEntries(['definitions','deployments','processes','historicProcesses','tasks','historicTasks','activities','historicActivities','historicExecutions']
+  ...Object.fromEntries(['definitions','deployments','processes','historicProcesses','tasks','historicTasks','activities','historicActivities','historicExecutions',
+    'cases','planItems','variables','historicCases','historicPlanItems','historicVariables','milestones']
     .map(key=>[key,state[key]??[]])),
   resources:state.resources??[],
 }:null;
@@ -21,6 +22,7 @@ export function buildFlowableReview({record,value,plan,selection,before,after,va
         contentType:selection.resource.contentType,...value.sourceResource?.reference}}:{}),
       deploymentName:selection?.deploymentName,deploymentKey:selection?.deploymentKey,tenantId:selection?.tenantId,
       processInstanceId:selection?.processInstanceId,taskId:selection?.taskId,
+      caseInstanceId:selection?.caseInstanceId,planItemInstanceId:selection?.planItemInstanceId,
       mode:selection?.mode,singleResult:selection?.singleResult}:null,
     before:summary(before),after:summary(after),validation:exchange(validation),response:exchange(response),
     reconciliation:reconciliation??null,failure:value.failure??null,

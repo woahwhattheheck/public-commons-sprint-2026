@@ -1,8 +1,8 @@
 {
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "flowable-merchant",
-  "title": "Flowable process and decision operations with complete customer receiving",
-  "description": "Original process and decision definitions and resources, reviewed BPMN and DMN releases, human-task and migration operations, typed rule evaluation, native execution audits and complete workspace handover",
+  "title": "Flowable process, case and decision operations with complete customer receiving",
+  "description": "Original BPMN/CMMN/DMN definitions and resources, reviewed deployments, adaptive cases, human work, process migration, typed decisions and full native history with customer receiving",
   "base": {
     "commands": [
       "installation",
@@ -73,7 +73,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Flowable process and decision operations with native deployment, migration and evaluation reviews, durable workspace and complete customer receiving",
+    "description": "Flowable process, case and decision operations with native deployment and operation reviews, durable workspace and complete customer receiving",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md",
     "repository": {
       "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",

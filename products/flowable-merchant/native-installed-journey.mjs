@@ -13,7 +13,8 @@ const PRODUCT = 'products/flowable-merchant/';
 const SDK = 'stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/';
 const RUNTIME = 'stellar/scf-starforge-20261009/distribution/runtime-workspace/';
 const MCP = 'stellar-forge/mcp-merchant-operator/';
-const CORE_KINDS = ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation'];
+const CORE_KINDS = ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation',
+  'casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask'];
 const HASH = /^[a-f0-9]{64}$/;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = value => JSON.stringify(value, (_, item) =>
@@ -147,7 +148,7 @@ function mcpConnection(url, token, signal, protocolVersion) {
 
 /** The parent closes its sender/receiver first. Every engine operation remains with that same native Flowable runtime. */
 export async function runInstalledFlowableJourney({
-  directory, configuration, sourceWorkspaceDirectory, sourceDelivery, reviewerUserId, signal,
+  directory, configuration, sourceWorkspaceDirectory, sourceDelivery, reviewerUserId, caseContinuation, signal,
 }) {
   need(configuration && configuration.installedVersion==='8.0.0' && /^[a-f0-9]{40}$/.test(configuration.sourceRevision??''),
     'Select the complete original installed Flowable release.');
@@ -178,7 +179,7 @@ export async function runInstalledFlowableJourney({
     identity={schema:SCHEMA,operation:configuration.operation,sourceRevision:configuration.sourceRevision,
       runtimeDirectory:configuration.runtimeDirectory,sourceWorkspaceDirectory,
       originalDelivery:{...ref(sourceDelivery.record),bytes:sourceDelivery.bytes,sha256:sourceDelivery.sha256},
-      environmentFile:configuration.environmentFile,outputDirectory:directory};
+      environmentFile:configuration.environmentFile,outputDirectory:directory,caseContinuation};
     state=old?JSON.parse(old):{identity,createdAt:new Date().toISOString(),steps:{},runs:[]};
     need(canonical(state.identity)===canonical(identity),'Continue the same installed journey, original workspace and delivery.');
   } catch(error) {
@@ -225,7 +226,7 @@ export async function runInstalledFlowableJourney({
     need(HASH.test(sourceDelivery.sha256) && sourceDelivery.record.kind==='delivery','Select the original complete parent delivery.');
     await checkedFile(sourceDelivery.path,sourceDelivery);
     await product.initializeFlowableProduct({directory:senderDirectory,workspaceDirectory:sourceWorkspaceDirectory,
-      name:'Native Flowable sender',connections:[configuration.connection,configuration.dmnConnection]});
+      name:'Native Flowable sender',connections:[configuration.connection,configuration.dmnConnection,configuration.cmmnConnection]});
     await product.initializeFlowableProduct({directory:receiverDirectory,name:'Native Flowable installed receiver',connections:[]});
     if(!await common.exists(join(appsDirectory,'workspace.json')))await runtime.createRuntimeWorkspace({directory:appsDirectory});
     apps=await runtime.openRuntimeWorkspace({directory:appsDirectory});
@@ -321,7 +322,7 @@ export async function runInstalledFlowableJourney({
     ];
     for(const args of cliCalls) {
       const result=await runCLI(sourceRoot,args,signal);report.cli.push(result.receipt);
-      if(args[0]==='actions')need(result.value.length===29,'The installed CLI exposes every original workspace action.');
+      if(args[0]==='actions')need(result.value.length===41,'The installed CLI exposes every original workspace action.');
       if(args[0]==='status')need(result.value.workspaceId===senderStatus.workspaceId,'CLI and SDK use the same native workspace.');
       if(args[0]==='record')need(result.value.sha256===selectedRelease.sha256,'CLI reads the same immutable native record.');
     }
@@ -329,7 +330,7 @@ export async function runInstalledFlowableJourney({
     need(canonical(reviewValue)===canonical(originalReview),'The CLI receives the complete original field review.');
     report.files.push(await checkedFile(reviewFile));
     mark('Installed SDK, original CLI and exact deployment source',{release:ref(selectedRelease),source:sourceReference,
-      actions:29,reviewSha256:hash(reviewBytes)});
+      actions:41,reviewSha256:hash(reviewBytes)});
     const laterInput={requestId:request('later-portfolio'),connectionId:senderStatus.connections.find(item=>item.connection.id===configuration.connection.id)?.id,
       label:'Installed operator continuation of original native portfolio'};
     need(laterInput.connectionId,'Select the original saved native engine.');
@@ -479,6 +480,181 @@ export async function runInstalledFlowableJourney({
       sdk:decisionSdkResult,cli:decisionCliResult,portfolio:ref(decisionPortfolio),collections:decisionCollections,
       definitionId:selectedDecision.id,executionId:selectedExecution.id});
 
+
+    const caseConnectionId=senderStatus.connections.find(item=>item.connection.id===configuration.cmmnConnection?.id)?.id;
+    need(caseConnectionId && caseContinuation?.connectionId===caseConnectionId &&
+      caseContinuation.portfolio?.kind==='casePortfolio' && typeof caseContinuation.caseInstanceId==='string' &&
+      typeof caseContinuation.definitionId==='string' && typeof caseContinuation.taskId==='string' &&
+      typeof caseContinuation.taskCompletionBodyText==='string',
+      'Continue the original commissioner case, definition, portfolio and exact active human task.');
+    need(JSON.parse(caseContinuation.taskCompletionBodyText).action==='complete',
+      'Keep the original native completion body for this case task.');
+    const {FLOWABLE_CMMN_COLLECTIONS}=await load(SDK+'cmmn-native.mjs');
+    const {flowableCaseInstanceId}=await load(SDK+'workspace/actions.mjs');
+    const caseSeed=await memo('original-case-continuation',{deliverySha256:sourceDelivery.sha256,
+      continuation:caseContinuation},async()=>{
+      const original=await sender.getRecord({kind:'casePortfolio',id:caseContinuation.portfolio.id,
+        revision:caseContinuation.portfolio.revision});
+      need(original.sha256===caseContinuation.portfolio.sha256 && original.value.connectionId===caseConnectionId,
+        'The active case continuation belongs to the exact original exported CMMN portfolio.');
+      const selected=await sender.readCaseInstance({portfolioId:original.id,revision:original.revision,
+        caseInstanceId:caseContinuation.caseInstanceId});
+      const task=selected.related.tasks.find(item=>item.id===caseContinuation.taskId);
+      need(selected.caseInstance?.id===caseContinuation.caseInstanceId &&
+        selected.caseInstance.caseDefinitionId===caseContinuation.definitionId &&
+        task && flowableCaseInstanceId(task)===caseContinuation.caseInstanceId,
+        'The original captured task is active on the selected original case and definition.');
+      if(caseContinuation.taskDefinitionKey)need(task.taskDefinitionKey===caseContinuation.taskDefinitionKey,
+        'Retain the original human-task definition key.');
+      const definition=await sender.readCaseDefinition({portfolioId:original.id,revision:original.revision,
+        definitionId:caseContinuation.definitionId});
+      need(definition.resources.some(item=>item.kind==='cmmn-definition-resource'),
+        'The selected case definition retains the complete original CMMN deployment source.');
+      return {...caseContinuation,portfolio:ref(original),originalTask:task,definition,originalCase:selected};
+    });
+    const caseSelections={
+      claim:{action:'claim',caseInstanceId:caseSeed.caseInstanceId,taskId:caseSeed.taskId,
+        bodyText:JSON.stringify({action:'claim',assignee:reviewerUserId})},
+      unclaim:{action:'unclaim',caseInstanceId:caseSeed.caseInstanceId,taskId:caseSeed.taskId,
+        bodyText:'{"action":"claim","assignee":null}'},
+      complete:{action:'complete',caseInstanceId:caseSeed.caseInstanceId,taskId:caseSeed.taskId,
+        bodyText:caseSeed.taskCompletionBodyText},
+    };
+    async function retainCaseOutcome(record,kind,selection,surface,reconcile) {
+      record=await sender.getRecord({kind,id:record.id});
+      if(record.value.dispatchedAt && ['UNKNOWN','DISPATCHED','READBACK'].includes(record.value.state)) {
+        await reconcile(record);
+        record=await sender.getRecord({kind,id:record.id});
+      }
+      need(record.value.state==='CONFIRMED' && record.value.after,
+        surface+' must retain the original native CMMN outcome; an uncertain dispatch is never sent again.');
+      const savedSelection=(await sender.readSource({reference:record.value.selection})).value;
+      need(canonical(savedSelection)===canonical(selection),'Retain the exact original '+surface+' case selection.');
+      const after=(await sender.readSource({reference:record.value.after})).value;
+      let native;
+      if(kind==='caseTask') {
+        const current=after.tasks.find(item=>item.id===selection.taskId),
+          historic=after.historicTasks.find(item=>item.id===selection.taskId);
+        native=current??historic;
+        need(native && flowableCaseInstanceId(native)===caseSeed.caseInstanceId,
+          surface+' must resolve the original task to the selected CMMN case.');
+        if(selection.action==='complete')need(!current && historic?.endTime &&
+          [null,undefined,'completed'].includes(historic.deleteReason),
+          'The completed original case task must be absent from runtime and retained in native history.');
+        else if(selection.action==='claim'||selection.action==='unclaim')
+          need(current && (current.assignee??null)===JSON.parse(selection.bodyText).assignee,
+            'The original native task assignment must match the reviewed request.');
+      } else {
+        native=after.planItems.find(item=>item.id===selection.planItemInstanceId)??
+          after.historicPlanItems.find(item=>item.id===selection.planItemInstanceId);
+        need(native && flowableCaseInstanceId(native)===caseSeed.caseInstanceId,
+          'The original native plan item belongs to the selected case.');
+      }
+      let response=null;
+      if(record.value.response) {
+        const original=(await sender.readSource({reference:record.value.response})).value;
+        need(original.complete && original.ok,'Retain the complete successful original CMMN response.');
+        response={status:original.status,bytes:original.bodyBytes,sha256:original.bodySha256};
+      }
+      const review=await sender.readReview({kind,id:record.id,revision:record.revision});
+      const prefix=surface.toLowerCase().replace(/[^a-z0-9]+/g,'-'),path=join(directory,prefix+'-case-review.json');
+      await common.publish(path,review,{replace:true,lease});const file=await checkedFile(path);
+      report.files.push(file);
+      for(const original of review.originals??[]) {
+        const received=await sender.downloadSource({reference:original.reference,
+          path:join(directory,'case-original-'+original.reference.sha256+'.source')});
+        await checkedFile(received.path,original.reference);report.files.push(received);
+      }
+      return {record:ref(record),selection,response,after:record.value.after,native,review:file};
+    }
+    const sdkCase=await memo('sdk-case-task',{connectionId:caseConnectionId,selection:caseSelections.claim},async()=>{
+      const prepared=await sender.prepareCaseTask({requestId:request('sdk-case-task-prepare'),connectionId:caseConnectionId,
+        label:'Installed SDK claim of original CMMN task',selection:caseSelections.claim});
+      const record=prepared.value.dispatchedAt?prepared:await sender.dispatchCaseTask({
+        requestId:request('sdk-case-task-dispatch:review:'+prepared.revision),id:prepared.id,
+        expectedRevision:prepared.revision,planSha256:prepared.value.planSha256});
+      return retainCaseOutcome(record,'caseTask',caseSelections.claim,'Installed SDK claim',record=>sender.reconcileOperation({
+        requestId:request('sdk-case-task-reconcile:'+record.revision),kind:'caseTask',id:record.id}));
+    });
+    const caseSelectionPath=join(directory,'original-case-unclaim-selection.json');
+    await common.publish(caseSelectionPath,caseSelections.unclaim,{replace:true,lease});
+    const cliCase=await memo('cli-case-task',{connectionId:caseConnectionId,selection:caseSelections.unclaim},async()=>{
+      const prepared=await runCLI(sourceRoot,['prepare','--dir',senderDirectory,'--kind','caseTask',
+        '--request',request('cli-case-task-prepare'),'--connection',caseConnectionId,'--selection',caseSelectionPath,
+        '--label','Installed CLI release of original CMMN task claim'],signal);
+      report.cli.push(prepared.receipt);let record=prepared.value;
+      if(!record.value.dispatchedAt) {
+        const dispatched=await runCLI(sourceRoot,['dispatch','--dir',senderDirectory,'--kind','caseTask',
+          '--request',request('cli-case-task-dispatch:review:'+record.revision),'--id',record.id,
+          '--revision',String(record.revision),'--plan-sha256',record.value.planSha256],signal);
+        report.cli.push(dispatched.receipt);record=dispatched.value;
+      }
+      return retainCaseOutcome(record,'caseTask',caseSelections.unclaim,'Installed CLI unclaim',async record=>{
+        const result=await runCLI(sourceRoot,['reconcile','--dir',senderDirectory,'--kind','caseTask',
+          '--request',request('cli-case-task-reconcile:'+record.revision),'--id',record.id],signal);
+        report.cli.push(result.receipt);return result.value;
+      });
+    });
+    async function allCaseCollections(portfolio,read) {
+      const summaries={},items={};
+      for(const collection of FLOWABLE_CMMN_COLLECTIONS) {
+        let offset=0;const rows=[];
+        for(;;) {
+          const page=await read({id:portfolio.id,revision:portfolio.revision,collection,offset,limit:17});
+          need(page.portfolio?.id===portfolio.id && page.portfolio.revision===portfolio.revision &&
+            page.complete && page.offset===offset,'Read the exact complete saved CMMN collection and revision.');
+          rows.push(...page.items);
+          if(page.nextOffset===null){need(rows.length===page.total,'Read every original native CMMN record.');break;}
+          need(page.nextOffset>offset,'Original CMMN collection paging must advance.');offset=page.nextOffset;
+        }
+        items[collection]=rows;
+        summaries[collection]={count:rows.length,sha256:hash(canonical(rows))};
+      }
+      return {items,summaries};
+    }
+    const casePortfolio=await sender.captureCasePortfolio({requestId:request('installed-case-portfolio'),
+      connectionId:caseConnectionId,label:'Complete installed native case work and history'});
+    need(casePortfolio.value.state==='CAPTURED','Capture every original native CMMN collection.');
+    const caseCollections=await allCaseCollections(casePortfolio,input=>sender.readCasePortfolio(input));
+    need(caseCollections.items.definitions.length>=6 && caseCollections.items.historicCases.length>0,
+      'Retain both native editions of all three original case families and their completed history.');
+    const installedCaseDefinition=await sender.readCaseDefinition({portfolioId:casePortfolio.id,
+      revision:casePortfolio.revision,definitionId:caseSeed.definitionId});
+    const installedCase=await sender.readCaseInstance({portfolioId:casePortfolio.id,revision:casePortfolio.revision,
+      caseInstanceId:caseSeed.caseInstanceId});
+    need(installedCase.caseInstance?.id===caseSeed.caseInstanceId &&
+      installedCase.related.tasks.some(item=>item.id===caseSeed.taskId && flowableCaseInstanceId(item)===caseSeed.caseInstanceId),
+      'Installed case work remains bound to the same original active task.');
+    for(const resource of [...installedCaseDefinition.resources,...installedCase.resources]) {
+      const bytes=Buffer.from(resource.contentBase64,'base64');
+      need(bytes.length===resource.bytes && hash(bytes)===resource.sha256,
+        'The original case source and native binary variable bytes must be complete.');
+      if(resource.originalResource) {
+        const received=await sender.downloadSource({reference:resource.originalResource,
+          path:join(directory,'case-resource-'+resource.sha256+'.source')});
+        await checkedFile(received.path,resource.originalResource);report.files.push(received);
+      }
+    }
+    for(const args of [
+      ['case-portfolio','--dir',senderDirectory,'--id',casePortfolio.id,'--revision',String(casePortfolio.revision),
+        '--collection','historicPlanItems','--limit','2'],
+      ['case-definition','--dir',senderDirectory,'--portfolio',casePortfolio.id,'--definition',caseSeed.definitionId,
+        '--revision',String(casePortfolio.revision)],
+      ['case-instance','--dir',senderDirectory,'--portfolio',casePortfolio.id,'--case',caseSeed.caseInstanceId,
+        '--revision',String(casePortfolio.revision)],
+    ]) {
+      const result=await runCLI(sourceRoot,args,signal);report.cli.push(result.receipt);
+      need(result.value.portfolio?.id===casePortfolio.id && result.value.portfolio.revision===casePortfolio.revision,
+        'CLI reads the exact original case portfolio edition.');
+      if(args[0]==='case-definition')need(canonical(result.value)===canonical(installedCaseDefinition),
+        'CLI and SDK return the same complete CMMN definition and resources.');
+      if(args[0]==='case-instance')need(canonical(result.value)===canonical(installedCase),
+        'CLI and SDK return the same original case work, variables and history.');
+    }
+    mark('Installed CMMN SDK, CLI and complete saved work',{portfolio:ref(casePortfolio),
+      original:caseSeed.portfolio,caseInstanceId:caseSeed.caseInstanceId,definitionId:caseSeed.definitionId,
+      taskId:caseSeed.taskId,sdk:sdkCase,cli:cliCase,collections:caseCollections.summaries});
+
     const laterDelivery=await sender.exportWorkspace({requestId:request('export-later'),label:'Complete installed Flowable continuation'});
     need(laterDelivery.value.state==='EXPORTED','Export the complete later native workspace.');
     const laterFile=await sender.downloadDelivery({id:laterDelivery.id,path:join(directory,'later-workspace.ndjson'),
@@ -525,7 +701,7 @@ export async function runInstalledFlowableJourney({
       if(!result.nextCursor)break;need(result.nextCursor!==cursor,'MCP tool pagination advances.');cursor=result.nextCursor;
     }
     const names=advertised.filter(name=>name.startsWith('merchant_flowable_'));
-    need(names.length===35 && new Set(names).size===35,'The selected installed merchant exposes all 35 original Flowable tools.');
+    need(names.length===47 && new Set(names).size===47,'The selected installed merchant exposes all 47 original Flowable tools.');
     const remoteStatus=await mcp.tool('merchant_flowable_status',{workspace:'sender'});
     need(remoteStatus.workspaceId===senderStatus.workspaceId,'Authenticated MCP and Applications use the same original workspace.');
     let chunksRead=0,reopenedReader=false;
@@ -616,6 +792,231 @@ export async function runInstalledFlowableJourney({
       id:mcpDecisionPortfolio.id,revision:mcpDecisionPortfolio.revision,collection:'historicExecutions',offset:0,limit:2});
     need(remoteHistory.complete && remoteHistory.total>=decisionItems.historicExecutions.length,
       'MCP exposes the original full native execution history after its decision operation.');
+
+    const remoteCaseDefinition=await mcp.tool('merchant_flowable_case_definition',{workspace:'sender',
+      portfolioId:casePortfolio.id,revision:casePortfolio.revision,definitionId:caseSeed.definitionId});
+    const remoteCase=await mcp.tool('merchant_flowable_case_instance',{workspace:'sender',
+      portfolioId:casePortfolio.id,revision:casePortfolio.revision,caseInstanceId:caseSeed.caseInstanceId});
+    need(canonical(remoteCaseDefinition)===canonical(installedCaseDefinition) &&
+      canonical(remoteCase)===canonical(installedCase),
+      'MCP, SDK and CLI open the exact same CMMN definition, binary resources, case work and history.');
+    const caseResource=installedCaseDefinition.resources.find(item=>item.kind==='cmmn-definition-resource'&&item.originalResource);
+    need(caseResource,'Retain the complete original CMMN resource for browser and agent receiving.');
+    const caseSourceExport=await mcp.tool('merchant_flowable_download',{workspace:'sender',kind:'source',
+      reference:caseResource.originalResource});
+    const caseSourceReceived=await retainedFile(caseSourceExport,join(directory,'mcp-original-case-definition.source'));
+    need(caseSourceReceived.file.bytes===caseResource.bytes && caseSourceReceived.file.sha256===caseResource.sha256,
+      'The installed MCP receives every byte of the original case definition.');
+    report.files.push(caseSourceReceived.file);
+    async function mcpCaseOperation(label,kind,selection) {
+      return memo('mcp-cmmn:'+label,{kind,connectionId:caseConnectionId,selection},async()=>{
+        const suffix={caseTask:'case_task',casePlanItem:'case_plan_item'}[kind];
+        need(suffix,'Select one original installed CMMN operation family.');
+        const prepared=await mcp.tool('merchant_flowable_prepare_'+suffix,{workspace:'sender',
+          requestId:request('mcp-cmmn:'+label+':prepare'),connectionId:caseConnectionId,
+          label:configuration.operation+' installed '+label,selection});
+        const record=prepared.value.dispatchedAt?prepared:await mcp.tool('merchant_flowable_dispatch_'+suffix,{
+          workspace:'sender',requestId:request('mcp-cmmn:'+label+':dispatch:review:'+prepared.revision),
+          id:prepared.id,expectedRevision:prepared.revision,planSha256:prepared.value.planSha256});
+        return retainCaseOutcome(record,kind,selection,'Installed MCP '+label,record=>mcp.tool('merchant_flowable_reconcile',{
+          workspace:'sender',requestId:request('mcp-cmmn:'+label+':reconcile:'+record.revision),kind,id:record.id}));
+      });
+    }
+    async function mcpCaseCapture(label) {
+      const portfolio=await mcp.tool('merchant_flowable_capture_cases',{workspace:'sender',
+        requestId:request('mcp-cmmn:'+label+':capture'),connectionId:caseConnectionId,
+        label:configuration.operation+' '+label});
+      need(portfolio.value.state==='CAPTURED','Complete the original native case capture for '+label+'.');
+      const work=await mcp.tool('merchant_flowable_case_instance',{workspace:'sender',portfolioId:portfolio.id,
+        revision:portfolio.revision,caseInstanceId:caseSeed.caseInstanceId});
+      return {portfolio:ref(portfolio),work};
+    }
+    function oneCaseWork(items,key,value,label) {
+      const selected=items.filter(item=>flowableCaseInstanceId(item)===caseSeed.caseInstanceId && item[key]===value);
+      need(selected.length===1,'Select exactly one original '+label+' from the saved case work.');
+      return selected[0];
+    }
+    const mcpCaseClaim=await mcpCaseOperation('original task claim','caseTask',caseSelections.claim);
+    let completedInstalledCase;
+    // All browser and MCP case writes precede the final complete workspace export.
+    need(configuration.playwrightModule && configuration.chromiumExecutable,
+      'Run the actual installed operator browser using the original selected Chromium runtime.');
+    {
+      const imported=await import(pathToFileURL(configuration.playwrightModule).href);
+      const playwright=imported.chromium?imported:imported.default;
+      const browser=await playwright.chromium.launch({headless:true,executablePath:configuration.chromiumExecutable,
+        args:['--no-sandbox','--disable-dev-shm-usage']});
+      try {
+        const page=await browser.newPage({viewport:{width:1440,height:1000}}),browserErrors=[];
+        page.on('pageerror',error=>browserErrors.push(String(error)));
+        const idle=async()=>{await page.locator('#busy').waitFor({state:'hidden'});
+          need((await page.locator('#notice').getAttribute('data-level'))!=='error',
+            'The original installed browser action must complete without an error.');};
+        async function findRow(container,text) {
+          const table=page.locator(container);
+          const previous=table.getByRole('button',{name:'Previous',exact:true});
+          while(await previous.count() && await previous.isEnabled())await previous.click();
+          for(;;) {
+            const rows=table.locator('tbody tr').filter({hasText:text});
+            if(await rows.count()){need(await rows.count()===1,'Select one original browser row.');return rows;}
+            const next=table.getByRole('button',{name:'Next',exact:true});
+            need(await next.count() && await next.isEnabled(),'The original saved browser row is absent: '+text);
+            await next.click();
+          }
+        }
+        async function browserAction(method,match,click) {
+          const response=page.waitForResponse(value=>{
+            if(new URL(value.url()).pathname!=='/api/action')return false;
+            try{const input=value.request().postDataJSON();return input.method===method&&match(input.args);}
+            catch{return false;}
+          },{timeout:180000});
+          await click();const actual=await response;
+          need(actual.ok(),'The actual browser request must return its original successful response.');
+          const input=actual.request().postDataJSON(),record=await actual.json();await idle();
+          return {input,record};
+        }
+        await page.goto(liveSession.browserUrl,{waitUntil:'networkidle'});await idle();
+        await page.locator('#engine-select').selectOption(laterInput.connectionId);await idle();
+        await page.getByRole('button',{name:'Definitions',exact:true}).click();
+        await page.waitForSelector('#definitions-table table');
+        const screenshot=join(directory,'installed-definitions.png');
+        await page.screenshot({path:screenshot,fullPage:true});report.files.push(await checkedFile(screenshot));
+        await page.locator('#engine-select').selectOption(decisionConnectionId);await idle();
+        await page.getByRole('button',{name:'Decisions',exact:true}).click();
+        await page.waitForSelector('#decisions-table table');
+        const decisionScreenshot=join(directory,'installed-decisions.png');
+        await page.screenshot({path:decisionScreenshot,fullPage:true});report.files.push(await checkedFile(decisionScreenshot));
+        await page.locator('#engine-select').selectOption(caseConnectionId);await idle();
+        await page.getByRole('button',{name:'Cases',exact:true}).click();
+        await page.locator('#case-portfolio-select').selectOption(casePortfolio.id);await idle();
+        const definitionRow=await findRow('#case-definitions-table',installedCaseDefinition.definition.deploymentId);
+        await definitionRow.getByRole('button',{name:'Source and start',exact:true}).click();await idle();
+        need((await page.locator('#detail-content').innerText()).includes(caseSeed.definitionId),
+          'The browser opens the exact selected original CMMN definition.');
+        const sourceLink=page.locator('#detail-content').getByRole('link',{name:'Download '+caseResource.filename,exact:true});
+        need(await sourceLink.count()===1,'Open the complete original case source download in the browser.');
+        const sourceDownloadPromise=page.waitForEvent('download');
+        await sourceLink.click();const sourceDownload=await sourceDownloadPromise;
+        const browserSourcePath=join(directory,'browser-original-case-definition.source');
+        await sourceDownload.saveAs(browserSourcePath);
+        const browserSource=await checkedFile(browserSourcePath,caseResource.originalResource);
+        report.files.push(browserSource);
+        const caseSourceScreenshot=join(directory,'installed-case-source.png');
+        await page.screenshot({path:caseSourceScreenshot,fullPage:true});report.files.push(await checkedFile(caseSourceScreenshot));
+        await page.locator('#close-detail').click();
+        const browserCompletion=await memo('browser-case-task',{caseInstanceId:caseSeed.caseInstanceId,
+          taskId:caseSeed.taskId,selection:caseSelections.complete},async()=>{
+          const label=configuration.operation+' installed browser case completion';
+          const existing=(await allRecords(sender,'caseTask')).filter(item=>item.label===label);
+          need(existing.length<=1,'One original browser case operation owns this completion.');
+          let record,preparedInput,dispatchedInput;
+          if(existing.length) {
+            record=await sender.getRecord({kind:'caseTask',id:existing[0].id});
+            const selection=(await sender.readSource({reference:record.value.selection})).value;
+            need(record.value.connectionId===caseConnectionId && canonical(selection)===canonical(caseSelections.complete),
+              'Reopen the original browser completion with its exact target and native body.');
+            const row=await findRow('#caseTask-records',label);
+            await row.getByRole('button',{name:'Review',exact:true}).click();await idle();
+            if(!record.value.dispatchedAt && ['INTERRUPTED','PREPARE_FAILED'].includes(record.value.phase)) {
+              const resumed=await browserAction('prepareCaseTask',input=>input.label===label,
+                ()=>page.locator('#detail-content').getByRole('button',{name:'Resume original preparation',exact:true}).click());
+              record=resumed.record;preparedInput=resumed.input;
+            }
+          } else {
+            const form=page.locator('#caseTask-form');
+            await form.locator('[name="taskId"]').fill(caseSeed.taskId);
+            await form.locator('[name="caseInstanceId"]').fill(caseSeed.caseInstanceId);
+            await form.locator('[name="action"]').selectOption('complete');
+            await form.locator('[name="label"]').fill(label);
+            await form.locator('[name="bodyText"]').fill(caseSeed.taskCompletionBodyText);
+            const prepared=await browserAction('prepareCaseTask',input=>input.label===label&&
+              canonical(input.selection)===canonical(caseSelections.complete),()=>form.locator('button[type="submit"]').click());
+            record=prepared.record;preparedInput=prepared.input;
+          }
+          record=await sender.getRecord({kind:'caseTask',id:record.id});
+          if(!record.value.dispatchedAt) {
+            need(record.value.phase==='PREPARED','Complete the original browser preparation before its native task dispatch.');
+            const originalId=record.id;
+            const dispatched=await browserAction('dispatchCaseTask',input=>input.id===originalId,
+              ()=>page.locator('#detail-content').getByRole('button',{name:'Execute case task action',exact:true}).click());
+            record=dispatched.record;dispatchedInput=dispatched.input;
+          }
+          const outcome=await retainCaseOutcome(record,'caseTask',caseSelections.complete,'Installed browser completion',
+            record=>sender.reconcileOperation({requestId:request('browser-case-task-reconcile:'+record.revision),
+              kind:'caseTask',id:record.id}));
+          const after=(await sender.readSource({reference:outcome.after})).value;
+          need(after.cases.find(item=>item.id===caseSeed.caseInstanceId)?.state===caseSeed.expectedCaseStateAfterTask &&
+            after.planItems.some(item=>item.id===caseSeed.followingPlanItemId &&
+              item.planItemDefinitionId===caseSeed.followingPlanItemDefinitionId &&
+              item.state===caseSeed.followingPlanItemStateAfterTask &&
+              flowableCaseInstanceId(item)===caseSeed.caseInstanceId),
+            'The browser completion must activate the original authored source-confirmation work on this case.');
+          return {...outcome,...(preparedInput?{preparedInput}:{}),...(dispatchedInput?{dispatchedInput}:{})};
+        });
+        const caseTaskScreenshot=join(directory,'installed-case-task-completion.png');
+        await page.screenshot({path:caseTaskScreenshot,fullPage:true});report.files.push(await checkedFile(caseTaskScreenshot));
+        // Continue the authored onboarding v2 model from that same completed review.
+        // IDs come from its original native capture; no replacement case is started.
+        const sourceConfirmation=await mcpCaseOperation('source confirmation','casePlanItem',{
+          action:'triggerPlanItem',caseInstanceId:caseSeed.caseInstanceId,
+          planItemInstanceId:caseSeed.followingPlanItemId,bodyText:'{"action":"trigger"}'});
+        const exceptionReady=await mcpCaseCapture('source confirmation complete');
+        const exceptionItem=oneCaseWork(exceptionReady.work.related.planItems,'planItemDefinitionId','exceptionReview',
+          'enabled exception-review plan item');
+        need(exceptionItem.state==='enabled','The original source-confirmation sentry enables the selected manual exception review.');
+        const exceptionStarted=await mcpCaseOperation('start exception review','casePlanItem',{
+          action:'startPlanItem',caseInstanceId:caseSeed.caseInstanceId,planItemInstanceId:exceptionItem.id,bodyText:'{"action":"start"}'});
+        const exceptionActive=await mcpCaseCapture('exception review active');
+        const exceptionTask=oneCaseWork(exceptionActive.work.related.tasks,'taskDefinitionKey','exceptionReview','exception-review task');
+        const exceptionClaim=await mcpCaseOperation('claim exception review','caseTask',{
+          action:'claim',caseInstanceId:caseSeed.caseInstanceId,taskId:exceptionTask.id,
+          bodyText:'{"action":"claim","assignee":"case-specialist"}'});
+        const exceptionComplete=await mcpCaseOperation('complete exception review','caseTask',{
+          action:'complete',caseInstanceId:caseSeed.caseInstanceId,taskId:exceptionTask.id,
+          bodyText:'{"action":"complete","variables":[{"name":"exceptionResolved","type":"boolean","value":true}]}'});
+        const finalReady=await mcpCaseCapture('final case approval active');
+        const finalTask=oneCaseWork(finalReady.work.related.tasks,'taskDefinitionKey','finalApproval','final approval task');
+        const finalClaim=await mcpCaseOperation('claim final approval','caseTask',{
+          action:'claim',caseInstanceId:caseSeed.caseInstanceId,taskId:finalTask.id,
+          bodyText:'{"action":"claim","assignee":"case-approver"}'});
+        const finalComplete=await mcpCaseOperation('complete final approval','caseTask',{
+          action:'complete',caseInstanceId:caseSeed.caseInstanceId,taskId:finalTask.id,
+          bodyText:'{"action":"complete","variables":[{"name":"handoverApproved","type":"boolean","value":true}]}'});
+        const completed=await mcpCaseCapture('complete installed CMMN history');
+        need(!completed.work.caseInstance && completed.work.historicCase?.id===caseSeed.caseInstanceId &&
+          completed.work.historicCase.state==='completed' && completed.work.historicCase.endTime &&
+          completed.work.related.milestones.length>=2 &&
+          completed.work.related.milestones.every(item=>flowableCaseInstanceId(item)===caseSeed.caseInstanceId),
+          'The original installed case must complete with its native history and both authored milestones.');
+        const finalCollections=await allCaseCollections(completed.portfolio,input=>mcp.tool('merchant_flowable_case_portfolio',
+          {workspace:'sender',...input}));
+        need(finalCollections.items.historicTasks.some(item=>item.id===caseSeed.taskId&&item.endTime) &&
+          !finalCollections.items.tasks.some(item=>flowableCaseInstanceId(item)===caseSeed.caseInstanceId),
+          'The final complete capture retains the browser task history and no unfinished native case task.');
+        completedInstalledCase={original:caseSeed.portfolio,caseInstanceId:caseSeed.caseInstanceId,definitionId:caseSeed.definitionId,
+          taskId:caseSeed.taskId,sdk:sdkCase,cli:cliCase,mcpClaim:mcpCaseClaim,browser:browserCompletion,
+          sourceConfirmation,exceptionStarted,exceptionClaim,exceptionComplete,finalClaim,finalComplete,
+          portfolio:completed.portfolio,work:completed.work,collections:finalCollections.summaries};
+        await page.reload({waitUntil:'networkidle'});await idle();
+        await page.locator('#engine-select').selectOption(caseConnectionId);await idle();
+        await page.getByRole('button',{name:'Cases',exact:true}).click();
+        await page.locator('#case-portfolio-select').selectOption(completed.portfolio.id);await idle();
+        await page.locator('#case-collection-select').selectOption('historicCases');await idle();
+        const historyRow=await findRow('#case-collection-table',caseSeed.caseInstanceId);
+        await historyRow.getByRole('button',{name:'Inspect',exact:true}).click();await idle();
+        const historyText=await page.locator('#detail-content').innerText();
+        need(historyText.includes(caseSeed.caseInstanceId)&&historyText.includes('completed'),
+          'The browser reopens the completed original case and its captured work history.');
+        const caseHistoryScreenshot=join(directory,'installed-case-history.png');
+        await page.screenshot({path:caseHistoryScreenshot,fullPage:true});report.files.push(await checkedFile(caseHistoryScreenshot));
+        need(browserErrors.length===0,'The complete installed browser produced a script error: '+browserErrors.join('\n'));
+        mark('Actual installed product browser',{screenshots:['installed-definitions.png','installed-decisions.png',
+          'installed-case-source.png','installed-case-task-completion.png','installed-case-history.png'],
+          workspaceId:senderStatus.workspaceId,decisionConnectionId,caseConnectionId,browserSource,caseCompletion:browserCompletion.record});
+      } finally {await browser.close();}
+    }
+    mark('Native installed CMMN customer continuation',completedInstalledCase);
+
     const finalDecisionDelivery=await sender.exportWorkspace({requestId:request('export-complete-decision-continuation'),
       label:'Complete original process and decision operating history'});
     const finalDecisionExport=await mcp.tool('merchant_flowable_download',{workspace:'sender',kind:'delivery',id:finalDecisionDelivery.id});
@@ -640,34 +1041,13 @@ export async function runInstalledFlowableJourney({
       'The complete process and decision receiving survives cold installed reopen.');
     mark('Native MCP decision evaluation and complete customer receiving',{evaluation:mcpDecisionResult,
       portfolio:ref(mcpDecisionPortfolio),history:remoteHistory.total,delivery:ref(finalDecisionDelivery),
-      receiving:ref(finalDecisionReopened),file:finalDecisionReceived.file,records:await compareCore(sender,receiver)});
+      receiving:ref(finalDecisionReopened),file:finalDecisionReceived.file,records:await compareCore(sender,receiver),
+      casePortfolio:completedInstalledCase.portfolio,caseInstanceId:completedInstalledCase.caseInstanceId});
 
-    if(configuration.playwrightModule && configuration.chromiumExecutable) {
-      const imported=await import(pathToFileURL(configuration.playwrightModule).href);
-      const playwright=imported.chromium?imported:imported.default;
-      const browser=await playwright.chromium.launch({headless:true,executablePath:configuration.chromiumExecutable,args:['--no-sandbox','--disable-dev-shm-usage']});
-      try {
-        const page=await browser.newPage({viewport:{width:1440,height:1000}});
-        await page.goto(liveSession.browserUrl,{waitUntil:'networkidle'});
-        await page.waitForSelector('body');
-        await page.getByRole('button',{name:'Definitions',exact:true}).click();
-        await page.waitForSelector('#definitions-table table');
-        const screenshot=join(directory,'installed-definitions.png');
-        await page.screenshot({path:screenshot,fullPage:true});
-        report.files.push(await checkedFile(screenshot));
-        await page.locator('#engine-select').selectOption(decisionConnectionId);
-        await page.locator('#busy').waitFor({state:'hidden'});
-        await page.getByRole('button',{name:'Decisions',exact:true}).click();
-        await page.waitForSelector('#decisions-table table');
-        need((await page.locator('#notice').getAttribute('data-level'))!=='error',
-          'The installed browser opens the same native decision portfolio.');
-        const decisionScreenshot=join(directory,'installed-decisions.png');
-        await page.screenshot({path:decisionScreenshot,fullPage:true});
-        report.files.push(await checkedFile(decisionScreenshot));
-        mark('Actual installed product browser',{screenshots:['installed-definitions.png','installed-decisions.png'],
-          workspaceId:senderStatus.workspaceId,decisionConnectionId});
-      } finally {await browser.close();}
-    }
+    report.completeWorkspace={delivery:ref(finalDecisionDelivery),receiving:ref(finalDecisionReopened),
+      file:finalDecisionReceived.file,workspaceId:(await receiver.status()).workspaceId};
+    need(CORE_KINDS.length===14 && completedInstalledCase?.work?.historicCase?.state==='completed',
+      'The final complete customer receiving includes all fourteen native process, decision and case record kinds.');
     preparedReport=report;
   } catch(error) {errors.push(error);}
   finally {
