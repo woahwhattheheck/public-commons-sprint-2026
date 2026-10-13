@@ -47,13 +47,13 @@
     },
     {
       "path": "lib/native.mjs",
-      "bytes": 3691,
-      "sha256": "005984ba23b389a4a66f0ee9819310db75c93937d23edba76c86a174d95d7df8"
+      "bytes": 4170,
+      "sha256": "9557703a9fff6fee56605000b64df9d17c2eb2b3c0a2bdc3125a315b84dc2c81"
     },
     {
       "path": "lib/workspace.mjs",
-      "bytes": 25472,
-      "sha256": "2e49845211046b769f7e781bf2f3f81abdd2f3507bc5548f9d02834e41a01d6d"
+      "bytes": 30365,
+      "sha256": "36ea16b11e8c7d81714c52c2ae440ba0b9ab4ca80f54ec632a21f01f40f5867c"
     },
     {
       "path": "native/principal_attempt.py",
@@ -197,13 +197,28 @@
     },
     {
       "path": "reference/contracts/principal_manager/tests/lifecycle.rs",
-      "bytes": 11895,
-      "sha256": "ef5165819b40dc0a9a76fc578d7780f4710034f8bbdd6f9e9206a349d53e4276"
+      "bytes": 11887,
+      "sha256": "e8bfbebaa583a929a795baacfdedd6af2eb87c8baf2771ca678d8e0010419fa9"
     },
     {
       "path": "reference/CONTRACT_INTEGRATION.md",
       "bytes": 16916,
       "sha256": "ec9fa21d6e0c8fff479d5a9373b5fba62d8d066242d09ad2ea5af30e9cc992b0"
+    },
+    {
+      "path": "native/principal-build.py",
+      "bytes": 26204,
+      "sha256": "c6b9fbc0bab8e59d71bf6263d40ab5cf806c214470c4c3611b76433de678cf92"
+    },
+    {
+      "path": "native/PRINCIPAL_BUILD.md",
+      "bytes": 6385,
+      "sha256": "0bec23a010bd8bcd4defb24903ad6a1efcb8e8a8f72d7ddbcf6442cd006c1c82"
+    },
+    {
+      "path": "native/CURRENT_BUILD.md",
+      "bytes": 6405,
+      "sha256": "b36e8ac3ffbff7175a994622ca221efa44d6abba5f7e487fc76a3a850561b4e6"
     }
   ]
 }
