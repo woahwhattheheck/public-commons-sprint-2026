@@ -14,22 +14,53 @@ values while reporting immediate changes and the final difference separately.
 
 1. Prepare a retained native run in the existing workbench. The added
    `Workspace.prepare_run` check requires a coefficient row for every declared
-   target code, alongside the existing baseline class coverage check.
-2. Open **Scenario footprint**, select that run, and build its preview. A direct
-   link may use `/web/scenario-footprint.html?run=FULL_RUN_ID`.
-3. Review the final changed hectares and raster preview, individual patch
-   eligibility, changes, overlaps and reversions. Open the complete final class
-   histogram and the exact coefficient rows copied from the retained CSV.
-4. Download the native scenario GeoTIFF, binary final change mask, full JSON,
-   final/patch transition CSVs, class histogram and coefficient rows.
-5. Start the same selected native run from the preview. The original queue,
-   NDR/SDR execution, model selection, stage recovery and results remain the
-   existing run's pathway. The execution and preview call the same new kernel.
+   target code, alongside the existing baseline class coverage check. The prepare
+   form shows any existing input preview for that exact grid, profile, scenario
+   and selected-model combination.
+2. Open the prepared run and choose **Build input preview**. This queues the
+   existing `scenario.footprint.preview` action for the retained run identity.
+   Preparing the preview does not start NDR or SDR.
+3. Review **Scenario inputs on the selected native grid** in the ordinary run
+   detail. It shows unique eligible cells and final changed cells with their
+   hectares, the original patch notes, preview creation time and compiler
+   version. **Open footprint, masks and coefficients** opens the original desk
+   for this exact run. Its direct standalone route remains
+   `/web/scenario-footprint.html?run=FULL_RUN_ID`.
+4. In the footprint desk, review individual patch eligibility, changes, overlaps
+   and reversions, the complete final class histogram and the exact coefficient
+   rows copied from the retained CSV. Download the native scenario GeoTIFF,
+   binary final change mask, full JSON, final/patch transition CSVs, class
+   histogram and coefficient rows.
+5. Choose **Run original models** or **Resume original models** in the ordinary
+   run detail, or **Start selected native models** in the footprint desk.
+   The original queue, NDR/SDR execution, selected models, stage recovery and
+   outputs remain the existing run's pathway. The run list's review action opens
+   the retained selection before starting or continuing it.
 
 A preview for an unchanged baseline or a scenario whose final values equal the
 baseline is an ordinary completed result. It retains the zero-change mask and
-all class/coverage accounting. The operator can decide whether that retained
-selection is useful.
+all class/coverage accounting. A missing preview, or an older report without
+complete counts, is shown as unavailable rather than zero. The operator can
+start a valid native selection after reviewing either condition.
+
+The scenario detail lists its retained run selections and their grid-specific
+input previews. Preparing another run from this detail keeps the scenario
+selection. Comparison details show each retained run's eligible and final changed
+area relative to its own source land-cover grid. These areas are not a pairwise
+difference between two edited scenarios and are not a hydrological benefit
+estimate; the native annual export differences remain separate.
+
+The summary reads already retained records during ordinary workspace refresh.
+Building a preview evaluates the run's retained selection with the current
+footprint compiler. Its compiler version, compiler hash and input identities are
+retained in the report. An older completed native run keeps its own original
+executed artifacts; rebuilding its input preview does not replace or certify
+those artifacts as products of the current compiler.
+
+Changing the selected run or workspace clears the previous report and native
+start action. Late catalogue, report, task and resume replies cannot replace a
+newer selection. The desk reads the selected run's actual retained state before
+offering Start, including when that run is outside the current catalogue page.
 
 ## Source and model meaning
 
@@ -83,7 +114,7 @@ its pixel size does not enter the native area totals.
 
 ## Installation
 
-Receive all eleven component files relative to the maintained application root,
+Receive all twelve component files relative to the maintained application root,
 or keep the complete component in a separate received directory:
 
 ```bash
@@ -134,6 +165,16 @@ GET catalogue: `/api/scenario-footprints/catalog`.
 GET retained report with authenticated file tickets:
 `/api/scenario-footprints/report?id=...`.
 The native `run.start` action is supplied by the existing operator.
+
+The registered provider's `state_snapshot(operator, workspace_key)` returns
+`data.scenario_footprints.records` through the original state extension binding.
+Each compact row preserves its report/run identity, full selected inputs, actual
+summary, original notes and compiler provenance. This projection reads saved
+records only. The ordinary maintained `app.mjs` imports
+`scenario_input_review.mjs`; the component's asset inventory also carries that
+module for receiving. The standalone component installer retains the original
+desk and shared-host detection without replacing an independently edited
+ordinary application controller.
 
 The additive adapter chains the original dispatch and GET handlers and keeps
 the original authorization, per-workspace queue and download verification. A
