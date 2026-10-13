@@ -40,8 +40,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 7455,
-      "sha256": "14b5500ba2f08a45560581e81b1d8c17340b93b48541ba79c6702911bc806d59",
+      "bytes": 7889,
+      "sha256": "d2e5127f5d0df6a703c7d56047240304e872ee2e00825daea8ec7d9bc38a84a3",
       "role": "patch"
     },
     {
