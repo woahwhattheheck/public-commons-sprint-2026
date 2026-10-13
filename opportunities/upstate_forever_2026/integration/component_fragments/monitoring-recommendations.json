@@ -3,7 +3,7 @@
   "id": "monitoring-recommendations",
   "components": {
     "monitoring-recommendations": {
-      "title": "Source-bound sampling priorities, native designs and editable study history",
+      "title": "Source-bound sampling priorities, exact design revisions and editable working copies",
       "requires": [
         "monitoring",
         "study-transfer"
@@ -19,7 +19,10 @@
         "operator/SAMPLING_PRIORITIES.md",
         "source_tools/receive_sampling_recommendations.py",
         "integration/component_fragments/monitoring-recommendations.json",
-        "operator/web/extensions/study_transfer.mjs"
+        "operator/web/extensions/study_transfer.mjs",
+        "model/monitoring_working_copies.py",
+        "operator/web/monitoring_working_copy.mjs",
+        "source_tools/SAMPLING_WORKING_COPIES.md"
       ]
     }
   },

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "monitoring-recommendations",
   "title": "Sampling priorities",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 86,
   "requires_actions": [
     "monitoring.design",
@@ -10,14 +10,17 @@
   ],
   "assets": [
     "monitoring_recommendations.mjs",
-    "monitoring_recommendations.css"
+    "monitoring_recommendations.css",
+    "monitoring_working_copy.mjs"
   ],
   "backend": {
     "module": "monitoring_recommendations",
     "actions": [
       "monitoring.recommendations.prepare",
       "monitoring.recommendations.design",
-      "monitoring.recommendations.export"
+      "monitoring.recommendations.export",
+      "monitoring.recommendations.working-save",
+      "monitoring.recommendations.working-export"
     ],
     "invoke": {
       "handler": "perform",
@@ -29,7 +32,8 @@
     "routes": [
       {
         "methods": [
-          "GET"
+          "GET",
+          "POST"
         ],
         "path": "/api/monitoring-recommendations",
         "handler": "read",
