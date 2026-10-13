@@ -1,18 +1,23 @@
 """Content-selected reuse of original native stages within this workspace."""
 from __future__ import annotations
+import copy
 import importlib.metadata
+import logging
 import platform
 from pathlib import Path
 import sys
-from .common import atomic_json, describe_file, digest, file_digest, identifier, now, read_json
+from .common import (atomic_json, describe_file, digest, file_digest, held,
+                     identifier, now, read_json)
 from .model_selection import run_models
-from .reuse import copy_verified, destination_file, native_companions, verify_stage
+from .reuse import (copy_verified, dataset_companions, destination_file,
+                    native_companions, verify_stage)
 
 INPUT_PATHS = {
     "ndr": ("dem_path", "lulc_path", "watersheds_path", "biophysical_table_path", "runoff_proxy_path"),
     "sdr": ("dem_path", "lulc_path", "watersheds_path", "biophysical_table_path",
             "erosivity_path", "erodibility_path", "drainage_path"),
 }
+LOGGER = logging.getLogger(__name__)
 
 
 def runtime_environment():
@@ -33,11 +38,23 @@ def runtime_environment():
     return result
 
 
+def _input_body(path, verified_inputs):
+    path = Path(path).resolve(strict=True)
+    if not path.is_file():
+        raise ValueError("Native stage input is not an original regular file")
+    retained = (verified_inputs or {}).get(str(path))
+    if retained is not None:
+        if path.stat().st_size != retained["bytes"]:
+            raise ValueError("Verified native input length changed: " + path.name)
+        return {"bytes": retained["bytes"], "sha256": retained["sha256"]}
+    return {"bytes": path.stat().st_size, "sha256": file_digest(path)}
+
+
 def signature(model, arguments, runtime_source, *, verified_inputs=None):
     if model not in INPUT_PATHS:
         raise ValueError("Select a published native model")
     values = {key: value for key, value in arguments.items()
-              if key not in ("workspace_dir",) + INPUT_PATHS[model]}
+              if key not in ("workspace_dir", "n_workers") + INPUT_PATHS[model]}
     inputs = {}
     for name in INPUT_PATHS[model]:
         selected_path = arguments.get(name)
@@ -45,49 +62,58 @@ def signature(model, arguments, runtime_source, *, verified_inputs=None):
             inputs[name] = None
             continue
         path = Path(selected_path).resolve(strict=True)
-        if not path.is_file():
-            raise ValueError("Native stage input is not an original regular file: " + name)
-        retained = (verified_inputs or {}).get(str(path))
-        if retained is not None:
-            if path.stat().st_size != retained["bytes"]:
-                raise ValueError("Verified native input length changed: " + name)
-            inputs[name] = {"bytes": retained["bytes"], "sha256": retained["sha256"]}
-        else:
-            inputs[name] = {"bytes": path.stat().st_size, "sha256": file_digest(path)}
-        companions = []
-        suffix = path.suffix.lower()
-        if suffix == ".shp":
-            candidates = [item for item in path.parent.glob(path.stem + ".*") if item != path]
-        elif suffix in (".tif", ".tiff"):
-            candidates = [Path(str(path) + tail) for tail in (".aux.xml", ".msk", ".ovr")]
-        else:
-            candidates = []
-        for companion in sorted(candidates):
-            if companion.is_file():
-                companions.append({"name": companion.name, "bytes": companion.stat().st_size,
-                                   "sha256": file_digest(companion)})
+        body = _input_body(path, verified_inputs)
+        companions = {member.name[len(path.stem):]: _input_body(member, verified_inputs)
+                      for member in dataset_companions(path)}
         if companions:
-            inputs[name]["companions"] = companions
+            body["companions"] = companions
+        inputs[name] = body
     dependencies = ("ndr", "sdr") if model == "ndr" else ("sdr",)
     modules = {name: runtime_source["modules"][name] for name in dependencies}
     selection = {"schema": "upstate.native-stage-inputs/v1", "model": model,
                  "invest_version": runtime_source["version"], "modules": modules,
                  "environment": runtime_source["environment"], "arguments": values, "inputs": inputs}
+    # results_suffix remains part of values because it determines registry names.
     return {"id": digest(selection), "selection": selection}
 
 
-def register(workspace, run_id, model, stage):
-    selected = stage.get("input_signature")
-    if not selected:
-        return
+def _scientific_signature(selected):
     if digest(selected["selection"]) != selected["id"]:
         raise ValueError("Native stage input identity differs")
+    value = selected["selection"]
+    if (value.get("schema") != "upstate.native-stage-inputs/v1"
+            or value.get("model") not in INPUT_PATHS):
+        raise ValueError("Native stage input selection has an unknown model")
+    value = {**value, "arguments": {key: item for key, item in value["arguments"].items()
+                                   if key != "n_workers"}}
+    return {"id": digest(value), "selection": value}
+
+
+def execution_slot(workspace, selected):
+    """Serialize production of a matching stage through the existing native loop."""
+    selected = _scientific_signature(selected)
+    return held(workspace.root / "stage-cache" / identifier(selected["id"]) / ".compute.lock")
+
+
+def register(workspace, run_id, model, stage):
+    original = stage.get("input_signature")
+    if not original:
+        return
+    selected = _scientific_signature(original)
+    if selected["selection"]["model"] != model or not stage.get("completed_at"):
+        raise ValueError("The indexed native stage differs from its completed model")
     run_id = identifier(run_id)
     key = identifier(selected["id"])
     record = {"schema": "upstate.native-stage-cache/v1", "id": key,
-              "run_id": run_id, "model": model, "completed_at": stage["completed_at"]}
-    atomic_json(workspace.root / "stage-cache" / key / (run_id + "-" + model + ".json"),
-                record, immutable=True)
+              "run_id": run_id, "model": model, "completed_at": stage["completed_at"],
+              "source_input_signature": original["id"]}
+    try:
+        # The pointer can be refreshed after an interrupted operation is resumed.
+        # Original run records and their input snapshots remain authoritative.
+        atomic_json(workspace.root / "stage-cache" / key / (run_id + "-" + model + ".json"),
+                    record)
+    except OSError as exc:
+        LOGGER.info("Completed native %s stage retained; index update deferred: %s", model, exc)
 
 
 def _check_destinations(directory, files):
@@ -97,73 +123,122 @@ def _check_destinations(directory, files):
         if path in seen and (seen[path]["bytes"], seen[path]["sha256"]) != (item["bytes"], item["sha256"]):
             raise ValueError("Native reuse has conflicting original output paths")
         seen[path] = item
-        target = destination_file(directory, path)
-        if target.exists():
-            from .common import verify_file
-            verify_file(directory, item)
+        destination_file(directory, path)
+
+
+def _native_member(directory, model, relative):
+    if not isinstance(relative, str) or not Path(relative).parts or Path(relative).parts[0] != model:
+        raise ValueError("Native reuse output belongs to another model stage")
+    return destination_file(directory, relative)
+
+
+def _candidate_indexes(workspace, model, selected, requested_arguments):
+    keys = [selected["id"]]
+    if "n_workers" in requested_arguments:
+        # Older indexed stages retained this scheduling control. Look up their
+        # exact predecessor key while comparing the same scientific selection.
+        previous = copy.deepcopy(selected["selection"])
+        previous["arguments"]["n_workers"] = requested_arguments["n_workers"]
+        old_key = digest(previous)
+        if old_key not in keys:
+            keys.append(old_key)
+    for key in keys:
+        folder = workspace.root / "stage-cache" / identifier(key)
+        for path in sorted(folder.glob("*-" + model + ".json")):
+            yield key, path
 
 
 def recover(workspace, run_id, model, selected, directory, requested_arguments):
-    """Return an original matching stage, or None; malformed candidates stay explicit.
+    """Copy a complete matching stage, retaining its original source provenance.
 
-    Only completed stages recorded by this adapter are indexed. A surviving stage
-    in a later failed run remains useful. Every retained body is checked before
-    it is linked/copied; unindexed historical runs remain readable normally.
+    Every output body is verified during its independent transfer. Interrupted
+    transfers retain complete matching files and can continue with the same or
+    another available source. Historical stages require their recorded input
+    signature; they are never re-keyed from today's input files.
     """
-    folder = workspace.root / "stage-cache" / identifier(selected["id"])
-    observations = []
-    candidates = sorted(folder.glob("*-" + model + ".json")) if folder.exists() else []
-    for path in candidates:
+    selected = _scientific_signature(selected)
+    if selected["selection"]["model"] != model:
+        raise ValueError("Native stage request selects another model")
+    run_id = identifier(run_id)
+    observations, seen = [], set()
+    for index_key, path in _candidate_indexes(workspace, model, selected, requested_arguments):
         try:
             record = read_json(path)
             if (record.get("schema") != "upstate.native-stage-cache/v1"
-                    or record.get("id") != selected["id"] or record.get("model") != model):
+                    or record.get("id") != index_key or record.get("model") != model):
                 raise ValueError("Native reuse index differs")
             original_id = identifier(record["run_id"])
-            if original_id == run_id:
+            if original_id == run_id or original_id in seen:
                 continue
+            seen.add(original_id)
             original = workspace.inspect_run(original_id)
             if model not in run_models(original):
                 raise ValueError("Original run did not select this native model")
             stage = original["stages"][model]
-            if stage.get("input_signature") != selected:
+            if _scientific_signature(stage["input_signature"]) != selected:
                 raise ValueError("Original stage inputs differ")
             old_directory = workspace.root / "runs" / original_id
-            verify_stage(old_directory, stage)
-            companions = native_companions(old_directory, stage["files"])
-            by_path = {item["path"]: item for item in stage.get("companions", [])}
-            by_path.update({item["path"]: item for item in companions})
-            companions = [by_path[name] for name in sorted(by_path)]
-            output_files = list(stage["files"].values()) + companions
-            original_arguments = {**stage["arguments"], "path": model + "-source-arguments.json"}
+            # Descriptor arguments are small; large outputs are hashed exactly
+            # as they are copied or cloned below, rather than in a second pass.
+            verify_stage(old_directory, stage, outputs=False)
+            companion_map = {item["path"]: item for item in stage.get("companions", [])}
+            for item in native_companions(old_directory, stage["files"]):
+                companion_map.setdefault(item["path"], item)
+            companions = [companion_map[name] for name in sorted(companion_map)]
+            additional_files = list(stage.get("additional_files", []))
+            output_files = list(stage["files"].values()) + companions + additional_files
+            for item in output_files:
+                _native_member(directory, model, item["path"])
+            registry_outputs = stage.get("registry_outputs", {})
+            directories = []
+            for item in registry_outputs.values():
+                if item.get("kind") == "directory":
+                    directories.append(_native_member(directory, model, item["path"]))
+                    directories.extend(_native_member(directory, model, member)
+                                       for member in item.get("directories", []))
+            original_arguments = {**stage["arguments"],
+                "path": model + "-source-arguments-" + stage["arguments"]["sha256"] + ".json"}
             _check_destinations(directory, output_files + [original_arguments])
+            transfer = {"files": 0, "bytes": 0, "methods": {}}
+            reuse_started = now()
+            copied = {}
+            for item in output_files:
+                if item["path"] not in copied:
+                    copied[item["path"]] = copy_verified(
+                        old_directory, item, directory, transfer=transfer,
+                        replace_mismatch=True)
+            files = {name: dict(item) for name, item in stage["files"].items()}
+            copied_companions = [dict(item) for item in companions]
+            source_arguments = copy_verified(
+                old_directory, stage["arguments"], directory,
+                path=original_arguments["path"], transfer=transfer,
+                replace_mismatch=True)
+            for target in directories:
+                target.mkdir(parents=True, exist_ok=True)
+            request_path = directory / (model + "-arguments.json")
+            atomic_json(request_path, requested_arguments)
+            completed = now()
+            result = {
+                **stage, "arguments": source_arguments, "files": files,
+                "companions": copied_companions,
+                "additional_files": [dict(item) for item in additional_files],
+                "requested_arguments": describe_file(directory, request_path),
+                "input_signature": selected,
+                "reuse_started_at": reuse_started,
+                "reused_at": completed, "transfer": transfer,
+                "reused_from": {
+                    "run_id": original_id, "model": model,
+                    "stage_started_at": stage.get("started_at"),
+                    "stage_completed_at": stage["completed_at"],
+                    "input_signature": stage["input_signature"]["id"],
+                    "requested_input_signature": selected["id"],
+                    "original_arguments": stage["arguments"],
+                    "previous_reuse": stage.get("reused_from"),
+                },
+            }
+            return result, observations
         except (OSError, ValueError, KeyError, TypeError) as exc:
             observations.append({"index": path.relative_to(workspace.root).as_posix(),
                                  "reason": str(exc)})
             continue
-        # Mutation starts only after the full original candidate and all existing
-        # destinations have been checked. Any I/O failure leaves this same run
-        # resumable, with no unrelated original or output replaced.
-        files = {name: copy_verified(old_directory, item, directory)
-                 for name, item in stage["files"].items()}
-        copied_companions = [copy_verified(old_directory, item, directory) for item in companions]
-        source_arguments = copy_verified(old_directory, stage["arguments"], directory,
-                                         path=original_arguments["path"])
-        request_path = directory / (model + "-arguments.json")
-        atomic_json(request_path, requested_arguments)
-        result = {
-            **stage, "arguments": source_arguments, "files": files,
-            "companions": copied_companions,
-            "requested_arguments": describe_file(directory, request_path),
-            "input_signature": selected,
-            "reused_at": now(),
-            "reused_from": {
-                "run_id": original_id, "model": model,
-                "stage_completed_at": stage["completed_at"],
-                "input_signature": selected["id"],
-                "original_arguments": stage["arguments"],
-                "previous_reuse": stage.get("reused_from"),
-            },
-        }
-        return result, observations
     return None, observations

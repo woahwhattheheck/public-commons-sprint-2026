@@ -151,7 +151,7 @@ function render(){
   }
   if(view==='runs'){
     html=pageHeader('Native model runs','Prepare a source-bound selection, then execute its original InVEST models. Completed native stages remain available for continuation and exact reuse.',button('run-compare','Compare completed runs')+button('run-prepare','Prepare native run','','primary'));
-    html+=d.runs.length?section('Retained model runs','Annual export totals use the original reporting mask and physical units.',table(['Selection','State','Nitrogen','Phosphorus','Sediment',''],d.runs.map(row=>'<tr><td class="name-cell"><strong>'+esc(named('scenarios',row.selection.scenario_id))+'</strong><small>'+esc(named('profiles',row.selection.profile_id))+' · '+esc(named('grids',row.selection.grid_id))+' · '+esc(nativeModelLabel(row.selection))+'</small><small class="mono">'+short(row.id)+'</small></td><td>'+badge(row.state)+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','nitrogen_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','phosphorus_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'sdr','sediment_export')+'</td><td class="actions-cell">'+itemButton('runs',row.id)+(row.state==='prepared'||row.state==='failed'?button('run-start',row.state==='prepared'?'Run':'Resume','data-id="'+row.id+'"','small'):'')+'</td></tr>'))):noRows('Prepare the first native model run','Select a complete grid, retained coefficient profile and baseline or alternative scenario.','run-prepare','Prepare native run');
+    html+=d.runs.length?section('Retained model runs','Annual export totals use the original reporting mask and physical units.',table(['Selection','State','Nitrogen','Phosphorus','Sediment',''],d.runs.map(row=>'<tr><td class="name-cell"><strong>'+esc(named('scenarios',row.selection.scenario_id))+'</strong><small>'+esc(named('profiles',row.selection.profile_id))+' · '+esc(named('grids',row.selection.grid_id))+' · '+esc(nativeModelLabel(row.selection))+'</small><small class="mono">'+short(row.id)+'</small></td><td>'+badge(row.state)+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','nitrogen_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'ndr','phosphorus_export')+'</td><td class="number-cell">'+nativeOutputCell(row,'sdr','sediment_export')+'</td><td class="actions-cell">'+itemButton('runs',row.id)+(row.state==='prepared'||row.state==='failed'?button('run-start',row.state==='prepared'?'Run':'Resume','data-id="'+row.id+'"','small'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+row.id+'"','small'):'')+'</td></tr>'))):noRows('Prepare the first native model run','Select a complete grid, retained coefficient profile and baseline or alternative scenario.','run-prepare','Prepare native run');
   }
   if(view==='comparisons'){
     html=pageHeader('Run comparisons','Compare completed original runs on the same retained grid. Signed changes are alternative minus baseline.',button('run-compare','Compare runs','','primary'));
@@ -210,7 +210,8 @@ async function openItem(kind,id,focus=true){
     if(row.error)content+='<div class="notice error">'+esc(row.error.message)+'</div>';
     content+=table(['Native stage','Execution source','Started','Completed','Retained outputs'],Object.entries(row.stages||{}).map(([name,stage])=>'<tr><td>'+esc(human(name))+'</td><td>'+(stage.reused_from?'Reused from '+esc(short(stage.reused_from.run_id))+'<br><small>'+esc(when(stage.reused_at))+'</small>':'Calculated in this retained run')+'</td><td>'+esc(when(stage.started_at))+'</td><td>'+esc(when(stage.completed_at))+'</td><td>'+(Object.keys(stage.files||{}).length+(stage.artifact?1:0))+'</td></tr>'));
     content+=table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>'));
-    content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
+    content+=completedModelOrigins(row);
+    content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+id+'"'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
   }else if(kind==='comparisons'){
     content=defs({baseline:runTitle(row.baseline_run_id),direction:row.direction,compared_outputs:row.common_artifacts||Object.keys(row.alternatives?.[0]?.artifacts||{})})+table(['Alternative','Export','Annual change','Valid cells','Profile also changes'],row.alternatives.flatMap(alt=>Object.entries(alt.artifacts).map(([name,item])=>'<tr><td>'+esc(runTitle(alt.run_id))+'</td><td>'+esc(human(name))+'</td><td>'+number(item.sum_change)+' '+esc((item.units||'').replace('/pixel',''))+'</td><td>'+number(item.valid_cells)+'</td><td>'+esc(alt.profile_changed?'Yes':'No')+'</td></tr>')));
   }else if(kind==='observations'){
@@ -552,6 +553,84 @@ function runForm(){
   form.elements.namedItem('grid').addEventListener('change',update);form.elements.namedItem('profile').addEventListener('change',update);update();
  });
 }
+function completedModelStage(row,model){
+ const stage=row?.stages?.[model]||row?.stage_summary?.[model];
+ return stage?.completed_at&&(stage.file_count??Object.keys(stage.files||{}).length)>0?stage:null;
+}
+function completedModelSources(target,model){
+ const rows=(state?.data?.runs||[]).filter(row=>nativeModels(row.selection).includes(model)&&
+  !['running','queued'].includes(row.state)&&completedModelStage(row,model));
+ const rank=row=>(row.selection.scenario_id===target.selection.scenario_id?4:0)+
+  (row.selection.grid_id===target.selection.grid_id?2:0)+
+  (row.selection.profile_id===target.selection.profile_id?1:0);
+ return rows.slice().sort((a,b)=>rank(b)-rank(a)||
+  String(completedModelStage(b,model).completed_at).localeCompare(String(completedModelStage(a,model).completed_at))||
+  a.id.localeCompare(b.id));
+}
+function canSelectCompletedModels(row){
+ return ['prepared','failed'].includes(row?.state)&&nativeModels(row.selection).length===2&&
+  ['ndr','sdr'].every(model=>completedModelSources(row,model).length);
+}
+function completedModelOrigins(row){
+ if(!row.assembly?.models)return '';
+ const rows=['ndr','sdr'].filter(model=>row.assembly.models[model]).map(model=>{
+  const entry=row.assembly.models[model],stage=row.stages?.[model]||{};
+  const source=entry.source_run_id||stage.reused_from?.run_id||row.id;
+  const original=(state?.data?.runs||[]).find(value=>value.id===source);
+  const selection=entry.source_selection||original?.selection;
+  return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(runTitle(source))+
+   '<small class="mono">'+esc(short(source))+'</small></td><td>'+
+   esc(selection?named('grids',selection.grid_id):'Retained original stage')+'</td><td>'+
+   esc(selection?named('profiles',selection.profile_id):'Retained original stage')+
+   '</td><td>'+number(entry.input_matches?.length||0)+' matched inputs</td><td>'+
+   (original?itemButton('runs',source):'')+'</td></tr>';
+ });
+ return '<h3>Original completed models</h3><p class="note">This run retains the selected original model results and their matching input records.</p>'+
+  table(['Model','Original run','Grid','Parameters','Inputs',''],rows);
+}
+async function completedModelsForm(id){
+ const selectedWorkspace=workspace;
+ const target=await api(endpoint('/api/item',{kind:'runs',id}));
+ if(workspace!==selectedWorkspace)return;
+ if(!['prepared','failed'].includes(target.state)||nativeModels(target.selection).length!==2)
+  throw Error('Choose a prepared combined NDR and SDR run.');
+ const candidates={ndr:completedModelSources(target,'ndr'),sdr:completedModelSources(target,'sdr')};
+ if(!candidates.ndr.length||!candidates.sdr.length)
+  throw Error('Complete the original NDR and SDR calculations before selecting their retained results.');
+ const options=model=>candidates[model].map(row=>({id:row.id,
+  title:runTitle(row.id)+' · '+named('grids',row.selection.grid_id)+' · '+short(row.id)}));
+ detailDialog.close();
+ openForm('Use completed models','Choose the original completed NDR and SDR calculations for this prepared combined run. The native operation checks their actual inputs, retains both results and completes the combined reporting outputs.',
+ '<div class="form-grid"><div class="full">'+defs({combined_run:short(target.id),
+  grid:named('grids',target.selection.grid_id),profile:named('profiles',target.selection.profile_id),
+  scenario:named('scenarios',target.selection.scenario_id)})+'</div>'+
+ field('Original completed NDR run',select('source_ndr',options('ndr'),candidates.ndr[0].id),
+  'Nitrogen and phosphorus results.',true)+
+ field('Original completed SDR run',select('source_sdr',options('sdr'),candidates.sdr[0].id),
+  'Sediment results. A completed run containing both models can supply both selections.',true)+
+ '<div id="completed-model-selection" class="full"></div>'+
+ '<p class="note full">The original terrain, land cover, scenario changes, biophysical table and model parameters must match this combined run. The retained native operation checks the selected files and reports any input difference in the same task.</p></div>',
+ 'Use results and complete run',()=>{
+  const source_runs={ndr:val('source_ndr'),sdr:val('source_sdr')};
+  if(!['ndr','sdr'].every(model=>candidates[model].some(row=>row.id===source_runs[model])))
+   throw Error('Choose the original completed source run for each model.');
+  return submitAction('run.start',{run_id:target.id,source_runs});
+ },()=>{
+  const update=()=>{
+   const rows=['ndr','sdr'].map(model=>{
+    const row=candidates[model].find(item=>item.id===val('source_'+model));
+    if(!row)return '';
+    return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(named('scenarios',row.selection.scenario_id))+
+     '</td><td>'+esc(named('grids',row.selection.grid_id))+'</td><td>'+
+     esc(named('profiles',row.selection.profile_id))+'</td><td>'+
+     esc(when(completedModelStage(row,model)?.completed_at))+'</td></tr>';
+   });
+   $('#completed-model-selection').innerHTML=table(['Model','Scenario','Grid','Parameters','Completed'],rows);
+  };
+  form.elements.namedItem('source_ndr').addEventListener('change',update);
+  form.elements.namedItem('source_sdr').addEventListener('change',update);update();
+ });
+}
 function compareForm(){
  const complete=state.data.runs.filter(x=>x.state==='complete');
  if(complete.length<2)throw Error('Complete a baseline and at least one alternative on the same model grid.');
@@ -830,6 +909,7 @@ async function dispatch(button){
  if(action==='scenario-new'||action==='scenario-clone')return scenarioForm(id);
  if(action==='run-prepare')return runForm();
  if(action==='run-start')return executeAction('run.start',{run_id:id});
+ if(action==='run-completed-models')return completedModelsForm(id);
  if(action==='run-compare')return compareForm();
  if(action==='run-log'||action==='run-log-more')return showRunLog(id,action==='run-log-more');
  if(action==='observation-new')return observationForm();
