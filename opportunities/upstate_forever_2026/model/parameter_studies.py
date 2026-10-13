@@ -734,20 +734,83 @@ def _report(result):
                     esc(", ".join(map(str, axis["values"]))) + "</td><td>" +
                     esc(axis["reason"]) + "</td><td>" +
                     "<br>".join(esc(ref) for ref in axis["references"]) + "</td></tr>")
+    maps = result.get("difference_maps", {})
+    map_section = ""
+    if maps.get("requested"):
+        map_rows = []
+        for alternative in maps.get("alternatives", []):
+            for pollutant, descriptor in alternative["artifacts"].items():
+                map_rows.append("<tr><td>" + esc(alternative["case"]) + "</td><td>" +
+                                esc(pollutant.replace("_export", "")) + "</td><td>" +
+                                esc(descriptor["units"]) + '</td><td><a href="' +
+                                esc(descriptor["path"]) + '">Download GeoTIFF</a></td></tr>')
+        if map_rows:
+            map_section = ('<h2>Spatial parameter responses</h2><p>' +
+                           esc(maps["basis"]) + '</p><p><a href="' +
+                           esc(maps["comparison"]["path"]) + '">Original comparison</a> · ' +
+                           '<a href="' + esc(maps["grid"]["path"]) +
+                           '">Original grid</a></p><div class="scroll"><table><thead><tr>' +
+                           '<th>Case</th><th>Pollutant</th><th>Units</th><th>GIS file</th>' +
+                           '</tr></thead><tbody>' + "".join(map_rows) + '</tbody></table></div>')
+        else:
+            map_section = ("<h2>Spatial parameter responses</h2><p>Maps will be included "
+                           "as the selected native alternatives complete.</p>")
+    cohort = result.get("native_versions") or {}
+    execution = "<h2>Executed model versions</h2>"
+    if isinstance(cohort, dict) and cohort.get("runs"):
+        labels = result.get("native_version_labels") or {}
+        guides = result.get("native_version_guides") or {}
+        version_rows = []
+        case_labels = {}
+        for case in result.get("cases", []):
+            case_labels.setdefault(case.get("run_id"), []).append(case.get("label") or case.get("id"))
+        for run_id, models in cohort["runs"].items():
+            for model, info in models.items():
+                reused = info.get("reused_from") or {}
+                origin = (str(reused["run_id"]) + " / " + str(reused.get("model") or model)
+                          if isinstance(reused, dict) and reused.get("run_id") else "—")
+                version = esc(info.get("comparison_version") or "Unavailable")
+                version += "<br>" + esc(labels.get(run_id, {}).get(model) or info.get("basis") or "Not recorded")
+                guide = guides.get(run_id, {}).get(model)
+                if isinstance(guide, str) and guide.startswith(("https://", "http://")):
+                    version += '<br><a href="' + esc(guide) + '">Model guide</a>'
+                values = (
+                    esc(", ".join(str(value) for value in case_labels.get(run_id, []) if value)) +
+                    "<br><code>" + esc(run_id) + "</code>",
+                    esc(str(model).upper()), version,
+                    esc(info.get("requested_version") or "Not recorded"),
+                    esc(info.get("stage_completed_at") or "Not recorded"), esc(origin))
+                version_rows.append("<tr>" + "".join("<td>" + value + "</td>" for value in values) + "</tr>")
+        execution += (
+            "<p>Each selected model has a consistent comparison version across the compared cases. "
+            "The source labels distinguish completed-stage execution, observed-run metadata and requested legacy versions.</p>"
+            '<p><a href="native-versions.csv">Download every run/model version record (CSV)</a> · '
+            '<a href="native-versions.json">Open complete version and reuse provenance (JSON)</a></p>'
+            '<div class="scroll"><table><thead><tr><th>Case and original run</th><th>Model</th>'
+            '<th>Recorded version and source</th><th>Requested version</th><th>Stage completed</th>'
+            '<th>Reused stage origin</th></tr></thead><tbody>' + "".join(version_rows) +
+            "</tbody></table></div>")
+    else:
+        execution += (
+            "<p>No per-model execution provenance was recorded in this saved result. "
+            "Its original native run selections remain in the full results JSON.</p>")
+    requested_version = result.get("baseline_selection", {}).get("invest_version")
+    requested_text = str(requested_version) if requested_version is not None else "not recorded"
     return """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>""" + esc(result["title"]) + """</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;margin:0}
 main{max-width:1320px;margin:32px auto;padding:0 24px}h1{font-size:26px;margin-bottom:8px}
 h2{font-size:19px;margin-top:30px}.meta{color:#555}table{border-collapse:collapse;width:100%;font-size:12px}
-th,td{padding:9px;text-align:left;border:1px solid #d5d5d5;vertical-align:top}
+th,td{padding:9px;text-align:left;border:1px solid #d5d5d5;vertical-align:top;overflow-wrap:anywhere}
 th{background:#efefef}tbody tr:nth-child(even){background:#fafafa}.scroll{overflow:auto}
 code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0}thead{display:table-header-group}}</style>
-</head><body><main><h1>""" + esc(result["title"]) + "</h1><p>" + esc(result["purpose"]) + """</p><p class="meta">InVEST """ + esc(result["invest_version"]) + " · " + esc(result["design"]) + " · " + str(result["completed_cases"]) + " / " + str(result["total_cases"]) + """ cases complete</p>
+</head><body><main><h1>""" + esc(result["title"]) + "</h1><p>" + esc(result["purpose"]) + """</p><p class="meta">Baseline requested InVEST """ + esc(requested_text) + " · " + esc(result["design"]) + " · " + str(result["completed_cases"]) + " / " + str(result["total_cases"]) + """ cases complete</p>
 <p class="meta">Native models: """ + esc(", ".join(result["models"]).upper()) + """</p>
 <p><a href="results.csv">Download quantitative results (CSV)</a> · <a href="results.json">Open full results (JSON)</a> · <a href="selection.json">Open saved design</a></p>
+""" + execution + """
 <h2>Parameter selection</h2><div class="scroll"><table><thead><tr><th>Axis</th><th>Native parameters</th><th>Values</th><th>Reason</th><th>Sources</th></tr></thead><tbody>""" + "".join(axes) + """</tbody></table></div>
 <h2>Quantitative comparisons</h2><p>""" + esc(result["comparison_basis"]) + """</p><p>""" + esc(result["mass_basis"]) + """</p><div class="scroll"><table><thead><tr><th>Area</th><th>Case</th><th>Pollutant</th><th>Units</th><th>Baseline on shared cells</th><th>Case on shared cells</th><th>Change</th><th>Change %</th><th>Shared cells</th><th>Support</th></tr></thead><tbody>""" + "".join(row_html) + """</tbody></table></div>
-<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
+""" + map_section + """<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
 <p>Study <code>""" + esc(result["experiment_id"]) + "</code><br>Baseline <code>" + esc(result["selection"]["baseline_run_id"]) + "</code></p></main></body></html>"
 
 
