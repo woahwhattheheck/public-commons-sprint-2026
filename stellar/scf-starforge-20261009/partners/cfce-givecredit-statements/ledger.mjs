@@ -1,6 +1,7 @@
 // MIT. Source-native CFCE payments, Soroban events and observed contract state.
 import { createHash } from 'node:crypto';
 import { need, copy, plain, parseNativeJSON, units, validateSourceEdition } from './source.mjs';
+import { decodeArchiveLedgerPage } from './archive.mjs';
 
 export const CFCE_LEDGER_DEFAULTS = Object.freeze({
   network:'mainnet',
@@ -377,20 +378,65 @@ function recordClassicTransfers(ctx,tx,parsed,row,ref) {
   return complete;
 }
 
+function originalRequestValue(input) {
+  if(Array.isArray(input))return input.map(originalRequestValue);
+  if(plain(input))return Object.fromEntries(Object.keys(input).sort().map(key=>[key,originalRequestValue(input[key])]));
+  if(typeof input==='number'){
+    need(Number.isSafeInteger(input),'ORIGINAL_LEDGER_REQUEST_PRECISION','Keep exact original integer request fields.');
+    return String(input);
+  }
+  need(input===null||['string','boolean'].includes(typeof input),'ORIGINAL_LEDGER_REQUEST_VALUE','Keep the original JSON request values.');
+  return input;
+}
+function originalRpcRequest(source) {
+  const request=source.request;
+  need(plain(request)&&request.jsonrpc==='2.0'&&request.method==='getLedgers'&&plain(request.params)&&
+    (typeof request.id==='string'||typeof request.id==='number'&&Number.isSafeInteger(request.id)),
+    'ORIGINAL_LEDGER_RPC_REQUEST','Retain the original named-parameter getLedgers request and response identity.');
+  const params=request.params,pagination=params.pagination;
+  need(pagination===undefined||plain(pagination),'ORIGINAL_LEDGER_RPC_PAGINATION','Retain the original pagination object.');
+  need(params.xdrFormat===undefined||params.xdrFormat==='base64','ORIGINAL_LEDGER_RPC_FORMAT','Use original base64 ledger XDR.');
+  const cursor=pagination?.cursor;
+  if(cursor!==undefined){
+    need(typeof cursor==='string'&&cursor.length&&params.startLedger===undefined,
+      'ORIGINAL_LEDGER_RPC_CURSOR','Keep the original cursor request without a replacement start ledger.');
+  }else{
+    const start=integer(params.startLedger,'original RPC start ledger');
+    need(start>0&&start<4294967296,'ORIGINAL_LEDGER_RPC_START','Retain the positive original RPC start ledger.');
+  }
+  if(pagination?.limit!==undefined){
+    const limit=integer(pagination.limit,'original RPC page limit');
+    need(limit>=1&&limit<=200,'ORIGINAL_LEDGER_RPC_LIMIT','Keep the provider page limit from 1 through 200.');
+  }
+  if(source.requestContent!==undefined){
+    need(typeof source.requestContent==='string','ORIGINAL_LEDGER_REQUEST_BODY','Retain the whole original request JSON string.');
+    const decoded=parseNativeJSON(source.requestContent);
+    need(JSON.stringify(originalRequestValue(decoded))===JSON.stringify(originalRequestValue(request)),
+      'ORIGINAL_LEDGER_REQUEST_BODY','The exact original request body and retained request fields must agree.');
+  }
+  return request;
+}
 function originalSourceIdentities(options) {
   const sources=options.originalLedgerSources||[];
   need(Array.isArray(sources),'ORIGINAL_LEDGER_SOURCES','Provide a list of complete original ledger source responses.');
   return sources.map(source=>{
-    need(plain(source)&&source.format==='stellar-expert-ledger-json'&&typeof source.content==='string',
-      'ORIGINAL_LEDGER_FORMAT','Use the whole original Stellar Expert ledger JSON response.');
+    need(plain(source)&&['stellar-expert-ledger-json','stellar-rpc-ledgers-json'].includes(source.format)&&typeof source.content==='string',
+      'ORIGINAL_LEDGER_FORMAT','Use a whole original Stellar Expert ledger or JSON-RPC getLedgers response.');
+    const validatedUrl=endpoint(source.sourceUrl,'original ledger source');
+    if(source.format==='stellar-rpc-ledgers-json'){
+      const request=originalRpcRequest(source);
+      need(typeof source.sourceUrl==='string','ORIGINAL_LEDGER_URL','Retain the original RPC source URL.');
+      return {format:source.format,sourceUrl:source.sourceUrl,sha256:sha(source.content),
+        request:copy(request),requestSha256:sha(JSON.stringify(request)),
+        ...(source.requestContent!==undefined?{requestContentSha256:sha(source.requestContent)}:{})};
+    }
     const ledger=integer(source.ledger,'original imported ledger');
     need(ledger>0&&ledger<4294967296,'ORIGINAL_LEDGER_SEQUENCE','Use the original positive ledger sequence.');
-    const sourceUrl=endpoint(source.sourceUrl,'original ledger source');
-    const url=new URL(sourceUrl),network=options.network||'mainnet';
+    const url=new URL(validatedUrl),network=options.network||'mainnet';
     need(url.hostname==='api.stellar.expert'&&url.protocol==='https:'&&
       url.pathname==='/explorer/'+(network==='mainnet'?'public':'testnet')+'/ledger/'+ledger+'/tx'&&!url.search,
       'ORIGINAL_LEDGER_URL','The original public source URL must identify the selected network and ledger.');
-    return {format:source.format,sourceUrl,ledger:String(ledger),sha256:sha(source.content)};
+    return {format:source.format,sourceUrl:validatedUrl,ledger:String(ledger),sha256:sha(source.content)};
   });
 }
 function originalNativeId(row,ledger) {
@@ -419,7 +465,7 @@ function originalEnvelopeAddresses(ctx,parsed) {
   addNativeStrings(ctx,transaction.source,addresses);
   if(parsed.feeSource)addNativeStrings(ctx,parsed.feeSource,addresses);
   for(const op of transaction.operations){
-    for(const field of ['source','destination','from','funder','sponsoredId','trustor'])addNativeStrings(ctx,op[field],addresses);
+    for(const field of ['source','destination','from','funder','sponsoredId','trustor','into','account','sponsor'])addNativeStrings(ctx,op[field],addresses);
     if(op.type==='invokeHostFunction'){
       const fn=op.func;
       if(variant(fn)==='hostFunctionTypeInvokeContract'){
@@ -431,32 +477,91 @@ function originalEnvelopeAddresses(ctx,parsed) {
   }
   return [...addresses];
 }
+function mergeOriginalLocations(...lists) {
+  const unique=new Map();
+  for(const location of lists.flat())if(location)unique.set(JSON.stringify(location),copy(location));
+  return [...unique.values()];
+}
+function indexOriginalTransaction(ctx,{row,ref,aliases,addresses,file,location}) {
+  row.originalSourceLocations=mergeOriginalLocations(row.originalSourceLocations||[],[location]);
+  const previous=ctx.originalCanonical.get(row.hash);
+  if(previous){
+    for(const field of ['ledger','createdAt','envelopeXdr','resultXdr'])need(previous.row[field]===row[field],
+      'ORIGINAL_LEDGER_TRANSACTION_CONFLICT','Original sources disagree about the same native transaction.');
+    for(const field of ['resultMetaXdr','applicationOrder','nativeTransactionId','originalProtocol'])
+      if(previous.row[field]!==null&&previous.row[field]!==undefined&&row[field]!==null&&row[field]!==undefined)
+        need(String(previous.row[field])===String(row[field]),'ORIGINAL_LEDGER_METADATA_CONFLICT',
+          'Original sources retain conflicting '+field+' for the same transaction.');
+    previous.refs=[...new Set([...previous.refs,ref])];
+    previous.addresses=[...new Set([...previous.addresses,...addresses])];
+    previous.row.originalSourceLocations=mergeOriginalLocations(previous.row.originalSourceLocations,row.originalSourceLocations);
+    if(!previous.row.resultMetaXdr&&row.resultMetaXdr){previous.row.resultMetaXdr=row.resultMetaXdr;previous.ref=ref;}
+    for(const field of ['applicationOrder','nativeTransactionId','originalTransactionId','originalProtocol'])
+      if(previous.row[field]===null||previous.row[field]===undefined)previous.row[field]=row[field]??null;
+    return previous;
+  }
+  const record={row,ref,refs:[ref],aliases:[...new Set(aliases)],addresses:[...new Set(addresses)],file};
+  ctx.originalCanonical.set(row.hash,record);
+  for(const alias of record.aliases){const list=ctx.originalTransactions.get(alias)||[];list.push(record);ctx.originalTransactions.set(alias,list);}
+  return record;
+}
 async function indexOriginalLedgers(ctx) {
-  const sources=ctx.options.originalLedgerSources||[];
+  const sources=ctx.options.originalLedgerSources||[],coveredLedgers=new Set();
   ctx.originalTransactions=new Map();ctx.originalCanonical=new Map();
   ctx.source.metadata.originalLedgerImports ||= [];
   for(const [index,original]of sources.entries()){
-    const identity=ctx.source.metadata.selection.originalLedgerSources[index];
+    const identity=ctx.source.metadata.selection.originalLedgerSources[index],isRpc=identity.format==='stellar-rpc-ledgers-json';
+    const reportedStatus=original.status===undefined||original.status===null?null:String(original.status);
+    need(reportedStatus===null||/^[1-5]\d{2}$/.test(reportedStatus),
+      'ORIGINAL_LEDGER_HTTP_STATUS','Retain the actual original HTTP status from 100 through 599, or null when it was not reported.');
     const file='ledger/originals/'+identity.sha256+'.json';
     if(ctx.source.files[file]!==undefined)need(ctx.source.files[file]===original.content,'ORIGINAL_LEDGER_BODY','The retained original source body changed.');
     else ctx.source.files[file]=original.content;
-    let retained=ctx.source.metadata.originalLedgerImports.find(row=>row.file===file&&row.sourceUrl===identity.sourceUrl);
+    let retained=ctx.source.metadata.originalLedgerImports.find(row=>row.file===file&&row.sourceUrl===identity.sourceUrl&&
+      (row.requestSha256||null)===(identity.requestSha256||null)&&(row.requestContentSha256||null)===(identity.requestContentSha256||null));
     if(!retained){
       const importedAt=now(),retrievedAt=original.retrievedAt===null||original.retrievedAt===undefined?null:timestamp(original.retrievedAt);
       const acquisition=plain(original.acquisition)?copy(original.acquisition):null;
-      retained={...copy(identity),file,bytes:Buffer.byteLength(original.content),retrievedAt,importedAt,
+      const requestFields=isRpc?{request:copy(original.request),
+        ...(original.requestContent!==undefined?{requestContent:original.requestContent,requestContentSha256:sha(original.requestContent)}:{})}:{};
+      retained={...copy(identity),file,bytes:Buffer.byteLength(original.content),status:reportedStatus,retrievedAt,importedAt,
         sourceInputImportedAt:original.importedAt||null,acquisition,records:'0',selectedHashes:[],
-        provenance:'Whole retained provider response imported directly; native transaction fields are decoded from its original body/result/meta.'};
+        provenance:isRpc?
+          'Whole retained JSON-RPC getLedgers response imported directly; original ledger headers and txProcessing XDR determine transaction identity and application order.':
+          'Whole retained provider response imported directly; native transaction fields are decoded from its original body/result/meta.'};
       ctx.source.metadata.originalLedgerImports.push(retained);
-      ctx.source.responses.push({url:identity.sourceUrl,method:'GET',retrievedAt,importedAt,status:null,
+      ctx.source.responses.push({url:identity.sourceUrl,method:isRpc?'POST':'GET',...requestFields,retrievedAt,importedAt,status:reportedStatus,
         transport:'retained-original-import',acquisition,content:original.content,file,sha256:identity.sha256});
+    }
+    if(isRpc){
+      const decoded=decodeArchiveLedgerPage({content:original.content,sdk:ctx.sdk,networkPassphrase:ctx.passphrase,request:original.request});
+      retained.recordContainer='json-rpc-ledgers';retained.records=String(decoded.rows.length);
+      retained.ledgers=copy(decoded.ledgers);retained.responseId=decoded.responseId;retained.cursor=decoded.cursor;
+      retained.oldestLedger=decoded.oldestLedger;retained.latestLedger=decoded.latestLedger;
+      for(const header of decoded.ledgers)coveredLedgers.add(header.sequence);
+      if(original.ledger!==undefined&&original.ledger!==null){
+        const declared=String(integer(original.ledger,'declared original RPC ledger'));
+        need(decoded.ledgers.length===1&&decoded.ledgers[0].sequence===declared,
+          'ORIGINAL_LEDGER_RPC_SELECTION','A declared single ledger must match the complete original RPC response.');
+      }
+      for(const originalRow of decoded.rows){
+        const ref=file+originalRow.sourcePointer,headerRef=file+originalRow.headerPointer;
+        const normalized={...copy(originalRow),txHash:originalRow.hash,requestedHash:originalRow.hash,
+          status:originalRow.successful?'SUCCESS':'FAILED',originalTransactionId:null,originalSourceRef:ref,
+          nativeTransactionIdBasis:'ledger-sequence-and-txProcessing-application-order'};
+        indexOriginalTransaction(ctx,{row:normalized,ref,aliases:originalRow.hashAliases,
+          addresses:originalRow.addresses,file,location:{format:identity.format,ref,headerRef,
+            nativeXdrPath:originalRow.nativeXdrPath,ledgerHash:originalRow.ledgerHash,
+            applicationOrder:originalRow.applicationOrder}});
+      }
+      continue;
     }
     const document=parseNativeJSON(original.content);
     const rows=Array.isArray(document)?document:document?._embedded?.records;
     need(Array.isArray(rows),'ORIGINAL_LEDGER_RECORDS','Retain the original ledger transaction array or its original HAL records.');
     retained.recordContainer=Array.isArray(document)?'array':'hal-records';
     if(original.recordContainer)need(original.recordContainer===retained.recordContainer,'ORIGINAL_LEDGER_CONTAINER','Retain the original declared record container.');
-    retained.records=String(rows.length);
+    retained.records=String(rows.length);coveredLedgers.add(identity.ledger);
     for(const [ordinal,row]of rows.entries()){
       const pointer=(Array.isArray(document)?'#/':'#/_embedded/records/')+ordinal,ref=file+pointer;
       need(plain(row)&&typeof row.body==='string'&&typeof row.result==='string',
@@ -481,28 +586,14 @@ async function indexOriginalLedgers(ctx) {
         envelopeXdr:row.body,resultXdr:row.result,resultMetaXdr:metadata,
         applicationOrder:nativeId.applicationOrder,nativeTransactionId:nativeId.id&&/^\d+$/.test(nativeId.id)?nativeId.id:null,
         originalTransactionId:nativeId.id,originalProtocol:row.protocol??null,originalSourceRef:ref};
-      const previous=ctx.originalCanonical.get(hash);
-      if(previous){
-        for(const field of ['ledger','createdAt','envelopeXdr','resultXdr'])need(previous.row[field]===normalized[field],
-          'ORIGINAL_LEDGER_TRANSACTION_CONFLICT','Original sources disagree about the same native transaction.');
-        if(previous.row.resultMetaXdr&&metadata)need(previous.row.resultMetaXdr===metadata,
-          'ORIGINAL_LEDGER_METADATA_CONFLICT','Original sources retain conflicting metadata for the same transaction.');
-        previous.refs.push(ref);
-        if(!previous.row.resultMetaXdr&&metadata){previous.row.resultMetaXdr=metadata;previous.ref=ref;}
-        if(previous.row.applicationOrder===null&&nativeId.applicationOrder!==null){
-          previous.row.applicationOrder=nativeId.applicationOrder;previous.row.nativeTransactionId=normalized.nativeTransactionId;
-        }
-        continue;
-      }
-      const record={row:normalized,ref,refs:[ref],aliases,addresses:originalEnvelopeAddresses(ctx,parsed),file};
-      ctx.originalCanonical.set(hash,record);
-      for(const alias of aliases){const list=ctx.originalTransactions.get(alias)||[];list.push(record);ctx.originalTransactions.set(alias,list);}
+      indexOriginalTransaction(ctx,{row:normalized,ref,aliases,addresses:originalEnvelopeAddresses(ctx,parsed),file,
+        location:{format:identity.format,ref,originalTransactionId:nativeId.id,applicationOrder:nativeId.applicationOrder}});
     }
   }
   if(sources.length)ctx.source.metadata.coverage.originalLedgerSources={
-    status:'retained-original-ledger-responses',ledgers:[...new Set(sources.map(row=>String(row.ledger)))],
-    records:String(ctx.originalCanonical.size),files:ctx.source.metadata.originalLedgerImports.map(row=>row.file),
-    scope:'The supplied original ledger responses; selected transaction and account/contract matches are decoded separately.'};
+    status:'retained-original-ledger-responses',ledgers:[...coveredLedgers].sort((a,b)=>Number(a)-Number(b)),
+    records:String(ctx.originalCanonical.size),files:[...new Set(ctx.source.metadata.originalLedgerImports.map(row=>row.file))],
+    scope:'The supplied whole original ledger responses; selected transaction and account/contract matches are decoded separately.'};
 }
 async function captureOriginalRecords(ctx,hash) {
   const records=ctx.originalTransactions?.get(hash)||[];
@@ -513,10 +604,11 @@ async function captureOriginalRecords(ctx,hash) {
     let tx=ctx.index.transactions.get(record.row.hash);
     if(!tx||tx.metadataStatus!=='retained'||!tx.operationsCaptured){
       tx=await decodeTransaction(ctx,{...record.row,requestedHash:hash},record.ref);
-      tx.rawRefs=[...new Set([...tx.rawRefs,...record.refs])];
       for(const observation of ctx.source.tables.contractObservations)
-        if(observation.provider&&/^[GC][A-Z2-7]{55}$/.test(observation.provider))ctx.accounts.add(observation.provider);
+        if(observation.provider&&/^G[A-Z2-7]{55}$/.test(observation.provider))ctx.accounts.add(observation.provider);
     }
+    tx.rawRefs=[...new Set([...tx.rawRefs,...record.refs])];
+    tx.originalSourceLocations=mergeOriginalLocations(tx.originalSourceLocations||[],record.row.originalSourceLocations||[]);
     for(const retained of ctx.source.metadata.originalLedgerImports)
       if(record.refs.some(ref=>ref.startsWith(retained.file+'#'))&&!retained.selectedHashes.includes(tx.hash))retained.selectedHashes.push(tx.hash);
     if(!preferred||tx.successful&&!preferred.successful||tx.hash===hash)preferred=tx;
@@ -526,9 +618,15 @@ async function captureOriginalRecords(ctx,hash) {
 }
 async function captureOriginalFrontier(ctx) {
   let captured=0;
+  // Contract providers are original source addresses, not Horizon accounts or
+  // additional GiveCredit contracts. Follow their retained transaction rows
+  // while leaving their native token-event acquisition to providerTokenQueries.
+  const addresses=new Set([...ctx.accounts,...ctx.contracts]);
+  for(const row of [...ctx.source.tables.contractObservations,...ctx.source.tables.donationEvents])
+    if(row.provider&&/^[GC][A-Z2-7]{55}$/.test(row.provider))addresses.add(row.provider);
   for(const [hash,record]of ctx.originalCanonical||[]){
     if(ctx.originalCapturedFrontier?.has(hash))continue;
-    if(!record.addresses.some(address=>ctx.accounts.has(address)||ctx.contracts.has(address)))continue;
+    if(!record.addresses.some(address=>addresses.has(address)))continue;
     ctx.originalCapturedFrontier||=new Set();ctx.originalCapturedFrontier.add(hash);
     await captureOriginalRecords(ctx,hash);captured++;
   }
@@ -547,6 +645,7 @@ async function decodeTransaction(ctx,row,ref) {
     applicationOrder:row.applicationOrder===undefined||row.applicationOrder===null?null:String(row.applicationOrder),
     nativeTransactionId:row.nativeTransactionId||null,originalTransactionId:row.originalTransactionId??null,
     originalProtocol:row.originalProtocol??null,
+    originalSourceLocations:copy(row.originalSourceLocations||[]),
     feeBump:row.feeBump===true||!!row.fee_bump_transaction,hashAliases:[hash],
     metadataStatus:metadata?'retained':'unavailable',metadataRawRef:metadata?ref:null};
   if (envelope) {
@@ -571,6 +670,7 @@ async function decodeTransaction(ctx,row,ref) {
   for(const prior of priorRows)for(const alias of prior.hashAliases||[prior.hash])aliases.add(alias);
   tx.hashAliases=[...aliases];
   tx.rawRefs=[...new Set([...tx.rawRefs,...priorRows.flatMap(prior=>prior.rawRefs||[])])];
+  tx.originalSourceLocations=mergeOriginalLocations(tx.originalSourceLocations,...priorRows.map(prior=>prior.originalSourceLocations||[]));
   if(tx.applicationOrder===null){const ordered=priorRows.find(prior=>prior.applicationOrder!==null&&prior.applicationOrder!==undefined);if(ordered)tx.applicationOrder=String(ordered.applicationOrder);}
   if(!tx.nativeTransactionId){const identified=priorRows.find(prior=>prior.nativeTransactionId);if(identified)tx.nativeTransactionId=identified.nativeTransactionId;}
   const retained=priorRows.find(prior=>prior.metadataStatus==='retained');
@@ -1113,10 +1213,15 @@ function interrupted(ctx,error) {
  * startLedger/endLedger (exclusive), assets (original token metadata),
  * fetchImpl, sdk, signal, timeoutMs, checkpoint, onProgress.
  *
- * originalLedgerSources contains complete retained Stellar Expert ledger responses
+ * originalLedgerSources accepts complete retained provider responses:
  * {format:'stellar-expert-ledger-json',sourceUrl,ledger,content,retrievedAt:null|string,
- * importedAt?,acquisition?,recordContainer?}. Original body/result/meta and native IDs
- * are decoded before remote lookup; original response text and import provenance remain.
+ * importedAt?,acquisition?,recordContainer?}, or
+ * {format:'stellar-rpc-ledgers-json',sourceUrl,request,requestContent?,content,
+ * retrievedAt:null|string,importedAt?,acquisition?}. The RPC request is the original
+ * named-parameter getLedgers call in base64 XDR format. Its entire response and
+ * transmitted request text (when retained) stay unchanged. Ledger header identities,
+ * transaction application order and exact XDR locations accompany decoded rows.
+ * All original transaction sources are indexed before remote lookup.
  * Queries retain their complete original response text, source bounds and cursors.
  * An interrupted acquisition throws with .checkpoint for exact native resumption.
  */
