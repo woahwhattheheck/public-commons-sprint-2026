@@ -236,3 +236,7 @@ All inputs in the table are named --options. Quoted strings retain spaces. The
 command line performs local commissioning record and file operations; the selected
 Budibase installation remains the native application execution and publishing
 surface.
+
+## Receive the rendered product and attachments
+
+After the complete CLI course, follow the full desktop/phone and attachment procedure in OPERATING_GUIDE.md, section “Inspect the delivered application and every attachment.” Open the exact rebuilt index.html, import the complete original core project or accepted handover, operate capture/plan/result/edition/commercial controls, view the real rendered output and every exported attachment, then reopen the extracted programme and original handover in a fresh browser profile. Use the existing operation and source identities. A completed CLI response does not by itself complete the rendered application receiving. Retain actual viewed images and repair concrete presentation or control defects in this same delivery.
