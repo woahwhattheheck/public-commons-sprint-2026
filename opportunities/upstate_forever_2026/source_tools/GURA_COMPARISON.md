@@ -60,8 +60,11 @@ Older command ledgers remain retained and their matching active child can be
 observed before another process is issued.
 
 If an inactive incomplete programme names a changed scientific source
-inventory, its saved selection can create the current programme while
-preserving canonical native run identities. The original receiving record
+inventory, its saved selection first reconnects a retained programme with
+matching native bindings and the current scientific source. An active compatible
+programme is observed through its existing command and locks. A new programme
+is created only when no such retained programme exists, preserving canonical
+native run identities. The original receiving record
 and comparison-plan bytes stay intact. Completed programmes and reports keep
 their original provenance and are reused after verification.
 
