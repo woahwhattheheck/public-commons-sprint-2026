@@ -467,11 +467,12 @@ export function createEvidenceWorkbench(ctx){
  async function openSavedDraft(row){
    await writeTail;const name=row.key.slice('draft:'.length),saved=await store.read(row.key);
    if(!saved)throw new Error('The saved draft is unavailable.');
-   const caseBound=/^(case|finding|finding-edit|finding-new|native-binding|succession|spatial|report):/.test(name);
+   const caseBound=/^(address|case|finding|finding-edit|finding-new|native-binding|succession|spatial|report):/.test(name);
    if(caseBound){const selected=saved.basis?.caseId||'';if(selected&&!catalog.cases.some(c=>c.caseId===selected))throw new Error('The retained original case is unavailable in this workspace. Download this draft before receiving its original project.');
      await changeCase(selected);}
    forms.set(name,{...saved,key:name,storageError:null});
    if(name.startsWith('finding')){view='Findings';activeFindingKey=name;}
+   else if(name.startsWith('address:'))view='Address QA';
    else if(name==='source')view='Sources';
    else if(name.startsWith('case:')||name.startsWith('native-binding:'))view='Case & subjects';
    else if(name.startsWith('succession:'))view='Later sources';
@@ -480,6 +481,163 @@ export function createEvidenceWorkbench(ctx){
    else throw new Error('This draft remains preserved for download; its original editor is unavailable.');
    await draw();
  }
+
+ // Address QA is an original-source review pane in this same workspace/journal.
+ let addressCatalogue=null,addressSelection='',addressSummary=null,addressPage=null,addressMembers=null;
+ let addressTab='candidates',addressSearch='',addressRule='',addressOffset=0,addressLimit=25,addressFlight=0,addressNavigation=0;
+ const addressFields=['identity','number','street','building','unitType','unit','postalCity','region','postalCode','municipality','county','authority','sourceDate'];
+ function addressInitial(){
+   return {title:'',jurisdiction:'',asOf:'',scope:'',sourceIds:[],metadataSourceId:'',
+     inventory:{openingCount:'',openingIds:'',closingCount:'',closingIds:''},
+     mapping:Object.fromEntries(addressFields.map(k=>[k,''])),
+     required:['identity','number','street','postalCity','region','postalCode'],
+     rules:['ADDRESS_SIGNATURE','EXACT_POINT','REPEATED_IDENTITY','MISSING_REQUIRED','POINT_GEOMETRY']};
+ }
+ function addressReset(){addressSelection='';addressSummary=null;addressPage=null;addressMembers=null;addressOffset=0;++addressFlight;}
+ function addressURL(path,values){return '/api/evidence/address/'+path+'?'+new URLSearchParams(values);}
+ async function addressRead(sourceId,offset=0){
+   const g=generation,flight=++addressFlight,selectedCase=caseId,tab=addressTab,search=addressSearch,rule=addressRule,limit=addressLimit;
+   const summary=await ctx.request(addressURL('summary',{sourceId}));
+   const page=await ctx.request(addressURL(tab,{sourceId,offset,limit,search,rule}));
+   if(!alive(g)||flight!==addressFlight||selectedCase!==caseId||tab!==addressTab||search!==addressSearch||rule!==addressRule||limit!==addressLimit)return;
+   addressSelection=sourceId;addressSummary=summary;addressPage=page;addressOffset=offset;addressMembers=null;
+   await draw();
+ }
+ async function addressMemberPage(candidate,offset=0){
+   const g=generation,flight=++addressFlight,sourceId=addressSelection,selectedCase=caseId,limit=addressLimit;
+   const page=await ctx.request(addressURL('members',{sourceId,candidateId:candidate.id,offset,limit}));
+   if(!alive(g)||flight!==addressFlight||sourceId!==addressSelection||selectedCase!==caseId||limit!==addressLimit)return;
+   addressMembers={candidate,page};await draw();
+ }
+ function addressRowTable(rows){
+   return table([
+     ['Original record',r=>[clean(r.objectId),note(r.id),note('Source position '+r.sourceIndex)]],
+     ['Address / unit',r=>[clean(r.values.number)+' '+clean(r.values.street),
+       note('Building '+clean(r.values.building)+' · '+clean(r.values.unitType)+' '+clean(r.values.unit))]],
+     ['Postal / administrative',r=>[clean(r.values.postalCity)+' · '+clean(r.values.region)+' '+clean(r.values.postalCode),
+       note('Municipality '+clean(r.values.municipality)+' · County '+clean(r.values.county))]],
+     ['Selected identity / source date',r=>[clean(r.values.identity),note(clean(r.values.sourceDate))]],
+     ['Screening',r=>[r.candidateIds.length+' candidates',note(r.missingRequired.length?'Missing selected fields: '+r.missingRequired.join(', '):'Selected required fields present'),
+       note(r.pointValid?'Original finite point':'Point geometry needs review')]],
+     ['Original evidence',r=>[href('Download exact source','/download/evidence/sources/'+encodeURIComponent(r.sourceId)),
+       detail('Complete saved row, raw mapped values and feature identity',r)]]
+   ],rows);
+ }
+ async function addressFinding(candidate){
+   if(!snapshot||addressSummary?.caseId!==caseId)throw new Error('Select this analysis’s original case before preparing a finding.');
+   const sourceId=addressSelection,summary=clone(addressSummary),selectedCase=caseId,g=generation;
+   const navigation=++addressNavigation,selectionFlight=addressFlight;
+   const stillSelected=()=>alive(g)&&caseId===selectedCase&&addressSelection===sourceId&&addressFlight===selectionFlight&&addressNavigation===navigation;
+   const existing=(snapshot.currentFindings||[]).find(r=>r.sourceReferences.some(ref=>ref.sourceId===sourceId&&ref.locator.includes(candidate.id)));
+   if(existing){
+     const savedKey='finding-edit:'+selectedCase+':'+existing.findingId;
+     await getForm(savedKey,{findingId:existing.findingId,previousId:existing.id,definition:normalizedFinding(existing)},currentBasis({findingVersionId:existing.id}));
+     if(!stillSelected())return;
+     activeFindingKey=savedKey;view='Findings';++generation;await draw();return;
+   }
+   const key='finding-new:'+selectedCase+':address-'+sourceId+':'+candidate.id;
+   const definition={...findingDefinition(),title:title(candidate.rule)+' — '+candidate.recordCount+' retained records',
+     classification:'PROFESSIONAL_QUESTION',statement:candidate.meaning+' Candidate '+candidate.id+
+       ' contains '+candidate.recordCount+' original records in the complete saved analysis '+sourceId+'.',
+     applicability:summary.scope,assumptions:summary.limitation,subjectIds:['address-cohort'],
+     sourceReferences:[{sourceId,locator:'candidates[id='+candidate.id+']; complete rowIds and original row/source identities'},
+       ...summary.sources.filter(s=>summary.pages.some(p=>p.sourceId===s.sourceId)).map(s=>({sourceId:s.sourceId,locator:'Original feature file; exact candidate positions are retained in '+sourceId}))],
+     reviewer:String(ctx.getActor()||'').trim(),nextAction:'Inspect every selected record and ask the responsible source owner to confirm the interpretation; retain the answer or explicit disposition.',
+     responsibleRole:'Address data steward'};
+   await writeTail;
+   if(!stillSelected())return;
+   await getForm(key,{findingId:null,previousId:null,definition},currentBasis({findingVersionId:null}));
+   if(!stillSelected())return;
+   activeFindingKey=key;view='Findings';++generation;await draw();
+ }
+ async function addressPane(){
+   const g=generation,selectedCase=caseId;
+   const cat=await ctx.request('/api/evidence/address/catalog'+(caseId?'?caseId='+encodeURIComponent(caseId):''));
+   if(!alive(g)||caseId!==selectedCase)return [];
+   addressCatalogue=cat;
+   if(addressSelection&&!cat.analyses.some(r=>r.id===addressSelection))addressReset();
+   const f=await getForm('address:'+(caseId||'new'),addressInitial(),currentBasis());
+   const b=f.body,profile=cat.profiles[0],basis=currentBasis();
+   const selectedSources=new Set(b.sourceIds);
+   const sourceChoices=choices();
+   const inventoryKeys=[['openingCount','Opening count'],['openingIds','Opening complete object IDs'],['closingCount','Closing count'],['closingIds','Closing complete object IDs']];
+   const config=section('Prepare a source-bound address review',
+     note('Use Sources to upload and retain each original feature response, metadata document and inventory observation. This analysis reads their exact saved bytes and creates a normal evidence case edition. It never edits an address.'),
+     basisPanel(f,basis),
+     grid(bind(f,'title','Review title'),bind(f,'jurisdiction','Jurisdiction'),bind(f,'asOf','Review as-of date',{type:'date'})),
+     bind(f,'scope','Exact query, source scope and intended review',{multiline:true,rows:3}),
+     section('Original feature files',
+       note('Choose only the complete original GeoJSON or Esri FeatureSet pages for this cohort. Metadata and ID inventories are selected below.'),
+       ...catalog.sources.map(s=>field(s.title+' · '+s.edition,el('input',{type:'checkbox',checked:selectedSources.has(s.id),
+         onchange:e=>{b.sourceIds=e.target.checked?[...b.sourceIds,s.id]:b.sourceIds.filter(id=>id!==s.id);save(f);}}))),
+       !catalog.sources.length&&note('No saved sources. Open Sources and retain the originals first.')),
+     field('Original layer metadata',select(b.metadataSourceId,sourceChoices,v=>{b.metadataSourceId=v;save(f);})),
+     section('Coverage observations',
+       note('Choose all four observations to compare the declared query membership. Leave all four empty for explicitly limited retained-file coverage. Matching IDs do not prove a transactional value snapshot.'),
+       grid(...inventoryKeys.map(([k,label])=>field(label,select(b.inventory[k],sourceChoices,v=>{b.inventory[k]=v;save(f);}))))),
+     section('Explicit field mapping',
+       note(cat.normalization),
+       actions(button('Use ASDI address field mapping',async()=>{b.mapping=clone(profile.mapping);b.required=clone(profile.required);b.rules=clone(profile.rules);await save(f);await draw();})),
+       grid(...addressFields.map(k=>field(title(k),textInput(b.mapping[k],v=>{b.mapping[k]=v;save(f);},{placeholder:'Original source field name'})))),
+       ...profile.sourceNotes.map(note)),
+     section('Analyst screening policy',
+       note('Required fields are your selected review policy. These choices do not assert an issuer standard. The address signature includes building and unit fields.'),
+       grid(...addressFields.map(k=>field('Require '+title(k),el('input',{type:'checkbox',checked:b.required.includes(k),
+         onchange:e=>{b.required=e.target.checked?[...b.required,k]:b.required.filter(v=>v!==k);save(f);}})))),
+       grid(...cat.rules.map(k=>field(title(k),el('input',{type:'checkbox',checked:b.rules.includes(k),
+         onchange:e=>{b.rules=e.target.checked?[...b.rules,k]:b.rules.filter(v=>v!==k);save(f);}}))))),
+     note(cat.limitation),
+     note('Limits: '+cat.limits.rows.toLocaleString()+' original records and '+(cat.limits.bytes/1024/1024)+' MiB of selected original JSON.'),
+     actions(button(caseId?'Save analysis and next case edition':'Save analysis and create case',async()=>{
+       const payload=clone(b);payload.metadataSourceId=payload.metadataSourceId||null;
+       if(Object.values(payload.inventory).every(v=>!v))payload.inventory={};
+       payload.caseId=caseId||null;payload.caseVersionId=snapshot?.case?.id||null;
+       await command('address.analyze',payload,f,basis);
+     },{disabled:busy||!!pending||!!f.storageError||stale(f,basis)})));
+   const pane=[section('Address QA',note('Candidate detection, complete original records and named source decisions in the same evidence workspace.'),
+     table([['Saved analysis',r=>button(r.title,()=>addressRead(r.id))],['Retained at / analyst',r=>[r.createdAt,note(r.actor)]],
+       ['Original derived data',r=>href('Download complete analysis JSON','/download/evidence/sources/'+encodeURIComponent(r.id))]],cat.analyses.slice().reverse()))];
+   if(addressSummary&&addressPage){
+     const s=addressSummary,p=addressPage;
+     pane.push(section(s.title,
+       note(s.summary.rows+' records · '+s.summary.candidateGroups+' candidate groups · '+s.summary.rowsWithCandidates+' records with candidates'),
+       note(s.inventory.meaning),
+       s.inventory.objectIdSetsMatch===false&&el('p',{class:'ev-warning',role:'alert'},'Coverage observations do not reconcile. Review the retained opening, received and closing inventories.'),
+       detail('Exact policy, original source identities and coverage',s),
+       actions(href('Download complete analysis','/download/evidence/sources/'+encodeURIComponent(addressSelection)),
+         ...((snapshot?.sources||[]).filter(x=>x.edition===s.requestId&&x.mediaType.startsWith('text/csv')).map(x=>href(x.filename,'/download/evidence/sources/'+encodeURIComponent(x.id)))),
+         s.caseId!==caseId&&button('Open original analysis case',async()=>{const sourceId=addressSelection;await changeCase(s.caseId);view='Address QA';await addressRead(sourceId);})),
+       grid(field('Review view',select(addressTab,[['candidates','Candidates'],['rows','All original records']],v=>{addressTab=v;addressOffset=0;addressPage=null;++addressFlight;draw().catch(e=>say(e.message,true));})),
+         field('Search original values',textInput(addressSearch,v=>{addressSearch=v;++addressFlight;})),
+         field('Rule filter',select(addressRule,[['','All rules'],...cat.rules.map(r=>[r,title(r)])],v=>{addressRule=v;++addressFlight;})),
+         field('Rows per page',select(addressLimit,[[25,'25'],[50,'50'],[100,'100']],v=>{addressLimit=Number(v);++addressFlight;}))),
+       note('The table is the last explicitly read page. Changed search and rule controls apply when you choose Read selected source page.'),
+       actions(button('Read selected source page',()=>addressRead(addressSelection,0))),
+       addressTab==='rows'?addressRowTable(p.items):table([
+         ['Candidate',c=>[title(c.rule),note(c.id)]],['Original records',c=>c.recordCount],
+         ['Meaning',c=>c.meaning],['Review',c=>actions(button('Inspect all candidate records',()=>addressMemberPage(c)),
+           button('Prepare named finding',()=>addressFinding(c),{disabled:s.caseId!==caseId||!snapshot}))],
+         ['Sample',c=>detail('First '+c.sample.length+' of '+c.recordCount+' records; use Inspect all candidate records for every member',c.sample)]
+       ],p.items,'No candidates match this page and filter.'),
+       note('Showing '+(p.total?p.offset+1:0)+'–'+Math.min(p.total,p.offset+p.items.length)+' of '+p.total+' matched '+(addressTab==='rows'?'records':'candidates')+'.'),
+       actions(button('Previous address page',()=>addressRead(addressSelection,Math.max(0,p.offset-addressLimit)),{disabled:p.offset===0}),
+         button('Next address page',()=>addressRead(addressSelection,p.offset+p.limit),{disabled:p.complete}))));
+   }else if(addressSelection){
+     pane.push(section('Read selected analysis',note('Your source selection remains retained; read the current page to apply changed filters.'),
+       actions(button('Read selected source page',()=>addressRead(addressSelection,0)))));
+   }
+   if(addressMembers){
+     const {candidate,page}=addressMembers;
+     pane.push(section('All members of '+candidate.id,note(candidate.meaning),addressRowTable(page.items),
+       note('Showing '+(page.total?page.offset+1:0)+'–'+Math.min(page.total,page.offset+page.items.length)+' of '+page.total+' original candidate members.'),
+       actions(button('Previous candidate members',()=>addressMemberPage(candidate,Math.max(0,page.offset-addressLimit)),{disabled:page.offset===0}),
+         button('Next candidate members',()=>addressMemberPage(candidate,page.offset+page.limit),{disabled:page.complete}),
+         button('Close candidate members',async()=>{addressMembers=null;++addressFlight;await draw();}))));
+   }
+   pane.push(config);
+   return pane;
+ }
+
  async function recoveryPane(){
    const savedDrafts=(await store.all()).filter(r=>r.key.startsWith('draft:'));
    const picker=el('input',{type:'file',accept:'.json,application/json',onchange:async e=>{
@@ -505,13 +663,13 @@ export function createEvidenceWorkbench(ctx){
    if(!root||!catalog)return;const g=generation,sequence=++reading;let content;
    root.inert=true;root.setAttribute('aria-busy','true');
    try{
-     content=await ({Sources:sourcesPane,'Case & subjects':casePane,Findings:findingsPane,'Later sources':successionPane,Spatial:spatialPane,Reports:reportsPane,Recovery:recoveryPane})[view]();
+     content=await ({Sources:sourcesPane,'Case & subjects':casePane,Findings:findingsPane,'Later sources':successionPane,Spatial:spatialPane,Reports:reportsPane,'Address QA':addressPane,Recovery:recoveryPane})[view]();
      if(!alive(g)||sequence!==reading)return;
      const selector=select(caseId,[['','New case'],...catalog.cases.map(c=>[c.caseId,c.title+' · '+c.jurisdiction])],async v=>{try{await changeCase(v);}catch(e){say(e.message,true);await draw();}});
      root.replaceChildren(
        el('header',{class:'ev-header'},el('div',{},el('p',{class:'ev-eyebrow'},'Parcel evidence'),el('h1',{},'Source, review and decision workspace'),note('Original workspace '+workspace+' · revision '+catalog.revision)),
          field('Current case',selector),actions(button('Refresh saved evidence',refresh),button('Prepare new case',()=>changeCase('')))),
-       el('nav',{'aria-label':'Evidence workflow',class:'ev-tabs'},...['Sources','Case & subjects','Findings','Later sources','Spatial','Reports','Recovery'].map(label=>button(label,async()=>{await writeTail;view=label;++generation;await draw();},{'aria-current':view===label?'page':undefined}))),
+       el('nav',{'aria-label':'Evidence workflow',class:'ev-tabs'},...['Sources','Case & subjects','Findings','Later sources','Spatial','Reports','Address QA','Recovery'].map(label=>button(label,async()=>{await writeTail;view=label;++generation;await draw();},{'aria-current':view===label?'page':undefined}))),
        problem&&el('p',{class:'ev-warning',role:'alert'},problem),pendingPanel(),...content,
        sourceResult&&view!=='Recovery'&&section(sourceResult.title,detail('Complete original record',sourceResult.value),button('Close inspection',async()=>{sourceResult=null;await draw();})));
      clearTimeout(pollTimer);
