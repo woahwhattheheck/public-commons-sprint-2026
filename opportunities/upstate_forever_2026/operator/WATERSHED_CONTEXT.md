@@ -771,6 +771,35 @@ Repair any observed layout or operating defect in this same course before
 presenting the finished product. The owner cutoff remains 14:00 UTC on
 October 13, 2026.
 
+## Retained report downloads and narrow selection briefs
+
+Source import can enrich the saved `operator-report.json` metadata while
+preserving the original scientific report and source fingerprint. The maintained
+HTTP course reads fresh report download tickets after source import and the
+selected-watershed export. It requires the same report ID, complete original
+report and scientific source fingerprint before downloading. The ordinary
+response-length, ETag and full-file SHA-256 checks continue to apply to those
+current tickets.
+
+The full Workspace backup now includes intermediate results. This preserves
+retained model-stage artifacts alongside the original sources, saved selections
+and reports through the existing independent receiving operation.
+
+Brief format v8 sets a 720-pixel minimum table width below a 600-pixel viewport.
+The existing horizontal table container keeps complete values readable on a
+narrow screen; desktop and print table styling remain unchanged. This explicit
+maintained successor preserves both earlier v6 exports and the native receiver's
+already-saved v7 correction. The export identity includes the brief version, so
+new layout bytes create a new selection export rather than overwrite an earlier
+saved brief. Original HUC membership, numbers, CSV/JSON records and map geometry
+remain unchanged.
+
+Continue the same source and receiving operation using the current application.
+Open the actual new brief at the presentation width and at 390 pixels, read the
+complete numerical rows using its horizontal table scroll, and reopen the
+retained downloads and independently received Workspace. Keep any ongoing native
+calculation or archive process on its already-admitted source edition.
+
 ### Current owner direction for the Upper Savannah demonstration
 
 Bryce's October 13 update is retained in the existing
