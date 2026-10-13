@@ -1,0 +1,95 @@
+{
+  "schema": "tjlabs.forms-workspace.complete-source-package.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "product_source_directory": "tools/forms-migration-e258-20261013",
+  "artifact_directory": "operations/forms-workspace-receiving-e258-20261013",
+  "operation": "FORMS-AUTHORING-WORKSPACE-RECEIVING-E258-20261013",
+  "preserved_original_release": {
+    "commit": "b32bbb8ff11067f41203194c6e2aa8fde06e18e9",
+    "files": 33,
+    "artifact_directory": "operations/forms-migration-receiving-e258-20261013",
+    "archive": "Forms_Source.zip",
+    "sha256": "8c5630af47d80a198b26175251fa621a0c1ac04be562668d6c50110528680e32"
+  },
+  "source_banks": {
+    "base33": {
+      "commit": "b32bbb8ff11067f41203194c6e2aa8fde06e18e9",
+      "source_directory": "tools/forms-migration-e258-20261013"
+    },
+    "workspace_core_api_guide3": "adb1c83f9732e3f8cb925fc199d5a194e26aa241",
+    "workspace_interface_browser3": "c2a7df2f0fdd6c1b7b4ef8aa47f392f757941a7d",
+    "installation2": "aaaac9ad8c1133003645e06e6fc4ab55d70451d3",
+    "native_course1": "16418a90b9497a78a7d174c797da309c2b11f39d"
+  },
+  "archive": {
+    "path": "Forms_Workspace_Source.zip",
+    "bytes": 283607,
+    "sha256": "d14139ceeccdd718bab35cad7e7fc3192dee2fe90d29bf417d31d2da0e9ff38a"
+  },
+  "manifest": {
+    "path": "SOURCE_SELECTION.json",
+    "bytes": 11013,
+    "sha256": "d9a00450383c4c8d5dc9afd7c477c1e30dfaf523bcd990696058763a881c2fda"
+  },
+  "guide": {
+    "path": "README.md",
+    "bytes": 19671,
+    "sha256": "432d5209158e6ec7173afdcf9853a4c2071e84a9acf6eefb16e835f14352265b"
+  },
+  "product_files": 42,
+  "archive_files": 42,
+  "source_bytes": 1280112,
+  "runtime": {
+    "native": "Linux; existing Python 3.11+ and SQLite; standard library",
+    "browser": "Existing Node, explicit installed Playwright module and Chromium; no installation"
+  },
+  "receiving": {
+    "native": {
+      "path": "receiving_forms_workspace.py",
+      "bytes": 37424,
+      "sha256": "1db29083e2336abcdd4d5bbbfaba1bcd8f047b9fda2b973da63efeb5517c0d1f",
+      "argv": [
+        "python",
+        "receiving_forms_workspace.py",
+        "--directory",
+        "NEW_PRIVATE_OPERATION",
+        "--keep-server"
+      ]
+    },
+    "browser": {
+      "path": "receiving_forms_workspace_browser.mjs",
+      "bytes": 27619,
+      "sha256": "c0151e642bb753b8611a80678f99b50c3843c287207634a951e77c9e16809a4c",
+      "argv": [
+        "node",
+        "receiving_forms_workspace_browser.mjs",
+        "--receiving",
+        "ORIGINAL_OPERATION/receiving.json",
+        "--directory",
+        "NEW_PRIVATE_BROWSER",
+        "--playwright",
+        "ACTUAL_MODULE",
+        "--chromium",
+        "ACTUAL_BINARY"
+      ],
+      "resume": "Same exact command/source/paths with --resume"
+    }
+  },
+  "verification": {
+    "status": "SOURCE_PACKAGED",
+    "original33_byte_exact": true,
+    "original_discovery11_byte_exact": true,
+    "archive_all_members_inflated_crc_sha_mode_checked": true,
+    "source_review": "CLOSED",
+    "native_receiving": "PENDING_EXISTING_COORDINATED_RECEIVER",
+    "browser_receiving": "PENDING_ACTUAL_NATIVE_RECEIPT",
+    "actual_visual_review": "PENDING_ORIGINAL_PRODUCED_FILES"
+  },
+  "license": {
+    "path": "LICENSE",
+    "mode": "100644",
+    "bytes": 1091,
+    "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+    "git_blob_sha": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+  }
+}
