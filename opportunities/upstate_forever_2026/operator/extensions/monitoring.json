@@ -13,7 +13,9 @@
     "monitoring-study-transfer.mjs",
     "monitoring_field_return.mjs",
     "monitoring-frontiers.mjs",
-    "monitoring-frontiers.css"
+    "monitoring-frontiers.css",
+    "monitoring-native-context.mjs",
+    "monitoring-native-context.css"
   ],
   "backend": {
     "module": "monitoring_native",
@@ -30,7 +32,8 @@
       "monitoring.campaign.fieldwork",
       "monitoring.campaign.fieldwork.return",
       "monitoring.comparison.prepare",
-      "monitoring.comparison.export"
+      "monitoring.comparison.export",
+      "monitoring.context.native.prepare"
     ],
     "invoke": {
       "handler": "perform",
