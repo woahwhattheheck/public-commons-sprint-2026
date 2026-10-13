@@ -13,9 +13,9 @@ import shutil
 import tempfile
 import zipfile
 
-from model.common import atomic_json, describe_file, file_digest, held, read_json
+from model.common import atomic_json, describe_file, digest, file_digest, held, read_json, relative_file, verify_file
 from model.workspace import Workspace
-from model import observed_context, portable, scientific_report
+from model import observed_context, observed_report_render, portable
 
 SCHEMA = "upstate.observation-comparability-delivery/v1"
 
@@ -73,14 +73,16 @@ def _completed_export(ws: Workspace, entry: dict, export_root: Path, archive_pat
                 or state.get("project_id") != ws.project["id"]
                 or state.get("source_id") != entry["id"]
                 or state.get("source_recipe_sha256") != entry["sha256"]
-                or state.get("report_path") != relative_root + "/report"):
+                or not isinstance(state.get("report_path"), str)
+                or not state["report_path"].startswith(relative_root + "/")):
             raise ValueError("The archive retains a different or incomplete original report selection")
+        portable.member_name("workspace/" + state["report_path"])
         prefix = "workspace/" + state["report_path"] + "/"
         expected = {name[len(prefix):]: record for name, record in manifest["members"].items()
                     if name.startswith(prefix)}
         if not expected:
             raise ValueError("The completed archive lacks its original report files")
-        for record in state.get("files", {}).values():
+        for record in _report_files(state).values():
             retained = expected.get(record["path"])
             if retained is None or any(retained[key] != record[key] for key in ("bytes", "sha256")):
                 raise ValueError("Saved report descriptor differs from its original archived member")
@@ -118,7 +120,48 @@ def _completed_export(ws: Workspace, entry: dict, export_root: Path, archive_pat
     return result
 
 
-def deliver(workspace: Path, manifest: Path, export_root: Path) -> dict:
+def _report_files(state: dict) -> dict:
+    """Include every formatter and observed-source descriptor in the saved edition."""
+    files = state.get("files")
+    required = {"report_html", "report_markdown", "report_data", "report_pdf"}
+    if not isinstance(files, dict) or not required.issubset(files):
+        raise ValueError("The completed original report lacks its PDF, HTML, Markdown or structured data descriptor")
+    records = {}
+    for name in ("files", "observed_source_files"):
+        group = state.get(name, {})
+        if not isinstance(group, dict):
+            raise ValueError("The original completed report lacks its retained file descriptors")
+        for record in group.values():
+            if not isinstance(record, dict) or not isinstance(record.get("path"), str):
+                raise ValueError("The original report file descriptor is incomplete")
+            previous = records.get(record["path"])
+            if previous and any(previous[key] != record[key] for key in ("bytes", "sha256")):
+                raise ValueError("The original report has conflicting descriptors for one retained file")
+            records[record["path"]] = record
+    if not records:
+        raise ValueError("The original completed report has no retained files")
+    return records
+
+
+def _verify_report(ws: Workspace, state: dict) -> Path:
+    if state.get("state") != "complete":
+        raise ValueError("Continue the original incomplete report operation")
+    selection = state["selection"]
+    bound = observed_context.bind(ws, selection)
+    if bound is None or bound != selection.get("observed_context_binding"):
+        raise ValueError("The original completed report source binding differs")
+    records = _report_files(state)
+    first = next(iter(records))
+    member = relative_file(ws.root, state["report_path"] + "/" + first)
+    report_root = ws.root / state["report_path"]
+    if not member.is_relative_to(report_root.resolve()):
+        raise ValueError("The report member leaves its original report directory")
+    for record in records.values():
+        verify_file(report_root, record)
+    return report_root
+
+
+def deliver(workspace: Path, manifest: Path, export_root: Path, *, new_rendering: bool = False) -> dict:
     ws = Workspace(workspace, create=False)
     export_root = export_root.resolve()
     export_root.mkdir(parents=True, exist_ok=True)
@@ -128,12 +171,12 @@ def deliver(workspace: Path, manifest: Path, export_root: Path) -> dict:
     export_lock = export_root / ".observation-comparability.lock"
     with held(workspace_lock, blocking=False):
         if workspace_lock.resolve() == export_lock.resolve():
-            return _deliver_locked(ws, manifest, export_root)
+            return _deliver_locked(ws, manifest, export_root, new_rendering=new_rendering)
         with held(export_lock, blocking=False):
-            return _deliver_locked(ws, manifest, export_root)
+            return _deliver_locked(ws, manifest, export_root, new_rendering=new_rendering)
 
 
-def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path) -> dict:
+def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path, *, new_rendering: bool) -> dict:
     manifest = manifest.resolve(strict=True)
     source = read_json(manifest)
     if len(source.get("entries", [])) != 1:
@@ -166,6 +209,8 @@ def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path) -> dict:
             raise ValueError("This partial export belongs to a different selected source edition; choose a new output directory")
     archive = export_root / _archive_name(entry)
     if archive.exists():
+        if new_rendering:
+            raise ValueError("Keep the completed original export; choose a new output directory for a new rendering edition")
         return _completed_export(ws, entry, export_root, archive)
     if prior_result_path.exists():
         raise ValueError("The completed export is missing its retained archive; restore that original file before continuing")
@@ -180,42 +225,45 @@ def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path) -> dict:
     state = {"schema": SCHEMA, "project_id": ws.project["id"], "source_id": source_id,
              "source_collection_id": collection["id"], "selection": selection,
              "source_recipe_sha256": entry["sha256"]}
-    if state_path.exists():
-        prior = read_json(state_path)
-        if any(prior.get(key) != value for key, value in state.items()):
-            raise ValueError("The saved report belongs to a different original source selection")
-    report_root = root / "report"
-    report_root.mkdir(exist_ok=True)
-    product = observed_context.collect(ws, selection, report_root, state)
-    source_records = [{"id": observed_context.ROLE, "source_id": source_id,
-        "title": entry["title"], "vintage": entry["vintage"], "uri": entry["uri"]}]
-    contact = {"organization": "TokenJunkieLabs"}
-    files = scientific_report.write_companions(report_root, recipe["title"], product["sections"],
-        contact=contact, source_records=source_records, binding=binding)
-    # Use the native composition, with the correct observation-only cover label.
-    html = report_root / "report.html"
-    body = html.read_text(encoding="utf-8").replace(
-        "Scientific model results, scenario changes and retained source editions.",
-        "Observed water-quality measurements, matched calendar periods and retained source editions.")
-    html.write_text(body, encoding="utf-8")
-    files["report_html"] = describe_file(report_root, html)
-    scientific_report.report_pdf(report_root / "report.pdf", recipe["title"], product["sections"],
-        contact=contact, source_records=source_records)
-    files["report_pdf"] = describe_file(report_root, report_root / "report.pdf")
-    state.update(state="complete", files=files, report_path=report_root.relative_to(ws.root).as_posix(),
-                 observed_source_files=product["files"])
-    atomic_json(state_path, state)
-    export_root.mkdir(parents=True, exist_ok=True)
+    prior = read_json(state_path) if state_path.exists() else None
+    if prior is not None and any(prior.get(key) != value for key, value in state.items()):
+        raise ValueError("The saved report belongs to a different original source selection")
+    preview_path = export_root / "render-preview.json"
+    if prior is not None and not new_rendering and not preview_path.exists():
+        # A completed legacy/current report is an immutable result, even when
+        # its outer archive had not yet been published.
+        report_root = _verify_report(ws, prior)
+        state = prior
+    else:
+        if preview_path.exists():
+            preview = read_json(preview_path)
+            if preview.get("selection") != selection or preview.get("binding") != binding:
+                raise ValueError("Resume the original selected rendering preview in this output")
+        else:
+            preview = observed_report_render.prepare(
+                ws, [{"source_collection_id": collection["id"], "source_id": source_id}],
+                title=recipe["title"], contact={"organization": "TokenJunkieLabs"},
+                manifest_paths=[manifest])
+            atomic_json(preview_path, preview, immutable=True)
+        report_root = root / "renderings" / preview["operation_id"]
+        rendered = observed_report_render.render(ws, preview, report_root)
+        files = dict(rendered["files"])
+        files["render_operation"] = describe_file(report_root, report_root / "operation.json")
+        state.update(
+            state="complete", files=files, observed_source_files={},
+            report_path=report_root.relative_to(ws.root).as_posix(),
+            rendering_operation_id=rendered["operation_id"],
+            rendering_identity=preview["render_identity"])
+        if prior is not None and prior != state:
+            history = root / "retained-report-selections" / (digest(prior) + ".json")
+            atomic_json(history, prior, immutable=True)
+        atomic_json(state_path, state)
+        _verify_report(ws, state)
+    files = state["files"]
     exported_report = export_root / "native-report"
-    if exported_report.exists():
-        # Preserve any differently named customer files in a destination rather
-        # than deleting or silently overwriting the receiving folder.
-        for path in report_root.rglob("*"):
-            if path.is_file():
-                target = exported_report / path.relative_to(report_root)
-                if target.exists() and file_digest(target) != file_digest(path):
-                    raise ValueError("Existing exported report differs: " + str(target))
-    shutil.copytree(report_root, exported_report, dirs_exist_ok=True)
+    for record in _report_files(state).values():
+        original = relative_file(report_root, record["path"])
+        observed_report_render._retain_original(original, exported_report / record["path"], record)
     atomic_json(export_root / "native-selection.json", state)
     archive_state = export_root / "workspace-export.json"
     record = portable.backup(ws, archive)
@@ -234,8 +282,10 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--new-rendering", action="store_true",
+                        help="Prepare an explicit new renderer-bound report edition in a new export directory")
     args = parser.parse_args(argv)
-    result = deliver(args.workspace, args.manifest, args.output)
+    result = deliver(args.workspace, args.manifest, args.output, new_rendering=args.new_rendering)
     print(json.dumps(result, ensure_ascii=False), flush=True)
     return 0
 

@@ -156,7 +156,37 @@ Per-Workspace and per-export kernel locks keep two receiving invocations from
 writing this report simultaneously.
 
 To intentionally render an existing source with newer application/formatter
-code, choose a new export directory. That creates a new complete snapshot while
+code, pass `--new-rendering` and choose a new export directory. That creates a new complete snapshot while
 the prior export remains available. The returned report_selection points to the
 export's own native-selection.json, so later work on the Workspace does not
 silently change the selection described by that completed handover.
+
+
+A completed Workspace report is also resumed before an outer ZIP exists. Its
+entire saved formatter and observed-source file inventory is verified against
+the same original selection and binding. The native formatter is not called
+again on that original report directory. This covers an interruption between
+report completion, output copying and portable publication.
+
+An explicit `--new-rendering` uses the existing
+`model.observed_report_render.prepare/render` operations. The retained
+preview binds the installed renderer source files, selected observations,
+presentation, title, organization and Workspace. It is saved before rendering;
+a retry continues that exact preview. New report bytes have a separate
+`renderings/<original-operation-id>/` directory, and every prior saved
+selection remains under `retained-report-selections/` before the
+current selection advances. Both the original completed report and its previous
+portable export remain usable.
+
+```sh
+python -m measurement_workspace.observation_comparability_delivery \
+  --workspace /absolute/path/to/owned/workspace \
+  --manifest /absolute/path/to/retained-source/model-sources.json \
+  --output /absolute/path/to/new-rendered-edition \
+  --new-rendering
+```
+
+Ordinary repeats omit this flag. A completed output directory always denotes
+its captured original edition. Report member publication uses the maintained
+bounded, atomic original-file retention, so a lost receiver does not leave a
+new partially written PDF under its final filename.
