@@ -125,7 +125,7 @@ The rows route accepts scenario_id, metric, case_id and q. A page contains at mo
 | eco13.experiment.receive | experiment_id, title, project_id, setup_id, currency; optional scenario_costs and page_size |
 | eco13.report.save | record_id; optional title, scenario_costs, objectives, budget_cents, clear_budget and reset_report_options |
 | eco13.comparison.export | record_id |
-| eco13.archive.receive | upload_id; optional title |
+| eco13.archive.receive | upload_id |
 
 Submit through POST /api/actions with workspace, action, payload and the original operation_id. Retain that operation identity across a lost HTTP response so the original operator returns the same queued task. The provider also recovers a completed receiving directory or ZIP written before the original task result was persisted.
 
@@ -162,3 +162,19 @@ Use **Review this saved edition** to retain the exact report, planning choices, 
 The **Comparison reviews** list reopens the actual review or receives its captured editable comparison through the existing archive receiver. Create a separate review for an actual revised comparison, then use the original review's **Engineering handbacks** to map customer requests to its real replacement files and requirements. The complete handback includes both comparison reviews and their original companion files. Full original Workspace transfer retains the review and engineering histories across machines.
 
 Complete operator and source-native instructions: [COMPARISON_REVIEW.md](COMPARISON_REVIEW.md).
+
+<!-- ecosystem-current-work-order:2026-10-13.3:begin -->
+## Current model, demo and presentation continuation
+
+Pass the complete [current owner brief](../CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`, into current cloud/provider/child assignments and onward handoffs. The scenario package [worker instructions](../integrations/eco13_scenario_lab/AGENTS.md) contain the full brief and all four direct owner quotations. Source brief Git blob: `8cd1c1f3d371a2fb75471813844e31f489aa8272`. Include the durable application path/version and actual outgoing artifact in the next substantive result.
+
+The actual simulated native model and connected usable product are the hard priority. Center the demonstration on the Upper Savannah RFP: actual geographic/source shapes, a 30 m grid, the upstream contributing model domain separate from the South Carolina reporting mask and utility focus, clearly identified realistic simulated inputs, and native InVEST NDR/SDR baseline, restoration and matched control. Show actual annual N/P kg/year and sediment tonnes/year delivered to streams. Preserve matching support, source editions and editable parameters. Stream loads are not intake concentrations.
+
+Keep the current model executor and one writer per live Workspace. Preserve already-running jobs and original run/task identities; consume the completed case through the existing experiment/comparison/report workflow. Runtime/source availability or another plan does not substitute for execution. Use the existing equipped runtime or an isolated actual execution environment through the current execution owner when needed, while other builds continue. Carry current source/runtime/archive joins into the same assembled product rather than creating a controller or parallel review process.
+
+Tim's scientific practice already provides GIS, watershed/environmental modeling, analysis, map/report publishing and natural-capital decision support. Show a concrete production workshare his team can compare with its own workflow, not an assumed tools or capacity gap. The prime retains scientific direction, method choices, review and its client relationship. Demonstrate choose inputs/assumptions → run → inspect real maps/tables/differences → revise → export and cold-reopen the editable work his team can continue. Show actual produced artifacts and real elapsed build/run/package history; invent neither timing nor a guaranteed response.
+
+Open, LOOK at and operate the final product and ALL attachments as the recipient. Use the actual populated case, relevant desktop/narrow widths, meaningful states, important controls, downloads and extracted archive/project reopening. Fix concrete presentation defects in the same plain industrial product. When media is used, record the actual working app and use natural generative TTS where available; watch/listen to the final export. Generated screens cannot pretend execution, and inspection cannot replace hard implementation or become review/test theatre.
+
+Pass the full direction onward at the next safe message boundary without pausing active work, reviving owner-stopped/deleted tasks or asking the owner to relay it. No bid/prime-yes gate or arbitrary product/feature cap. Preserve focused validation, no private GitHub/Actions, attribution/source/contact/meeting/spend controls and the October 13, 2026 10:00 a.m. Eastern / 14:00 UTC cutoff.
+<!-- ecosystem-current-work-order:end -->
