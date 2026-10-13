@@ -1,0 +1,364 @@
+{
+  "schema": "stellar-forge.collaborative-documents-original-source.v1",
+  "repository": "woahwhattheheck/commons",
+  "commit": "fce1f8b787822513fb1b8a1ed77f41c5f2322fae",
+  "prefix": "revenue/tiptap_hocuspocus_workshare_20261012/",
+  "installedDirectory": "workbench",
+  "capsule": {
+    "gitBlob": "06fe2515d81442aefae04fcf83e9b8e055b942a0",
+    "bytes": 1417178,
+    "sha256": "302846127e16e1ee6b29de52e1d81a2b55328c0b618db8bd111d48fc4e6d6b15"
+  },
+  "files": [
+    {
+      "path": "cli.mjs",
+      "mode": "100644",
+      "bytes": 6228,
+      "sha256": "d2b17f5e3a8fe8c88d4501e8246908bc3ebe326e763655b9cd7efbfeaef5cd5a",
+      "gitBlob": "ba5c283ddc6e8986bb57bd2fcd9a9b0dfa5a4dfa"
+    },
+    {
+      "path": "CORE-CONTRACT.md",
+      "mode": "100644",
+      "bytes": 16122,
+      "sha256": "7b0d1ce37d868f527d627d5284399b7b57ae0759f5bdf33af36d4b505673f0a8",
+      "gitBlob": "f1d7fca917528fc6f4e56d0c9fdc1e875c75c7bd"
+    },
+    {
+      "path": "core/archive.mjs",
+      "mode": "100644",
+      "bytes": 19089,
+      "sha256": "cccaa0604b2500fd2bc97dd0a9774a260aaef66d042d1710a0933991d114b400",
+      "gitBlob": "037ce4ba6b7fa3fa70bd8b4c02245a9bcd559593"
+    },
+    {
+      "path": "core/auth.mjs",
+      "mode": "100644",
+      "bytes": 6687,
+      "sha256": "c18013814f6d3f3f75faedd45f01e146cd55a40546a4b8970721c736e49bba3d",
+      "gitBlob": "6f53d4d601255c1dc6b5ea364aea59f6317950c9"
+    },
+    {
+      "path": "core/common.mjs",
+      "mode": "100644",
+      "bytes": 6500,
+      "sha256": "ac174953d65fb6bbe7cbd56b852295c215f934becfb8659ba0205646da579a41",
+      "gitBlob": "269ce9b911b14a2cceabd4f4593619614b9bdfdd"
+    },
+    {
+      "path": "core/jobs.mjs",
+      "mode": "100644",
+      "bytes": 15767,
+      "sha256": "5330b5f6db34707243bf82e7672e7e42058c0add93f8c0c8af838bc7e739b9d4",
+      "gitBlob": "03bc8c83e9a0a8cf4f78e43831c8acd3d4a53327"
+    },
+    {
+      "path": "core/migration.mjs",
+      "mode": "100644",
+      "bytes": 8811,
+      "sha256": "a1f9826912f2900a74a6095077593fbab94ee2bef59cf604c1dd88d4cd3548be",
+      "gitBlob": "837267600d4a520bdb66a20d1c30d6ba44670e23"
+    },
+    {
+      "path": "core/objects.mjs",
+      "mode": "100644",
+      "bytes": 2783,
+      "sha256": "5801aa4df5b03ad02ce55c80b279c1d29b20267a596a560b09ab6e03ddfd6f62",
+      "gitBlob": "5c203fc86edde3e2b51801a7cabfeba7a6069edc"
+    },
+    {
+      "path": "core/store.mjs",
+      "mode": "100644",
+      "bytes": 12776,
+      "sha256": "f09ccab590287bf27dcf24fe47cfc3377ceea35eb3fb27753a7f3c37e4a93f93",
+      "gitBlob": "df30dac3e9ef0db0c515c883471167dbd7744e2e"
+    },
+    {
+      "path": "core/uploads.mjs",
+      "mode": "100644",
+      "bytes": 5462,
+      "sha256": "dca04e16a6a3f6a63989bebababb874a38265020da8b3063fad8bdcc0c7c1f6e",
+      "gitBlob": "e869703263d1f4d7dfd159d8681f72fc4ac773ac"
+    },
+    {
+      "path": "core/workspace.mjs",
+      "mode": "100644",
+      "bytes": 23265,
+      "sha256": "5fd16c969c7d386b9d8372734f5ee0d453a75d3e65d7333ceb01a6b038843f6d",
+      "gitBlob": "77033d23ee6e51fd964b8c618b44d44948ab290d"
+    },
+    {
+      "path": "delivery/render_workshare.py",
+      "mode": "100644",
+      "bytes": 9346,
+      "sha256": "30a77eb35fe2f206b5becfd0ea9f7f29e70e5c10dd7b333381f991a76835762b",
+      "gitBlob": "71a9f85b5f5ef580140a3d2ec9d0d915e913a51b"
+    },
+    {
+      "path": "delivery/workshare-input.json",
+      "mode": "100644",
+      "bytes": 1362,
+      "sha256": "c8ac5432f83760599ba6a4ac47862386b4cad5912b9f0fb34c53fdd7fc88cc9e",
+      "gitBlob": "d3ccdf094c5374f3147496049590232e90d014d7"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "bytes": 1243,
+      "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec",
+      "gitBlob": "857c06a5eac94348279d74b7d0313d51e01a97b9"
+    },
+    {
+      "path": "native/runtime.mjs",
+      "mode": "100644",
+      "bytes": 19922,
+      "sha256": "54cfdaf71025c0af4298f37106861980c4a040dbe0310dc1e947a81b491adfdf",
+      "gitBlob": "ee5fbbfdcb05a083c4d4b9ce82821a5d62cb2e1e"
+    },
+    {
+      "path": "native/selection.mjs",
+      "mode": "100644",
+      "bytes": 4870,
+      "sha256": "f0f42ca65d8be2a0b15e2f130f10d54ce2e25a8dd16c9fe2f737f2447933efeb",
+      "gitBlob": "825bb09c7acb5d8849b2d21b60399b1b157599d7"
+    },
+    {
+      "path": "OPERATOR.md",
+      "mode": "100644",
+      "bytes": 22922,
+      "sha256": "e3407566f2d2e4fbc97d0f3950ea6b470e2af6a49cbaa38cd9feecb10a1b4054",
+      "gitBlob": "72d9359ef758c17c3bf1dbcfb21eab2b3fcd1ccb"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "bytes": 50357,
+      "sha256": "72621f79b14ef8f2bcccb1b02e29ad43784c8aec8d6c50561ca0bf3e330f845e",
+      "gitBlob": "166988af51c4a7f2ae7133b210da19481e6857b4"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 820,
+      "sha256": "3b004e9ba1b9f65e5016284aebe9981d94a79b59d10103586b7d460076396564",
+      "gitBlob": "8477e8fd5f48d4e797087b3e9197dc328775bdd5"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "bytes": 12560,
+      "sha256": "92b37411982e261f3fd493a254b86fcb6f6b35e1481ec170f3c787d0ae4702dd",
+      "gitBlob": "4dd06439dbde585d6c633786600bd5fae18e38c1"
+    },
+    {
+      "path": "receiving/browser.mjs",
+      "mode": "100644",
+      "bytes": 55358,
+      "sha256": "0cd8f63bd1ec9d6dcb2fcca382975900c6f9ab4f46936335ace4d4d379db52bf",
+      "gitBlob": "1aea8059841a2f310b9d2a74db297539670b2ca3"
+    },
+    {
+      "path": "receiving/private_case.py",
+      "mode": "100644",
+      "bytes": 38991,
+      "sha256": "012d6ce850e71d362bc946ba92f914771b5ce7df1229a28444cf810bcf36a4ba",
+      "gitBlob": "6d1a04f422f8ef68c4451ca3775f23e10d39206c"
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "mode": "100644",
+      "bytes": 58450,
+      "sha256": "1b0aa1e785d5bd8b2bb6bd466013545fc8041e9d063e0affaff2e979c8bb1a4f",
+      "gitBlob": "3b1b0206c5af3728f39ba43e80782aff69063870"
+    },
+    {
+      "path": "receiving/run_and_save.py",
+      "mode": "100644",
+      "bytes": 68536,
+      "sha256": "eb36c03658e60bca1ba4c86c48a76f3bb24abe44425aa7ce837fef302e5990ed",
+      "gitBlob": "aed7e45d0850ac84cceda26b25827e6fd705b2f9"
+    },
+    {
+      "path": "receiving/SAVING.md",
+      "mode": "100644",
+      "bytes": 11724,
+      "sha256": "2ce73012f18232fc046faafe075bc7351caefb6425d6f062ab4415fb73b6d786",
+      "gitBlob": "e31d9a61d87f02113fedba57c57e048745ae64aa"
+    },
+    {
+      "path": "reference/documents.json",
+      "mode": "100644",
+      "bytes": 3818,
+      "sha256": "752bb3a767e5b2f456308df021bff017059e0631fb4370f31509346ad3a45237",
+      "gitBlob": "7944b1abb2a5afcd1c7875953718a7c098f72b90"
+    },
+    {
+      "path": "reference/schema.mjs",
+      "mode": "100644",
+      "bytes": 219,
+      "sha256": "7ef1b98bfe55c5b82c0f63f56025bb18376a7eaf38c2099cae7484e97706073c",
+      "gitBlob": "82fbf4eceb0b11da59fdb7e8f4bf210df5108b27"
+    },
+    {
+      "path": "runtime/archive.py",
+      "mode": "100644",
+      "bytes": 16125,
+      "sha256": "d572d906172fb078983046ae1fddf32533eadb9de7f56c508d0c99d942a240ab",
+      "gitBlob": "6b035a80cc30784caf167dba6ff81274f304a6d4"
+    },
+    {
+      "path": "runtime/client.mjs",
+      "mode": "100644",
+      "bytes": 4766,
+      "sha256": "03a65b7514b74ca565bbc5c4c068cfab00a7fdaf9b436f94b76fa9e94f5122ae",
+      "gitBlob": "5f456ffa568de1b04543c41f8c468fd74c412328"
+    },
+    {
+      "path": "runtime/inspect.mjs",
+      "mode": "100644",
+      "bytes": 3744,
+      "sha256": "f8d9b59852d7a61776175a5dab3e3a0c89e3be4d6c0e99665f824c1965ecf781",
+      "gitBlob": "9419482bab12ef3a33e27b09e7b20dc3aa7c24a0"
+    },
+    {
+      "path": "runtime/manage.py",
+      "mode": "100644",
+      "bytes": 38079,
+      "sha256": "60418d6e47c25ef3152cf352f58a8ec1a8a1304113f4e098d19d21b6b5654d8b",
+      "gitBlob": "d4499c4560d23f2eb6a6c379f3b98aa8b78235f5"
+    },
+    {
+      "path": "runtime/ORIGINAL_SOURCE_RECEIVING.json",
+      "mode": "100644",
+      "bytes": 3206,
+      "sha256": "e021c04bcb0cc671bce7d08174f1797ff458d9ddee650bf60e30c668756ba23f",
+      "gitBlob": "d9c85ba4930fafb1fd17d00036fdafacda607e53"
+    },
+    {
+      "path": "runtime/RUNTIME.md",
+      "mode": "100644",
+      "bytes": 13158,
+      "sha256": "dc2207174c70673cb030d876e8573c581402a27e75c2c7b2d86b76383c90fbae",
+      "gitBlob": "60a0b6e95e1d2171b4a6b4fb905189a741e5c7b5"
+    },
+    {
+      "path": "runtime/sources.py",
+      "mode": "100644",
+      "bytes": 15444,
+      "sha256": "f04604ee102390fee3e966fee63dc4f752dc207976901563c3bb7d5a323fbd71",
+      "gitBlob": "833f3efa6ca273b92deb64cbb9fe5e459cd8d233"
+    },
+    {
+      "path": "runtime/upstreams.json",
+      "mode": "100644",
+      "bytes": 523479,
+      "sha256": "3c741b6e7a25898abd8deaacc8ad44dbc1e4ebfa2260669e1dbbaa73a0d82f9c",
+      "gitBlob": "7f910eb64656388609e527854b7ff459554a089b"
+    },
+    {
+      "path": "scripts/build.mjs",
+      "mode": "100644",
+      "bytes": 1570,
+      "sha256": "93ee3a4dd1e8e11f4fd13d29e133b0b7144c592125e09e0ca1eff1b53fec195e",
+      "gitBlob": "0891b32f2443b0415941fba9cfdcfcda9232a9ad"
+    },
+    {
+      "path": "scripts/install.mjs",
+      "mode": "100644",
+      "bytes": 5645,
+      "sha256": "982463ecebac0b6c8e8a43349b27075069b558861af79ece4678c794f4dfadcc",
+      "gitBlob": "0d49b189a7c392d395f52d27e176e6a6d8abbd39"
+    },
+    {
+      "path": "server.mjs",
+      "mode": "100644",
+      "bytes": 20099,
+      "sha256": "a98184b2bec35271a93bd6cbee2e940922fad2210cc3854a8247718f4034a429",
+      "gitBlob": "7634466dbc1900c42fb919d8076dc4972c056c4f"
+    },
+    {
+      "path": "SOURCE-CONTRACT.md",
+      "mode": "100644",
+      "bytes": 5097,
+      "sha256": "1becc4f901d81468c9a6465f9b62bdc6d5c91876f66dd7867f75ec22ec82ee88",
+      "gitBlob": "a0b5f42a62f1ed1e3e5ef40b705967378a6222bf"
+    },
+    {
+      "path": "vendor/stellar-expert/exact-json.mjs",
+      "mode": "100644",
+      "bytes": 2861,
+      "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26",
+      "gitBlob": "f24ed2620ee2460c780e6efea22c738edffbff75"
+    },
+    {
+      "path": "vendor/stellar-expert/LICENSE",
+      "mode": "100644",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+      "gitBlob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+    },
+    {
+      "path": "vendor/stellar-expert/provider.mjs",
+      "mode": "100644",
+      "bytes": 10426,
+      "sha256": "109bc181030e9b795cb34a1b7c29d636a78c959f9f47c43735ecba60be613cfc",
+      "gitBlob": "60b8804e32cc45ce44ccb295f8f086e703bc9406"
+    },
+    {
+      "path": "vendor/stellar-expert/schema.mjs",
+      "mode": "100644",
+      "bytes": 5972,
+      "sha256": "d34b64253374f9d2f3b74975b458758797ae7c9e5acdf5e23c1226c8d6d7dcef",
+      "gitBlob": "7538d26e74fa21fa4b1b388b6d80bb18dde0928c"
+    },
+    {
+      "path": "vendor/stellar-expert/SOURCE.json",
+      "mode": "100644",
+      "bytes": 1760,
+      "sha256": "73ae9bb25ed2096019a78a00999670ebc418401a262b458cf30bf32a72181549",
+      "gitBlob": "3e2912ed5bd74da6ee0ff1063b582ba7dfc4156b"
+    },
+    {
+      "path": "vendor/stellar-expert/store.mjs",
+      "mode": "100644",
+      "bytes": 11135,
+      "sha256": "357227427d3b25d7a43527b494b938fe401665ddb2385e8eeb2396a6538c3200",
+      "gitBlob": "f8e64bf625a0c0d2f6678a9b8c1d07a0ffd42f9d"
+    },
+    {
+      "path": "web/app.mjs",
+      "mode": "100644",
+      "bytes": 98549,
+      "sha256": "6bfd77d192b650d418553f2e1618bb9878b74fc5048520d9457784e2ae23bb9d",
+      "gitBlob": "8cabd0c77a87bc9f1c2a932880e39a2966a11c71"
+    },
+    {
+      "path": "web/editor.mjs",
+      "mode": "100644",
+      "bytes": 24687,
+      "sha256": "ae1cff83cfd7c546e152e73660146733bdebcfc56f7d0cf817bb719e84d5c6ff",
+      "gitBlob": "de8ac9a498cb314681df951b7414f45d9d83d3d2"
+    },
+    {
+      "path": "web/index.html",
+      "mode": "100644",
+      "bytes": 8346,
+      "sha256": "777c49c6351b6737e27e9a79b08883c967ef312dac457ef31f9c5edd2d08e465",
+      "gitBlob": "f363841cd03b1124cf2dccd0a42cdc4987f52654"
+    },
+    {
+      "path": "web/style.css",
+      "mode": "100644",
+      "bytes": 19029,
+      "sha256": "55fb11925a46c743437ddc03c1d0433acf90d8397a4bdc7d2839dfa844bf4b34",
+      "gitBlob": "d64c37d30c030cf39c51e947f8853cf798fe7e07"
+    },
+    {
+      "path": "WORKSHARE.md",
+      "mode": "100644",
+      "bytes": 5468,
+      "sha256": "c7cd927c344da4089af75ede256f8acd42c63d83a0defa9162974b6f6b496403",
+      "gitBlob": "5f3b7af4447346275057a2f666413a01c6ee6992"
+    }
+  ]
+}
