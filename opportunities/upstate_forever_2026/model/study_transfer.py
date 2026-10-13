@@ -1128,7 +1128,7 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
                 if spatial_review:
                     if (value.get("schema") != "upstate.spatial-reviews/v1"
                             or value.get("project_id") != workspace.project["id"]
-                            or value.get("id") != key or digest(value) != key):
+                            or digest(value) != key):
                         raise ValueError("The saved map review differs from its original identity or project.")
                     selection, state = value, {**value, "state": "complete"}
                 elif selected_kind == "spatial-exports":
