@@ -326,7 +326,8 @@ def source_manifest_members(path, value):
     return members
 
 
-def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True):
+def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True,
+            selected_components=None):
     """Return original member identities and exact gaps without executing source."""
     files = document.get("files")
     metadata = document.get("file_metadata", {})
@@ -341,6 +342,9 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             (path, _text(files, metadata, path)) for path in fragment_paths(files)])
     # An explicitly supplied catalogue is already the caller's complete selection.
     catalog = validate_catalog(catalog)
+    if selected_components is not None:
+        requested = strings(list(selected_components), "Selected family components", nonempty=True)
+        catalog = {**catalog, "required_components": requested}
     selected = _selected(catalog, extra_components)
     files, metadata = dict(files), dict(metadata)
     embedded = {}
@@ -467,6 +471,14 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         if found:
             for candidate in found:
                 require(candidate, owner, kind)
+                if selected_components is not None:
+                    # Python executes retained package initializers before the
+                    # selected module. Namespace packages need no invented file.
+                    for parent in PurePosixPath(candidate).parents:
+                        if str(parent) != ".":
+                            initializer = (parent / "__init__.py").as_posix()
+                            if initializer in files and initializer != candidate:
+                                require(initializer, owner, "python-package")
             return
         chosen_roots = ("",) if isinstance(name, tuple) else roots
         targets = [(root + "/" if root else "") + _module_base(name) + "/"
@@ -604,10 +616,19 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         is_package = (any(candidate.endswith("/__init__.py") for candidate in module_files)
                       or not module_files)
         for alias in aliases:
+            child = _child_module(name, alias.name) if alias.name != "*" else None
+            # An initializer's own "from . import child" declaration appears in
+            # its exports, but Python must still load that original child file.
+            # Preserve real constants/classes rather than inventing modules.
+            if (selected_components is not None and child is not None and is_package
+                    and owner in module_files
+                    and any(candidate in files for candidate in module_candidates(child))):
+                require_module(child, owner, "python-import", namespace=True)
+                continue
             if alias.name == "*" or alias.name in exports:
                 continue
             if is_package:
-                require_module(_child_module(name, alias.name), owner, "python-import", namespace=True)
+                require_module(child, owner, "python-import", namespace=True)
             elif module_files:
                 issue("python-import", owner, _module_label(_child_module(name, alias.name)),
                       "Imported name is absent from the retained module", line=line)
@@ -645,10 +666,10 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             issue("source-manifest", manifest_path, manifest_path, str(error))
 
     ids = {}
-    for path in sorted(files):
+    def inspect_descriptor(path):
         if not (path.startswith("operator/extensions/") and path.endswith(".json")
                 and "/" not in path[len("operator/extensions/"):]):
-            continue
+            return
         required.add(path)
         try:
             manifest = json.loads(_text(files, metadata, path))
@@ -701,7 +722,21 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
 
     js_pattern = re.compile(
         r"""(?:\b(?:import|export)\s+(?:[^;\n]*?\s+from\s*)?|\bimport\s*\(\s*)["'](\.[^"']+)["']""")
-    for path in sorted(files):
+    def source_paths():
+        # Keep the full-edition behavior unchanged. An explicit family follows
+        # the same resolver from declared roots, including newly reached files.
+        scanned = set()
+        while True:
+            pending = sorted((required if selected_components is not None else files.keys()) - scanned)
+            if not pending:
+                return
+            for path in pending:
+                scanned.add(path)
+                if path in files:
+                    yield path
+
+    for path in source_paths():
+        inspect_descriptor(path)
         if not path.endswith((".py", ".js", ".mjs", ".html")):
             continue
         try:
@@ -717,6 +752,12 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                 continue
             if path in retained_only:
                 continue
+            if selected_components is not None:
+                for parent in PurePosixPath(installed_owner(path)).parents:
+                    if str(parent) != ".":
+                        initializer = (parent / "__init__.py").as_posix()
+                        if initializer in files and initializer != path:
+                            require(initializer, path, "python-package")
             package = list(PurePosixPath(installed_owner(path)).parent.parts)
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
@@ -816,8 +857,12 @@ def require_complete(document, **kwargs):
     return report
 
 
-def inspect_directory(root, *, required=False, allow_embedded=False):
-    """Read original files; do not import backends or run scientific models."""
+def read_directory(root, *, allow_embedded=False, selected_components=None):
+    """Read original source for static inspection; execute no application code.
+
+    Explicit families discover against the retained Python/JavaScript module
+    inventory, then load only their declared and reachable non-code members.
+    """
     root = Path(root).resolve(strict=True)
     files, metadata = {}, {}
     catalog_file = root / CATALOG_PATH
@@ -826,9 +871,14 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
     catalog, fragment_records = compose_catalog(
         json.loads(catalog_file.read_text("utf-8")), read_directory_fragments(root))
     catalog = validate_catalog(catalog)
-    declared = {path for component in catalog["components"].values() for path in component["paths"]}
-    declared.update(fragment["path"] for fragment in fragment_records)
+    if selected_components is not None:
+        requested = strings(list(selected_components), "Selected family components", nonempty=True)
+        catalog = {**catalog, "required_components": requested}
     selected = _selected(catalog, ())
+    declared = {path for name in (selected if selected_components is not None else catalog["components"])
+                for path in catalog["components"][name]["paths"]}
+    declared.add(CATALOG_PATH)
+    declared.update(fragment["path"] for fragment in fragment_records)
     _, retained_only, templates = selected_contexts(catalog, selected)
     declared.update(row["path"] for name in selected
                     for key in ("retained_only", "html_templates")
@@ -844,8 +894,12 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
         if not path.is_file():
             continue
         name = relative_path.as_posix()
-        if name not in declared and not name.endswith((".py", ".js", ".mjs", ".html", ".json", ".css")):
+        source_suffixes = ((".py", ".js", ".mjs") if selected_components is not None
+                           else (".py", ".js", ".mjs", ".html", ".json", ".css"))
+        if name not in declared and not name.endswith(source_suffixes):
             continue
+        if path.stat().st_size > 256 * 1024 * 1024:
+            raise ValueError("Selected source exceeds the receiving limit: " + name)
         body = path.read_bytes()
         record = {"bytes": len(body), "sha256": digest(body)}
         try:
@@ -897,8 +951,9 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
     # historical pages remain hash-covered without importing their old assets.
     # This keeps an original on-disk figure present in source-map inspection,
     # without reading unrelated original geospatial payloads.
-    pending = [name for name in files
-               if name.endswith(".html") and name not in retained_only]
+    pending = ([] if selected_components is not None else
+               [name for name in files
+                if name.endswith(".html") and name not in retained_only])
     scanned = set()
     while pending:
         name = pending.pop()
@@ -937,5 +992,52 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
             if target.endswith(".html") and target not in retained_only:
                 pending.append(target)
     document = {"files": files, "file_metadata": metadata}
-    return (require_complete(document, allow_embedded=allow_embedded) if required
-            else inspect(document, allow_embedded=allow_embedded))
+    if selected_components is not None:
+        # Assets can themselves contain imports or relative HTML resources.
+        # Reuse inspect's exact context-aware edges until no new body is read.
+        while True:
+            report = inspect(document, allow_embedded=allow_embedded,
+                             selected_components=selected_components)
+            targets = {row["target"] for row in report["dependencies"]
+                       if row["target"] not in files}
+            added = False
+            for name in sorted(targets):
+                relative(name)
+                path = root.joinpath(*PurePosixPath(name).parts)
+                if not path.exists():
+                    continue
+                if path.is_symlink() or not path.resolve(strict=True).is_relative_to(root):
+                    raise ValueError("Selected family member leaves the application: " + name)
+                for parent in path.parents:
+                    if parent == root:
+                        break
+                    if parent.is_symlink():
+                        raise ValueError("Selected family member contains an alias: " + name)
+                if not path.is_file():
+                    continue
+                if path.stat().st_size > 256 * 1024 * 1024:
+                    raise ValueError("Selected family member exceeds the receiving limit: " + name)
+                with path.open("rb") as stream:
+                    body = stream.read(256 * 1024 * 1024 + 1)
+                if len(body) > 256 * 1024 * 1024:
+                    raise ValueError("Selected family member exceeds the receiving limit: " + name)
+                record = {"bytes": len(body), "sha256": digest(body)}
+                try:
+                    files[name] = body.decode("utf-8")
+                except UnicodeError:
+                    files[name] = base64.b64encode(body).decode("ascii")
+                    record["encoding"] = "base64"
+                metadata[name] = record
+                added = True
+            if not added:
+                break
+    return document
+
+
+def inspect_directory(root, *, required=False, allow_embedded=False, selected_components=None):
+    """Inspect a whole edition, or an explicitly selected family and its closure."""
+    document = read_directory(root, allow_embedded=allow_embedded,
+                              selected_components=selected_components)
+    options = {"allow_embedded": allow_embedded, "selected_components": selected_components}
+    return require_complete(document, **options) if required else inspect(document, **options)
+

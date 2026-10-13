@@ -139,3 +139,63 @@ Composer dependency: existing scientific-report-editions.
 The A73C simulated headwaters case remains one generator, one source edition and one native runtime operation. Its parameter-study owner retains the routing/Lmax design and joint decision calculations; its delivery owner retains the full native maps and project archive. This course accepts that design's actual saved ID after its original contrasts complete, then supplies a typed scientific source to the existing report composer.
 
 Actual Upper Savannah studies use their own regional input grid, coefficient profiles, scenarios and run IDs. Gura remains the original Kenya model commissioning case. A scientific source preserves whichever original design it is given and its full source provenance; it transfers no observations, calibration claims or physical quantities between those studies.
+
+
+## Complete simulated demonstration receiving
+
+The maintained `source_tools/simulated_headwaters.py` driver carries the same teaching case through the scientific report and independent receiving. Its original command, Workspace, output directory, prepare-only/field-only options, native run queue and customer/field phases remain the entry points. Continue the existing case with the same original command after a repaired native or report phase.
+
+The driver completes the existing parameter course before the final mapped delivery. It then prepares this course's actual saved-ensemble source with `prepare(workspace, ensemble_id, render=True)`. The saved source must belong to the same project and design and describe the completed native course. The original native-process and field chapters retain their order; the study source is appended once.
+
+The original ordered report publisher saves the full source selection as a `scientific-report-editions` record. This is the edition shown by the Sources composer. The existing mapped delivery retains the original baseline, riparian restoration, matched-area control, overlays and map settings, with the same ordered scientific source chapters.
+
+### Two actual receiving results
+
+The driver prepares two original application archives:
+
+| Receiving scope | Original producer | What the independently started receiving child opens |
+| --- | --- | --- |
+| Selected scientific report | `model.study_transfer.export_study`, rooted at the saved scientific-report edition | The original ordered report, every selected source, the editable ensemble design and its retained native member runs, original parameter-course results and report lineage. |
+| Complete demonstration project | The existing `Workspace.backup` operation | The original complete native model case, maps, spatial reviews, field campaign, customer requests/handbacks, scientific sources, saved report and parameter course. |
+
+Both use the existing `source_tools/simulated_headwaters_receiving.py` helper from the archive's own application in a separate isolated Python process. The selected report uses its `selected_study` mode; the complete project retains all original scientific, field and customer checks. The child verifies the actual retained report and data. It does not rerender a report or execute a native model.
+
+The selected transfer is explicit:
+
+~~~python
+selection = {
+    "schema": "upstate.study-selection/v1",
+    "title": actual_title,
+    "roots": [{"kind": "scientific-report-editions", "id": saved_report_id}],
+    "include_related_results": False,
+}
+~~~
+
+The receiving child resolves the same original Study receipt using `verify_received_studies`, reads the archived scientific report through `scientific_report_editions.inspect`, and checks the report-bound source operation against the original ensemble/report signatures. Every retained recipe input, source collection body/companion and scientific output is checked through the existing archive member inventory. Original course verification checks the selected profiles, ordered scenarios, completed native member runs, support-group decision reports and paired-product archives.
+
+### Retained driver outputs
+
+All paths below are relative to the original demo output directory. The driver receipt records the actual identities and absolute receiving paths.
+
+| Output | Contents |
+| --- | --- |
+| `parameter-course.json` | The original completed parameter-course result. |
+| `native-study-scientific-source.json` | The original registered source operation, source binding, figure count and rendering release. |
+| `delivery-selection.json` / `mapped-delivery.json` | The original mapped selection with the ordered study chapter and its completed delivery. |
+| `scientific-report-preview.json` / `scientific-report-edition.json` | The original ordered publisher preview and immutable saved edition. |
+| `selected-study-transfer.json` | The original selected Study receipt and complete archive identity. |
+| `selected-study-archives/<edition>.zip` | The selected report, editable dependencies and embedded application. |
+| `selected-study-reopened/<edition>/` | The received application and Workspace for that exact archive. |
+| `selected-study-cold-reopen/<attempt>/` | The actual isolated child request, launch, stdout/stderr and original result. |
+| `archives/<edition>.zip` and `reopened/<edition>/` | The complete project's original archive and its independent receiving directory. |
+| `cold-reopen/<attempt>/` | The complete project's original isolated receiving records. |
+
+The existing `demo-receiving.json` gains `scientific_study`, `scientific_report`, `scientific_study_transfer`, `scientific_study_received` and `scientific_study_cold_receiving`. Original run, field, customer, spatial, parameter and complete-project receipt fields remain available.
+
+### Continue an interrupted original phase
+
+The selected archive name binds the actual scientific edition, source operation and current driver/receiving helper source identities. The complete archive identity also includes the actual scientific source, saved report and selected transfer ID. A newer scientific or application edition therefore receives its own output identity.
+
+A repeated selected export uses the original producer's completed archive recovery. Existing receiving directories are reused only after their members and project match that same original archive. Each isolated reopen gets a new attempt directory with its actual process result. An exception retains the native driver's phase and the original receiver's child logs, so the same owner can repair that concrete stage and continue the same case.
+
+The teaching selection remains explicitly simulated. This receiving course preserves the original physical constituent units, annual time basis, sign conventions and exact support masks. Its modeled results are independent of the separate Upper Savannah regional observation/calibration and Gura commissioning operations.

@@ -29,6 +29,11 @@ PROPOSED_PDF = (
 )
 SCHEMA = "upstate.classified-water-capture/v1"
 
+try:
+    from .water_classifications import classification_scope
+except ImportError:
+    from water_classifications import classification_scope
+
 
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
@@ -439,6 +444,7 @@ def write_source_manifest(root, result):
                         "upstream_source_id": layer.get("upstream_source_id"),
                         "data_status": layer.get("data_status"),
                         "source_selection": layer.get("selection"),
+                        **{key: layer[key] for key in ("jurisdiction", "classification_system") if key in layer},
                         "source_adoption": layer.get("adoption"),
                         "representation": "Derived native-feature collection; exact publisher pages are companions",
                         "companions": companions})
@@ -447,7 +453,9 @@ def write_source_manifest(root, result):
                         **files[item["path"]], "uri": item["uri"],
                         "vintage": item["id"], "designation_status": item["status"],
                         "observed_at": item["captured_at"]})
-    manifest = {"schema": "upstate.sources/v1", "title": "SC DES classified-water source edition",
+    title = ("Jurisdiction-qualified classified-water source edition" if any(layer.get("classification_system") for layer in result["layers"])
+             else "SC DES classified-water source edition")
+    manifest = {"schema": "upstate.sources/v1", "title": title,
                 "captured_at": result["created_at"], "entries": entries,
                 "notes": ["Original object IDs, all source fields, native geometry and CRS retained.",
                           "Current and proposed regulatory editions remain separate sources.",
@@ -528,8 +536,11 @@ def crs_identity(value):
 def adopt(args):
     """Assemble existing publisher responses into the capture contract without HTTP requests."""
     specification_body, specification = retained_json(args.selection)
-    if specification.get("schema") != "upstate.retained-classified-water-selection/v1":
+    selection_v2 = specification.get("schema") == "upstate.retained-classified-water-selection/v2"
+    if specification.get("schema") not in ("upstate.retained-classified-water-selection/v1", "upstate.retained-classified-water-selection/v2"):
         raise ValueError("Select the retained classified-water selection specification")
+    if selection_v2:
+        classification_scope(specification, required=True)
     url = public_url(specification["layer_url"]).rstrip("/")
     if not re.search(r"/(?:MapServer|FeatureServer)/\d+$", url):
         raise ValueError("Selection must identify an exact native service layer")
@@ -606,20 +617,39 @@ def adopt(args):
     if len(features) != expected_count:
         raise ValueError("Original feature count differs from the selected source edition: "
                          + str(len(features)) + " versus " + str(expected_count))
-    class_field, huc_field = specification["class_field"], specification["huc_field"]
-    if class_field not in field_types or huc_field not in field_types:
+    class_field = specification["class_field"]
+    huc_field = specification.get("huc_field") if selection_v2 else specification["huc_field"]
+    if class_field not in field_types or (huc_field is not None and huc_field not in field_types):
         raise ValueError("Selection class/HUC field does not match actual metadata")
+    attribute_filters = specification.get("attribute_filters", {}) if selection_v2 else {}
+    if selection_v2:
+        expected_ids = specification.get("expected_object_ids")
+        if (not isinstance(expected_ids, list) or
+                any(isinstance(v, bool) or not isinstance(v, int) for v in expected_ids) or
+                len(expected_ids) != len(set(expected_ids)) or set(expected_ids) != set(features)):
+            raise ValueError("Registry v2 adoption requires the exact unique original object-ID inventory")
+        if not isinstance(attribute_filters, dict) or any(
+                field not in field_types or not isinstance(values, list) or not values or
+                any(isinstance(v, (dict, list)) for v in values)
+                for field, values in attribute_filters.items()):
+            raise ValueError("Attribute selection must use actual fields and nonempty original scalar values")
+        if huc_field is None and not attribute_filters:
+            raise ValueError("A source without publisher HUCs must retain its actual attribute-selection predicate")
     class_counts, publisher_hucs = {}, set()
     for feature in features.values():
         attributes = feature["attributes"]
         class_value, huc = attributes.get(class_field), attributes.get(huc_field)
         if class_value not in specification["included_class_codes"]:
             raise ValueError("A retained feature lies outside the selected source classes")
-        if (not isinstance(huc, str) or not re.fullmatch(r"\d{12}", huc)
-                or not any(huc.startswith(prefix) for prefix in specification["included_huc_prefixes"])):
-            raise ValueError("A retained publisher HUC does not meet the original selection")
+        if huc_field is not None:
+            if (not isinstance(huc, str) or not re.fullmatch(r"\d{12}", huc)
+                    or not any(huc.startswith(prefix) for prefix in specification["included_huc_prefixes"])):
+                raise ValueError("A retained publisher HUC does not meet the original selection")
+            publisher_hucs.add(huc)
+        if any(field not in attributes or attributes[field] not in values
+               for field, values in attribute_filters.items()):
+            raise ValueError("An original feature does not match the retained attribute selection")
         class_counts[class_value] = class_counts.get(class_value, 0) + 1
-        publisher_hucs.add(huc)
     if specification.get("expected_publisher_huc_count", len(publisher_hucs)) != len(publisher_hucs):
         raise ValueError("Publisher HUC count differs from the selected source edition")
     expected_classes = specification.get("expected_class_counts", {})
@@ -644,8 +674,9 @@ def adopt(args):
                 raise ValueError("Original attribute page lacks the actual native OID")
             if identity in attributes_by_id:
                 raise ValueError("Attribute inventory repeats a native ID; select either combined or paged attributes")
-            if not {oid, class_field, huc_field}.issubset(attributes):
-                raise ValueError("Attribute inventory must retain the native ID, class and publisher HUC")
+            required_attributes = {oid, class_field} | ({huc_field} if huc_field is not None else set()) | set(attribute_filters)
+            if not required_attributes.issubset(attributes):
+                raise ValueError("Attribute inventory must retain the native ID, class and original selection fields")
             if not set(attributes).issubset(field_types):
                 raise ValueError("Attribute inventory includes fields absent from the original layer metadata")
             attribute_columns.update(attributes)
@@ -724,6 +755,7 @@ def adopt(args):
         "upstream_source_id": specification["source_id"],
         "data_status": specification.get("data_status"),
         "selection": specification,
+        **({key: specification[key] for key in ("jurisdiction", "classification_system")} if selection_v2 else {}),
         "publisher_huc_field": huc_field,
         "publisher_huc_count": len(publisher_hucs),
         "attribute_inventory_checked": bool(args.attributes),
