@@ -1,3 +1,6 @@
+import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
+import {flowLoadOperation,readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
+import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
 import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
 import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
 import {intakeOperation} from './intake.mjs';
@@ -50,6 +53,19 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         send(response,200,reconciliationOperation(s,method,parts.slice(1),query,method==='POST'?await readBody(request):{}));return;
       }
       if(parts[0]==='flow'){
+        if(method==='GET'&&parts.length===4&&parts[3]==='bundle'){
+          if(parts[1]==='studies'){send(response,200,flowStudyBundle(s,parts[2]));return;}
+          if(parts[1]==='load-results'){send(response,200,flowLoadBundle(s,parts[2]));return;}
+        }
+        if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&parts[3]==='report.html'){send(response,200,renderFlowStudy(readFlowStudy(s,parts[2])),'text/html; charset=utf-8','daily-discharge-study.html');return;}
+        if(parts[1]?.startsWith('load-')){
+          if(method==='GET'&&parts[1]==='load-results'&&parts.length===4){
+            const result=readFlowLoadResult(s,parts[2]),format=parts[3];
+            if(format==='report.html'){send(response,200,renderFlowLoads(result),'text/html; charset=utf-8','concentration-discharge.html');return;}
+            if(['daily.csv','periods.csv','context.csv','annual.csv'].includes(format)){send(response,200,flowLoadCSV(result,format.split('.')[0]),'text/csv; charset=utf-8',format);return;}
+          }
+          send(response,200,await flowLoadOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
+        }
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['daily.csv','periods.csv','samples.csv'].includes(parts[3])){send(response,200,flowCSV(readFlowStudy(s,parts[2]),parts[3].split('.')[0]),'text/csv; charset=utf-8',parts[3]);return;}
         send(response,200,await flowOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
       }
