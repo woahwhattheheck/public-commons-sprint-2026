@@ -59,3 +59,15 @@ node release.mjs render-comparison examples/may-2026-to-august-2026/comparison-c
 ~~~
 
 The retained complete comparison reconstructs both editions from their exact originals before rendering. The maintained `receive_browser.mjs` course operates the actual publisher ZIP intake, explicit mapper, source-date controls, full downloads and cold reopen with the host’s existing browser. See `RECEIVE_BROWSER.md` for original archive identities and actual desktop/390px recipient inspection.
+
+## Complete compact reviewer
+
+Open `comparison-review-compact.html` for the same complete before/after source review in a714,976-byte standalone file. The original national CSV and all four current API responses remain embedded unchanged. Compressed and expanded SHA-256 checks run before the original editions are reconstructed and controls enabled. Export complete sources and review decisions using the same ordinary buttons.
+
+Generate a new compact file, including any returned review decisions, with the maintained command:
+
+```sh
+node ../../release.mjs render-comparison comparison-complete.json /new/comparison-review-compact.html --compact
+```
+
+The browser needs built-in gzip decompression; `comparison-review.html` remains the ordinary uncompressed option. The full compact example exceeds256KiB, so use a complete file download or attachment when an embedding surface has that limit. No original rows, source files or change fields were removed to reduce its size.
