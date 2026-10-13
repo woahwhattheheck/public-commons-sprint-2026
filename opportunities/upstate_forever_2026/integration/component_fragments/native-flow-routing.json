@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-flow-routing",
+  "source_reference": "WO26 original native Flow routes, PR4781/7b6c341a6e2a0ce23f297984ee8d363f46ce61b5; complete retained direction/terrain/stream source, original task, saved reports and two-point/cold receiving",
+  "components": {
+    "native-flow-routing": {
+      "title": "Original native Flow routes and complete recipient handover",
+      "paths": [
+        "model/flow_routing.py",
+        "model/flow_routing_source.py",
+        "model/routing_paths.py",
+        "operator/ROUTING_PATHS.md",
+        "operator/extensions/flow-routing.json",
+        "operator/flow_routing.py",
+        "operator/web/flow-routing.css",
+        "operator/web/flow-routing.mjs",
+        "source_tools/receive_flow_routing.py",
+        "source_tools/receive_flow_routing_browser.mjs",
+        "source_tools/receive_routing_paths.py",
+        "integration/component_fragments/native-flow-routing.json",
+        "docs/COMPLETE_APPLICATION_RECEIVING.md",
+        "AGENTS.md",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "core",
+        "native-run-desk"
+      ]
+    }
+  },
+  "required_components": [
+    "native-flow-routing"
+  ]
+}

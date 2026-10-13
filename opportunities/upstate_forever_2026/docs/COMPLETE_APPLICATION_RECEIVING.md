@@ -118,6 +118,123 @@ In the received operator, open Project transfer and the completed receiving oper
 
 For native Parameter studies, use the already prepared study and its actual scientific interpreter. Its existing run/resume path retains paired-result progress, difference GeoTIFFs and report artifacts; the current Gura suite produces verified per-study exports and the final aggregate ZIP. The source installer does not create a replacement scientific study or receiving operation.
 
+## Receive the complete native Flow routes family
+
+The `native-flow-routing` component is declared in
+`integration/component_fragments/native-flow-routing.json`. The maintained
+component reader composes this additive declaration with the existing catalogue
+and other fragments. It selects the full eleven-file Flow routes product,
+including its kernel, original raster reader, native saved-report writer,
+operator provider/extension/browser/style, complete operator guide, encoded
+course and both original receiving modules. Its dependencies are the existing
+scientific core and Native run desk.
+
+A full current cumulative install uses the commands above unchanged. The
+installer reads the effective component catalogue before and after staging and
+retains this new declaration, its complete sources and the original operator
+registration. A saved application or source package that predates this family
+needs the current original declaration and all selected sources; adding only a
+browser module does not install the routing product.
+
+For a source overlay from an already complete pinned application, the maintained
+assembler can export this explicit family with its transitive local dependencies:
+
+```sh
+"$UPSTATE_PYTHON" -B "$UPSTATE_SOURCE/source_tools/application_assembly.py" \
+  "$UPSTATE_SOURCE" \
+  --family-component native-flow-routing \
+  --family-against "$UPSTATE_APPLICATION" \
+  --edition ACTUAL_FLOW_ROUTING_SOURCE_EDITION \
+  --operation-id ACTUAL_EXISTING_OPERATION \
+  --source-map "$UPSTATE_OPERATION/flow-routing-family.json.gz"
+```
+
+Use `--family-against` only with the actual existing receiving application. It
+records exact destination preimages for source members already present. Without
+that option the exported family still carries its complete original source;
+the receiving composer continues to require an explicit compatible predecessor
+before replacing a different installed file.
+
+The family exporter preserves the original complete catalogue and fragment
+bodies as selection provenance. It does not replace the destination catalogue
+with a partial copy. Receive this author's
+`integration/component_fragments/native-flow-routing.json` through the existing
+source composition first, together with the matching maintained core/Native run
+declarations when the host is older. The same assembler checks those selected
+definitions before applying the family. Keep newer unrelated families and their
+original authors' declarations. If a definition or source preimage differs,
+compose that actual current source with its owner; do not strip the guard or
+force an old full catalogue over the installed application.
+
+With those maintained declarations already received, use the same source
+composer and a fresh application output:
+
+```sh
+"$UPSTATE_PYTHON" -B "$UPSTATE_SOURCE/source_tools/application_assembly.py" \
+  "$UPSTATE_APPLICATION" \
+  --overlay "$UPSTATE_OPERATION/flow-routing-family.json.gz" \
+  --edition ACTUAL_JOINED_APPLICATION_EDITION \
+  --operation-id ACTUAL_EXISTING_OPERATION \
+  --output "$UPSTATE_OPERATION/application-with-flow-routes" \
+  --source-map "$UPSTATE_OPERATION/application-with-flow-routes.json.gz" \
+  --zip "$UPSTATE_OPERATION/application-with-flow-routes.zip"
+```
+
+The original Workspace remains separate from the application. Flow routes reads
+an actual completed NDR or SDR stage: retained arguments, direction/terrain/stream
+rasters and their original companions. It follows that selected native graph and
+creates a source-bound explanation; installation or receiving does not launch a
+new scientific model. The source-only workbook project is not a replacement for
+the original native project.
+
+### Operate, receive and reopen the same saved routes
+
+Use the full [Flow routes operator guide](../operator/ROUTING_PATHS.md). In the
+existing authenticated browser, its adjacent
+`source_tools/receive_flow_routing_browser.mjs` exports
+`receiveFlowRouting({page, api, workspace, workspaceDirectory, runId, model,
+points, directory})`. The caller supplies its original page/API, holds the same
+receiving-directory lock and selects two distinct actual source cells. Each
+point includes its row, column, title, interpretation notes and explicit
+`stop_at_stream` choice. The helper preserves original request identities and
+retains complete source/report downloads, current working history and the
+operator's original selection.
+
+After that original browser operation returns its `operation_file`, run:
+
+```sh
+"$UPSTATE_PYTHON" -B "$UPSTATE_APPLICATION/source_tools/receive_flow_routing.py" \
+  --workspace /absolute/actual/completed-native/workspace \
+  --browser-operation "$UPSTATE_OPERATION/flow-browser/operation.json" \
+  --output-dir "$UPSTATE_OPERATION/flow-native-receiving"
+```
+
+Use the actual returned operation file if its owned directory differs. The
+command receives both saved immutable reports, captures the complete Workspace
+and application, restores them to a fresh destination and reopens every original
+route/source identity. If that receiving destination already exists, it rejoins
+the original archive through `portable.resume_restore` with the retained archive
+SHA rather than accepting directory existence as a receiving result.
+
+Register the returned `reopened_workspace` through the existing application
+Workspace opening flow. In that registered Workspace, call the same module's
+`receiveReopenedFlowRouting({page, api, workspace, operationFile, directory})`
+with the original completed operation file and a separate owned capture
+directory. It opens both original saved routes and compares their complete
+records, graph documents and thirteen outgoing files through the real operator.
+
+The report ZIP contains its twelve original non-ZIP report members. Original
+native raster/argument/companion bodies have their own source downloads and
+travel in the full Workspace archive. Keep those distinctions in the handover.
+The browser course operates the actual served interactive HTML with its
+maintained response policy before reopening the exact downloaded offline HTML;
+it also opens the real SVG, terrain image, JSON, CSV, GeoJSON and kernel source.
+The producer must personally LOOK at the resulting desktop and 390-pixel screens
+and every attachment in its normal viewer, operate its controls and repair the
+affected result before presentation. Retain `AGENTS.md` and
+`CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4` with this same receiving
+course and original scientific operation.
+
 ## Owner-directed rendered-product inspection
 
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
@@ -129,6 +246,6 @@ The Ecosystem product requires plain industrial design: readable tables, clear h
 
 Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
 
-Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. This instruction does not extend or restart the Ecosystem sprint: the existing cutoff is October 13, 2026 at 10:00 a.m. America/Kentucky/Louisville, 14:00 UTC.
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. The earlier October 13, 2026 10:00 a.m. Eastern checkpoint was superseded by Bryce's direct 10:46 a.m. renewal in CURRENT_OWNER_DIRECTION.md version `2026-10-13.4`. Continue the same unfinished application and native receiving work while preserving completed results and current process ownership.
 
 Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
