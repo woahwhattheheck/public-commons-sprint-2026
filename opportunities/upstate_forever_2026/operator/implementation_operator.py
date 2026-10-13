@@ -31,7 +31,7 @@ ACTIONS = frozenset({
     "implementation.lab.dispatch", "implementation.lab.dispatch-report",
     "implementation.reconciliation.apply", "implementation.site-visit.import",
 })
-READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "dispatch-report-detail", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview", "site-visit-inspect", "site-visit-preview"})
+READS = frozenset({"selection-preview", "list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "dispatch-report-detail", "dispatch-report-catalogue", "briefing-catalog", "briefing-preview", "reconciliation-conflicts", "reconciliation-preview", "site-visit-inspect", "site-visit-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -254,6 +254,11 @@ class ImplementationOperator:
             return self.selections(workspace)
         if operation == "dispatch-report-preview":
             return self._dispatch_report(workspace, payload, preview=True)
+        if operation == "dispatch-report-catalogue":
+            from model.implementation_dispatch_report import list_dispatch_reports
+            plan_id = self._id(payload.get("plan_id"))
+            result = list_dispatch_reports(self.operator.ws(workspace), plan_id, payload.get("dispatch_id"))
+            return dict(result, workspace_key=workspace)
         if operation == "dispatch-report-detail":
             from model.implementation_dispatch_report import get_dispatch_report
             result = get_dispatch_report(self.operator.ws(workspace), payload.get("operation_id"))

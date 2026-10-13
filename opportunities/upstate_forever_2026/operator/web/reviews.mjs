@@ -21,7 +21,7 @@ const outcome = records => {
   return records.find(x=>!predecessors.has(x.id)) ?? null;
 };
 
-export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm,openStudyTransfer,openSavedScientificReport}){
+export function attachCustomerReviews({getState,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm,openStudyTransfer,openSavedScientificReport,openSavedReportComparison}){
   let mounted=null,query='',filter='all',activePacket=null,activeTab='files',generation=0,transferRequest=null;
   const current = () => getState()?.workspace_key;
   const rows = () => getState()?.data.customer_reviews ?? [];
@@ -158,29 +158,87 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       detail:$('[data-requirement-detail]',row).value,
     }));
   }
-  async function newReview(id,exportId=null,scientificRequest=null){
-    const opening=reviewFormRequest(),requestedWorkspace=opening.workspace;
-    if(scientificRequest&&scientificRequest.workspace_key!==requestedWorkspace)
-      throw Error('Open this saved scientific report in its original Workspace.');
-    const catalogue=await read('catalog');
-    const scientific=scientificRequest?await api(endpoint('/api/source-reports/scientific-edition',{
-      workspace:requestedWorkspace,id:scientificRequest.edition_id})):null;
-    if(scientific&&(scientific.workspace_key!==requestedWorkspace||scientific.edition?.id!==scientificRequest.edition_id))
-      throw Error('The saved scientific report differs from the selected original edition.');
-    const original=id?(await read('review',{review_id:id})).review:null;
-    if(!opening.current()||(scientificRequest?.isCurrent&&!scientificRequest.isCurrent()))return;
+  function comparisonReviewDraftKey(workspace,id){return 'customer-review-comparison-draft:'+workspace+':'+id;}
+  function readComparisonReviewDraft(workspace,id){
+    try{
+      const value=JSON.parse(sessionStorage.getItem(comparisonReviewDraftKey(workspace,id))||'null');
+      if(value?.workspace!==workspace||value.comparison_id!==id||typeof value.title!=='string'||
+          typeof value.purpose!=='string'||!Array.isArray(value.requirements)||!Array.isArray(value.notes)||
+          !value.notes.every(note=>typeof note==='string')||
+          !value.requirements.every(row=>row&&['id','title','detail'].every(key=>typeof row[key]==='string')))return null;
+      return value;
+    }catch{return null;}
+  }
+  function retainComparisonReviewDraft(editor,workspace,id,value){
+    if(!editor.current())return;
+    try{
+      sessionStorage.setItem(comparisonReviewDraftKey(workspace,id),JSON.stringify({workspace,comparison_id:id,...value}));
+      const status=$('#review-comparison-draft-status',editor.form);if(status)status.textContent='';
+    }catch{
+      const status=$('#review-comparison-draft-status',editor.form);
+      if(status)status.textContent='Browser storage is unavailable. Keep this original review form open until its request is retained.';
+    }
+  }
+  function comparisonReviewIntro(value){
+    const record=value.comparison;
+    return '<section class="review-intro"><h3>'+esc(record.title)+'</h3><p>'+
+      Number(record.change_count).toLocaleString()+' recorded changes. Both complete original editions and the exact matching plan stay fixed for this review.</p>'+
+      value.originals.map(row=>'<p><strong>'+esc(row.side==='left'?'Earlier: ':'Later: ')+esc(row.title)+
+        '</strong><small class="mono">'+esc(row.id)+'</small></p>').join('')+
+      '<details><summary>Original record matching plan</summary><pre>'+esc(pretty(record.plan))+'</pre></details>'+
+      '<p id="review-comparison-draft-status" role="status"></p></section>';
+  }
+  async function newReview(id,exportId=null,scientificRequest=null,comparisonRequest=null){
+    const opening=reviewFormRequest(),requestedWorkspace=opening.workspace,requestedProject=getState()?.project?.id;
+    const boundRequest=scientificRequest||comparisonRequest;
+    const openingCurrent=()=>opening.current()&&(!boundRequest?.isCurrent||boundRequest.isCurrent());
+    if(boundRequest&&boundRequest.workspace_key!==requestedWorkspace)
+      throw Error('Open this original report selection in its receiving Workspace.');
+    if(!openingCurrent())return;
+    let catalogue,scientific=null,comparison=null,original=null;
+    try{
+      catalogue=await read('catalog');
+      if(!openingCurrent())return;
+      if(scientificRequest){
+        scientific=await api(endpoint('/api/source-reports/scientific-edition',{
+          workspace:requestedWorkspace,id:scientificRequest.edition_id}));
+        if(!openingCurrent())return;
+        if(scientific.workspace_key!==requestedWorkspace||scientific.edition?.id!==scientificRequest.edition_id)
+          throw Error('The saved scientific report differs from the selected original edition.');
+      }
+      if(comparisonRequest){
+        comparison=await api(endpoint('/api/report-changes/detail',{
+          workspace:requestedWorkspace,id:comparisonRequest.comparison_id}));
+        if(!openingCurrent())return;
+        const record=comparison.comparison,originals=comparison.originals;
+        if(comparison.workspace_key!==requestedWorkspace||record?.id!==comparisonRequest.comparison_id||
+            record.schema!=='upstate.scientific-report-comparison/v1'||record.state!=='complete'||
+            !Array.isArray(originals)||originals.length!==2||
+            !['left','right'].every(side=>{
+              const rows=originals.filter(row=>row.side===side),row=rows[0];
+              return rows.length===1&&row?.id===record[side]?.id&&
+                /^[0-9a-f]{64}$/.test(row?.id||'')&&row.project_id===requestedProject&&
+                record[side].project_id===requestedProject;
+            }))throw Error('The saved comparison differs from this Workspace or its two original report editions.');
+      }
+      original=id?(await read('review',{review_id:id})).review:null;
+    }catch(error){if(!openingCurrent())return;throw error;}
+    if(!openingCurrent())return;
+    const comparisonDraft=comparison?readComparisonReviewDraft(requestedWorkspace,comparison.comparison.id):null;
     let editor=null;
     if(requestedWorkspace!==current())throw Error('Reopen the form in the selected workspace.');
-    const selection=original?.selection??{source_collection_ids:[],run_ids:[],delivery_ids:[],spatial_export_ids:[],requirements:[],notes:[]};
+    const selection=original?.selection??{source_collection_ids:[],run_ids:[],delivery_ids:[],spatial_export_ids:[],
+      requirements:comparisonDraft?.requirements??[],notes:comparisonDraft?.notes??[]};
     const maps=catalogue.spatial_exports??[],chosenMaps=exportId?[exportId]:(selection.spatial_export_ids??[]);
     if(chosenMaps.some(key=>!maps.some(row=>row.id===key)))throw Error('Reopen the completed map export in this workspace before selecting it for review.');
-    const title=scientific?scientific.edition.title+' — review':original?original.title+' — revised selection':'';
+    const title=comparison?(comparisonDraft?.title??comparison.comparison.title+' — review'):
+      scientific?scientific.edition.title+' — review':original?original.title+' — revised selection':'';
     const single=!exportId&&catalogue.sources.length===1?[catalogue.sources[0].id]:[];
-    openForm(scientific?'Review saved scientific report':original?'Create a revised review selection':'Create customer review',
-      scientific?'Retain this exact report edition, its original figures and companions, and the review purpose. Returned feedback uses the existing Customer review history and worklist.':'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
+    openForm(comparison?'Review saved report comparison':scientific?'Review saved scientific report':original?'Create a revised review selection':'Create customer review',
+      comparison?'Retain the exact earlier and later reports, complete change register and matching plan with your authored review purpose. Original Customer review feedback and history remain available.':scientific?'Retain this exact report edition, its original figures and companions, and the review purpose. Returned feedback uses the existing Customer review history and worklist.':'Choose retained originals and the purpose of this review. A saved selection keeps its own files and response history.',
       '<div class="form-grid">'+field('review_title','Review title',title,{required:true,wide:true,maximum:300})+
-      field('review_purpose','Purpose',original?.purpose??'',{type:'textarea',required:true,wide:true,rows:3,maximum:20000,note:'Describe the decision this selected work should support.'})+'</div>'+
-      (scientific?'<section class="review-intro"><h3>'+esc(scientific.edition.title)+'</h3><p>'+scientific.edition.source_count+' original studies · '+scientific.edition.section_count+' sections · '+scientific.edition.figure_count+' figures · '+scientific.files.length+' retained files</p><p class="mono">'+esc(scientific.edition.id)+'</p><p>The complete saved edition is fixed for this review. Preparing the review does not change the report or its source ordering.</p><details><summary>Original report files</summary><ul>'+scientific.files.map(item=>'<li>'+esc(item.path)+' · '+Number(item.bytes).toLocaleString()+' bytes</li>').join('')+'</ul></details></section>':
+      field('review_purpose','Purpose',comparisonDraft?.purpose??original?.purpose??'',{type:'textarea',required:true,wide:true,rows:3,maximum:20000,note:'Describe the decision this selected work should support.'})+'</div>'+
+      (comparison?comparisonReviewIntro(comparison):scientific?'<section class="review-intro"><h3>'+esc(scientific.edition.title)+'</h3><p>'+scientific.edition.source_count+' original studies · '+scientific.edition.section_count+' sections · '+scientific.edition.figure_count+' figures · '+scientific.files.length+' retained files</p><p class="mono">'+esc(scientific.edition.id)+'</p><p>The complete saved edition is fixed for this review. Preparing the review does not change the report or its source ordering.</p><details><summary>Original report files</summary><ul>'+scientific.files.map(item=>'<li>'+esc(item.path)+' · '+Number(item.bytes).toLocaleString()+' bytes</li>').join('')+'</ul></details></section>':
       '<div class="review-choice-grid">'+choices('source_collection_ids','Original source editions',catalogue.sources,original?selection.source_collection_ids:single)+
       choices('run_ids','Completed model runs',catalogue.runs,selection.run_ids)+
       choices('delivery_ids','Completed deliveries',catalogue.deliveries,selection.delivery_ids)+
@@ -195,9 +253,32 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
           source_collection_ids:checkValues('source_collection_ids'),run_ids:checkValues('run_ids'),delivery_ids:checkValues('delivery_ids'),
           spatial_export_ids:checkValues('spatial_export_ids'),
           requirements:requirementValues(),notes:notes(val('review_notes'))};
-        if(!scientific&&!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
+        if(!scientific&&!comparison&&!value.source_collection_ids.length&&!value.run_ids.length&&!value.delivery_ids.length&&!value.spatial_export_ids.length)throw Error('Select at least one original source edition, completed saved map, model run or delivery.');
         const ids=value.requirements.map(x=>x.id);
         if(new Set(ids).size!==ids.length)throw Error('Give every requirement its own ID.');
+        if(comparison){
+          const reviewSelection={title:value.title,purpose:value.purpose,requirements:value.requirements,notes:value.notes};
+          retainComparisonReviewDraft(editor,requestedWorkspace,comparison.comparison.id,reviewSelection);
+          const snapshot=JSON.stringify(reviewSelection);
+          let preview;
+          try{preview=await api('/api/report-changes/review-preview',{method:'POST',body:{
+            workspace:requestedWorkspace,comparison_id:comparison.comparison.id,review_selection:reviewSelection}});}
+          catch(error){if(!editor.current())return;throw error;}
+          if(!editor.current())return;
+          const latest={title:val('review_title'),purpose:val('review_purpose'),requirements:requirementValues(),notes:notes(val('review_notes'))};
+          if(JSON.stringify(latest)!==snapshot)
+            throw Error('Your review fields changed during comparison verification. Submit the current fields again.');
+          const identity=preview.source_identity;
+          if(preview.workspace_key!==requestedWorkspace||preview.comparison_id!==comparison.comparison.id||
+              !/^[0-9a-f]{64}$/.test(preview.operation_id||'')||!preview.review_selection||
+              identity?.schema!=='upstate.scientific-report-comparison-review/v1'||
+              identity.project_id!==requestedProject||identity.comparison_id!==comparison.comparison.id||
+              !['left','right'].every(side=>identity.pair_identity?.[side]?.edition_id===comparison.comparison[side].id&&
+                identity.pair_identity[side].project_id===requestedProject))
+            throw Error('The review preview does not identify this exact original report comparison.');
+          return submitAction('report-changes.review',{comparison_id:comparison.comparison.id,
+            review_selection:preview.review_selection,expected_operation_id:preview.operation_id});
+        }
         if(scientific){
           const reviewSelection={title:value.title,purpose:value.purpose,requirements:value.requirements,notes:value.notes};
           const snapshot=JSON.stringify(reviewSelection);
@@ -218,12 +299,26 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       },()=>{
         editor=reviewFormSession('[name="review_title"]',requestedWorkspace);
         editor.form._reviewIssuer=catalogue.issuer;
+        if(comparison){
+          const save=()=>{if(editor.current())retainComparisonReviewDraft(editor,requestedWorkspace,comparison.comparison.id,{
+            title:val('review_title'),purpose:val('review_purpose'),requirements:requirementValues(),notes:notes(val('review_notes'))});};
+          editor.listen(editor.form,'input',save);editor.listen(editor.form,'change',save);
+          editor.listen(editor.form,'click',()=>Promise.resolve().then(save));
+          save();
+        }
       });
   }
   async function prepareScientificReportReview(value){
     if(!value||value.workspace_key!==current()||!/^[0-9a-f]{64}$/.test(value.edition_id||''))
       throw Error('Choose a saved scientific report in its original Workspace.');
     return newReview(null,null,{workspace_key:value.workspace_key,edition_id:value.edition_id,
+      isCurrent:typeof value.isCurrent==='function'?value.isCurrent:null});
+  }
+  async function prepareReportComparisonReview(value){
+    if(!value||value.workspace_key!==current()||!/^[0-9a-f]{64}$/.test(value.comparison_id||''))
+      throw Error('Choose a saved report comparison in its original Workspace.');
+    if(typeof value.isCurrent==='function'&&!value.isCurrent())return;
+    return newReview(null,null,null,{workspace_key:value.workspace_key,comparison_id:value.comparison_id,
       isCurrent:typeof value.isCurrent==='function'?value.isCurrent:null});
   }
   function loadIssuer(){
@@ -283,6 +378,52 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       if(current()!==ws||generation!==serial||activePacket!==packet||!mounted)return null;
       throw error;
     }
+  }
+  function retainedReportComparisons(packet){
+    const project=packet.review?.project?.id,found=new Map();
+    if(project!==getState()?.project?.id)return [];
+    for(const selection of packet.review?.selections??[]){
+      if(selection.kind!=='sources')continue;
+      for(const entry of selection.source?.entries??[]){
+        const metadata=entry.metadata??{},identity=metadata.scientific_report_comparison_identity;
+        if(entry.kind!=='document'||entry.role!=='SCIENTIFIC_REPORT_COMPARISON_REVIEW'||
+            metadata.report_schema!=='upstate.scientific-report-comparison/v1'||
+            identity?.schema!=='upstate.scientific-report-comparison-review/v1'||
+            identity.project_id!==project||!/^[0-9a-f]{64}$/.test(identity.comparison_id??'')||
+            metadata.comparison_id!==identity.comparison_id||
+            !['left','right'].every(side=>{
+              const original=identity.pair_identity?.[side];
+              return original?.project_id===project&&/^[0-9a-f]{64}$/.test(original.edition_id??'')&&
+                metadata[side+'_edition_id']===original.edition_id;
+            }))continue;
+        found.set(identity.comparison_id,{id:identity.comparison_id,title:entry.title||'Original report comparison',
+          left:identity.pair_identity.left.edition_id,right:identity.pair_identity.right.edition_id});
+      }
+    }
+    return [...found.values()];
+  }
+  function originalReportComparisons(packet){
+    const comparisons=retainedReportComparisons(packet);
+    if(!comparisons.length)return '';
+    return '<section class="review-intro"><h3>Original report comparison</h3>'+
+      '<p>Reopen the complete change register and both saved report editions in their original reading order.</p>'+
+      comparisons.map(row=>'<div class="page-actions"><span>'+esc(row.title)+'</span>'+
+        (typeof openSavedReportComparison==='function'?button('open-report-comparison','Open original comparison',packet.review.id,
+          'data-comparison-id="'+esc(row.id)+'"'):'')+
+        (typeof openSavedScientificReport==='function'?['left','right'].map(side=>button('open-comparison-report',
+          side==='left'?'Open earlier report':'Open later report',packet.review.id,
+          'data-comparison-id="'+esc(row.id)+'" data-edition-id="'+esc(row[side])+'"')).join(''):'')+'</div>').join('')+'</section>';
+  }
+  async function openBoundReportComparison(node,report=false){
+    const packet=activePacket,ws=current(),serial=generation;
+    const comparison=packet&&packet.review.id===node.dataset.id?
+      retainedReportComparisons(packet).find(row=>row.id===node.dataset.comparisonId):null;
+    if(!comparison||(report&&![comparison.left,comparison.right].includes(node.dataset.editionId)))
+      throw Error('Reopen the original review before following its bound report comparison.');
+    const target=report?openSavedScientificReport:openSavedReportComparison;
+    if(typeof target!=='function')throw Error('The original report comparison view is unavailable in this application.');
+    try{return await target({workspace_key:ws,id:report?node.dataset.editionId:comparison.id});}
+    catch(error){if(current()!==ws||generation!==serial||activePacket!==packet||!mounted)return null;throw error;}
   }
   async function openForStudy(selection){
     const ws=current(),id=selection?.id,tab=selection?.tab??'files';
@@ -913,7 +1054,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     activePacket=packet;activeTab=tab;
     const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks'],['received','Received packages']];
     const body=tab==='received'?receivedPackagesBody(packet._receipts??[],packet.review.id):tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
-    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+originalScientificReports(packet)+
+    detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+originalScientificReports(packet)+originalReportComparisons(packet)+
       '<nav class="review-tabs" aria-label="Review sections">'+tabs.map(([key,title])=>button('tab',title,packet.review.id,'data-tab="'+key+'" aria-pressed="'+(tab===key)+'"')).join('')+'</nav><section>'+body+'</section>'+
       '<details class="technical"><summary>Complete review document</summary>'+fileList([packet._packet_download])+'<dl class="definition"><dt>Review</dt><dd class="mono">'+esc(packet.review.id)+'</dd><dt>Project</dt><dd class="mono">'+esc(packet.review.project.id)+'</dd></dl></details></div>',{kind:'customer-review',id:packet.review.id});
     if(tab==='received')mountReceivedSearch(packet._receipts??[]);
@@ -1055,6 +1196,9 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   }
   function taskActions(task){
     if(task.action==='spatial.review.export'&&task.state==='complete')return mapActions(task.result);
+    if(task.action==='report-changes.review'&&task.state==='complete'&&task.result?.kind==='review'&&
+        /^[0-9a-f]{64}$/.test(task.result.review_id||'')&&/^[0-9a-f]{64}$/.test(task.result.comparison_id||''))
+      return '<div class="page-actions">'+button('open','Open original review',task.result.review_id)+'</div>';
     if(!task._review)return '';
     const row=task._review,rebuild=rebuildExportControl(task.id,row);
     if(row.kind==='received-review'&&row.receipt_id){const url=receivedDeskURL(row.desk_url);return '<div class="page-actions">'+button('packet-detail','Open received package',row.receipt_id)+button('open','Open retained review',row.review_id)+(url?'<a class="button primary" href="'+esc(url)+'" target="_blank" rel="noopener">Open received desk</a>':'')+'</div>';}
@@ -1065,6 +1209,8 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     const action=node.dataset.action.slice(7),id=node.dataset.id;
     if(action==='study-transfer')return transferReview(id,node);
     if(action==='open-scientific-report')return openOriginalScientificReport(node);
+    if(action==='open-report-comparison')return openBoundReportComparison(node);
+    if(action==='open-comparison-report')return openBoundReportComparison(node,true);
     if(action==='worklist'||action.startsWith('worklist-'))return worklistAction(action,id);
     if(action==='packet-receive')return receivePackage(id||'');
     if(action==='packets')return openReceivedPackages(id||'');
@@ -1094,5 +1240,5 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(action==='compare')return compareForm();
     if(action==='template')return template(id);
   }
-  return {render,mount,detach,dispatch,taskActions,openReview,openForStudy,mapActions,prepareScientificReportReview};
+  return {render,mount,detach,dispatch,taskActions,openReview,openForStudy,mapActions,prepareScientificReportReview,prepareReportComparisonReview};
 }

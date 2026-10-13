@@ -46,6 +46,8 @@ python receive_report.py --application /path/to/application \
   --package /path/to/same-day-edition --output /path/to/new/native-report
 ```
 
+The same helper also opens the complete archive exported by the native Sources desk: extract that archive and use its directory as `--package`. It accepts the byte-identical native `sources.json` manifest (or its collision-safe `report-sources-*.json` name) and preserves every original companion. The outer delivery inventory is verified when present; it is not required for the native export.
+
 This helper imports the complete ordinary source manifest, binds the original project and report schema through existing native APIs, collects sections and source files with `model.observed_context`, renders with the existing scientific renderer and reopens the registered source. It dispatches no scientific model or monitoring plan. Result and selection JSON retain the actual source collection, report source, project and native output identities. The output argument is outside application, Workspace and source package. Use a separate new directory for each report edition.
 
 The saved delivery is ready to join the original regional scientific composer, retaining this source alongside the existing monthly calendar, scientific report and Monitoring campaign. The complete original archive remains unchanged.

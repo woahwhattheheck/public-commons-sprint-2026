@@ -130,12 +130,28 @@ def catalog(workspace):
     return {"sources": sources, "selections": overview(workspace)}
 
 
+def _source_origin(workspace, source):
+    """Read source provenance without changing the immutable saved binding."""
+    choice = _choice(source)
+    if choice["kind"] == "installed":
+        return None
+    _, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
+    _require(entry["body"]["sha256"] == choice["source_sha256"],
+             "The original cohort source changed its retained edition")
+    # Imported here because the Study helper also verifies this store's receipts.
+    from .observation_comparability_study_transfer import origin
+    native = origin(entry)
+    return {"source": choice, "title": entry["title"], "native_origin": native,
+            "relationship": ("same_project" if native["project_id"] == workspace.project["id"]
+                             else "external_project") if native else "source_only"}
+
+
 def inputs(workspace, source):
     value = _load(workspace, source)
     return {"source": value["binding"]["source"], "binding": value["binding"],
             "data": value["data"], "defaults": value["defaults"],
             "presentation": value["presentation"], "binding_sha256": digest(value["binding"]),
-            "producers": _producers()}
+            "producers": _producers(), "source_origin": _source_origin(workspace, source)}
 
 
 def _selection(value, loaded):
@@ -303,7 +319,8 @@ def inspect(workspace, key):
              {k: v for k, v in current.items() if k != "edition"} ==
              {k: v for k, v in captured.items() if k != "edition"},
              "The native report source binding changed")
-    return {"edition": receipt, "data": data}
+    return {"edition": receipt, "data": data,
+            "source_origin": _source_origin(workspace, selection["source"])}
 
 
 def verify_all(workspace):

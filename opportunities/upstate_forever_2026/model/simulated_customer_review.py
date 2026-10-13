@@ -521,16 +521,155 @@ def _packet_export(workspace, directory, selected, *, handback=False):
             "package_sha256": result["package_sha256"], "members": result["members"]}
 
 
-def export_review_case(workspace, operation_id, destination):
+
+PRESENTATION_SCHEMA = "upstate.simulated-customer-presentation/v1"
+
+
+def _rendering_sources():
+    root = Path(__file__).resolve().parents[1]
+    return [_descriptor(root, name) for name in
+            ("model/simulated_customer_review.py", "model/reviews.py",
+             "model/review_handback.py", "operator/review_app.html")]
+
+
+def _export_closure(directory, exported):
+    """The complete declared case, both native desks and retained earlier editions."""
+    names = {"case-manifest.json", *(row["path"] for row in exported["members"])}
+    for key in ("original_review", "engineering_handback"):
+        packet = exported[key]
+        names.add(packet["archive"]["path"])
+        folder = directory / packet["directory"]
+        def failed(error):
+            raise ValueError("Cannot enumerate the complete customer edition: " + str(error)) from error
+        for current, folders, files in os.walk(folder, followlinks=False, onerror=failed):
+            for name in folders:
+                if (Path(current) / name).is_symlink():
+                    raise ValueError("The original customer edition contains a directory alias")
+            for name in files:
+                names.add((Path(current) / name).relative_to(directory).as_posix())
+    if exported.get("presentation") is not None:
+        presentation = _read(directory, "presentation.json")
+        names.update(row["path"] for row in presentation["previous_files"])
+    return [_descriptor(directory, name) for name in sorted(names)]
+
+
+def _retain_previous_edition(directory, source, previous, rendering_sources, selected):
+    inventory = _export_closure(source, previous)
+    for item in inventory:
+        body = _verify_member(source, item).read_bytes()
+        name = "previous-edition/" + item["path"]
+        _directory((directory / name).parent, create=True)
+        _body(directory, name, body)
+        # A concurrent source change must not silently select another edition.
+        _verify_member(source, item)
+    copied = inspect_export(directory / "previous-edition")
+    if copied != previous or _export_closure(source, previous) != inventory:
+        raise ValueError("The complete previous customer edition changed during receiving")
+    value = {"schema": PRESENTATION_SCHEMA, "same_case": selected,
+             "previous_manifest": _descriptor(directory, "previous-edition/case-manifest.json"),
+             "previous_files": [{**item, "path": "previous-edition/" + item["path"]} for item in inventory],
+             "rendering_sources": rendering_sources,
+             "meaning": "A new presentation of the same original customer decisions and scientific evidence. "
+                        "The full earlier edition remains independently inspectable and reopenable."}
+    _put(directory, "presentation.json", value)
+    return _descriptor(directory, "presentation.json")
+
+
+def _inspect_presentation(directory, exported):
+    descriptor = exported.get("presentation")
+    if descriptor is None:
+        return
+    if descriptor != _descriptor(directory, "presentation.json"):
+        raise ValueError("The selected customer presentation descriptor differs")
+    value = _read(directory, "presentation.json")
+    if (value.get("schema") != PRESENTATION_SCHEMA or value.get("same_case") != _reference(exported)
+            or value.get("previous_manifest", {}).get("path") != "previous-edition/case-manifest.json"):
+        raise ValueError("The presentation must retain the same complete original customer case")
+    _verify_member(directory, value["previous_manifest"])
+    previous = inspect_export(directory / "previous-edition")
+    if _reference(previous) != _reference(exported):
+        raise ValueError("The earlier presentation contains different customer decisions")
+    expected = [{**row, "path": "previous-edition/" + row["path"]}
+                for row in _export_closure(directory / "previous-edition", previous)]
+    if value.get("previous_files") != expected:
+        raise ValueError("Retain the complete previous customer edition and its original native packages")
+    for item in expected:
+        _verify_member(directory, item)
+    expected_names = {"model/simulated_customer_review.py", "model/reviews.py",
+                      "model/review_handback.py", "operator/review_app.html"}
+    sources = value.get("rendering_sources")
+    if (not isinstance(sources, list) or len(sources) != len(expected_names)
+            or {item.get("path") for item in sources} != expected_names):
+        raise ValueError("Retain every original presentation source identity")
+    for item in sources:
+        identifier(item.get("sha256"))
+        if isinstance(item.get("bytes"), bool) or not isinstance(item.get("bytes"), int) or item["bytes"] <= 0:
+            raise ValueError("The original presentation source length differs")
+    # Changed HTML remains presentation only: original record and source evidence
+    # in both complete native packages must equal the selected previous edition.
+    for stem in ("original-review", "engineering-handback"):
+        module = reviews if stem == "original-review" else handbacks
+        current_packet = module.inspect_packet(directory / stem)
+        previous_packet = module.inspect_packet(directory / "previous-edition" / stem)
+        if stem == "original-review":
+            if current_packet["packet"] != previous_packet["packet"]:
+                raise ValueError("A presentation update changed the original review or response history")
+        else:
+            document = _read(directory / stem, "handback.json")
+            if document != _read(directory / "previous-edition" / stem, "handback.json"):
+                raise ValueError("A presentation update changed the original engineering history")
+            for review in document["reviews"]:
+                current = reviews.inspect_packet(directory / stem / review["path"])["packet"]
+                earlier = reviews.inspect_packet(directory / "previous-edition" / stem / review["path"])["packet"]
+                if current != earlier:
+                    raise ValueError("A presentation update changed a linked original review or source artifact")
+
+
+def presentation_descends_from(directory, expected):
+    """Match a complete earlier receipt through verified presentation lineage."""
+    directory = _directory(Path(directory).expanduser())
+    current = inspect_export(directory)
+    selected = _reference(expected)
+    while True:
+        if _reference(current) != selected:
+            return False
+        if current == expected:
+            return True
+        if current.get("presentation") is None:
+            return False
+        directory = directory / "previous-edition"
+        current = inspect_export(directory)
+
+
+def export_review_case(workspace, operation_id, destination, *, previous=None):
     """Export both complete native desks and a full, labelled worklist snapshot."""
     selected_result = inspect_review(workspace, operation_id)
     if selected_result["phase"] != "ready":
         raise ValueError("Complete the engineering handback before exporting the full teaching case")
     selected = _reference(selected_result)
+    source, earlier, rendering_sources = None, None, None
     identity = {"schema": SCHEMA, "kind": "export", "classification": LABEL, **selected}
+    if previous is not None:
+        source = _directory(Path(previous).expanduser())
+        earlier = inspect_export(source)
+        if _reference(earlier) != selected:
+            raise ValueError("Re-export the same original ready operation and exact response generation")
+        target = _outside(workspace, destination)
+        if target.resolve().is_relative_to(source.resolve()) or source.resolve().is_relative_to(target.resolve()):
+            raise ValueError("Preserve the previous presentation in a separate ordinary source directory")
+        rendering_sources = _rendering_sources()
+        identity["presentation"] = {
+            "previous_manifest_sha256": file_digest(reviews._regular(source, "case-manifest.json")),
+            "rendering_sources": rendering_sources}
     directory = _destination(workspace, destination, identity)
     with held(directory / ".operation.lock", blocking=False):
         _put(directory, "selection.json", selected)
+        presentation = None
+        if source is not None:
+            presentation = _retain_previous_edition(directory, source, earlier, rendering_sources, selected)
+            # The original worklist is a source-dated snapshot, not a new customer decision.
+            for name in ("current-worklist.json", "current-worklist.csv"):
+                _body(directory, name, reviews._regular(source, name).read_bytes())
         original = _packet_export(workspace, directory, selected)
         handback = _packet_export(workspace, directory, selected, handback=True)
         # Capture the complete current filtered worklist once. Later real replies
@@ -541,7 +680,8 @@ def export_review_case(workspace, operation_id, destination):
         snapshot = _read(directory, "current-worklist.json")
         if snapshot["filters"]["review_id"] != selected["original_review_id"]:
             raise ValueError("The saved worklist belongs to another selected review")
-        _body(directory, "current-worklist.csv", review_worklist.csv_document(snapshot).encode("utf-8"))
+        if presentation is None:
+            _body(directory, "current-worklist.csv", review_worklist.csv_document(snapshot).encode("utf-8"))
         readme = (
             "# Simulated field review and engineering handback\n\n"
             + LABEL + ". Customer wording and engineering dispositions are authored teaching inputs.\n\n"
@@ -555,12 +695,22 @@ def export_review_case(workspace, operation_id, destination):
             "That current snapshot is separate from the historical response pinned in the two native packages. "
             "Engineering addressed items do not create customer acceptance.\n"
         )
+        if presentation is not None:
+            readme += ("\n## Presentation history\n\nThis edition preserves the same original review, customer response "
+                       "and engineering decisions. Open previous-edition/README.md and its two complete desks "
+                       "for the unchanged earlier presentation. presentation.json retains the full file and "
+                       "renderer identities. The current and earlier packages remain independently inspectable.\n")
         _body(directory, "README.md", readme.encode("utf-8"))
         members = [_descriptor(directory, name) for name in
                    ("operation.json", "selection.json", "current-worklist.json", "current-worklist.csv", "README.md")]
         value = {"schema": SCHEMA, "kind": "portable-teaching-case", "classification": LABEL,
                  **selected, "original_review": original, "engineering_handback": handback,
                  "members": members, "current_worklist_snapshot_id": snapshot["snapshot_id"]}
+        if presentation is not None:
+            if _rendering_sources() != rendering_sources:
+                raise ValueError("The presentation implementation changed during this export")
+            value["members"].append(presentation)
+            value["presentation"] = presentation
         _put(directory, "case-manifest.json", value)
         inspected = inspect_export(directory)
         return {**inspected, "directory": str(directory),
@@ -579,6 +729,8 @@ def inspect_export(path):
     if any(value.get(key) != item for key, item in selected.items()):
         raise ValueError("The teaching case manifest differs from its original selection")
     expected = {"operation.json", "selection.json", "current-worklist.json", "current-worklist.csv", "README.md"}
+    if value.get("presentation") is not None:
+        expected.add("presentation.json")
     if (len(value.get("members", [])) != len(expected)
             or {item.get("path") for item in value["members"]} != expected):
         raise ValueError("The teaching case has an incomplete or repeated companion inventory")
@@ -610,6 +762,7 @@ def inspect_export(path):
             or snapshot["offset"] != 0 or snapshot["next_offset"] is not None
             or snapshot["total"] != len(snapshot["rows"])):
         raise ValueError("The exported current worklist does not contain its complete selected snapshot")
+    _inspect_presentation(directory, value)
     return value
 
 
@@ -692,6 +845,7 @@ def main(argv=None):
     export = sub.add_parser("export", help="Write complete native review and handback packages")
     export.add_argument("--operation", required=True)
     export.add_argument("--output", required=True)
+    export.add_argument("--previous", help="Explicit new presentation of this complete earlier export; preserves it")
     receive = sub.add_parser("receive", help="Reopen both packages in the same restored original project")
     receive.add_argument("--source", required=True)
     receive.add_argument("--output", required=True)
@@ -702,7 +856,7 @@ def main(argv=None):
     elif args.command == "inspect":
         result = inspect_review(workspace, args.operation)
     elif args.command == "export":
-        result = export_review_case(workspace, args.operation, args.output)
+        result = export_review_case(workspace, args.operation, args.output, previous=args.previous)
     else:
         result = receive_review_case(workspace, args.source, args.output)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))

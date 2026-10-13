@@ -60,6 +60,50 @@ const artifact=async(relative,bytes,kind,details={})=>{
 };
 const record=(name,value)=>artifact('records/'+safe(name)+'.json',JSON.stringify(value,null,2)+'\n','original_api_response');
 const errors=[];
+const canonical=value=>JSON.stringify(value,(_,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
+function retainedRequest(saved){
+ check(saved&&typeof saved.workspace==='string'&&typeof saved.action==='string'&&
+  typeof saved.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(saved.operation_id)&&
+  saved.payload&&typeof saved.payload==='object'&&!Array.isArray(saved.payload),
+  'The retained action has no complete original request; preserve its journal and reconcile in Operations.');
+ const request={workspace:saved.workspace,action:saved.action,payload:saved.payload,operation_id:saved.operation_id};
+ if(saved.request)check(canonical(saved.request)===canonical(request),'The retained original request changed.');
+ return request;
+}
+function verifiedTask(task,saved){
+ const request=retainedRequest(saved);
+ check(task&&typeof task.id==='string'&&/^[0-9a-f]{64}$/.test(task.id),'The original action returned no valid task ID.');
+ check(task.workspace===request.workspace&&task.action===request.action&&canonical(task.payload)===canonical(request.payload),
+  'The original task differs from its retained Workspace, action or payload.');
+ if(saved.task_id)check(task.id===saved.task_id,'The original task ID changed.');
+ // The maintained queue can return an already active identical request with its
+ // original operation ID. Keep that actual task; never replace its identity.
+ return task;
+}
+async function retainActionRequest(route){
+ const request=route.request(),active=activeAction;
+ if(!active||new URL(request.url()).pathname!=='/api/actions'||request.method()!=='POST')return route.continue();
+ let body;
+ try{body=request.postDataJSON();}catch{return route.continue();}
+ if(body?.workspace!==active.workspace||body?.action!==active.expectedAction)return route.continue();
+ try{
+  check(new URL(request.url()).origin===new URL(page.url()).origin,'The original action left the operator origin.');
+  await assertWorkspace(active.workspace);
+  const candidate={workspace:body.workspace,action:body.action,payload:body.payload,operation_id:body.operation_id};
+  retainedRequest(candidate);
+  const previous=journal.actions[active.label];
+  if(previous)check(canonical(retainedRequest(previous))===canonical(candidate),'The action changed during original request admission.');
+  else journal.actions[active.label]={...candidate,request:candidate,submitted_at:now(),task_id:null};
+  await checkpoint();
+  check(activeAction===active&&workspace===active.workspace,'The browser action was detached before dispatch.');
+  await assertWorkspace(active.workspace);
+  await route.continue();
+ }catch(error){
+  active.admission_error=error;
+  active.rejectAdmission?.(error);
+  await route.abort('aborted');
+ }
+}
 function redact(text){return String(text).replace(/([?&#](?:token|capability|access_token)=)[^&#\s"']+/gi,'$1[redacted]').replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g,'Bearer [redacted]');}
 async function assertWorkspace(expected=workspace){
  check(await page.locator('#workspace-select').inputValue()===expected,'The browser moved to a different Workspace.');
@@ -99,11 +143,50 @@ async function readAfter(route,query,trigger){
  });
  await trigger();const actual=await response;check(actual.ok(),route+' returned HTTP '+actual.status());return actual.json();
 }
-async function completedTask(id,label){
+async function recoverOriginalTask(saved,label){
+ await assertWorkspace();
+ const request=retainedRequest(saved);
+ check(request.workspace===workspace,'The saved request belongs to another selected Workspace.');
+ // Active-request deduplication may have returned a task under a different
+ // operation ID without creating an alias. Once it finishes, posting only our
+ // operation ID could create another task. Inspect complete original history.
+ const history=await api('/api/state');
+ check(history.workspace_key===workspace&&Array.isArray(history.tasks),'Complete original task history is unavailable.');
+ const scoped=history.tasks.filter(task=>task.workspace===workspace&&task.action===request.action);
+ check(scoped.every(task=>task.payload&&typeof task.payload==='object'&&!Array.isArray(task.payload)),
+  'Original task history omitted request payloads; preserve this journal and reopen Operations.');
+ const exact=scoped.filter(task=>task.operation_id===request.operation_id);
+ const candidates=exact.length?exact:scoped.filter(task=>canonical(task.payload)===canonical(request.payload));
+ check(candidates.length<=1,'More than one retained task matches the unacknowledged request. Reconcile its original task ID in Operations; preserve this journal.');
+ if(candidates.length){
+  const task=verifiedTask(await api('/api/task',{id:candidates[0].id}),saved);
+  saved.task_id=task.id;await checkpoint();await record('task-'+task.id,task);
+  await event('original_action_reconciled',{label,task_id:task.id,operation_id:request.operation_id,state:task.state});
+  return completedTask(task.id,label,saved);
+ }
+ // No retained task matches: admit the original complete request under its
+ // unchanged operation ID. Stopped tasks were handled above, never resumed.
+ await assertWorkspace();
+ const response=await page.evaluate(async request=>{
+  const token=sessionStorage.getItem('upstate-operator-capability');
+  if(!token)throw Error('The operator session is not authenticated.');
+  const result=await fetch('/api/actions',{method:'POST',credentials:'same-origin',
+   headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','X-Workspace':request.workspace},
+   body:JSON.stringify(request)});
+  return {status:result.status,ok:result.ok,body:await result.json()};
+ },request);
+ check(response.ok,response.body?.error?.message||'Original request recovery failed: HTTP '+response.status);
+ const task=verifiedTask(response.body.task||response.body,saved);
+ saved.task_id=task.id;await checkpoint();await record('task-'+task.id,task);
+ await event('original_action_recovered',{label,task_id:task.id,operation_id:request.operation_id,state:task.state});
+ return completedTask(task.id,label,saved);
+}
+async function completedTask(id,label,saved){
  const deadline=Date.now()+1000*(config.task_timeout_seconds||1200);
  while(Date.now()<deadline){
   await assertWorkspace();const task=await api('/api/task',{id});
-  check(task.id===id&&(!task.workspace||task.workspace===workspace),'Task identity or Workspace changed.');
+  check(task.id===id&&task.workspace===workspace,'Task identity or Workspace changed.');
+  if(saved)verifiedTask(task,saved);
   if(task.state==='complete'){await record('task-'+id,task);return task;}
   if(['failed','interrupted','cancelled'].includes(task.state)){await record('task-'+id,task);throw Error(label+' ended '+task.state+': '+(task.error?.message||'inspect retained task'));}
   await pause(1800);
@@ -115,27 +198,27 @@ async function action(label,expectedAction,trigger){
  let saved=journal.actions[label];
  if(saved){
   check(saved.workspace===workspace&&saved.action===expectedAction,'The retained action belongs to another selection.');
-  if(!saved.task_id){
-   const state=await api('/api/state',{compact:1});
-   const found=(state.tasks||[]).filter(t=>t.operation_id===saved.operation_id&&t.action===expectedAction);
-   check(found.length===1,'The original submitted request has no uniquely recovered task. Inspect Operations for operation_id '+saved.operation_id+'; preserve this receiving journal.');
-   saved.task_id=found[0].id;await checkpoint();
-  }
-  return completedTask(saved.task_id,label);
+  retainedRequest(saved);
+  if(!saved.task_id)return recoverOriginalTask(saved,label);
+  return completedTask(saved.task_id,label,saved);
  }
- activeAction={label,expectedAction,workspace};
+ const active=activeAction={label,expectedAction,workspace};
+ const admissionFailure=new Promise((_,reject)=>{active.rejectAdmission=reject;});
+ admissionFailure.catch(()=>{});
  const response=page.waitForResponse(r=>{
   if(new URL(r.url()).pathname!=='/api/actions'||r.request().method()!=='POST')return false;
   try{const b=r.request().postDataJSON();return b.workspace===workspace&&b.action===expectedAction;}catch{return false;}
  },{timeout:60000});
+ response.catch(()=>{});
  try{
-  await trigger();const r=await response;await writing;
+  await Promise.race([Promise.resolve().then(trigger),admissionFailure]);
+  const r=await Promise.race([response,admissionFailure]);await writing;
   const body=await r.json();check(r.ok(),body.error?.message||'Original queued request failed: HTTP '+r.status());
-  const task=body.task||body;check(task.id,'The original action returned no task ID.');
   saved=journal.actions[label];check(saved?.operation_id,'The original request was not journaled.');
+  const task=verifiedTask(body.task||body,saved);
   saved.task_id=task.id;await checkpoint();
   await artifact('images/'+safe(label)+'-queued.png',await page.screenshot({fullPage:true}),'queued_action_screenshot',{workspace,task_id:task.id});
-  return completedTask(task.id,label);
+  return completedTask(task.id,label,saved);
  }finally{activeAction=null;response.catch(()=>{});}
 }
 async function chemistry(){
@@ -262,15 +345,7 @@ async function configureBrowser(){
  }
  page=await context.newPage();page.setDefaultTimeout(30000);
  page.on('pageerror',error=>{errors.push({at:now(),message:redact(error.message)});});
- page.on('request',request=>{
-  if(!activeAction||new URL(request.url()).pathname!=='/api/actions'||request.method()!=='POST')return;
-  try{
-   const body=request.postDataJSON(),a=activeAction;
-   if(body.action!==a.expectedAction||body.workspace!==a.workspace)return;
-   journal.actions[a.label]={action:body.action,workspace:body.workspace,operation_id:body.operation_id,payload:body.payload,submitted_at:now(),task_id:null};
-   void checkpoint();
-  }catch(error){errors.push({at:now(),message:redact(error.message)});}
- });
+ await page.route('**/api/actions',retainActionRequest);
  let url=process.env.CHEMISTRY_OPERATOR_URL;
  if(option('--url-file'))url=(await fs.readFile(option('--url-file'),'utf8')).trim();
  check(url,'Provide CHEMISTRY_OPERATOR_URL or a private --url-file containing the existing authenticated operator URL.');

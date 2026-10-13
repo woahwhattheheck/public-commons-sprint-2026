@@ -36,7 +36,9 @@
     ],
     "applicationProviders": [],
     "merchantProviders": [],
-    "browserAssets": []
+    "browserAssets": [
+      "stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs"
+    ]
   },
   "contributions": [
     "tyk-workspaces",
@@ -70,7 +72,8 @@
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/native-journey.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/native-journey.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/commissioning-native-journey.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
