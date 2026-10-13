@@ -171,6 +171,7 @@
     "assessment-context": {
       "title": "assessment context",
       "paths": [
+        "model/assessment_report_context.py",
         "operator/extensions/assessment-context.json"
       ],
       "requires": [
@@ -2261,6 +2262,9 @@
       "title": "Station geography and assessment context",
       "paths": [
         "model/assessment_context.py",
+        "model/assessment_report_context.py",
+        "model/observed_station_studies.json",
+        "model/observed_station_studies.py",
         "model/station_assessment_context.py",
         "model/station_geography.py",
         "model/station_inventory.py",
