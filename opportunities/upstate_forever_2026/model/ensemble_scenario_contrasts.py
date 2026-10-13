@@ -212,9 +212,28 @@ def sections(plan, content, profiles, scenarios, scope):
               [[row["scenario_label"], source.POLLUTANT_LABELS[row["pollutant"]] + " / " + row["total_units"],
                 row["members"], row["minimum_delta"], row["maximum_delta"], row["common_cells"],
                 row["common_support_sha256"]] for row in content["support_groups"]]),
-        table(["Profile", "Original parameters", "Original coefficient source"],
-              [[key, value.get("parameters", {}), value.get("biophysical_source_id")]
-               for key, value in profiles.items()]),
+    ]])
+    result.append(["Original scientific choices", [
+        table(["Parameter case", "Profile", "Parent profile", "Scientific status", "Table SHA256"],
+              [[member["label"], member["profile_id"], member.get("parent_profile_id"),
+                profiles[member["profile_id"]].get("scientific_status", "working"),
+                profiles[member["profile_id"]].get("table_summary", {}).get("sha256")]
+               for member in plan["members"]]),
+        table(["Case", "Native model", "Parameter", "Original value"],
+              [[member["label"], model.upper(), name, value]
+               for member in plan["members"] for model in ("ndr", "sdr")
+               for name, value in member["parameters"].get(model, {}).items()]),
+        table(["Case", "Original scientific references", "Selected parameter assignments"],
+              [[member["label"], profiles[member["profile_id"]].get("references", []),
+                member.get("assignments", [])] for member in plan["members"]]),
+        table(["Scenario", "Kind", "Reason", "Original mapped changes"],
+              [[value["title"], value["kind"], value["reason"], value.get("patches", [])]
+               for value in scenarios.values()]),
+        table(["Case", "Scenario", "Original role", "Native run", "Scenario identity"],
+              [[member["label"], row["label"], row["role"], row["run_id"], row["scenario_id"]]
+               for member in plan["members"] for row in member["runs"]]),
+        "The original scientific status, source references and mapped changes remain attached "
+        "to the modeled result. Native completion does not alter those original classifications.",
     ]])
     if report["errors"]:
         result.append(["Unavailable original pairs", [

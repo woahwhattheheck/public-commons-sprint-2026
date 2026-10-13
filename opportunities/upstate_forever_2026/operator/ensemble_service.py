@@ -189,6 +189,8 @@ class EnsembleService:
                 rows.append({"id": saved["id"], "available": True,
                              "title": saved.get("title"), "state": saved["state"],
                              "source_state": saved["source_state"],
+                             "native_state": saved.get("native_state"),
+                             "landcover_pairs": saved.get("landcover_pairs"),
                              "reference": saved["selection"]["scenario_reference"],
                              "created_at": saved["created_at"]})
             return {"workspace_key": workspace, **ensemble_scenario_contrasts.catalog(ws, key),
