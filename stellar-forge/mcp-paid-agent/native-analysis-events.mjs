@@ -37,6 +37,10 @@ function action(value,record,id){
  check(value.request.operation_id,EVENT_ID,'OPERATION_ID_REQUIRED');
  const result=pick(value,['id','programme','workspace_id','created_at','updated_at','status','attempts','error']);
  result.request=pick(value.request,['action','operation_id','input_id','review_sha256']);
+ if(value.mapping_review){const s=value.mapping_review.selection;
+ result.mapping_review={schema:value.mapping_review.schema,reviewed_at:value.mapping_review.reviewed_at,
+  comparison_sha256:s.comparison_sha256,programme_revision:s.programme_revision,baseline_operation_id:s.baseline_operation_id,
+  reviewer_preview:preview(s.reviewer),note_preview:preview(s.note),decision_count:s.decisions.length};}
  if(value.progress)result.progress=pick(value.progress,['phase','id','kind','status','message']);
  if(object(value.result))result.result=pick(value.result,['schema','operation_id','accepted_operation_id','edition_id',
  'review_sha256','version_id','report_name','workbook_name','workbook_job_id','workspace_archive_job_id',
@@ -69,8 +73,18 @@ function inspection(value,record,id,schema){
  return pick(value,['schema','workspace_id','input_id','edition_id','source','original_files','events','through_sequence','pages','receiver']);
 }
 
+function selectedMapping(value){
+ fields(value,['fields'],['schema']);
+ need(value.schema===undefined||value.schema==='stellar-forge.event-feed-analysis-mapping.v1','MAPPING_SCHEMA_INVALID');
+ need(Array.isArray(value.fields)&&value.fields.length<=100,'FIELD_MAPPING_REQUIRED');
+ for(const field of value.fields){fields(field,['name','pointer']);check(field.name,/^[A-Za-z][A-Za-z0-9_]{0,47}$/,'FIELD_NAME_INVALID');
+ need(typeof field.pointer==='string'&&field.pointer.length<=2000&&(field.pointer===''||field.pointer.startsWith('/'))&&
+ !/~(?:[^01]|$)/.test(field.pointer),'FIELD_POINTER_INVALID');}
+ return copy(value);
+}
+
 function recordIdentity(kind,id){
- need(['overview','programme','action','fields','values'].includes(kind),'RECORD_KIND_INVALID');
+ need(['overview','programme','action','fields','values','mapping'].includes(kind),'RECORD_KIND_INVALID');
  if(kind==='overview')need(id==='overview','RECORD_ID_REQUIRED');
  else check(id,kind==='programme'?EVENT_NAME:EVENT_ID,'RECORD_ID_REQUIRED');
 }
@@ -148,6 +162,29 @@ export function createNativeEventActions({reads,parse}={}){
  check(x.id,EVENT_ID,'INPUT_ID_REQUIRED');return pick(x,['id','files','created_at']);});
  return {workspace_id:record.workspaceId,active:value.active,source_receiver_available:value.source_receiver_available,
  programmes,actions,inputs,next_actions:value.next_actions,next_inputs:value.next_inputs};
+ });
+ }
+ if(operation==='event-mapping-compare'){
+ check(body.programme,EVENT_NAME,'PROGRAMME_REQUIRED');check(body.input_id,EVENT_ID,'INPUT_ID_REQUIRED');
+ const mapping=selectedMapping(body.mapping);integer(body.field_limit??25,1,50);
+ return snapshot(record,'mapping',body.input_id,()=>postBytes(ROOT+'/named/'+body.programme+'/mapping-comparison',
+  {input_id:body.input_id,mapping},EVENT_MAX_RECORD),value=>{
+ need(object(value)&&value.schema==='stellar-forge.event-feed-mapping-comparison.v1'&&value.workspace_id===record.workspaceId&&
+  value.programme===body.programme&&value.input_id===body.input_id&&Array.isArray(value.fields)&&value.field_count===value.fields.length&&
+  Array.isArray(value.mapped_fields)&&Array.isArray(value.required_decisions),'MAPPING_COMPARISON_CHANGED');
+ check(value.comparison_sha256,EVENT_HASH,'MAPPING_COMPARISON_REQUIRED');check(value.baseline_operation_id,EVENT_ID,'MAPPING_BASELINE_REQUIRED');
+ integer(value.programme_revision);need(eventCanonical(value.mapping.fields)===eventCanonical(mapping.fields),'FIELD_MAPPING_CHANGED');
+ return {...pick(value,['schema','workspace_id','programme','input_id','programme_revision','baseline_operation_id',
+  'comparison_sha256','mapping_sha256','previous_mapping_sha256','previous','current','receiver',
+  'required_decisions','field_count']),window:pick(value.window,['schema','before','after','retained','added',
+   'earlier_through_sequence','later_through_sequence','earlier_pages','later_pages']),
+  mapped_fields:page(value.mapped_fields,body.mapping_offset??0,body.mapping_limit??25,row=>({...row,
+   before_pointer:row.before_pointer===null?null:preview(row.before_pointer),
+   after_pointer:row.after_pointer===null?null:preview(row.after_pointer),
+   pointer_previews:{before:row.before_pointer!==null&&preview(row.before_pointer)!==row.before_pointer,
+    after:row.after_pointer!==null&&preview(row.after_pointer)!==row.after_pointer}})),
+  fields:page(value.fields,body.field_offset??0,body.field_limit??25,row=>({...row,
+   pointer:preview(row.pointer),pointer_preview:preview(row.pointer)!==row.pointer}))};
  });
  }
  if(operation==='event-input-create'){
@@ -237,13 +274,18 @@ export function createNativeEventActions({reads,parse}={}){
  const actionName=operation.slice('event-'.length),request={id:body.id,operation_id:body.operation_id,action:actionName};
  if(body.resume!==undefined)request.resume=body.resume;
  if(actionName==='review'){
- check(body.input_id,EVENT_ID,'INPUT_ID_REQUIRED');fields(body.mapping,['fields'],['schema']);
- need(body.mapping.schema===undefined||body.mapping.schema==='stellar-forge.event-feed-analysis-mapping.v1','MAPPING_SCHEMA_INVALID');
- need(Array.isArray(body.mapping.fields)&&body.mapping.fields.length<=100,'FIELD_MAPPING_REQUIRED');
- for(const field of body.mapping.fields){fields(field,['name','pointer']);check(field.name,/^[A-Za-z][A-Za-z0-9_]{0,47}$/,'FIELD_NAME_INVALID');
- need(typeof field.pointer==='string'&&field.pointer.length<=2000&&(field.pointer===''||field.pointer.startsWith('/'))&&
- !/~(?:[^01]|$)/.test(field.pointer),'FIELD_POINTER_INVALID');}
- request.input_id=body.input_id;request.mapping=copy(body.mapping);
+ check(body.input_id,EVENT_ID,'INPUT_ID_REQUIRED');
+ request.input_id=body.input_id;request.mapping=selectedMapping(body.mapping);
+ if(body.mapping_review!==undefined){
+  const value=body.mapping_review;fields(value,['comparison_sha256','programme_revision','baseline_operation_id','reviewer','note','decisions']);
+  check(value.comparison_sha256,EVENT_HASH,'MAPPING_COMPARISON_REQUIRED');integer(value.programme_revision);
+  check(value.baseline_operation_id,EVENT_ID,'MAPPING_BASELINE_REQUIRED');label(value.reviewer,240);
+  need(typeof value.note==='string'&&value.note.trim()&&Buffer.byteLength(value.note)<=8000,'DECISION_NOTE_REQUIRED');
+  need(Array.isArray(value.decisions)&&value.decisions.length<=200,'MAPPING_DECISIONS_REQUIRED');
+  for(const decision of value.decisions){fields(decision,['name','reason']);check(decision.name,/^[A-Za-z][A-Za-z0-9_]{0,47}$/,'FIELD_NAME_INVALID');
+   need(typeof decision.reason==='string'&&decision.reason.trim()&&Buffer.byteLength(decision.reason)<=4000,'MAPPING_REASON_REQUIRED');}
+  request.mapping_review=copy(value);
+ }
  }else if(actionName==='apply'||actionName==='refresh-review'){
  check(body.review_sha256,EVENT_HASH,'REVIEW_REQUIRED');
  need(typeof body.note==='string'&&body.note.trim()&&Buffer.byteLength(body.note)<=8000,'DECISION_NOTE_REQUIRED');

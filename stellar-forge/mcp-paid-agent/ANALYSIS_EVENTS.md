@@ -435,3 +435,31 @@ behavior defects in the same source. Source-only execution is separate from
 this actual native/rendered course. Return the exact source edition, original
 workspace/input/programme IDs, complete downloads and real screens to the
 existing receiving owner; preserve the same original operation and deadline.
+
+## Complete later-input mapping comparison
+
+The existing Analysis action now accepts event-mapping-compare with programme, input_id and the complete proposed mapping. It reads the actual accepted original source/mapping and the retained current pair; no review or apply is dispatched. The result returns source/baseline identities, required decision names, paged complete-field observations and paged mapped outputs. Use field_offset/field_limit (at most50) and mapping_offset/mapping_limit (at most25) for summaries. Overlong catalogue pointers are explicitly labelled previews; the full immutable record retains their exact text.
+
+Always receive complete_record with the unchanged event-record-file/readNativeAnalysisEventRecord byte loop before deciding. Its kind is mapping. The helper compareNativeAnalysisEventMappings(options) performs the original call and full digest-bound receiving, returning bytes, text, value and record. It requires the original connection, expectedWorkspaceId, inputId, programme and complete mapping.
+
+The comparison distinguishes the previous full window, current cumulative full window and newly added events. Earlier retained values do not prove a field remains present in new events. JSON null and missing remain different. Its required_decisions list includes changed output mappings and the actually observed new-event issues. Preserve every original output name/pointer and the complete before/after inventories when preparing a successor.
+
+event-review keeps its original request and adds optional mapping_review:
+{
+  comparison_sha256,
+  programme_revision,
+  baseline_operation_id,
+  reviewer,
+  note,
+  decisions: [{name, reason}]
+}
+The decisions must cover exactly every required output name, once each. The native coordinator recomputes from original files, binds the accepted baseline and normalized mapping, and retains the full attributed comparison in that original action's mapping_review field. Read the complete action record to recover it. A changed or interrupted request reuses its same id/operation_id/body; it is not assigned another native action merely because the response was uncertain.
+
+The original native review SHA and separate event-apply remain authoritative. No source projection, report/workbook calculation, subscriber, payment or delivery engine is replaced. The full original workspace archive includes the current raw input chunks, preceding registered source originals and complete browser action evidence. Use that native export/receive path, plus the optional source-bound browser mapping-review companion, for complete independent receiving.
+
+
+## Complete worksheet choices after a source changes
+
+An event-apply result with WORKBOOK_COLUMN_CHOICES_REQUIRED retains every unresolved worksheet, its complete preceding columns and exact new source. Receive the entire original action record with complete_record before selecting those values. The same Event browser now provides full structured review, source-bound save/reopen and a complete readable export; the portable workbook-columns.mjs and CLI share that exact choice schema.
+
+Follow [Event workbook column continuation](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md). Its template receives the complete native proposal and actual workspace/programme; its columns command checks the complete original binding and emits all reviewed column arrays for the existing event-apply request. Preserve the original operation_id, review_sha256 and accepted note; retain a new action ID for deliberately changed column input and recover that same action unchanged after an uncertain reply. Original native conversion checks and the full sixteen-file delivery remain authoritative.
