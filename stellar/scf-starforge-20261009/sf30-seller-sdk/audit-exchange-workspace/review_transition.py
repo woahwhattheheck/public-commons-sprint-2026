@@ -25,17 +25,17 @@ def entity_scope(model, selected):
             return keys
         keys = extended
 
-def impact(before, after, selected):
+def impact(before, after, selected, comparison):
     old = entity_scope(before, selected)
     new = entity_scope(after, selected)
-    comparison = compare_models(before, after)
     result = {
         "added": [row for row in comparison["added"] if row["entityKey"] in new],
         "removed": [row for row in comparison["removed"] if row["entityKey"] in old],
         "changed": [row for row in comparison["changed"] if row["before"]["entityKey"] in old or row["after"]["entityKey"] in new],
         "referenceChanges": [row for row in comparison["referenceChanges"]
                              if not selected or row["reference"].get("fromKey") in old | new
-                             or row["reference"].get("targetKey") in old | new],
+                             or row["reference"].get("targetKey") in old | new
+                             or bool(set(row["reference"].get("targetKeys", [])) & (old | new))],
     }
     result["counts"] = {name: len(rows) for name, rows in result.items()}
     return result
@@ -76,7 +76,7 @@ def preview(ws, db, inputs):
                      "samePathEntity": current_entity,
                      "identityChanged": bool(selected_entity and (not current_entity or
                          any(old_entity.get(k) != current_entity.get(k) for k in ("xmlId", "namespace", "kind")))),
-                     "impact": impact(previous["model"], target["model"], selected_entity)})
+                     "impact": impact(previous["model"], target["model"], selected_entity, revisions[previous["id"]]["comparison"])})
     value = {"format": FORMAT, "workspaceId": ws._meta(db)["workspaceId"],
              "version": ws._meta(db)["version"], "sourceId": source_id, "sourceName": source["name"],
              "toRevision": ws._revision_summary(target), "targetValidation": target["validation"],
