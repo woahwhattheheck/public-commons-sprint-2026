@@ -18,12 +18,14 @@ SCHEMA = "upstate.received-parameter-study/v1"
 def summary(identity):
     rows = [row for row in identity.get("scientific_report_sources", [])
             if row.get("report_context_kind") == transfer.CONTEXT]
+    direct = identity.get("parameter_studies", [])
     return {
+        "direct_parameter_study_count": len(direct),
         "parameter_study_source_count": len(rows),
         "editable_parameter_study_count": len({
             row["experiment_id"] for row in rows
             if row.get("relationship") == "same_project"
-        }),
+        } | {row["experiment_id"] for row in direct}),
     }
 
 
@@ -59,6 +61,42 @@ def augment(closure, retained, result):
             if row.get("report_context_kind") == transfer.CONTEXT]
     result.update(summary(identity))
     result["parameter_study_sources"] = []
+    direct = identity.get("parameter_studies", [])
+    transfer.verify_native_receipt(closure, direct)
+    for captured in direct:
+        key = identifier(captured["experiment_id"])
+        state = closure.read("experiments/" + key + "/experiment.json")
+        members = []
+        for path, label in (("experiment-specs/" + key + ".json", "Original immutable Parameter selection"),
+                            ("experiments/" + key + "/experiment.json", "Current original Parameter checkpoint")):
+            closure.read(path)
+            members.append(_member(closure, {"path": path, **{
+                name: closure.files[path][name] for name in ("bytes", "sha256")}}, label))
+        exports = []
+        for label, item in sorted(state.get("artifacts", {}).items()):
+            path = "experiments/" + key + "/" + item["path"]
+            # Preserve interrupted/missing exports as the original study state;
+            # the native desk owns refresh, not this receiving read.
+            if path in closure.files and closure.files[path]["bytes"] == item["bytes"]:
+                exports.append(_member(closure, {**item, "path": path}, label))
+        result["parameter_study_sources"].append({
+            "schema": SCHEMA, "source_kind": "direct_study", "source": None,
+            "experiment_id": key, "title": captured["selection"]["title"],
+            "purpose": captured["selection"].get("purpose"), "design": captured["selection"]["design"],
+            "source_project_id": captured["workspace_id"],
+            "relationship": "same_project", "editable": True,
+            "baseline_run_id": captured["baseline_run_id"],
+            "baseline_selection": deepcopy(captured["baseline_selection"]),
+            "calibration_origin": deepcopy(captured.get("calibration_origin")),
+            "models": deepcopy(state.get("models", [])), "pollutants": deepcopy(state.get("pollutants", [])),
+            "selected_case_ids": [case["id"] for case in captured["cases"]],
+            "selected_cases": [{**deepcopy(case), "state": next(
+                (row.get("state") for row in state["cases"] if row["id"] == case["id"]), None)}
+                for case in captured["cases"]],
+            "captured_state": deepcopy(captured["captured_state"]), "current_state": _state(state),
+            "source_selection": deepcopy(captured["selection"]), "report_ids": [],
+            "source_members": members, "result_members": exports,
+        })
     for captured in rows:
         token = (captured["source_collection_id"], captured["source_id"])
         if closure.report_source_records.get(token) != captured:

@@ -23,7 +23,7 @@ from . import parameter_support_reconciliation as reconciliation
 DIRECTORY = "parameter-report-sources"
 SCHEMA = "upstate.parameter-report-source/v1"
 SOURCE_ID = "saved-parameter-study"
-EDITION = 3
+EDITION = 4
 
 
 def _choices(value, available, label):
@@ -95,7 +95,15 @@ def preview(workspace, value):
         "expected_artifact_sha256": packet["artifact_sha256"],
         "case_ids": case_ids, "area_ids": area_ids, "pollutants": pollutants,
     }
-    return {"selection": selection, "cases": [row for row in packet["cases"] if row["id"] in case_ids],
+    calibration = None
+    if packet["selection"].get("calibration_origin"):
+        from .parameter_calibration import continuation, validate_continuation
+        origin = validate_continuation(workspace, packet["selection"]["calibration_origin"],
+                                       packet["selection"]["baseline_run_id"])
+        calibration = continuation(workspace, origin["calibration_id"])
+    return {**({"calibration_origin": calibration["calibration_origin"],
+                "calibration_context": calibration["context"]} if calibration else {}),
+            "selection": selection, "cases": [row for row in packet["cases"] if row["id"] in case_ids],
             "areas": [row for row in packet["areas"] if row["id"] in area_ids],
             "models": packet["models"], "pollutants": pollutants,
             "selected_rows": len(case_ids) * len(area_ids) * len(pollutants),
@@ -304,6 +312,24 @@ def _freeze(workspace, key, directory, selected, state):
         if original_selection:
             _retain_source(workspace, directory, original_selection["source_collection_id"],
                            original_selection["source_id"], records, bindings)
+    if selected.get("calibration_origin"):
+        from .parameter_calibration import validate_continuation
+        origin = validate_continuation(workspace, selected["calibration_origin"],
+                                       state["selection"]["baseline_run_id"])
+        for kind, key, name in (
+            ("calibrations", origin["calibration_id"], "result.json"),
+            ("calibration-plans", origin["plan_id"], "plan.json"),
+            ("observations", origin["observation_id"], "observations.json"),
+        ):
+            path = workspace.root / kind / (key + ".json")
+            shared._copy(workspace, describe_file(workspace.root, path),
+                         directory / "calibration-origin" / name)
+        observed = workspace._get("observations", origin["observation_id"])
+        shared._copy(workspace, observed["original"], directory / "calibration-origin" / "observations-original.csv")
+        plan = workspace._get("calibration-plans", origin["plan_id"])
+        catchments = plan["selection"]["catchments"]
+        _retain_source(workspace, directory, catchments["source_collection_id"],
+                       catchments["source_id"], records, bindings)
     grid = workspace.get_grid(state["baseline_selection"]["grid_id"])
     grid_root = workspace.root / "grids" / grid["id"]
     atomic_json(directory / "grid.json", grid, immutable=True)
@@ -498,6 +524,33 @@ def _sections(selected, rows, ranges):
             "No original range rows are included in this source selection. Selecting only some "
             "completed cases does not create a new range. The original selected pair rows remain "
             "available with their own geographic support.",
+        ]])
+    if selected.get("calibration_origin"):
+        origin, context = selected["calibration_origin"], selected["calibration_context"]
+        sections.append(["Original annual-reference evaluation", [
+            context["interpretation"],
+            _table(["Retained identity", "Original value"], [
+                ["Evaluation title", context["title"]], ["Evaluation", origin["calibration_id"]],
+                ["Original plan", origin["plan_id"]], ["Selected working profile", origin["selected_profile_id"]],
+                ["Selected baseline run", origin["selected_run_id"]],
+                ["Original reference run", origin["reference_run_id"] or "Not declared in the original evaluation"],
+                ["Observation edition", origin["observation_id"]],
+                ["Calibration groups", len(context["calibration_group_ids"])],
+                ["Held-out groups", len(context["validation_group_ids"])],
+            ]),
+            "Original source notes: " + ("; ".join(context["notes"]) or "None recorded."),
+            _table(["Original evaluation context", "Retained value"], [
+                ["Source vintages", context["source_vintages"]],
+                ["Calibration groups", context["calibration_group_ids"]],
+                ["Held-out groups", context["validation_group_ids"]],
+                ["Selected validation", context["selected_validation"]],
+                ["Objective", context["objective"]],
+            ]),
+            {"kind": "links", "items": [
+                {"title": "Complete original evaluation", "path": "calibration-origin/result.json"},
+                {"title": "Original candidate selection and holdout", "path": "calibration-origin/plan.json"},
+                {"title": "Original observation records", "path": "calibration-origin/observations.json"},
+                {"title": "Unchanged observation source table", "path": "calibration-origin/observations-original.csv"}]},
         ]])
     sections.extend(reconciliation.sections(selected, rows))
     sections.append(["Original files and spatial interpretation", [

@@ -29,6 +29,7 @@ from . import paired_ensemble_study_transfer as paired_transfer
 from . import report_changes_study_transfer as report_changes_transfer
 from . import multivariate_control_study_transfer as control_transfer
 from . import calibration_study_transfer as calibration_transfer
+from . import parameter_study_transfer as parameter_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
@@ -43,7 +44,7 @@ from . import chemistry_study_transfer as chemistry_transfer
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
+ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
               "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
@@ -73,6 +74,7 @@ LOCKS = {
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
+    "parameter-studies": "Parameter studies",
     "runs": "Native runs", "robust-decisions": "Decision studies",
     "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
     "sources": "Source collections", "grids": "Prepared grids",
@@ -160,6 +162,8 @@ def _record_path(kind, key):
     if kind == "robust-decisions":
         from .decision_study_transfer import MEMBER
         return MEMBER
+    if kind == "parameter-studies":
+        return "experiments/" + key + "/experiment.json"
     if kind in IMMUTABLE_KINDS or kind in monitoring_transfer.MUTABLE_KINDS:
         return kind + "/" + key + ".json"
     if kind in DOCUMENTS:
@@ -188,6 +192,7 @@ class _Closure:
         self.monitoring_records = {}
         self.monitoring_reports = {}
         self.report_source_records = {}
+        self.parameter_study_records = {}
         self.scientific_report_records = {}
         self.paired_ensemble_records = {}
         self.report_comparison_records = {}
@@ -500,6 +505,8 @@ class _Closure:
             pass
         elif chemistry_transfer.visit(self, kind, key, value, reason):
             pass
+        elif parameter_transfer.visit(self, kind, key, value, reason):
+            pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
             pass
         elif community_transfer.visit(self, kind, key, value):
@@ -633,8 +640,10 @@ class _Closure:
             parts = relative.split("/")
             if len(parts) >= 2:
                 key = parts[1][:-5] if (kind in IMMUTABLE_KINDS or kind in monitoring_transfer.MUTABLE_KINDS) and parts[1].endswith(".json") else parts[1]
-                node_files[(kind, key)] += 1
-                node_sizes[(kind, key)] += item["bytes"]
+                node_kind = ("parameter-studies" if kind == "experiments" and
+                             ("parameter-studies", key) in self.nodes else kind)
+                node_files[(node_kind, key)] += 1
+                node_sizes[(node_kind, key)] += item["bytes"]
         nodes = []
         for (kind, key), row in sorted(self.nodes.items()):
             value = copy.deepcopy(row)
@@ -662,6 +671,7 @@ class _Closure:
             "external_decision_dependencies": self.external_decision_dependencies,
             "completed_deliveries": delivery_transfer.receipt(self),
             "geographic_native_studies": copy.deepcopy(self.geographic_native_records),
+            "parameter_studies": parameter_transfer.native_receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
@@ -945,6 +955,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             "planned_cases": plan["planned_cases"],
             "related_result_issues": plan["related_result_issues"],
         }
+        if closure.parameter_study_records:
+            identity["parameter_studies"] = parameter_transfer.native_receipt(closure)
         if closure.geographic_native_records:
             identity["geographic_native_studies"] = copy.deepcopy(closure.geographic_native_records)
         if closure.report_source_records:
@@ -1042,6 +1054,7 @@ def verify_received_studies(workspace):
                            report_source_keys={(row["source_collection_id"], row["source_id"])
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
+        parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
@@ -1088,6 +1101,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind == "parameter-studies":
+            for row in parameter_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind in customer_review_transfer.ROOT_KINDS:
             for row in customer_review_transfer.catalogue(workspace, selected_kind):
