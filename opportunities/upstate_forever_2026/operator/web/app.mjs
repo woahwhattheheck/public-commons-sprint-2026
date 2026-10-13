@@ -767,25 +767,36 @@ function observationForm(){
  '<fieldset class="full"><legend>Original parameter labels</legend><p class="note">The native names nitrogen, phosphorus and sediment already match. Map other exact source labels when they represent those same annual mass-rate parameters.</p><div id="parameter-rows"></div>'+button('parameter-add','Map an original label','','small')+'</fieldset>'+
  '<fieldset class="full"><legend>Accepted source qualifiers</legend><label class="check"><input name="blank_qualifier" type="checkbox" checked><span>Accept an empty source qualifier</span></label>'+field('Other accepted exact qualifiers',area('qualifiers'),'One original qualifier per line. Unselected qualifiers remain retained as context.',true)+'</fieldset></div>',
  'Retain original observations',async()=>{
-  if(formContext.observationMetadataLoading)throw Error('The source-method document is still loading.');
-   if(formContext.observationMetadataError)throw Error(formContext.observationMetadataError);
-   const uploaded=await uploadFile(form.elements.namedItem('observation_file').files[0]),columns={},parameter_mapping={};
-  for(const key of keys)if(val('column_'+key))columns[key]=val('column_'+key);
-  for(const node of $$('[data-parameter-row]',form)){
-   const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
-  }
-  const metadata={...(formContext.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
-  if(val('period_start'))metadata.period_start=val('period_start');else delete metadata.period_start;if(val('period_end'))metadata.period_end=val('period_end');else delete metadata.period_end;
-   if(formContext.observationMetadataFile)metadata.source_metadata_document=formContext.observationMetadataFile;
-  if(metadata.value_basis==='annual_mass_rate'&&!metadata.annualization_method.trim())throw Error('Describe the original method that produced the annual mass-rate values.');
+  const context=formContext,selectedWorkspace=workspace;
+  const csvControl=form.elements.namedItem('observation_file'),methodControl=form.elements.namedItem('observation_metadata');
+  const file=csvControl.files[0],methodFile=methodControl.files[0],csvToken=context.observationCSVToken,methodToken=context.observationMetadataToken;
+  const readMetadata=()=>{
+   if(context.observationMetadataLoading)throw Error('The source-method document is still loading.');
+   if(context.observationMetadataError)throw Error(context.observationMetadataError);
+   if(context.observationCSVLoading)throw Error('The original CSV header is still loading.');
+   if(context.observationCSVError)throw Error(context.observationCSVError);
+   if(!file||context.observationCSVFile!==file)throw Error('Choose the original CSV and wait for its column mapping.');
+   const columns={},parameter_mapping={};
+   for(const key of keys)if(val('column_'+key))columns[key]=val('column_'+key);
+   for(const node of $$('[data-parameter-row]',form)){
+    const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
+   }
+   const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
+   if(val('period_start'))metadata.period_start=val('period_start');else delete metadata.period_start;if(val('period_end'))metadata.period_end=val('period_end');else delete metadata.period_end;
+   if(context.observationMetadataFile)metadata.source_metadata_document=context.observationMetadataFile;
+   if(metadata.value_basis==='annual_mass_rate'&&!metadata.annualization_method.trim())throw Error('Describe the original method that produced the annual mass-rate values.');
+   return metadata;
+  };
+  const metadata=readMetadata(),selectedMetadata=JSON.stringify(metadata);
+  const uploaded=await uploadFile(file);
+  if(formContext!==context||workspace!==selectedWorkspace||csvControl.files[0]!==file||methodControl.files[0]!==methodFile||context.observationCSVToken!==csvToken||context.observationMetadataToken!==methodToken||JSON.stringify(readMetadata())!==selectedMetadata)throw Error('The observation selection changed during upload. Review the current CSV, source method and mapping, then import again.');
   return submitAction('observation.import',{upload_id:uploaded.id,metadata});
  },()=>{
   form.elements.namedItem('basis').addEventListener('change',()=>form.elements.namedItem('annualization_method').required=val('basis')==='annual_mass_rate');
    form.elements.namedItem('observation_metadata').addEventListener('change',async()=>{
-    const context=formContext,token=crypto.randomUUID();context.observationMetadataToken=token;context.observationMetadataLoading=true;context.observationMetadataError=null;
-    const current=()=>formContext===context&&context.observationMetadataToken===token;
+    const context=formContext,selectedWorkspace=workspace,control=form.elements.namedItem('observation_metadata'),file=control.files[0],token=crypto.randomUUID();context.observationMetadataToken=token;context.observationMetadataLoading=true;context.observationMetadataError=null;
+    const current=()=>formContext===context&&workspace===selectedWorkspace&&context.observationMetadataToken===token&&control.files[0]===file;
     try{
-     const file=form.elements.namedItem('observation_metadata').files[0];
      if(!file){context.observationMetadata=null;context.observationMetadataFile=null;return;}
      if(file.size>1024*1024)throw Error('Use a source-method JSON of at most 1 MiB; the original data CSV is selected separately.');
      const data=new Uint8Array(await file.arrayBuffer());if(!current())return;
@@ -811,14 +822,21 @@ function observationForm(){
     finally{if(current())context.observationMetadataLoading=false;}
    });
   form.elements.namedItem('observation_file').addEventListener('change',async()=>{
+   const context=formContext,selectedWorkspace=workspace,control=form.elements.namedItem('observation_file'),file=control.files[0],token=crypto.randomUUID();
+   context.observationCSVToken=token;context.observationCSVLoading=true;context.observationCSVError=null;context.observationCSVFile=null;context.observationHeaders=null;
+   const current=()=>formContext===context&&workspace===selectedWorkspace&&context.observationCSVToken===token&&control.files[0]===file;
+   for(const key of keys)setOptions(form.elements.namedItem('column_'+key),[]);
+   $('#csv-header-note').textContent=file?'Reading the original CSV header…':'Choose the original CSV to inspect its actual header.';
    try{
-    const file=form.elements.namedItem('observation_file').files[0];if(!file)return;
-    const headers=csvHeader(await file.slice(0,256*1024).text());
+    if(!file)return;
+    const headers=csvHeader(await file.slice(0,256*1024).text());if(!current())return;
     if(!headers.length||new Set(headers).size!==headers.length)throw Error('The original CSV header is empty or repeats a column name.');
-    formContext.observationHeaders=headers;
-     for(const key of keys){const selected=formContext.observationMetadata?.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),headers.map(x=>[x,x]),headers.includes(selected)?selected:'');}
+    context.observationHeaders=headers;context.observationCSVFile=file;
+    for(const key of keys){const selected=context.observationMetadata?.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),headers.map(x=>[x,x]),headers.includes(selected)?selected:'');}
     $('#csv-header-note').textContent=headers.length+' original CSV fields: '+headers.join(', ');
-   }catch(error){$('#form-error').textContent=error.message;$('#form-error').hidden=false;}
+    $('#form-error').hidden=true;
+   }catch(error){if(current()){context.observationCSVError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
+   finally{if(current())context.observationCSVLoading=false;}
   });
  });
 }
