@@ -68,15 +68,15 @@
         },
         {
           "path": "README.md",
-          "sha256": "1338a43409c575524218b5b8081dcf4d7399e428975010a7dcd9317fd538c7b1"
+          "sha256": "e40a3e927acdeac30a4461d27b87a316bed99336376a2ac238af1ce40501f649"
         },
         {
           "path": "build_observation_report.mjs",
-          "sha256": "a1f1daf8e61f83f1863ef61ad67e9f9da9f062b819d8d1b6608058f932b5c568"
+          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
         },
         {
           "path": "lake-observations-report.html",
-          "sha256": "95c8d66884d6fa60694927a8356ae3753faa9e0b7d8283290370c3890b16e53c"
+          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
         }
       ]
     }
@@ -85,6 +85,7 @@
     "ActivityIdentifier joins every original three-lake result to one original activity.",
     "Three lake stations have 15 chlorophyll records each; six microcystin censored values remain blank with their original limits.",
     "Source observations, original study summaries and native model quantities retain their individual temporal and physical units.",
-    "The complete offline sampling report embeds all88 original working records and exact original three-lake result CSV, preserving censored blanks and individual reporting limits."
+    "The complete offline sampling report embeds all88 original working records and exact original three-lake result CSV, preserving censored blanks and individual reporting limits.",
+    "The report includes the maintained original75-record five-station chlorophyll cohort; the application-root eighteenmile_lake_observation_report.sources.json imports all original cohort/reconciliation companions together."
   ]
 }
