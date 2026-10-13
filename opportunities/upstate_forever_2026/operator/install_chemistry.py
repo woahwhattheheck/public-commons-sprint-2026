@@ -97,7 +97,8 @@ FILES = [
     "source/monitoring_field_assignment/RECEIVING.md",
     "integration/component_fragments/monitoring-field-assignment.json",
     "source_tools/monitoring_field_assignment_browser.mjs",
-    "source_tools/receive_monitoring_field_assignment_browser.mjs"
+    "source_tools/receive_monitoring_field_assignment_browser.mjs",
+    "source/monitoring-field-study/source/prepare_field_package_edition.py"
 ]
 
 ORIGINAL_SHA256 = {
@@ -311,6 +312,7 @@ FIELD_RACE_PREVIOUS_SHA256 = {
 }
 
 FIELD_ASSIGNMENT_PREVIOUS_SHA256 = {
+    "integration/component_fragments/monitoring-field-study.json": "915b907e1a2531708efd1125501e43863e58ea79b7d12ca5d699c31d5946c7ef",
     "operator/install_chemistry.py": "70ad65fa6d5dcfc07f85fe6f23c71db1d3717dd4b75868e7d15b765b89195682",
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "d90e4992d165f8b7b1784e945c8df749a2ae31be1ee319ea494d1508d94452b8",
     "source/monitoring-field-study/source-manifest.json": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db",

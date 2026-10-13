@@ -25,7 +25,8 @@
     "monitoring_field_selection_pull_request": 4266,
     "field_capture_continuity": "e51ec185cfd7d4d3706df6c8718d985b496efaf9",
     "field_assignment_source": "8b97244c08d6ad2cea455e0e5ef0e75b0016b77c",
-    "corrected_field_manifest_blob": "2ea96965b05bd9677c62407fb4a49baef7f0ac2a"
+    "corrected_field_manifest_blob": "2ea96965b05bd9677c62407fb4a49baef7f0ac2a",
+    "field_package_preparer_commit": "2b676e8460820dc48683a09847a3b6a4a538168b"
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -192,8 +193,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 36065,
-      "sha256": "8e5d88916193427950ea109c51f64075dbca7289d90766b1d8609e8394a3c8fc"
+      "bytes": 36277,
+      "sha256": "378dd5acc709fae2488663bcd8c4f381da0cacc8e8fd0a662620e579ed89cdb5"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -332,13 +333,13 @@
     },
     {
       "path": "integration/component_fragments/monitoring-field-study.json",
-      "bytes": 1570,
-      "sha256": "915b907e1a2531708efd1125501e43863e58ea79b7d12ca5d699c31d5946c7ef"
+      "bytes": 1651,
+      "sha256": "048caf88c4bd3bfc4e8843525848152895664d524da8ae4c033d2f6f5d03d4b0"
     },
     {
       "path": "source/monitoring-field-study/INSTALLATION.md",
-      "bytes": 23117,
-      "sha256": "be41e52c6912d5f432b80cf5f9ef87c75afd028ac2cb024c0764f721398aede7"
+      "bytes": 24145,
+      "sha256": "e3802a555bbd4686e92080b8f5b0df6a21e3dfc3a86297633c653e7d576c699b"
     },
     {
       "path": "model/monitoring_field_selection.py",
@@ -454,6 +455,11 @@
       "path": "source_tools/receive_monitoring_field_assignment_browser.mjs",
       "bytes": 11537,
       "sha256": "baa62ff972c7d07c64a54896c04228ba5046ab536030481043a3c64a2769d6ef"
+    },
+    {
+      "path": "source/monitoring-field-study/source/prepare_field_package_edition.py",
+      "bytes": 8089,
+      "sha256": "bfa6a314eb25ef05b41a6fb6ce7b44ab36fc596cc66af5f086508d0ac0d4a4ef"
     }
   ],
   "preserved_shared_dependencies": [
