@@ -640,3 +640,60 @@ to the existing 217-HUC domain and its reporting, upstream and utility selection
 HUC8 catalog membership remains source context; the original polygon geometry
 determines the spatial relationship. See the source edition's complete README
 and capture manifest for all request URLs, original dates and geometry details.
+
+## 15. Regional gauge support through the same Workspace
+
+Open **Gauge support** in the shared operator after receiving the complete
+regional watershed and station-geography components. Select the saved regional
+report, original HUC12 polygon source and identity field, original gauge points
+or saved station edition, original whole-catchment source and retained daily-flow
+coverage. Select the reporting HUC12s and any original utility polygon sources.
+Each utility retains its own source and native identity field.
+
+The saved report joins exact original station/series identities to the regional
+HUC geometry. It shows point membership, the point's relationship to its supplied
+whole catchment, individual catchment/HUC intersections, full regional and
+selected reporting support, and original calendar coverage. Nested catchments
+are combined by geometric union when reporting covered area. Original approved,
+estimated and provisional counts remain attached to the observed days. All
+reported areas use EPSG:5070.
+
+Select a gauge to inspect its original point, catchment outline, HUC intersections
+and annual coverage. Download its HTML report, complete CSVs, GeoJSONs and
+original-source ZIP from the same result. The linked original station and
+regional editions remain available through the current Workspace.
+
+The complete source intake, build and independent receiving sequence runs from
+the selected application with the original regional report already present:
+
+```sh
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gauge_support \\
+  --workspace "$UPSTATE_WORKSPACE" \\
+  --report-id "$UPSTATE_REGIONAL_REPORT_ID" \\
+  --huc-manifest "$UPSTATE_ORIGINAL_DOMAIN_MANIFEST" \\
+  --huc-source-id upstate-wbd-upstream-domain-20261012 \\
+  --huc-id-field huc12 \\
+  --output "$UPSTATE_GAUGE_RECEIVING_OUTPUT"
+```
+
+Set the output directory outside the application and Workspace. The command
+retains and verifies the original discharge and NLDI source families, imports
+the selected original HUC polygons, saves the exact analysis selection, builds
+the report, backs up the same scientific Workspace and reopens it independently.
+Use repeated `--reporting-huc12` arguments for an explicit subset and
+`--utility-selection` for the original utility source-reference array. The
+existing `--huc-collection` route selects an already imported original domain.
+`--prepare-only` completes source intake; repeating without it continues the
+same saved selection into computation.
+
+For component receiving into an existing complete application, apply the full
+eight-file component:
+
+```sh
+"$UPSTATE_PYTHON" -B operator/install_gauge_support.py \\
+  --application "$APPLICATION" --source-root "$COMPONENT_ROOT" --apply
+```
+
+Restart the operator to register its descriptor. The complete installation, exact source
+selection schema, commands and interpretation are in
+[operator/GAUGE_SUPPORT.md](GAUGE_SUPPORT.md).

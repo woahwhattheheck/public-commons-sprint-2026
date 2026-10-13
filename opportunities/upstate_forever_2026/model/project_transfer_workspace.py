@@ -6,6 +6,8 @@ native action is explicitly requested; standalone transport remains stdlib-only.
 from __future__ import annotations
 from contextlib import nullcontext
 from pathlib import Path
+import os
+import stat
 import time
 from .project_transfer import (TransferStore, TransferError, _atomic, canonical,
                                digest_id, load_json, sha)
@@ -106,15 +108,30 @@ class NativeProjectTransfer:
                 if record["state"] != "restoring":
                     raise TransferError("Native destination appeared during archive assembly")
                 # The original receiver doesn't retain ARCHIVE.json on disk.
-                from .project_transfer import file_hash, member_name
+                from .project_transfer import archive_member_mode, file_hash, member_name
                 snapshot = self.store.snapshot(snapshot_id)
                 for name, expected in snapshot["archive"]["members"].items():
                     p = target.joinpath(*Path(member_name(name)).parts)
                     if p.is_symlink() or not p.is_file() or p.stat().st_size != expected["bytes"] or file_hash(p) != expected["sha256"]:
                         raise TransferError("Interrupted native receiving differs from its original files")
+                    mode = archive_member_mode(snapshot, name)
+                    if mode is not None and os.name == "posix" and stat.S_IMODE(p.stat().st_mode) != (mode & 0o777):
+                        raise TransferError("Interrupted native receiving differs from its original file mode: " + name)
+                # Recover the same receiving summary as portable.restore after a
+                # lost reply, using the original files verified above.
+                from .workspace import Workspace
+                from .portable_acquisitions import verify_acquisitions
+                restored = Workspace(target / "workspace")
+                source_acquisitions = verify_acquisitions(
+                    restored.root, snapshot["archive"]["members"],
+                    source_ids={row["id"] for row in restored._list("sources")})
+                retained_acquisitions = snapshot["archive"].get("source_acquisitions")
+                if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
+                    raise TransferError("Receiving changed the original source acquisition lineage")
                 result = {"project": snapshot["archive"]["project"], "directory": str(target),
                           "workspace": str(target / "workspace"), "application": str(target / "application"),
-                          "identity": "MATCH", "recovered_after_lost_reply": True}
+                          "identity": "MATCH", "recovered_after_lost_reply": True,
+                          "source_acquisitions": source_acquisitions}
             else:
                 record["state"] = "restoring"
                 _atomic(record_path, canonical(record) + b"\n", replace=True)

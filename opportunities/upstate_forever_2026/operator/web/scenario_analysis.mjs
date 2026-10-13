@@ -3,6 +3,7 @@
  * Native analysis records remain the source of all quantities and scores.
  */
 import {createAnalysisDelivery} from './scenario_analysis_delivery.mjs';
+import {nativeModelsForOutputs,nativeCommonVersionIssues,nativeModelVersionLabel} from './native_versions.mjs';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rows=value=>Array.isArray(value)?value:[];
@@ -39,6 +40,7 @@ export function scenarioNativeVersion(run){
 }
 
 const nativeVersionLabel=run=>{
+  if(run?.model_versions||run?.stages||run?.stage_summary)return nativeModelVersionLabel(run);
   const version=scenarioNativeVersion(run);
   if(!version.comparison_version)return 'InVEST version unavailable';
   if(!version.observed)return 'InVEST '+version.requested+' requested; execution version not retained';
@@ -692,11 +694,10 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       const baselineRun=completed.find(r=>r.id===val('analysis_baseline'));
       const selectedRuns=[baselineRun,...ids.map(id=>completed.find(run=>run.id===id))];
       if(!baselineRun||selectedRuns.some(run=>!run||run.selection.grid_id!==baselineRun.selection.grid_id))throw Error('Select alternatives on the baseline’s original grid.');
-      const baselineVersion=scenarioNativeVersion(baselineRun).comparison_version;
-      if(!baselineVersion)throw Error('The baseline has no observed or retained requested InVEST version.');
-      if(selectedRuns.some(run=>scenarioNativeVersion(run).comparison_version!==baselineVersion))throw Error('Select alternatives with the baseline’s observed InVEST version, or its labeled legacy requested version.');
       const shared=commonOutputs(selectedRuns);
       if(!shared.length)throw Error('Choose a cohort that shares nutrient or sediment outputs across every selected run.');
+      const versionIssues=nativeCommonVersionIssues(selectedRuns,nativeModelsForOutputs(shared));
+      if(versionIssues.length)throw Error(versionIssues.join(' '));
       const selection={...sourceAreaOrigin(initial),title:val('analysis_title').trim(),baseline_run_id:baselineRun.id,scenario_run_ids:ids,
         weights:parseAnalysisWeights(Object.fromEntries(pollutants.map(([id])=>[id,shared.includes(id)?val('analysis_'+id):0])))};
       delete selection.caps;delete selection.percentile;
@@ -725,6 +726,8 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
         document.getElementById('analysis-common-outputs').textContent=shared.length?
           'Compared native outputs: '+shared.map(pollutantName).join(', ')+'. '+(selectedRuns.length===1?'Baseline analysis.':(selectedRuns.length-1)+' selected alternative'+(selectedRuns.length===2?'':'s')+'.'):
           'These selected runs have no common native output. Change the alternatives to share NDR or SDR.';
+        const versionIssues=shared.length?nativeCommonVersionIssues(selectedRuns,nativeModelsForOutputs(shared)):[];
+        if(versionIssues.length)document.getElementById('analysis-common-outputs').textContent+=' Version requirements: '+versionIssues.join(' ');
         for(const [id] of pollutants){
           const available=shared.includes(id);
           for(const node of form.querySelectorAll('[name="analysis_'+id+'"],[name="weight_'+id+'"]')){
@@ -770,8 +773,8 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
         const b=completed.find(r=>r.id===form.elements.namedItem('analysis_baseline').value);
         const selectedIds=[...form.querySelectorAll('[name="analysis_run"]:checked')].map(n=>n.value);
         const initialIds=selectedIds.length?selectedIds:rows(initial.scenario_run_ids);
-        const available=completed.filter(r=>r.id!==b?.id&&r.selection.grid_id===b?.selection.grid_id&&scenarioNativeVersion(r).comparison_version===scenarioNativeVersion(b).comparison_version&&commonOutputs([b,r]).length);
-        document.getElementById('analysis-run-choices').innerHTML=available.length?available.map(r=>'<label class="check"><input type="checkbox" name="analysis_run" value="'+esc(r.id)+'"'+(initialIds.includes(r.id)?' checked':'')+'><span>'+esc(runTitle(r.id))+'<small>'+esc((r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r))+'</small></span></label>').join(''):'<p class="note">The baseline can be analyzed now. Completed alternatives on this grid and compatible native version will appear here.</p>';
+        const available=completed.filter(r=>r.id!==b?.id&&r.selection.grid_id===b?.selection.grid_id&&commonOutputs([b,r]).length);
+        document.getElementById('analysis-run-choices').innerHTML=available.length?available.map(r=>'<label class="check"><input type="checkbox" name="analysis_run" value="'+esc(r.id)+'"'+(initialIds.includes(r.id)?' checked':'')+'><span>'+esc(runTitle(r.id))+'<small>'+esc((r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r))+'</small></span></label>').join(''):'<p class="note">The baseline can be analyzed now. Completed alternatives on this grid will appear here. Execution versions are checked for the common outputs of the selected cohort.</p>';
         scope();
       }
       alternatives();form.elements.namedItem('analysis_baseline').addEventListener('change',alternatives);
@@ -796,14 +799,14 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
     const baseline=byId.get(seed.baseline_run_id);
     if(!baseline)throw Error('The supplied baseline must have completed its selected original native model outputs in this workspace.');
     if(!baseline.selection?.grid_id)throw Error('The supplied baseline has no retained model grid.');
-    const baselineVersion=scenarioNativeVersion(baseline).comparison_version;
-    if(!baselineVersion)throw Error('The supplied baseline has no observed or retained requested InVEST version.');
     const requested=seed.scenario_run_ids??[];
     if(!Array.isArray(requested))throw Error('Supply original native alternative IDs as a list, or leave it empty for baseline analysis.');
     const ids=[...new Set(requested)];
     if(ids.some(id=>typeof id!=='string'||id===baseline.id||!byId.has(id)))throw Error('Each supplied alternative must be a distinct completed run of its selected native models.');
     if(ids.some(id=>byId.get(id).selection?.grid_id!==baseline.selection.grid_id))throw Error('The supplied alternatives must use the baseline original model grid.');
-    if(ids.some(id=>scenarioNativeVersion(byId.get(id)).comparison_version!==baselineVersion))throw Error('The supplied alternatives must share the baseline’s observed InVEST version, or its labeled legacy requested version.');
+    const suppliedRuns=[baseline,...ids.map(id=>byId.get(id))];
+    const versionIssues=nativeCommonVersionIssues(suppliedRuns,nativeModelsForOutputs(commonOutputs(suppliedRuns)));
+    if(versionIssues.length)throw Error(versionIssues.join(' '));
     if(!commonOutputs([baseline,...ids.map(id=>byId.get(id))]).length)throw Error('Choose a native cohort that shares nutrient or sediment outputs across every selected run.');
     return newAnalysis({selection:{...seed,baseline_run_id:baseline.id,scenario_run_ids:ids}});
   }

@@ -228,6 +228,7 @@ export function createProjectTransferDesk(host) {
       '<div class="pt-actions">'+button('check','Refresh receiving coverage','',busy||detailBusy||!selectedSnapshot)+
       button('inspect','Download missing-block request','',busy||!selectedSnapshot)+
       button('report','Export file inventory','',busy||!selectedSnapshot)+'</div>'+
+      acquisitionsView(detail?.source_acquisitions)+
       '<div class="pt-divider"><h3>Reconstruct and continue</h3><p>Build a complete original archive for storage, or restore an editable copy into this operator’s receiving area.</p>'+
       '<div class="pt-actions">'+button('archive','Build original archive','',busy||!ready)+button('restore','Restore editable copy','',busy||!ready,true)+'</div></div></section>'+
       (showInventory?'<section class="pt-card"><h2>Compare editions</h2><div class="pt-grid"><label class="pt-field">Earlier edition<select data-pt-field="beforeSnapshot">'+snapshotOptions(beforeSnapshot)+'</select></label>'+
@@ -252,6 +253,31 @@ export function createProjectTransferDesk(host) {
     if (value.received_bytes != null) return phase+' · received '+bytes(value.received_bytes)+' · reused '+bytes(value.reused_bytes);
     return phase;
   }
+  function acquisitionsView(value, task = null) {
+    if (!value || value.schema !== 'upstate.source-acquisition-receiving/v1') return '';
+    const rows = arr(value.operations);
+    const destination = task?.result?.workspace_key ||
+      (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action) ? task.workspace : null);
+    const continuations = rows.filter(row => row.continued_from).length;
+    return '<details class="pt-settings"><summary>Retained soil and floodplain acquisitions · '+
+      rows.length.toLocaleString()+' operations · '+continuations.toLocaleString()+' continuations</summary>'+
+      '<p>Original source requests, provider responses, imported source editions and continuation history travel with this project.</p>'+
+      (rows.length?'<div class="pt-table"><table><thead><tr><th>Acquisition</th><th>Retained state</th><th>Source editions</th><th>Open</th></tr></thead><tbody>'+
+      rows.map(row => {
+        const retained = row.selection_retained === true && identity.test(row.resume_operation_id || '');
+        const editions = [row.source_collection_id,row.original_source_collection_id].filter(Boolean);
+        const action = task?.state === 'complete' && destination && retained ?
+          button('open-acquisition','Open acquisition','data-id="'+esc(task.id)+'" data-operation-id="'+esc(row.id)+'"') : '';
+        return '<tr><td><strong>'+esc(row.title || 'Source acquisition')+'</strong><div class="pt-id">'+esc(row.id)+'</div>'+
+          (row.continued_from?'<small>Continues '+esc(short(row.continued_from))+'</small>':'')+
+          '<div>'+arr(row.families).map(esc).join(', ')+'</div></td><td>'+esc(String(row.state || 'prepared').replaceAll('_',' '))+
+          (Number.isSafeInteger(row.retained_result_files)?'<small> · '+row.retained_result_files+' result files</small>':'')+
+          '</td><td>'+editions.map(value=>'<span class="pt-id" title="'+esc(value)+'">'+esc(short(value))+'</span>').join('<br>')+
+          (editions.length?'':'No imported edition in this acquisition')+'</td><td>'+action+
+          (!retained?'Original preparation retained':!destination?'Available after editable restoration':'')+'</td></tr>';
+      }).join('')+'</tbody></table></div>':'<p class="pt-empty">This edition contains no retained soil or floodplain acquisition operations.</p>')+
+      '</details>';
+  }
   function taskView(item) {
     const result = item.result || {}, progress = item._transfer_progress;
     let outcome = '';
@@ -269,7 +295,7 @@ export function createProjectTransferDesk(host) {
       '<small>'+date(item.created_at)+' · '+short(item.id)+'</small>'+
       (!terminal(item.state)?'<p role="status">'+esc(progressText(progress) || item.state)+'</p>':'')+
       (item.error?'<div class="pt-error"><strong>'+esc(item.error.code || 'Task error')+'</strong><p>'+esc(item.error.message || item.error)+'</p></div>':'')+
-      outcome+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
+      outcome+acquisitionsView(result.source_acquisitions,item)+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
       (['failed','interrupted'].includes(item.state)?button('resume','Resume original task','data-id="'+item.id+'"',busy):'')+'</div></article>';
   }
   function render() {
@@ -338,6 +364,22 @@ export function createProjectTransferDesk(host) {
     if (name==='task'||name==='source-task') {await host.showTask(id);return;}
     if (name==='study-desk') {await host.navigate('study-transfer');return;}
     if (name==='open-restored') {await host.selectWorkspace(id);await host.navigate('study-transfer');return;}
+    if (name==='open-acquisition') {
+      const task = tasks().find(item => item.id === id && item.state === 'complete');
+      const row = arr(task?.result?.source_acquisitions?.operations)
+        .find(item => item.id === target.dataset.operationId);
+      const destination = task?.result?.workspace_key ||
+        (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action) ? task.workspace : null);
+      if (!row?.selection_retained || !identity.test(row.resume_operation_id || '') || !destination)
+        throw new Error('Choose a retained acquisition from a completed capture or editable restoration.');
+      if (typeof host.openDesk !== 'function') throw new Error('Reopen the current operator to use its registered scientific desks.');
+      if (host.getWorkspace() !== destination) await host.selectWorkspace(destination);
+      if (host.getWorkspace() !== destination) throw new Error('The workspace changed while opening the retained acquisition.');
+      await host.openDesk('conservation','dispatch',{dataset:{
+        action:'conservation-open-source-capture',operationId:row.resume_operation_id
+      }});
+      return;
+    }
     if (name==='older-tasks') {historyLimit+=20;render();await refreshTaskDetails();return;}
     if (name==='clear-request') {requestUpload=null;fileInputs.request=null;persist();render();return;}
     if (name==='open-snapshot') {selectedSnapshot=id;detail=null;fileOffset=0;tab='inspect';persist();render();await loadDetail(0);return;}

@@ -15,13 +15,16 @@ from .common import (atomic_bytes, atomic_json, describe_file, digest, file_dige
 SCHEMA = "upstate.utility-microbial-study/v1"
 FOLDER = "utility-microbial-studies"
 TITLE = "Utility-focus E. coli observations — 2021–2025"
-MANIFEST_SHA256 = "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
+MANIFEST_SHA256 = "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
+SOURCE_EDITIONS = {
+    MANIFEST_SHA256: "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff",
+    "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26",
+}
 DOMAIN_SHA256 = "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
 SOURCE_DIRECTORY = Path(__file__).resolve().parents[1] / "source/ecoli_utility_context/20261013"
 EXPECTED = {
     "utility-ecoli-observations": ("table", "b6cf7d334c6b8bb1a174374c30e8ea3081dd1f05be2418040272c581a49264a8"),
     "utility-ecoli-stations": ("vector", "533e91201e09aa1103289722f0077edb496f4ed319deb6a4b58771fb7073a907"),
-    "utility-ecoli-offline-explorer": ("document", "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"),
 }
 EXPECTED_COUNTS = {"ARJWS": {"stations": 5, "records": 142},
                    "PRWD": {"stations": 31, "records": 588}}
@@ -29,21 +32,30 @@ MAX_DOMAIN_BYTES = 64 * 1024 * 1024
 
 
 def _collection(workspace, manifest):
-    """Reuse an imported original source edition, including all report companions."""
+    """Reuse one complete current or retained predecessor presentation edition."""
+    requested = None
     if manifest is not None:
         manifest = Path(manifest).resolve(strict=True)
-        if file_digest(manifest) != MANIFEST_SHA256:
-            raise ValueError("Choose the complete original utility E. coli source-manifest.json")
+        requested = file_digest(manifest)
+        if requested not in SOURCE_EDITIONS:
+            raise ValueError("Choose a complete retained utility E. coli source-manifest.json")
     candidates = [row for row in workspace._list("sources")
-                  if row.get("original_manifest", {}).get("sha256") == MANIFEST_SHA256]
+                  if row.get("original_manifest", {}).get("sha256") in SOURCE_EDITIONS
+                  and (requested is None or row["original_manifest"]["sha256"] == requested)]
     if candidates:
-        collection = sorted(candidates, key=lambda row: row["id"])[0]
+        collection = sorted(candidates, key=lambda row: (
+            row["original_manifest"]["sha256"] != MANIFEST_SHA256, row["id"]))[0]
     elif manifest is not None:
         collection = workspace.import_sources(manifest)
     else:
         raise ValueError("Import the original utility microbial source or select its complete manifest")
+    edition = collection["original_manifest"]["sha256"]
+    if edition not in SOURCE_EDITIONS:
+        raise ValueError("Choose a complete retained microbial presentation edition")
+    expected_entries = {**EXPECTED, "utility-ecoli-offline-explorer": (
+        "document", SOURCE_EDITIONS[edition])}
     entries = {entry["id"]: entry for entry in collection["entries"]}
-    for source_id, (kind, expected) in EXPECTED.items():
+    for source_id, (kind, expected) in expected_entries.items():
         entry = entries.get(source_id)
         if entry is None or entry["kind"] != kind or entry["body"]["sha256"] != expected:
             raise ValueError("The retained microbial source differs: " + source_id)
@@ -295,7 +307,7 @@ def _selection(workspace, collection, entries, domain, title):
         "watersheds": [domain] if domain is not None else [],
         "aliases": {}, "choices": {},
         "microbial_context": {
-            "source_manifest_sha256": MANIFEST_SHA256,
+            "source_manifest_sha256": collection["original_manifest"]["sha256"],
             "period": {"start": "2021-01-01", "end": "2025-12-31"},
             "quantity": "Original sampled E. coli concentration and detection/quantitation condition",
             "utility_source_counts": counts,

@@ -811,7 +811,8 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
     application_root = Path(__file__).resolve().parent.parent
     source_names = ["source_tools/gura_comparison.py", "model/common.py", "model/workspace.py",
                     "model/rasters.py", "model/native.py", "model/portable.py", "model/compute_programme.py",
-                    "model/compute_programme_cli.py", "model/scenario_decisions.py"]
+                    "model/compute_programme_cli.py", "model/scenario_decisions.py",
+                    "model/native_study.py"]
     if build_economics:
         source_names.extend(["model/decision_analysis.py", "model/decision_cli.py",
                              "model/decision_desk.html"])
@@ -918,8 +919,23 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
                 _progress(directory, state, completed_native_runs=len(runs), phase="original watershed report")
                 requested = scenario_decisions.select_cohort(
                     ws, runs[0]["id"], alternative_run_ids=[run["id"] for run in runs[1:]],
-                    title=plan["title"], zones=plan["zones"])
-                atomic_json(directory / "report-selection.json", requested, immutable=True)
+                    title=plan["title"], zones=plan["zones"],
+                    delivery_mode="native_study", native_study={
+                        "title": plan["study"], "purpose": plan["purpose"],
+                        "reference": plan.get("source_reference"),
+                    })
+                original_selection_path = directory / "report-selection.json"
+                if original_selection_path.exists():
+                    previous = read_json(original_selection_path)
+                    context_fields = {"delivery_mode", "native_study"}
+                    if ({name: value for name, value in previous.items() if name not in context_fields}
+                            != {name: value for name, value in requested.items() if name not in context_fields}):
+                        raise ValueError("The retained Gura report selection differs from the original cohort and zones")
+                else:
+                    atomic_json(original_selection_path, requested, immutable=True)
+                selection_path = directory / "report-selections" / (digest(requested) + ".json")
+                atomic_json(selection_path, requested, immutable=True)
+                _progress(directory, state, report_selection=describe_file(directory, selection_path))
                 native_report = scenario_decisions.build(ws, requested)
                 report_directory = ws.root / "scenario-decisions" / native_report["id"]
                 report_path = verify_file(report_directory, native_report["files"]["json"])
