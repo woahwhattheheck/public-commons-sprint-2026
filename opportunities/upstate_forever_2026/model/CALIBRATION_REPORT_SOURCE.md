@@ -202,3 +202,11 @@ receipt and ZIP generation. The ordinary portable collector retains the new
 model code, Workspace collection, prepared source directory and banked source
 objects recursively. No separate transfer format or manual archive injection
 is needed.
+
+## Native execution provenance and retained producer editions
+
+Producer edition `native-calibration-review-report-v2` carries the original calibration's native-execution snapshot into the source recipe and the scientific report's **Native model versions and output quantities** section. It shows the producing version and its basis beside the requested version, per-hectare raster units, annual-load units and the exact area reduction. The source reference links the complete native-execution CSV when that member belongs to the original review. All source companions remain the exact verified review members.
+
+Reopening an original `native-calibration-review-report-v1` source preserves that producer edition and reconstructs its original selection identity. New preparation uses v2 and therefore receives a distinct immutable source identity; it never changes an existing delivery's selected source. The review controller displays the retained edition beside each registered report source.
+
+Historical completed calibrations without a native-execution snapshot still produce a readable source with its original native records. New provenance is supplied by a newly completed calibration and its new review, rather than reconstructed from the executing machine's current model version.
