@@ -44,8 +44,10 @@ def retained_source(workspace, source_id, checksum, manifest):
     return collection, path, entry
 
 
-def retained_geometry(workspace, manifest=None):
+def retained_geometry(workspace, manifest=None, source_id=None):
     """Reuse this Workspace's original upstream domain or focus-feature edition."""
+    if source_id is not None and manifest is None:
+        raise ValueError("An explicit geometry source ID needs its retained manifest")
     collections = workspace.sources()
     if manifest is not None:
         selected = workspace.import_sources(manifest)
@@ -53,21 +55,21 @@ def retained_geometry(workspace, manifest=None):
     else:
         collections = sorted(collections, key=lambda row: (
             str(row.get("captured_at") or ""), row["id"]), reverse=True)
-    for source_id in (DOMAIN_SOURCE, WBD_SOURCE):
+    for selected_id in ((source_id,) if source_id is not None else (DOMAIN_SOURCE, WBD_SOURCE)):
         for collection in collections:
             for entry in collection["entries"]:
-                if entry["id"] != source_id:
+                if entry["id"] != selected_id:
                     continue
                 if (entry["kind"] != "vector" or entry.get("encoding") != "gzip"
                         or entry.get("source_format") != "Esri JSON"
                         or not entry.get("decoded_sha256") or not entry.get("source_crs")):
                     raise ValueError("The original WBD source needs its native format, CRS and decoded hash")
-                if source_id == WBD_SOURCE and entry["body"]["sha256"] != WBD_SHA:
+                if selected_id == WBD_SOURCE and entry["body"]["sha256"] != WBD_SHA:
                     continue
                 path, entry = workspace.source_file(collection["id"], source_id)
                 return collection, path, entry
     if manifest is not None:
-        raise ValueError("The geometry manifest needs the original upstream-domain or four-focus WBD entry")
+        raise ValueError("The geometry manifest needs the selected native WBD source entry")
     return retained_source(workspace, WBD_SOURCE, WBD_SHA, APPLICATION / "source/sources.json")
 
 
@@ -79,6 +81,8 @@ def main(argv=None):
                         help="Directory for actual plan, CSV, geometry and report exports")
     parser.add_argument("--geometry-manifest", type=Path,
                         help="Original retained domain sources.json when its collection is not yet in this Workspace")
+    parser.add_argument("--geometry-source-id",
+                        help="Exact fresh WBD edition ID in --geometry-manifest; otherwise original domain/focus IDs are reused")
     parser.add_argument("--baseline-run", help="An actual retained baseline to bind to this programme")
     parser.add_argument("--scenario-run", action="append", default=[],
                         help="An actual compatible alternative; repeat for several alternatives")
@@ -91,7 +95,7 @@ def main(argv=None):
         workspace, TABLE_SOURCE, TABLE_SHA,
         APPLICATION / "source/communities-rfp-20261012/source-manifest.json")
     geometry_collection, geometry_path, geometry_entry = retained_geometry(
-        workspace, args.geometry_manifest)
+        workspace, args.geometry_manifest, args.geometry_source_id)
     geometry_body = geometry_path.read_bytes()
     decoded = gzip.decompress(geometry_body)
     if hashlib.sha256(decoded).hexdigest() != geometry_entry["decoded_sha256"]:

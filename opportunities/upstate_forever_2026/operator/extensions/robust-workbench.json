@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "robust-workbench",
   "title": "Decision studies",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 68,
   "assets": [
     "robust_workbench.mjs",
@@ -24,6 +24,7 @@
       "robust.study.revise",
       "robust.experiment.prepare",
       "robust.summary.prepare",
+      "robust.diagnostic.prepare",
       "robust.solve",
       "robust.frontier",
       "robust.project.export",
@@ -101,6 +102,20 @@
           "POST"
         ],
         "operation": "experiment",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/diagnostic",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "diagnostic",
         "handler": "read",
         "args": [
           "workspace_key",

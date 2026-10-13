@@ -379,3 +379,10 @@ A focused native receiving check can compile `model/calibration_maps.py` and
 completed calibration's map edition, open its first PDF/SVG and scalar source,
 save a review, export its GIS project and reopen the same workspace. Use actual
 retained report IDs from that study.
+
+
+## Complete retained calibration review
+
+The completed comparison now includes **Complete calibration reviews**. Use **Prepare review package** to choose the exact saved error/map editions, title and notes. The existing queue builds one immutable report with all original tables, source records, catchment companions and map artifacts. Open it through **Read report**, or extract its complete ZIP and open `index.html` offline. Its print layout and full source links travel together.
+
+The same calibration extension owns the `calibration.review.prepare` action, `calibration-reviews` item and authenticated nested report-member route. Current source-error and map records keep their original identities. Review selection enforces an exact map/error pairing when a map contains error bands. The full producer, API, restart and source-preservation contract is [Complete calibration review](../model/CALIBRATION_REVIEW.md).

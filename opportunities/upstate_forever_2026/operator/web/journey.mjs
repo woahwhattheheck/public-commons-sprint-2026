@@ -25,7 +25,7 @@ export const journeySteps=[
  {id:'compare',title:'Compare physical results',view:'comparisons',do:'Compare the completed baseline and alternative on the same grid. Open the difference map and inspect its quantities.',see:'Alternative-minus-baseline changes, physical units, valid-cell coverage and any changed parameter profile.',meaning:'A negative difference means the alternative has a smaller modeled export for that quantity on the compared cells.',say:'This shows the modeled change from the same baseline, with the units and assumptions visible.'},
  {id:'maps',title:'Inspect and explain the maps',view:'spatial',do:'Open the selected result or comparison in Spatial review. Inspect the legend, extent, source layers and saved annotations, then save a view or map pack.',see:'Actual mapped outputs, saved geographic views and the original printable map files.',meaning:'Map colors and priorities need the physical units, legend and selected geography beside them.',say:'I can move from a numerical result to the actual map and retain the view we discussed.'},
  {id:'delivery',title:'Build and open the delivery',view:'deliveries',do:'Build the original seven-map delivery from completed runs and actual supporting sources. Open its report, maps and working package.',see:'The native delivery state, selected runs, map PDFs, metadata and original authenticated downloads.',meaning:'The delivery packages the analysis with its supporting source editions and restorable working project.',say:'The handover includes both the readable report and the working analysis behind it.'},
- {id:'reopen',title:'Save, reopen and transfer',view:'overview',do:'Save your view and notes, create the complete native backup, then restore the archive and open its workspace. The selected analysis and notes reopen with the project.',see:'The original project identity, saved selections, runs, maps and actual restore result.',meaning:'The native archive carries the scientific workspace, selected analysis and notes together. Separate journey and notes downloads are also available.',say:'We can reopen the same project and continue the discussion from the saved analysis.'}
+ {id:'reopen',title:'Save, reopen and transfer',view:'overview',do:'Save your view, open Project continuity and create a complete project with its operation history. Receive its archive or incremental edition, open the received workspace and continue the retained work.',see:'The original project identity, saved selections and notes, completed results, receiving workspace and unfinished original operations.',meaning:'Project continuity carries the scientific workspace and the selected operating history together. Scientific backups and separate journey downloads remain available.',say:'We can reopen the project, explain the saved analysis and continue its unfinished work.'}
 ];
 export const journeyVocabulary=[
  ['Source edition','The retained version of an original dataset, with its references and original files.'],
@@ -401,7 +401,9 @@ export function attachOperatingJourney(host){
  function reopen(){
   const backup=latestTask('workspace.backup'),restore=latestTask('workspace.restore');
   const nativeSession=Object.hasOwn(state()?.data||{},'operator_session');
-  let html='<div class="page-actions">'+(nativeSession?action('save-view','Save view and notes'):'')+action('backup','Create complete native backup','',true)+action('restore','Restore workspace archive')+action('export','Download journey selections')+action('notes','Download operating notes')+'</div>';
+  const continuity=state()?.data?.project_continuity?.accepted_actions?.includes('workspace.snapshot');
+  let html='<div class="page-actions">'+(continuity&&nativeSession?action('handoff','Save view and transfer project','',true):'')+(continuity?action('view','Receive or continue a project','data-view-name="project-continuity"'):'')+(nativeSession?action('save-view','Save view and notes'):'')+action('backup','Create scientific workspace backup','',!continuity)+action('restore','Restore workspace archive')+action('export','Download journey selections')+action('notes','Download operating notes')+'</div>';
+  if(continuity)html+=notice('Project continuity saves the original scientific workspace with selected completed history, unfinished operations and their required original inputs. Choose a complete ZIP or incremental parts there. After receiving, open the returned project, review its saved history and resume selected work.');
   const saved=state()?.data?.operator_session;
   if(saved)html+=facts([['View saved with project',when(saved.saved_at)],['Saved profile',title('profiles',saved.journey?.selection?.profile_id)],['Saved native models',modelLabel(saved.journey?.selection)]])+'<div class="page-actions">'+action('open-saved-view','Open saved project view')+'</div>'+notice('Opening the project view keeps the current browser view available below.');
   if(preferences.browser_view_draft)html+='<div class="page-actions">'+action('swap-browser-view','Switch to retained browser view')+'</div>'+notice('The retained browser view includes its selected records, watershed context and notes. Switching keeps the view you are leaving available for another switch.');
@@ -580,7 +582,7 @@ export function attachOperatingJourney(host){
    if(!preferences.browser_view_draft)throw Error('No earlier browser view is retained.');
    return openRetainedView(preferences.browser_view_draft);
   }
-  if(name==='save-view'){
+  if(name==='save-view'||name==='handoff'){
    if(busy)throw Error('The current operation is being retained. Wait for its response.');
    const selectedWorkspace=workspace(),generation=preferences.generation;
    const journey=exportValue(),expectedRevision=state().data.operator_session?.revision||null;
@@ -590,8 +592,10 @@ export function attachOperatingJourney(host){
     if(workspace()!==selectedWorkspace||preferences.generation!==generation)return;
     await host.refresh({force:true});
     if(workspace()!==selectedWorkspace||preferences.generation!==generation)return;
+    if(name==='handoff'&&preferences.notes!==journey.notes){host.toast('The saved view is retained. Save your newer local notes before transferring.');return;}
     update();host.toast('Selected analysis and notes saved in this workspace.');
    }finally{busy=false;if(button.isConnected)button.disabled=false;}
+   if(name==='handoff')return host.navigate('project-continuity');
    return;
   }
   if(name==='scenario')return form('scenario.save',()=>host.openScenario(preferences.selection.scenario_id));

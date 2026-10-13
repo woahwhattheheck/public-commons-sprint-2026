@@ -1,7 +1,7 @@
 {
   "schema": "upstate.observation-support-patch/v1",
   "version": "1.2.0",
-  "base_component_sha256": "baa1ee854055d5becb9eb1293fa27c42b51c21cc363dbc643276901bed8c2dc1",
+  "base_component_sha256": "08ed5c2d1873030e96be0ecd294dba2322b04ce4cd523cdce5028f78bbbb62c3",
   "edits": {
     "model/observations.py": [
       {
@@ -182,13 +182,17 @@
       {
         "label": "retained support receiving 8",
         "old": "            (\"calibration_hydrology\", \"source/hydrology-huc05-07-20261013/model-sources.json\"),",
-        "next": "            (\"calibration_hydrology\", \"source/hydrology-huc05-07-20261013/model-sources.json\"),\n            (\"calibration_basins\", \"source/hydrology-huc05-07-20261013/nldi/model-sources.json\"),"
+        "next": "            (\"calibration_hydrology\", \"source/hydrology-huc05-07-20261013/model-sources.json\"),\n            (\"calibration_basins\", \"source/hydrology-huc05-07-20261013/nldi/model-sources.json\"),\n            (\"calibration_geographic_support\", \"source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json\"),",
+        "previous": [
+          "            (\"calibration_hydrology\", \"source/hydrology-huc05-07-20261013/model-sources.json\"),\n            (\"calibration_basins\", \"source/hydrology-huc05-07-20261013/nldi/model-sources.json\"),"
+        ]
       }
     ]
   },
   "known_additions": {
     "source/import_observed_context.py": [
-      "5de7bcc4ce42424f97448f7160940482b6c098fa783692e5c75166db1b3d2af2"
+      "5de7bcc4ce42424f97448f7160940482b6c098fa783692e5c75166db1b3d2af2",
+      "32f34e028661510c6a94501625349095fddbad5d1fca973e6166b302046f138e"
     ],
     "operator/web/observed_series.mjs": [
       "34b714b563af63ed803d34722cf5345a925ebd1845835d5e1cbaacfdd012eed9"
@@ -203,28 +207,45 @@
       "a2694d10954e4105b82fb41bb601f07a508fe71ad541c104b103da29d2273cf2"
     ],
     "model/observation_support.py": [
-      "3db5404b188cf62316948b434350e041416b07f1d88698e52afd534946b03f66"
+      "3db5404b188cf62316948b434350e041416b07f1d88698e52afd534946b03f66",
+      "1bd2c8b84ae546ddf886dba00fd64c7883f5fd735a1f6dbdbc38dd1c01a2301c"
     ],
     "model/observations.py": [
-      "0881445041a3e385c61d5aa44c5110841c75d2e958d533697a3fb92889495aed"
+      "0881445041a3e385c61d5aa44c5110841c75d2e958d533697a3fb92889495aed",
+      "cb5b81c8396ed7632a3330a4546510887b812e2955cd269c62b6013d5af22e62"
     ],
     "operator/web/observation_support.mjs": [
-      "8c829b7a205d21878dd29b2bb0984206bfeef30208485e7ae9c83315c79fd06d"
+      "8c829b7a205d21878dd29b2bb0984206bfeef30208485e7ae9c83315c79fd06d",
+      "5a60dcecec4216cf8fdda0e65ae6c64d5fe4a2a178e7be72001a1f5dcd48588c"
     ],
     "operator/web/app.mjs": [
-      "9ec031237fc72893f07d9d25c7a2a469f2b5cf787485c3aebe48347acbebd168"
+      "9ec031237fc72893f07d9d25c7a2a469f2b5cf787485c3aebe48347acbebd168",
+      "e171ec85450d82fbee5f3587bace907f80bc25f311d6b11752b01c0d0ef1c46c"
     ],
     "source/import_observation_support.py": [
-      "96636107aa7d159ac9007c32edf9b914e5381ddc1abfa12059b075a8087984fc"
+      "96636107aa7d159ac9007c32edf9b914e5381ddc1abfa12059b075a8087984fc",
+      "3b8cacdb55953db430356af74286c843d8194a29ee03d50c4c40c6f01d62e53a"
     ],
     "source/observation_support_patch.json": [
-      "e4fb62b6cd433513d358d62e7bb85af2fb055f18b9ac39367572b70b634e28b9"
+      "e4fb62b6cd433513d358d62e7bb85af2fb055f18b9ac39367572b70b634e28b9",
+      "2b86324fd2699ac54db3b71391ae8f5bf3b47650230dbf525870bc4be65d3202"
     ],
     "source/install_observation_support.py": [
-      "056815204347d3dd1eb6444ec373b6cb260eaf89ea6205354582275c67e29751"
+      "056815204347d3dd1eb6444ec373b6cb260eaf89ea6205354582275c67e29751",
+      "33823015cec6680c455e774a5f3e830a9db2bf05d05f230bc614e39c1ef247a1"
     ],
     "source/OBSERVATION_SUPPORT.md": [
-      "7b8aabf3151812c524396e7c7b32fd8a4ae0be39a6105b7ad37cf3ece10a3f83"
+      "7b8aabf3151812c524396e7c7b32fd8a4ae0be39a6105b7ad37cf3ece10a3f83",
+      "f99a2b0383ea32e39af0d3901b54f751cdb83db9d709251d551112c8872eb236"
+    ],
+    "source/observation_source_calendar.py": [
+      "8e1a9064610c947305954d8146fdbf96b3e074a4ff11d93b23f7b9b09d88568b"
+    ],
+    "operator/server.py": [
+      "81f2b9100f0a0678e4b1013edb2c0a536e47fd138fdcbefb21cb2e4cbe75d80e"
+    ],
+    "source_tools/receive_observed_context.py": [
+      "21aff20a8a56f187094d5ae23600007d27859b10ce34120ae4fd86ccff4c448a"
     ]
   }
 }

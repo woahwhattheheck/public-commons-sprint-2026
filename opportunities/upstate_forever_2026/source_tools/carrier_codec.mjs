@@ -123,6 +123,9 @@ function nativeSourceMembers(bank) {
       !bank.file_metadata || typeof bank.file_metadata !== "object" ||
       Array.isArray(bank.file_metadata))
     throw Error("A complete native application source bank is required");
+  if (typeof bank.operation_id !== "string" || !bank.operation_id.trim() ||
+      typeof bank.edition !== "string" || !bank.edition.trim())
+    throw Error("The native source bank requires its operation and edition identities");
   const names = Object.keys(bank.files).sort();
   if (JSON.stringify(names) !== JSON.stringify(Object.keys(bank.file_metadata).sort()))
     throw Error("Every native source member needs its original metadata");
@@ -225,7 +228,7 @@ function decodeNativeSourceDocuments(documents) {
   return nativeTransportPayload(metadata, ordered.map(row => row.base64).join(""));
 }
 
-function nativeSourceBank(source) {
+function nativeSourceBank(source, operationId) {
   if (source && source.schema === NATIVE_SOURCE_SCHEMA) return source;
   if (!source || source.schema !== "commons.source-map/1" ||
       source.kind !== "upstate.complete-application-source/v1" ||
@@ -237,7 +240,10 @@ function nativeSourceBank(source) {
     throw Error("Every application source-map member needs its original metadata");
   if (source.binary_files !== undefined && !Array.isArray(source.binary_files))
     throw Error("Original binary members must be an array");
-  const bank = {...source, schema: NATIVE_SOURCE_SCHEMA,
+  const operation = operationId ?? source.operation_id ?? source.source_ref;
+  if (typeof operation !== "string" || !operation.trim())
+    throw Error("A complete source map needs its source_ref or an explicit operationId");
+  const bank = {...source, schema: NATIVE_SOURCE_SCHEMA, operation_id: operation,
     source_schema: source.schema, files: Object.create(null), file_metadata: Object.create(null),
     binary_files: [...(source.binary_files || [])]};
   for (const [path, content] of Object.entries(source.files)) {
@@ -259,7 +265,7 @@ function nativeSourceBank(source) {
 function encodeNativeSourceDocuments(source, options = {}) {
   const {maxDocumentChars = 900000, maxBase64Chars = 880000, lineWidth = 120,
          title = "Upper Savannah — complete native application source",
-         sourceReference = "", includeBootstrap = true} = options;
+         sourceReference = "", includeBootstrap, operationId} = options;
   if (!Number.isSafeInteger(maxDocumentChars) || maxDocumentChars < 4096 ||
       !Number.isSafeInteger(maxBase64Chars) || maxBase64Chars < 4 ||
       !Number.isSafeInteger(lineWidth) || lineWidth < 16 || lineWidth > 1024)
@@ -271,7 +277,7 @@ function encodeNativeSourceDocuments(source, options = {}) {
   if (typeof source === "string" || Array.isArray(source)) {
     retained = decodeNativeSourceDocuments(source);
   } else {
-    const bank = nativeSourceBank(source), inventory = nativeSourceMembers(bank);
+    const bank = nativeSourceBank(source, operationId), inventory = nativeSourceMembers(bank);
     const jsonText = JSON.stringify(bank, null, 2) + "\n", bytes = utf8Encode(jsonText);
     const compressedBytes = gzipBytes(bytes);
     retained = {bank, jsonText, compressedBytes, base64: toBase64(compressedBytes),
@@ -282,9 +288,13 @@ function encodeNativeSourceDocuments(source, options = {}) {
         gzip_bytes: compressedBytes.length, gzip_sha256: sha256Bytes(compressedBytes)
       }};
   }
+  if (includeBootstrap !== undefined && typeof includeBootstrap !== "boolean")
+    throw Error("Choose a boolean includeBootstrap option");
   let bootstrap = "";
-  if (includeBootstrap) {
-    const path = "source_tools/receive_drive_source.py", body = retained.bank.files[path];
+  const receiverPath = "source_tools/receive_drive_source.py";
+  const addBootstrap = includeBootstrap ?? typeof retained.bank.files[receiverPath] === "string";
+  if (addBootstrap) {
+    const path = receiverPath, body = retained.bank.files[path];
     if (typeof body !== "string")
       throw Error("The complete bank must retain its native receiver to include the bootstrap");
     const row = {path, ...retained.bank.file_metadata[path],

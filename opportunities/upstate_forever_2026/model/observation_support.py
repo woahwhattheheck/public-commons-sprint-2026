@@ -107,9 +107,17 @@ def attributes(cell, metadata, parameter):
     return result
 
 
+def measurement_support(row, metadata=None):
+    metadata = metadata or {}
+    return (row.get("measurement_support") or metadata.get("measurement_support")
+            or KIND_SUPPORTS.get(metadata.get("observation_kind"))
+            or ("catchment_export" if metadata.get("value_basis", "annual_mass_rate") == "annual_mass_rate"
+                else "other_context"))
+
+
 def comparison_issues(row, metadata=None):
     metadata = metadata or {}
-    support = row.get("measurement_support") or metadata.get("measurement_support") or "catchment_export"
+    support = measurement_support(row, metadata)
     issues = []
     if support != "catchment_export":
         issues.append("Retained " + SUPPORTS.get(support, str(support)).lower()
@@ -152,8 +160,7 @@ def context_record(row, metadata=None):
     return {
         "observation_id": row["id"],
         **{key: row.get(key) for key in FIELDS if key in row},
-        "measurement_support": row.get("measurement_support") or metadata.get("measurement_support")
-                               or "catchment_export",
+        "measurement_support": measurement_support(row, metadata),
         "species": source_species(row, metadata),
         "original_parameter": row.get("original_parameter"),
         "species_origin": row.get("species_origin"),
