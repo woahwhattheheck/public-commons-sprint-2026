@@ -1,6 +1,5 @@
 {
-  "schema": "upstate.application-components/v1",
-  "edition": "original-wbd-station-context-20261013",
+  "schema": "upstate.application-component-fragment/v1",
   "source_reference": {
     "wbd_source_commit": "2e74226eaa12193c2ee44e98ff9f2263e7e48cfe",
     "station_base_commit": "3b802384e299e6f12bdca68db209bf3c3c51854c"
@@ -234,6 +233,22 @@
       "requires": [
         "station-geography",
         "observed-station-studies"
+      ],
+      "source_manifests": [
+        "observations/wbd_station_join_20261013/station-context.sources.json"
+      ]
+    }
+  },
+  "id": "observed-station-wbd",
+  "extend_components": {
+    "station-geography": {
+      "paths": [
+        "model/station_wbd_context.py"
+      ]
+    },
+    "station-assessment": {
+      "paths": [
+        "model/station_wbd_context.py"
       ]
     }
   }
