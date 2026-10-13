@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "human-services-directory",
-  "description": "Original HSDS/FHIR Directory sources, standards assessments, reviewed service/referral decisions, complete OperatingPlan procedures and editable handoffs. Includes complete returned-procedure review, recoverable original plan receiving and full customer histories. Includes reviewed original HSDS row corrections, complete derived sources and candidate acceptance with editable customer receiving. Includes complete offline customer worksheets, exact returned-file receiving and explicit typed field review into original correction plans. Includes explicit three-way customer worksheet reconciliation against a selected current edition, complete row matching, typed conflicts and reviewed correction plans.",
+  "description": "Original HSDS/FHIR Directory sources, standards assessments, reviewed service and referral decisions, and editable OperatingPlans with full histories. Includes recoverable plan receiving, reviewed HSDS corrections and derived sources, candidate acceptance, offline customer worksheets, exact returned files, and three-way reconciliation against a current edition with complete row matching, typed conflicts and reviewed correction plans.",
   "commands": {
     "human-services-directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/cli.mjs"
   },

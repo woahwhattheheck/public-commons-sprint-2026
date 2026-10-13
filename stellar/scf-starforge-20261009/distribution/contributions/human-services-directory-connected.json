@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "human-services-directory-connected",
-  "description": "Complete Directory, conformance and original OperatingPlan procedures through the maintained typed SDK, MCP, full-file receiver and managed Applications. Includes complete returned-procedure review, recoverable original plan receiving and full customer histories. Includes reviewed original HSDS row corrections, complete derived sources and candidate acceptance with editable customer receiving. Includes complete offline customer worksheets, exact returned-file receiving and explicit typed field review into original correction plans. Includes explicit three-way customer worksheet reconciliation against a selected current edition, complete row matching, typed conflicts and reviewed correction plans.",
+  "description": "Complete Directory and conformance workflows through the typed SDK, MCP, full-file receiver and managed Applications. Includes editable OperatingPlans and histories, recoverable plan receiving, reviewed HSDS corrections and derived sources, candidate acceptance, offline customer worksheets, exact returned files, and three-way reconciliation against a current edition with complete row matching, typed conflicts and reviewed correction plans.",
   "commands": {
     "merchant-human-services-directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/cli.mjs"
   },
