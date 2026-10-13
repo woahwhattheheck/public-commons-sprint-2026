@@ -25,7 +25,7 @@ const defs = obj => '<dl class="definition">'+Object.entries(obj).map(([k,v])=>'
 const button = (action,label,extra='',style='') => '<button type="button" class="'+esc(style)+'" data-action="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
 const viewLabels={conservation:'Conservation plans','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
-const actionLabels={'conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
+const actionLabels={'paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
 const mapFamilies=['future_sediment_loss','future_nutrient_runoff','critical_drinking_water','high_quality_waters','current_nutrient_export','current_sediment_export','combined_pollutant_export'];
 const mapTitles={future_sediment_loss:'Future sediment loss',future_nutrient_runoff:'Future nutrient runoff',critical_drinking_water:'Critical drinking-water sources',high_quality_waters:'Designated high-quality waters',current_nutrient_export:'Current nutrient export',current_sediment_export:'Current sediment export',combined_pollutant_export:'Combined pollutant export'};
 const keyName='upstate-operator-capability';
@@ -405,24 +405,29 @@ function sourceForm(){
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
+  const context=formContext,generation=context.sourcePreviewGeneration,selectedWorkspace=workspace;
+  const currentDraft=()=>{if(formContext!==context||workspace!==selectedWorkspace||context.sourcePreviewGeneration!==generation)throw Error('The source selection changed while it was being checked. Preview the current selection again.');};
   const mode=val('source_mode');let data;
   if(mode==='registered')data={registered_id:val('registered_id')};
   else{
-   const uploaded=await uploadFile(form.elements.namedItem('source_file').files[0]);
-   data={upload_id:uploaded.id};
+   const file=form.elements.namedItem('source_file').files[0];
+   data={};
    if(mode==='archive'&&val('manifest_member').trim())data.manifest_member=val('manifest_member').trim();
    if(mode==='file'){
     data.file_metadata={title:val('source_title'),uri:val('source_uri'),vintage:val('source_vintage'),kind:val('source_kind')};
     for(const [name,key] of [['source_units','units'],['source_role','role'],['source_layer','layer']])if(val(name).trim())data.file_metadata[key]=val(name).trim();
     data.notes=lines(val('source_notes'));
    }
+   const uploaded=await uploadFile(file);currentDraft();data.upload_id=uploaded.id;
   }
-  sourcePreview=await api('/api/source-preview',{method:'POST',body:data});
+  const preview=await api('/api/source-preview',{method:'POST',body:data});
+  currentDraft();sourcePreview=preview;
   $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(x.title)+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
   $('#form-submit').textContent='Import this source edition';
   $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
  },()=>{
   const renderSource=()=>{
+   formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
    $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources'])),'',true):
@@ -435,8 +440,9 @@ function sourceForm(){
  });
 }
 function sourceDraftChanged(event){
- if(formContext?.sourcePreviewLocked)return;
- if(sourcePreview&&event.target.closest('#source-selection-body')){sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';}
+ if(!formContext||!event.target.closest('#source-selection-body'))return;
+ formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
+ sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
 }
 function nativeModels(record){
  const chosen=record?.models??['ndr','sdr'];

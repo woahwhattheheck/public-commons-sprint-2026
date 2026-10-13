@@ -105,7 +105,9 @@ https://github.com/OSGeo/gdal/blob/master/ogr/ogrsf_frmts/geojson/ogresrijsonrea
 
 https://github.com/Toblerity/Fiona/blob/main/fiona/ogrext.pyx
 
-When an earlier import has already been adopted, rerun the same `adopt` command with the existing output directory. It validates the retained inventory and regenerates `sources.json` with these identity declarations. Then import that manifest into the existing Workspace; the retained geometry body is reused.
+When an earlier import has already been adopted, rerun the same `adopt` command with the existing output directory and the identical retained selection file. It validates the retained inventory and refreshes `sources.json` with the current identity declarations. The previous generated manifest is preserved under `source-manifests/<sha256>.json`, and the native source bodies remain unchanged. Import the refreshed manifest into the existing Workspace.
+
+Selection bytes are part of the adoption input identity. An existing adoption made from a source-carrier edition must keep its original selection file, whose retained path is recorded in `capture.json`. The public selection uses original source filenames in place of carrier locators and therefore has a different byte identity. To adopt the public selection, use a new output directory with the same original metadata, geometry and attribute responses. Both routes reuse the acquired source data.
 
 ## Regulatory source data
 
