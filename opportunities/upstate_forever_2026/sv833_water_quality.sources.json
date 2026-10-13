@@ -10,8 +10,8 @@
       "kind": "document",
       "role": "observed_water_quality_report",
       "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-      "bytes": 113118,
-      "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891",
+      "bytes": 120250,
+      "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "2021–2026 original observations; derived 2026-10-13",
       "metadata": {
@@ -129,13 +129,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -240,12 +240,12 @@
         {
           "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
           "bytes": 37328,
-          "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5"
+          "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-          "bytes": 34988,
-          "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629"
+          "bytes": 42103,
+          "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
         }
       ]
     },
@@ -374,13 +374,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -480,17 +480,17 @@
         {
           "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
           "bytes": 37328,
-          "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5"
+          "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-          "bytes": 34988,
-          "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629"
+          "bytes": 42103,
+          "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-          "bytes": 113118,
-          "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891"
+          "bytes": 120250,
+          "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
         }
       ]
     },
@@ -619,13 +619,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -725,17 +725,17 @@
         {
           "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
           "bytes": 37328,
-          "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5"
+          "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-          "bytes": 34988,
-          "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629"
+          "bytes": 42103,
+          "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-          "bytes": 113118,
-          "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891"
+          "bytes": 120250,
+          "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
         }
       ]
     },
@@ -864,13 +864,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -970,17 +970,17 @@
         {
           "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
           "bytes": 37328,
-          "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5"
+          "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-          "bytes": 34988,
-          "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629"
+          "bytes": 42103,
+          "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-          "bytes": 113118,
-          "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891"
+          "bytes": 120250,
+          "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
         }
       ]
     },
@@ -991,7 +991,7 @@
       "role": "observed_water_quality_figure",
       "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
       "bytes": 37328,
-      "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5",
+      "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "2021–2026 original observations; derived 2026-10-13",
       "metadata": {
@@ -1110,13 +1110,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -1220,13 +1220,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-          "bytes": 34988,
-          "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629"
+          "bytes": 42103,
+          "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-          "bytes": 113118,
-          "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891"
+          "bytes": 120250,
+          "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
         }
       ]
     },
@@ -1236,8 +1236,8 @@
       "kind": "document",
       "role": "observed_water_quality_figure",
       "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
-      "bytes": 34988,
-      "sha256": "97552eedc4d9aa2b67ff9b90576120f8fcbe440ecbc62c31dcac4c556b35d629",
+      "bytes": 42103,
+      "sha256": "dad20b799dcc906f39bd1a39266aff88df001129d9ac3a850666ade72980c1dd",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "2021–2026 original observations; derived 2026-10-13",
       "metadata": {
@@ -1356,13 +1356,13 @@
         },
         {
           "path": "observations/sv833_2021_2026/figures.mjs",
-          "bytes": 5936,
-          "sha256": "621344c1b8038e3994029d2fd2584a34ac59b019ac84259c79f3b7c7d042d77a"
+          "bytes": 5977,
+          "sha256": "131a9204a80ca79d66e3ca4df5e7bafda541693457811f7e171fe7b61a574a94"
         },
         {
           "path": "observations/sv833_2021_2026/report.mjs",
-          "bytes": 23865,
-          "sha256": "72407e09e3272268322d6e4c7916007e83490bcc04dc6da524b23d8cf92e39e6"
+          "bytes": 23882,
+          "sha256": "68531aec1e319ca5d29a6f9aabe33ff3063e0be1d09bd8c09abdc6bb3b084367"
         },
         {
           "path": "observations/sv833_2021_2026/outputs.mjs",
@@ -1467,12 +1467,12 @@
         {
           "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
           "bytes": 37328,
-          "sha256": "44ee9e2f34dea94548e0cf0608aa96961dd15794ced256c75cd7d2e46ea385e5"
+          "sha256": "6ca494242808ccff5eb9dfcfa33d305c81431e2f0fa8c461309b612f67406b93"
         },
         {
           "path": "observations/sv833_2021_2026/sv833-water-quality-study.html",
-          "bytes": 113118,
-          "sha256": "5dcb568cf87dc81c47a9e37d0054189a0dc4d50f564c83f2740f79831f5b7891"
+          "bytes": 120250,
+          "sha256": "364885f803e54885c24b5925d55b56e8703d737e5377c0f5043fa9ed3c525dd3"
         }
       ]
     }
