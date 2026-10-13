@@ -316,7 +316,7 @@ class SpatialExports:
                     rows += 1
                 if result.get("difference"):
                     delta = result["difference"]
-                    writer.writerow({**base, "kind": "difference", "layer": "alternative minus baseline",
+                    writer.writerow({**base, "kind": "difference", "layer": "right source minus left source",
                                      "value_text": delta["value_text"], "units": delta["units"],
                                      "direction": delta["direction"],
                                      "source_sha256": _json_text({
@@ -391,7 +391,7 @@ class SpatialExports:
             "Raster legends use the native print frame's selected physical range: low values are "
             "gray 28, high values gray 232 and a constant valid field gray 127. NoData is transparent. "
             "A value of zero remains a valid value unless the original source mask excludes it. "
-            "Difference means alternative minus baseline. Swipe places comparison on the left "
+            "Difference means right source minus left source. Swipe places the right/comparison source on the left "
             "of the retained divider, above the full primary underlay.\n\n"
             "annotations.json and annotations.csv contain original pixel coordinates, rows/columns, "
             "masks, numeric text, scale/offset, physical units and covering feature attributes. "

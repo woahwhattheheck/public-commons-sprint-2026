@@ -5,6 +5,7 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, operationId,
   recordId, operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
+import { managedResult } from './managed-result.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 export { applicationEnvironment };
 import { defaultApplicationProviders, readApplicationProvider, applicationProviderForKind,
@@ -178,6 +179,9 @@ export async function readApplicationTerminal(root, { operationId: id, applicati
   const process = await readJSON(join(directory, 'terminal-process.json'), true);
   const result = await readJSON(join(directory, 'terminal-exit.json'), true);
   const device = await readJSON(join(directory, 'terminal-device.json'), true);
+  const state = await readJSON(join(directory, 'state.json'), true);
+  const commandResult = await readJSON(join(directory, 'command-result.json'), true);
+  const managedOutcome = managedResult(state, commandResult);
   const active = !result && await operationRunning(join(directory, 'worker.lock'));
   const names = (await readdir(join(directory, 'terminal-inputs')).catch(error =>
     error.code === 'ENOENT' ? [] : Promise.reject(error))).filter(name => /^[a-f0-9-]{36}\.json$/.test(name));
@@ -186,7 +190,7 @@ export async function readApplicationTerminal(root, { operationId: id, applicati
   let output = { text: '', totalBytes: 0, offset: 0 };
   try { output = await tailFile(join(directory, 'worker.log')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   return { operationId: id, ready: active && Boolean(process) && device?.inputTTY === true && device?.outputTTY === true, active, process, device, result,
-    output, inputs: receipts.slice(0, 40) };
+    managedOutcome, output, inputs: receipts.slice(0, 40) };
 }
 export async function sendApplicationTerminal(root, { operationId: id, applicationId, inputId, text } = {}) {
   const { directory, request } = await terminalRequest(root, id);

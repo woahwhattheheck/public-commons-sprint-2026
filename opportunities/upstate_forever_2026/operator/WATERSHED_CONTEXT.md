@@ -41,6 +41,7 @@ The provider is watershed_context.WatershedContextActions(operator, fault, sourc
 | Operation | Original transport | Result |
 | --- | --- | --- |
 | Discover sources and reports | GET or POST /api/watershed-context/catalog | Original workspace source choices, configured source choices, saved report summaries, and saved selection summaries |
+| Receive a completed original run | watershed.context.receive task | Original archive, native input aliases, report and connectivity downloads |
 | Build full regional context | watershed.context.analyze task | Saved regional report using source_tools.prepare_watershed_context.load_source_edition |
 | Read report | GET or POST /api/watershed-context/report?report_id=ID | Complete model report, exact input hashes, and verified downloads |
 | Read one watershed | GET or POST /api/watershed-context/huc?report_id=ID&huc12=HUC | Original per-watershed record and source references |
@@ -113,8 +114,8 @@ selected classified-water records, with no overlap. Priority and source-class
 controls have independent All defaults. Combining a priority filter with a
 selected class returns the actual intersection. State membership selects
 whole watersheds; Lower Tugaloo keeps 59,689.69 whole-HUC acres alongside the
-published Georgia 38,264.28633246-acre and South Carolina
-21,425.42741381-acre portions.
+published Georgia 38,264.29-acre and South Carolina
+21,425.43-acre portions.
 
 ## Complete native fields in selection CSVs
 
@@ -151,3 +152,252 @@ The current selection export identity includes brief_format alongside csv_format
 ### Reanalyze a received source edition
 
 The receiver keeps every original source and program file in `native_source_files` and the retained archive. Its ordinary `source_inputs` inventory contains only the executed context, optional classification coverage and optional native network under the same canonical filenames used by source import. Exact source aliases live at `source/<canonical-name>`. The core source fingerprint is therefore identical across native receiving and source import, allowing the operator to add later publisher query and geometry companions to a same-input regional report while keeping its original report bytes.
+
+
+## Original native network and upstream detail — v1.2.0
+
+The existing source loader accepts `prepare --native-network PATH`. For the original Upper Savannah source, pass `source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json`. The loader retains those exact bytes as `native-network.json` beside `full-domain-water-context.json` and `scdes-domain217-source-coverage.json`. The source edition and its normal Workspace import remain one cohort.
+
+The Regional watershed context desk also offers original network sources from the server's registered source roots and imported native-network entries. Register the application source root with `--source-root` when launching the operator. The catalogue recognizes the original USGS filename and the loader's `native-network.json`; selected bytes are checked against the catalogue SHA256 before the model receives them. Choosing “Use the source edition’s retained network” preserves its existing companion.
+
+The desk invokes the maintained `model.watershed_context.build_watershed_context` with the selected original network. A replacement network produces the model's new deterministic report identity. The report retains the exact original network, context and coverage bytes together; the source fingerprint and source-validation report identity reflect that same combined input cohort. Saved reports and exports remain inside the scientific Workspace for portable save and restore.
+
+The report shows native source rows, covered model watersheds, domain exits and source cycles. Watershed detail separates the focal watershed's attributes from its upstream totals. Upstream totals exclude the focal watershed. Export upstream watersheds and Export downstream model watersheds use the existing saved-selection export operation. External downstream IDs remain visible as original IDs without an in-domain navigation action.
+
+NRCS priority and selected SCDES classes retain separate filters. The regional watershed context is distinct from the four utility surface-water protection polygons used by the receiving-water workflow. Existing saved Lower Tugaloo selections, Show all watersheds, downloads and workspace switching are preserved.
+
+
+
+
+## Receive a completed original regional run
+
+Choose **Regional watersheds → Receive completed run** and select the original regional calculation ZIP. The shared upload transport retains the complete archive, and the `watershed.context.receive` task receives it into the selected project. When the operation completes, the desk opens the received regional report. The same saved reports, per-watershed detail, selection exports and downloads apply to received calculations.
+
+The receiver reads the original run and source manifests, checks every declared output and original input, confirms the report's original source identities and whole-domain membership, and retains the original selected watershed separately. It copies the completed output bytes into the Workspace. The original model source, execution record, standard output and complete ZIP remain downloadable alongside the seven result files. Source selection, scientific calculation and original result identifiers are preserved.
+
+The included completed run has identifier `watershed-4592eb077b7164d59ba4`. Its original result contains 217 watershed records, 240 state-specific NRCS rows, 15 priority watersheds represented by 18 state-specific priority rows, 1,886 classified-water records and the retained Lower Tugaloo selection `030601020507`. The original whole ZIP is 121,182 bytes with SHA256 `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5`.
+
+Receive that included result into an existing Workspace from the complete installed application:
+
+    python -B source_tools/receive_watershed_context.py \\
+      --workspace /path/to/existing/workspace \\
+      --source-package source/water_context/20261013/completed-run.package.json
+
+To receive an original ZIP directly, use `--archive /path/to/completed-run.zip` in place of `--source-package`; `--expected-sha256` can additionally pin the complete archive. The command prints the original result ID, complete summary, original selection and mounted operator record path. Repeating the receive verifies and reuses the same retained result.
+
+The browser action uses the same receiver with the immutable upload's exact SHA256. A project change during upload prevents the operation from being queued to a different project. Interrupted receiving can resume matching retained files; the complete operator record is published after the output set is ready. The original Workspace capture lock serializes this publication with project backup, and all retained members travel with normal project backup and receiving.
+
+### Original receiving files
+
+- `watershed-context/REPORT_ID/receiving/original-native-result.zip`: complete original calculation ZIP.
+- `watershed-context/REPORT_ID/receiving/run-receipt.json`: original command, source/output manifests, timestamps and result.
+- `watershed-context/REPORT_ID/source/model/`: original calculation source.
+- `watershed-context/REPORT_ID/source/source/water_context/20261013/`: original model input bytes.
+
+The shared registry manifest declares the additional `watershed.context.receive` action and browser `uploadFile` capability. The standalone installer includes both source preparation and completed-result receiving modules. Original model outputs retain their own edition; the current installed model includes the author's clarified South Carolina selected-class labels for subsequent calculations.
+
+
+
+## Completed connectivity alongside the retained original run
+
+The completed regional archive remains result `watershed-4592eb077b7164d59ba4`.
+When the application includes `outputs/watershed-connectivity-20261013/`, the receiver
+also attaches that complete, source-bound connectivity edition to the same saved
+report. Its original 217-row CSV, report, structured summary and manifest appear
+in the ordinary downloads and travel with the original Workspace archive.
+
+The receiver matches the connectivity edition to the original report ID and exact
+report bytes, verifies each original connectivity file, and checks every focal
+HUC12, area, priority flag and selected-class count against the retained regional
+rows. The operator shows the three disjoint exit catchments and original source
+scope under **Completed original connectivity analysis**. It preserves the
+original native calculation record and its own source edition. The full graph
+report explains focal, upstream and contributing measures; nested upstream sets
+overlap, so combined selections use distinct watershed membership.
+
+An additional retained graph edition can be selected explicitly with
+`--connectivity-root /path/to/completed-connectivity` on the same receive command.
+Repeating the receive attaches or reuses its identical companions under
+`watershed-context/REPORT_ID/connectivity/`, after the same original result is
+received. The default included edition carries the unchanged original CLOUD
+files from F0C8NMPGQ78 and its source identities.
+
+
+
+## Complete native network selections and export editions
+
+The native network selector accepts the original plain JSON topology and the
+retained `native-network.json.gz` or `model-domain.esri.json.gz` bodies.
+Compression is detected from the actual bytes. Selection retains those same
+bytes with the report, and the ordinary source importer preserves the matching
+companion name. Choosing a different network replaces only the network companion
+for that analysis; the original source edition stays retained.
+
+Saved-selection CSVs use the maintained model's complete `HUC_COLUMNS` and
+the same nested-network projection and spreadsheet-safe cell encoding as full
+regional reports. The export identity includes the maintained csv_format, csv_columns and
+brief_format, so older exports remain available and a current export receives its
+own retained record. Original path links, upstream membership links, upstream
+and downstream export controls, saved selection history, and the original
+completed-run upload action share this one desk.
+
+After a completed run is opened, its original selected watershed supplies the
+initial detail when a saved browser detail is unavailable. For the included run,
+this opens Lower Tugaloo while retaining all 217 regional rows.
+
+The standalone installer also copies the complete original calculation package,
+source inputs, available model/source guides and completed connectivity files
+when they are present in the prepared source root. The source bank contains all
+of those files; the receiving command therefore works from the installed
+application root as shown above.
+
+
+## Maintained native receiving and planning-brief integration
+
+The upload action and source-package CLI call the existing
+`operator/receive_watershed_context.py` adoption engine. Its direct CLI remains
+available. The exact executed model inputs keep the canonical source fingerprint;
+program snapshots and publisher companions retain their distinct inventories.
+The adapter attaches completed connectivity after that same native adoption,
+using the Workspace lock and the exact original report bytes. Reanalysis with the
+same inputs preserves the existing supporting-source update behavior.
+
+Current HTML and Markdown watershed planning briefs, the four-HUC RFP focus
+export, complete native CSV serializer and `csv_format` / `csv_columns` /
+`brief_format` cache identities remain intact. The complete source includes the
+maintained `model/watershed_brief.py` and guide and the original operator receiver.
+
+
+## Complete imported source entries
+
+When the selected context is an imported Workspace source, the report retains
+its primary document and every companion listed in that entry. Their native
+`view_path` directories stay together. The current regional entry therefore
+keeps the raw NRCS/classified-water material under `20261012/` alongside the
+context, coverage and topology under `20261013/`.
+
+Each complete entry is retained under
+`source/entries/ENTRY_FINGERPRINT/` inside the saved report. That folder contains
+the original native members, a portable `_source-entry-manifest.json`, the exact
+original import manifest, and a source-entry record. The portable manifest uses
+the ordinary `upstate.sources/v1` contract and can be imported with
+`Workspace.import_sources` from that retained directory.
+
+The calculation fingerprint continues to bind only the loader's original model
+inputs. The provider checks that capturing the complete context entry leaves
+that fingerprint unchanged. An independently selected imported network retains
+its own complete entry, while the active model-input inventory identifies the
+network actually used. A network already contained in the context entry remains
+part of that original entry even when an explicit alternative is selected.
+
+A separate complete-edition manifest binds the active context/network entries,
+the calculation fingerprint and the retained supporting-original inventory.
+It is saved under `source/editions/EDITION_FINGERPRINT.json`. Its normal file
+descriptor, every source member and the portable entry manifests appear in the
+existing report downloads and Workspace archive.
+
+Rebuilding from the same model inputs can add another complete source edition
+to the same calculated report. Earlier editions remain retained. Each new
+selection export binds its complete-edition fingerprint in addition to the
+existing report, CSV and planning-brief identities. Reopening an earlier saved
+selection retains that selection's original source-edition binding.
+
+Paths in a saved selection's source-edition reference are relative to its parent
+report directory, identified by `source_edition_report_id` and the explicit
+`source_edition_path_basis`. Selection JSON, CSV and briefs remain compact
+report-derived exports. Transfer the full source edition with the parent report
+through the ordinary Workspace archive; its entry manifests and native members
+are registered in that report's downloads.
+
+Directly registered source directories retain the model inputs and supplied
+publisher companions checked by the maintained source loader. To retain a
+larger entry with companions in several directories, import its original source
+manifest into the Workspace and select that imported entry in the desk.
+
+Acreage displayed in these instructions is rounded to two decimals; original JSON and CSV retain their published precision.
+
+
+## Selected network originals and source-linked planning briefs
+
+An explicit network choice carries the selected topology and its checked source
+companions into the regional report. The maintained loader accepts nested
+original paths and validates each declared member against the retained bytes.
+When a different network is chosen, its source metadata replaces the active
+network metadata; the context, classification and NRCS originals keep their
+existing roles. The complete imported context entry remains retained, and a
+separately imported network keeps its own portable entry.
+
+A `native-network-source.json` companion can bind an original publisher URI to
+the exact topology bytes. The loader checks the source member, byte count and
+SHA256 before exposing that URI in selection JSON and the HTML/Markdown planning
+briefs. These references carry the topology and provenance hashes so the saved
+brief identifies the network edition used for that selection. The calculation
+fingerprint continues to describe only the model inputs.
+
+Planning briefs use the maintained version 2 source-reference format. A changed
+source reference creates a new export identity along with the existing report,
+CSV, brief-format and complete-source-edition identities. Earlier exports retain
+their original source binding. Reopening an export also checks its retained
+parent report bytes.
+
+
+### Receive the current network edition through the operator
+
+The complete HTTP receiving workflow can use the current canonical source
+manifest explicitly:
+
+    python integration/run_watershed_context_operator.py \
+      --application /absolute/current/application \
+      --source-dir /absolute/current/application/source/water_context/20261013 \
+      --source-manifest /absolute/current/application/source/water_context/sources-20261013.json \
+      --output /absolute/new/receiving-directory
+
+Use a new output directory. The workflow receives the original completed result,
+reopens it through the maintained CLI, analyzes the registered source edition,
+imports the selected context entry, exports its watershed selection and planning
+brief, and restores the normal Workspace archive. It compares the original
+output bytes and the actual retained source identities across these operations.
+Its complete instructions are in `integration/WATERSHED_CONTEXT_RECEIVING.md`.
+
+The historical `20261013/complete-sources.json` describes its original source
+edition. The explicit parent manifest above selects the current context entry
+with the native network and its cross-date companions. Before import, the source
+loader checks that the selected entry supplies the same named calculation inputs,
+byte counts and hashes as the registered directory; after import it checks the
+reconstructed Workspace view again. The importer returns the exact source ID
+alongside the collection ID, so the NRCS entry in the same manifest is never
+mistaken for the regional context.
+
+For direct Python use,
+`import_source_edition(workspace, directory, source_manifest=manifest_path)`
+selects this same manifest. The source preparer's CLI retains its existing
+arguments.
+
+
+The standalone installer also copies each available canonical or historical
+source manifest and all of its declared primary documents and companions. It
+checks their declared byte counts and hashes and preserves the original dated
+directories. Both manifest editions remain separate; the explicit manifest
+argument above chooses the network edition for the receiving workflow.
+
+
+## Distinct contributing watershed selections
+
+Saved selections now keep a distinct union of the focal watersheds and their
+known upstream model-domain members when original connectivity is available.
+The brief shows each focal contributing set, the distinct combined area, shared
+memberships, priority watershed names and expanded publisher class labels.
+The original focal JSON and CSV retain their selected membership. An additional
+`watershed-contributing-hucs.csv` lists each distinct contributing HUC once.
+
+The provider uses the report's own native network membership first. For the
+original completed regional result, it can use the included completed
+connectivity CSV and summary after checking the exact report ID and report-file
+hash. Its contributing-context digest participates in the saved export identity
+alongside the full source edition and byte-bound publisher references. The
+complete standalone briefing command is in `model/WATERSHED_BRIEF.md`.
+
+The installer also retains the additive `complete-native-sources.json` edition
+when supplied. The historical `complete-sources.json`, the separate native
+manifest and the canonical parent import manifest keep their original bytes
+and paths.

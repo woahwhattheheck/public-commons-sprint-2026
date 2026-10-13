@@ -4,12 +4,14 @@
 const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
-  ['runs', 'Native runs']
+  ['runs', 'Native runs'],
+  ['robust-decisions', 'Decision studies']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
-  staging:'Preparing original study files', archiving:'Writing and verifying archive',
+  staging:'Preparing original study files', decisions:'Saving decision history', investigations:'Saving investigation history',
+  archiving:'Writing and verifying archive',
   publishing:'Saving archive', complete:'Ready', failed:'Needs attention',
   interrupted:'Interrupted', cancelled:'Cancelled'
 };
@@ -42,7 +44,9 @@ export function attachStudyTransfer(host) {
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
   let taskSignature='',lastError='',requestSerial=0;
   let pendingSubmission=null;
-  let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:null;
+  let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
+    typeof host.openExtension==='function'?
+      selection=>host.openExtension('project-transfer','openForStudy',selection):null;
   const requests=new Set();
   const workspaceNow=()=>host.getWorkspace?.()??host.getState()?.workspace_key??null;
   const current=stamp=>root&&stamp.epoch===epoch&&stamp.workspace===workspace&&workspace===workspaceNow();
@@ -78,7 +82,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved analyses, experiment programmes or native runs. The receiving workspace keeps the original inputs, cases and results.</p>'+
+      '<p>Choose saved analyses, experiment programmes, native runs or decision studies. The receiving workspace keeps the original inputs, cases and results.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
@@ -144,7 +148,7 @@ export function attachStudyTransfer(host) {
       body.innerHTML='<p class="st-empty">Reading saved studies…</p>';
     }else if(!page.items.length){
       body.innerHTML='<p class="st-empty">'+(selectedOnly?'No selected studies match this view.':
-        'No saved studies match this view. Saved analyses, programmes and native runs appear here.')+'</p>';
+        'No saved studies match this view. Saved analyses, programmes, native runs and decision studies appear here.')+'</p>';
     }else{
       body.innerHTML='<div class="st-table-scroll"><table class="st-table"><thead><tr>'+
         '<th scope="col"><span class="st-sr">Select</span></th><th scope="col">Study</th>'+
@@ -190,6 +194,16 @@ export function attachStudyTransfer(host) {
       '<p class="st-description">The archive also includes the application source. Its final download size appears after compression.</p>'+
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Contents</th>'+
       '<th scope="col">Files</th><th scope="col">Uncompressed size</th></tr></thead><tbody>'+groups+'</tbody></table></div>';
+    if(plan.decision_history?.studies)html+='<p class="st-description">The export also captures '+
+      number(plan.decision_history.studies)+' decision studies, '+number(plan.decision_history.revisions)+
+      ' saved revisions and '+number(plan.decision_history.calculations)+
+      ' calculations in their original editable database. Its captured size is included in the completed archive.</p>';
+    if(plan.external_decision_dependencies?.length)html+='<details class="st-details"><summary>'+
+      number(plan.external_decision_dependencies.length)+' original-workspace references retained with received decision history</summary>'+
+      '<p class="st-description">These decisions were received from another scientific workspace. Their complete revisions, gains and calculation history remain editable here. Open the original workspace for those ecological model runs.</p><ul>'+
+      plan.external_decision_dependencies.map(row=>'<li>'+escapeHTML(row.kind)+': '+
+        escapeHTML(row.id)+' · revision '+number(row.revision)+' · original workspace '+
+        escapeHTML(row.source_workspace_id||'not recorded')+'</li>').join('')+'</ul></details>';
     if(plan.planned_cases||plan.expected_unmaterialized?.length)html+='<p class="st-description">'+
       number(plan.planned_cases)+' programme cases remain available to prepare. '+
       number(plan.expected_unmaterialized?.length)+' declared future records retain their original planned state.</p>';
@@ -468,7 +482,7 @@ export function attachStudyTransfer(host) {
     if(!next)throw new Error('Open a scientific workspace first.');
     if(workspace!==next)reset(next);
     for(const row of roots){
-      if(!Object.hasOwn(rootLabels,row.kind)||!/^[0-9a-f]{64}$/.test(row.id||''))throw new Error('Select an original saved scientific study.');
+      if(!Object.hasOwn(rootLabels,row.kind)||!(row.kind==='robust-decisions'?/^study_[0-9a-f]{32}$/:/^[0-9a-f]{64}$/).test(row.id||''))throw new Error('Select an original saved scientific study.');
       selected.set(keyOf(row),{...row,title:row.title||row.id.slice(0,12),state:row.state||'Saved'});
     }
     selectedOnly=true;kind='';query='';offset=0;invalidatePlan();
