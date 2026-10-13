@@ -1,6 +1,7 @@
 /** Independent scientific source comparisons in the original authenticated Workspace. */
 import {draftScope,openComparisonDraftStore} from './independent_comparison_state.mjs';
 import {renderIndependentFigures,moveIndependentFigure} from './independent_comparison_figures.mjs';
+import {renderPublisherBudget,selectPublisherBudget,buildPublisherBudgetReport,buildPublisherBudgetSvg,buildPublisherBudgetCsv,buildPublisherBudgetJson} from './sparrow_budget_figures.mjs';
 const clone=value=>JSON.parse(JSON.stringify(value));
 const canonical=value=>JSON.stringify(value,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 const list=value=>Array.isArray(value)?value:[];
@@ -118,7 +119,7 @@ export function attachIndependentComparison(host){
     const overview=list(value.rows).map(row=>'<tr><td>'+esc(row.target)+'<br>COMID '+esc(row.comid)+'</td><td>'+esc(row.parameter)+'</td><td>'+esc(numbers(budget(row,'ACCL')?.total))+' '+esc(budget(row,'ACCL')?.unit)+'</td><td>'+esc(numbers(budget(row,'INCL')?.total))+' '+esc(budget(row,'INCL')?.unit)+'</td><td>'+esc(numbers(row.support?.incrementalPercentOfAccumulated))+'%</td><td>'+esc(row.targetLocation)+'</td></tr>').join('');
     const editions=list(value.editionComparisons).map(row=>'<tr><td>'+esc(row.target)+'<br>'+esc(row.parameter)+'</td><td>'+esc(row.oldField)+': '+(row.oldValue===null?'No original calibration row':esc(numbers(row.oldValue)))+'</td><td>'+esc(row.currentField)+': '+esc(numbers(row.currentValue))+'</td><td>'+esc(row.unit)+'</td><td>'+esc(numbers(row.difference))+'</td><td>'+esc(numbers(row.relativePercent))+(row.relativePercent===null||row.relativePercent===undefined?'':'%')+'</td></tr>').join('');
     const fields=list(value.sourceMap?.fields).map(field=>'<tr><td>'+esc(field.parameter)+'<br>'+esc(field.field)+'</td><td>'+esc(field.publisherLabel)+'</td><td>'+esc(field.unit)+'</td><td>'+esc(field.quantity)+'<br>'+esc(field.sourceSupport)+'</td><td>'+esc(field.definition?.text||'')+'</td></tr>').join('');
-    return '<section class="ic-panel"><h3>'+esc(value.title)+'</h3><p>Publisher HTML, its operating field configuration and the retained release dictionary resolve the annual units shown here. '+esc(value.counts?.predictionRows)+' original prediction rows retain '+esc(value.counts?.budgets)+' source budgets and '+esc(value.counts?.componentValues)+' component values.</p>'+
+    return renderPublisherBudget(value,c.state.view.publisherBudget||{})+'<section class="ic-panel"><h3>'+esc(value.title)+'</h3><p>Publisher HTML, its operating field configuration and the retained release dictionary resolve the annual units shown here. '+esc(value.counts?.predictionRows)+' original prediction rows retain '+esc(value.counts?.budgets)+' source budgets and '+esc(value.counts?.componentValues)+' component values.</p>'+
       '<p class="ic-note">Incremental load includes attenuation over half the local reach. Accumulated load includes upstream sources and attenuation. Delivered quantities target the Atlantic Ocean for these reaches. Matching units alone never makes these quantities equivalent to the native landscape-to-stream result.</p>'+
       table(['Original reach','Constituent','ACCL · accumulated annual load','INCL · incremental annual load','INCL as a share of ACCL','Coastal target'],overview)+
       button('prediction-context-download','Download complete prediction chapter')+button('publisher-field-map-download','Download publisher field definitions')+
@@ -145,6 +146,18 @@ export function attachIndependentComparison(host){
       if(!alive(c,g))return;c.predictionContext=value;
     }catch(error){if(alive(c,g))c.predictionError=error.message;}
     finally{c.predictionLoading=false;if(alive(c,epoch)&&c.state.view.tab==='context')renderBody(c);}
+  }
+  function downloadPublisherBudget(c,action){
+    need(c.predictionContext,'Read the complete publisher prediction chapter first.');
+    need(['svg','csv','json','report','all-csv','all-json'].includes(action),'Choose a publisher figure or full-data download.');
+    const context=clone(c.predictionContext),selection=selectPublisherBudget(context,c.state.view.publisherBudget||{}),view=clone(selection.view);
+    const stem='sparrow-'+[view.comid,view.parameter,view.metric].map(value=>String(value).replace(/[^a-zA-Z0-9_.-]/g,'_')).join('-');
+    if(action==='svg')return download(stem+'.svg',buildPublisherBudgetSvg(context,view),'image/svg+xml;charset=utf-8');
+    if(action==='csv')return download(stem+'.csv',buildPublisherBudgetCsv(context,view),'text/csv;charset=utf-8');
+    if(action==='json')return download(stem+'.json',buildPublisherBudgetJson(context,view),'application/json;charset=utf-8');
+    if(action==='report')return download('sparrow-complete-source-budget-report.html',buildPublisherBudgetReport(context,view),'text/html;charset=utf-8');
+    if(action==='all-csv')return download('sparrow-all-source-budgets.csv',buildPublisherBudgetCsv(context,view,{all:true}),'text/csv;charset=utf-8');
+    return download('sparrow-complete-source-budgets.json',buildPublisherBudgetJson(context,view,{all:true}),'application/json;charset=utf-8');
   }
   function fitContextView(c){
     const value=c.fitContext;
@@ -379,6 +392,15 @@ export function attachIndependentComparison(host){
     root.addEventListener('error',e=>{if(!alive(c,g)||!e.target.matches?.('[data-figure-image]'))return;const label=node('[data-figure-status]');if(label){label.textContent='The retained figure could not be displayed. Reopen this same saved edition or use its exact SVG and data downloads.';label.classList.add('ic-error');}},{signal,capture:true});
     root.addEventListener('input',e=>{try{if(!e.target.matches('select,[data-native],[data-reference]'))input(e);}catch(error){status(error.message,true);}},{signal});
     root.addEventListener('change',e=>{const t=e.target;
+      if(t.matches('[data-budget-filter]')){try{
+        if(!alive(c,g))return;
+        need(c.predictionContext,'Read the complete publisher prediction chapter first.');
+        const key=t.dataset.budgetFilter;need(['comid','parameter','metric'].includes(key),'Choose an original publisher budget display control.');
+        const current=selectPublisherBudget(c.predictionContext,c.state.view.publisherBudget||{}).view;
+        const selected=selectPublisherBudget(c.predictionContext,{...current,[key]:t.value});
+        c.state.view.publisherBudget=clone(selected.view);c.dirty=true;queueSave(c);renderBody(c);
+        root.querySelector('[data-budget-filter="'+key+'"]')?.focus();
+      }catch(error){if(alive(c,g))status(error.message,true);}return;}
       if(t.matches('[data-figure-filter]')){const key=t.dataset.figureFilter;need(['figureKind','figureParameter','figureId'].includes(key),'Choose an original figure display control.');c.state.view[key]=t.value;if(key!=='figureId')c.state.view.figureId='';c.dirty=true;queueSave(c);renderBody(c);return;}
       if(t.matches('[data-import]')){const file=t.files?.[0];if(file)receive(c,file).catch(error=>{if(alive(c,g))status(error.message,true);});return;}
       try{if(t.matches('[data-native],[data-reference]')){editable(c);retainParent(c);archive(c,'Original source selection changed');
@@ -392,7 +414,10 @@ export function attachIndependentComparison(host){
         else if(t.dataset.default==='parameter')renderBody(c);
       }catch(error){status(error.message,true);}
     },{signal});
-    root.addEventListener('click',e=>{const t=e.target.closest('[data-ic]');if(!t)return;e.preventDefault();Promise.resolve(click(t.dataset.ic,t)).catch(error=>{if(alive(c,g))status(error.message,true);});},{signal});
+    root.addEventListener('click',e=>{
+      const budget=e.target.closest('[data-budget-action]');
+      if(budget){e.preventDefault();try{if(alive(c,g))downloadPublisherBudget(c,budget.dataset.budgetAction);}catch(error){if(alive(c,g))status(error.message,true);}return;}
+      const t=e.target.closest('[data-ic]');if(!t)return;e.preventDefault();Promise.resolve(click(t.dataset.ic,t)).catch(error=>{if(alive(c,g))status(error.message,true);});},{signal});
     try{if(!c.loaded){const saved=await c.store.read();if(saved){validateWorking(saved.state);c.state=saved.state;c.revision=saved.revision;}c.loaded=true;}if(!alive(c,g))return;render(c);await refresh(c);if(c.state.pending)status('An original request is retained. Use Recover original request to receive its same task; no automatic resubmission.');}
     catch(error){c.blocked=true;c.error=error.message;if(alive(c,g)){render(c);status(c.error,true);}}
   }
