@@ -2,6 +2,8 @@
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
+import { renderNativeAssessmentReviewer } from "./native_assessment_reviewer.mjs";
+import { NATIVE_CONTEXT_SCHEMA, bindNativeAssessmentGeography } from "./native_assessment_geography.mjs";
 
 export const REPORT_SCHEMA = "upstate.assessment-association-report/v1";
 const codec = createArchiveCodec();
@@ -41,6 +43,7 @@ function parse(text, label) {
 function nativeGeography(text, records) {
   if (text === undefined) return null;
   const source = parse(text, "saved station geography");
+  if (source.schema === NATIVE_CONTEXT_SCHEMA) return bindNativeAssessmentGeography(text, records);
   if (!Array.isArray(source.stations) || !Array.isArray(source.sources) || !source.build_id)
     fail("choose the retained station-geography analysis.json");
   const bySite = new Map();
@@ -74,7 +77,7 @@ function nativeGeography(text, records) {
       sha256: sha(text), bytes: codec.utf8Encode(text).length }, stations: result };
 }
 
-export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography }) {
+export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext }) {
   const joined = joinAssessmentIdentities(assessments, identityCrosswalk);
   const programme = parse(priorities, "original programme crosswalk");
   if (programme.schema !== "upstate.source-priority-assessment-crosswalk/v2" ||
@@ -113,6 +116,11 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
       state_rows: row.nrcs_state_rows, priority_state_rows: priority, focus: row.focus || null };
   };
   const mapped = nativeGeography(geography, joined.records);
+  const nativeAnnual = nativeAnnualContext ? parse(nativeAnnualContext, "completed annual-reference context") : null;
+  if (nativeAnnual && (mapped?.source?.schema !== NATIVE_CONTEXT_SCHEMA ||
+      nativeAnnual.schema !== "upstate.annual-reference-assessment-context/v1" ||
+      nativeAnnual.input_sha256 !== mapped.source.input_sha256))
+    fail("the annual-reference context must match the completed native geography");
   const records = joined.records.map(row => {
     const assessment = nrcs(row.huc12), station = nrcs(row.station_publisher_huc12);
     const exact = Boolean(row.station_publisher_huc12);
@@ -166,14 +174,19 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     station_exact_priority_huc12s: unique(records.filter(row => row.station_programme.priority_states.length).map(row => row.station_publisher_huc12)),
     assessment_focus_records: records.filter(row => row.assessment_programme.focus).length,
     station_exact_focus_records: records.filter(row => row.station_programme.focus).length,
-    assessment_editions: editions, native_geography: mapped?.source || null };
-  const result = { schema: REPORT_SCHEMA, report_vintage: "2026-10-13", title: "Upper Savannah assessment and station source associations",
+    assessment_editions: editions, native_geography: mapped?.source || null,
+    ...(nativeAnnual ? {native_annual_reference:identity("inputs/annual-reference-assessment-summary.json", nativeAnnualContext)} : {}) };
+  const result = { schema: REPORT_SCHEMA, report_vintage: "2026-10-13", title: mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
+      "Upper Savannah published assessments and native watershed membership" :
+      "Upper Savannah assessment and station source associations",
     summary, methodology: [
       "Assessment membership uses each retained assessment edition's published HUC12.",
       "Station membership uses only the native station publisher's reported HUC level; HUC8-only rows remain unresolved at HUC12.",
       "The exact source-bound assessment ID and native station identity crosswalk join every record. Original coordinates and CRS remain untransformed.",
       "NRCS FY26 priority context follows the original state-HUC rows for each reported HUC12; it does not score or reassign an assessment record.",
-      "Optional mapped membership is read from the saved native station-geography analysis and uses its original point source and polygon references.",
+      mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
+        "Mapped membership is read from the completed native assessment context and verified against every original station coordinate and assessment identity; publisher assignments remain unchanged." :
+        "Optional mapped membership is read from the saved native station-geography analysis and uses its original point source and polygon references.",
       "Counts distinguish original assessment records, distinct sites and HUCs. The same site can occur in multiple assessment editions.",
       "A difference between publisher labels is a source distinction; choosing a source label does not change the original assessment.",
       "NRCS priority, published assessment status, mapped point membership, classified reaches and modelled export retain their separate meanings."
@@ -183,7 +196,9 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     "inputs/assessment-records-domain217.csv": assessments,
     "inputs/assessment159-native-identity-crosswalk.csv": identityCrosswalk,
     "inputs/source-priority-assessment-domain217.json": priorities,
-    ...(geography !== undefined ? { "inputs/station-geography-analysis.json": geography } : {}) };
+    ...(geography !== undefined ? {
+      [mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ? "inputs/assessment-native-huc-context.json" :
+        "inputs/station-geography-analysis.json"]: geography } : {}) };
   result.inputs = Object.entries(files).filter(([path]) => path.startsWith("inputs/")).map(([path,text]) => identity(path,text));
   files["assessment-associations.json"] = json(result);
   const flattened = records.map(row => ({ ...row,
@@ -206,7 +221,10 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
   files["watershed-membership-comparison.csv"] = csv(watershedRows, ["huc12","name","priority_states","assessment_records",
     "assessment_stations","station_exact_records","station_exact_stations","assessment_record_ids","station_record_ids","state_rows"]);
   files["assessment-edition-summary.csv"] = csv(editions, Object.keys(editions[0]));
-  files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = renderAssociationReviewer(result, renderAssociationReport(result));
+  if (nativeAnnual) files["inputs/annual-reference-assessment-summary.json"] = nativeAnnualContext;
+  const reviewHtml = renderAssociationReviewer(result, renderAssociationReport(result));
+  files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
+    renderNativeAssessmentReviewer({result,context:parse(geography,"completed native geography"),annual:nativeAnnual,html:reviewHtml}) : reviewHtml;
   const reportIdentity = identity("assessment-associations.json", files["assessment-associations.json"]);
   const sourceId = "assessment-association-report-" + reportIdentity.sha256.slice(0,20);
   files["artifacts.json"] = json({schema:"commons.artifacts/v1",source_id:sourceId,files:Object.entries(files).map(([path,text])=>identity(path,text))});
