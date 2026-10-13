@@ -223,7 +223,7 @@ def render(state, manifest):
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             '<meta http-equiv="Content-Security-Policy" content="' + _text(policy) + '">'
             "<title>" + _text(atlas["title"]) + " — Map atlas</title><style>" + STYLE +
-            '</style></head><body><header><div class="eyebrow">Upper Savannah Scientific Workbench / Map atlas</div>'
+            '</style></head><body><header><div class="eyebrow">Scientific Workbench / Map atlas</div>'
             "<h1>" + _text(atlas["title"]) + "</h1><p>" +
             _text(atlas.get("settings", {}).get("subtitle") or
                   "Explore the seven map families, the selected alternatives and the original source context.") +
