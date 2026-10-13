@@ -194,6 +194,8 @@ def tangent_predictions(parameters: Parameters, values: np.ndarray, observations
                         factor = weight * 1000.0 / p.state_volumes[idx]
                         predictions[i] += state[idx] * factor
                         for j in range(count): jac[i, j] += state[(j+1)*n + idx] * factor
+                if not np.isfinite(predictions[i]) or not np.isfinite(jac[i]).all():
+                    raise ModelError(f"observation {o['id']}: concentration operator overflow; review weights and model units")
     sample(0.0)
     start = 0.0
     for phase in p.phases:
@@ -453,6 +455,8 @@ def uncertainty(project: dict | Project, parameter_rows: list[dict], observation
         outputs[i] = [lookup[(o["day"], o["reach"], o["species"])] if "species" in o else
                       sum(weight * lookup[(o["day"], o["reach"], sid)] for sid, weight in group)
                       for o, group in zip(obs, components)]
+        if not np.isfinite(outputs[i]).all():
+            raise ModelError("Observation ensemble operator overflow; review component weights and model units")
         maximum_budget_residual = max(maximum_budget_residual, max(abs(b["relative_residual"]) for b in result["budgets"]))
         if progress: progress({"stage": "uncertainty", "completed": i+1, "total": draws})
     q = np.quantile(outputs, [0.05, 0.5, 0.95], axis=0)
