@@ -78,16 +78,27 @@ export async function saveJSON(path, value, replace = false) {
 }
 async function saveJSONUnlocked(path, value, replace) {
   const temporary = path + '.pending-' + randomUUID();
-  const handle = await open(temporary, 'wx', 0o600);
-  try { await handle.writeFile(json(value)); await handle.sync(); }
-  finally { await handle.close(); }
-  if (replace) await rename(temporary, path);
-  else {
-    try { await link(temporary, path); }
-    finally { await unlink(temporary); }
+  let handle = null, created = false;
+  try {
+    handle = await open(temporary, 'wx', 0o600); created = true;
+    await handle.writeFile(json(value)); await handle.sync();
+    await handle.close(); handle = null;
+    if (replace) await rename(temporary, path);
+    else await link(temporary, path);
+  } finally {
+    try { if (handle) await handle.close(); }
+    finally {
+      if (created) {
+        try {
+          try { await unlink(temporary); }
+          catch (error) { if (error.code !== 'ENOENT') throw error; }
+        } finally {
+          const parent = await open(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY);
+          try { await parent.sync(); } finally { await parent.close(); }
+        }
+      }
+    }
   }
-  const parent = await open(dirname(path), constants.O_RDONLY | constants.O_DIRECTORY);
-  try { await parent.sync(); } finally { await parent.close(); }
 }
 export async function processIdentity(pid = process.pid) {
   try {
