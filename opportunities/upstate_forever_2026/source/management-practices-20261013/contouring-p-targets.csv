@@ -1,0 +1,8 @@
+source_id,printed_slope_band_percent,absolute_usle_p,maximum_field_slope_length_ft,maximum_field_slope_length_m,units,operation,uncertainty_range,load_type,source_locator,applicability,optional_length_extension_applied
+"usda-ah537-table13","1-2","0.6","400","121.92","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","3-5","0.5","300","91.44","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","6-8","0.5","200","60.96","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","9-12","0.6","120","36.576","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","13-16","0.7","80","24.384","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","17-20","0.8","60","18.288","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
+"usda-ah537-table13","21-25","0.9","50","15.24","dimensionless","set","false","","Printed p35 Table13; PDF p41","AH537_Table13_conditions","false"
