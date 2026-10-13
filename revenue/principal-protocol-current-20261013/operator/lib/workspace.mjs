@@ -175,10 +175,22 @@ export function checkObservation(result,request,selected,objects,api=API){
  need(result.status===status&&identity(result.value)===identity(value)&&identity(result.numberTokens)===identity(numberTokens)&&identity(result.parseError)===identity(parseError)&&result.stdoutFileId===(stdout?.id??null)&&result.stderrFileId===(stderr?.id??null),'OBSERVATION_PROJECTION_CHANGED');
 }
 
+// API object keys may be canonically reordered in a retained command. Match the
+// complete named catalogue without rewriting the original UI/argument order.
+function catalogueIdentity(rows){
+ need(Array.isArray(rows),'API_IDENTITY');const ids=new Set();
+ const ordered=rows.map(row=>{
+  need(object(row)&&typeof row.id==='string'&&!ids.has(row.id)&&Array.isArray(row.fields),'API_IDENTITY');ids.add(row.id);const names=new Set();
+  const fields=row.fields.map(field=>{need(object(field)&&typeof field.name==='string'&&!names.has(field.name),'API_IDENTITY');names.add(field.name);return field;});
+  fields.sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);return{...row,fields};
+ });
+ ordered.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);return identity(ordered);
+}
+
 export function inspectPacket(packet){
  keys(packet,['schema','sha256','body']);need(packet.schema===PORTABLE_SCHEMA&&identity(packet.body)===packet.sha256,'PORTABLE_IDENTITY');const p=packet.body;keys(p,['workspace','requests','objects','application','api','createdAt']);
  need(object(p.workspace)&&object(p.workspace.workspace)&&Number.isSafeInteger(p.workspace.workspace.revision)&&p.workspace.workspace.revision>=0,'WORKSPACE_SHAPE');
- need(identity(p.api)===p.workspace.apiSha256&&identity(p.workspace.catalogue)===identity(makeCatalogue(p.api)),'API_IDENTITY');for(const k of ['plans','observations','eventPages','notes','files','exports','history'])need(Array.isArray(p.workspace[k]),'WORKSPACE_SHAPE',{k});
+ need(identity(p.api)===p.workspace.apiSha256&&catalogueIdentity(p.workspace.catalogue)===catalogueIdentity(makeCatalogue(p.api)),'API_IDENTITY');for(const k of ['plans','observations','eventPages','notes','files','exports','history'])need(Array.isArray(p.workspace[k]),'WORKSPACE_SHAPE',{k});
  need(Array.isArray(p.requests)&&Array.isArray(p.objects)&&Array.isArray(p.application),'PORTABLE_SHAPE');
  const objects=new Map();let total=0;for(const row of p.objects){keys(row,['descriptor','contentBase64']);const d=row.descriptor,b=decode64(row.contentBase64);need(d.id==='file-'+hash(b)&&d.sha256===hash(b)&&d.bytes===b.length&&b.length<=MAX_OBJECT&&!objects.has(d.id),'OBJECT_IDENTITY');objects.set(d.id,d);total+=b.length;}need(total<=MAX_OBJECTS,'WORKSPACE_OBJECT_CAPACITY');
  for(const f of p.workspace.files)need(objects.has(f.id)&&identity(objects.get(f.id))===identity(f),'FILE_REFERENCE_CHANGED');
