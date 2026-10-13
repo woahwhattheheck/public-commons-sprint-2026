@@ -7,7 +7,7 @@ from .common import atomic_json, describe_file, file_digest, read_json
 
 SCHEMA = "upstate.observed-report/v1"
 ROLE = "OBSERVED_CONTEXT"
-EDITION = "observed-context-20261013-v3"
+EDITION = "observed-context-20261013-v4"
 
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -72,11 +72,11 @@ def bind(workspace, selection):
     return source["binding"] if source else None
 
 
-def _bind_rows(source, rows, filename=None):
+def _bind_rows(source, rows, filename=None, *, member_prefix=""):
     """Attach the actual retained recipe selector and its verified member."""
     binding, members = source["binding"], source["members"]
     for row in rows:
-        name = filename or row["source_file"]
+        name = member_prefix + (filename or row["source_file"])
         member = members[name]
         row["source_selector"] = {
             "source_collection_id": binding["source_collection_id"],
@@ -88,6 +88,7 @@ def _bind_rows(source, rows, filename=None):
         }
         original_name = row.get("original_source_path")
         if original_name:
+            original_name = member_prefix + original_name
             original = members.get(original_name)
             if original is None:
                 raise ValueError("Original concentration response is absent: " + original_name)
@@ -111,19 +112,39 @@ def _concentration_support(source):
     members = source["members"]
     measured = published_studies.WQP_FILE
     cohort = published_studies.WQP_COHORT
-    if measured not in members and cohort not in members:
+    # A direct study source retains plain member names. The regional report
+    # retains the same study below its original application-relative namespace.
+    # Resolve one complete namespace without changing source-authored row paths.
+    prefixes = sorted({
+        name[:-len(suffix)]
+        for name in members for suffix in (measured, cohort)
+        if name == suffix or name.endswith("/" + suffix)
+    })
+    if not prefixes:
         return None
+    if len(prefixes) != 1:
+        raise ValueError("Observed concentration context selects multiple original study namespaces")
+    member_prefix = prefixes[0]
     required = (measured, cohort, "study.json", "stations.csv", "seasonal_summaries.csv")
-    missing = [name for name in required if name not in members]
+    member_names = {name: member_prefix + name for name in required}
+    missing = [name for name in member_names.values() if name not in members]
     if missing:
         raise ValueError("Observed concentration context is missing original inputs: " + ", ".join(missing))
-    originals = {name: members[name]["path"].read_bytes() for name in required}
+    originals = {name: members[member_names[name]]["path"].read_bytes() for name in required}
     study = published_studies._json(originals["study.json"])
     if study.get("schema") != published_studies.STUDY_SCHEMA:
         raise ValueError("Observed concentration study has another original schema")
-    stations = _bind_rows(source, published_studies._csv_rows(originals["stations.csv"], "stations"), "stations.csv")
-    seasonal = _bind_rows(source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"), "seasonal_summaries.csv")
-    rows = _bind_rows(source, published_studies._combined_observations(originals))
+    stations = _bind_rows(
+        source, published_studies._csv_rows(originals["stations.csv"], "stations"),
+        "stations.csv", member_prefix=member_prefix,
+    )
+    seasonal = _bind_rows(
+        source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"),
+        "seasonal_summaries.csv", member_prefix=member_prefix,
+    )
+    rows = _bind_rows(
+        source, published_studies._combined_observations(originals), member_prefix=member_prefix,
+    )
     sites = {row["site_id"] for row in stations}
     observations = published_studies._observation_context(
         rows, seasonal, study, sites, set(CONCENTRATIONS), {"surface"},
@@ -135,10 +156,11 @@ def _concentration_support(source):
         "selection": {
             "site_ids": sorted(sites), "parameters": sorted(CONCENTRATIONS),
             "strata": ["surface"], "sampling_period": study.get("grab_sampling", {}),
+            "source_member_prefix": member_prefix,
         },
         "input_members": {
             name: {"bytes": members[name]["bytes"], "sha256": members[name]["sha256"]}
-            for name in required
+            for name in member_names.values()
         },
         "observations": enrich_observation_context(observations),
     }

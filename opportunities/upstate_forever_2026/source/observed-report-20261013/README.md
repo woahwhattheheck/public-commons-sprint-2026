@@ -6,7 +6,7 @@ Maintained by TokenJunkieLabs. Code follows the repository MIT license. Scientif
 
 ## Install in the current application
 
-Receive this source package into the maintained application directory containing model/workspace.py. Install the current report successor from https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP, which composes scientific_report.py and delivery.py from the merged current v6 source. Then run:
+Use the current maintained application containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. Compose the regional concentration collector v4 on that current source, then run:
 
 ```sh
 python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12/original-workspace
@@ -24,7 +24,7 @@ The six-year gauge component was executed from six original agency daily-mean re
 
 The monthly discharge companion was executed from 230 original reporting periods, four source routes and all 365 approved gauge days. It preserves actual reporting-period overlap and selected source identifiers. The three upstream volume and phosphorus cohorts are complete in every month. Species-specific nitrogen coverage remains explicit.
 
-PDF output uses ReportLab vector Drawings from the exact figure specification (one 252-point-high drawing per panel). HTML and Markdown use the original D3 SVGs. These are four scientific figures with 5, 1, 1 and 5 panels. The figure spec, original SVGs, offline D3 renderer and pinned licensed dependencies are included.
+PDF output uses ReportLab vector Drawings from the exact figure specification (one 252-point-high drawing per panel). HTML carries the verified original D3 SVG bytes for standalone viewing; Markdown links to the same retained package SVGs. These are four scientific figures with 5, 1, 1 and 5 panels. The figure spec, original SVGs, offline D3 renderer and pinned licensed dependencies are included.
 
 ## Reproduce source calculations
 
@@ -71,7 +71,8 @@ The installer also accepts `--manifest observations/eighteenmile_2023/report_con
 The renderer defaults to `observed_hydrology_context.sources.json` beneath `--app-root`, matching the installer's regional context. An explicit renderer `--manifest` path resolves from the current working directory. Add `--create-workspace` with the worker's own fresh `--workspace` and `--output` paths to run the same retained source on another Linux worker. Existing workspaces remain selected when this option is omitted. The output operation records the actual collection and source IDs, report section and figure counts, and file descriptors.
 
 Related maintained source:
-- Current scientific report successor: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP
+- Original scientific report source edition: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP
+- Maintained report application: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026
 - Observed-data desk and native intake: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QM61KRQ
 - Complete 62-file study source and offline figures: https://chatgpt.com/space/page_fb63164ad5208191b42417dd980ffb6a
 - Original observed hydrology and monthly discharge companion: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2
