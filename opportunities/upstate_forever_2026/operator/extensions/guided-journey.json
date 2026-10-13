@@ -6,7 +6,9 @@
   "order": 10,
   "assets": [
     "journey.mjs",
-    "journey.css"
+    "journey.css",
+    "regional_journey.mjs",
+    "regional_journey.css"
   ],
   "requires_actions": [
     "profile.save",
@@ -35,6 +37,8 @@
       "reportError",
       "selectWorkspace",
       "setJourneyController",
+      "openDesk",
+      "openExperiment",
       "openMap",
       "openScenario",
       "openProfile",
