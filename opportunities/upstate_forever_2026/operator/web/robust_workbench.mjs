@@ -182,9 +182,12 @@ function openDocument(d){state.pendingExperiment=null;state.document=d;state.stu
    state.pendingExperiment=draft.pending_experiment||null;state.draftKey=key;state.answer=null;state.runId=null;state.runRevision=null;
    renderStudy();history();$('#results').classList.add('hidden');mark();status('Restored the retained browser draft. Save it to create a native study revision.');
  }
- async function configureExperiment(){
-   const id=$('#experiments').value;if(!id)throw Error('Select a retained experiment with an original paired summary.');
-   persist();const value=await read('experiment',{experiment_id:id});
+ async function configureExperiment(selectedExperiment){
+   const id=typeof selectedExperiment==='string'?selectedExperiment:$('#experiments').value;if(!id)throw Error('Select a retained experiment with an original paired summary.');
+   persist();
+   if(memory.drafts['experiment:'+id]?.pending_experiment===id){restoreDraft('experiment:'+id);return;}
+   const version=++loadVersion;const value=await read('experiment',{experiment_id:id});
+   if(version!==loadVersion)return;
    state.pendingExperiment=id;state.document={id:null,head:null,revision:null,runs:[]};
    state.study={...clone(value.configuration),cells:[]};state.draftKey='experiment:'+id;state.answer=null;state.runId=null;state.runRevision=null;
    renderStudy();history();$('#results').classList.add('hidden');mark();
@@ -338,5 +341,5 @@ function openDocument(d){state.pendingExperiment=null;state.document=d;state.stu
    const key=workspace,generation=lifecycle,hadPending=catalogRefreshPending||historyRefreshPending;settle().then(()=>{if(hadPending&&active(key,generation))return refreshWhenIdle();}).catch(error=>{if(active(key,generation))status(error.message||error);});
  }
  function detach(){persist();disposed=true;lifecycle++;loadVersion++;events?.abort();events=null;root?.classList.remove('robust-workbench');root=null;state.busy=false;}
- return {mount,update,detach,open:openStudy};
+ return {mount,update,detach,open:openStudy,prepare:configureExperiment};
 }

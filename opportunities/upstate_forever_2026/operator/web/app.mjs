@@ -89,6 +89,7 @@ const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>worksp
  openReceivingPlan:id=>receivingWaters.openPlan(id),
  getView:()=>view,reportError:globalError,selectWorkspace,
  setJourneyController:controller=>{operatingJourney=controller;},
+ openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),
  openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},
  openScenario:id=>journeyForm(()=>scenarioForm(id)),
  openProfile:id=>journeyForm(()=>profileForm(id)),
