@@ -128,3 +128,5 @@ The per-resource wrapper files remain unchanged original records. Their manifest
 Use NATIVE_SKOS_RECEIVING.md for the separately retained complete native scheme/collection context. Native source qualification still requires the actual installed version, original graph edition, full selected vocabulary and target receiving. Operate and view the exact outgoing UI and reopened downloads after changing the selected format.
 
 A later received edition compares each supplied record with the context actually selected for that record in the prior release. If a prior rejection kept an older context, receiving identical resource bytes under a new interpretation still creates a meaning-review item. Records carried forward outside a partial selection retain their old context without being silently reinterpreted.
+
+The native context-to-workspace command is `arches_app.py receive-native`; see the complete command and its pinned context/revision arguments in NATIVE_SKOS_RECEIVING.md. It opens the existing staff workspace and uses the original importer. Refresh the browser to review the returned edition before creating a release.
