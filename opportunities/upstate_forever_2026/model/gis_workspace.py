@@ -4,6 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 from . import gis_project as gis
+from . import fgdc_metadata
 
 
 SOURCE_METADATA_FIELDS = (
@@ -65,7 +66,8 @@ def source_layer(workspace, selection: dict) -> dict:
                       "uri": entry["uri"], "vintage": entry["vintage"],
                       "sha256": entry["body"]["sha256"], "role": entry.get("role"),
                       "units": entry.get("units"), "conversion": entry.get("conversion"),
-                      "received_gis":entry.get("received_gis")},
+                      "received_gis":entry.get("received_gis"),
+                      "source_metadata": fgdc_metadata.retained_source_metadata(entry)},
            "visible": selection.get("visible", False)}
     # Keep explicit scientific metadata with the portable originals and working layer.
     # These are the retained source's own values, not inferred units or geography.
@@ -255,6 +257,7 @@ def delivery_layers(workspace, delivery_id):
     gis.checked(workspace.root, original)
     return {
         "layers": layers, "attachments": [attachment], "grid": grid,
+        "metadata_contact": deepcopy(state.get("selection", {}).get("contact") or {}),
         "binding": {"version": DELIVERY_ADAPTER_VERSION, "delivery_id": delivery_id,
                     "delivery_state": original, "atlas_index": atlas_descriptor,
                     "grid_id": grid["id"], "dataset_ids": list(datasets),
@@ -286,6 +289,19 @@ def delivery_choices(workspace):
             "reason": ("" if eligible else "Complete the current delivery edition with its map-dataset catalogue."),
         })
     return result
+
+
+def _metadata_contact(selection, delivery=None):
+    """Retain an explicit declaration or the selected delivery's actual contact."""
+    supplied = [key for key in ("metadata_contact", "contact") if key in selection]
+    if len(supplied) == 2 and selection[supplied[0]] != selection[supplied[1]]:
+        raise ValueError("GIS metadata contact declarations disagree")
+    if supplied:
+        contact = selection[supplied[0]]
+    else:
+        contact = (delivery or {}).get("metadata_contact", {})
+    fgdc_metadata.validate_contact(contact)
+    return deepcopy(contact)
 
 
 def request(workspace, selection: dict) -> dict:
@@ -435,6 +451,7 @@ def request(workspace, selection: dict) -> dict:
         layers[0]["visible"]=True
     result={"schema":gis.REQUEST_SCHEMA,"title":selection.get("title",workspace.project["title"]+" · editable GIS"),
             "project_crs":project_crs,"layers":layers,"attachments":attachments,
+            "metadata_contact": _metadata_contact(selection, delivery),
             "provenance":{"project_id":workspace.project["id"],"project_title":workspace.project["title"],
                           "runs":runs,"grid_ids":list(dict.fromkeys(grid_ids +
                               ([delivery["grid"]["id"]] if delivery is not None else []))),
@@ -637,7 +654,12 @@ def adopt_sources(workspace, selection: dict) -> dict:
             original_source=row.get('source') or {}
             for name in ('role','conversion'):
                 if original_source.get(name) is not None:entry[name]=original_source[name]
-            if data['kind']=='vector':entry['layer']=data['layer']
+            if data['kind']=='vector':
+                entry['layer']=data['layer']
+                if row.get('vector_metadata'):
+                    from . import gis_vector_metadata
+                    gis_vector_metadata.verify_metadata(root, project, row)
+                    entry['received_gis']['vector_metadata'] = deepcopy(row['vector_metadata'])
             entries.append(entry)
         seen_context=set()
         context_sources=[]
@@ -691,6 +713,20 @@ def adopt_sources(workspace, selection: dict) -> dict:
             layer = byid[layer_id]
             context('Retained originals · '+layer['title'],layer['originals'],
                     context_id=layer_id,context_role='layer_originals',source=layer.get('source'))
+            if layer['data']['kind'] == 'vector' and layer.get('vector_metadata'):
+                from . import gis_vector_metadata
+                gis_vector_metadata.verify_metadata(root, project, layer)
+                descriptor = layer['vector_metadata']
+                # Preserve metadata and its actual linked dataset under their
+                # common project-relative hierarchy when importing the source.
+                records = [descriptor['xml'], descriptor['json'],
+                           gis.record(root, gis.local(root, layer['working_path']))]
+                context('FGDC metadata · '+layer['title'], records,
+                        context_id=layer_id+':vector-metadata', context_role='vector_metadata',
+                        source={'kind': 'retained FGDC vector dataset metadata',
+                                'vector_metadata': deepcopy(descriptor),
+                                'dataset_layer_id': layer_id,
+                                'original_source': deepcopy(layer.get('source', {}))})
         for attachment_id in attachments:
             document=documents[attachment_id]
             context(document['title'],document['files'],

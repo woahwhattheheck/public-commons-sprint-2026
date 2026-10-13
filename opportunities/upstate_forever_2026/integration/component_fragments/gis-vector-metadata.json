@@ -1,0 +1,59 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gis-vector-metadata",
+  "extend_components": {
+    "gis-projects": {
+      "paths": [
+        "model/gis_vector_metadata.py",
+        "model/GIS_VECTOR_METADATA.md",
+        "integration/component_fragments/gis-vector-metadata.json",
+        "model/fgdc_metadata.py",
+        "source/fgdc-metadata/receive_vector_metadata.py",
+        "source/fgdc/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect01.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect02.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect03.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect04.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect05.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect06.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect07.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect08.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect09.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect10.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/capture-manifest.json",
+        "source/fgdc-metadata/schema/README.md"
+      ]
+    },
+    "retained-application-source": {
+      "paths": [
+        "model/gis_vector_metadata.py",
+        "model/GIS_VECTOR_METADATA.md",
+        "integration/component_fragments/gis-vector-metadata.json",
+        "model/fgdc_metadata.py",
+        "source/fgdc-metadata/receive_vector_metadata.py",
+        "source/fgdc/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect01.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect02.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect03.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect04.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect05.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect06.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect07.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect08.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect09.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect10.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/capture-manifest.json",
+        "source/fgdc-metadata/schema/README.md"
+      ]
+    }
+  },
+  "source_reference": {
+    "operation_id": "UPSTATE-GIS-VECTOR-METADATA-7BF6-20261013",
+    "ownership": "Original GIS3576/4141 and ED6E metadata APIs; additive vector metadata/source adoption",
+    "source_contract": "upstate.gis-vector-metadata/v1"
+  }
+}
