@@ -1,0 +1,611 @@
+{
+  "schema": "commons.uid370.primary-source-register.v1",
+  "checkedOn": "2026-10-13",
+  "representation": "Own concise source observations plus original URLs and field identities. Null originalBytesSha256 means original HTTP bytes were not retained; web extraction is not an original file checksum.",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "Historic England UID370 official notice copy",
+      "url": "https://www.sell2wales.gov.wales/search/show/search_view.aspx?ID=OCT666699&catID=",
+      "publisher": "Sell2Wales / Historic England",
+      "kind": "notice_copy",
+      "publishedOrVersion": "2026-10-10",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn183view0",
+      "access": "document_read",
+      "observation": "Full official notice text read. Original FTS identifier retained. Published overall GBP and lot AED fields disagree.",
+      "coverage": [
+        "procurement"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S02",
+      "title": "Original Find a Tender notice and OCDS package",
+      "url": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages/095824-2026",
+      "publisher": "Find a Tender",
+      "kind": "notice_original",
+      "publishedOrVersion": "2026-10-09T16:42:28+01:00",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn181view2",
+      "access": "original_file_received_and_read",
+      "observation": "Complete Cabinet Office original acquired through ordinary public source_url and read byte-for-byte. Explicit deadline offsets resolved; original whole GBP / lot AED discrepancy remains.",
+      "coverage": [
+        "procurement"
+      ],
+      "originalBytesSha256": "5e9549dbf55d0440b747cbda9036c767810731811935a90a217e1a795400bfac",
+      "originalBytes": 8877,
+      "originalFile": "originals/UID370_095824-2026_original_ocds.json"
+    },
+    {
+      "id": "S03",
+      "title": "Heritage specialist training and qualifications",
+      "url": "https://historicengland.org.uk/education/training-skills/heritageskills-cpd/training-and-qualifications/",
+      "publisher": "Historic England",
+      "kind": "discovery_listing",
+      "publishedOrVersion": "2025-10-24",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn190view3",
+      "access": "document_read",
+      "observation": "Candidate discovery and heritage context. A published qualification link does not confirm a provider offering or available place.",
+      "coverage": [
+        "qualification",
+        "heritage_scope"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S04",
+      "title": "Find a regulated qualification",
+      "url": "https://www.gov.uk/find-a-regulated-qualification",
+      "publisher": "Ofqual / GOV.UK",
+      "kind": "register_entry",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn181view0",
+      "access": "document_read",
+      "observation": "Register and full public CSV entry point for qualifications and awarding organisations in England/Northern Ireland.",
+      "coverage": [
+        "qualification",
+        "awarding_organisation"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S05",
+      "title": "Ofqual Register API maintained documentation",
+      "url": "https://github.com/OfqualGovUK/ofqual-register-api",
+      "publisher": "OfqualGovUK",
+      "kind": "api_contract",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn191view1",
+      "access": "documentation_read",
+      "observation": "Public qualification/organisation identifiers, list parameters and response fields read. API data responses have not been received in this arm. The documented single-record route was subsequently exercised for S35 and S36; its complete camelCase responses are retained.",
+      "coverage": [
+        "qualification",
+        "awarding_organisation"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S06",
+      "title": "Find a learning aim and ILR sources of data",
+      "url": "https://www.gov.uk/government/publications/individualised-learner-record-ilr-sources-of-data/find-a-learning-aim-and-ilr-sources-of-data",
+      "publisher": "Department for Education",
+      "kind": "data_guidance",
+      "publishedOrVersion": "2026-06-10",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn180search1",
+      "access": "document_read",
+      "observation": "Learning aims, standards, frameworks and funding sources; qualification regulation and funding validity are separate records.",
+      "coverage": [
+        "learning_aim",
+        "funding"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S07",
+      "title": "LARS table and field definitions version12",
+      "url": "https://assets.publishing.service.gov.uk/media/6a293ec26d178a6fb7e3201e/LARS_table_and_field_definitions_version_12.pdf",
+      "publisher": "Department for Education",
+      "kind": "schema_pdf",
+      "publishedOrVersion": "2026-06",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn183view2",
+      "access": "full_original_pdf_attached",
+      "observation": "Full original49-page PDF attached,587585bytes. Its extracted field contract was previously read. No checksum is assigned without reading the binary bytes.",
+      "coverage": [
+        "learning_aim",
+        "standard",
+        "funding",
+        "validity"
+      ],
+      "originalBytesSha256": null,
+      "originalBytes": 587585
+    },
+    {
+      "id": "S08",
+      "title": "Find a learning aim download data",
+      "url": "https://submit-learner-data.service.gov.uk/find-a-learning-aim/DownloadData",
+      "publisher": "Department for Education",
+      "kind": "download_index",
+      "publishedOrVersion": "2026-10-12",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn186view0",
+      "access": "index_and_download_link_read",
+      "observation": "Live index lists v12 and v11 uploads dated12October2026. Linked v12 CSV ZIP content type was observed; archive bytes were not materialized.",
+      "coverage": [
+        "learning_aim",
+        "standard",
+        "funding"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S09",
+      "title": "Vocational qualifications quarterly certificates dataset",
+      "url": "https://www.gov.uk/government/statistical-data-sets/vocational-qualifications-dataset",
+      "publisher": "Ofqual",
+      "kind": "statistical_release",
+      "publishedOrVersion": "2026-09-17",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn185view3",
+      "access": "document_read",
+      "observation": "England qualification-quarter certificates from2012, excluding general qualifications listed in scope, EPA/AAQ and T Levels. Historical releases may be revised.",
+      "coverage": [
+        "certificate_counts"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S10",
+      "title": "Vocational qualifications CSVW metadata",
+      "url": "https://assets.publishing.service.gov.uk/media/6a0dcf6d5c3c79da61662e3c/regulated-qualifications-dataset-Jan-2012-to-present-England-metadata.txt",
+      "publisher": "Ofqual",
+      "kind": "csvw_contract",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn193view0",
+      "access": "original_file_received_and_read",
+      "observation": "Wide quarter columns; qualification+recognition number identity. Metadata null declaration includes0 although the same description defines true zero.",
+      "coverage": [
+        "certificate_counts"
+      ],
+      "originalBytesSha256": "5cfebe79b3304ed2b725bf5ce504f19b8fcafa2f4594f87ee4b053dd0948cd4a",
+      "originalBytes": 4754,
+      "originalFile": "originals/Ofqual_regulated_qualifications_England_original_CSVW_metadata.txt"
+    },
+    {
+      "id": "S11",
+      "title": "Further education and skills statistics methodology",
+      "url": "https://explore-education-statistics.service.gov.uk/methodology/further-education-and-skills-statistics-methodology",
+      "publisher": "Department for Education",
+      "kind": "statistical_methodology",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn194view2",
+      "access": "document_read",
+      "observation": "ILR populations, rounding and revised classification. SSA changes published sinceJanuary2026 restate preceding years; freeze one release basis.",
+      "coverage": [
+        "participation",
+        "outcomes",
+        "comparability"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S12",
+      "title": "Further education and skills2025/26 release",
+      "url": "https://explore-education-statistics.service.gov.uk/find-statistics/further-education-and-skills/2025-26",
+      "publisher": "Department for Education",
+      "kind": "statistical_release",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn180search4",
+      "access": "document_read",
+      "observation": "Release-year label and each table's actual covered period must be retained independently.",
+      "coverage": [
+        "participation",
+        "outcomes"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S13",
+      "title": "FE national aim-level achievement rates",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/d6398c8a-2e63-4689-a741-b96e11514d27",
+      "publisher": "Department for Education",
+      "kind": "dataset_contract",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn190view0",
+      "access": "metadata_and_preview_read",
+      "observation": "National aim-level QAR2022/23–2024/25;401115 listed rows; updated26March2026. Combined title/reference column and full denominator fields observed.",
+      "coverage": [
+        "aim_outcomes"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S14",
+      "title": "Adult FE provider aim enrolments predecessor",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/e6a4087c-2194-41db-a96b-7e51384c418a",
+      "publisher": "Department for Education",
+      "kind": "dataset_contract",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn185search4",
+      "access": "indexed_contract_read",
+      "observation": "Dated2024/25 release predecessor: provider/level/SSA learning-aim enrolments. Select the required release explicitly; this is not asserted as the latest table.",
+      "coverage": [
+        "provider_context"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S15",
+      "title": "Apprenticeships2025/26 release",
+      "url": "https://explore-education-statistics.service.gov.uk/find-statistics/apprenticeships/2025-26",
+      "publisher": "DfE / DWP",
+      "kind": "statistical_release",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn193search0",
+      "access": "document_read",
+      "observation": "Current in-year counts coverAug2025–Apr2026; subsequent final-year release is plannedNovember2026. Starts, participation and achievements differ.",
+      "coverage": [
+        "apprenticeship_outcomes"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S16",
+      "title": "Apprenticeship national standard/framework QAR",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/50ecb4f6-29c0-4481-89ff-b277f3c40e78",
+      "publisher": "DfE / DWP",
+      "kind": "dataset_contract",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn194view1",
+      "access": "metadata_and_preview_read",
+      "observation": "National QAR2022/23–2024/25,206024 listed rows; updated26March2026; retains standard/framework, age, funding and subject dimensions.",
+      "coverage": [
+        "apprenticeship_outcomes"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S17",
+      "title": "Apprenticeship provider/standard QAR",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/7221a340-3cf4-4aa5-9256-e32ad3ff2003",
+      "publisher": "DfE / DWP",
+      "kind": "dataset_contract",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn195view0",
+      "access": "metadata_and_preview_read",
+      "observation": "Provider/standard QAR2022/23–2024/25,577542 listed rows; updated27April2026. UKPRN and standard-name/code fields exist; option/site dimensions do not.",
+      "coverage": [
+        "apprenticeship_outcomes"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S18",
+      "title": "Apprenticeship national starts/achievements/enrolments",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/15b85e0e-28e0-423f-beb9-3a4e8031300c",
+      "publisher": "DfE / DWP",
+      "kind": "dataset_contract",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn195view1",
+      "access": "metadata_and_preview_read",
+      "observation": "National standard/framework series2019/20–2025/26,162426 listed rows. Current-year Aug–Apr provisional; earlier years Aug–Jul final.",
+      "coverage": [
+        "apprenticeship_activity"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S19",
+      "title": "Apprenticeship provider starts/achievements",
+      "url": "https://explore-education-statistics.service.gov.uk/data-catalogue/data-set/3e1366a6-d1c2-4317-973e-82c55269f2f7",
+      "publisher": "DfE / DWP",
+      "kind": "dataset_contract",
+      "publishedOrVersion": "2026-07-16",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn195view2",
+      "access": "metadata_and_preview_read",
+      "observation": "Provider/level/SSA series2020/21–2025/26,188468 listed rows. No standard or physical-site column in this table.",
+      "coverage": [
+        "provider_context"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S20",
+      "title": "Apprenticeship QAR transparency redactions",
+      "url": "https://content.explore-education-statistics.service.gov.uk/api/releases/5fa09991-9ced-4ca5-b626-73b747df272d/files/f3715db9-4d8d-4074-943b-31daa6f831b7",
+      "publisher": "DfE / DWP",
+      "kind": "supplementary_pdf",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn195view3",
+      "access": "pdf_text_read",
+      "observation": "Seven-page supplementary provider redactions read. Preserve separately with release context; never silently replace the principal data table.",
+      "coverage": [
+        "coverage",
+        "redaction"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S21",
+      "title": "UKRLP provider search",
+      "url": "https://www.ukrlp.co.uk/ukrlp/ukrlp_provider.page_pls_showSearchPage/1000",
+      "publisher": "UKRLP",
+      "kind": "provider_directory",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn181search13",
+      "access": "indexed_entry_read",
+      "observation": "Provider identification search. No individual provider or site record was acquired in this arm.",
+      "coverage": [
+        "provider_identity"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S22",
+      "title": "UKRLP frequently asked questions",
+      "url": "https://www.ukrlp.co.uk/ukrlp/ukrlp_util.page_pls_staticPage?pv_page=FAQ&x=",
+      "publisher": "UKRLP",
+      "kind": "identity_guidance",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn181search15",
+      "access": "indexed_excerpt_read",
+      "observation": "UKRLP registration is not an educational-quality assessment. Direct page retrieval did not yield a full current body.",
+      "coverage": [
+        "provider_identity"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S23",
+      "title": "ILR2026/27 delivery location postcode",
+      "url": "https://guidance.submit-learner-data.service.gov.uk/26-27/ilr/entity/LearningDelivery/field/DelLocPostCode",
+      "publisher": "Department for Education",
+      "kind": "field_contract",
+      "publishedOrVersion": "2026/27",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn185view2",
+      "access": "document_read",
+      "observation": "Actual delivery-location field, including majority location, start-of-aim timing, provider-postcode fallback and remote sentinelZZ99 9ZZ.",
+      "coverage": [
+        "site",
+        "geography"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S24",
+      "title": "ONS Open Geography portal",
+      "url": "https://geoportal.statistics.gov.uk/",
+      "publisher": "Office for National Statistics",
+      "kind": "geography_index",
+      "publishedOrVersion": "2026-08",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn189search0",
+      "access": "index_read",
+      "observation": "Index lists August2026 ONSPD and NSPL releases. Receiver must pin chosen download, geography vintage and licence; no postcode files received here.",
+      "coverage": [
+        "geography"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S25",
+      "title": "Skills England occupational maps API OpenAPI1.0",
+      "url": "https://occupational-maps-api.skillsengland.education.gov.uk/swagger/v1.0/swagger.json",
+      "publisher": "Skills England",
+      "kind": "openapi_contract",
+      "publishedOrVersion": "1.0",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn190view2",
+      "access": "original_file_received_and_read",
+      "observation": "Occupation hierarchy, product expansions, code/version/status and search pagination contract. X-API-KEY header required; public pages used for observed seed records.",
+      "coverage": [
+        "occupation",
+        "standard"
+      ],
+      "originalBytesSha256": "e2918ee3418fef3d54b05b76fbf25ba02ba85cebc4367624510b143800611138",
+      "originalBytes": 78284,
+      "originalFile": "originals/Skills_England_occupational_maps_original_openapi.json"
+    },
+    {
+      "id": "S26",
+      "title": "Skills England occupational maps terms",
+      "url": "https://occupational-maps.skillsengland.education.gov.uk/terms-conditions/",
+      "publisher": "Skills England",
+      "kind": "reuse_terms",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn183view1",
+      "access": "document_read",
+      "observation": "OGL content and distinct logo/API attribution terms; retain the source's current attribution wording when the receiver uses its API.",
+      "coverage": [
+        "licence"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S27",
+      "title": "Stonemason standard version1.1",
+      "url": "https://skillsengland.education.gov.uk/apprenticeships/st0442-v1-1",
+      "publisher": "Skills England",
+      "kind": "standard_version",
+      "publishedOrVersion": "1.1",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn185view1",
+      "access": "document_read",
+      "observation": "Retired start window20February–9August2023; LARS637 and ST0442 identity.",
+      "coverage": [
+        "standard_version"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S28",
+      "title": "Stonemason standard version1.2",
+      "url": "https://skillsengland.education.gov.uk/apprenticeships/st0442-v1-2",
+      "publisher": "Skills England",
+      "kind": "standard_version",
+      "publishedOrVersion": "2025-10-01",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn192view7",
+      "access": "document_read",
+      "observation": "Approved for starts from10August2023; published version log, LARS637, six options including Heritage Stonemason.",
+      "coverage": [
+        "standard_version"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S29",
+      "title": "Heritage Stonemason occupation option",
+      "url": "https://occupational-maps.skillsengland.education.gov.uk/maps/occupation/OCC0442C",
+      "publisher": "Skills England",
+      "kind": "occupation_option",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn184search2",
+      "access": "indexed_official_record_read",
+      "observation": "Exact published occupation option identifierOCC0442C; option identity remains distinct from whole ST0442 standard.",
+      "coverage": [
+        "occupation_option"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S30",
+      "title": "Pre-1919 repair and maintenance qualification",
+      "url": "https://www.nocn.org.uk/products/qualifications/18392-600-3111-6-nocn-level-3-award-in-understanding-repair-and-maintenance-of-traditional-pre-1919-buildings/",
+      "publisher": "NOCN",
+      "kind": "awarding_body_qualification",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn192view2",
+      "access": "document_read",
+      "observation": "Actual qualification number600/3111/6; Level3,20TQT,2credits; one mandatory heritage unit. Listing is a qualification record.",
+      "coverage": [
+        "qualification",
+        "heritage_content"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S31",
+      "title": "Energy efficiency in older/traditional buildings qualification",
+      "url": "https://www.nocn.org.uk/products/qualifications/610-1607-x-nocn-level-3-award-in-energy-efficiency-measures-for-older-and-traditional-buildings-2022/",
+      "publisher": "NOCN",
+      "kind": "awarding_body_qualification",
+      "publishedOrVersion": null,
+      "checkedOn": "2026-10-13",
+      "webRef": "turn192view4",
+      "access": "document_read",
+      "observation": "Actual qualification number610/1607/X; Level3,30TQT,3credits; three mandatory units with original references. RetainX.",
+      "coverage": [
+        "qualification",
+        "heritage_content"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S32",
+      "title": "Qualification funding approval overview",
+      "url": "https://www.gov.uk/guidance/qualification-funding-approval/overview-of-qualification-funding-approval-process",
+      "publisher": "Department for Education",
+      "kind": "funding_guidance",
+      "publishedOrVersion": "2025-12-12",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn180search7",
+      "access": "document_read",
+      "observation": "Regulation, learning-aim publication and funding approval are separate stages. Funding visibility alone is not a learner/provider entitlement.",
+      "coverage": [
+        "funding"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S33",
+      "title": "Qualification funding review",
+      "url": "https://www.gov.uk/guidance/qualification-funding-approval/how-we-will-review-qualifications",
+      "publisher": "Department for Education",
+      "kind": "funding_guidance",
+      "publishedOrVersion": "2025-12-12",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn180search10",
+      "access": "document_read",
+      "observation": "Funding approvals have academic-year and new-start conditions; preserve the actual selected route and effective dates.",
+      "coverage": [
+        "funding"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S34",
+      "title": "ILR funding returns2026/27",
+      "url": "https://www.gov.uk/government/publications/advice-individualised-learner-record-ilr-returns/advice-individualised-learner-record-ilr-funding-returns-2026-to-2027",
+      "publisher": "Department for Education",
+      "kind": "provider_guidance",
+      "publishedOrVersion": "2026/27",
+      "checkedOn": "2026-10-13",
+      "webRef": "turn184search3",
+      "access": "document_read",
+      "observation": "Funding returns use the provider's own UKPRN; administrative provider identity remains distinct from subcontractor and physical delivery site.",
+      "coverage": [
+        "provider_identity"
+      ],
+      "originalBytesSha256": null
+    },
+    {
+      "id": "S35",
+      "title": "Original Ofqual register qualification 610/1607/X",
+      "url": "https://register-api.ofqual.gov.uk/api/Qualifications/6101607X",
+      "publisher": "Ofqual",
+      "kind": "original_api_record",
+      "publishedOrVersion": "2026-06-18T22:31:10.24Z",
+      "checkedOn": "2026-10-13",
+      "access": "original_file_received_and_read",
+      "observation": "Actual camelCase single-record JSON. Available to learners; RN5194; offeredInEngland=true; no operational or certification end set. Dates and nullable fields retained exactly. This is a regulatory record, not a provider offering.",
+      "coverage": [
+        "qualification",
+        "regulatory_status"
+      ],
+      "originalBytes": 1603,
+      "originalBytesSha256": "bc556ae12c6449ddf2a2b76db073c5a5cd9e21cb62db6f4e31d27a0092a097f6",
+      "originalFile": "originals/Ofqual_qualification_6101607X_original.json"
+    },
+    {
+      "id": "S36",
+      "title": "Original Ofqual register qualification 600/3111/6",
+      "url": "https://register-api.ofqual.gov.uk/api/Qualifications/60031116",
+      "publisher": "Ofqual",
+      "kind": "original_api_record",
+      "publishedOrVersion": "2026-06-18T22:31:10.24Z",
+      "checkedOn": "2026-10-13",
+      "access": "original_file_received_and_read",
+      "observation": "Actual camelCase single-record JSON. Available to learners; RN5194; offeredInEngland=true; no operational or certification end set. Dates and nullable fields retained exactly. This is a regulatory record, not a provider offering.",
+      "coverage": [
+        "qualification",
+        "regulatory_status"
+      ],
+      "originalBytes": 1648,
+      "originalBytesSha256": "a794e2c8db397b8217a247e4d49584daa84d29cc182401c78604384c99f495d1",
+      "originalFile": "originals/Ofqual_qualification_60031116_original.json"
+    }
+  ]
+}
