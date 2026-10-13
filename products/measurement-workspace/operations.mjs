@@ -42,6 +42,38 @@ add('large-intakes','GET','/large/intakes');add('large-intake-begin','POST','/la
 for(const op of ['prepare','commit','receive'])add('large-intake-'+op,'POST','/large/intakes/:id/'+op);
 add('large-sources','GET','/large/sources');add('large-source','GET','/large/sources/:id');add('large-source-chunk','GET','/large/sources/:id/files/:file/:offset');
 add('large-editions','GET','/large/editions');add('large-export','POST','/large/editions');add('large-edition','GET','/large/editions/:id');add('large-edition-chunk','GET','/large/editions/:id/files/:file/:offset');
+
+// Scientific families retain the original native models, definitions, immutable
+// source snapshots, draft formats and transactional request receipts.
+add('observation-catalogue','GET','/observation-editions');
+add('observation-inspect','POST','/observation-editions/inspect',{replay:'read',effect:'read'});
+add('observation-preview','POST','/observation-editions/preview',{replay:'read',effect:'read'});
+add('observation-save','POST','/observation-editions/editions',{replay:'exact',note:'Retain the original operation_id, full source binding, expected_revision and exact choices. Native save resolves this original operation before current revision checks.'});
+add('observation-editions','GET','/observation-editions/editions');
+add('observation-edition','GET','/observation-editions/editions/:id');
+for(const file of ['report.html','observations.csv','report.csv','calibration.json'])add('observation-'+file,'GET','/observation-editions/editions/:id/'+file);
+for(const [family,base,plural] of [['sediment','sediment','studies'],['sediment-comparison','sediment-comparisons','comparisons']]){
+ add(family+'-catalogue','GET','/'+base+'/catalogue');
+ add(family+'-project','GET','/'+base+'/project');
+ add(family+(family==='sediment'?'-study':'-edition'),'GET','/'+base+'/'+plural+'/:id');
+ add(family+'-draft','GET','/'+base+'/drafts/:id');
+ add(family+'-request','GET','/'+base+'/requests/:id');
+ for(const action of ['preview','save','drafts','abandon','receive'])add(family+'-'+action,'POST','/'+base+'/'+action,{replay:action==='preview'?'read':'exact',effect:action==='preview'?'read':'write',note:action==='preview'?'Original scientific preview; no authoring or import.':'Keep the complete native request UUID/body. Native accepted or abandoned receipt wins before a fresh save; received histories remain original.'});
+ const files=family==='sediment'?['report.html','pairs.csv','residuals.csv','predictions.csv','coefficients.csv']:['report.html','metrics.csv','observations.csv','coefficients.csv'];
+ for(const file of files)add(family+'-'+file,'GET','/'+base+'/'+plural+'/:id/'+file);
+}
+for(const action of ['observations','deployment-preview','pairs-preview'])add('sediment-'+action,'POST','/sediment/'+action,{replay:'read',effect:'read'});
+add('sediment-comparison-candidates','POST','/sediment-comparisons/candidates',{replay:'read',effect:'read'});
+add('chiques-catalogue','GET','/chiques/catalogue');add('chiques-collection','GET','/chiques/collections/:id');
+add('chiques-preview','POST','/chiques/preview',{replay:'read',effect:'read'});
+add('chiques-receive','POST','/chiques/receive',{replay:'exact',note:'The complete original preparation and expectedId are required by native receiving. This imports original source occurrences; it does not approve scientific eligibility.'});
+add('intake-compare','POST','/intake/:id/compare',{replay:'read',effect:'read'});
+add('intake-comparison-reopen','POST','/intake/comparison-reopen',{replay:'read',effect:'read'});
+add('intake-comparison-history','GET','/intake/:id/comparison-history');
+for(const action of ['comparison-report','comparison-bundle','comparison-csv'])add('flow-'+action,'POST','/flow/'+action,{replay:'read',effect:'read'});
+for(const action of ['load-comparison','load-comparison-report','load-comparison-csv','load-comparison-bundle'])add('flow-'+action,'POST','/flow/'+action,{replay:'read',effect:'read'});
+add('export-source-selection','GET','/exports/:id/source-selection',{note:'Original source-return selection only; publishing and receiving retain the existing Source Returns owner.'});
+
 export const OPERATIONS=Object.freeze(rows);
 const index=new Map(rows.map(x=>[x.name,x]));
 function need(ok,message){if(!ok)throw Object.assign(new TypeError(message),{code:'MEASUREMENT_OPERATION_INVALID'});}
