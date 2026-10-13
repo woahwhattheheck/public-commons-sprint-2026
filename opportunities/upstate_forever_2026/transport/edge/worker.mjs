@@ -140,9 +140,24 @@ function nonceHTML(body,script="") {
       "'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"}});
 }
 
+function deploymentEnv(env) {
+  return {...env,
+    ECO_PUBLIC_ORIGIN:env.PUBLIC_ORIGIN||env.ECO_PUBLIC_ORIGIN,
+    ECO_OPERATOR_ID:env.WORKSPACE_KEY||env.ECO_OPERATOR_ID,
+    ECO_RELAY:env.RELAY||env.ECO_RELAY
+  };
+}
+
 export class EcoRelay {
   constructor(ctx,env) {
-    this.ctx=ctx; this.env=env; this.sql=ctx.storage.sql;
+    this.ctx=ctx; this.env=deploymentEnv(env); this.sql=ctx.storage.sql;
+    // Existing deployment secret names remain authoritative; derive digests privately.
+    this.credentialsReady=(async()=>{
+      if(typeof env.RECIPIENT_TOKEN==="string"&&env.RECIPIENT_TOKEN)
+        this.env.ECO_RECIPIENT_TOKEN_SHA256=await sha256(env.RECIPIENT_TOKEN);
+      if(typeof env.CONNECTOR_TOKEN==="string"&&env.CONNECTOR_TOKEN)
+        this.env.ECO_CONNECTOR_TOKEN_SHA256=await sha256(env.CONNECTOR_TOKEN);
+    })();
     this.inputs=new Map(); this.outputs=new Map(); this.readers=new Map(); this.waiters=new Map();
     this.sql.exec("CREATE TABLE IF NOT EXISTS relay_requests (id TEXT PRIMARY KEY,state TEXT NOT NULL,updated INTEGER NOT NULL,last_polled INTEGER NOT NULL DEFAULT 0,record TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS relay_chunks (id TEXT NOT NULL,side TEXT NOT NULL,offset INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,PRIMARY KEY(id,side,offset))");
@@ -401,8 +416,21 @@ export class EcoRelay {
   }
   async connectorRoute(request,url,instance) {
     const path=url.pathname,method=request.method;
+    if(path==="/_eco/v1/connector/migration-status"&&method==="GET") {
+      const counts={},storage=this.ctx.storage;let startAfter;
+      for(;;) {
+        const page=await storage.list({prefix:"job:",limit:128,...(startAfter?{startAfter}:{})});
+        for(const [key,record] of page) {counts[record.state||"unknown"]=(counts[record.state||"unknown"]||0)+1;startAfter=key;}
+        if(page.size<128)break;
+      }
+      const bound=!!(this.env.NATIVE_WORKSPACE_KEY||await storage.get("native-workspace-binding"));
+      return json({schema:VERSION,operator_id:this.env.ECO_OPERATOR_ID,legacy_states:counts,
+        native_workspace_bound:bound,legacy_storage_preserved:true});
+    }
     if(path==="/_eco/v1/connector/register"&&method==="POST") {
       const value=await readJSON(request);
+      if(!TOKEN_RE.test(value.native_workspace_key||""))
+        problem(400,"NATIVE_WORKSPACE","Supply the original private launcher's workspace identity.");
       if(!Array.isArray(value.routes)||value.routes.length>10000)problem(400,"ROUTE_MANIFEST","Supply the actual installed route manifest.");
       const rows=value.routes.map(row=>{
         const method=String(row.method||"").toUpperCase(),path=cleanPath(row.path);
@@ -411,6 +439,13 @@ export class EcoRelay {
         if(!["GET","POST","PUT","PATCH","DELETE"].includes(method)||(!path.startsWith("/api/")&&!pageRead)||path.includes("?")||DENIED.has(path)||path==="/_eco"||path.startsWith("/_eco/"))
           problem(400,"ROUTE_MANIFEST","Register only exact installed application methods/routes and GET pages/assets.");
         return [method,path];
+      });
+      await this.ctx.storage.transaction(async transaction=>{
+        const stored=await transaction.get("native-workspace-binding");
+        const expected=this.env.NATIVE_WORKSPACE_KEY||stored;
+        if(expected&&expected!==value.native_workspace_key)
+          problem(409,"NATIVE_WORKSPACE","The transport is bound to a different original native workspace.");
+        if(!stored)await transaction.put("native-workspace-binding",value.native_workspace_key);
       });
       this.ctx.storage.transactionSync(()=>{this.sql.exec("DELETE FROM relay_routes");for(const row of rows)this.sql.exec("INSERT OR IGNORE INTO relay_routes(method,path) VALUES(?,?)",...row);});
       return json({schema:VERSION,registered:rows.length,chunk_bytes:CHUNK_BYTES,operator_id:this.env.ECO_OPERATOR_ID});
@@ -560,6 +595,7 @@ export class EcoRelay {
   }
   async fetch(request) {
     try {
+      await this.credentialsReady;
       this.origin(request,false);
       const url=new URL(request.url),path=url.pathname;
       if(path==="/_eco/health"&&request.method==="GET")
@@ -602,9 +638,13 @@ export class EcoRelay {
   }
 }
 
+// Preserve the already-deployed SQLite namespace and exported class.
+export class WorkbenchRelay extends EcoRelay {}
+
 export default {
   async fetch(request,env) {
     try {
+      env=deploymentEnv(env);
       const expected=canonicalOrigin(env.ECO_PUBLIC_ORIGIN||"");
       if(new URL(request.url).origin!==expected)problem(421,"WRONG_ORIGIN","Use the configured workbench origin.");
       if(!ID_RE.test(env.ECO_OPERATOR_ID||""))problem(503,"OPERATOR_CONFIG","Configure the original fixed operator mapping.");
