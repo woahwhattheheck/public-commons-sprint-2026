@@ -69,3 +69,19 @@ Use plain industrial software design: readable tables, clear hierarchy, consiste
 Carry this complete instruction into delegated assignments and the active owner-controlled policy, boot, build and receiving guidance those workers actually read. Preserve other owner controls, original operation identities and historical records. Leave third-party/vendor policies intact. Do not force restarts, create watchers or revive owner-stopped work. When the runtime is unavailable, join the existing equipped receiver with the complete exact version and opening steps, inspect its actual rendered result, and continue independent implementation while it runs.
 
 
+
+## Complete package downloads and document viewer
+
+The existing six-merchant record now also produces two complete, self-contained document viewers. Open `customer/Unlost-complete-sample-documents.html` for the free edition or `customer/Unlost-complete-paid-documents.html` for its five-merchant paid edition. Each viewer contains a complete ordinary ZIP and all eight selected files. It opens the original HTML, CSV, JSON and text documents and downloads either one exact member or the complete archive. The member hashes are checked before opening or downloading.
+
+Use the original `customer/localization-sample/app.html` or `customer/localization-paid/app.html` for interactive editing. The document viewer previews HTML with scripts disabled, while the separately delivered apps retain their complete interactive behavior. The private receiving Page includes both direct apps and both complete package viewers: https://chatgpt.com/space/page_839214ada674819188a6ca32ca6f0e32 . The existing browser receiving course remains the place for desktop, narrow-screen and downloaded/reopened product use.
+
+Rebuild the complete documents and both portable ZIPs from the unchanged whole record:
+
+```sh
+node build-package-documents.mjs working-record.json NEW_COMPLETE_DOCUMENT_OUTPUT
+```
+
+The reusable `localization/package-documents.mjs` also runs unchanged in connected JavaScript with its existing five modules supplied. It receives the complete original record through the maintained fulfillment engine, verifies whole export equality, selects the two current localization packages, creates ordinary STORE ZIPs, reopens every member with CRC and original byte/hash comparisons, and builds the document envelopes with the maintained DEFLATE implementation. It uses the existing 6A62 customer-package panel without changing that viewer. All complete helper bodies are included. The whole record, original sender/draft, original customer files and existing package selections remain unchanged.
+
+The actual connected run received the whole record exactly, built the 248149-byte sample ZIP and390558-byte paid ZIP, and reopened all16 selected member occurrences exactly. Complete archive/panel identities and helper provenance are in `complete-document-receipt.json`. These portable ZIPs use the maintained connected writer's documented file modes/order/timestamp, while `build-localization.cjs` retains its original Node archive writer. The complete selected member bodies agree; archive-level byte identity between those two writers is not required or asserted.

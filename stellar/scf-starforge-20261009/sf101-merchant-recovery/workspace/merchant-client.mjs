@@ -93,13 +93,18 @@ export async function readRecoveryWorkspaceConfiguration(path) {
 const definitions = new Map(recoveryWorkspaceTools((name, description, properties, required, options) =>
   ({ name, properties, required, options })).map(value => [value.name, value]));
 const paged = new Set(['merchant_recovery_inventory', 'merchant_recovery_requests', 'merchant_recovery_operations']);
-const writes = new Set(['merchant_recovery_start', 'merchant_recovery_resume', 'merchant_recovery_cancel']);
+const writes = new Set(['merchant_recovery_start', 'merchant_recovery_resume', 'merchant_recovery_cancel',
+  'merchant_recovery_support_review','merchant_recovery_support_save','merchant_recovery_support_export',
+  'merchant_recovery_bundle_inspection','merchant_recovery_bundle_attach','merchant_recovery_bundle_pair_attach','merchant_recovery_bundle_case_export']);
 function validateSelection(value) {
   exact(value, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
-    'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'],
+    'capturePlanId', 'quiesced', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId',
+    'objectSessionId', 'expectedRecordSha256','archiveId','sourceRequestId','sourceReviewHash','sourceAttempt','sourceSide',
+    'beforeObjectSessionId','afterObjectSessionId','beforeExpectedRecordSha256','afterExpectedRecordSha256'],
     ['profileId', 'action', 'id']);
   checked(value.profileId, ID, 'profile ID'); checked(value.id, ID, 'operation ID');
-  if (!['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume'].includes(value.action))
+  if (!['snapshot', 'verify', 'publisher-prepare', 'fleet-prepare', 'push', 'pull', 'restore', 'resume',
+    'object-snapshot', 'object-verify', 'object-restore','object-bundle-export','object-bundle-receive','object-compare'].includes(value.action))
     throw failure('INVALID_PARAMS', 'Choose an original recovery action.');
   for (const key of ['destinationName', 'capturePlanId', 'restoreId', 'publisherRestoreId', 'fleetRestoreId', 'fleetTargetId'])
     if (value[key] !== undefined) checked(value[key], ID, key);
@@ -109,6 +114,33 @@ function validateSelection(value) {
     throw failure('INVALID_PARAMS', 'Use the exact bundleId returned by this original workspace.');
   if (value.quiesced !== undefined && value.quiesced !== true)
     throw failure('INVALID_PARAMS', 'Capture and fleet preparation require the explicit actual producer-quiescence acknowledgment.');
+  const comparisonFields=['beforeObjectSessionId','afterObjectSessionId','beforeExpectedRecordSha256','afterExpectedRecordSha256'];
+  if(value.action==='object-compare'){
+    exact(value,['profileId','action','id',...comparisonFields],['profileId','action','id',...comparisonFields]);
+    checked(value.beforeObjectSessionId,ID,'before declared Object session');checked(value.afterObjectSessionId,ID,'after declared Object session');
+    checked(value.beforeExpectedRecordSha256,SHA,'before record');checked(value.afterExpectedRecordSha256,SHA,'after record');
+    return;
+  }
+  if(comparisonFields.some(key=>Object.hasOwn(value,key)))throw failure('INVALID_PARAMS','Comparison selectors belong to object-compare.');
+  if(value.action==='object-bundle-export'){
+    exact(value,['profileId','action','id','sourceRequestId','sourceReviewHash','sourceAttempt','sourceSide'],
+      ['profileId','action','id','sourceRequestId','sourceReviewHash','sourceAttempt']);
+    if(value.sourceSide!==undefined&&!['before','after'].includes(value.sourceSide))throw failure('INVALID_PARAMS','Select before or after from the original comparison.');
+    checked(value.sourceRequestId,ID,'original recovery request');checked(value.sourceReviewHash,SHA,'original recovery review');
+    if(!Number.isSafeInteger(value.sourceAttempt)||value.sourceAttempt<0)throw failure('INVALID_PARAMS','Select the exact observed original attempt.');
+  }else if(value.action==='object-bundle-receive'){
+    exact(value,['profileId','action','id','archiveId','objectSessionId'],['profileId','action','id','archiveId','objectSessionId']);
+    checked(value.archiveId,ID,'host-declared archive');checked(value.objectSessionId,ID,'declared original receiving session');
+  }else if (value.action.startsWith('object-')) {
+    const snapshot = value.action === 'object-snapshot';
+    exact(value, ['profileId', 'action', 'id', 'objectSessionId', ...(snapshot ? ['quiesced'] : ['expectedRecordSha256'])],
+      ['profileId', 'action', 'id', 'objectSessionId', ...(snapshot ? ['quiesced'] : ['expectedRecordSha256'])]);
+    checked(value.objectSessionId, ID, 'host-declared Object session ID');
+    if (snapshot && value.quiesced !== true) throw failure('INVALID_PARAMS', 'Confirm the original Object writers are stopped.');
+    if (!snapshot) checked(value.expectedRecordSha256, SHA, 'original Object backup record');
+  } else if (Object.hasOwn(value, 'objectSessionId') || Object.hasOwn(value, 'expectedRecordSha256')) {
+    throw failure('INVALID_PARAMS', 'Object session selectors belong to the original Object recovery actions.');
+  }
   if (value.action === 'fleet-prepare') {
     exact(value, ['profileId', 'action', 'id', 'restoreId', 'fleetRestoreId', 'fleetTargetId', 'quiesced'],
       ['profileId', 'action', 'id', 'fleetTargetId', 'quiesced']);
@@ -126,7 +158,45 @@ function validateSelection(value) {
 function validate(name, input) {
   if (input.profileId !== undefined) checked(input.profileId, ID, 'profile ID');
   if (input.id !== undefined) checked(input.id, ID, 'operation ID');
-  if (input.selection !== undefined) validateSelection(input.selection);
+  if(input.selection!==undefined) {
+    if(name==='merchant_recovery_support_review'){
+      const s=input.selection;exact(s,['profileId','id','transferId','caseId','expectedRevision','slot','expectedReviewHash','afterAttempt'],
+        ['profileId','id','transferId','caseId','expectedRevision','slot','expectedReviewHash','afterAttempt']);
+      checked(s.profileId,ID,'profile');checked(s.id,ID,'original request');
+      checked(s.transferId,/^[a-z0-9][a-z0-9_-]{0,63}$/,'Support transfer');
+      checked(s.caseId,/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,'case');
+      checked(s.expectedRevision,SHA,'case revision');checked(s.expectedReviewHash,SHA,'original request review');
+      if(!['before','after'].includes(s.slot)||!Number.isSafeInteger(s.afterAttempt)||s.afterAttempt<0)
+        throw failure('INVALID_PARAMS','Select the original observed attempt and a before/after slot.');
+    }else validateSelection(input.selection);
+  }
+  if(input.transferId!==undefined)checked(input.transferId,/^[a-z0-9][a-z0-9_-]{0,63}$/,'Support transfer');
+  for(const key of ['beforeId','afterId'])if(input[key]!==undefined)checked(input[key],ID,'original bundle request');
+  for(const key of ['pairSha256','expectedPairSha256'])if(input[key]!==undefined)checked(input[key],SHA,'comparison pair');
+  if(['merchant_recovery_bundle_attachment','merchant_recovery_bundle_case_export'].includes(name)&&
+    (input.archiveSha256!==undefined)===(input.pairSha256!==undefined))throw failure('INVALID_PARAMS','Select exactly one original archive or pair SHA.');
+  if(input.archiveId!==undefined)checked(input.archiveId,ID,'host-declared archive');
+  if(input.archiveSha256!==undefined)checked(input.archiveSha256,SHA,'original archive');
+  if(input.expectedRevision!==undefined)checked(input.expectedRevision,SHA,'original saved case revision');
+  if(input.kind!==undefined&&!(name==='merchant_recovery_comparison_artifact'?['result','html','markdown']:['report','verification','publication']).includes(input.kind))throw failure('INVALID_PARAMS','Select report or verification.');
+  if(input.actor!==undefined&&(typeof input.actor!=='string'||!input.actor.trim()||Buffer.byteLength(input.actor)>200))
+    throw failure('INVALID_PARAMS','Supply the actual operator within 200 UTF-8 bytes.');
+  if(input.expectedReviewSha256!==undefined)checked(input.expectedReviewSha256,SHA,'Support review');
+  if(name==='merchant_recovery_support_cases'){
+    if(input.q!==undefined&&(typeof input.q!=='string'||input.q.length>1000))throw failure('INVALID_PARAMS','Use a bounded case search.');
+    if(input.offset!==undefined&&(!Number.isSafeInteger(input.offset)||input.offset<0))throw failure('INVALID_PARAMS','Use the returned case offset.');
+    if(input.limit!==undefined&&(!Number.isInteger(input.limit)||input.limit<1||input.limit>200))throw failure('INVALID_PARAMS','Use a case page size from1 through200.');
+  }
+  if (input.objectSessionId !== undefined) checked(input.objectSessionId, ID, 'host-declared Object session ID');
+  if (input.sha256 !== undefined) checked(input.sha256, SHA, 'retained native evidence SHA256');
+  if (input.afterAttempt !== undefined && (!Number.isSafeInteger(input.afterAttempt) || input.afterAttempt < 0))
+    throw failure('INVALID_PARAMS', 'Select the original observed nonnegative attempt number.');
+  if (input.quiesced !== undefined && input.quiesced !== true)
+    throw failure('INVALID_PARAMS', 'Confirm the original Object writers are stopped.');
+  if (name === 'merchant_recovery_resume' &&
+      (input.afterAttempt !== undefined || input.expectedReviewHash !== undefined || input.quiesced !== undefined) &&
+      (input.afterAttempt === undefined || input.expectedReviewHash === undefined))
+    throw failure('INVALID_PARAMS', 'An Object continuation binds both the saved review and observed original attempt.');
   if (input.expectedReviewHash !== undefined) checked(input.expectedReviewHash, SHA, 'native review hash');
   if (paged.has(name)) {
     if (input.limit !== undefined && (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 100))
@@ -150,10 +220,16 @@ function nativeFailure(native, { workspace, input, status, uncertain = false, mu
   const safe = { code: typeof native?.code === 'string' ? native.code.slice(0,100) : 'RECOVERY_WORKSPACE_FAILED',
     message: typeof native?.message === 'string' ? native.message.slice(0,500) : 'The original recovery request failed.' };
   for (const key of metadataFields) if (['string','number','boolean'].includes(typeof native?.[key])) safe[key] = native[key];
+  const evidence=native?.nativeEvidence;
+  if(evidence&&SHA.test(evidence.sha256??'')&&Number.isSafeInteger(evidence.bytes)&&evidence.bytes>0)
+    safe.nativeEvidence={sha256:evidence.sha256,bytes:evidence.bytes};
   const selected = scope(workspace, input ?? {});
   const details = { outcome: uncertain ? 'OUTCOME_UNKNOWN' : Number.isInteger(status) && status >= 400 ? 'REJECTED' : 'READ_FAILED', ...selected,
     ...(Number.isInteger(status) ? { httpStatus: status } : {}), mutationRequestAttempted, error: safe };
-  if (selected.profileId && selected.operationId) details.readback = {
+  const transfer=input?.transferId??input?.selection?.transferId;
+  if(transfer)details.readback={tool:'merchant_recovery_support_transfer',
+    arguments:{workspace,profileId:input?.profileId??input?.selection?.profileId,transferId:transfer}};
+  else if (selected.profileId && selected.operationId) details.readback = {
     tool: 'merchant_recovery_request', arguments: { workspace, profileId: selected.profileId, id: selected.operationId } };
   if (uncertain) details.mayHaveCommitted = true;
   // The original MCP HTTP/stdio transport retains code and reason. Keep the
@@ -185,14 +261,26 @@ export class MerchantRecoveryWorkspaces {
     const launch = await this.#launch(workspace);
     const action = name.slice('merchant_recovery_'.length);
     let method = 'GET', route, body;
-    if (action === 'status') route = '/api/state';
+    if(action==='comparison_artifact')route=urlQuery('/api/object-comparison-artifact',{profile:input.profileId,id:input.id,kind:input.kind,sha256:input.sha256});
+    else if(action==='bundle_inspection')route=urlQuery('/api/bundle-inspection',{profile:input.profileId,archive:input.archiveId});
+    else if(action==='bundle_pair')route=urlQuery('/api/bundle-pair',{profile:input.profileId,before:input.beforeId,after:input.afterId});
+    else if(action==='bundle_attachment')route=urlQuery('/api/bundle-attachment',{profile:input.profileId,id:input.transferId,sha256:input.archiveSha256,pair:input.pairSha256});
+    else if(action==='bundle_report')route=urlQuery('/api/bundle-report',{profile:input.profileId,id:input.id,kind:input.kind});
+    else if(action==='bundle_artifact')route=urlQuery('/api/bundle-artifact',{profile:input.profileId,id:input.id});
+    else if(action==='support_cases')route=urlQuery('/api/support-cases',{profile:input.profileId,q:input.q,offset:input.offset,limit:input.limit});
+    else if(action==='support_transfers')route=urlQuery('/api/support-transfers',{profile:input.profileId});
+    else if(['support_transfer','support_handoff','support_package'].includes(action))
+      route=urlQuery('/api/'+action.replaceAll('_','-'),{profile:input.profileId,id:input.transferId});
+    else if (action === 'status') route = '/api/state';
+    else if (action === 'object_session') route = urlQuery('/api/object-session', { profile: input.profileId, session: input.objectSessionId });
+    else if (action === 'object_evidence') route = urlQuery('/api/object-evidence', { sha256: input.sha256 });
     else if (action === 'requests') route = urlQuery('/api/requests', { cursor: input.cursor, limit: input.limit });
     else if (['request', 'operation'].includes(action)) route = urlQuery('/api/' + action, { profile: input.profileId, id: input.id });
     else if (['bundles', 'inventory', 'operations'].includes(action))
       route = urlQuery('/api/' + action, { profile: input.profileId, cursor: input.cursor, limit: input.limit });
     else {
-      method = 'POST'; route = '/api/' + action;
-      body = JSON.stringify(action === 'review' ? input.selection : input);
+      method = 'POST'; route = '/api/' + action.replaceAll('_','-');
+      body = JSON.stringify(['review','support_review'].includes(action) ? input.selection : input);
       if (Buffer.byteLength(body) > MAX_REQUEST_BYTES)
         throw failure('INVALID_PARAMS', 'The original native recovery request exceeds 64 KiB.');
     }
@@ -211,8 +299,8 @@ export class MerchantRecoveryWorkspaces {
     try {
       for await (const chunk of response.body ?? []) {
         size += chunk.byteLength;
-        if (size > MAX_REPLY_BYTES) throw failure('RECOVERY_WORKSPACE_REPLY_LIMIT',
-          'Read the exact retained request or a smaller original page; this response exceeds 32 MiB.');
+        if (size > (action==='comparison_artifact'?513*1024*1024:action==='support_handoff'?512*1024*1024:MAX_REPLY_BYTES)) throw failure('RECOVERY_WORKSPACE_REPLY_LIMIT',
+          'Read the exact retained request, whole saved case export or a smaller original page; this response exceeds its complete-response limit.');
         chunks.push(Buffer.from(chunk));
       }
     } catch (error) {
