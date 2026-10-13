@@ -18,8 +18,21 @@ from model import monitoring_field_assignment as assignment
 from model import portable
 
 
+def _external_path(value, workspace):
+    original = Path(value).expanduser()
+    if original.is_symlink():
+        raise ValueError("Choose an ordinary receiving path, not a symbolic link.")
+    path = original.resolve()
+    if path == workspace.root or path.is_relative_to(workspace.root) or path.is_relative_to(APP):
+        raise ValueError("Choose a receiving path outside the application and original Workspace.")
+    return path
+
+
 def receive(workspace, output, request, *, receive_directory=None, python=None):
-    output = Path(output).expanduser().absolute()
+    output = _external_path(output, workspace)
+    destination = _external_path(receive_directory, workspace) if receive_directory else None
+    if destination is not None and (destination == output or output.is_relative_to(destination)):
+        raise ValueError("Choose a separate new received-project directory outside the course output.")
     if output == workspace.root or output.is_relative_to(workspace.root) or output.is_relative_to(APP):
         raise ValueError("Choose a receiving output outside the application and original Workspace.")
     output.mkdir(parents=True, exist_ok=True)
@@ -27,7 +40,7 @@ def receive(workspace, output, request, *, receive_directory=None, python=None):
         selection_path = output / "selection.json"
         selected = dict(schema="upstate.monitoring-field-assignment-receiving/v1",
                         project_id=workspace.project["id"], request=request,
-                        receiving_directory=str(Path(receive_directory).absolute()) if receive_directory else None)
+                        receiving_directory=str(destination) if destination else None)
         atomic_json(selection_path, selected, immutable=True)
         receipt_path = output / "receiving.json"
         receipt = read_json(receipt_path) if receipt_path.exists() else {"selection": selected}
@@ -52,7 +65,6 @@ def receive(workspace, output, request, *, receive_directory=None, python=None):
             atomic_json(receipt_path, receipt)
         archive = verify_file(output, receipt["archive"])
         if receive_directory:
-            destination = Path(receive_directory).expanduser().absolute()
             receiving = (portable.resume_restore(archive, destination,
                          expected_archive_sha256=receipt["archive"]["sha256"])
                          if destination.exists() else portable.restore(archive, destination))
@@ -62,7 +74,7 @@ def receive(workspace, output, request, *, receive_directory=None, python=None):
             command = [python or sys.executable, "-B",
                        str(Path(receiving["application"]) / "source_tools" / "receive_monitoring_field_assignment.py"),
                        "--workspace", receiving["workspace"], "--inspect-assignment", result["id"]]
-            cold = subprocess.run(command, check=True, capture_output=True, text=True)
+            cold = subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
             inspected = json.loads(cold.stdout)
             if (inspected["id"] != result["id"] or inspected["plan"] != result["plan"]
                     or inspected["report"]["id"] != result["report"]["id"]
@@ -93,7 +105,7 @@ def main():
         return
     if not args.output:
         parser.error("--output is required for native receiving.")
-    saved = Path(args.output).expanduser().absolute() / "selection.json"
+    saved = _external_path(args.output, workspace) / "selection.json"
     if saved.exists():
         selected = read_json(saved)
         request = selected["request"]
