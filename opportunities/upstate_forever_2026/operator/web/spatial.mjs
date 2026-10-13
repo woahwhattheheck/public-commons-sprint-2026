@@ -305,8 +305,8 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   function mapPane(c,name,title,base,top=null){
     const frame=c.model.frame,size=frame.size;
     return '<div class="spatial-pane"><header><strong>'+esc(title)+'</strong><span>'+esc(base?.units||'')+'</span></header>'+
-      '<div class="spatial-map" data-spatial-map="'+name+'" data-tool="'+c.model.tool+'" tabindex="0" role="application" aria-label="'+esc(title)+' interactive spatial review. Arrow keys pan; plus and minus zoom; I inspects, P pans, M places markers, A selects an area." style="aspect-ratio:'+size.width+' / '+size.height+'">'+
-      imageHTML(base)+(top?'<div class="spatial-swipe-image" style="clip-path:inset(0 '+(100-c.model.swipe)+'% 0 0)">'+imageHTML(top)+'</div>':'')+
+      '<div class="spatial-map" data-spatial-map="'+name+'" data-tool="'+c.model.tool+'" tabindex="0" role="application" aria-label="'+esc(title)+' interactive spatial review. Arrow keys pan; plus and minus zoom; I inspects, P pans, M places markers, A selects an area.">'+
+      imageHTML(base)+(top?'<div class="spatial-swipe-image">'+imageHTML(top)+'</div>':'')+
       '<svg class="spatial-vector-canvas" viewBox="0 0 '+size.width+' '+size.height+'" aria-hidden="true"><g data-spatial-vector-paths></g><g data-spatial-region-paths></g><g data-spatial-marker-paths></g><g data-spatial-point-paths></g></svg>'+
       '<span class="spatial-map-axis" aria-hidden="true" title="Increasing coordinate-system Y">Y+</span></div></div>';
   }
@@ -339,6 +339,9 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     else html=mapPane(c,'primary',p?.title||layer(c,m.reference)?.title||'Original vector sources',p);
     const canvases=c.root.querySelector('[data-spatial-canvases]');
     canvases.classList.toggle('spatial-linked',m.mode==='compare'&&!!p&&!!a);canvases.innerHTML=html;
+    // Apply native display geometry through the trusted client under the existing CSP.
+    for(const map of canvases.querySelectorAll('[data-spatial-map]'))map.style.aspectRatio=frame.size.width+' / '+frame.size.height;
+    for(const image of canvases.querySelectorAll('.spatial-swipe-image'))image.style.clipPath='inset(0 '+(100-m.swipe)+'% 0 0)';
     if(focusName)(canvases.querySelector('[data-spatial-map="'+focusName+'"]')||canvases.querySelector('[data-spatial-map]'))?.focus({preventScroll:true});
     c.root.querySelector('[data-spatial-swipe-control]').hidden=!(m.mode==='swipe'&&p&&a);
     c.root.querySelector('[data-spatial-input="swipe"]').value=m.swipe;
