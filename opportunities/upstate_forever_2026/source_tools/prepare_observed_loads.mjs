@@ -40,7 +40,7 @@ export function prepare(argv){
  const json=v=>JSON.stringify(v,null,2)+"\n",files={
  "observed-loads.json":json(result),"index.html":loads.renderHtml(result),
  "daily-loads.csv":loads.csvString(daily,["series_key","station_id","characteristic","sample_fraction","method_id","gauge_id","date","concentration_basis","concentration_mg_l","concentration_lower_mg_l","concentration_upper_mg_l","discharge_m3_s","load_kg","load_lower_kg","load_upper_kg","censored","sample_ids","flow_ids","issues"]),
- "period-loads.csv":loads.csvString(periods,["series_key","station_id","characteristic","sample_fraction","method_id","gauge_id","catchment_id","label","period_start","period_end","period_end_exclusive","whole_calendar_year","expected_days","quantified_days","coverage_complete","load_kg","load_lower_kg","load_upper_kg","censored_days","sampled_days","interpolated_days","quantity_basis","uncertainty","missing_reasons"]),
+ "period-loads.csv":loads.csvString(periods,["series_key","station_id","characteristic","sample_fraction","method_id","gauge_id","catchment_id","label","period_start","period_end","period_end_exclusive","whole_calendar_year","expected_days","quantified_days","coverage_complete","load_kg","load_lower_kg","load_upper_kg","quantified_flow_volume_m3","flow_weighted_concentration_mg_l","flow_weighted_concentration_lower_mg_l","flow_weighted_concentration_upper_mg_l","flow_weighted_concentration_basis","censored_days","sampled_days","interpolated_days","quantity_basis","uncertainty","missing_reasons"]),
  "concentration-context.csv":exports.context_csv,"concentration-context.metadata.json":json(exports.context_metadata),
  "annual-loads.csv":exports.annual_csv,"annual-loads.metadata.json":json(exports.annual_metadata)
  };
