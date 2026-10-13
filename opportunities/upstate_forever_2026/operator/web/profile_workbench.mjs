@@ -78,6 +78,7 @@ export function createProfileWorkbench(host) {
   let root=null,events=null,workspace=null,catalog=null,opened=null,editor=null,draftKey=null,preview=null,comparison=null;
   let memory={drafts:{},requests:[],selected:null,open_draft:null},mode='empty',busy=false,disposed=true,epoch=0,lifecycle=0,taskSignature='';
   let profileSearch='',profileState='all',tableSearch='',tableGroup='all',message='',isError=false;
+  let managementReady=Promise.resolve(),managementOpening=0;
   let reviewDraft={status:'working',reviewer:'',reviewer_role:'',reference:'',notes:''};
   const $=s=>root?.querySelector(s),$$=s=>root?[...root.querySelectorAll(s)]:[];
   const current=()=>host.getState()?.workspace_key||null;
@@ -162,7 +163,7 @@ export function createProfileWorkbench(host) {
     const evidenceNode=document.createElement('div');evidenceNode.setAttribute('data-pw-biophysical-evidence','');$('[data-pw-main]').append(evidenceNode);
     biophysicalEvidence.mount(evidenceNode,{workspace_key:workspace,profile_id:id,title:profile.title});
     const managementNode=document.createElement('div');managementNode.setAttribute('data-pw-management-cases','');$('[data-pw-main]').append(managementNode);
-    managementCases.mount(managementNode,{workspace_key:workspace,profile_id:id,title:profile.title});
+    managementReady=managementCases.mount(managementNode,{workspace_key:workspace,profile_id:id,title:profile.title});
     const reviewNode=document.createElement('div');reviewNode.setAttribute('data-pw-customer-review','');$('[data-pw-main]').append(reviewNode);
     customerReview.mount(reviewNode,{workspace_key:workspace,profile_id:id,title:profile.title});
   }
@@ -230,6 +231,34 @@ export function createProfileWorkbench(host) {
     persist();const token=++epoch;setMessage('Opening the saved profile and original coefficients…');const result=await read('inspect',{profile_id:id});if(disposed||token!==epoch||(options.guard&&!options.guard()))return;
     if(options.retireDraft&&sameDraft(options.retireDraft,memory.drafts[options.retireDraft.draft_key]))delete memory.drafts[options.retireDraft.draft_key];
     opened=result;opened.profile_id||=id;editor=null;draftKey=null;preview=null;comparison=null;mode='detail';memory.selected=id;persist();paintLibrary();paintDetail();setMessage();
+  }
+  async function openSavedManagementDesign(value){
+    if(disposed||!root||value?.workspace_key!==workspace||workspace!==current()||
+       !/^[0-9a-f]{64}$/.test(value?.management_case_id||''))
+      throw Error('Open the saved management design in its original workspace.');
+    const origin=workspace,generation=lifecycle,turn=++managementOpening,before=canonical(editor);
+    const same=()=>activeScope(origin,generation)&&turn===managementOpening;
+    try{
+    persist();
+    const saved=await read('management/inspect',{case_id:value.management_case_id});
+    if(!same()||canonical(editor)!==before)return null;
+    const id=saved?.baseline_profile_id,table=saved?.selection?.expected_table_sha256;
+    if(saved?.schema!=='upstate.management-cases/v1'||saved.id!==value.management_case_id||
+       !/^[0-9a-f]{64}$/.test(id||'')||saved.selection?.baseline_profile_id!==id||
+       !/^[0-9a-f]{64}$/.test(table||'')||
+       (host.getState()?.project?.id&&saved.workspace_id!==host.getState().project.id)||
+       (value.profile_id&&value.profile_id!==id)||
+       (value.profile_set_id&&value.profile_set_id!==saved.profile_set_id)||
+       (value.table_sha256&&value.table_sha256!==table))
+      throw Error('The received management design does not match its original profile and source table.');
+    await openProfile(id,{guard:()=>same()&&canonical(editor)===before});
+    if(!same()||mode!=='detail'||profileId(opened)!==id)return null;
+    if(opened.table?.sha256!==table)throw Error('The opened profile has a different coefficient table.');
+    await managementReady;
+    if(!same()||mode!=='detail'||profileId(opened)!==id)return null;
+    return await managementCases.openSavedDesign({workspace_key:origin,management_case_id:saved.id,
+      profile_id:id,profile_set_id:saved.profile_set_id,table_sha256:table});
+    }catch(error){if(same())setMessage(error.message||String(error),true);throw error;}
   }
   function startDraft(record,key,baseId=null){
     persist();draftKey=key;
@@ -364,5 +393,5 @@ export function createProfileWorkbench(host) {
     const signature=canonical(tasks().map(task=>[task.id,task.state]));if(signature!==taskSignature){taskSignature=signature;paintTasks();const origin=workspace,generation=lifecycle;receiveCompleted().catch(error=>{if(activeScope(origin,generation))setMessage(error.message,true);});}
   }
   function detach(){customerReview.detach();biophysicalEvidence.detach();managementCases.detach();persist();disposed=true;epoch++;lifecycle++;busy=false;events?.abort();events=null;root?.classList.remove('profile-workbench');root=null;}
-  return {mount,update,detach,open:openProfile};
+  return {mount,update,detach,open:openProfile,openSavedManagementDesign};
 }
