@@ -63,6 +63,7 @@ def main(argv=None):
     child.add_argument('--project', required=True)
     child = commands.add_parser('export')
     child.add_argument('--project', required=True)
+    child.add_argument('--out', required=True)
     child = commands.add_parser('receive')
     child.add_argument('--archive', required=True)
     child.add_argument('--out', required=True)
