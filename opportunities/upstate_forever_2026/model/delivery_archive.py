@@ -145,8 +145,11 @@ def package_archive(directory, package_root, package, *, limits=None):
         expected[name] = {"bytes": source.stat().st_size, "sha256": file_digest(source)}
     sources = {name: relative_file(package_root, name) for name in expected}
     application = Path(__file__).resolve().parent.parent
-    for name in ("audit.py", "raster_checks.py", "package_delivery.py",
-                 "delivery_snapshot.py", "handoff_view.py", "README.md", "PACKAGING_LIMITS.md"):
+    tool_names = ("audit.py", "raster_checks.py", "package_delivery.py",
+                  "delivery_snapshot.py", "handoff_view.py", "README.md", "PACKAGING_LIMITS.md")
+    if package.get("schema") == "commons.native-study-package/v1":
+        tool_names += ("native_study_audit.py",)
+    for name in tool_names:
         member = "tools/" + name
         if member in expected:
             raise ValueError("Original package uses the verification-tool member name")
