@@ -218,7 +218,7 @@ export class EcoRelay {
   }
   allowed(method,path) {
     path=cleanPath(path); const pathname=path.split("?")[0];
-    if(DENIED.has(pathname)||pathname.startsWith("/_eco/")) return false;
+    if(DENIED.has(pathname)||pathname==="/_eco"||pathname.startsWith("/_eco/")) return false;
     if(method==="GET"&&(pathname==="/"||pathname==="/health"||pathname==="/favicon.ico"||
       /^\/web\/[A-Za-z0-9_./-]+$/.test(pathname)||validFilePathname(pathname))) return true;
     if(CORE_ROUTES.some(row=>row[0]===method&&row[1]===pathname)) return true;
@@ -406,9 +406,10 @@ export class EcoRelay {
       if(!Array.isArray(value.routes)||value.routes.length>10000)problem(400,"ROUTE_MANIFEST","Supply the actual installed route manifest.");
       const rows=value.routes.map(row=>{
         const method=String(row.method||"").toUpperCase(),path=cleanPath(row.path);
-        const staticPath=method==="GET"&&(path==="/"||path==="/health"||/^\/[A-Za-z0-9_./-]+\.(?:mjs|js|css|html|png|svg|ico|woff2?)$/.test(path));
-        if(!["GET","POST","PUT","PATCH","DELETE"].includes(method)||(!path.startsWith("/api/")&&!staticPath)||path.includes("?")||DENIED.has(path)||path.startsWith("/_eco/"))
-          problem(400,"ROUTE_MANIFEST","Register only exact installed application methods/routes and static GET assets.");
+        // Only exact rows registered by the authenticated native connector are admitted.
+        const pageRead=method==="GET";
+        if(!["GET","POST","PUT","PATCH","DELETE"].includes(method)||(!path.startsWith("/api/")&&!pageRead)||path.includes("?")||DENIED.has(path)||path==="/_eco"||path.startsWith("/_eco/"))
+          problem(400,"ROUTE_MANIFEST","Register only exact installed application methods/routes and GET pages/assets.");
         return [method,path];
       });
       this.ctx.storage.transactionSync(()=>{this.sql.exec("DELETE FROM relay_routes");for(const row of rows)this.sql.exec("INSERT OR IGNORE INTO relay_routes(method,path) VALUES(?,?)",...row);});
