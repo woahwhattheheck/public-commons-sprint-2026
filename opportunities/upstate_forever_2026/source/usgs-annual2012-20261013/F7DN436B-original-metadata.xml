@@ -1,0 +1,890 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Saad, D.A.</origin>
+        <origin>Argue, D.M.</origin>
+        <origin>Schwarz, G.E.</origin>
+        <origin>Anning, D.W.</origin>
+        <origin>Ator, S.W.</origin>
+        <origin>Hoos, A.B.</origin>
+        <origin>Preston, S.D.</origin>
+        <origin>Robertson, D.M.</origin>
+        <origin>Wise, D.R.</origin>
+        <pubdate>2019</pubdate>
+        <title>Water-quality and streamflow datasets used for estimating long-term mean streamflow and annual loads to be considered for use in the 2012 regional streamflow, nutrient and sediment SPARROW models, United States, 1999-2014</title>
+        <geoform>rdb and txt (csv)</geoform>
+        <pubinfo>
+          <pubplace>Online</pubplace>
+          <publish>U.S. Geological Survey data release</publish>
+        </pubinfo>
+        <onlink>https://dx.doi.org/10.5066/F7DN436B</onlink>
+        <lworkcit>
+          <citeinfo>
+            <origin>Saad, D.A.</origin>
+            <origin>Schwarz, G.E.</origin>
+            <origin>Argue, D.M.</origin>
+            <origin>Anning, D.W.</origin>
+            <origin>Ator, S.W.</origin>
+            <origin>Hoos, A.B.</origin>
+            <origin>Preston, S.D.</origin>
+            <origin>Robertson, D.M.</origin>
+            <origin>Wise, D.R.</origin>
+            <pubdate>2019</pubdate>
+            <title>Estimates of Long-Term Mean Streamflow and Nutrient and Suspended Sediment Loads Considered for Use in Regional SPARROW Models of the Conterminous United States, 2012 Base Year</title>
+            <geoform>SIR</geoform>
+            <serinfo>
+              <sername>Scientific Investigations Report</sername>
+              <issue>2019-5069</issue>
+            </serinfo>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://dx.doi.org/10.3133/sir20195069</onlink>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>The United States Geological Survey’s (USGS) SPAtially Referenced Regressions On Watershed attributes (SPARROW) model was developed to aid in the interpretation of monitoring data and simulate water-quality conditions in streams across large spatial scales.  SPARROW is a hybrid empirical/process-based mass balance model that can be used to estimate the major sources and environmental factors that affect the long-term supply, transport, and fate of contaminants in streams. The spatially explicit model structure is defined by a river reach network coupled with contributing catchments. The model is calibrated by statistically relating watershed sources and transport-related properties to monitoring-based streamflow and water-quality load estimates.  Streamflow and load estimates considered for use in regional SPARROW model applications (2012 base year) are described in Saad and others, 2019 (https://dx.doi.org/10.3133/sir20195069).  Load estimation methods described in this report include the Beale Ratio Estimator and Fluxmaster models. This USGS data release contains all of the input and output files necessary to reproduce the load estimates considered for inclusion in the 2012 regional SPARROW models.  Data preparation for input to the load estimation models is also fully described in the above-mentioned report.</abstract>
+      <purpose>This USGS data release contains all of the input and output files necessary to reproduce the results from the Fluxmaster and Beale load estimation models described in the associated U.S. Geological Survey Scientific Investigations Report (https://dx.doi.org/10.3133/sir20195069). Data preparation for input to the models is also fully described in the above-mentioned report.</purpose>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <rngdates>
+          <begdate>19991001</begdate>
+          <enddate>20140930</enddate>
+        </rngdates>
+      </timeinfo>
+      <current>ground condition</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-124.292</westbc>
+        <eastbc>-67.318056</eastbc>
+        <northbc>48.998814</northbc>
+        <southbc>25.85</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>None</themekt>
+        <themekey>SPARROW</themekey>
+        <themekey>loads</themekey>
+        <themekey>Fluxmaster model</themekey>
+        <themekey>Beale model</themekey>
+        <themekey>nutrients</themekey>
+        <themekey>total nitrogen</themekey>
+        <themekey>total phosphorus</themekey>
+        <themekey>suspended sediment</themekey>
+        <themekey>total suspended solids</themekey>
+        <themekey>streamflow</themekey>
+        <themekey>water quality</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Metadata Identifier</themekt>
+        <themekey>USGS:583f2f21e4b04fc80e3bd227</themekey>
+      </theme>
+      <place>
+        <placekt>None</placekt>
+        <placekey>United States</placekey>
+      </place>
+    </keywords>
+    <accconst>none</accconst>
+    <useconst>none</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntper>David Saad</cntper>
+          <cntorg>US Geological Survey</cntorg>
+        </cntperp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>8505 Research Way</address>
+          <city>Middleton</city>
+          <state>Wisconsin</state>
+          <postal>53562</postal>
+          <country>USA</country>
+        </cntaddr>
+        <cntvoice>608-821-3865</cntvoice>
+        <cntemail>dasaad@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <datacred>U.S. Geological Survey National Water Quality Program</datacred>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>Statistical analysis</attraccr>
+    </attracc>
+    <logic>Statistical analysis</logic>
+    <complete>Data set is considered complete for the information presented, as described in the abstract. Users are advised to read the rest of the metadata record carefully for additional details.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>Sites were located based on NHDPlus (version 2) if geographic coordinates were missing</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>No formal positional accuracy tests were conducted</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <procstep>
+        <procdesc>The process used to develop these datasets for use in Fluxmaster are fully described in USGS SIR 2019-5069 by Saad and others (2019).</procdesc>
+        <procdate>2018</procdate>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spdoinfo>
+    <direct>Point</direct>
+  </spdoinfo>
+  <spref>
+    <horizsys>
+      <geograph>
+        <latres>1.0E-5</latres>
+        <longres>1.0E-5</longres>
+        <geogunit>Decimal degrees</geogunit>
+      </geograph>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>sitegage.zip</enttypl>
+        <enttypd>Input files containing information for paired water-quality and streamflow sites for Fluxmaster load estimation for streamflow, total nitrogen, total phosphorus, total suspended solids, and suspended sediment. Five text files are included that contain the data for streamflow (q), data file = sitegage_q.txt; total nitrogen (TN), data file = sitegage_tn.txt;  total phosphorus (TP), data file = sitegage_tp.txt; total suspended solids (TSS), data file = sitegage_tss.txt; and suspended sediment (SSC), sitegage_ssc.txt. These text files are compressed into one zip file (sitegage.zip). Each file in sitegage.zip represents information about the water-quality or flow stations used in Fluxmaster to estimate loads for a given constiuent (q,TN, TP, TSS, or SSC).</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>station_id</attrlabl>
+        <attrdef>Water-quality station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS Stations and producer defined for stations that were not in NWIS</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>station_name</attrlabl>
+        <attrdef>Water-quality station name</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique name, name may describe place and include letters, numbers, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flow_station_id</attrlabl>
+        <attrdef>Flow station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS stations and producer defined for any stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>area</attrlabl>
+        <attrdef>Water-quality station drainage area, in square kilometers</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for any stations that were not in NWIS or that did not have drainage area in NWIS.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.21</rdommin>
+            <rdommax>2878424.01</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flow_station_area</attrlabl>
+        <attrdef>Flow station drainage area, in square kilometers</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for any stations not in NWIS or without drainage area in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.21</rdommin>
+            <rdommax>2269165.61</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lat</attrlabl>
+        <attrdef>Water-quality station latitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS Stations and producer defined for stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>25.85</rdommin>
+            <rdommax>48.998814</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lon</attrlabl>
+        <attrdef>Water-quality station longitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for any stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-124.292</rdommin>
+            <rdommax>-67.318056</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>huc8</attrlabl>
+        <attrdef>8-Digit Hydrologic Unit Code (HUC) of water-quality station location</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>National Watershed Boundary Dataset (WBD)</codesetn>
+            <codesets>https://www.nrcs.usda.gov/wps/portal/nrcs/main/national/water/watersheds/dataset/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>altsite_id</attrlabl>
+        <attrdef>Alternate station identifier for water-quality station. Fluxmaster program requires this attribute in order to run even if there are no values.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>altsite_area</attrlabl>
+        <attrdef>Drainage area in square kilometers for alternate water-qualiy station;  Fluxmaster program requires this attribute in order to run even if there are no values.</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>region</attrlabl>
+        <attrdef>SPARROW model region</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Midwest, Northeast, Southeast, Pacific, Southwest</edomv>
+            <edomvd>SPARROW regions: Midwest US, Northeast US, Southeast US, Pacific US, Southwest US</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>flow.zip</enttypl>
+        <enttypd>Input files containing daily discharge data input for Fluxmaster load estimation. Multiple rdb files are compressed in flow.zip. An rdb file is a tab-delimited file that can be opened in a text editor. Each file represents an individual flow station.  These files have various header lengths and 3 to 5 columns of data. The only columns required for Fluxmaster are: datetime, nn_00060_00003 and nn_00060_00003_cd. The value for nn (data descriptor) is a number from USGS NWIS that varies from site to site and is meaningless in the Fluxmaster load estimation program. For sites that were not in USGS NWIS, a value of 99 was used to represent nn.  Individual flow files represent various periods of record, though only the period from Oct 1, 1999 through Sept 30, 2014 are used in Fluxmaster load estimation.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>agency_cd</attrlabl>
+        <attrdef>Agency that collected the daily flow data</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>The field contains a code, such as, USGS or some other acronym or code,  that is used to identify the agency who collected the data.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>site_no</attrlabl>
+        <attrdef>Flow station identifier</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>datetime</attrlabl>
+        <attrdef>Date of daily flow value</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>nn_00060_00003</attrlabl>
+        <attrdef>Daily flow value, in cubic feet per second; The value used in the column heading to represent "nn" may vary from file to file and is not important in the Fluxmaster load estimation program.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Values vary by dataset</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>nn_00060_00003_cd</attrlabl>
+        <attrdef>Daily flow value remark code; The value used in the column heading to represent "nn" may vary from file to file and is not important in the Fluxmaster load estimation program.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>USGS NWIS</codesetn>
+            <codesets>https://nwis.waterdata.usgs.gov/usa/nwis/pmcodes/help?codes_help</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>waterquality.zip</enttypl>
+        <enttypd>Input files containing discrete water-quality concentration data for Fluxmaster load estimation for total nitrogen (TN), data file = wq_tn.txt; total phosphorus (TP), data file = wq_tp.txt;  total suspended solids (TSS), data file = wq_tss.txt;  and suspended sediment (SSC), data file = wq_ssc.txt.  These text files are compressed into one zip file (waterquality.zip). Each file in waterquality.zip represents information about the water-quality stations and constiuent concentrations used in Fluxmaster to estimate loads for a given constiuent (TN, TP, TSS, and SSC). Concentration data represents the period from Oct 1, 1999 through Sept 30, 2014.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>station_id</attrlabl>
+        <attrdef>Water-quality station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS Stations and producer defined for stations that were not in NWIS</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>date</attrlabl>
+        <attrdef>Date of water-quality sample, mm/dd/yyyy</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>time</attrlabl>
+        <attrdef>Time of water-quality sample</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0010</rdommin>
+            <rdommax>2400</rdommax>
+            <attrunit>military time</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>pXXXXX</attrlabl>
+        <attrdef>Constituent concentration value, mg/L (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>USGS NWIS</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>USGS NWIS parameter codes</codesetn>
+            <codesets>https://help.waterdata.usgs.gov/codes-and-parameters/parameters</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rXXXXX</attrlabl>
+        <attrdef>Constituent remark code (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>USGS NWIS</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>USGS NWIS</codesetn>
+            <codesets>https://help.waterdata.usgs.gov/codes-and-parameters</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>dXXXXX</attrlabl>
+        <attrdef>Constituent laboratory detection level (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC). Fluxmaster program requires this attribute in order to run even if there are no values.</attrdef>
+        <attrdefs>USGS NWIS</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>USGS NWIS</codesetn>
+            <codesets>https://help.waterdata.usgs.gov/code/report_level_query?fmt=html</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>region</attrlabl>
+        <attrdef>SPARROW model region</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Midwest, Northeast, Southeast, Pacific, Southwest</edomv>
+            <edomvd>SPARROW modeling regions: Midwest US, Northeast US, Southeast US, Pacific US, Southwest US</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>load_est.zip</enttypl>
+        <enttypd>Output files containing estimated long-term average loads and associated information for total nitrogen (TN), output data file = load_est_tn.txt; total phosphorus (TP), output data file = load_est_tp.txt; total suspended solids (TSS), output data file = load_est_tss.txt; and suspended sediment (SSC), output data file = load_est_ssc.txt. These csv files are compressed into one zip file (load_est.zip). Each file contains output for all stations for a given consituent (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC).</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>region</attrlabl>
+        <attrdef>SPARROW model region</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Midwest, Northeast, Southeast, Pacific, Southwest</edomv>
+            <edomvd>Sparrow Model Regions: Midwest US, Northeast US, Southeast US, Pacific US, Southwest US</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>station_id</attrlabl>
+        <attrdef>Water-quality station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS Stations and producer defined for stations that were not in NWIS</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>station_name</attrlabl>
+        <attrdef>Water-quality station name</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS NWIS stations and producer defined for any  stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique name, name may describe place and include letters, numbers, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lat</attrlabl>
+        <attrdef>Water-quality station latitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS Stations and producer defined for stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>25.85</rdommin>
+            <rdommax>48.998814</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lon</attrlabl>
+        <attrdef>Water-quality station longitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS Stations and producer defined for stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-124.292</rdommin>
+            <rdommax>-67.318056</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>area</attrlabl>
+        <attrdef>Water-quality station drainage area in square kilometers</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS stations and producer defined for any stations not in NWIS.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.21</rdommin>
+            <rdommax>2878424.01</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>comid</attrlabl>
+        <attrdef>NHDPlus Version 2 unique stream reach identifier</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>12650</rdommin>
+            <rdommax>948021144</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_XXXXX_final_method</attrlabl>
+        <attrdef>Load estimation method used for this water-quality station (beale=Beale Ratio Estimator; flux5pkd=Fluxmaster 5-parameter regression with Kalman smoothing and detrending; XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>beale</edomv>
+            <edomvd>Beale Ratio Estimator</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>flux5pkd</edomv>
+            <edomvd>Fluxmaster</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flow_station_id</attrlabl>
+        <attrdef>Flow station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS stations and producer defined for any stations not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flow_station_area</attrlabl>
+        <attrdef>Flow station drainage area in square kilometers</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS stations and producer defined for any  stations not in NWIS.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.21</rdommin>
+            <rdommax>2269165.61</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>dflow_start_date_predpd</attrlabl>
+        <attrdef>Starting date for flow data for the included flow period of record</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>dflow_end_date_predpd</attrlabl>
+        <attrdef>Ending date for flow data for the included flow period of record</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>wq_start_date_XXXXX</attrlabl>
+        <attrdef>Starting date for water-quality station data for the included water quality period of record (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>wq_end_date_XXXXX</attrlabl>
+        <attrdef>Ending date for water-quality station data for the included water quality period of record (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>n_wq_obs_XXXXX</attrlabl>
+        <attrdef>Number of water-quality observations for the included water quality period of record (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>25</rdommin>
+            <rdommax>4555</rdommax>
+            <attrunit>count</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>n_wq_censored_XXXXX</attrlabl>
+        <attrdef>Number of censored water-quality observations for the included water quality period of record (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>361</rdommax>
+            <attrunit>count</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rload_a_XXXXX</attrlabl>
+        <attrdef>Beale Ratio Estimator, long-term average load, kg/yr (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>9.8705</rdommin>
+            <rdommax>133937182572</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>serload_a_XXXXX</attrlabl>
+        <attrdef>Beale Ratio Estimator, standard error of the long-term average load, kg/yr (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>2.2511</rdommin>
+            <rdommax>5366842073</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>nstrata_a_XXXXX</attrlabl>
+        <attrdef>Beale Ratio Estimator, number of strata used in load estimation (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1</rdommin>
+            <rdommax>8</rdommax>
+            <attrunit>Count</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>LOAD_A_XXXXX</attrlabl>
+        <attrdef>Fluxmaster, detrended, long-term average load, kg/yr (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>79.9975</rdommin>
+            <rdommax>36886730811</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SLOAD_A_XXXXX</attrlabl>
+        <attrdef>Fluxmaster, standard error of the detrended, long-term average load, kg/yr (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>9.483</rdommin>
+            <rdommax>3245334667.7</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rat_bre_f5kd_XXXXX</attrlabl>
+        <attrdef>Ratio of Beale, long-term average load / Fluxmaster, detrended, long-term average load = rload_a_XXXXX/LOAD_A_XXXXX (XXXXX=00600 for TN; 00665 for TP; 00530 for TSS; 80154 for SSC)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.2004</rdommin>
+            <rdommax>2.2425</rdommax>
+            <attrunit>Unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>b_int</attrlabl>
+        <attrdef>Fluxmaster water-quality model coefficient estimate for the intercept</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-20.3677</rdommin>
+            <rdommax>6.9477</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>b_ldflow</attrlabl>
+        <attrdef>Fluxmaster water-quality model coefficient estimate for log of mean daily flow</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-0.8327</rdommin>
+            <rdommax>1.8719</rdommax>
+            <attrunit>cfs​</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>b_sin</attrlabl>
+        <attrdef>Fluxmaster water-quality model coefficient estimate for seasonal sine function</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-1.5743</rdommin>
+            <rdommax>1.1744</rdommax>
+            <attrunit>sin(2pi*decimal time​)</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>b_cos</attrlabl>
+        <attrdef>Fluxmaster water-quality model coefficient estimate for seasonal cosine function</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-1.3619</rdommin>
+            <rdommax>0.7989</rdommax>
+            <attrunit>cos(2pi*decimal time​)​​</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>b_trend</attrlabl>
+        <attrdef>Fluxmaster water-quality model coefficient estimate for the time term that represents trend in concentration</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-0.3356</rdommin>
+            <rdommax>0.2498</rdommax>
+            <attrunit>decimal time</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>p_nonFAT_Load</attrlabl>
+        <attrdef>P-value associated with trend in load</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>merged_stations</attrlabl>
+        <attrdef>List of stations whose water-quality record were combined to create the load estimation dataset for this site</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>unique values to represent merged stations; includes a combination of numbers, letters, and characters</udom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>flow_est.zip</enttypl>
+        <enttypd>Output file containing estimated long-term daily streamflows and associated information (one zipped csv file)</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>region</attrlabl>
+        <attrdef>SPARROW model region</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Midwest, Northeast, Southeast, Pacific, Southwest</edomv>
+            <edomvd>Sparrow Model Regions: Midwest US, Northeast US, Southeast US, Pacific US, Southwest US</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>station_id</attrlabl>
+        <attrdef>Flow station identifier</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS stations and producer defined for any USGS and non-USGS stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>station_name</attrlabl>
+        <attrdef>Flow station name</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for any stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <udom>unique value, may include numbers, letters, and/or characters</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lat</attrlabl>
+        <attrdef>Flow station latitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS Stations and producer defined for stations that were not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>25.8767</rdommin>
+            <rdommax>48.9988</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lon</attrlabl>
+        <attrdef>Flow station longitude in decimal degrees</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for USGS NWIS stations and producer defined for any stations not in NWIS</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-124.3929</rdommin>
+            <rdommax>-67.3180</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>area</attrlabl>
+        <attrdef>Flow station drainage area, km2</attrdef>
+        <attrdefs>USGS National Water Information System (NWIS) for some USGS NWIS stations and producer defined for stations that were not in NWIS.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.0216</rdommin>
+            <rdommax>2269165.60</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>comid</attrlabl>
+        <attrdef>NHDPlus Version 2 unique stream reach identifier</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>12932</rdommin>
+            <rdommax>948100389</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>mean_dflow_predpd</attrlabl>
+        <attrdef>Average daily flow over the included flow period of record, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.1</rdommin>
+            <rdommax>504223.2519</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>dflow_start_date_predpd</attrlabl>
+        <attrdef>Starting date for flow data for the included flow period of record</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>dflow_end_date_predpd</attrlabl>
+        <attrdef>Ending date for flow data for the included flow period of record</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <udom>Day</udom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey - ScienceBase</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+          <country>USA</country>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <distliab>This database, identified as Water-quality and streamflow datasets used in the Fluxmaster and Beale models for estimating loads to be used in the 2012 regional nutrient, suspended sediment and streamflow SPARROW models, 1999-2014, has been approved for release by the U.S. Geological Survey (USGS). Although the data have been subjected to rigorous review and are substantially complete, the USGS reserves the right to revise the data pursuant to further analysis and review. Furthermore, the data are released on the condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from authorized or unauthorized use. Although the data, software, and related material have been processed successfully on a computer system at the USGS, no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty. The USGS or the U.S. Government shall not be held liable for improper or incorrect use of the data described and/or contained herein. Any use of trade, product, or firm names is for descriptive purposes only and does not imply endorsement by the U.S. Government.</distliab>
+  </distinfo>
+  <metainfo>
+    <metd>20200826</metd>
+    <metc>
+      <cntinfo>
+        <cntperp>
+          <cntper>Jana S. Stewart</cntper>
+          <cntorg>US Geological Survey</cntorg>
+        </cntperp>
+        <cntpos>Geographer</cntpos>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>8505 Research Way</address>
+          <city>Middleton</city>
+          <state>Wisconsin</state>
+          <postal>53562</postal>
+          <country>USA</country>
+        </cntaddr>
+        <cntvoice>608-821-3855</cntvoice>
+        <cntemail>jsstewar@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>

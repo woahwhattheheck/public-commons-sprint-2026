@@ -157,3 +157,27 @@
 .receptor-workbench .rc-unit.rc-quiet { opacity: .25; }
 .receptor-workbench .rc-unit.rc-chosen,
 .receptor-workbench .rc-unit:focus-visible { opacity: 1; stroke: #000; stroke-width: 2.2; outline: none; }
+
+.receptor-workbench .rc-editor { border: 1px solid var(--rc-line); padding: 1rem; margin: 1rem 0; background: #fafafa; }
+.receptor-workbench .rc-editor > label { display: grid; gap: .3rem; margin: .85rem 0; font-size: .86rem; }
+.receptor-workbench .rc-editor textarea { box-sizing: border-box; width: 100%; min-height: 6rem; padding: .65rem .7rem; border: 1px solid #aaa; border-radius: 2px; background: #fff; color: #171717; font: inherit; resize: vertical; }
+.receptor-workbench .rc-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.receptor-workbench .rc-anchor-entry { display: flex; gap: .6rem; align-items: end; margin: 1rem 0; }
+.receptor-workbench .rc-anchor-entry label { display: grid; flex: 1; min-width: 0; gap: .3rem; font-size: .86rem; }
+.receptor-workbench .rc-anchor-entry button { flex-shrink: 0; }
+.receptor-workbench .rc-anchor-list { list-style: none; padding: 0; margin: .8rem 0; display: grid; gap: .45rem; }
+.receptor-workbench .rc-anchor-list li { display: flex; gap: .65rem; justify-content: space-between; align-items: center; padding: .55rem .7rem; background: #fff; border: 1px solid var(--rc-line); }
+.receptor-workbench .rc-anchor-list span { overflow-wrap: anywhere; }
+.receptor-workbench .rc-anchor-list strong { font-variant-numeric: tabular-nums; }
+.receptor-workbench .rc-unit.rc-edit-anchor { opacity: 1; stroke: #111; stroke-width: 2.6; stroke-dasharray: 6 2; }
+.receptor-workbench button[data-receptor-action="author-save"] { background: #292929; color: #fff; border-color: #292929; }
+.receptor-workbench button[data-receptor-action="author-save"]:hover { background: #080808; }
+.receptor-workbench textarea:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .receptor-workbench .rc-anchor-entry { flex-wrap: wrap; }
+  .receptor-workbench .rc-anchor-entry label { flex-basis: 100%; }
+  .receptor-workbench .rc-editor { padding: .75rem; }
+}
+@media print {
+  .receptor-workbench [data-rc-authoring] { display: none; }
+}
