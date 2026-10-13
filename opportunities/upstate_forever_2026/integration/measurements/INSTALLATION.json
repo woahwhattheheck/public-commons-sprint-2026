@@ -224,6 +224,12 @@
       "original_claim": "1791922913.353769",
       "guide": "measurement_workspace/FLOW_EXPORTS.md",
       "preserves": "Exact original Flow study, saved load and both comparison member paths/order/bytes/manifests and scientific IDs; historical stored ZIP and unrelated collection callers unchanged."
+    },
+    "collection_working_custody": {
+      "source_base": "8489255dad91a05ac2bd69f3ce650b6c5ed28195",
+      "original_claim": "1791920117.443899",
+      "behavior": "Preserve complete detached browser working states and original persistence leases under their original workspace/account; retain exact pending requests and unload warnings for unfinished inactive copies.",
+      "composed_main": "573e503919e673739e02b3e7a983994c26d63fd0"
     }
   },
   "files": [
@@ -249,8 +255,8 @@
     },
     {
       "path": "MEASUREMENT_COLLECTION_WORKING.md",
-      "bytes": 16329,
-      "sha256": "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d"
+      "bytes": 17713,
+      "sha256": "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
@@ -259,8 +265,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 11533,
-      "sha256": "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed"
+      "bytes": 11534,
+      "sha256": "ef5d5af29998f156c50efa94aa4cc7965e765ed54835e4decf15fb60162ff20a"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
@@ -969,18 +975,18 @@
     },
     {
       "path": "measurement_workspace/web/collection_working.mjs",
-      "bytes": 9213,
-      "sha256": "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
+      "bytes": 10343,
+      "sha256": "e1e04cc67cf29f6a0567015c18cec58e0cdf82a1fd9b4bdb69e6d11eac877ad8"
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 32497,
-      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
+      "bytes": 33724,
+      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 11569,
-      "sha256": "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306"
+      "bytes": 12138,
+      "sha256": "e3d4b8ae2741300c6780b522ffc8bd6bb57912543c8662b519b5e51f79c7302c"
     },
     {
       "path": "measurement_workspace/web/flow_editions.css",
@@ -1479,8 +1485,8 @@
     },
     {
       "path": "operator/web/collection_working.mjs",
-      "bytes": 9213,
-      "sha256": "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
+      "bytes": 10343,
+      "sha256": "e1e04cc67cf29f6a0567015c18cec58e0cdf82a1fd9b4bdb69e6d11eac877ad8"
     },
     {
       "path": "operator/web/flow_editions.css",
@@ -1514,8 +1520,8 @@
     },
     {
       "path": "operator/web/measured_collections.mjs",
-      "bytes": 32497,
-      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
+      "bytes": 33724,
+      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
     },
     {
       "path": "operator/web/measured_intake.mjs",
@@ -1544,8 +1550,8 @@
     },
     {
       "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 12140,
-      "sha256": "2437ec857d3e2b0b99b746445b7b7892ba3c7d41e7c4c63e26960c9f0e7b8069"
+      "bytes": 12709,
+      "sha256": "ba0d96e2fde9a9bb62af149ff4191cf5dc474019709ea9523bf36b4964514c9d"
     },
     {
       "path": "operator/web/measured_results.mjs",
@@ -1919,7 +1925,8 @@
       "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e",
       "53ca268bcaf42c86e7a3e5f3ac3bcae35c9b6b6a2a05fe31186fc6eb85621b3f",
       "d98bc3f5194407beb5c14fc7bb3d7ab80fa02facfa61116accd23635f174d685",
-      "28da657655db9de08416d68362212651d3eb203e11ddcaa46456eb199df7a87f"
+      "28da657655db9de08416d68362212651d3eb203e11ddcaa46456eb199df7a87f",
+      "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306"
     ],
     "operator/extensions/measured-observations.json": [
       "4995708ba0285439ab85d0a0d5af614d1b1aca9d6240f22246a53e54b400315e",
@@ -1947,7 +1954,8 @@
       "908a1b01cf4a1c65b6d448d9deefdaa20dc8dacd7c4fcc80ae307c6e87cc235d",
       "318000da39f13c99c61742298fd658b78dc08b2cc8aaedb44cd541f976d5dc7d",
       "152f481368cf76e9e5a5ddbceaa9c7fcec6c92d0eca59c8dd53256bce8f112ca",
-      "372c9f6932470763d26798ed34f02ead6c4ea1c420f26fadc4a890674f0e750b"
+      "372c9f6932470763d26798ed34f02ead6c4ea1c420f26fadc4a890674f0e750b",
+      "2437ec857d3e2b0b99b746445b7b7892ba3c7d41e7c4c63e26960c9f0e7b8069"
     ],
     "MEASURED_CHEMISTRY.md": [
       "a9d47546de0a79b85d9c86621bd55d4325d9c257b953ad48774fa7a3e264db15",
@@ -2089,7 +2097,8 @@
     ],
     "measurement_workspace/web/collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
-      "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5"
+      "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
+      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
     ],
     "measurement_workspace/engine/providers.mjs": [
       "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e"
@@ -2139,7 +2148,8 @@
     ],
     "operator/web/measured_collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
-      "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5"
+      "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
+      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
     ],
     "source/MEASURED_CHEMISTRY_RECEIVING.md": [
       "6ce4c211a91336c094a123b295731ccd1a177ed293235af7a071592f05c26ad3"
@@ -2165,7 +2175,8 @@
       "d4eeb7501e8017ca3abc2eea8b513743ce37292284886f0dd7cffaec78c8955f",
       "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11",
       "4c0587db9127ece1e122cb45837e112989435b36eb4301f044da11fe642bc3cd",
-      "7fa7df0f7d26c0df40cacba16fba18894ae4c879a2b1e5158c2dc952f96bf6ba"
+      "7fa7df0f7d26c0df40cacba16fba18894ae4c879a2b1e5158c2dc952f96bf6ba",
+      "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed"
     ],
     "install_measurement_large_files.py": [
       "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
@@ -2415,6 +2426,15 @@
     ],
     "measurement_workspace/engine/flow_bundles.mjs": [
       "7064b72e812a8e09b0f7043665e918c9403d47ac91feb6d3ac7dd5be1d91ffb6"
+    ],
+    "MEASUREMENT_COLLECTION_WORKING.md": [
+      "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d"
+    ],
+    "measurement_workspace/web/collection_working.mjs": [
+      "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
+    ],
+    "operator/web/collection_working.mjs": [
+      "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
     ]
   },
   "requires": [
