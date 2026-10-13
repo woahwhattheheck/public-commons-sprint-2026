@@ -1,29 +1,33 @@
 {
   "schema": "upstate.keowee-watershed-source/v1",
   "operation_id": "ECO13-6A4E-KEOWEE-WATERSHED-JOIN",
-  "revision": "1.1.0",
-  "source_commit": "334c35b62d2555cc61a90863a0cf238b800f22a9",
+  "revision": "1.2.0",
+  "source_commit": "f71d21b0eb204e5ef5306d069418ec0277eca670",
   "files": [
     {
       "path": "model/keowee_profile_adapter.py",
-      "bytes": 23045,
-      "sha256": "e36148ceb0f042cc0fd86c1525034066e9376df0b12acf06e23e57e58186b971",
+      "bytes": 26065,
+      "sha256": "ff8fff2304fdea510eaf89e4e297a66f57e4a2f2a925f69c9981df5e9bfc574c",
       "previous_sha256": [
-        "8eb6d3ddb1edcd53f8bfe47ffda4db77d6f6f48187eb4d69d44a5c58f7cd2d69"
+        "8eb6d3ddb1edcd53f8bfe47ffda4db77d6f6f48187eb4d69d44a5c58f7cd2d69",
+        "e36148ceb0f042cc0fd86c1525034066e9376df0b12acf06e23e57e58186b971"
       ]
     },
     {
       "path": "model/keowee_priority.py",
-      "bytes": 38241,
-      "sha256": "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431",
-      "previous_sha256": []
+      "bytes": 47154,
+      "sha256": "52a9c817d4871e44f18e9f9a9b909376fa83efbf49816f6393b16ffdec5ca22e",
+      "previous_sha256": [
+        "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431"
+      ]
     },
     {
       "path": "source/keowee-native-binding-20261013.json",
-      "bytes": 41005,
-      "sha256": "b5e50ed043db62ad166a2f8754e502fed212225b0a54ab9ee498505ba567b465",
+      "bytes": 41641,
+      "sha256": "112adf2bacb28691ee5b82a8c9753e82a98dfcfb3d6dbc9d9726e11772986590",
       "previous_sha256": [
-        "91a9e738d5c5a2ad35d60d7e69500cc91f37b4ddf160977c5818dd6b6e4c16c1"
+        "91a9e738d5c5a2ad35d60d7e69500cc91f37b4ddf160977c5818dd6b6e4c16c1",
+        "b5e50ed043db62ad166a2f8754e502fed212225b0a54ab9ee498505ba567b465"
       ]
     },
     {
@@ -92,33 +96,39 @@
     },
     {
       "path": "source_tools/install_keowee_watershed_join.py",
-      "bytes": 23158,
-      "sha256": "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512",
+      "bytes": 25763,
+      "sha256": "4267bb1394612a5cdab5873614a4fdc01a297141f0bb4af0e6587341bd7ffc37",
       "previous_sha256": [
         "b34ef7ac82b9006b6346bfce568d8806bf76cc39a47957112b817fda62a379df",
-        "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf"
+        "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf",
+        "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512"
       ]
     },
     {
       "path": "source_tools/INSTALL_KEOWEE_WATERSHED_JOIN.md",
-      "bytes": 10731,
-      "sha256": "336491782319b285be89f48636c6890fc18dd5150ce28eb30bd460962c63ed11",
+      "bytes": 13363,
+      "sha256": "f4383efb5156700f214a7b74284a6bdfbfef7deaeedb3ad2fa03bb92ef18f304",
       "previous_sha256": [
         "0e8d1e97892fd82f22c3dc67b4cd1045ff8a2baf13c96d8459b60f8470a95595",
-        "be0aa7fcdde36e267dbaee64442bad3579f1824a1afcfa1555c16c5a5eea11e7"
+        "be0aa7fcdde36e267dbaee64442bad3579f1824a1afcfa1555c16c5a5eea11e7",
+        "336491782319b285be89f48636c6890fc18dd5150ce28eb30bd460962c63ed11"
       ]
     },
     {
       "path": "operator/web/keowee-method-view.mjs",
-      "bytes": 16473,
-      "sha256": "bf94b4bd3da9924f43724005ec54461c8a747df83e9acc8aeb9eb064955f6886",
-      "previous_sha256": []
+      "bytes": 19598,
+      "sha256": "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698",
+      "previous_sha256": [
+        "bf94b4bd3da9924f43724005ec54461c8a747df83e9acc8aeb9eb064955f6886"
+      ]
     },
     {
       "path": "operator/web/conservation.mjs",
-      "bytes": 122162,
-      "sha256": "58fd78e525f32e364ea5047186d7388d6d34a9ca464c2563f7cfee72b4fea532",
-      "previous_sha256": []
+      "bytes": 168281,
+      "sha256": "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
+      "previous_sha256": [
+        "58fd78e525f32e364ea5047186d7388d6d34a9ca464c2563f7cfee72b4fea532"
+      ]
     },
     {
       "path": "operator/KEOWEE_METHOD_VIEW.md",
@@ -216,6 +226,36 @@
       "bytes": 2654,
       "sha256": "fa5818dc7cce66b44a2e508de31d115a3699d0c29f03d25b6fbcbd2f1f951330",
       "previous_sha256": []
+    },
+    {
+      "path": "source_tools/keowee_interval_receiving.mjs",
+      "bytes": 5386,
+      "sha256": "bc9b11e40a2eabc5aa2c6f3ef4096304f496791981a498138745bef1c38e345d"
+    },
+    {
+      "path": "source/keowee-native-receiving-20261013/source-interval-journey.json",
+      "bytes": 60852,
+      "sha256": "864d7d51bf0893d1c26d159ca55417432422bc8ddffd897dc2df87003e080bb4"
+    },
+    {
+      "path": "source_tools/gura_setup_review.py",
+      "bytes": 18912,
+      "sha256": "b9f084118665ca7c82b42994d7cd7d602e14ad839b935d85f91564bad0a9d3b9"
+    },
+    {
+      "path": "source/gura-scientific-setup-request.json",
+      "bytes": 3451,
+      "sha256": "d4deb8fba5a650fe7f23730f52650b4fcd79654f63f22e6b108cff2613984387"
+    },
+    {
+      "path": "source_tools/GURA_SETUP_REVIEW.md",
+      "bytes": 9160,
+      "sha256": "689714e9d474ca50c3e34d7fce7353f6470f0d4ef971e236b280cecab867310f"
+    },
+    {
+      "path": "source/gura-setup-integration-20261013.json",
+      "bytes": 3912,
+      "sha256": "f43e35f65b4f103d36639a3fbee1147851643808caf7565799fe5d4ea22b967f"
     }
   ],
   "required_profile": {
@@ -224,8 +264,11 @@
     "files": [
       {
         "path": "source/keowee/20261013/KEOWEE-INTEGRATION.md",
-        "bytes": 13162,
-        "sha256": "6e463f137ecc9b177ebc21766121ca27b951c77800571495c1f1ae8ff9952070"
+        "bytes": 16694,
+        "sha256": "cec9ac09ae85c9798fa030749a0bae33eed77eb7d6c5a4fdd06a20b0a5c68e17",
+        "previous_sha256": [
+          "6e463f137ecc9b177ebc21766121ca27b951c77800571495c1f1ae8ff9952070"
+        ]
       },
       {
         "path": "source/keowee/20261013/keowee-criteria.csv",
@@ -234,13 +277,19 @@
       },
       {
         "path": "source/keowee/20261013/keowee-evaluator.d.mts",
-        "bytes": 17162,
-        "sha256": "f721913b3290c67eab80c2c70c3ec0f881ad938a5563755bfca3e956c24db663"
+        "bytes": 18444,
+        "sha256": "7b6a3ffbedeb42f05b2caa14dd841b084910e0d9e037123fe4fdbe78289458dd",
+        "previous_sha256": [
+          "f721913b3290c67eab80c2c70c3ec0f881ad938a5563755bfca3e956c24db663"
+        ]
       },
       {
         "path": "source/keowee/20261013/keowee-evaluator.mjs",
-        "bytes": 20040,
-        "sha256": "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65"
+        "bytes": 24920,
+        "sha256": "8267a1b4d90e15d05f089191be25894bac179f53b0568514a1e071f23128c5e1",
+        "previous_sha256": [
+          "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65"
+        ]
       },
       {
         "path": "source/keowee/20261013/keowee-fields.csv",
@@ -259,22 +308,28 @@
       },
       {
         "path": "source/keowee/20261013/keowee-sources-manifest.json",
-        "bytes": 3863,
-        "sha256": "3f56af96c013ea1328c79d01b2601f86f51fa77dfbd9ec1b061cca8a4fb99849"
+        "bytes": 4373,
+        "sha256": "95fb2cac89705dccdb7bf1ed8a48a48b2ed032616a0c73348547149e9abeef6a",
+        "previous_sha256": [
+          "3f56af96c013ea1328c79d01b2601f86f51fa77dfbd9ec1b061cca8a4fb99849"
+        ]
       },
       {
         "path": "source/keowee/20261013/lake-keowee-methodology.json",
         "bytes": 78447,
         "sha256": "388f9f7ae3246dd156fad446c616bbf8d3440a09b2edd524c45cef1d6c299da0"
       }
-    ]
+    ],
+    "implementation_revision": "1.1.0",
+    "implementation_edition": "closed-source-intervals-20261013",
+    "implementation_commit": "63a6069c817b34c5da3bc4e2be0a4563a8d3dff6"
   },
   "joins": [
     {
       "path": "model/keowee_priority.py",
       "base_bytes": 34855,
       "base_sha256": "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd",
-      "result_sha256": "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431",
+      "result_sha256": "52a9c817d4871e44f18e9f9a9b909376fa83efbf49816f6393b16ffdec5ca22e",
       "edits": [
         {
           "id": "profile-import",
@@ -380,6 +435,61 @@
           "id": "summary-profile",
           "before": "        \"source_interpretations\": document[\"source_interpretations\"],\n        \"criterion_table\": table_info",
           "after": "        \"source_interpretations\": document[\"source_interpretations\"],\n        \"source_profile\": document[\"source_profile\"],\n        \"native_pixel_area_m2\": cell_area_ha * 10000 if cell_area_ha is not None else None,\n        \"criterion_table\": table_info"
+        },
+        {
+          "id": "source-interval-owner-1",
+          "before": "\nMETHOD_FILE = Path(__file__).resolve().parents[1] / \"source\" / \"keowee-priority-methods-20261013.json\"\nMETHOD_SCHEMA = \"upstate.keowee-priority-methods/v1\"\nTABLE_SCHEMA = \"upstate.parcel-criteria/v1\"\nVERSION = 1\nACRES_PER_HECTARE = 10000.0 / 4046.8564224\nCANDIDATE_FIELDS = {\n    \"area_ha\", \"reporting_area_ha\", \"protected_fraction\", \"protected_area_ha\",\n    \"source_water_fraction\", \"source_water_area_ha\", \"high_quality_context\",\n    \"high_quality_overlap_area_ha\", \"high_quality_contact_length_m\",\n}\nEXPORT_UNITS = {\n    \"nitrogen_export\": (\"kg/ha/year\", \"kg/cell/year\"),\n    \"phosphorus_export\": (\"kg/ha/year\", \"kg/cell/year\"),\n    \"sediment_export\": (\"metric_tonnes/ha/year\", \"metric_tonnes/cell/year\"),\n",
+          "after": "\nMETHOD_FILE = Path(__file__).resolve().parents[1] / \"source\" / \"keowee-priority-methods-20261013.json\"\nMETHOD_SCHEMA = \"upstate.keowee-priority-methods/v1\"\nTABLE_SCHEMA = \"upstate.parcel-criteria/v1\"\nVERSION = 2\nACRES_PER_HECTARE = 10000.0 / 4046.8564224\nCANDIDATE_FIELDS = {\n    \"area_ha\", \"reporting_area_ha\", \"protected_fraction\", \"protected_area_ha\",\n    \"source_water_fraction\", \"source_water_area_ha\", \"high_quality_context\",\n    \"high_quality_overlap_area_ha\", \"high_quality_contact_length_m\",\n}\nNUMERIC_METRIC_UNITS = {\n    \"parcel_acres\": \"acres\", \"hydric_soil_acres\": \"acres\", \"sensitive_riparian_acres\": \"acres\",\n}\nEXPORT_UNITS = {\n    \"nitrogen_export\": (\"kg/ha/year\", \"kg/cell/year\"),\n    \"phosphorus_export\": (\"kg/ha/year\", \"kg/cell/year\"),\n    \"sediment_export\": (\"metric_tonnes/ha/year\", \"metric_tonnes/cell/year\"),\n"
+        },
+        {
+          "id": "source-interval-owner-2",
+          "before": "\n\ndef _table(workspace, score, retained):\n    if not score.get(\"metrics\"):\n        return profile_adapter.CriterionTable(), {\"state\": \"parcel_attributes_and_native_quantities\", \"rows\": 0}\n    choice = score[\"metrics\"]\n    path, entry = workspace.source_file(choice[\"source_collection_id\"], choice[\"source_id\"])\n    raw = path.read_bytes()\n    original = retained[\"criteria_source\"][\"body\"][\"sha256\"]\n",
+          "after": "\n\ndef _table(workspace, score, retained):\n    if not score.get(\"metrics\"):\n        return profile_adapter.CriterionTable(), {\"state\": \"parcel_attributes_and_native_quantities\", \"rows\": 0}, {}\n    choice = score[\"metrics\"]\n    path, entry = workspace.source_file(choice[\"source_collection_id\"], choice[\"source_id\"])\n    raw = path.read_bytes()\n    original = retained[\"criteria_source\"][\"body\"][\"sha256\"]\n"
+        },
+        {
+          "id": "source-interval-owner-3",
+          "before": "            records = payload[\"rows\"]\n            metadata = {key: value for key, value in payload.items() if key != \"rows\"}\n        else:\n            raise ValueError(\"A criterion JSON table must contain rows under upstate.parcel-criteria/v1\")\n    result = profile_adapter.CriterionTable()\n    result.metadata = metadata\n    for row in records:\n        if not isinstance(row, dict):\n            raise ValueError(\"Criterion table rows must be objects\")\n",
+          "after": "            records = payload[\"rows\"]\n            metadata = {key: value for key, value in payload.items() if key != \"rows\"}\n        else:\n            raise ValueError(\"A criterion JSON table must contain rows under upstate.parcel-criteria/v1\")\n    result, bounds = profile_adapter.CriterionTable(), {}\n    result.metadata = metadata\n    for row in records:\n        if not isinstance(row, dict):\n            raise ValueError(\"Criterion table rows must be objects\")\n"
+        },
+        {
+          "id": "source-interval-owner-4",
+          "before": "        if not isinstance(values, dict):\n            raise ValueError(\"Parcel criterion values must be an object\")\n        result[key] = values\n        result.retain_row(key, row, choice[\"id_column\"])\n    return result, {\"state\": \"retained_table\", \"rows\": len(result), \"body_sha256\": original, \"metadata\": metadata}\n\n\ndef _missing(value):\n    return value is None or isinstance(value, str) and not value.strip()\n\n\n",
+          "after": "        if not isinstance(values, dict):\n            raise ValueError(\"Parcel criterion values must be an object\")\n        result[key] = values\n        result.retain_row(key, row, choice[\"id_column\"])\n        limits = row.get(\"metric_bounds\", {})\n        if isinstance(limits, str):\n            limits = json.loads(limits) if limits.strip() else {}\n        if not isinstance(limits, dict):\n            raise ValueError(\"Parcel metric_bounds must map numeric field names to closed source intervals\")\n        bounds[key] = {\n            _text(name, \"Bounded metric field\"): _numeric_interval(interval, name)\n            for name, interval in limits.items()\n        }\n    return result, {\n        \"state\": \"retained_table\", \"rows\": len(result), \"body_sha256\": original, \"metadata\": metadata,\n        \"rows_with_numeric_intervals\": sum(bool(value) for value in bounds.values()),\n    }, bounds\n\n\ndef _numeric_interval(value, name):\n    if not isinstance(value, dict):\n        raise ValueError(name + \" requires a source interval object\")\n    result = _copy(value)\n    lower = _number(result.get(\"lower\"), name + \" lower limit\")\n    upper = _number(result.get(\"upper\"), name + \" upper limit\")\n    if upper < lower:\n        raise ValueError(name + \" upper limit is below its lower limit\")\n    if result.get(\"closed\", True) is not True:\n        raise ValueError(name + \" requires closed numeric interval endpoints\")\n    result.update(lower=lower, upper=upper, closed=True)\n    result[\"unit\"] = _text(result.get(\"unit\"), name + \" interval unit\")\n    result[\"method\"] = _text(result.get(\"method\"), name + \" interval method\")\n    result[\"reference\"] = _text(result.get(\"reference\"), name + \" interval source reference\")\n    return result\n\n\ndef _resolved_interval(original, binding, name):\n    result = _copy(original)\n    transform = binding.get(\"transform\", \"identity\") if binding else \"identity\"\n    if transform == \"ha_to_acres\":\n        if result[\"unit\"] not in (\"ha\", \"hectares\"):\n            raise ValueError(name + \" hectare conversion requires interval units ha or hectares\")\n        result[\"lower\"] *= ACRES_PER_HECTARE\n        result[\"upper\"] *= ACRES_PER_HECTARE\n        result[\"unit\"] = \"acres\"\n        result[\"input_interval\"] = _copy(original)\n        result[\"conversion\"] = \"hectares * 10000 / 4046.8564224\"\n    elif transform != \"identity\":\n        raise ValueError(name + \" numeric interval requires identity or ha_to_acres\")\n    expected = NUMERIC_METRIC_UNITS.get(name)\n    if expected is not None and result[\"unit\"] != expected:\n        raise ValueError(name + \" interval must be expressed in \" + expected)\n    return result\n\n\ndef _missing(value):\n    return value is None or isinstance(value, str) and not value.strip()\n\n\n"
+        },
+        {
+          "id": "source-interval-owner-5",
+          "before": "        raise ValueError(name + \" must contain positive original integer stream orders\")\n    return set(values)\n\n\ndef _resolve(row, table, score, required, means, cell_area_ha):\n    values, provenance = {}, {}\n    for name, kind in required.items():\n        binding = score[\"bindings\"].get(name)\n        if binding is None:\n            if name in table.get(row[\"id\"], {}):\n                raw = table[row[\"id\"]][name]\n                detail = {\"kind\": \"table\", \"field\": name}\n            elif name == \"parcel_acres\":\n                raw = row[\"area_ha\"] * ACRES_PER_HECTARE\n                detail = {\"kind\": \"derived\", \"field\": \"area_ha\", \"formula\": \"hectares * 10000 / 4046.8564224\"}\n            else:\n",
+          "after": "        raise ValueError(name + \" must contain positive original integer stream orders\")\n    return set(values)\n\n\ndef _resolve(row, table, score, required, means, cell_area_ha, table_bounds):\n    values, provenance, resolved_bounds = {}, {}, {}\n    for name, kind in required.items():\n        binding = score[\"bindings\"].get(name)\n        interval_field = None\n        if binding is None:\n            if name in table.get(row[\"id\"], {}):\n                raw = table[row[\"id\"]][name]\n                detail = {\"kind\": \"table\", \"field\": name}\n                interval_field = name\n            elif name in table_bounds.get(row[\"id\"], {}):\n                raw, detail, interval_field = None, {\"kind\": \"table\", \"field\": name}, name\n            elif name == \"parcel_acres\":\n                raw = row[\"area_ha\"] * ACRES_PER_HECTARE\n                detail = {\"kind\": \"derived\", \"field\": \"area_ha\", \"formula\": \"hectares * 10000 / 4046.8564224\"}\n            else:\n"
+        },
+        {
+          "id": "source-interval-owner-6",
+          "before": "            elif source == \"attribute\":\n                raw = row[\"original_attributes\"].get(binding[\"field\"])\n            elif source == \"table\":\n                raw = table.get(row[\"id\"], {}).get(binding[\"field\"])\n            elif source == \"study_mean\":\n                raw = _field(row, table, binding)\n                mean = means.get(name)\n                value = None if _missing(raw) or mean is None else _number(raw, name) > mean\n",
+          "after": "            elif source == \"attribute\":\n                raw = row[\"original_attributes\"].get(binding[\"field\"])\n            elif source == \"table\":\n                raw = table.get(row[\"id\"], {}).get(binding[\"field\"])\n                interval_field = binding[\"field\"]\n            elif source == \"study_mean\":\n                raw = _field(row, table, binding)\n                mean = means.get(name)\n                value = None if _missing(raw) or mean is None else _number(raw, name) > mean\n"
+        },
+        {
+          "id": "source-interval-owner-7",
+          "before": "                              original_profile_pixel_area_m2=None)\n            if source not in (\"study_mean\", \"stream_order\"):\n                value = _typed(_transform(raw, binding, name), kind, name)\n                detail[\"raw\"] = raw\n        values[name] = value\n        provenance[name] = detail\n    return values, provenance\n\n\ndef _criterion(rule, metrics, profile_identity=None):\n    kind = rule[\"type\"]\n    if kind in (\"maximum\", \"sum\"):\n        children = [_criterion(row, metrics, profile_identity) for row in rule[\"terms\"]]\n        options = profile_adapter.aggregate_options(\n            children, operation=kind, cap=rule.get(\"cap\") if kind == \"sum\" else None)\n        lower, upper = min(options), max(options)\n        return {\"id\": rule[\"id\"], \"known_points\": lower, \"possible_points\": upper,\n                \"points\": lower if lower == upper else None, \"score_options\": options,\n                \"terms\": children, \"reference\": rule[\"reference\"]}\n    value = metrics.get(rule[\"metric\"])\n    if kind == \"thresholds\" and \"source_profile_rule\" in rule:\n        return profile_adapter.numeric_component(rule, value, profile_identity)\n    if kind == \"boolean\":\n        options = [0, rule[\"points\"]] if value is None else [rule[\"points\"] if value else 0]\n    elif kind == \"levels\":\n        if isinstance(value, dict) and value.get(\"schema\") == profile_adapter.CLASS_SCHEMA:\n            options = [rule[\"levels\"][label] for label in value[\"classes\"]]\n        else:\n            options = list(rule[\"levels\"].values()) if value is None else [rule[\"levels\"][value]]\n    elif kind == \"thresholds\":\n        options = ([rule[\"otherwise\"]] + [row[\"points\"] for row in rule[\"thresholds\"]]\n                   if value is None else [next((row[\"points\"] for row in rule[\"thresholds\"]\n                                              if value >= row[\"min\"]), rule[\"otherwise\"])])\n    else:\n        raise ValueError(\"Unsupported published criterion type\")\n    options = sorted(set(options))\n    lower, upper = min(options), max(options)\n    result = {\"id\": rule[\"id\"], \"metric\": rule[\"metric\"], \"value\": value,\n              \"known_points\": lower, \"possible_points\": upper, \"score_options\": options,\n              \"points\": lower if lower == upper else None, \"reference\": rule[\"reference\"]}\n    if isinstance(value, dict) and value.get(\"schema\") == profile_adapter.CLASS_SCHEMA:\n        result[\"classification\"] = value\n    return result\n\ndef _eligible(rule, metrics):\n    if \"constant\" in rule:\n        return rule[\"constant\"]\n    if \"any\" in rule:\n",
+          "after": "                              original_profile_pixel_area_m2=None)\n            if source not in (\"study_mean\", \"stream_order\"):\n                value = _typed(_transform(raw, binding, name), kind, name)\n                detail[\"raw\"] = raw\n        if kind == \"number\" and interval_field in table_bounds.get(row[\"id\"], {}):\n            original_interval = table_bounds[row[\"id\"]][interval_field]\n            interval = _resolved_interval(original_interval, binding, name)\n            if value is not None and not interval[\"lower\"] <= value <= interval[\"upper\"]:\n                raise ValueError(name + \" exact value is outside its retained source interval\")\n            if value is None and interval[\"lower\"] == interval[\"upper\"]:\n                value = interval[\"lower\"]\n            resolved_bounds[name] = interval\n            detail[\"numeric_interval\"] = interval\n            detail[\"value_state\"] = \"exact\" if value is not None else \"source_interval\"\n        values[name] = value\n        provenance[name] = detail\n    return values, provenance, resolved_bounds\n\n\ndef _threshold_points(rule, value):\n    return next((row[\"points\"] for row in rule[\"thresholds\"] if value >= row[\"min\"]), rule[\"otherwise\"])\n\n\ndef _threshold_interval(rule, interval):\n    options = _threshold_options(rule, interval)\n    return min(options), max(options)\n\n\n\ndef _source_profile_interval(rule, interval, profile_identity):\n    \"\"\"Evaluate every literal source bin over a closed geometric interval.\n\n    Bin endpoints and the open regions between them exhaust the classification\n    changes. A gap keeps the profile's unresolved alternatives; an overlap keeps\n    every matched class. Probe values are evaluation points, never observations.\n    \"\"\"\n    lower, upper = interval[\"lower\"], interval[\"upper\"]\n    boundaries = {lower, upper}\n    for band in rule[\"source_profile_rule\"][\"bins\"]:\n        for key in (\"min\", \"max\"):\n            boundary = band[key]\n            if boundary is not None and lower <= boundary <= upper:\n                boundaries.add(float(boundary))\n    ordered = sorted(boundaries)\n    probes = list(ordered)\n    for left, right in zip(ordered, ordered[1:]):\n        # Half-sums avoid overflowing a finite interval; nextafter handles an\n        # endpoint-rounded midpoint without escaping the closed input bounds.\n        middle = left / 2 + right / 2\n        if not left < middle < right:\n            middle = math.nextafter(left, right)\n        if left < middle < right:\n            probes.append(middle)\n    classifications = [\n        profile_adapter.classify(\n            value, rule[\"source_profile_rule\"],\n            criterion_id=rule[\"source_profile_criterion_id\"],\n            identity=profile_identity, references=rule[\"source_profile_references\"],\n        )\n        for value in probes\n    ]\n    options = sorted({value for item in classifications for value in item[\"score_options\"]})\n    return {\n        \"schema\": profile_adapter.CLASS_SCHEMA,\n        \"criterion_id\": rule[\"source_profile_criterion_id\"],\n        \"value\": None, \"unit\": rule[\"source_profile_rule\"][\"unit\"],\n        \"state\": \"bounded_interval\",\n        \"value_interval\": {key: interval[key] for key in (\"lower\", \"upper\", \"unit\", \"method\", \"reference\")},\n        \"attainable_states\": sorted({item[\"state\"] for item in classifications}),\n        \"matched_classes\": list(dict.fromkeys(\n            label for item in classifications for label in item[\"matched_classes\"])),\n        \"classes\": list(dict.fromkeys(label for item in classifications for label in item[\"classes\"])),\n        \"score_options\": options,\n        \"source_profile\": _copy(profile_identity),\n        \"references\": _copy(rule[\"source_profile_references\"]),\n    }\n\n\ndef _threshold_options(rule, interval):\n    \"\"\"Retain attainable step values rather than filling gaps between scores.\"\"\"\n    lower, upper = interval[\"lower\"], interval[\"upper\"]\n    probes = [lower, upper]\n    for threshold in rule[\"thresholds\"]:\n        cutoff = float(threshold[\"min\"])\n        if lower <= cutoff <= upper:\n            probes.append(cutoff)\n        if lower < cutoff <= upper:\n            probes.append(max(lower, math.nextafter(cutoff, -math.inf)))\n    return sorted({_threshold_points(rule, value) for value in probes})\n\n\ndef _criterion(rule, metrics, metric_bounds=None, profile_identity=None):\n    metric_bounds = metric_bounds or {}\n    kind = rule[\"type\"]\n    if kind in (\"maximum\", \"sum\"):\n        children = [_criterion(row, metrics, metric_bounds, profile_identity) for row in rule[\"terms\"]]\n        options = profile_adapter.aggregate_options(\n            children, operation=kind, cap=rule.get(\"cap\") if kind == \"sum\" else None)\n        lower, upper = min(options), max(options)\n        interval_used = any(row.get(\"interval_used\", False) for row in children)\n        return {\n            \"id\": rule[\"id\"], \"known_points\": lower, \"possible_points\": upper,\n            \"points\": lower if lower == upper else None, \"score_options\": options,\n            \"terms\": children, \"reference\": rule[\"reference\"],\n            \"interval_used\": interval_used,\n            \"points_determined_by_interval\": interval_used and lower == upper,\n        }\n    value = metrics.get(rule[\"metric\"])\n    interval = metric_bounds.get(rule[\"metric\"]) if kind == \"thresholds\" else None\n    classification = None\n    if kind == \"thresholds\" and \"source_profile_rule\" in rule:\n        if value is None and interval is not None:\n            classification = _source_profile_interval(rule, interval, profile_identity)\n        else:\n            classification = profile_adapter.classify(\n                value, rule[\"source_profile_rule\"],\n                criterion_id=rule[\"source_profile_criterion_id\"],\n                identity=profile_identity, references=rule[\"source_profile_references\"],\n            )\n        options = classification[\"score_options\"]\n    elif kind == \"boolean\":\n        options = [0, rule[\"points\"]] if value is None else [rule[\"points\"] if value else 0]\n    elif kind == \"levels\":\n        if isinstance(value, dict) and value.get(\"schema\") == profile_adapter.CLASS_SCHEMA:\n            classification = value\n            options = [rule[\"levels\"][label] for label in value[\"classes\"]]\n        else:\n            options = list(rule[\"levels\"].values()) if value is None else [rule[\"levels\"][value]]\n    elif kind == \"thresholds\":\n        if value is not None:\n            options = [_threshold_points(rule, value)]\n        elif interval is not None:\n            options = _threshold_options(rule, interval)\n        else:\n            options = [rule[\"otherwise\"], *(row[\"points\"] for row in rule[\"thresholds\"])]\n    else:\n        raise ValueError(\"Unsupported published criterion type\")\n    options = sorted(set(options))\n    lower, upper = min(options), max(options)\n    result = {\n        \"id\": rule[\"id\"], \"metric\": rule[\"metric\"], \"value\": value,\n        \"known_points\": lower, \"possible_points\": upper, \"score_options\": options,\n        \"points\": lower if lower == upper else None, \"reference\": rule[\"reference\"],\n        \"evaluation\": \"exact_metric\" if value is not None else \"bounded_metric\" if interval else \"undetermined_metric\",\n        \"interval_used\": value is None and interval is not None,\n    }\n    if classification is not None:\n        result[\"classification\"] = classification\n    if interval is not None:\n        result[\"value_interval\"] = {\n            key: interval[key] for key in (\"lower\", \"upper\", \"unit\", \"method\", \"reference\")\n        }\n        result[\"points_determined_by_interval\"] = value is None and lower == upper\n    return result\n\n\n\ndef _eligible(rule, metrics):\n    if \"constant\" in rule:\n        return rule[\"constant\"]\n    if \"any\" in rule:\n"
+        },
+        {
+          "id": "source-interval-owner-8",
+          "before": "        raise ValueError(\"The saved published method differs from the installed method; prepare a successor study\")\n    profile_state = profile_adapter.load()\n    if retained.get(\"source_profile\") != document[\"source_profile\"]:\n        raise ValueError(\"The saved study belongs to another source-profile binding; prepare its successor\")\n    table, table_info = _table(workspace, score, retained)\n    required = metric_types(selected)\n    cell_area_ha = _native_cell_area(workspace, spec, bindings)\n    resolved_bands = _native_bands(candidates, score, cell_area_ha)\n    means = {}\n",
+          "after": "        raise ValueError(\"The saved published method differs from the installed method; prepare a successor study\")\n    profile_state = profile_adapter.load()\n    if retained.get(\"source_profile\") != document[\"source_profile\"]:\n        raise ValueError(\"The saved study belongs to another source-profile binding; prepare its successor\")\n    table, table_info, table_bounds = _table(workspace, score, retained)\n    required = metric_types(selected)\n    cell_area_ha = _native_cell_area(workspace, spec, bindings)\n    resolved_bands = _native_bands(candidates, score, cell_area_ha)\n    means = {}\n"
+        },
+        {
+          "id": "source-interval-owner-9",
+          "before": "            numbers = [_field(row, table, binding) for row in candidates]\n            numbers = [_number(x, name) for x in numbers if not _missing(x)]\n            numbers = [x for x in numbers if x > 0]\n            means[name] = math.fsum(numbers) / len(numbers) if numbers else None\n    summary = {\"complete\": 0, \"partial\": 0, \"prerequisite_absent\": 0, \"prerequisite_unknown\": 0}\n    for row in candidates:\n        metrics, provenance = _resolve(row, table, score, required, means, cell_area_ha)\n        components = [_criterion(rule, metrics, document[\"source_profile\"]) for rule in selected[\"criteria\"]]\n        lower = sum(item[\"known_points\"] for item in components)\n        upper = sum(item[\"possible_points\"] for item in components)\n        prerequisite = _eligible(selected[\"eligibility\"], metrics)\n        complete = lower == upper\n",
+          "after": "            numbers = [_field(row, table, binding) for row in candidates]\n            numbers = [_number(x, name) for x in numbers if not _missing(x)]\n            numbers = [x for x in numbers if x > 0]\n            means[name] = math.fsum(numbers) / len(numbers) if numbers else None\n    summary = {\n        \"complete\": 0, \"partial\": 0, \"prerequisite_absent\": 0, \"prerequisite_unknown\": 0,\n        \"parcels_with_numeric_intervals\": 0, \"criteria_determined_by_intervals\": 0,\n        \"complete_scores_using_intervals\": 0,\n    }\n    for row in candidates:\n        metrics, provenance, metric_bounds = _resolve(\n            row, table, score, required, means, cell_area_ha, table_bounds)\n        components = [_criterion(rule, metrics, metric_bounds, document[\"source_profile\"])\n                      for rule in selected[\"criteria\"]]\n        interval_criteria = sum(bool(item.get(\"points_determined_by_interval\")) for item in components)\n        summary[\"parcels_with_numeric_intervals\"] += bool(metric_bounds)\n        summary[\"criteria_determined_by_intervals\"] += interval_criteria\n        lower = sum(item[\"known_points\"] for item in components)\n        upper = sum(item[\"possible_points\"] for item in components)\n        prerequisite = _eligible(selected[\"eligibility\"], metrics)\n        complete = lower == upper\n"
+        },
+        {
+          "id": "source-interval-owner-10",
+          "before": "            \"method_id\": document[\"id\"], \"category_id\": selected[\"id\"], \"unit\": \"points\",\n            \"points\": lower if complete and prerequisite is True else None, \"known_points\": lower, \"possible_points\": upper,\n            \"maximum\": selected[\"maximum\"], \"priority\": priority,\n            \"prerequisite\": prerequisite, \"metric_values\": metrics, \"metric_sources\": provenance,\n            \"definition_sha256\": sha,\n        }\n        profile_adapter.candidate_trace(row, table, score, document, components, profile_state)\n        row[\"point_priority\"] = priority\n        row[\"score_unit\"] = \"points\"\n        summary[\"complete\" if complete else \"partial\"] += 1\n        if prerequisite is False:\n            row[\"exclusion_reasons\"].append(\"Published \" + selected[\"title\"] + \" prerequisite is absent\")\n            summary[\"prerequisite_absent\"] += 1\n        elif prerequisite is None:\n",
+          "after": "            \"method_id\": document[\"id\"], \"category_id\": selected[\"id\"], \"unit\": \"points\",\n            \"points\": lower if complete and prerequisite is True else None, \"known_points\": lower, \"possible_points\": upper,\n            \"maximum\": selected[\"maximum\"], \"priority\": priority,\n            \"prerequisite\": prerequisite, \"metric_values\": metrics, \"metric_sources\": provenance,\n            \"metric_bounds\": metric_bounds,\n            \"definition_sha256\": sha,\n        }\n        profile_adapter.candidate_trace(row, table, score, document, components, profile_state)\n        row[\"point_priority\"] = priority\n        row[\"score_unit\"] = \"points\"\n        summary[\"complete\" if complete else \"partial\"] += 1\n        summary[\"complete_scores_using_intervals\"] += bool(complete and prerequisite is True and interval_criteria)\n        if prerequisite is False:\n            row[\"exclusion_reasons\"].append(\"Published \" + selected[\"title\"] + \" prerequisite is absent\")\n            summary[\"prerequisite_absent\"] += 1\n        elif prerequisite is None:\n"
+        },
+        {
+          "id": "source-interval-owner-11",
+          "before": "        \"maximum\": selected[\"maximum\"], \"priority_ranges\": selected[\"priority\"],\n        \"reference\": selected[\"reference\"], \"source_uri\": document[\"source_uri\"],\n        \"definition_sha256\": sha, \"implementation_sha256\": current_code,\n        \"formula\": \"Sum published criterion contributions, preserving each criterion maximum and practice prerequisite.\",\n        \"interpretation\": score[\"interpretation\"], \"headwater_orders\": score[\"headwater_orders\"],\n        \"source_interpretations\": document[\"source_interpretations\"],\n        \"source_profile\": document[\"source_profile\"],\n        \"native_pixel_area_m2\": cell_area_ha * 10000 if cell_area_ha is not None else None,\n",
+          "after": "        \"maximum\": selected[\"maximum\"], \"priority_ranges\": selected[\"priority\"],\n        \"reference\": selected[\"reference\"], \"source_uri\": document[\"source_uri\"],\n        \"definition_sha256\": sha, \"implementation_sha256\": current_code,\n        \"formula\": \"Sum published criterion contributions, preserving each criterion maximum and practice prerequisite.\",\n        \"numeric_intervals\": (\n            \"Closed acreage limits retain observed positive geometry and unresolved source coverage; \"\n            \"literal source bins, including gaps and overlaps, are evaluated across the whole interval. \"\n            \"Exact points can be determined \"\n            \"without assigning an exact acreage.\"),\n        \"interpretation\": score[\"interpretation\"], \"headwater_orders\": score[\"headwater_orders\"],\n        \"source_interpretations\": document[\"source_interpretations\"],\n        \"source_profile\": document[\"source_profile\"],\n        \"native_pixel_area_m2\": cell_area_ha * 10000 if cell_area_ha is not None else None,\n"
         }
       ]
     },
@@ -428,9 +538,9 @@
     },
     {
       "path": "operator/web/conservation.mjs",
-      "base_bytes": 124883,
-      "base_sha256": "8ba403d5f1e7c7270066f2426ca962a8baf70b36996e74d017f1109d0e113071",
-      "result_sha256": "58fd78e525f32e364ea5047186d7388d6d34a9ca464c2563f7cfee72b4fea532",
+      "base_bytes": 171002,
+      "base_sha256": "b97d443014832e41ce53cf938d06153a1a6b5ae5b9b313731d928abd6ed079ba",
+      "result_sha256": "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
       "edits": [
         {
           "id": "keowee-method-view-import",
@@ -443,6 +553,21 @@
           "after": "  function pointCriteria(candidate) {\n    return renderKeoweePointCriteria(candidate, {\n      formatNumber: number,\n      originalReference: criterionReference,\n    });\n  }"
         }
       ]
+    }
+  ],
+  "owner_editions": [
+    {
+      "commit": "41b42a18522dca766ce9f4af9417d63639dfda69",
+      "scope": "Current native interval scoring and Conservation owner composition"
+    },
+    {
+      "commit": "63a6069c817b34c5da3bc4e2be0a4563a8d3dff6",
+      "scope": "Closed source intervals in the executable profile and original Greenwood journey"
+    },
+    {
+      "merge": "f71d21b0eb204e5ef5306d069418ec0277eca670",
+      "pull_request": 3082,
+      "scope": "Original Gura setup assembly through existing scientific review and portable receiving"
     }
   ]
 }
