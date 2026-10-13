@@ -480,9 +480,14 @@ async function inspectReport(report,plan,folder='report'){
  }
  const expected=['community-report.html','community-report.md','community-report.json','communities.csv','utilities.csv',
   'watersheds.csv','interventions.csv','scientific-context.csv','plan.json','original-community-source.csv','REPORT.json','community-report.zip'];
+ for(const name of expected)assert.ok(records[name],'Complete report member '+name);
  if(mappingCourse){
-  for(const name of [...expected,'received-interventions.csv','INTERVENTION_IMPORT.json'])assert.ok(records[name],'Complete mapped report member '+name);
- }else assert.deepEqual(Object.keys(records).sort(),expected.sort());
+  for(const name of ['received-interventions.csv','INTERVENTION_IMPORT.json'])assert.ok(records[name],'Complete mapped report member '+name);
+ }
+ if(plan.previous_plan_id&&report.format_version>=7){
+  for(const name of ['plan-revision-summary.json','previous-plan.json','plan-revision-changes.csv'])
+   assert.ok(records[name],'Complete saved-plan revision member '+name);
+ }
  assert.equal(records['original-community-source.csv'].sha256,c.source_sha256);
  const payload=JSON.parse(await fs.readFile(records['community-report.json'].path,'utf8'));
  assert.equal(payload.schema,'upstate.community-report/v1');
