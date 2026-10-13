@@ -109,7 +109,7 @@ def _validate(value):
     return value
 
 
-def _source(workspace, collection_id, source_id):
+def _source(workspace, collection_id, source_id, *, include_value=True):
     from .common import relative_file
     collection = workspace._get("sources", collection_id)
     entries = [entry for entry in collection["entries"] if entry["id"] == source_id]
@@ -127,7 +127,9 @@ def _source(workspace, collection_id, source_id):
     actual = file_sha256(path)
     if expected.get("sha256") != actual or expected.get("bytes") != path.stat().st_size:
         raise ContractError("The original observational source body changed")
-    value = _validate(load_json(path))
+    # Intake validates the complete original document. A saved context is bound
+    # to these exact bytes, so inspection need not materialize it again.
+    value = _validate(load_json(path)) if include_value else None
     binding = {
         "source_id": source_id, "source_collection_id": collection_id,
         "source_record_id": collection["id"], "title": entry.get("title", ""),
@@ -317,7 +319,10 @@ def inspect(workspace, context_id):
     record = workspace._get(COLLECTION, context_id)
     if record.get("schema") != SCHEMA:
         raise ContractError("Saved monitoring context has an unsupported schema")
-    _source(workspace, record["source_binding"]["source_collection_id"], record["source_binding"]["source_id"])
+    _, retained_binding = _source(workspace, record["source_binding"]["source_collection_id"],
+                                  record["source_binding"]["source_id"], include_value=False)
+    if retained_binding != record["source_binding"]:
+        raise ContractError("Saved monitoring context differs from its original source binding")
     service = _service(workspace)
     network = service.get("networks", record["network_id"])
     from .monitoring_sources import verify_retained_binding
@@ -377,6 +382,29 @@ def report_html(record):
             "<h2>Complete source and selection</h2><pre>"+esc(json.dumps({k: record[k] for k in ("source_binding", "source_edition", "station_mapping")}, indent=2, ensure_ascii=False))+"</pre></html>")
 
 
+
+def _export_members(workspace, record):
+    """Describe an already inspected context and its exact original source."""
+    from .monitoring_packet import bytes_member
+    from .monitoring_sources import source_export_members
+    yield "observed-context/context.json", bytes_member(canonical_bytes(record))
+    yield "observed-context/report.html", bytes_member(report_html(record).encode("utf-8"))
+    for key in ("station_matches", "calendar", "high_flow_episodes", "annual_coverage",
+                "station_year_coverage", "monthly_coverage", "topology", "paired_contrasts"):
+        yield "observed-context/" + key.replace("_", "-") + ".csv", bytes_member(_csv(record[key]))
+    yield from source_export_members(workspace, "monitoring-observations", record["source_binding"])
+
+
+def export_members(workspace, context_id, *, plan_id=None, network_id=None):
+    """Streamable descriptors with the same names and bytes as export_files."""
+    record = inspect(workspace, context_id)
+    if plan_id and record.get("plan_id") != plan_id:
+        raise ContractError("Selected observational context belongs to another saved plan")
+    if network_id and record["network_id"] != network_id:
+        raise ContractError("Selected observational context belongs to another saved network")
+    yield from _export_members(workspace, record)
+
+
 def export_files(workspace, context_id, *, plan_id=None, network_id=None):
     record = inspect(workspace, context_id)
     if plan_id and record.get("plan_id") != plan_id:
@@ -395,26 +423,25 @@ def export_files(workspace, context_id, *, plan_id=None, network_id=None):
 
 
 def export_context(workspace, *, context_id, export_root=None):
-    """Export the complete retained source context through the original file tickets."""
+    """Stream the complete retained source context through original file tickets."""
     import uuid
-    import zipfile
-    import hashlib
+    from .monitoring_packet import add_member, bytes_member, retain_packet
     service = _service(workspace)
     if export_root is not None:
         service.export_root = Path(export_root).resolve()
     record = inspect(workspace, context_id)
-    files = export_files(workspace, context_id)
-    files["manifest.json"] = canonical_bytes({
+    files = {}
+    for name, member in _export_members(workspace, record):
+        add_member(files, name, member)
+    add_member(files, "manifest.json", bytes_member(canonical_bytes({
         "schema": "upstate.monitoring-context-export/v1", "context_id": record["id"],
-        "files": [{"path": name, "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
-                  for name, body in sorted(files.items())]})
+        "files": [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
+                  for name, member in sorted(files.items())]})))
     base = service.export_root or workspace.root.parent / (workspace.root.name + "-monitoring-exports")
     folder = base / ("monitoring-context-" + uuid.uuid4().hex)
     folder.mkdir(parents=True, exist_ok=False)
     path = folder / "monitoring-observed-context.zip"
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, body in sorted(files.items()):
-            archive.writestr(name, body)
+    retain_packet(path, files, metadata="export")
     return service._download(path, {"format": "observed-context", "context_id": record["id"],
                                     "network_id": record["network_id"], "plan_id": record["plan_id"],
                                     "files": len(files)})

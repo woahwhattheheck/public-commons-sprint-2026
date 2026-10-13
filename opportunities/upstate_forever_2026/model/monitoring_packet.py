@@ -9,6 +9,7 @@ import hashlib
 import os
 from pathlib import Path, PurePosixPath
 import tempfile
+import time
 import zipfile
 
 from .monitoring_common import ContractError
@@ -110,8 +111,14 @@ def _verify_existing(path, files):
     return result
 
 
-def retain_packet(path, files):
-    """Publish one source-bound ZIP atomically, retaining an exact existing packet."""
+def retain_packet(path, files, *, metadata="deterministic"):
+    """Publish an exact source-bound ZIP; retain handoff or ordinary export metadata.
+
+    Existing fieldwork packets keep their deterministic defaults. Review exports
+    use the original ZipFile.writestr timestamp and regular-file permissions.
+    """
+    if metadata not in {"deterministic", "export"}:
+        raise ValueError("Choose deterministic handoff or ordinary export ZIP metadata")
     path = Path(path)
     files = {_member_name(name): member for name, member in files.items()}
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,9 +131,10 @@ def retain_packet(path, files):
             pending = Path(stream.name)
             with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as archive:
                 for name, member in sorted(files.items()):
-                    entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                    stamp = (1980, 1, 1, 0, 0, 0) if metadata == "deterministic" else time.localtime()[:6]
+                    entry = zipfile.ZipInfo(name, date_time=stamp)
                     entry.compress_type = zipfile.ZIP_DEFLATED
-                    entry.external_attr = 0o100644 << 16
+                    entry.external_attr = (0o100644 if metadata == "deterministic" else 0o600) << 16
                     entry.file_size = member["bytes"]
                     with archive.open(entry, "w") as outgoing:
                         _copy_body(member, outgoing)
