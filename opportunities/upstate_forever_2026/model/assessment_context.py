@@ -20,7 +20,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, held, identifier, now, read_json, relative_file, verify_file)
 from . import station_geography as geography
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 KIND = "assessment-contexts"
 SCHEMA = "upstate.assessment-geographic-context/v1"
 PACKAGE = "upstate.assessment-context-package/v1"
@@ -345,7 +345,9 @@ def _report(result):
                   for row in result["watersheds"])
     groups = "".join("<tr>"+"".join("<td>"+esc(value)+"</td>" for value in
               (row["edition"],row["assessment"]["title"],row["assessment"]["status"],
-               row["assessment"]["vintage"],row["cause"],row["impaired_use"],row.get("use_support"),row["assessment_row_count"]))+
+               row["assessment"]["vintage"],row["cause"],row["impaired_use"],
+               "Not recorded" if row.get("use_support") in (None, "") else row["use_support"],
+               row["assessment_row_count"]))+
               "</tr>" for row in result["assessment_groups"])
     issues = "".join("<li>" + esc(row["station_id"]) + " / original row " +
                      str(row["row_number"]) + ": " + esc(row["geographic_status"]) + "</li>"
