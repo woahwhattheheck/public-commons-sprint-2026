@@ -26,6 +26,7 @@ from . import portable, study_delivery_transfer as delivery_transfer
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import calibration_study_transfer as calibration_transfer
+from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
 from . import native_process_study_transfer as process_transfer
@@ -597,7 +598,8 @@ def preview(workspace, selection):
 def _capture_locks(stack, closure, already):
     for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure),
-                     *process_transfer.lock_paths(closure)):
+                     *process_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
+                     *gauge_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))

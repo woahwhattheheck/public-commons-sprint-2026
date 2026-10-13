@@ -2,11 +2,11 @@
 from __future__ import annotations
 from model.common import identifier, read_json, relative_file, describe_file
 from model.ensembles import Ensembles, parameter_catalog
-from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source
+from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source
 
 ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report",
-                     "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume", "ensemble.flow-support", "ensemble.scientific-source"})
-READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source"})
+                     "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume", "ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source"})
+READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source", "study-source"})
 WRITES = frozenset({"preview"})
 
 class EnsembleService:
@@ -47,6 +47,18 @@ class EnsembleService:
         return {"workspace_key": workspace,
                 "sources": [{"source_collection_id": collection["id"], "source_id": entry["id"]}],
                 "title": entry.get("title") or "Saved annual-load calibration"}
+
+    def _study_source(self, workspace, ensemble_id):
+        ws = self.operator.ws(workspace)
+        prepared = ensemble_study_source.latest(ws, identifier(ensemble_id))
+        if not prepared:
+            return None
+        downloads = [self.operator._ticket(workspace, relative_file(ws.root, item["path"]), item,
+                                          name.replace("_", " "))
+                     for name, item in prepared.get("files", {}).items()]
+        return {"workspace_key": workspace, "source": prepared,
+                "scientific_report_selection": self._scientific_report_selection(workspace, prepared),
+                "downloads": downloads}
 
     def _consumer(self, workspace, key):
         ws = self.operator.ws(workspace)
@@ -145,6 +157,11 @@ class EnsembleService:
         if operation == "annual-references":
             return {"workspace_key": workspace, **ensemble_references.catalog(ws),
                     "ensembles": self.overview(workspace)}
+        if operation == "study-source":
+            result = self._study_source(workspace, self._ensemble_id(payload))
+            if not result or not result["source"].get("source"):
+                raise self.Fault("ENSEMBLE_STUDY_SOURCE", "Prepare this saved native study’s scientific source first.", 409)
+            return result
         if operation == "scientific-source":
             source = ensemble_scientific_source.latest(ws, identifier(payload.get("consumer_id")))
             if not source or not source.get("source"):
@@ -188,12 +205,13 @@ class EnsembleService:
                     "summary": data, "report": report,
                     "export_state": ensemble_report.export_state(report, data),
                     "downloads": self._downloads(workspace, report),
+                    "study_source": self._study_source(workspace, key),
                     "consumers": self._consumer_rows(ws, key)}
         raise self.Fault("ENSEMBLE_READ", "Choose a supported ensemble operation.")
 
     def decorate_task(self, task):
         """Refresh report tickets when an original queued task is reopened."""
-        if task.get("action") in {"ensemble.flow-support", "ensemble.scientific-source"}:
+        if task.get("action") in {"ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source"}:
             result = task.get("result") or {}
             ws = self.operator.ws(task["workspace"])
             task["_downloads"] = [
@@ -223,6 +241,14 @@ class EnsembleService:
         ws = self.operator.ws(workspace)
         manager = Ensembles(ws)
         action, payload = task["action"], task["payload"]
+        if action == "ensemble.study-source":
+            result = ensemble_study_source.prepare(ws, self._ensemble_id(payload),
+                                                   render=payload.get("render", True))
+            return {**result, "workspace_key": workspace,
+                    "scientific_report_selection": self._scientific_report_selection(workspace, result),
+                    "downloads": [
+                self.operator._ticket(workspace, relative_file(ws.root, item["path"]), item, name.replace("_", " "))
+                for name, item in result.get("files", {}).items()]}
         if action == "ensemble.scientific-source":
             result = ensemble_scientific_source.prepare(ws, identifier(payload.get("consumer_id")),
                                                        render=payload.get("render", True))
