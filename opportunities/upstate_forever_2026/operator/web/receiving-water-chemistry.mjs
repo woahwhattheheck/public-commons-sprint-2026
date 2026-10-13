@@ -10,9 +10,20 @@ export function createWaterDesk(host) {
  function live(token,version=epoch){return root&&token===owner&&currentContext(token)&&version===epoch;}
  function retained(){try{return JSON.parse(localStorage.getItem(storageKey())||'null')}catch{return null}}
  function save(){if(!root||!owner)return;draft=collect();localStorage.setItem(storageKey(),JSON.stringify(draft));}
- function options(rows,selected){return option('','Choose explicitly',!selected)+rows.map(x=>option(x,x,x===selected)).join('')}
+ const choiceLabels={
+  delimiter:{',':'Comma (,)',';':'Semicolon (;)','tab':'Tab','|':'Vertical bar (|)'},
+  format:{'cwms-json':'Original CWMS JSON','csv':'Delimited text (CSV)'},
+  units:{'cms':'Cubic metres per second (cms)','m3/s':'Cubic metres per second (m3/s)','cfs':'Cubic feet per second (cfs)','m3/day':'Cubic metres per day (m3/day)','m3':'Cubic metres (m3)','ac-ft':'Acre-feet (ac-ft)','acre-ft':'Acre-feet (acre-ft)'},
+  value_support:{'interval-ending':'Average over the interval ending at the timestamp','instantaneous':'Instantaneous value at the timestamp'},
+  quality_type:{'integer':'Whole-number quality codes','text':'Text quality codes'},
+  timestamp_format:{'iso8601':'ISO 8601 date and time','unix-ms':'Milliseconds since 1 January 1970 UTC','unix-seconds':'Seconds since 1 January 1970 UTC'},
+  template_period_policy:{'repeat-single-phase':'Repeat the original chemical inputs in every water period'},
+  signed_value_policy:{'mean-preserve-signed-originals':'Average every signed original value, including negative readings'}
+ };
+ const observationLabels={'retained':'Eligible original observation','missing':'No observation at this boundary','quality-excluded':'Quality code excluded by the selection','nonpositive':'Zero or negative original storage'};
+ function options(rows,selected,labels={}){return option('','Choose explicitly',!selected)+rows.map(x=>option(x,labels[x]??x,x===selected)).join('')}
  function field(name,label,value='',type='text'){return `<label>${esc(label)}<input data-w="${esc(name)}" type="${type}" value="${esc(value)}"></label>`}
- function select(name,label,rows,value){return `<label>${esc(label)}<select data-w="${esc(name)}">${options(rows,value)}</select></label>`}
+ function select(name,label,rows,value){return `<label>${esc(label)}<select data-w="${esc(name)}">${options(rows,value,choiceLabels[name]||{})}</select></label>`}
  const get=(node,name)=>node.querySelector(`[data-w="${name}"]`)?.value??'';
  function sources(){return (catalog.sources||[]).flatMap(c=>(c.entries||[]).map(e=>({key:JSON.stringify({source_collection_id:c.id,source_id:e.id}),label:c.title+' / '+(e.title||e.id)})))}
  function binding(row,type){
@@ -106,10 +117,10 @@ export function createWaterDesk(host) {
  function savedList(){return (catalog.water_preparations||[]).map(x=>`<p>${button('open',x.title,x.id)} · ${button('case','Open chemical scenario',x.case_id)}</p>`).join('')||'<p>No source-period preparation saved yet.</p>'}
  function previewView(value){
   const rows=value.support.periods.flatMap(p=>p.storage.map(r=>({period:p.period,begin:p.begin,end:p.end,reach:r.reach,initial:r.initial_volume_m3,inflow:r.inflow_m3_day,outflow:r.outflow_m3_day,predicted:r.predicted_volume_m3,observed:r.observed_storage?.volume_m3,observedState:r.observed_storage?.state,difference:r.observed_minus_predicted_m3,flows:p.flows})));
-  const cols=['period','begin','end','reach','initial','inflow','outflow','predicted','observed','observedState','difference'];
-  const errors=value.errors.length?'<h4>Selections requiring attention</h4>'+value.errors.map(x=>'<p>'+esc(JSON.stringify(x))+'</p>').join(''):'<p>Every selected interval is present and eligible; every phase retains positive storage.</p>';
+  const cols=[['period','Period'],['begin','Begin (UTC)'],['end','End (UTC)'],['reach','Reach'],['initial','Initial storage (m³)'],['inflow','Inflow (m³/day)'],['outflow','Outflow (m³/day)'],['predicted','Flow-derived storage (m³)'],['observed','Original observed storage (m³)'],['observedState','Observation eligibility'],['difference','Eligible observed − predicted (m³)']];
+  const errors=value.errors.length?'<h4>Selections requiring attention</h4>'+value.errors.map(x=>'<p><strong>'+esc([x.period!==undefined?'Period '+x.period:'',x.flow_id?'Flow '+x.flow_id:'',x.reach?'Reach '+x.reach:''].filter(Boolean).join(' · '))+'</strong> '+esc(x.reason||'Review the complete source support below.')+'</p>').join(''):'<p>Every selected interval is present and eligible; every phase retains positive storage.</p>';
   return `<h3>${value.state==='ready'?'Source periods ready':'Source selection needs correction'}</h3>${errors}<p>${rows.length} reach-period rows. Flow is m³/day; stored water and differences are m³. Original signed values, quality codes and units remain attached.</p>
-   <div class="chemistry-scroll"><table><thead><tr>${cols.map(x=>'<th>'+esc(x)+'</th>').join('')}</tr></thead><tbody>${rows.map(r=>'<tr>'+cols.map(k=>'<td>'+esc(typeof r[k]==='number'?r[k].toPrecision(9):r[k])+'</td>').join('')+'</tr>').join('')}</tbody></table></div>
+   <div class="chemistry-scroll"><table><thead><tr>${cols.map(([,label])=>'<th>'+esc(label)+'</th>').join('')}</tr></thead><tbody>${rows.map(r=>'<tr>'+cols.map(([k])=>'<td>'+esc(typeof r[k]==='number'?r[k].toPrecision(9):k==='observedState'?(observationLabels[r[k]]??r[k]??'No storage series selected'):r[k])+'</td>').join('')+'</tr>').join('')}</tbody></table></div>
    <details><summary>Complete original interval support and source identities</summary><pre>${esc(JSON.stringify(value.support,null,2))}</pre></details>`;
  }
  async function act(action,id){

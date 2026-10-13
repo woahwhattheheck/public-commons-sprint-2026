@@ -1,0 +1,209 @@
+{
+  "schema": "principal.operator-source.v1",
+  "api": {
+    "bytes": 13901,
+    "sha256": "ad7d0fc7b58f005fd4f39f450ae5980c878501593cf7554137450e68c2b5531a"
+  },
+  "files": [
+    {
+      "path": "CONTRACT_API.json",
+      "bytes": 13901,
+      "sha256": "ad7d0fc7b58f005fd4f39f450ae5980c878501593cf7554137450e68c2b5531a"
+    },
+    {
+      "path": "package.json",
+      "bytes": 214,
+      "sha256": "a380432688064e1b1d2bda1bc21822562c6aa9d53c25553f9a9af27d32711da5"
+    },
+    {
+      "path": "server.mjs",
+      "bytes": 5543,
+      "sha256": "966deb99f49facae8aef5055b22af784132c8d4fdcc241ec977f1a9c79d510c1"
+    },
+    {
+      "path": "cli.mjs",
+      "bytes": 5211,
+      "sha256": "e380517a01d088c8ac25e9c5921e13afba583cb17dc95b2761422aa59d2959ce"
+    },
+    {
+      "path": "lib/value.mjs",
+      "bytes": 2369,
+      "sha256": "8ac95822b8e43a6daffcb695ee69375a8304bca3b64c293cadb22cf111831c17"
+    },
+    {
+      "path": "lib/catalogue.mjs",
+      "bytes": 3076,
+      "sha256": "8c828e195e574391070dd5229e1bd47e4bbfa4adede1e3404000c2cf1f75e348"
+    },
+    {
+      "path": "lib/files.mjs",
+      "bytes": 14321,
+      "sha256": "f21486aa39013421a57973ea2a86e81daa1e2bc23df32e89d33efad08c9b70fa"
+    },
+    {
+      "path": "lib/source-json.mjs",
+      "bytes": 3754,
+      "sha256": "5db7e5bfd6671f4502653e456114f9212cceb6db6319432a41d977474197b232"
+    },
+    {
+      "path": "lib/native.mjs",
+      "bytes": 3691,
+      "sha256": "005984ba23b389a4a66f0ee9819310db75c93937d23edba76c86a174d95d7df8"
+    },
+    {
+      "path": "lib/workspace.mjs",
+      "bytes": 25472,
+      "sha256": "2e49845211046b769f7e781bf2f3f81abdd2f3507bc5548f9d02834e41a01d6d"
+    },
+    {
+      "path": "native/principal_attempt.py",
+      "bytes": 8059,
+      "sha256": "5fca5169727ce835274337ac6b07546f1674e198f79c946818e14507bcd0ed53"
+    },
+    {
+      "path": "native/watershed_process.py",
+      "bytes": 29581,
+      "sha256": "506634371a87cbdc005b65d4e9c75a480bef18e0f0a762c3de463c859018903c"
+    },
+    {
+      "path": "native/PRINCIPAL_PROCESS.md",
+      "bytes": 3966,
+      "sha256": "9813f773af11c830948ff446d588a336dbb55a78434d38cde9c75487876b5ce1"
+    },
+    {
+      "path": "NATIVE_OPERATOR.md",
+      "bytes": 9133,
+      "sha256": "c721c81dccb2f5a521fa1af95e55ac9b9ce365621eec54531f623cd553dd5b7d"
+    },
+    {
+      "path": "receiving/principal-receiving.mjs",
+      "bytes": 13063,
+      "sha256": "52a278576c63649fe60e6265c0c9695ecd9769e9a4e87ca9580d5f61ec875c33"
+    },
+    {
+      "path": "receiving/RECEIVING.md",
+      "bytes": 6865,
+      "sha256": "c6065ad5121a03acc3c60777a9ae678bfacd1ea2aee504d7d9b67674d9496978"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 2039,
+      "sha256": "1e80f7366c5caf6187ad63133176e0d1ca9c4767f9ea84e7b2b030c1349d9f81"
+    },
+    {
+      "path": "web/styles.css",
+      "bytes": 5198,
+      "sha256": "60a1a0e021b6b83056c3a089c41ca9283657592672525e3572a61d01c9892006"
+    },
+    {
+      "path": "web/sha256.mjs",
+      "bytes": 3383,
+      "sha256": "fbc57cd9ad9f17f90f084d7d387ab02794c6a330b26a98392c129bbe09ef44ba"
+    },
+    {
+      "path": "web/journal.mjs",
+      "bytes": 25315,
+      "sha256": "bdb108f1abbc43932738993512b25b7829abf74312c9d2cad5ef01466e84a8da"
+    },
+    {
+      "path": "web/app.mjs",
+      "bytes": 41730,
+      "sha256": "b46a7616e4625d705881db187c7ae80faf5010eaa71180fd24be564707aa6eaa"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 7844,
+      "sha256": "e728a4f43551cf369548497d8891cfa114f0b9f54354f204e7aab8bfce08ccc8"
+    },
+    {
+      "path": "OPERATOR.md",
+      "bytes": 7642,
+      "sha256": "b6e2b025ea2d66936c2e9e46781df080b5e13a7e2d2dfe54b622a2729a00be36"
+    },
+    {
+      "path": "reference/Cargo.toml",
+      "bytes": 357,
+      "sha256": "8ddf0f4357c13de0e749c1f3278df9fdc310fda95784278a50fdde53f00d9cd4"
+    },
+    {
+      "path": "reference/Cargo.lock",
+      "bytes": 45699,
+      "sha256": "93498c4282584371a5042b277cfd182ff1cc07a8e3f69a5c74c70fb74354fe1e"
+    },
+    {
+      "path": "reference/rust-toolchain.toml",
+      "bytes": 114,
+      "sha256": "434ff6439d1896b5558fb1077c8169c68f1ee596cbb4b7948de2bef68b9688cd"
+    },
+    {
+      "path": "reference/PRINCIPAL_API.json",
+      "bytes": 13901,
+      "sha256": "ad7d0fc7b58f005fd4f39f450ae5980c878501593cf7554137450e68c2b5531a"
+    },
+    {
+      "path": "reference/contracts/common.rs",
+      "bytes": 7220,
+      "sha256": "f30e5b831573e7f878169ee4d682784893ca8417f50fcf4b7f39438d7a2443bb"
+    },
+    {
+      "path": "reference/contracts/oracle_adapter/Cargo.toml",
+      "bytes": 330,
+      "sha256": "62d92060a9c18bee6d5755ed3c6dff940b37a6d62d88be1714adb6005502ddff"
+    },
+    {
+      "path": "reference/contracts/oracle_adapter/src/lib.rs",
+      "bytes": 3073,
+      "sha256": "c807f877764f6cc1049ae3c62f40bf95262ac20c3ec7ae7adcfcc88d81c6f55c"
+    },
+    {
+      "path": "reference/contracts/permissioning/Cargo.toml",
+      "bytes": 329,
+      "sha256": "2d479709e9ccde9f86da61a1e4b878694af61d2fa4ea5a123701c54d7e128c6b"
+    },
+    {
+      "path": "reference/contracts/permissioning/src/lib.rs",
+      "bytes": 2323,
+      "sha256": "842422d798a5e043914e80a1980e8f54448b909f45ccf5f8d3c4b8a5c1b74f3b"
+    },
+    {
+      "path": "reference/contracts/sy_wrapper/Cargo.toml",
+      "bytes": 326,
+      "sha256": "2e1fa3c2fb6dd4c0e8e0c1bff8a09fbf82e79422d263b1516d6fb6be48e3e3d6"
+    },
+    {
+      "path": "reference/contracts/sy_wrapper/src/lib.rs",
+      "bytes": 6806,
+      "sha256": "23465d794f38d865759316ec5f399f02fbf8d3ca6bba4e75bf0c59e995470888"
+    },
+    {
+      "path": "reference/contracts/principal_manager/Cargo.toml",
+      "bytes": 645,
+      "sha256": "fa8a98359c3f13b05603a1ddaf2412d68b3ad51fb8265a6f83e083f725533ae8"
+    },
+    {
+      "path": "reference/contracts/principal_manager/src/lib.rs",
+      "bytes": 15429,
+      "sha256": "0dab2f71478d22ca232c464afee8d7d08ff9e1c40b5b00d95cee95a267ceb316"
+    },
+    {
+      "path": "reference/contracts/risk_control/Cargo.toml",
+      "bytes": 328,
+      "sha256": "7b9b05f8327c3d4a9d9f91c768a7335375b3496f4b288698e3e7a265d8500631"
+    },
+    {
+      "path": "reference/contracts/risk_control/src/lib.rs",
+      "bytes": 3741,
+      "sha256": "ecc8db989983c85c1bac033da6be9b1b5d4e7cd50be5df68c630c34cefdc494a"
+    },
+    {
+      "path": "reference/contracts/principal_manager/tests/lifecycle.rs",
+      "bytes": 11895,
+      "sha256": "ef5165819b40dc0a9a76fc578d7780f4710034f8bbdd6f9e9206a349d53e4276"
+    },
+    {
+      "path": "reference/CONTRACT_INTEGRATION.md",
+      "bytes": 16916,
+      "sha256": "ec9fa21d6e0c8fff479d5a9373b5fba62d8d066242d09ad2ea5af30e9cc992b0"
+    }
+  ]
+}

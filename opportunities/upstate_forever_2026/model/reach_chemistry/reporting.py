@@ -582,16 +582,18 @@ def _source_period_sections(project):
             ("duration_days", "Duration (days)")], "Every selected original period")
         + _table(flows, [("record", "Period / flow"), ("flow_id", "Flow"), ("begin", "Begin UTC"), ("end", "End UTC"),
             ("state", "Selection state"), ("expected_values", "Expected intervals"), ("present_values", "Nonmissing values"),
-            ("missing_count", "Missing intervals"), ("rejected_quality_count", "Excluded-quality values"),
+            ("missing_count", "Missing intervals"), ("off_grid_count", "Timestamps outside the selected interval grid"),
+            ("rejected_quality_count", "Excluded-quality values"),
             ("quality_codes", "Original quality-code counts")], "Complete original flow coverage by period")
         + _table(flows, [("record", "Period / flow"), ("missing_first", "First retained missing timestamps (up to 12)"),
+            ("off_grid_first", "First retained off-grid timestamps (up to 12)"),
             ("rejected_quality_first", "First retained excluded-quality timestamps (up to 12)"),
             ("negative_original_values", "Signed negative original values"),
             ("original_units", "Original units"), ("minimum_original_value", "Original minimum"),
             ("maximum_original_value", "Original maximum"), ("original_mean", "Original interval mean"),
             ("mean_cms", "Converted mean (m³/s)"), ("m3_day", "Water rate (m³/day)"),
             ("volume_m3", "Period water volume (m³)")], "Original numeric support and explicit unit conversion")
-        + "<p>The coverage counts cover the whole selected period. The source builder retains up to twelve example timestamps for each missing or excluded-quality category; the complete original files accompany the case. Signed original values are preserved when calculating the selected interval mean. Missing or excluded-quality intervals are not filled or removed to manufacture a complete period.</p>"
+        + "<p>The coverage counts cover the whole selected period. The source builder retains up to twelve example timestamps for each missing, off-grid or excluded-quality category; the complete original files accompany the case. Signed original values are preserved when calculating the selected interval mean. Missing, off-grid or excluded-quality intervals are not filled or removed to manufacture a complete period.</p>"
         + _table(storage, [("record", "Period / reach"), ("reach", "Reach"), ("begin", "Begin UTC"), ("end", "End UTC"),
             ("duration_days", "Duration (days)"), ("initial_volume_m3", "Initial volume (m³)"),
             ("inflow_m3_day", "Incoming water (m³/day)"), ("outflow_m3_day", "Outgoing water (m³/day)"),

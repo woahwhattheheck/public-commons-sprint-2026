@@ -79,6 +79,8 @@ python -m source_tools.compose \
 
 Each `--manifest` is an original `upstate.sources/v1` file; each `--entry` is one source row with its original file and companions. The output directory must contain all selected source files. The composer verifies every declared byte count and hash, rewrites only their relative paths, retains the original input manifests as document sources, and rejects duplicate source IDs. Reusing an identical selection returns the same immutable manifest bytes.
 
+See [Original source intake and native view reuse](SOURCE_MATERIALIZATION.md) for operation-scoped verification reuse and the complete original-manifest receiving command. It preserves every retained source and native companion while avoiding repeated body reads within one unchanged preparation.
+
 Import `sources/model-inputs.json` through the existing operator or `Workspace.import_sources`. Source bodies and companions then enter the original content-addressed store. Native views preserve each entry's directory relationships, including original tile/request definitions and shapefile sidecars. Existing source editions without those path annotations remain readable.
 
 The grid also requires actual NLCD, R-factor and K-factor rasters with the declared physical units. Their original source vintages, selection rules and conversions stay in their own source entries. The scientific engine is the original pinned InVEST NDR/SDR implementation; these preparation commands do not execute a model.

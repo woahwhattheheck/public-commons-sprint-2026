@@ -150,6 +150,77 @@ The course keeps `events.jsonl`, every completed stage record, complete original
 Read the actual output before reporting execution completion. An unstarted or interrupted course retains its same source and operation for continuation. The supplied source programme is reusable; its existence alone is not a native result.
 
 
+
+## Issue a saved edition for prime or colleague review
+
+Open **Prime review and returns**, select one complete immutable edition, enter a clear review purpose, and choose **Issue complete reviewed edition**. The current named reviewer provides the issue attribution. The application retains the exact complete issued JSON file and its selected baseline identity before offering the download.
+
+Give that whole file to the colleague. They open the same response desk, use **Editions and receiving → Receive and reopen complete work**, choose the issued file, and continue their independent local copy. Their original receiving history binds the exact issued-file hash. They can change requirements, presentation wording, source documents, evidence and page order, save their own reviewed editions, and return **Download working copy + unfinished fields**. That download also retains their unapplied text and any unfinished return-review work.
+
+The author keeps the original issuing working copy. A file from another workspace, another seed edition, an unrelated baseline or a copy without the exact original receiving link cannot be silently joined.
+
+## Review the complete returned work
+
+1. Choose **New independent return review**. Select its exact original issue and the complete returned JSON file. The whole file is retained immediately in this existing working copy.
+2. Name the reviewing author and state the decision purpose. Choose **Compare complete original sources**.
+3. Expand changes to inspect the complete issued baseline, current author value and returned colleague value. Requirements, slides and documents match their original IDs. Independently added records with a colliding ID, deletions, changed fields, absent fields, explicit null values and exact JSON types remain visible.
+4. Choose current, returned or a complete custom value for each listed change. **Keep all current author changes** and **Select all returned changes** are deliberate whole-side selections; they can be refined item by item. Document additions/removals and the complete chosen document order must agree. Requirement evidence, source reviews and PDF assembly must still reference actual selected documents.
+5. If the incoming working copy contains unapplied editor text or unfinished return-review work, inspect the complete original and the downloadable unfinished-editor envelope. Acknowledge the retained material before deciding from its applied content.
+6. Prepare the complete review plan. The ordinary response validator checks the assembled entire response, including all 56 original requirements, all 12 slide IDs/order, four summary flags, the 240-second duration and complete source/evidence references.
+7. Resolve changed-material decisions. A completed/applicability decision that mixes content and evidence beyond either complete attributed side must be explicitly reopened or reviewed again. The same rule applies to a reviewed matrix or sample-summary source whose document/review material changes. **Explicitly reopen all changed-material decisions** creates visible reopening choices; prepare the plan again to inspect their result. Individual review JSON records the named reviewer, date where relevant, reason and complete decision basis.
+8. Choose **Apply exact plan as reviewed author edition**. One immutable edition appends to the author's existing history. It retains the full before/after draft, every explicit choice, material-review decisions, exact issue/return identities and the entire original returned file. The colleague's separate edition chain stays within that whole preserved return.
+
+The comparison and plan each bind the actual complete author workspace and returned original. Changing the author content makes a prior plan stale. The application never silently applies an earlier comparison to newly changed source.
+
+### Preserve incomplete decisions and recover the original action
+
+The existing IndexedDB working-copy journal retains the full returned file, selected issue, all choices/custom JSON, material-review text, comparison and plan. Reloading reopens the same review copy. Choosing another review preserves its predecessors. Complete working-copy and editable-application downloads carry these unfinished decisions with the original documents.
+
+Issue and Apply retain an exact original request before computing and committing the result. **Recover original issue** and **Recover original apply result** reuse that request. A saved result returns its original issue or edition identity.
+
+If the author source changed before a pending Apply committed, **Recompare changed author content independently** first checks for the original saved result. When no saved result exists and the complete author workspace differs, it preserves the whole earlier request in the old review copy and opens a distinct review copy. The new comparison retains a prior choice only when the complete corresponding baseline/current/returned cell is still identical. It does not reinterpret the old request as a new mutation.
+
+The recovery control stays visible independently of the comparison panel. Source selectors and choice editors are disabled while that review has an unresolved retained action. Independent working copies and complete downloads remain available through the original desk.
+
+### Retained source and history limits
+
+The original per-file 32 MiB and selected 128 MiB limits remain. An author copy may retain at most 128 issued/returned original archives and 128 saved return decisions, within the existing 128-edition limit. Its complete decoded document objects plus literal UTF-8 issued/returned archive bodies share a 512 MiB retained-history budget. Incoming custody nesting is limited to 16 generations.
+
+The complete archive history is checked on open, export, native verification and receiving. It reconstructs every retained review from the exact archived issued/returned sources and explicit choices, then compares the complete result with its immutable author edition. Original document objects remain content-addressed and complete.
+
+## Continue the same original receiving case through prime review
+
+Run the original complete receiving course first using its existing directory and inputs. Then continue that **same original case** from this whole source generation:
+
+~~~sh
+python3 PRIME_RETURN_RECEIVING.py \
+  --case /absolute/owned/hcps-original-receiving \
+  --node /absolute/node
+~~~
+
+The following controller acquires the same original operation lock and verifies every completed preceding output. It uses the actual original author workspace and complete observed 225-second presentation trace. It keeps source, browser profiles, loopback origin, checkpoints, logs and all following outputs beneath the original case's **prime-review/** directory.
+
+The whole following journey:
+
+1. Attaches the actual completed original playback trace and saves a reviewed baseline against R23.
+2. Uses the real browser to issue that exact saved edition.
+3. Receives it in an independent colleague profile, edits complete source-bound requirements/evidence, preserves unfinished slide text across reload, and exports the complete returned file.
+4. Retains a genuinely separate author edition over the same baseline.
+5. Compares the complete return in the real operator UI, preserves unfinished explicit choices across reload, selects a mixture of author/returned content, and explicitly reopens the resulting changed-material completion decision before saving the author edition.
+6. Downloads the whole editable application, opens it in another actual recipient profile, preserves every original byte/history/return plan, and reloads the same received copy.
+7. Captures actual desktop and 390-pixel recipient/author views and preserves the entire original-plus-following case in **HCPS_Complete_Original_And_Prime_Review.tar.gz**.
+
+The final archive includes complete application source, all original inputs, documents, immutable editions, issued/returned full files, browser working histories, actual outputs and original logs. Repeat the same command to continue or adopt only fully verified existing outputs. Earlier source and completed original results remain retained.
+
+The producing operator must actually view the captured screens and open/use the exact outgoing application and attachments under the owner rule below. The source course does not substitute for that observation.
+
+## Current browser ownership
+
+Bryce explicitly released the October 13 local in-app browser meeting hold in the original coordination message 1791908979.290839: the meeting is over and the in-app browser is free again. Authorized local browser work may resume while preserving user tabs and saved state. The release applies to that browser hold only. A later direct owner reservation controls subsequent work.
+
+Original release: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791908979290839 .
+
+
 <!-- bryce-rendered-product-inspection:begin -->
 ## Standing lab rule: inspect the rendered product before presenting it
 

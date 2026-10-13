@@ -1,0 +1,311 @@
+{
+  "schema": "upstate.flow-weighted-concentration-execution/v1",
+  "method": "upstate.observed-load-integration/v2",
+  "fixture": {
+    "contract": {
+      "schema": "upstate.observed-loads-contract/v1",
+      "period": {
+        "start": "2024-01-01",
+        "end": "2024-01-04"
+      },
+      "maximum_interpolation_gap_days": 45,
+      "daily_concentration_basis": "date_assigned_grab_with_daily_mean_flow",
+      "accepted_concentration_qualifiers": [
+        ""
+      ],
+      "accepted_concentration_statuses": [
+        "Final"
+      ],
+      "accepted_censoring_conditions": [
+        "Present Below Quantification Limit",
+        "Not Detected"
+      ],
+      "accepted_flow_approval_statuses": [
+        "Approved"
+      ],
+      "accepted_flow_qualifiers": [
+        ""
+      ],
+      "accepted_flow_validity": [
+        ""
+      ],
+      "event_sampling_policy": "retain_only",
+      "source_references": [
+        "retained-method-exercise:daily-flow",
+        "retained-method-exercise:original-support"
+      ],
+      "support": [
+        {
+          "station_id": "fixture-station",
+          "gauge_id": "USGS-fixture",
+          "gauge_relation": "co_located",
+          "accepted": true,
+          "location_match": true,
+          "catchment_match": true,
+          "catchment_id": "fixture-catchment",
+          "evidence": [
+            "retained-method-exercise:original-support"
+          ]
+        }
+      ],
+      "native_comparison_mappings": [],
+      "seasons": []
+    },
+    "samples": [
+      {
+        "sample_id": "sample0",
+        "station_id": "fixture-station",
+        "date": "2024-01-01",
+        "characteristic": "Total Nitrogen",
+        "sample_fraction": "Unfiltered",
+        "value": "1",
+        "unit": "mg/L",
+        "detection_condition": "",
+        "limit_value": "",
+        "limit_unit": "",
+        "result_status": "Final",
+        "qualifier": "",
+        "method_id": "fixture-method",
+        "method_context": "explicit-method-exercise",
+        "source_file": "fixture-samples.csv",
+        "source_row": "2"
+      },
+      {
+        "sample_id": "sample2",
+        "station_id": "fixture-station",
+        "date": "2024-01-03",
+        "characteristic": "Total Nitrogen",
+        "sample_fraction": "Unfiltered",
+        "value": "3",
+        "unit": "mg/L",
+        "detection_condition": "",
+        "limit_value": "",
+        "limit_unit": "",
+        "result_status": "Final",
+        "qualifier": "",
+        "method_id": "fixture-method",
+        "method_context": "explicit-method-exercise",
+        "source_file": "fixture-samples.csv",
+        "source_row": "4"
+      }
+    ],
+    "flows": [
+      {
+        "observation_id": "fixture-0",
+        "monitoring_location_id": "USGS-fixture",
+        "date": "2024-01-01",
+        "discharge_m3_s": 1,
+        "approval_status": "Approved",
+        "qualifier": "",
+        "validity": []
+      },
+      {
+        "observation_id": "fixture-1",
+        "monitoring_location_id": "USGS-fixture",
+        "date": "2024-01-02",
+        "discharge_m3_s": 2,
+        "approval_status": "Approved",
+        "qualifier": "",
+        "validity": []
+      },
+      {
+        "observation_id": "fixture-2",
+        "monitoring_location_id": "USGS-fixture",
+        "date": "2024-01-03",
+        "discharge_m3_s": 3,
+        "approval_status": "Approved",
+        "qualifier": "",
+        "validity": []
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "Unequal flow weights use exactly matching mass and volume",
+      "passed": true,
+      "period": {
+        "label": "selected_period",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-04",
+        "period_end_exclusive": true,
+        "expected_days": 3,
+        "quantified_days": 3,
+        "coverage_complete": true,
+        "load_kg": 1209.6,
+        "load_lower_kg": 1209.6,
+        "load_upper_kg": 1209.6,
+        "censored_days": 0,
+        "sampled_days": 2,
+        "interpolated_days": 1,
+        "quantified_flow_volume_m3": 518400,
+        "flow_weighted_concentration_mg_l": 2.3333333333333335,
+        "flow_weighted_concentration_lower_mg_l": 2.3333333333333335,
+        "flow_weighted_concentration_upper_mg_l": 2.3333333333333335,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {},
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Censored bounds retain a null point and weighted lower/upper envelope",
+      "passed": true,
+      "period": {
+        "label": "selected_period",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-04",
+        "period_end_exclusive": true,
+        "expected_days": 3,
+        "quantified_days": 3,
+        "coverage_complete": true,
+        "load_kg": null,
+        "load_lower_kg": 1036.8000000000002,
+        "load_upper_kg": 1382.4,
+        "censored_days": 2,
+        "sampled_days": 2,
+        "interpolated_days": 1,
+        "quantified_flow_volume_m3": 518400,
+        "flow_weighted_concentration_mg_l": null,
+        "flow_weighted_concentration_lower_mg_l": 2.0000000000000004,
+        "flow_weighted_concentration_upper_mg_l": 2.6666666666666665,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {},
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Zero matching volume leaves all concentration fields null",
+      "passed": true,
+      "period": {
+        "label": "selected_period",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-04",
+        "period_end_exclusive": true,
+        "expected_days": 3,
+        "quantified_days": 3,
+        "coverage_complete": true,
+        "load_kg": 0,
+        "load_lower_kg": 0,
+        "load_upper_kg": 0,
+        "censored_days": 0,
+        "sampled_days": 2,
+        "interpolated_days": 1,
+        "quantified_flow_volume_m3": 0,
+        "flow_weighted_concentration_mg_l": null,
+        "flow_weighted_concentration_lower_mg_l": null,
+        "flow_weighted_concentration_upper_mg_l": null,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {},
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Missing discharge excludes the same day from both sums",
+      "passed": true,
+      "period": {
+        "label": "selected_period",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-04",
+        "period_end_exclusive": true,
+        "expected_days": 3,
+        "quantified_days": 2,
+        "coverage_complete": false,
+        "load_kg": 864,
+        "load_lower_kg": 864,
+        "load_upper_kg": 864,
+        "censored_days": 0,
+        "sampled_days": 2,
+        "interpolated_days": 0,
+        "quantified_flow_volume_m3": 345600,
+        "flow_weighted_concentration_mg_l": 2.5,
+        "flow_weighted_concentration_lower_mg_l": 2.5,
+        "flow_weighted_concentration_upper_mg_l": 2.5,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {
+          "Missing daily flow": 1
+        },
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Rejected interpolation excludes a high-volume day from the denominator",
+      "passed": true,
+      "period": {
+        "label": "selected_period",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-04",
+        "period_end_exclusive": true,
+        "expected_days": 3,
+        "quantified_days": 2,
+        "coverage_complete": false,
+        "load_kg": 864,
+        "load_lower_kg": 864,
+        "load_upper_kg": 864,
+        "censored_days": 0,
+        "sampled_days": 2,
+        "interpolated_days": 0,
+        "quantified_flow_volume_m3": 345600,
+        "flow_weighted_concentration_mg_l": 2.5,
+        "flow_weighted_concentration_lower_mg_l": 2.5,
+        "flow_weighted_concentration_upper_mg_l": 2.5,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {
+          "Concentration gap exceeds selected maximum": 1
+        },
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Seasonal means use only their exact selected quantified days",
+      "passed": true,
+      "period": {
+        "label": "Two-day selected season",
+        "period_start": "2024-01-01",
+        "period_end": "2024-01-03",
+        "period_end_exclusive": true,
+        "expected_days": 2,
+        "quantified_days": 2,
+        "coverage_complete": true,
+        "load_kg": 432,
+        "load_lower_kg": 432,
+        "load_upper_kg": 432,
+        "censored_days": 0,
+        "sampled_days": 1,
+        "interpolated_days": 1,
+        "quantified_flow_volume_m3": 259200,
+        "flow_weighted_concentration_mg_l": 1.6666666666666667,
+        "flow_weighted_concentration_lower_mg_l": 1.6666666666666667,
+        "flow_weighted_concentration_upper_mg_l": 1.6666666666666667,
+        "flow_weighted_concentration_basis": "Mass and flow volume over the identical quantified days; 1000 * kg / m3; null for zero volume",
+        "missing_reasons": {},
+        "annualized": false,
+        "quantity_basis": "mass_over_quantified_days",
+        "uncertainty": "Lower/upper loads propagate reported censoring limits through the selected interpolation only; they are not confidence intervals. Sampling frequency, event undersampling, daily-mean flow versus grab-sample timing, laboratory uncertainty and flow uncertainty remain unquantified. No missing day is scaled to an annual total."
+      }
+    },
+    {
+      "name": "Complete original589/2192 result is unchanged apart from new fields/schema",
+      "passed": true,
+      "counts": {
+        "source_samples": 589,
+        "source_flows": 2192,
+        "series": 19,
+        "support_admitted_series": 0,
+        "context_only_series": 19,
+        "quantified_days": 0
+      },
+      "annual_rows": 0
+    }
+  ],
+  "source_outputs_preserved": "Original v1 outputs/ files remain unchanged. Source-derived 589/2192 numerical fields match exactly after removing the additive weighted fields and schema generation.",
+  "execution": "Exact maintained JavaScript calculation/report source in V8; no physical filesystem or browser claim."
+}

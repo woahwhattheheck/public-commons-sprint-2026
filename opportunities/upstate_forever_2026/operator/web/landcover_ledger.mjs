@@ -2,13 +2,34 @@
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone = value => JSON.parse(JSON.stringify(value));
 const identity = value => JSON.stringify([value.source_collection_id, value.source_id]);
-const defaults = () => ({title:'Land-cover change ledger',input_mode:'runs',baseline:'',alternatives:[],baseline_source:'',source_alternatives:[],baseline_band:'1',source_bands:{},zones:'',id_field:'huc12',name_field:'name',layer:'',ids:'',support:'all',unknown:'error',overlap:false,projected_area:false});
+const defaults = () => ({title:'Land-cover change ledger',input_mode:'runs',baseline:'',alternatives:[],baseline_source:'',source_alternatives:[],baseline_band:'1',source_bands:{},annual_sources:[{ref:'',year:'',band:'1'},{ref:'',year:'',band:'1'}],zones:'',id_field:'huc12',name_field:'name',layer:'',ids:'',support:'all',unknown:'error',overlap:false,projected_area:false});
+
+const NLCD_LABELS={11:'Open water',12:'Perennial ice/snow',21:'Developed, open space',22:'Developed, low intensity',23:'Developed, medium intensity',24:'Developed, high intensity',31:'Barren land',41:'Deciduous forest',42:'Evergreen forest',43:'Mixed forest',51:'Dwarf scrub',52:'Shrub/scrub',71:'Grassland/herbaceous',72:'Sedge/herbaceous',73:'Lichens',74:'Moss',81:'Pasture/hay',82:'Cultivated crops',90:'Woody wetlands',95:'Emergent herbaceous wetlands'};
+const classLabel=code=>String(code)+' · '+(NLCD_LABELS[code]||'Retained class');
+const quantity=value=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value).toLocaleString(undefined,{maximumFractionDigits:2}):'—';
+const STATUS_LABELS={stable:'Unchanged in every selected observation',changed_once:'One observed transition',changed_multiple:'Multiple observed transitions',returned_to_initial:'Returned to the initial class'};
+export function timelineSelection(rows,rasters){
+ if(!Array.isArray(rows)||rows.length<2)throw Error('Choose at least two actual land-cover observations.');
+ let previous=null;const seen=new Set();
+ return rows.map((item,index)=>{
+  const source=rasters.find(row=>identity(row)===item.ref),year=Number(item.year),band=Number(item.band);
+  if(!source)throw Error('Choose an available retained source for observation '+(index+1)+'.');
+  if(!String(item.year).trim()||!Number.isSafeInteger(year)||year<1||year>9999)throw Error('Enter the actual whole observation year for observation '+(index+1)+'.');
+  if(previous!==null&&year<=previous)throw Error('Keep observation years unique and strictly increasing; use Move earlier/later to order the retained sources.');
+  if(!Number.isSafeInteger(band)||band<1)throw Error('Each selected raster band must be a positive whole number.');
+  const key=JSON.stringify([source.source_collection_id,source.source_id,band]);
+  if(seen.has(key))throw Error('The same retained source band cannot represent two separate observations.');
+  seen.add(key);previous=year;
+  return {year,source_collection_id:source.source_collection_id,source_id:source.source_id,band};
+ });
+}
 
 export function attachLandcoverLedger({getState, api, endpoint, toast, openScientificReport}) {
   const sessions = new Map();
   let root=null, key=null, current=null, catalog=null, epoch=0, events=null;
   let catalogRequest=0, inputRequest=0, editionRequest=0, reportReadRequest=0;
-  let openedEdition=null, openedReport=null;
+  let openedEdition=null, openedReport=null, openedTimeline=null;
+  const timelineView={zone:'',status:'all',page:0};
   const find = selector => root?.querySelector(selector);
   const all = selector => [...(root?.querySelectorAll(selector) || [])];
   const field = name => find('[name="'+name+'"]');
@@ -25,11 +46,13 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     sessions.set(workspace,session);return session;
   }
   const controls = () => '<header><p>RETAINED LAND-COVER EDITIONS</p><h1>Land-cover changes</h1><p>Compare land-cover classes and changed hectares on the original raster grid, with coverage for each reporting area.</p></header>'+
-    '<form><div class="lc-form"><label>Title<input name="title" required value="Land-cover change ledger"></label><label>Comparison inputs<select name="input_mode"><option value="runs">Retained model runs</option><option value="sources">Annual raster source editions</option></select></label></div>'+
+    '<form><div class="lc-form"><label>Title<input name="title" required value="Land-cover change ledger"></label><label>Comparison inputs<select name="input_mode"><option value="runs">Retained model runs</option><option value="sources">Baseline and alternative raster editions</option><option value="timeline">Multi-year change history</option></select></label></div>'+
     '<fieldset data-mode="runs"><legend>Retained runs</legend><div class="lc-form"><label>Baseline run<select name="baseline" required></select></label><label>Alternative runs<select name="alternatives" multiple required size="5"></select></label></div><p>Run operands must use the same original retained grid.</p></fieldset>'+
     '<fieldset data-mode="sources" hidden disabled><legend>Annual source editions</legend><p>Select original NLCD class rasters on the same native grid. Equal-area hectares are the default; a projected planar grid requires the explicit option below. Each band keeps its own valid-data mask. These comparisons describe land-cover change between the selected editions.</p><div class="lc-form"><label>Baseline source<select name="baseline_source" required></select></label><label>Baseline band<input name="baseline_band" type="number" min="1" step="1" required value="1"></label><label>Alternative sources<select name="source_alternatives" multiple required size="5"></select></label></div><div data-source-bands class="lc-form"></div><div data-source-summary></div></fieldset>'+
+    '<fieldset data-mode="timeline" hidden disabled><legend>Ordered land-cover observations</legend><p>Choose at least two actual retained class rasters in increasing observation years. Each selected band retains its own source bytes, grid and mask. A gap between selected years does not establish when a change occurred.</p><div data-timeline-inputs></div><button type="button" data-action="add-year">Add observation</button><p data-timeline-order role="status"></p><p>All selected observations use the same common valid support. Forest-class exchanges remain separate from crossing into or out of forest; developed open space is a class, not measured impervious cover.</p></fieldset>'+
     '<fieldset><legend>Original reporting polygons</legend><div class="lc-form"><label>Reporting source<select name="zones" required></select></label><label>Identifier field<input name="id_field" value="huc12" required></label><label>Name field<input name="name_field" value="name"></label><label>Layer (empty uses original)<input name="layer"></label><label>Selected original IDs (one per line; empty selects all)<textarea name="ids" rows="3"></textarea></label><label>Common support<select name="support"><option value="all">Across every selected alternative</option><option value="pair">Separately for each alternative</option></select></label><label>Unknown classes<select name="unknown"><option value="error">Report input error</option><option value="exclude">Exclude and quantify missing area</option></select></label><label class="lc-checkbox"><input name="overlap" type="checkbox">Allow overlapping reporting areas; use a unique domain union</label><label class="lc-checkbox"><input name="projected_area" type="checkbox">Allow projected planar hectares on a retained projected grid. Default requires an equal-area projection.</label></div></fieldset>'+
     '<div class="lc-toolbar"><button type="button" data-action="check">Check selected inputs</button><button type="submit">Build land-cover ledger</button><button type="button" data-action="refresh">Refresh retained inputs</button><button type="button" data-action="resume" hidden>Resume original task</button></div></form>'+
+    '<div class="lc-toolbar"><button type="button" data-action="save-selection">Download input selection</button><label>Open saved input selection<input type="file" data-open-selection accept="application/json,.json"></label></div>'+
     '<p data-note role="status" aria-live="polite"></p><section data-input-preview hidden></section><section><h2>Saved editions</h2><select name="edition"><option value="">Choose a saved ledger</option></select><button type="button" data-action="open">Open edition</button></section><section data-result></section>';
   function draft() {
     if(!root)return current?.draft;
@@ -37,7 +60,8 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     const selected=name=>[...(field(name)?.selectedOptions||[])].map(o=>o.value);
     const source_bands={...current.draft.source_bands};
     for(const input of all('[data-source-band]'))source_bands[input.dataset.sourceBand]=input.value;
-    return {title:value('title'),input_mode:value('input_mode'),baseline:value('baseline'),alternatives:selected('alternatives'),baseline_source:value('baseline_source'),source_alternatives:selected('source_alternatives'),baseline_band:value('baseline_band'),source_bands,zones:value('zones'),id_field:value('id_field'),name_field:value('name_field'),layer:value('layer'),ids:value('ids'),support:value('support'),unknown:value('unknown'),overlap:Boolean(field('overlap')?.checked),projected_area:Boolean(field('projected_area')?.checked)};
+    const annual_sources=all('[data-timeline-row]').map(row=>({ref:row.querySelector('[data-year-source]').value,year:row.querySelector('[data-year-value]').value,band:row.querySelector('[data-year-band]').value}));
+    return {annual_sources,title:value('title'),input_mode:value('input_mode'),baseline:value('baseline'),alternatives:selected('alternatives'),baseline_source:value('baseline_source'),source_alternatives:selected('source_alternatives'),baseline_band:value('baseline_band'),source_bands,zones:value('zones'),id_field:value('id_field'),name_field:value('name_field'),layer:value('layer'),ids:value('ids'),support:field('support')?.disabled?current.draft.support:value('support'),unknown:value('unknown'),overlap:Boolean(field('overlap')?.checked),projected_area:Boolean(field('projected_area')?.checked)};
   }
   function retain() {if(!root||!current)return;current.draft=draft();save(current,key);}
   function restore(value) {
@@ -57,11 +81,86 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
   }
   function mode() {
     for(const group of all('[data-mode]')){const active=group.dataset.mode===field('input_mode').value;group.hidden=!active;group.disabled=!active;}
+    const timeline=field('input_mode').value==='timeline';field('support').disabled=timeline;field('support').value=timeline?'all':current.draft.support;
+    find('[type="submit"]').textContent=timeline?'Build multi-year change history':'Build land-cover ledger';
   }
+
+  function timelineInputs(){
+    const box=find('[data-timeline-inputs]');if(!box)return;
+    const rows=Array.isArray(current.draft.annual_sources)?current.draft.annual_sources:defaults().annual_sources;
+    const options=(catalog?.rasters||[]).map(row=>({value:identity(row),label:row.title+' · '+(row.vintage||'vintage unspecified')+' · '+row.source_id}));
+    box.innerHTML=rows.map((row,i)=>{
+      const available=options.some(x=>x.value===row.ref),choices=[{value:'',label:'Choose retained source'},...options,...(!available&&row.ref?[{value:row.ref,label:'Unavailable retained selection · '+row.ref}]:[])];
+      return '<div class="lc-year-row" data-timeline-row="'+i+'"><h3>Observation '+(i+1)+'</h3><label>Actual observation year<input data-year-value type="number" min="1" max="9999" step="1" required value="'+escape(row.year)+'"></label><label>Retained class raster<select data-year-source required>'+choices.map(o=>'<option value="'+escape(o.value)+'"'+(o.value===row.ref?' selected':'')+'>'+escape(o.label)+'</option>').join('')+'</select></label><label>Band<input data-year-band type="number" min="1" step="1" required value="'+escape(row.band??'1')+'"></label><div class="lc-toolbar"><button type="button" data-action="year-up" data-index="'+i+'"'+(!i?' disabled':'')+' aria-label="Move observation '+(i+1)+' earlier">Move earlier</button><button type="button" data-action="year-down" data-index="'+i+'"'+(i===rows.length-1?' disabled':'')+' aria-label="Move observation '+(i+1)+' later">Move later</button><button type="button" data-action="remove-year" data-index="'+i+'"'+(rows.length<=2?' disabled':'')+' aria-label="Remove observation '+(i+1)+'">Remove</button></div></div>';
+    }).join('');
+    timelineOrder();
+  }
+  function timelineOrder(){
+    const p=find('[data-timeline-order]');if(!p)return;
+    const rows=all('[data-timeline-row]').map(row=>({year:row.querySelector('[data-year-value]').value}));
+    const years=rows.map(row=>Number(row.year)),valid=rows.every((row,i)=>row.year.trim()&&Number.isSafeInteger(years[i])&&years[i]>0&&(i===0||years[i]>years[i-1]));
+    p.textContent=valid?'Selected observations: '+years.join(' → ')+'. Intervals: '+years.slice(1).map((year,i)=>years[i]+'–'+year+' ('+(year-years[i])+' years)').join('; ')+'. Changes are located between observations.':'Enter actual observation years in strictly increasing order. The source’s publication vintage is shown separately.';
+  }
+  function timelineEdit(action,index){
+    retain();const rows=current.draft.annual_sources;
+    if(action==='add-year')rows.push({ref:'',year:'',band:'1'});
+    else if(action==='remove-year'&&rows.length>2&&Number.isInteger(index)&&index>=0&&index<rows.length)rows.splice(index,1);
+    else if((action==='year-up'||action==='year-down')&&Number.isInteger(index)){const next=index+(action==='year-up'?-1:1);if(index>=0&&index<rows.length&&next>=0&&next<rows.length)[rows[index],rows[next]]=[rows[next],rows[index]];}
+    current.edit++;inputRequest++;save(current,key);timelineInputs();const preview=find('[data-input-preview]');preview.hidden=true;preview.replaceChildren();
+    if(current.storageFailure)note('Browser draft storage is unavailable. Download the complete input selection to retain the current fields.',true);
+  }
+  function saveSelection(){
+    retain();const value={schema:'upstate.landcover-input-selection/v1',workspace_id:catalog?.workspace_id||null,workspace_key:key,draft:clone(current.draft)},blob=new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='land-cover-input-selection.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);note('Complete input selection downloaded. The saved native edition and portable report remain in this Workspace.');
+  }
+  async function openSelection(file){
+    const workspace=key,view=epoch,session=current,edit=session.edit;let value;
+    try{value=JSON.parse(await file.text());}catch{throw Error('Open the complete downloaded land-cover input-selection JSON.');}
+    if(!alive(workspace,view)||session!==current||edit!==session.edit)throw Error('Current input fields changed while the file was opening. They are preserved; reopen the file when ready.');
+    if(value.schema!=='upstate.landcover-input-selection/v1'||!value.draft||value.workspace_key!==workspace||value.workspace_id!==(catalog?.workspace_id||null))throw Error('Open this selection in its original Workspace; original source identities stay attached to that project.');
+    const expected=defaults(),received=value.draft;
+    for(const [name,defaultValue]of Object.entries(expected)){
+      const value=received[name];
+      if(Array.isArray(defaultValue)){if(!Array.isArray(value))throw Error('The saved selection lacks '+name+'.');}
+      else if(defaultValue&&typeof defaultValue==='object'){if(!value||typeof value!=='object'||Array.isArray(value)||Object.values(value).some(x=>typeof x!=='string'))throw Error('The saved source-band fields differ.');}
+      else if(typeof value!==typeof defaultValue)throw Error('The saved '+name+' field differs.');
+    }
+    if(!['runs','sources','timeline'].includes(received.input_mode)||received.alternatives.some(x=>typeof x!=='string')||received.source_alternatives.some(x=>typeof x!=='string')||received.annual_sources.some(x=>!x||['ref','year','band'].some(k=>typeof x[k]!=='string')))throw Error('The saved observation fields differ.');
+    if(!confirm('Replace the current input fields with this complete saved selection? Active native tasks and completed editions remain in place.'))return;
+    session.draft=Object.fromEntries(Object.keys(expected).map(name=>[name,clone(received[name])]));session.edit++;inputRequest++;restore(session.draft);sourceDetails();save(session,workspace);
+    const preview=find('[data-input-preview]');preview.hidden=true;preview.replaceChildren();note('Original saved input fields reopened.'+(session.storageFailure?' Browser storage is unavailable; retain the downloaded selection.':''));
+  }
+  function renderTimeline(){
+    const box=find('[data-timeline-result]'),timeline=openedTimeline;if(!box||!timeline)return;
+    if(timeline.schema!=='upstate.landcover-timeline/v1'||!Array.isArray(timeline.rows)||!Array.isArray(timeline.years))throw Error('The retained multi-year report has an unsupported structure.');
+    const rows=timeline.rows;if(!rows.length){box.innerHTML='<h3>Multi-year change history</h3><p>The retained report has no reporting-area rows.</p>';return;}
+    let row=rows.find(r=>r.zone_id===timelineView.zone)||rows.find(r=>r.zone_id==='__domain__')||rows[0];timelineView.zone=row.zone_id;
+    const summary=row.summary||{},forest=row.groups?.forest||{},years=timeline.years;
+    const metrics=[['stable_ha','Unchanged class'],['changed_ha','Changed class'],['one_observed_transition_ha','One observed transition'],['multiple_observed_transitions_ha','Multiple observed transitions'],['returned_to_initial_ha','Returned to initial class'],['changed_without_return_ha','Changed without return'],['persistent_final_ha','Final class retained in later observation'],['unconfirmed_final_ha','Final class first seen at last observation']];
+    const cards='<dl class="lc-metrics">'+metrics.map(([key,label])=>'<div><dt>'+label+'</dt><dd>'+quantity(summary[key])+' ha</dd></div>').join('')+'</dl>';
+    const filtered=(row.trajectories||[]).filter(t=>timelineView.status==='all'||t.status===timelineView.status).slice().sort((a,b)=>b.ha-a.ha||String(a.codes).localeCompare(String(b.codes)));
+    const pages=Math.max(1,Math.ceil(filtered.length/50));timelineView.page=Math.min(pages-1,Math.max(0,timelineView.page));const visible=filtered.slice(timelineView.page*50,(timelineView.page+1)*50);
+    const annual=(row.annual||[]),codes=[...new Set(annual.flatMap(a=>(a.classes||[]).map(c=>c.code)))].sort((a,b)=>a-b);
+    box.innerHTML='<h3>Multi-year change history</h3><p>'+years.map(escape).join(' → ')+' · '+escape(years.length)+' selected observations. Every displayed hectare uses the common valid support across all observations.</p>'+
+      '<div class="lc-form"><label>Reporting area<select data-timeline-zone>'+rows.map(r=>'<option value="'+escape(r.zone_id)+'"'+(r.zone_id===row.zone_id?' selected':'')+'>'+escape(r.zone_id==='__domain__'?'Unique reporting-area union':(r.zone_name||r.zone_id)+' · '+r.zone_id)+'</option>').join('')+'</select></label><label>Observed trajectory<select data-timeline-status><option value="all">All retained trajectories</option>'+Object.entries(STATUS_LABELS).map(([key,label])=>'<option value="'+key+'"'+(timelineView.status===key?' selected':'')+'>'+escape(label)+'</option>').join('')+'</select></label></div>'+
+      '<p>Common analysis area: <strong>'+quantity(row.analysis_ha)+' ha</strong>. Covered area: '+quantity(row.covered_ha)+' ha. Coverage: '+quantity(row.coverage_pct)+'%. Overlapping individual reporting areas must not be summed; use the retained unique union where supplied.</p>'+cards+
+      '<p>These quantities describe overlapping properties of the same trajectories. A final class is retained when it appears in at least two selected observations after the last observed change. This does not establish continuous persistence between unobserved years.</p>'+
+      '<h4>Forest changes</h4><div class="lc-table"><table><thead><tr><th>Observed relationship</th><th>Hectares</th></tr></thead><tbody>'+
+      [['forest_internal_only_ha','Class exchanges remaining within forest at every observation']].map(([key,label])=>'<tr><td>'+label+'</td><td>'+quantity(summary[key])+'</td></tr>').join('')+
+      Object.entries({stable_present_ha:'Forest at every observation',stable_absent_ha:'Outside forest at every observation',entered_ha:'At least one observed entry into forest',exited_ha:'At least one observed exit from forest',returned_ha:'Returned to original forest membership after crossing'}).map(([key,label])=>'<tr><td>'+label+'</td><td>'+quantity(forest[key])+'</td></tr>').join('')+'</tbody></table></div><p>Forest membership uses the original model’s forest classes. Entry, exit and return areas overlap: forest → nonforest → forest contributes to all three. Forest-type exchanges remain separate from membership crossings; neither supplies an impervious-surface measurement.</p>'+
+      '<h4>Class area at each observation</h4><div class="lc-table"><table><thead><tr><th>Original class</th>'+years.map(y=>'<th>'+escape(y)+' · ha</th>').join('')+'</tr></thead><tbody>'+codes.map(code=>'<tr><th>'+escape(classLabel(code))+'</th>'+years.map(year=>{const a=annual.find(a=>a.year===year),value=a?.classes?.find(c=>c.code===code)?.ha;return '<td>'+quantity(value===undefined&&a?0:value)+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>'+
+      '<h4>Retained cell trajectories</h4><p>'+filtered.length+' trajectories · ordered by original area. Reversal counts a return to any previously observed class after leaving it. The observation count at the end is not a duration in years.</p>'+
+      '<div class="lc-table"><table><thead><tr>'+years.map(y=>'<th>'+escape(y)+'</th>').join('')+'<th>Area · ha</th><th>Intersecting cells</th><th>Changes</th><th>Returns</th><th>Ending class observations</th><th>Last observed change</th><th>Status</th></tr></thead><tbody>'+visible.map(t=>'<tr>'+t.codes.map(code=>'<td>'+escape(classLabel(code))+'</td>').join('')+'<td>'+quantity(t.ha)+'</td><td>'+quantity(t.intersecting_cells)+'</td><td>'+quantity(t.change_count)+'</td><td>'+quantity(t.reversal_count)+'</td><td>'+quantity(t.final_class_observations)+'</td><td>'+(t.last_change_from_year==null?'No observed change':escape(t.last_change_from_year)+'–'+escape(t.last_change_to_year))+'</td><td>'+escape(STATUS_LABELS[t.status]||t.status)+'</td></tr>').join('')+'</tbody></table></div>'+
+      '<div class="lc-toolbar"><button type="button" data-action="timeline-page" data-direction="-1"'+(timelineView.page===0?' disabled':'')+'>Previous trajectories</button><span>Page '+(timelineView.page+1)+' of '+pages+'</span><button type="button" data-action="timeline-page" data-direction="1"'+(timelineView.page+1>=pages?' disabled':'')+'>Next trajectories</button></div>'+
+      '<details><summary>Adjacent observed transitions</summary>'+(row.adjacent||[]).map(interval=>'<h5>'+escape(interval.from_year)+'–'+escape(interval.to_year)+'</h5><div class="lc-table"><table><thead><tr><th>From class</th><th>To class</th><th>Hectares</th><th>Intersecting cells</th></tr></thead><tbody>'+interval.transitions.map(t=>'<tr><td>'+escape(classLabel(t.from_code))+'</td><td>'+escape(classLabel(t.to_code))+'</td><td>'+quantity(t.ha)+'</td><td>'+quantity(t.intersecting_cells)+'</td></tr>').join('')+'</tbody></table></div>').join('')+'</details>'+
+      '<details><summary>Interpretation retained with this edition</summary><ul>'+(timeline.interpretation||[]).map(text=>'<li>'+escape(text)+'</li>').join('')+'</ul></details>';
+  }
+
   function sourceDetails() {
+    timelineInputs();
     const d=current.draft,rows=catalog?.rasters||[];
     const alternatives=d.source_alternatives||[];
-    find('[data-source-bands]').innerHTML=alternatives.map(ref=>{const row=rows.find(item=>identity(item)===ref);return '<label>Band · '+escape(row?.title||ref)+'<input type="number" min="1" step="1" required data-source-band="'+escape(ref)+'" value="'+escape(d.source_bands?.[ref]||'1')+'"></label>';}).join('');
+    find('[data-source-bands]').innerHTML=alternatives.map(ref=>{const row=rows.find(item=>identity(item)===ref);return '<label>Band · '+escape(row?.title||ref)+'<input type="number" min="1" step="1" required data-source-band="'+escape(ref)+'" value="'+escape(d.source_bands?.[ref]??'1')+'"></label>';}).join('');
     const chosen=[d.baseline_source,...alternatives].filter(Boolean).map(ref=>rows.find(row=>identity(row)===ref)).filter(Boolean);
     find('[data-source-summary]').innerHTML=chosen.length?'<details><summary>Original source editions</summary><div class="lc-table"><table><thead><tr><th>Source</th><th>Vintage</th><th>Role</th><th>Source ID</th><th>SHA-256</th></tr></thead><tbody>'+chosen.map(row=>'<tr><td>'+escape(row.title)+'</td><td>'+escape(row.vintage)+'</td><td>'+escape(row.role||'unspecified')+'</td><td>'+escape(row.source_id)+'</td><td><code>'+escape(row.body?.sha256)+'</code></td></tr>').join('')+'</tbody></table></div></details>':'';
   }
@@ -73,7 +172,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     field('baseline_source').innerHTML='<option value="">Choose source</option>'+rasterOptions;field('source_alternatives').innerHTML=rasterOptions;
     field('zones').innerHTML='<option value="">Choose source</option>'+(catalog.vectors||[]).map(row=>'<option value="'+escape(identity(row))+'">'+escape(row.title)+' · '+escape(row.vintage)+'</option>').join('');
     const selectedEdition=field('edition').value||current.lastOpened;
-    field('edition').innerHTML='<option value="">Choose a saved ledger</option>'+(catalog.editions||[]).map(row=>'<option value="'+escape(row.id)+'">'+escape(row.title)+' · '+row.zone_count+' areas · '+row.alternative_count+' alternatives · '+(row.selection?.input_mode==='sources'?'annual sources':'retained runs')+'</option>').join('');
+    field('edition').innerHTML='<option value="">Choose a saved ledger</option>'+(catalog.editions||[]).map(row=>'<option value="'+escape(row.id)+'">'+escape(row.title)+' · '+row.zone_count+' areas · '+row.alternative_count+' alternatives · '+(row.selection?.input_mode==='timeline'?'multi-year history':row.selection?.input_mode==='sources'?'raster editions':'retained runs')+'</option>').join('');
     field('edition').value=selectedEdition;restore(d);sourceDetails();buttons();
   }
   function buttons() {
@@ -103,12 +202,14 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     if(!vector)throw Error('Choose an original reporting source.');
     if(!d.title.trim()||!d.id_field.trim())throw Error('Enter a title and original reporting identifier field.');
     const ids=d.ids.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const payload={title:d.title,zones:{source_collection_id:vector.source_collection_id,source_id:vector.source_id,id_field:d.id_field,name_field:d.name_field,...(d.layer?{layer:d.layer}:{}),...(ids.length?{ids}:{})},options:{support_scope:d.support,unknown_policy:d.unknown,allow_overlap:d.overlap,...(d.projected_area?{allow_projected_area:true}:{})}};
-    if(d.input_mode==='sources') {
+    const payload={title:d.title,zones:{source_collection_id:vector.source_collection_id,source_id:vector.source_id,id_field:d.id_field,name_field:d.name_field,...(d.layer?{layer:d.layer}:{}),...(ids.length?{ids}:{})},options:{support_scope:d.input_mode==='timeline'?'all':d.support,unknown_policy:d.unknown,allow_overlap:d.overlap,...(d.projected_area?{allow_projected_area:true}:{})}};
+    if(d.input_mode==='timeline') {
+      payload.input_mode='timeline';payload.annual_sources=timelineSelection(d.annual_sources,catalog.rasters||[]);
+    } else if(d.input_mode==='sources') {
       const source=(ref,band)=>{const row=(catalog.rasters||[]).find(item=>identity(item)===ref);const n=Number(band);if(!row)throw Error('Choose an available retained raster source.');if(!Number.isSafeInteger(n)||n<1)throw Error('Each selected raster band must be a positive integer.');return {source_collection_id:row.source_collection_id,source_id:row.source_id,band:n};};
       if(!d.source_alternatives.length)throw Error('Select at least one alternative raster source.');
       payload.input_mode='sources';payload.baseline_source=source(d.baseline_source,d.baseline_band);
-      payload.alternative_sources=d.source_alternatives.map(ref=>source(ref,d.source_bands[ref]||'1'));
+      payload.alternative_sources=d.source_alternatives.map(ref=>source(ref,d.source_bands[ref]??'1'));
       const refs=[payload.baseline_source,...payload.alternative_sources].map(row=>JSON.stringify(row));
       if(new Set(refs).size!==refs.length)throw Error('Choose distinct baseline and alternative source bands.');
     } else {
@@ -119,6 +220,10 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     }
     return payload;
   }
+  function timelineInputSummary(selection){
+    const rows=selection.annual_sources||[];
+    return '<h2>Checked observation sequence</h2><div class="lc-table"><table><thead><tr><th>Observation year</th><th>Original retained source</th><th>Published vintage</th><th>Band</th><th>Observed interval</th></tr></thead><tbody>'+rows.map((row,i)=>{const source=(catalog?.rasters||[]).find(s=>s.source_collection_id===row.source_collection_id&&s.source_id===row.source_id);return '<tr><td>'+escape(row.year)+'</td><td>'+escape(source?.title||row.source_id)+'</td><td>'+escape(source?.vintage||'Not specified by source')+'</td><td>'+escape(row.band)+'</td><td>'+(i?escape(rows[i-1].year)+'–'+escape(row.year)+' · '+escape(row.year-rows[i-1].year)+' years':'Initial selected observation')+'</td></tr>';}).join('')+'</tbody></table></div><p>All observations share the checked original lattice and common valid support. Dates between the selected observations remain unobserved.</p>';
+  }
   async function checkInputs() {
     const payload=selection(),workspace=key,view=epoch,edit=current.edit,ticket=++inputRequest;
     note('Checking original source bytes, selected bands, native grid and reporting identifiers…');
@@ -126,7 +231,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
       const result=await api('/api/landcover-ledger/inputs',{method:'POST',body:{workspace,selection:payload}});
       if(!alive(workspace,view)||ticket!==inputRequest||edit!==current.edit)return;
       const grid=result.grid||{},box=find('[data-input-preview]');box.hidden=false;
-      box.innerHTML='<h2>Selected inputs checked</h2><p>'+escape(result.reporting?.feature_count)+' original reporting features. Native grid: '+escape(grid.crs||grid.crs_wkt||'retained grid')+' · '+escape(grid.width)+' × '+escape(grid.height)+' cells. Area basis: '+escape(grid.area_basis||'retained native grid')+'.</p><p>'+escape(result.remaining)+'</p><details><summary>Original input check</summary><pre>'+escape(JSON.stringify(result,null,2))+'</pre></details>';
+      box.innerHTML=(payload.input_mode==='timeline'?timelineInputSummary(result.selection||payload):'')+'<h2>Selected inputs checked</h2><p>'+escape(result.reporting?.feature_count)+' original reporting features. Native grid: '+escape(grid.crs||grid.crs_wkt||'retained grid')+' · '+escape(grid.width)+' × '+escape(grid.height)+' cells. Area basis: '+escape(grid.area_basis||'retained native grid')+'.</p><p>'+escape(result.remaining)+'</p><details><summary>Original input check</summary><pre>'+escape(JSON.stringify(result,null,2))+'</pre></details>';
       note('Selected input identity and grid checks completed. Build computes actual class transitions and coverage.');
     } catch(error){if(alive(workspace,view)&&ticket===inputRequest&&edit===current.edit)note(error.message||String(error),true);}
   }
@@ -147,7 +252,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     }
   }
   function renderEdition(result) {
-    const target=find('[data-result]');target.replaceChildren();openedEdition=result.edition;openedReport=null;reportReadRequest++;
+    const target=find('[data-result]');target.replaceChildren();openedEdition=result.edition;openedReport=null;openedTimeline=result.report?.timeline||null;reportReadRequest++;timelineView.zone='';timelineView.status='all';timelineView.page=0;
     const title=document.createElement('h2');title.textContent=result.edition.title;target.append(title);
     const caption=document.createElement('p');caption.textContent='Saved edition '+result.edition.id+' · '+result.edition.zone_count+' reporting areas · '+result.edition.alternative_count+' alternatives. Download the portable ZIP to retain the offline report with all report companions.';target.append(caption);
     const downloads=document.createElement('div');downloads.className='lc-downloads';
@@ -156,7 +261,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
       if(typeof url!=='string'||!/^\/api\/file(?:\/|\?)/.test(url))continue;
       const link=document.createElement('a');link.href=url;link.textContent=ticket.label||ticket.title||ticket.filename||'Download retained file';link.setAttribute('download','');downloads.append(link);
     }
-    target.append(downloads);target.append(reportPanel(result));reportButtons();
+    target.append(downloads);if(openedTimeline){const section=document.createElement('section');section.setAttribute('data-timeline-result','');target.append(section);renderTimeline();}target.append(reportPanel(result));reportButtons();
     const preview=result.preview_url;
     if(typeof preview!=='string'||!/^\/api\/file\/landcover-ledger\/[A-Za-z0-9_-]+\/[a-f0-9]{64}\?embedded=1$/.test(preview))throw Error('The saved report has no valid original-host preview route.');
     const iframe=document.createElement('iframe');iframe.title=result.edition.title;iframe.setAttribute('sandbox','allow-scripts allow-downloads allow-modals');iframe.src=preview;target.append(iframe);
@@ -252,7 +357,7 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
   async function openEdition(id) {
     if(!id)throw Error('Choose a saved edition.');
     const workspace=key,view=epoch,ticket=++editionRequest;
-    openedEdition=null;openedReport=null;reportReadRequest++;
+    openedEdition=null;openedReport=null;openedTimeline=null;reportReadRequest++;
     const oldPanel=find('[data-report-panel]');if(oldPanel)oldPanel.replaceChildren();
     note('Opening the saved report, GIS files and source bindings…');
     try {
@@ -298,10 +403,11 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     retain();current.edit++;inputRequest++;
     const preview=find('[data-input-preview]');preview.hidden=true;preview.replaceChildren();
     if(event.target.name==='input_mode')mode();
+    if(event.target.closest('[data-timeline-row]'))timelineOrder();
     if(event.target.name==='source_alternatives'||event.target.name==='baseline_source')sourceDetails();
     save(current,key);
   }
-  function detach() {if(root&&current)retain();epoch++;catalogRequest++;inputRequest++;editionRequest++;reportReadRequest++;openedEdition=null;openedReport=null;events?.abort();events=null;root=null;}
+  function detach() {if(root&&current)retain();epoch++;catalogRequest++;inputRequest++;editionRequest++;reportReadRequest++;openedEdition=null;openedReport=null;openedTimeline=null;events?.abort();events=null;root=null;}
   function mount(container) {
     if(root===container&&key===getState()?.workspace_key){observe();return;}
     detach();root=container;key=getState()?.workspace_key;current=sessionFor(key);catalog=null;
@@ -309,11 +415,15 @@ export function attachLandcoverLedger({getState, api, endpoint, toast, openScien
     const listen=(target,type,handler)=>target.addEventListener(type,handler,{signal:events.signal});
     restore(current.draft);sourceDetails();buttons();
     listen(root,'input',changed);listen(root,'change',changed);
+    listen(root,'change',event=>{if(event.target.matches('[data-timeline-zone],[data-timeline-status]')){timelineView.zone=find('[data-timeline-zone]').value;timelineView.status=find('[data-timeline-status]').value;timelineView.page=0;renderTimeline();}if(event.target.matches('[data-open-selection]')){const file=event.target.files?.[0],workspace=key,view=epoch;event.target.value='';if(file)openSelection(file).catch(error=>{if(alive(workspace,view))note(error.message||String(error),true);});}});
     listen(find('form'),'submit',event=>{event.preventDefault();const workspace=key,view=epoch;submit().catch(error=>{if(alive(workspace,view))note(error.message||String(error),true);});});
     listen(root,'click',event=>{
       const button=event.target.closest('[data-action]');if(!button)return;event.preventDefault();
       const workspace=key,view=epoch;let promise;
       if(button.dataset.action==='refresh')promise=refresh();
+      if(['add-year','remove-year','year-up','year-down'].includes(button.dataset.action))timelineEdit(button.dataset.action,Number(button.dataset.index));
+      if(button.dataset.action==='save-selection')saveSelection();
+      if(button.dataset.action==='timeline-page'){timelineView.page+=Number(button.dataset.direction);renderTimeline();}
       if(button.dataset.action==='check')promise=checkInputs();
       if(button.dataset.action==='open')promise=openEdition(field('edition').value);
       if(button.dataset.action==='resume')promise=resume();

@@ -137,6 +137,23 @@ WATER_PREVIOUS_SHA256 = {
     "model/reach_chemistry/reporting.py": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1"
 }
 
+# Exact source editions delivered to the same receiving-water host.
+# Keep these byte identities; unrelated local edits still require reconciliation.
+WATER_RELEASE_PREVIOUS_SHA256 = {
+    "operator/web/receiving-water-chemistry.mjs": [
+        "6858ffa821c7437c4af8e790d7a1972723cbb9c73d23c0ca7b2894b07bba8295"
+    ],
+    "model/reach_chemistry/reporting.py": [
+        "550377cff80cf9c3e21242fadbaaaf64c1133051780dd82132af5ceff9d840d2"
+    ],
+    "operator/install_chemistry.py": [
+        "2e999e65b2eb5fdb772eb266afbfea57f1c9f784ffefa608c2eb4089091bbc39"
+    ],
+    "model/reach_chemistry/io.py": [
+        "249150dfa06f9ecbcfa3b38187d23bdc46946e28eaa930fa062b369fa04ccccc"
+    ]
+}
+
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
     "model/chemistry_cli.py": "4cf3e90a83474842cc4da0773c8d7c22fe1ecca2dc189da7347e52d4cc173cf2",
@@ -515,7 +532,8 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name), CURRENT_DIRECTION_PREVIOUS_SHA256.get(name), WATER_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name), CURRENT_DIRECTION_PREVIOUS_SHA256.get(name), WATER_PREVIOUS_SHA256.get(name),
+                     *WATER_RELEASE_PREVIOUS_SHA256.get(name, ())}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:

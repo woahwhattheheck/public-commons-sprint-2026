@@ -181,6 +181,24 @@ def _captured(closure, entry):
             raise ValueError("The Parameter source changed its fixed comparison reference")
     origin = checkpoint["selection"].get("calibration_origin")
     if origin:
+        def verify_catchment_source(source_plan):
+            selected = source_plan["selection"]["catchments"]
+            matches = [row for row in inventory.get("source_bindings", [])
+                       if row.get("source_collection_id") == selected["source_collection_id"]
+                       and row.get("source_id") == selected["source_id"]]
+            if len(matches) != 1:
+                raise ValueError("The captured calibration lost its original catchment binding")
+            binding = matches[0]
+            prefix = ("original-sources/" + identifier(selected["source_collection_id"])
+                      + "/" + digest(selected["source_id"]) + "/")
+            entry = original(prefix + "entry.json")
+            if (entry != binding.get("entry")
+                    or entry["body"]["sha256"] != source_plan["spatial_groups"]["source"]["sha256"]):
+                raise ValueError("The captured original calibration catchment edition changed")
+            for item in [entry["body"], *entry.get("companions", [])]:
+                member = prefix + "members/" + _relative(item.get("view_path", item["filename"]))
+                if member not in seen or not _same(item, members.get(member, {})):
+                    raise ValueError("The captured calibration lost an original catchment source member")
         from .parameter_calibration import continuation_origin
         report = original("calibration-origin/result.json")
         plan = original("calibration-origin/plan.json")
@@ -196,6 +214,43 @@ def _captured(closure, entry):
                 or basis.get("calibration_origin") != origin
                 or not _same(observed["original"], members.get("calibration-origin/observations-original.csv", {}))):
             raise ValueError("The Parameter source changed its original selected-profile lineage.")
+        verify_catchment_source(plan)
+        from .calibration_followup import _selection as original_study_selection
+        prior = plan["selection"].get("prior_evaluation")
+        seen_history = set()
+        while prior is not None:
+            prior_id = identifier(prior["calibration_id"])
+            if prior_id in seen_history:
+                raise ValueError("The captured calibration history repeats an original dependency")
+            seen_history.add(prior_id)
+            prefix = "calibration-origin/history/" + prior_id + "/"
+            earlier = original(prefix + "result.json")
+            earlier_plan = original(prefix + "plan.json")
+            earlier_spec = original(prefix + "parameter-study.json")
+            earlier_observed = original(prefix + "observations.json")
+            for value, kind, key in (
+                (earlier, "calibrations", prior_id),
+                (earlier_plan, "calibration-plans", prior["plan_id"]),
+                (earlier_spec, "experiment-specs", prior["parameter_study_id"]),
+                (earlier_observed, "observations", earlier_plan["selection"]["observation_id"]),
+            ):
+                if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
+                    raise ValueError("The captured earlier calibration source changed")
+            earlier = {**earlier, "id": prior_id}
+            earlier_plan = {**earlier_plan, "id": prior["plan_id"]}
+            old_origin = continuation_origin(earlier, earlier_plan, project)
+            study_selection = original_study_selection(earlier_spec)
+            if (study_selection.get("calibration_origin") != old_origin
+                    or study_selection.get("baseline_run_id") != old_origin["selected_run_id"]
+                    or digest(study_selection) != prior["parameter_study_selection_sha256"]
+                    or earlier_plan["observations"] != {
+                        "id": earlier_plan["selection"]["observation_id"],
+                        "metadata": earlier_observed["metadata"], "original": earlier_observed["original"]}
+                    or not _same(earlier_observed["original"],
+                                 members.get(prefix + "observations-original.csv", {}))):
+                raise ValueError("The captured earlier selected-profile lineage changed")
+            verify_catchment_source(earlier_plan)
+            prior = earlier_plan["selection"].get("prior_evaluation")
     return recipe, basis, checkpoint, cases, inventory, members, seen
 
 

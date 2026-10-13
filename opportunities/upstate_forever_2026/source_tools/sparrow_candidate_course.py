@@ -296,6 +296,7 @@ def operate(workspace_path, prepared, preset_path, output, *, ensemble_id=None,
     with held(output / ".course.lock", blocking=False):
         progress_path = output / "progress.json"
         progress = read_json(progress_path) if progress_path.exists() else {"schema": SCHEMA, "comparisons": {}}
+        admitted = False
         try:
             binding = bind(workspace.root, prepared)
             if binding["original_preparation_id"] != preset["preparation_id"]:
@@ -339,9 +340,10 @@ def operate(workspace_path, prepared, preset_path, output, *, ensemble_id=None,
                         "original_selection": selection, "native_execution": basis["native_execution"],
                         "model_inputs": inputs, "code_sha256": {p: _sha(ROOT / p) for p in CODE_PATHS}}
             identity["id"] = digest(identity)
-            atomic_json(output / "course-input.json", identity, immutable=True)
             if progress.get("course_id") not in (None, identity["id"]):
                 raise ValueError("This output retains another immutable course; select a fresh directory")
+            atomic_json(output / "course-input.json", identity, immutable=True)
+            admitted = True
             progress.pop("error", None)
             progress.update(course_id=identity["id"], state="running", phase="original_comparisons")
             atomic_json(progress_path, progress)
@@ -400,6 +402,10 @@ def operate(workspace_path, prepared, preset_path, output, *, ensemble_id=None,
             atomic_json(progress_path, progress)
             return summary
         except BaseException as error:
+            # A rejected source/code/candidate binding must not relabel the
+            # original course checkpoint. Its current error goes to stderr.
+            if not admitted:
+                raise
             progress.update(state="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
                             error={"type": type(error).__name__, "message": str(error)})
             try:

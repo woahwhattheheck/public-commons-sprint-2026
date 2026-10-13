@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "landcover-temporal",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791910333857719",
+  "extend_components": {
+    "landcover-ledger": {
+      "paths": [
+        "model/landcover_temporal.py",
+        "model/landcover_timeline_receiving.py",
+        "model/LANDCOVER_TEMPORAL.md",
+        "operator/LANDCOVER_TIMELINE.md"
+      ]
+    }
+  },
+  "required_components": []
+}

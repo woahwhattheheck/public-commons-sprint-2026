@@ -101,7 +101,8 @@
       "openItem",
       "showTask",
       "openExperiment",
-      "openBackup"
+      "openBackup",
+      "navigate"
     ],
     "styles": [
       "/web/multivariate_control.css"

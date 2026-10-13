@@ -18,17 +18,28 @@
         {
           "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({\n openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),\n openNativeProgramme:options=>experiments.openForInvestigation(options),\ngetState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
           "marker": "let operatingJourney=null;"
+        },
+        {
+          "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({\n openRunRevisionForm,\n openParameterStudy:(selection,options)=>parameterStudies.openSavedStudy(selection,options),\n openNativeProgramme:options=>experiments.openForInvestigation(options),\n openScientificReport,openSavedScientificReport,openSavedCustomerReview,prepareReportComparisonReview,openSavedReportComparison,\ngetState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+          "marker": "let operatingJourney=null;"
+        },
+        {
+          "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({\n openRunRevisionForm,\n openParameterStudy:(selection,options)=>parameterStudies.openSavedStudy(selection,options),\n openCalibrationParameterStudy:selection=>parameterStudies.openFromCalibration(selection),\n openNativeProgramme:options=>experiments.openForInvestigation(options),\n openScientificReport,openSavedScientificReport,openSavedCustomerReview,prepareReportComparisonReview,openSavedReportComparison,\ngetState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+          "marker": "let operatingJourney=null;"
         }
       ]
     },
     {
       "id": "journey-original-capabilities",
       "before": " getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
-      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n captureCommunityView:()=>community.capture(),\n validateCommunityView:value=>community.validateView(value),\n restoreCommunityView:value=>community.restoreView(value),\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
-      "marker": "captureCommunityView:()=>community.capture(),",
+      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n captureCommunityView:()=>community.capture(),\n validateCommunityView:value=>community.validateView(value),\n restoreCommunityView:value=>community.restoreView(value),\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openJourneySource:options=>journeyForm(()=>sourceForm(options)),\n openScenario:(id,selection)=>journeyForm(()=>scenarioForm(id,selection)),\n openProfile:(id,selection)=>journeyForm(()=>profileForm(id,selection)),\n openGrid:(id,selection)=>journeyForm(()=>gridForm(id,selection)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
+      "marker": " openJourneySource:options=>journeyForm(()=>sourceForm(options)),",
       "compatible_before": [
         {
           "before": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});"
+        },
+        {
+          "before": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n captureCommunityView:()=>community.capture(),\n validateCommunityView:value=>community.validateView(value),\n restoreCommunityView:value=>community.restoreView(value),\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});"
         }
       ]
     },
@@ -36,7 +47,13 @@
       "id": "journey-original-request",
       "before": "  const result=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:formContext?.operation_id||crypto.randomUUID()}});",
       "after": "  const submittedOperation=formContext?.operation_id||crypto.randomUUID();\n  const originalRequest={workspace,action,payload,operation_id:submittedOperation};\n  const request=operatingJourney?operatingJourney.beforeSubmission(originalRequest):originalRequest;\n  const result=await api('/api/actions',{method:'POST',body:request});\n  operatingJourney?.acceptTask(result,submittedOperation);",
-      "marker": "operatingJourney.beforeSubmission(originalRequest)"
+      "marker": "operatingJourney.beforeSubmission(originalRequest)",
+      "compatible_after": [
+        {
+          "after": "async function submitAction(action,payload){\n  const context=formContext;\n  if(context&&context.workspace!==workspace)throw Error('The selected workspace changed. Reopen this form in the intended workspace.');\n  if(context?.runRevision?.step==='profile')payload=revisionProfilePayload(context.originalProfile,payload);\n  const submittedOperation=context?.operation_id||crypto.randomUUID();\n  const ticket=admissionContext(action,submittedOperation),journey=operatingJourney;\n  const originalRequest={workspace:ticket.workspace,action,payload,operation_id:submittedOperation};\n  const request=journey?journey.beforeSubmission(originalRequest):originalRequest;\n  const revision=context?.runRevision;\n  if(revision&&revision.action!==action)throw Error('This form belongs to another revision step. Reopen it from the retained revision.');\n  const result=await api(revision?endpoint('/api/run-revisions/submit'):'/api/actions',\n    {method:'POST',body:revision?{...request,...revision}:request});\n  if(context)context.acceptedTask={id:result.id,workspace:ticket.workspace};\n  if(connectionEpoch!==ticket.connectionEpoch)return result;\n  if(workspace===ticket.workspace&&workspaceRevision===ticket.workspaceRevision){\n    try{journey?.acceptTask(result,submittedOperation);}\n    catch(error){toast('Operation retained. Journey display: '+(error.message||String(error)));}\n  }\n  if(formContext===context&&currentAdmission(ticket,{details:false})){\n    formDialog.close();formContext=null;\n  }\n  return presentAcceptedTask(ticket,result);\n}\n",
+          "marker": "const request=journey?journey.beforeSubmission(originalRequest):originalRequest;"
+        }
+      ]
     },
     {
       "id": "journey-overview",
@@ -133,6 +150,36 @@
           "marker": "    for(const node of document.querySelectorAll('[data-view]'))node.setAttribute"
         }
       ]
+    },
+    {
+      "id": "first-source-collection-default",
+      "before": "const collectionDefault=row=>row?.source_collection_id||((sources().length===1)?sources()[0].id:'');",
+      "after": "const collectionDefault=(row,initialSource)=>{\n if(row?.source_collection_id)return row.source_collection_id;\n if(initialSource){if(!sources().some(source=>source.id===initialSource))throw Error('Choose a retained original source edition from this workspace.');return initialSource;}\n return sources().length===1?sources()[0].id:'';\n};",
+      "marker": "const collectionDefault=(row,initialSource)=>{"
+    },
+    {
+      "id": "first-source-profile-form",
+      "before": "async function profileForm(id){\n requireSources();const current=formOpening('profile.save');\n let row;\n try{row=id?await api(endpoint('/api/item',{kind:'profiles',id})):null;}\n catch(error){if(current())throw error;return;}\n if(!current())return;\n const collection=collectionDefault(row);",
+      "after": "async function profileForm(id,initialSelection={}){\n requireSources();const current=formOpening('profile.save');\n let row;\n try{row=id?await api(endpoint('/api/item',{kind:'profiles',id})):null;}\n catch(error){if(current())throw error;return;}\n if(!current())return;\n const collection=collectionDefault(row,initialSelection.source_collection_id);",
+      "marker": "async function profileForm(id,initialSelection={}){"
+    },
+    {
+      "id": "first-source-scenario-form",
+      "before": "async function scenarioForm(id){\n requireSources();const current=formOpening('scenario.save');\n let row;\n try{row=id?await api(endpoint('/api/item',{kind:'scenarios',id})):null;}\n catch(error){if(current())throw error;return;}\n if(!current())return;\n const collection=collectionDefault(row);",
+      "after": "async function scenarioForm(id,initialSelection={}){\n requireSources();const current=formOpening('scenario.save');\n let row;\n try{row=id?await api(endpoint('/api/item',{kind:'scenarios',id})):null;}\n catch(error){if(current())throw error;return;}\n if(!current())return;\n const collection=collectionDefault(row,initialSelection.source_collection_id);",
+      "marker": "async function scenarioForm(id,initialSelection={}){"
+    },
+    {
+      "id": "first-source-grid-form",
+      "before": "async function gridForm(id){",
+      "after": "async function gridForm(id,initialSelection={}){",
+      "marker": "async function gridForm(id,initialSelection={}){"
+    },
+    {
+      "id": "first-source-grid-collection",
+      "before": " const row=original?.spec,collection=collectionDefault(row);",
+      "after": " const row=original?.spec,collection=collectionDefault(row,initialSelection.source_collection_id);",
+      "marker": " const row=original?.spec,collection=collectionDefault(row,initialSelection.source_collection_id);"
     }
   ],
   "server_patches": [
@@ -147,6 +194,12 @@
           "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\", \"runtime\"}"
         }
       ]
+    },
+    {
+      "id": "first-source-saved-view-selection",
+      "before": "        fields = {\"baseline_run_id\": \"runs\", \"grid_id\": \"grids\", \"profile_id\": \"profiles\",\n",
+      "after": "        fields = {\"source_collection_id\": \"sources\",\n                  \"baseline_run_id\": \"runs\", \"grid_id\": \"grids\", \"profile_id\": \"profiles\",\n",
+      "marker": "        fields = {\"source_collection_id\": \"sources\",\n"
     }
   ],
   "optional_file_patches": {
