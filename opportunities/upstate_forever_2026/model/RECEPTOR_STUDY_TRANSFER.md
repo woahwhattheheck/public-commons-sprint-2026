@@ -33,6 +33,23 @@ Use the existing selected-study export, transfer or original portable restore. A
 
 Original `.network.lock`, `.prepare.lock`, `.batch.lock`, `.inventory.lock` and `.report.lock` boundaries are used during capture. Compute-programme capture also observes the original programme, execution and control locks. File contents and directory inventories are checked by the maintained Study transfer writer. Reading the closure does not materialize source views or rewrite report records.
 
+The selected-study capture identifies each of those owner locks by its original
+relative path. If a source-family helper has already acquired a record's lock,
+the generic record loop retains that same acquisition instead of opening and
+locking the file again. The second dependency-resolution pass also reuses the
+held lock. Every distinct owner lock remains nonblocking and stays held until
+the capture exits; a genuinely concurrent writer still prevents capture.
+
+This composes the correction exercised by the original ECHO6C52 receiving
+course: its saved source-water report, source ZIP, full backup/restore and
+selected Study export/restore all completed after resuming the same failed
+export task. The separate original four-protection-area Study reopened all
+50 report files and its original plan, then saved and read a receiving-only
+title revision. Updating an advancing application uses the current full
+`model/study_transfer.py`; preserve its source-refresh, parameter-study and
+other family dependencies. Existing completed archives retain their original
+bytes and ordinary receiving path.
+
 The retained network describes original upstream HUC12 relationships. It does not imply that a geography-only report contains modeled pollutant quantities. Physical inventories continue to identify their original baseline, alternatives, grid support, annual units and producing model versions.
 
 ## Saved projected-map editions
