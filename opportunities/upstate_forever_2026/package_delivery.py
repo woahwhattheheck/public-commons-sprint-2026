@@ -12,11 +12,11 @@ from pathlib import Path, PurePosixPath
 import stat
 import sys
 
-from delivery_snapshot import capture_delivery, fingerprint, relative_path, verify_capture
+from delivery_snapshot import (DEFAULT_LIMITS, MAX_INDEX_BYTES, MAX_MANIFEST_BYTES,
+                               capture_delivery, capture_limits, fingerprint,
+                               relative_path, verify_capture)
 from handoff_view import render_handoff
 
-MAX_MANIFEST_BYTES = 1_048_576
-MAX_INDEX_BYTES = 8 * 1_048_576
 HERE = Path(__file__).resolve().parent
 
 
@@ -71,7 +71,8 @@ def original_ids(filename, name):
     return values
 
 
-def collect_references(data):
+def collect_references(data, *, limits=None):
+    limits = capture_limits(limits)
     require(isinstance(data, dict) and data.get('schema') == 'upstate-ec-sdc-2026/delivery-v1',
             'Expected the original upstate-ec-sdc-2026/delivery-v1 manifest')
     rasters = data.get('rasters') if isinstance(data.get('rasters'), dict) else {}
@@ -90,9 +91,10 @@ def collect_references(data):
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
     assets = data.get('project_assets', [])
-    require(isinstance(assets, list) and len(assets) <= 200 and
+    require(isinstance(assets, list) and len(assets) <= limits['max_references'] and
             all(isinstance(path, str) and path for path in assets),
-            'project_assets must be an explicit list of at most 200 relative file paths')
+            'project_assets must be explicit relative paths within max_references=' +
+            str(limits['max_references']))
     references.extend({'role': 'project_asset', 'path': path} for path in assets)
     return references, raster_paths
 
@@ -163,17 +165,34 @@ def json_bytes(value):
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + '\n').encode('utf-8')
 
 
-def pack(manifest_path, output):
-    raw = read_regular(manifest_path, MAX_MANIFEST_BYTES)
+def write_json_new(path, value, maximum):
+    """Stream a new metadata member within its selected byte budget."""
+    encoder = json.JSONEncoder(ensure_ascii=False, indent=2,
+                               sort_keys=True, allow_nan=False)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        size = 0
+        for chunk in encoder.iterencode(value):
+            raw = chunk.encode('utf-8')
+            size += len(raw)
+            require(size + 1 <= maximum,
+                    'Package metadata exceeds max_index_bytes=' + str(maximum))
+            stream.write(raw)
+        stream.write(b'\n')
+
+
+def pack(manifest_path, output, *, limits=None):
+    limits = capture_limits(limits)
+    raw = read_regular(manifest_path, limits['max_manifest_bytes'])
     data = parse_json(raw)
-    references, raster_paths = collect_references(data)
+    references, raster_paths = collect_references(data, limits=limits)
     # Validate declared names before probing only their known companion names.
     for reference in references:
         if reference['path'] is not None:
             relative_path(reference['path'])
     source_root = manifest_path.absolute().parent.resolve(strict=True)
     companions = companion_state(source_root, raster_paths)
-    index = capture_delivery(manifest_path, output, references, raw)
+    index = capture_delivery(manifest_path, output, references, raw, limits=limits)
     included = {entry['path'].removeprefix('delivery/') for entry in index['artifacts']}
     for relative in sorted(companions - included):
         index['missing'].append({'roles': ['raster_companion'], 'path': 'delivery/' + relative,
@@ -183,6 +202,12 @@ def pack(manifest_path, output):
     require(companion_state(source_root, raster_paths) == companions,
             'Raster companion presence changed during packaging; choose a fresh capture')
     audit_raw = json_bytes(audit)
+    require(len(audit_raw) <= limits['max_index_bytes'] and
+            len(audit_raw) <= limits['max_file_bytes'],
+            'Generated audit exceeds the selected metadata/member byte budget')
+    require(sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
+            <= limits['max_total_bytes'],
+            'Captured source and audit exceed the selected total byte budget')
     write_new(output / 'audit.json', audit_raw)
     index['artifacts'].append({'roles': ['technical-audit'], 'path': 'audit.json',
                                'bytes': len(audit_raw), 'sha256': hashlib.sha256(audit_raw).hexdigest()})
@@ -200,10 +225,10 @@ def pack(manifest_path, output):
         index['disposition'] = 'PACKAGED_HUMAN_REVIEW_REQUIRED'
         code = 0
     index['packageSha256'] = fingerprint(index)
-    verify_capture(output, index)
+    verify_capture(output, index, limits=limits)
     # Write the inventory after all artifact bytes are stable. The navigator is
     # a derivative of the inventory/audit and is outside their fingerprint.
-    write_new(output / 'package.json', json_bytes(index))
+    write_json_new(output / 'package.json', index, limits['max_index_bytes'])
     write_new(output / 'index.html', render_handoff(index, audit).encode('utf-8'))
     print(json.dumps({'disposition': index['disposition'], 'package': str(output),
                       'packageSha256': index['packageSha256'], 'capturedFiles': len(index['artifacts']),
@@ -212,9 +237,10 @@ def pack(manifest_path, output):
     return code
 
 
-def verify(output):
-    index = parse_json(read_regular(output / 'package.json', MAX_INDEX_BYTES))
-    verify_capture(output, index)
+def verify(output, *, limits=None):
+    limits = capture_limits(limits)
+    index = parse_json(read_regular(output / 'package.json', limits['max_index_bytes']))
+    verify_capture(output, index, limits=limits)
     print(json.dumps({'integrity': 'MATCH', 'packageSha256': index['packageSha256'],
                       'auditStatus': index.get('auditStatus', 'UNKNOWN'),
                       'humanReview': index.get('humanReview', 'UNKNOWN'),
@@ -230,9 +256,16 @@ def main():
     create.add_argument('output', type=Path)
     check = sub.add_parser('verify', help='Check listed file bytes and inventory fingerprint')
     check.add_argument('output', type=Path)
+    for command in (create, check):
+        for key, default in DEFAULT_LIMITS.items():
+            command.add_argument('--' + key.replace('_', '-'), type=int, default=default,
+                                 help='Positive integer; default %(default)s' +
+                                      (' references' if key == 'max_references' else ' bytes'))
     args = parser.parse_args()
     try:
-        return pack(args.manifest, args.output) if args.command == 'pack' else verify(args.output)
+        limits = {key: getattr(args, key) for key in DEFAULT_LIMITS}
+        return (pack(args.manifest, args.output, limits=limits) if args.command == 'pack'
+                else verify(args.output, limits=limits))
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, RecursionError) as error:
         print(json.dumps({'status': 'ERROR', 'detail': str(error),
                           'partialOutput': 'If a new output directory was created, retain it for inspection and choose a fresh path after repair.'}), file=sys.stderr)
