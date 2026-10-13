@@ -88,13 +88,14 @@ def _return(workspace, db, identity):
         _, original, draft, manuscript, kinds = recipient.read_return(path)
     return record, raw, draft, manuscript
 
-def _queues(workspace, db, queue_id, local=False):
+def _queues(workspace, db, queue_id, local=False, origin=None):
     values = []
     for record in workspace._all(db, "export"):
         if record["kind"] != "recipient-queue" or record.get("queueId") != queue_id:
             continue
         value = _value(workspace._bytes(db, record["sha256"]))
-        if not local or value["workspaceId"] == workspace._meta(db)["workspaceId"]:
+        require(value["queueId"] == queue_id, "recipient_queue_history", "The queue metadata and full body differ.")
+        if (not local or value["workspaceId"] == workspace._meta(db)["workspaceId"]) and (origin is None or value["workspaceId"] == origin):
             values.append((record, value))
     values.sort(key=lambda pair: pair[1]["edition"])
     # Receiving the same complete archive can produce several native export IDs.
@@ -106,9 +107,50 @@ def _queues(workspace, db, queue_id, local=False):
         unique[key] = (record, value)
     return list(unique.values())
 
+def _bind_entries(workspace, db, value, cache):
+    for item in value["entries"]:
+        sha = item["returnSha256"]
+        if sha not in cache:
+            retained = _matching(workspace, db, sha, "recipient-return")
+            record, raw, draft, manuscript = _return(workspace, db, retained["id"])
+            cache[sha] = {"bytes": len(raw), "draftSha256": digest(draft), "manuscriptId": manuscript["manuscriptId"],
+                "editionSha256": manuscript["editions"][-1]["sha256"], "source": manuscript["source"],
+                "reviews": [{"localId": row["localId"], "inputs": recipient.native_inputs(row)}
+                            for row in manuscript["editions"][-1]["reviews"]]}
+        original = cache[sha]
+        require(original["source"]["workspaceId"] == value["workspaceId"]
+                and original["manuscriptId"] == item["manuscriptId"]
+                and original["editionSha256"] == item["editionSha256"],
+                "recipient_queue_source", "An original queue entry relabels its complete retained return.")
+        preview = item["preview"]
+        if preview is not None:
+            require(preview.get("schema") == recipient.PREVIEW and preview.get("workspaceId") == value["workspaceId"]
+                    and preview.get("draftSha256") == original["draftSha256"]
+                    and preview.get("originalSource") == original["source"] and preview.get("returnBytes") == original["bytes"]
+                    and type(preview.get("expectedVersion")) is int and preview["expectedVersion"] >= 0
+                    and isinstance(preview.get("reviews"), list) and len(preview["reviews"]) == len(original["reviews"]),
+                    "recipient_queue_preview", "The retained preview differs from the whole original manuscript.")
+            expected = preview["expectedVersion"]
+            for authored, proposed in zip(original["reviews"], preview["reviews"]):
+                _keys(proposed, {"localId", "accepted", "request", "result"})
+                request = proposed["request"]
+                _keys(request, {"requestId", "expectedVersion", "action", "inputs"})
+                require(proposed["localId"] == authored["localId"] and type(proposed["accepted"]) is bool
+                        and request["action"] == "review.save" and request["inputs"] == authored["inputs"]
+                        and type(request["expectedVersion"]) is int and request["expectedVersion"] >= 0,
+                        "recipient_queue_preview", "A retained preview changed an original review request body.")
+                identity = recipient.request_id({"manuscriptId": original["manuscriptId"],
+                    "editions": [{"sha256": original["editionSha256"]}]}, authored["localId"], request["expectedVersion"])
+                require(request["requestId"] == identity, "recipient_queue_preview", "An original request identity differs.")
+                if not proposed["accepted"]:
+                    require(request["expectedVersion"] == expected and proposed["result"] is None,
+                            "recipient_queue_preview", "The original pending request sequence differs.")
+                    expected += 1
+
 def _history(workspace, db, record, value):
-    by_sha = {r["sha256"]: (r, v) for r, v in _queues(workspace, db, value["queueId"])}
+    by_sha = {r["sha256"]: (r, v) for r, v in _queues(workspace, db, value["queueId"], origin=value["workspaceId"])}
     history = []
+    bindings = {}
     selected = (record, value)
     seen = set()
     while selected:
@@ -116,6 +158,7 @@ def _history(workspace, db, record, value):
         require(r["sha256"] not in seen and v.get("schema") == FORMAT
                 and v["workspaceId"] == value["workspaceId"] and v["queueId"] == value["queueId"],
                 "recipient_queue_history", "The retained queue ancestry differs.")
+        _bind_entries(workspace, db, v, bindings)
         seen.add(r["sha256"])
         history.append({"export": r, "queue": v})
         previous = v["previousSha256"]

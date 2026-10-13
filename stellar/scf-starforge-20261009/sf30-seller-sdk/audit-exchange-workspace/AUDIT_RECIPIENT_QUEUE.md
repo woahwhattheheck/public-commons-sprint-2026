@@ -38,6 +38,28 @@ This edition is product source. A source review or parser result does not establ
 
 The full installed application source is selected by SOURCE_FILES.json and browser-assets.json. No hosted Actions job, paid browser service, new database identity or external recipient send is required by this feature.
 
+## Same-case operated continuation
+
+After the original installed programme has completed, use its COMPLETE.json/RUN_RESULT.json and the same original author workspace. Prepare a private JSON selection with exactly workspaceId, returnIds (one to 128 distinct retained original return IDs), title, note and operator. Use real retained returns; this course creates queue editions and does not change any review decision.
+
+Run from the complete following application source:
+
+```sh
+python3 AUDIT_RECIPIENT_QUEUE_RECEIVING.py \
+  --completed-installed /absolute/original-installed-journal \
+  --directory /absolute/following-queue-journal \
+  --selection /absolute/original-queue-selection.json \
+  --chromium /absolute/retained/chromium \
+  --playwright-module /absolute/installed/playwright \
+  --node /absolute/node
+```
+
+The receiver acquires the completed predecessor and following operation leases, verifies the original complete archive and every selected source member, and uses the existing author. Its browser operates empty/populated queue states, unfinished typing, full working-file download and restore, two immutable queue editions, an accepted-response interruption recovered with its exact original request, history/whole-source downloads, reopening, and desktop/narrow layouts. Each request is durably retained before dispatch. On restart, the actual retained pending request is reconciled before replaying earlier accepted stages.
+
+The receiver compares browser downloads with native original bytes, verifies every queue-package member, replays the three exact accepted requests without advancing version, confirms unchanged native reviews, exports the complete application and independently receives/reopens/reexports it. Inherited queue history must preserve the full original bodies and remain read-only. A completed browser result is verified and reused; a retained RUN_RESULT continues packaging only. Source/input changes require a separate explicitly selected following journal; never rewrite INPUT.json.
+
+The receiver closes/drains its server and owned Node/Chromium descendants before releasing inherited leases. The final archive includes the complete preceding operated archive, every selected source file, browser requests/outcomes/downloads, received workspace and complete application exports. It deliberately reports renderedRecipientReady:false until the producing operator personally opens/views the actual screenshots and outgoing attachments; captured files alone do not satisfy the owner rule.
+
 ## Owner instruction
 
 # Owner-directed rendered-product inspection

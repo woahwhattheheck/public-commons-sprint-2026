@@ -62,9 +62,9 @@ export function mountRecipientQueue(host,desk){
     draftId=null;draftVersion=0;selectedExport=null;readOnly=false;history=[];progress.clear();render();
   }
   function controls(){
-    const blocked=host.busy()||loading||!host.state()||Boolean(host.pending());
+    const nativeBlocked=host.busy()||loading||!host.state()||Boolean(host.pending()),blocked=nativeBlocked||pendingWrites>0;
     for(const button of panel.querySelectorAll("button"))button.disabled=blocked||button.dataset.queueUnavailable==="true";
-    for(const form of panel.querySelectorAll("form"))form.inert=blocked;
+    for(const form of panel.querySelectorAll("form"))form.inert=nativeBlocked;
     $("recipient-queue-add").disabled=blocked||readOnly||!draft;
     $("recipient-queue-save").disabled=blocked||readOnly||!draft?.entries.length||Boolean(persistenceError);
     $("recipient-queue-export").disabled=blocked||!selectedExport;
