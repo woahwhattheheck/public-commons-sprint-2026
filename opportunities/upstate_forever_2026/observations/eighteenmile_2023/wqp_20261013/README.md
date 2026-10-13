@@ -50,7 +50,7 @@ Import source-manifest.json through the existing source importer:
 python -m model.cli --workspace ACTUAL_WORKSPACE source-import observations/eighteenmile_2023/wqp_20261013/source-manifest.json
 ```
 
-The manifest retains all original and derived companions together. Use the existing Measurements/source context consumer to show the observations beside the published nutrient summaries and completed watershed scenarios. Join on the original monitoring-location and activity identifiers, with date as temporal context. Each quantity remains a lake concentration with its original units; model export tables retain their own mass/time units and source coverage.
+The local manifest retains the original CSV and derived data companions. Use the combined application-root manifest below to import the full report and both observation cohorts together. Use the existing Measurements/source context consumer to show the observations beside the published nutrient summaries and completed watershed scenarios. Join on the original monitoring-location and activity identifiers, with date as temporal context. Each quantity remains a lake concentration with its original units; model export tables retain their own mass/time units and source coverage.
 
 Files:
 

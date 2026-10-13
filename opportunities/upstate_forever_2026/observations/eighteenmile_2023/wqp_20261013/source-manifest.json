@@ -68,15 +68,7 @@
         },
         {
           "path": "README.md",
-          "sha256": "e40a3e927acdeac30a4461d27b87a316bed99336376a2ac238af1ce40501f649"
-        },
-        {
-          "path": "build_observation_report.mjs",
-          "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
-        },
-        {
-          "path": "lake-observations-report.html",
-          "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
+          "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
         }
       ]
     }
@@ -85,7 +77,7 @@
     "ActivityIdentifier joins every original three-lake result to one original activity.",
     "Three lake stations have 15 chlorophyll records each; six microcystin censored values remain blank with their original limits.",
     "Source observations, original study summaries and native model quantities retain their individual temporal and physical units.",
-    "The complete offline sampling report embeds all88 original working records and exact original three-lake result CSV, preserving censored blanks and individual reporting limits.",
-    "The report includes the maintained original75-record five-station chlorophyll cohort; the application-root eighteenmile_lake_observation_report.sources.json imports all original cohort/reconciliation companions together."
+    "The report includes the maintained original75-record five-station chlorophyll cohort; the application-root eighteenmile_lake_observation_report.sources.json imports all original cohort/reconciliation companions together.",
+    "Use the application-root combined report manifest to retain the complete report/generator and both source directory trees."
   ]
 }
