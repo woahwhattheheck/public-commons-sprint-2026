@@ -2,7 +2,7 @@
   "schema": "commons.ecosystem.extension-access-review.v1",
   "activeManifests": 57,
   "retiredManifests": 1,
-  "registeredRoutes": 236,
+  "registeredRoutes": 237,
   "registeredFileRoutes": 11,
   "registeredActions": 171,
   "safeViewerPosts": [
@@ -109,7 +109,11 @@
     "/api/source-reports/scientific-source-preview",
     "/api/profile-workbench/biophysical/authoring-list",
     "/api/profile-workbench/biophysical/authoring-inspect",
-    "/api/profile-workbench/biophysical/authoring-export"
+    "/api/profile-workbench/biophysical/authoring-export",
+    "/api/profile-workbench/management/catalog",
+    "/api/profile-workbench/management/preview",
+    "/api/profile-workbench/management/inspect",
+    "/api/profile-workbench/management/published-preview"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

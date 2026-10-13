@@ -168,7 +168,7 @@ def catalog(workspace=None, baseline_profile_id=None):
         "invest_version": INVEST_VERSION,
         "parameters": [{"target": key, **copy.deepcopy(value)}
                        for key, value in PARAMETERS.items()],
-        "designs": ["one_at_a_time", "factorial"],
+        "designs": ["one_at_a_time", "factorial", "explicit_cases"],
     }
     if workspace is not None and baseline_profile_id is not None:
         profile, entry, table = _base(workspace, baseline_profile_id)
@@ -190,7 +190,7 @@ def catalog(workspace=None, baseline_profile_id=None):
 def _normalise(workspace, spec):
     if not isinstance(spec, dict):
         raise ValueError("Provide the source-backed profile selection as an object")
-    allowed = {"title", "reason", "baseline_profile_id", "design", "factors"}
+    allowed = {"title", "reason", "baseline_profile_id", "design", "factors", "cases"}
     if set(spec) - allowed:
         raise ValueError("Unknown source-backed profile fields")
     clean = {
@@ -199,8 +199,36 @@ def _normalise(workspace, spec):
         "baseline_profile_id": identifier(spec["baseline_profile_id"]),
         "design": spec.get("design", "one_at_a_time"),
     }
-    if clean["design"] not in ("one_at_a_time", "factorial"):
-        raise ValueError("Select one_at_a_time or factorial")
+    if clean["design"] not in ("one_at_a_time", "factorial", "explicit_cases"):
+        raise ValueError("Select one_at_a_time, factorial or explicit_cases")
+    if clean["design"] == "explicit_cases":
+        if spec.get("factors"):
+            raise ValueError("Place each management factor inside its named explicit case")
+        cases = spec.get("cases")
+        if not isinstance(cases, list) or not cases:
+            raise ValueError("Supply the named management cases")
+        selected_cases, names = [], set()
+        for case in cases:
+            if not isinstance(case, dict) or set(case) != {"name", "reason", "factors"}:
+                raise ValueError("Each explicit case needs name, reason and factors")
+            name = _text(case["name"], "Management case name")
+            if name in names:
+                raise ValueError("Named management cases must be distinct")
+            names.add(name)
+            proposed, base, entry, table = _normalise(workspace, {
+                "title": name, "reason": case["reason"],
+                "baseline_profile_id": clean["baseline_profile_id"],
+                "design": "factorial", "factors": case["factors"],
+            })
+            if not proposed["factors"] or any(len(f["levels"]) != 1 for f in proposed["factors"]):
+                raise ValueError("Each explicit case needs factors with one exact selected level")
+            selected_cases.append({"name": name, "reason": proposed["reason"],
+                                   "factors": proposed["factors"]})
+        clean.update(factors=[], cases=selected_cases)
+        canonical(clean)
+        return clean, base, entry, table
+    if spec.get("cases"):
+        raise ValueError("Named cases use the explicit_cases design")
     base, entry, table = _base(workspace, clean["baseline_profile_id"])
     active = selected_models(base)
     by_code = {int(row["lucode"]): row for row in table["rows"]}
@@ -272,14 +300,22 @@ def _change(factor, level, base, rows):
 def _configurations(spec, base, table):
     by_code = {int(row["lucode"]): row for row in table["rows"]}
     factors = spec["factors"]
-    candidates = itertools.chain([[]], (
-        ([(factor, level)] for factor in factors for level in factor["levels"])
-        if spec["design"] == "one_at_a_time" else
-        (list(zip(factors, levels))
-         for levels in itertools.product(*(factor["levels"] for factor in factors)))
-    ))
+    named = spec["design"] == "explicit_cases"
+    if named:
+        candidates = [(None, [])] + [
+            ({"name": case["name"], "reason": case["reason"]},
+             [(factor, factor["levels"][0]) for factor in case["factors"]])
+            for case in spec["cases"]]
+    else:
+        selections = itertools.chain([[]], (
+            ([(factor, level)] for factor in factors for level in factor["levels"])
+            if spec["design"] == "one_at_a_time" else
+            (list(zip(factors, levels))
+             for levels in itertools.product(*(factor["levels"] for factor in factors)))
+        ))
+        candidates = ((None, selection) for selection in selections)
     records, observed = [], {}
-    for candidate in candidates:
+    for case, candidate in candidates:
         changes = [change for factor, level in candidate
                    if (change := _change(factor, level, base, by_code)) is not None]
         science = sorted(
@@ -292,6 +328,8 @@ def _configurations(spec, base, table):
                    for factor, level in candidate]
         if key in observed:
             observed[key]["equivalent_choices"].append(choices)
+            if case:
+                observed[key].setdefault("management_cases", []).append(case)
             continue
         value = {
             "configuration_id": key,
@@ -300,6 +338,8 @@ def _configurations(spec, base, table):
             "changes": changes, "equivalent_choices": [choices],
             "is_baseline": not changes,
         }
+        if case:
+            value.update(label=case["name"], management_cases=[case])
         records.append(value)
         observed[key] = value
     return records
@@ -362,6 +402,8 @@ def _working_profile(base, profile_set, config):
             "equivalent_choices": copy.deepcopy(config["equivalent_choices"]),
         },
     )
+    if config.get("management_cases"):
+        result["experiment_derivation"]["management_cases"] = copy.deepcopy(config["management_cases"])
     for change in config["changes"]:
         domain, name = change["target"].split(".", 1)
         if domain == "table":
@@ -496,6 +538,8 @@ def materialize(workspace, spec):
                     "is_baseline": config["is_baseline"], "changes": config["changes"],
                     "biophysical_sha256": profile["table_summary"]["sha256"],
                 }
+                if config.get("management_cases"):
+                    item["management_cases"] = copy.deepcopy(config["management_cases"])
                 if derived:
                     item["source_collection_id"] = derived["source_collection_id"]
                     item["files"] = derived["files"]
@@ -539,7 +583,8 @@ def selection_with_profiles(workspace, selection, profile_spec):
     result = materialize(workspace, profile_spec)
     selected["profile_ids"] = list(dict.fromkeys(normalized["profile_ids"] + result["profile_ids"]))
     selected["axes"] = []
-    selected["design"] = profile_spec.get("design", "one_at_a_time")
+    selected["design"] = ("factorial" if profile_spec.get("design") == "explicit_cases"
+                          else profile_spec.get("design", "one_at_a_time"))
     normalized, _, _, _ = experiments._normalise(workspace, selected)
     return {"selection": normalized, "profile_set": result}
 

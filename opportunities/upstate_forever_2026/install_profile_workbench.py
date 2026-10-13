@@ -13,6 +13,12 @@ import tempfile
 
 COMPONENT_FILES = (
     "model/profile_editions.py",
+    "model/experiment_profiles.py",
+    "model/experiments.py",
+    "operator/experiment_operator.py",
+    "model/management_cases.py",
+    "operator/web/management_cases.mjs",
+    "operator/MANAGEMENT_CASES.md",
     "model/profile_customer_review.py",
     "model/biophysical_evidence.py",
     "model/biophysical_evidence_authoring.py",
@@ -25,6 +31,18 @@ COMPONENT_FILES = (
     "source/upper-flint-2024/biophysical-evidence-ndr.csv",
     "source/upper-flint-2024/biophysical-evidence-sdr.csv",
     "source_tools/PROFILE_CUSTOMER_REVIEW.md",
+    "source/management-practices-20261013/management-practice-references.json",
+    "source/management-practices-20261013/practice-observations.csv",
+    "source/management-practices-20261013/contouring-p-targets.csv",
+    "source/management-practices-20261013/source-provenance.json",
+    "source/management-practices-20261013/MANAGEMENT_PRACTICE_EVIDENCE.md",
+    "source/management-practices-20261013/endale-2021-pasture-recipe.json",
+    "source/management-practices-20261013/endale-2021-annual-loads.csv",
+    "source/management-practices-20261013/endale-2021-paired-contrasts.csv",
+    "source/management-practices-20261013/ENDALE_2021_PASTURE_CASES.md",
+    "source_tools/prepare_endale_pasture_cases.py",
+    "source_tools/run_endale_pasture_course.py",
+    "model/published_management_cases.py",
     "operator/profile_workbench.py",
     "operator/web/profile_workbench.mjs",
     "operator/web/profile_customer_review.mjs",
@@ -163,6 +181,27 @@ def retain_biophysical_authoring(source):
     return source
 
 
+def retain_management_cases(source):
+    if "inspect_management_case(restored," in source:
+        ast.parse(source)
+        return source
+    anchors = [(indent, indent + 'if restored._list("planning-inventories"):\n')
+               for indent in ("    ", "        ")]
+    matches = [(indent, anchor) for indent, anchor in anchors
+               if any(line == anchor for line in source.splitlines(keepends=True))]
+    if len(matches) != 1:
+        raise ValueError("Compose management-case receiving into the original Workspace restore")
+    indent, anchor = matches[0]
+    addition = (indent + 'if restored._list("management-cases"):\n'
+                + indent + '    from .management_cases import inspect as inspect_management_case\n'
+                + indent + '    for management_case in restored._list("management-cases"):\n'
+                + indent + '        inspect_management_case(restored, management_case["id"])\n')
+    source = replace_once(source, "\n" + anchor, "\n" + addition + anchor,
+                          "management case semantic receiving")
+    ast.parse(source)
+    return source
+
+
 def app_join(source):
     # Applied to the current core source, preserving every other extension join.
     source = replace_once(source,
@@ -210,7 +249,7 @@ def _install_locked(application, source_root, *, dry_run=False):
     if sha(profile_original) == PROFILE_BASE and sha(profile_source) != PROFILE_SELECTED_MODELS:
         raise ValueError("The selected-model join differs from its retained original postimage.")
     originals[profile_name], pending[profile_name] = profile_original, profile_source
-    for name, join in (("model/portable.py", lambda source: retain_biophysical_authoring(retain_biophysical_evidence(retain_launchers(source)))),
+    for name, join in (("model/portable.py", lambda source: retain_management_cases(retain_biophysical_authoring(retain_biophysical_evidence(retain_launchers(source))))),
                        ("operator/web/app.mjs", app_join)):
         body = (application / name).read_bytes()
         originals[name], pending[name] = body, join(body.decode("utf-8")).encode("utf-8")
@@ -222,6 +261,8 @@ def _install_locked(application, source_root, *, dry_run=False):
     read_paths.extend(["/api/profile-workbench/biophysical/authoring-list",
                        "/api/profile-workbench/biophysical/authoring-inspect",
                        "/api/profile-workbench/biophysical/authoring-export"])
+    read_paths.extend("/api/profile-workbench/management/" + name
+                      for name in ("catalog", "preview", "inspect", "published-preview"))
     for path in read_paths:
         if path in policy.get("writePosts", []) or path in policy.get("adminRoutes", []):
             raise ValueError("Keep the current route access classification at " + path)

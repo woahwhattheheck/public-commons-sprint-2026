@@ -8,6 +8,8 @@ are reused; a subsequent execute call retries unfinished cases.
 from __future__ import annotations
 
 from bisect import bisect_right
+import contextlib
+import math
 import copy
 import csv
 import hashlib
@@ -860,6 +862,150 @@ def _reporting_cells(workspace, grid_id):
     return count, grid["grid"]["pixel_area_ha"]
 
 
+AREA_METRICS_SCHEMA = "upstate.experiment-per-area/v1"
+_AREA_FIELDS = {
+    "nitrogen_export": ("load_n", "load_type_n", "eff_n", "crit_len_n", "proportion_subsurface_n"),
+    "phosphorus_export": ("load_p", "load_type_p", "eff_p", "crit_len_p"),
+    "sediment_export": ("usle_c", "usle_p"),
+}
+
+
+def _area_ratio(value, area):
+    return value / area if value is not None and area > 0 else None
+
+
+def _area_source_context(workspace, baseline, alternative):
+    """Read completed native inputs; never compile a new footprint or run a model."""
+    from .profiles import inspect_table
+    grid_id = baseline["selection"]["grid_id"]
+    if alternative["selection"]["grid_id"] != grid_id:
+        raise ValueError("Per-area responses require the original common model grid")
+    grid = workspace.get_grid(grid_id)
+    directory = workspace.root / "grids" / grid_id
+    reporting = verify_file(directory, grid["files"]["reporting_mask"])
+    domain = verify_file(directory, grid["files"]["model_domain"])
+    sides = []
+    missing = []
+    for run in (baseline, alternative):
+        selected = run["selection"]
+        profile = workspace._get("profiles", selected["profile_id"])
+        scenario = workspace._get("scenarios", selected["scenario_id"])
+        table, entry = workspace.source_file(profile["source_collection_id"], profile["biophysical_source_id"])
+        if entry["body"]["sha256"] != profile["table_summary"]["sha256"]:
+            raise ValueError("The original profile's coefficient table has changed")
+        rows = inspect_table(table, selected_models=selected_models(selected))["rows"]
+        if scenario["kind"] == "baseline":
+            descriptor = grid["files"]["NLCD"]
+            landcover = verify_file(directory, descriptor)
+        else:
+            descriptor = run.get("stages", {}).get("landcover", {}).get("artifact")
+            if descriptor is None:
+                missing.append(run["id"])
+                landcover = None
+            else:
+                landcover = verify_file(workspace.root / "runs" / run["id"], descriptor)
+        sides.append({
+            "profile": profile, "rows": {int(row["lucode"]): row for row in rows},
+            "landcover": landcover,
+            "source": {"run_id": run["id"], "profile_id": profile["id"],
+                       "scenario_id": scenario["id"], "landcover": copy.deepcopy(descriptor),
+                       "table": {"source_collection_id": profile["source_collection_id"],
+                                 "source_id": profile["biophysical_source_id"],
+                                 "body": copy.deepcopy(entry["body"]),
+                                 **{key: entry[key] for key in ("title", "uri", "vintage") if key in entry}}},
+        })
+    return {"grid": grid, "reporting_path": reporting, "domain_path": domain, "sides": sides,
+            "unavailable": ("The completed land-cover raster descriptor is absent for run(s): "
+                            + ", ".join(missing)) if missing else None}
+
+
+def _area_table_changes(context, pollutant):
+    """Compare actual native values, including load type, without relying on profile labels."""
+    sides = context["sides"]
+    fields = _AREA_FIELDS[pollutant]
+    rows = [side["rows"] for side in sides]
+    changed_codes, changes = set(), []
+    for code in sorted(set(rows[0]) | set(rows[1])):
+        for field in fields:
+            original = [table.get(code, {}).get(field) for table in rows]
+            values = [None if value is None else value.strip() if field.startswith("load_type_")
+                      else float(value) for value in original]
+            if values[0] != values[1]:
+                changed_codes.add(code)
+                changes.append({"lucode": code, "field": field,
+                                "before": values[0], "after": values[1],
+                                "before_original_text": original[0], "after_original_text": original[1]})
+    model = "sdr" if pollutant == "sediment_export" else "ndr"
+    names = SDR_KEYS if model == "sdr" else NDR_KEYS
+    if pollutant == "phosphorus_export":
+        names = names - {"subsurface_critical_length_n", "subsurface_eff_n"}
+    global_changes = []
+    for name in sorted(names):
+        before = sides[0]["profile"][model].get(name)
+        after = sides[1]["profile"][model].get(name)
+        if before != after:
+            global_changes.append({"path": model + "." + name, "before": before, "after": after})
+    return changed_codes, changes, global_changes
+
+
+def _area_result(metric, pollutant, context, counts, changed_totals, changes,
+                 global_changes, footprint_sha256):
+    """Keep whole-reporting response distinct from density on changed cells."""
+    area = float(context["grid"]["grid"]["pixel_area_ha"])
+    paired_area = metric["paired_area_ha"]
+    density = {name: _area_ratio(metric[name], paired_area)
+               for name in ("baseline_total", "alternative_total", "delta", "reduction")}
+    result = {"schema": AREA_METRICS_SCHEMA, "units": rasters.RATE_UNITS[pollutant],
+              "paired_reporting": {"area_ha": paired_area, **density},
+              "status": "input_footprint_unavailable" if context["unavailable"] else "available"}
+    if context["unavailable"]:
+        result["reason"] = context["unavailable"]
+        return result
+    changed_area = counts["changed_cells"] * area
+    local_area = counts["paired_changed_cells"] * area
+    local_delta = changed_totals[1] - changed_totals[0] if local_area else None
+    attributable = (not global_changes and not counts["landcover_support_changed_cells"]
+                    and changed_area > 0 and metric["paired_cells"] > 0)
+    reason = ("Global model parameters also changed; the total response is not attributed to the spatial input change."
+              if global_changes else "Land-cover valid support differs between the original inputs."
+              if counts["landcover_support_changed_cells"] else "No actual changed-input area on the model domain."
+              if not changed_area else "No paired-valid reported output cells."
+              if not metric["paired_cells"] else None)
+    result.update(
+        input_footprint={
+            "basis": "model-domain pixel centres with valid original land cover in both runs",
+            "definition": "Actual land-cover code differences, plus changed pollutant-relevant coefficient values where the retained class is unchanged; each cell counts once.",
+            **counts, "area_ha": changed_area,
+            "domain_valid_area_ha": counts["domain_valid_cells"] * area,
+            "reporting_area_ha": counts["reporting_changed_cells"] * area,
+            "paired_area_ha": local_area,
+            "paired_fraction_of_reporting_changed": (
+                counts["paired_changed_cells"] / counts["reporting_changed_cells"]
+                if counts["reporting_changed_cells"] else None),
+            "sha256": footprint_sha256, "coefficient_changes": changes,
+            "global_parameter_changes": global_changes,
+            "sources": {"baseline": context["sides"][0]["source"],
+                        "alternative": context["sides"][1]["source"],
+                        "model_domain": copy.deepcopy(context["grid"]["files"]["model_domain"]),
+                        "reporting_mask": copy.deepcopy(context["grid"]["files"]["reporting_mask"])}},
+        whole_reporting_response_per_changed_ha={
+            "delta": _area_ratio(metric["delta"], changed_area) if attributable else None,
+            "reduction": _area_ratio(metric["reduction"], changed_area) if attributable else None,
+            "denominator_area_ha": changed_area, "available": attributable, "reason": reason,
+            "numerator": "Total annual mass change over all paired-valid reporting cells; includes response outside the changed cells."},
+        changed_cell_density={
+            "area_ha": local_area,
+            "baseline_total": changed_totals[0] if local_area else None,
+            "alternative_total": changed_totals[1] if local_area else None,
+            "delta_total": local_delta, "reduction_total": -local_delta if local_delta is not None else None,
+            "baseline": _area_ratio(changed_totals[0], local_area),
+            "alternative": _area_ratio(changed_totals[1], local_area),
+            "delta": _area_ratio(local_delta, local_area),
+            "reduction": _area_ratio(-local_delta if local_delta is not None else None, local_area),
+            "numerator": "Annual mass on paired-valid reporting cells whose inputs actually changed; not whole-reporting response."})
+    return result
+
+
 def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_ha, comparison):
     import numpy as np
     import rasterio
@@ -871,6 +1017,8 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
         missing = set(pollutants) - set(run["artifacts"])
         if missing:
             raise ValueError("The selected model run lacks completed outputs: " + ", ".join(sorted(missing)))
+    context = _area_source_context(workspace, baseline, alternative)
+    domain_geometry = None
     metrics = {}
     for pollutant in pollutants:
         units = rasters.MASS_UNITS[pollutant]
@@ -883,8 +1031,41 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
         baseline_total = alternative_total = 0.0
         paired_cells = baseline_cells = alternative_cells = 0
         support = hashlib.sha256()
-        with rasterio.open(base_path) as a, rasterio.open(alt_path) as b:
+        footprint = hashlib.sha256()
+        changed_codes, changes, global_changes = _area_table_changes(context, pollutant)
+        counts = dict.fromkeys(("domain_valid_cells", "landcover_support_changed_cells",
+                                "landcover_changed_cells", "coefficient_changed_cells",
+                                "changed_cells", "reporting_changed_cells", "paired_changed_cells"), 0)
+        changed_totals = [0.0, 0.0]
+        with contextlib.ExitStack() as stack:
+            a = stack.enter_context(rasterio.open(base_path))
+            b = stack.enter_context(rasterio.open(alt_path))
+            reporting = stack.enter_context(rasterio.open(context["reporting_path"]))
             rasters.check_same_grid(a, b)
+            rasters.check_same_grid(a, reporting)
+            transform = a.transform
+            actual_area = abs(transform.a * transform.e - transform.b * transform.d) / 10000.0
+            if (not a.crs or not a.crs.is_projected
+                    or str(a.crs.linear_units).lower() not in ("metre", "meter", "metres", "meters")
+                    or not math.isfinite(actual_area) or actual_area <= 0
+                    or not math.isclose(actual_area, pixel_area_ha, rel_tol=1e-10, abs_tol=1e-12)
+                    or not math.isclose(actual_area, float(context["grid"]["grid"]["pixel_area_ha"]),
+                                        rel_tol=1e-10, abs_tol=1e-12)):
+                raise ValueError("Per-area results require the exact original projected metre grid and pixel area")
+            land = None
+            if not context["unavailable"]:
+                from rasterio.features import rasterize
+                land = [stack.enter_context(rasterio.open(side["landcover"])) for side in context["sides"]]
+                for source in land:
+                    rasters.check_same_grid(a, source)
+                if domain_geometry is None:
+                    geometries, _ = rasters.vector_geometry(context["domain_path"], layer="model_domain",
+                                                           target_crs=a.crs)
+                    domain_geometry = rasters.polygon_union(geometries)
+            footprint.update(canonical({"schema": AREA_METRICS_SCHEMA, "grid_id": baseline["selection"]["grid_id"],
+                                        "pollutant": pollutant, "changes": changes,
+                                        "baseline": context["sides"][0]["source"],
+                                        "alternative": context["sides"][1]["source"]}))
             support.update(canonical({"grid_id": baseline["selection"]["grid_id"],
                                       "width": a.width, "height": a.height}))
             for _, window in a.block_windows(1):
@@ -895,6 +1076,40 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
                 a_good = ~np.ma.getmaskarray(av) & np.isfinite(ad)
                 b_good = ~np.ma.getmaskarray(bv) & np.isfinite(bd)
                 paired = a_good & b_good
+                in_reporting = reporting.read(1, window=window) == 1
+                if np.any((a_good | b_good) & ~in_reporting):
+                    raise ValueError("Delivered experiment mass contains valid cells outside its retained reporting mask")
+                if land is not None:
+                    lv = [source.read(1, window=window, masked=True) for source in land]
+                    data = [np.ma.getdata(value) for value in lv]
+                    good = [~np.ma.getmaskarray(value) & np.isfinite(raw)
+                            for value, raw in zip(lv, data)]
+                    domain = rasterize([(domain_geometry, 1)], out_shape=ad.shape,
+                                       transform=a.window_transform(window), fill=0,
+                                       all_touched=False, dtype="uint8") == 1
+                    valid = domain & good[0] & good[1]
+                    for side, raw, mask in zip(context["sides"], data, good):
+                        codes = np.unique(raw[domain & mask])
+                        if any(float(code) != int(code) or int(code) not in side["rows"] for code in codes):
+                            raise ValueError("A retained native land-cover class lacks its exact coefficient row")
+                    lc_changed = valid & (data[0] != data[1])
+                    coefficient_changed = valid & (data[0] == data[1]) & np.isin(data[0], list(changed_codes))
+                    changed = lc_changed | coefficient_changed
+                    changed_reporting = changed & in_reporting
+                    changed_paired = changed_reporting & paired
+                    counts["domain_valid_cells"] += int(valid.sum())
+                    counts["landcover_support_changed_cells"] += int((domain & (good[0] ^ good[1])).sum())
+                    counts["landcover_changed_cells"] += int(lc_changed.sum())
+                    counts["coefficient_changed_cells"] += int(coefficient_changed.sum())
+                    counts["changed_cells"] += int(changed.sum())
+                    counts["reporting_changed_cells"] += int(changed_reporting.sum())
+                    counts["paired_changed_cells"] += int(changed_paired.sum())
+                    changed_totals[0] += float(ad[changed_paired].sum(dtype="float64"))
+                    changed_totals[1] += float(bd[changed_paired].sum(dtype="float64"))
+                    footprint.update(canonical([int(window.col_off), int(window.row_off),
+                                                int(window.width), int(window.height)]))
+                    for mask in (valid, changed, changed_reporting, changed_paired):
+                        footprint.update(np.packbits(mask, bitorder="little").tobytes())
                 baseline_cells += int(a_good.sum())
                 alternative_cells += int(b_good.sum())
                 paired_cells += int(paired.sum())
@@ -917,6 +1132,8 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
             "support_sha256": support.hexdigest(),
             "direction": "alternative minus baseline",
         }
+        metric["per_area"] = _area_result(metric, pollutant, context, counts, changed_totals,
+                                          changes, global_changes, footprint.hexdigest())
         if comparison is not None:
             artifact = comparison["alternatives"][0]["artifacts"][pollutant]
             metric["difference_raster_sum"] = artifact["sum_change"]
@@ -1042,7 +1259,15 @@ def _csv_bytes(rows):
                "parameters", "pollutant", "units", "baseline_total", "alternative_total",
                "delta", "reduction", "relative_change_pct", "paired_cells",
                "baseline_valid_cells", "alternative_valid_cells", "reporting_cells",
-               "coverage_fraction", "paired_area_ha", "support_sha256", "error")
+               "coverage_fraction", "paired_area_ha", "support_sha256", "error",
+               "per_area_units", "per_area_status", "baseline_per_paired_ha", "alternative_per_paired_ha",
+               "delta_per_paired_ha", "reduction_per_paired_ha", "changed_input_area_ha",
+               "changed_input_reporting_area_ha", "changed_input_paired_area_ha",
+               "changed_input_reporting_coverage", "whole_reporting_delta_per_changed_ha",
+               "whole_reporting_reduction_per_changed_ha", "response_per_changed_ha_reason",
+               "changed_cell_delta_density", "changed_cell_reduction_density",
+               "changed_landcover_cells", "changed_coefficient_cells", "changed_input_sha256",
+               "global_parameter_changes", "changed_input_sources")
     writer = csv.DictWriter(output, fieldnames=columns)
     writer.writeheader()
     for row in rows:
@@ -1057,14 +1282,59 @@ def _csv_bytes(rows):
             writer.writerow(common)
             continue
         for pollutant, metric in row["metrics"].items():
+            area = metric.get("per_area", {})
+            paired = area.get("paired_reporting", {})
+            footprint = area.get("input_footprint", {})
+            response = area.get("whole_reporting_response_per_changed_ha", {})
+            density = area.get("changed_cell_density", {})
             writer.writerow({**common, "pollutant": pollutant,
-                             **{key: metric.get(key) for key in columns if key in metric}})
+                             **{key: metric.get(key) for key in columns if key in metric},
+                             "per_area_units": area.get("units"), "per_area_status": area.get("status"),
+                             "baseline_per_paired_ha": paired.get("baseline_total"),
+                             "alternative_per_paired_ha": paired.get("alternative_total"),
+                             "delta_per_paired_ha": paired.get("delta"),
+                             "reduction_per_paired_ha": paired.get("reduction"),
+                             "changed_input_area_ha": footprint.get("area_ha"),
+                             "changed_input_reporting_area_ha": footprint.get("reporting_area_ha"),
+                             "changed_input_paired_area_ha": footprint.get("paired_area_ha"),
+                             "changed_input_reporting_coverage": footprint.get("paired_fraction_of_reporting_changed"),
+                             "whole_reporting_delta_per_changed_ha": response.get("delta"),
+                             "whole_reporting_reduction_per_changed_ha": response.get("reduction"),
+                             "response_per_changed_ha_reason": _csv_text(response.get("reason") or area.get("reason") or ""),
+                             "changed_cell_delta_density": density.get("delta"),
+                             "changed_cell_reduction_density": density.get("reduction"),
+                             "changed_landcover_cells": footprint.get("landcover_changed_cells"),
+                             "changed_coefficient_cells": footprint.get("coefficient_changed_cells"),
+                             "changed_input_sha256": footprint.get("sha256"),
+                             "global_parameter_changes": _csv_text(json.dumps(footprint.get("global_parameter_changes", []), ensure_ascii=False, sort_keys=True)),
+                             "changed_input_sources": _csv_text(json.dumps(footprint.get("sources", {}), ensure_ascii=False, sort_keys=True))})
     return output.getvalue().encode("utf-8-sig")
 
 
 def _summarize_locked(workspace, experiment_id, plan, state):
     directory = _directory(workspace, experiment_id)
     rows = _records(directory)
+    # Enrich historical completed cases once from their retained inputs/outputs.
+    # Their original case identity, completion metadata, totals and artifacts stay intact.
+    reporting_context = None
+    for row in rows:
+        if row["state"] != "complete" or (row.get("metrics") and all(
+                value.get("per_area", {}).get("schema") == AREA_METRICS_SCHEMA
+                for value in row["metrics"].values())):
+            continue
+        reference = workspace.inspect_run(row["baseline_run_id"])
+        alternative = workspace.inspect_run(row["run_id"])
+        if reporting_context is None:
+            reporting_context = _reporting_cells(workspace, plan["baseline"]["grid_id"])
+        count, area = reporting_context
+        enriched = _pair_metrics(workspace, reference, alternative, count, area, None)
+        for pollutant, value in enriched.items():
+            retained = row["metrics"][pollutant]
+            for name in ("baseline_total", "alternative_total", "paired_cells", "support_sha256"):
+                if retained.get(name) != value.get(name):
+                    raise ValueError("Retained experiment mass/support differs while adding per-area context: " + name)
+            retained["per_area"] = value["per_area"]
+        _persist_case(directory, row)
     models = selected_models(plan["baseline"])
     pollutants = output_models(models)
     generated = now()
@@ -1073,7 +1343,7 @@ def _summarize_locked(workspace, experiment_id, plan, state):
         "title": state["title"], "reason": plan["selection"]["reason"],
         "state": state["state"], "selection": plan["selection"], "baseline": plan["baseline"],
         "counts": plan["counts"], "progress": copy.deepcopy(state["progress"]),
-        "generated_at": generated, "rows": rows,
+        "generated_at": generated, "rows": rows, "area_metrics_schema": AREA_METRICS_SCHEMA,
         "models": list(models), "pollutants": list(pollutants),
         "grid_id": plan["baseline"]["grid_id"],
         "pairs": [{"profile_id": row["profile_id"], "baseline_run_id": row["baseline_run_id"],
@@ -1087,6 +1357,9 @@ def _summarize_locked(workspace, experiment_id, plan, state):
             "positive_delta": "Higher annual export", "negative_delta": "Lower annual export",
             "ranges": "Sensitivity ranges over the explicitly evaluated profiles.",
             "zero_baseline": "Relative change is undefined when the paired baseline total is zero.",
+            "reporting_density": "Paired annual reporting mass divided by its paired-valid reporting area.",
+            "changed_area": "Actual union of pollutant-relevant coefficient and land-cover changes on valid model-domain pixel centres; distinct from reporting area and nominal intervention polygons.",
+            "response_per_changed_hectare": "Whole paired-reporting response divided by actual model-domain changed area; distinct from export density on changed cells. Not attributed when global model parameters or land-cover validity also differ.",
         },
         "files": {},
     }
@@ -1177,6 +1450,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
             state["state"] = "complete"
             previous = read_summary(workspace, experiment_id)
             if (previous is not None and previous["state"] == "complete"
+                    and previous.get("area_metrics_schema") == AREA_METRICS_SCHEMA
                     and previous["progress"]["complete"] == plan["counts"]["cases"]):
                 atomic_json(directory / "state.json", state)
                 return {**state, "reused": True}

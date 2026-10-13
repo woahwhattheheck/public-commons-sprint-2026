@@ -6,6 +6,8 @@ import json
 from model import profile_editions as model
 from model import profile_customer_review as customer_review
 from model import biophysical_evidence as evidence
+from model import management_cases as management
+from model import published_management_cases as published_management
 from model import biophysical_evidence_authoring as authoring
 from model.common import describe_file, verify_file
 
@@ -15,12 +17,14 @@ BIOPHYSICAL_ACTIONS = frozenset({
     "profile.biophysical.experiment.prepare", "profile.biophysical.evidence.populate",
 })
 AUTHORING_ACTIONS = frozenset({"profile.biophysical.authoring.save", "profile.biophysical.authoring.register"})
-ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS | AUTHORING_ACTIONS
+MANAGEMENT_ACTIONS = frozenset({"profile.management.prepare", "profile.management.experiment.prepare"})
+ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS | MANAGEMENT_ACTIONS | AUTHORING_ACTIONS
 READS = frozenset({"catalog", "inspect", "table", "preview", "compare", "methods",
                    "customer-review-catalog", "customer-review-inspect", "customer-review-preview",
                    "biophysical-catalog", "biophysical-template", "biophysical-evidence-preview",
                    "biophysical-evidence-inspect", "biophysical-ranges-preview", "biophysical-ranges-inspect",
-                   "biophysical-authoring-list", "biophysical-authoring-inspect", "biophysical-authoring-export"})
+                   "biophysical-authoring-list", "biophysical-authoring-inspect", "biophysical-authoring-export",
+                   "management-catalog", "management-preview", "management-inspect", "management-published-preview"})
 
 
 class ProfileWorkbench:
@@ -87,14 +91,43 @@ class ProfileWorkbench:
         return [self.operator._ticket(workspace_key, verify_file(ws.root, record), record, label)
                 for label, record in files.items()]
 
+    def _management_downloads(self, workspace_key, record):
+        ws = self.operator.ws(workspace_key)
+        path = ws.root / management.KIND / (record["id"] + ".json")
+        result = [self.operator._ticket(workspace_key, path, describe_file(ws.root, path),
+                                        "Complete editable management selection")]
+        seen = set()
+        for row in record["profiles"]:
+            profile = ws._get("profiles", row["profile_id"])
+            profile_path = ws.root / "profiles" / (profile["id"] + ".json")
+            source_path, entry = ws.source_file(profile["source_collection_id"], profile["biophysical_source_id"])
+            for label, path, descriptor in (
+                    (profile["title"] + " / native profile", profile_path, describe_file(ws.root, profile_path)),
+                    (profile["title"] + " / coefficient CSV", source_path, entry["body"])):
+                token = (str(path), descriptor["sha256"])
+                if token not in seen:
+                    result.append(self.operator._ticket(workspace_key, path, descriptor, label))
+                    seen.add(token)
+        return result
+
     def read(self, workspace_key, operation, payload=None):
         ws = self.operator.ws(workspace_key)
         value = payload or {}
         if not isinstance(value, dict):
             raise self.Fault("PROFILE_REQUEST", "Use a profile selection object.")
-        if operation.startswith(("customer-review-", "biophysical-")):
+        if operation.startswith(("customer-review-", "biophysical-", "management-")):
             value = {key: item for key, item in value.items() if key != "workspace"}
-        if operation == "biophysical-authoring-list":
+        if operation == "management-catalog":
+            result = management.catalog(ws, value.get("profile_id"))
+            result["published_recipe"] = published_management.catalog(ws, value.get("profile_id"))
+        elif operation == "management-published-preview":
+            result = published_management.preview(ws, value)
+        elif operation == "management-preview":
+            result = management.preview(ws, value)
+        elif operation == "management-inspect":
+            result = management.inspect(ws, value.get("case_id"))
+            result["_downloads"] = self._management_downloads(workspace_key, result)
+        elif operation == "biophysical-authoring-list":
             if set(value) != {"profile_id"}:
                 raise self.Fault("PROFILE_REQUEST", "Select the original profile for named working revisions.")
             result = authoring.list_series(ws, value["profile_id"])
@@ -162,6 +195,10 @@ class ProfileWorkbench:
             return authoring.save(ws, task["payload"], created_at=task.get("created_at"))
         if action == "profile.biophysical.authoring.register":
             return authoring.register(ws, task["payload"], created_at=task.get("created_at"))
+        if action == "profile.management.prepare":
+            return management.prepare(ws, task["payload"])
+        if action == "profile.management.experiment.prepare":
+            return management.prepare_experiment(ws, task["payload"])
         if action == "profile.biophysical.evidence.populate":
             from source_tools.receive_biophysical_evidence import populate
             value = task["payload"]
@@ -211,6 +248,11 @@ class ProfileWorkbench:
                 value["_downloads"] = self._authoring_downloads(value["workspace"], detail["files"])
                 value["_downloads"].extend(self._evidence_downloads(value["workspace"], detail["evidence"], evidence.EVIDENCE_KIND))
             return value
+        if task["action"] in MANAGEMENT_ACTIONS:
+            if task["action"] == "profile.management.prepare":
+                detail = management.inspect(ws, result["id"])
+                value["_downloads"] = self._management_downloads(value["workspace"], detail)
+            return value
         if task["action"] in BIOPHYSICAL_ACTIONS:
             if task["action"] in {"profile.biophysical.evidence.save", "profile.biophysical.evidence.populate"}:
                 detail = evidence.inspect_evidence(ws, result["id"])
@@ -245,4 +287,6 @@ class ProfileWorkbench:
         return {**model.verify_all(workspace),
                 "customer_reviews": customer_review.verify_all(workspace),
                 "biophysical_evidence": evidence.verify_all(workspace),
-                "biophysical_authoring": authoring.verify_all(workspace)}
+                "biophysical_authoring": authoring.verify_all(workspace),
+                "management_cases": len([management.inspect(workspace, row["id"])
+                                         for row in workspace._list(management.KIND)])}
