@@ -38,12 +38,53 @@ function loadSeriesContext(series){
  const c=series.series_context;if(!c)return '';
  return '<br><small>'+e([c.chemical_basis&&'Basis: '+c.chemical_basis,c.normalized_unit&&'Unit: '+c.normalized_unit,c.source_speciation&&'Reported species: '+c.source_speciation].filter(Boolean).join(' · '))+'</small>';
 }
+function canonicalMeasurementRows(integration){
+ return (integration.source_samples||[]).filter(sample=>sample.original?.canonical_original?.sourceKind==='wqp');
+}
+function interpretedMeasurement(row){
+ const finite=value=>typeof value==='number'&&Number.isFinite(value);
+ if(row.censor==='none'&&finite(row.value))return n(row.value)+' '+row.unit;
+ if(row.censor==='left'&&finite(row.upper))return 'At or below '+n(row.upper)+' '+row.unit+' · left-censored';
+ if(row.censor==='right'&&finite(row.lower))return 'At or above '+n(row.lower)+' '+row.unit+' · right-censored';
+ if(finite(row.lower)&&finite(row.upper))return n(row.lower)+' to '+n(row.upper)+' '+row.unit+' · retained interval';
+ return 'Unresolved value or bound';
+}
+function originalMeasurements(integration){
+ const selected=canonicalMeasurementRows(integration);if(!selected.length)return '';
+ const groups=new Map();
+ for(const sample of selected){const group=groups.get(sample.series_key)||[];group.push(sample);groups.set(sample.series_key,group);}
+ const censored=selected.filter(sample=>sample.original.canonical_original.censor!=='none').length;
+ let body='<h2 id="original-measurements">Original measurements</h2><p>'+n(selected.length)+' original results, including '+n(censored)+' censored results. Each row keeps its reported value and unit alongside the retained interpretation. Bounds are not substituted point measurements. Repeated dates and activities remain separate results; no averaging or mass calculation is performed in these tables.</p>';
+ body+='<p>Dates, local clocks and time-zone labels are reproduced from the source. An agency clock label is not independently corrected here. Blank analytical fractions or chemical bases remain unspecified. The complete CSV and calculation download retain the original records.</p>';
+ for(const samples of groups.values()){
+  const first=samples[0],c=first.series_context||{},row=first.original.canonical_original;
+  body+='<h3>'+e(first.characteristic)+' · '+e(row.unit||'unit unspecified')+'</h3><p>'+e(first.station_id)+' · '+e(row.fraction||'Fraction unspecified')+' · '+e(row.basis?'Basis: '+row.basis:'Chemical or mass basis unspecified')+' · '+e([row.methodContext,row.method].filter(Boolean).join(' ')||'Method unspecified')+'</p>';
+  const dimensions=[c.source_speciation&&'Reported species: '+c.source_speciation,c.solids_basis&&('Solids: '+({'total-suspended-solids':'total suspended solids (TSS); no conversion to suspended sediment concentration','suspended-sediment-concentration':'suspended sediment concentration (SSC); no conversion to total suspended solids'}[c.solids_basis]||c.solids_basis)),c.microbial_count_method&&'Count method: '+c.microbial_count_method,c.turbidity_scale&&'Turbidity scale: '+c.turbidity_scale,
+   row.resultDepth!==''&&row.resultDepth!=null&&'Result depth: '+[row.resultDepth,row.resultDepthUnit,row.resultDepthReference].filter(x=>x!==''&&x!=null).join(' '),
+   row.activityDepth!==''&&row.activityDepth!=null&&'Activity depth: '+[row.activityDepth,row.activityDepthUnit,row.activityDepthReference].filter(x=>x!==''&&x!=null).join(' '),
+   row.relativeDepth&&'Relative depth: '+row.relativeDepth,row.timeBasis&&'Time basis: '+row.timeBasis,row.temperatureBasis&&'Temperature basis: '+row.temperatureBasis,row.weightBasis&&'Weight basis: '+row.weightBasis].filter(Boolean);
+  if(dimensions.length)body+='<p><small>'+e(dimensions.join(' · '))+'</small></p>';
+  body+='<div class="scroll" role="region" tabindex="0" aria-label="'+e(first.characteristic)+' original measurements"><table><caption>'+n(samples.length)+' separate original results</caption><thead><tr><th scope="col">Source date / clock</th><th scope="col">Reported value / unit</th><th scope="col">Retained interpretation</th><th scope="col">Condition / limits / review</th><th scope="col">Original activity / result</th></tr></thead><tbody>';
+  for(const sample of [...samples].sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))){
+   const value=sample.original.canonical_original;
+   const clock=[value.sourceTime,value.timeZone].filter(Boolean).join(' ');
+   const reported=value.reportedValue!==''&&value.reportedValue!=null?String(value.reportedValue):'No numeric value reported';
+   const limits=(value.detectionLimits||[]).map(limit=>[limit.type,limit.value,limit.unit].filter(x=>x!==''&&x!=null).join(' '));
+   const quality=[value.detection&&'Condition: '+value.detection,value.qualifier&&'Qualifier: '+value.qualifier,value.status&&'Source status: '+value.status,
+     value.review?.state&&'Review: '+value.review.state,...(sample.issues||[])].filter(Boolean);
+   if(value.variantCount>1)quality.push(value.selectedVersion?(value.selectedVersion===value.id?'This source version is selected.':'A different source version is selected.'):'Source-version conflict unresolved.');
+   body+='<tr><td>'+e(value.sampledDate)+'<br><small>'+e(clock||'Clock not reported')+'</small></td><td>'+e(reported)+(value.reportedUnit?' '+e(value.reportedUnit):'')+'</td><td>'+e(interpretedMeasurement(value))+'</td><td>'+quality.map(e).join('<br>')+(limits.length?'<br><small>'+limits.map(e).join('<br>')+'</small>':'')+'</td><td>'+e(value.activityId)+'<br><small>'+e(value.sourceResultId||sample.id)+'</small></td></tr>';
+  }
+  body+='</tbody></table></div>';
+ }
+ return body;
+}
 export function renderFlowLoads(value,urls={}){
- const integration=value.integration,link={json:'flow-loads.json',daily:'daily-loads.csv',periods:'period-loads.csv',context:'concentration-context.csv',annual:'annual-loads.csv',...urls};
- let body='<p class="subtitle">TJLabs · Upper Savannah · Measurements</p><h1>Concentration and discharge</h1><p>'+e(integration.contract.period.start)+' through '+e(integration.contract.period.end)+' (end exclusive)</p>'+links([['Complete calculation',link.json],['Daily rows',link.daily],['Period quantities',link.periods],['Original measured context',link.context],['Complete eligible annual quantities',link.annual]]);
+ const integration=value.integration,title=canonicalMeasurementRows(integration).length?'Measurements and discharge':'Concentration and discharge',link={json:'flow-loads.json',daily:'daily-loads.csv',periods:'period-loads.csv',context:'concentration-context.csv',annual:'annual-loads.csv',...urls};
+ let body='<p class="subtitle">TJLabs · Upper Savannah · Measurements</p><h1>'+e(title)+'</h1><p>'+e(integration.contract.period.start)+' through '+e(integration.contract.period.end)+' (end exclusive)</p>'+links([['Complete calculation',link.json],['Daily rows',link.daily],['Period quantities',link.periods],['Original measured context',link.context],['Complete eligible annual quantities',link.annual]]);
  body+='<p class="note">'+e(integration.uncertainty)+'</p><p>'+n(integration.counts.source_samples)+' source samples; '+n(integration.counts.source_flows)+' selected flow rows; '+n(integration.counts.series)+' constituent/fraction/method series.</p><h2>Series support and coverage</h2><div class="scroll"><table><thead><tr><th>Station / constituent</th><th>Fraction / method</th><th>Support</th><th>Source / usable samples</th><th>Quantified days</th><th>Interpretation</th></tr></thead><tbody>';
  for(const s of integration.series)body+='<tr><td>'+e(s.station_id)+'<br>'+e(s.characteristic)+loadSeriesContext(s)+'</td><td>'+e(s.sample_fraction)+'<br>'+e(s.method_context)+' '+e(s.method_id)+'</td><td>'+e(s.support.gauge_relation)+'</td><td>'+n(s.source_sample_count)+' / '+n(s.usable_sample_count)+'</td><td>'+n(s.periods[0]?.quantified_days||0)+' / '+n(s.periods[0]?.expected_days||0)+'</td><td>'+e(s.support.issues.join('; ')||s.status)+'</td></tr>';
- body+='</tbody></table></div><h2>Quantities over supported days</h2><p>Reported bounds describe the chosen censoring/interpolation calculation. They are not confidence intervals. Flow-weighted concentrations use the identical quantified-day water volume.</p><div class="scroll"><table><thead><tr><th>Series / period</th><th>Dates (end exclusive)</th><th>Quantified / expected days</th><th>Mass point / lower / upper (kg)</th><th>Matched water volume (m³)</th><th>Flow-weighted point / lower / upper (mg/L)</th></tr></thead><tbody>';
+ body+='</tbody></table></div>'+originalMeasurements(integration)+'<h2>Quantities over supported days</h2><p>Reported bounds describe the chosen censoring/interpolation calculation. They are not confidence intervals. Flow-weighted concentrations use the identical quantified-day water volume.</p><div class="scroll"><table><thead><tr><th>Series / period</th><th>Dates (end exclusive)</th><th>Quantified / expected days</th><th>Mass point / lower / upper (kg)</th><th>Matched water volume (m³)</th><th>Flow-weighted point / lower / upper (mg/L)</th></tr></thead><tbody>';
  let count=0;
  for(const s of integration.series)for(const p of [...s.periods,...s.annual]){
   count++;body+='<tr><td>'+e(s.station_id)+'<br>'+e(s.characteristic)+' / '+e(s.sample_fraction)+loadSeriesContext(s)+'<br>'+e(p.label)+'</td><td>'+e(p.period_start)+'<br>'+e(p.period_end)+'</td><td>'+n(p.quantified_days)+' / '+n(p.expected_days)+'</td><td>'+n(p.load_kg)+' / '+n(p.load_lower_kg)+' / '+n(p.load_upper_kg)+'</td><td class="numeric">'+n(p.quantified_flow_volume_m3)+'</td><td>'+n(p.flow_weighted_concentration_mg_l)+' / '+n(p.flow_weighted_concentration_lower_mg_l)+' / '+n(p.flow_weighted_concentration_upper_mg_l)+'</td></tr>';
@@ -51,5 +92,5 @@ export function renderFlowLoads(value,urls={}){
  body+='</tbody></table></div>';
  if(!count)body+='<p>These original station relationships provide regional flow context. The selected study contains no co-located catchment concentration/discharge series for mass integration. Its complete original concentration records and sampling-day links remain available above.</p>';
  body+='<h2>Selected scientific method</h2><dl><dt>Method edition</dt><dd>'+e(integration.schema)+'</dd><dt>Original flow study</dt><dd><code>'+e(value.flow_study_id)+'</code></dd><dt>Maximum interpolation gap</dt><dd>'+n(integration.contract.maximum_interpolation_gap_days)+' days</dd><dt>Daily concentration approximation</dt><dd>'+e(integration.contract.daily_concentration_basis)+'</dd><dt>Event sampling</dt><dd>'+e(integration.contract.event_sampling_policy)+'</dd></dl><details><summary>Complete selected support and method contract</summary><pre>'+e(JSON.stringify(integration.contract,null,2))+'</pre></details>';
- return shell('Concentration and discharge',body);
+ return shell(title,body);
 }
