@@ -477,6 +477,7 @@ def operate_locked(args, output):
     archive_selection = {
         "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
         "fieldwork_operation_id": campaign["operation_id"],
+        "fieldwork_revision": campaign["current_revision"],
         "ensemble_id": parameter_plan["ensemble_id"],
     }
     edition_suffix = hashlib.sha256(json.dumps(
@@ -574,6 +575,8 @@ def operate_locked(args, output):
     if (received_ensemble["grid_id"] != receipt["grid_id"]
             or received_ensemble["alternative_scenario_ids"] != receipt["alternative_scenario_ids"]):
         raise ValueError("Reopened parameter study differs from the original scenario selection")
+    if received_ensemble["progress"]["complete"] != received_ensemble["progress"]["total"]:
+        raise ValueError("Reopen every completed native member of the original parameter study")
     received_course = read_json(reopened.root / "ensemble_results"
                                 / parameter_plan["ensemble_id"] / "headwaters-results.json")
     if received_course.get("state") != "complete":
