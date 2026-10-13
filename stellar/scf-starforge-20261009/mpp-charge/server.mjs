@@ -170,7 +170,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
       if(request.method==='GET' && url.pathname==='/api/channel/state') {
         await send(response,Response.json(await channelWorkbench.state(),{headers:{'cache-control':'no-store'}}));return;
       }
-      const channelRead=/^\/api\/channel\/(tasks|purchases|contracts|funders|funding|settlements|observations)\/([^/]+)$/.exec(url.pathname);
+      const channelRead=/^\/api\/channel\/(tasks|purchases|contracts|funders|funding|settlements|observations|openings)\/([^/]+)$/.exec(url.pathname);
       if(request.method==='GET' && channelRead) {
         await send(response,Response.json(await channelWorkbench.read(channelRead[1],decodeURIComponent(channelRead[2])),
           {headers:{'cache-control':'no-store'}}));return;

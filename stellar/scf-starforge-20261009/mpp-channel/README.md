@@ -1,6 +1,6 @@
 # MPP channel work
 
-Operate recurring paid tasks through an existing funded Stellar channel. The original MPP workspace retains the task budget, each original request, cumulative commitment, merchant delivery, paid response, channel funding, ongoing collection and final close. The browser, installed command, JavaScript and Python clients all use the same native records and lease.
+Open and fund a selected Stellar channel, then operate recurring paid tasks through it. The original MPP workspace retains the task budget, each original request, cumulative commitment, merchant delivery, paid response, channel funding, ongoing collection and final close. The browser, installed command, JavaScript and Python clients all use the same native records and lease.
 
 This application adds the native **channel** intent beside the existing Charge product. Its wire protocol is the pinned Stellar MPP channel implementation: incremental challenge amounts, cumulative vouchers and the existing one-way-channel contract. Each receiving application carries the full operating history and the complete source needed to reopen it.
 
@@ -25,9 +25,114 @@ node "$RECEIVED_APPLICATION/stellar/scf-starforge-20261009/mpp-channel/cli.mjs" 
 
 The original workspace must be stopped before the direct command acquires its lease. Attached commands use `--dir` and share the running product.
 
+## Open and initially fund a channel
+
+Use **Open a channel** in Channel work when the customer and merchant need their first channel. Keep an existing deployed channel by selecting its original identity in the task or merchant form.
+
+Choose the actual network, token, funder account, recipient, commitment public key, initial amount, refund waiting period and selected contract edition. The setup derives the channel address from the network, funder and retained salt. Its signed deployment includes that exact salt, WASM hash and original constructor arguments.
+
+### Select the source and deposit
+
+| Selection | Meaning |
+|---|---|
+| Network and RPC | The RPC must report the selected Stellar network before observation, preparation, submission or recovery. |
+| Token and decimals | The selected SEP-41 token contract and its display precision. Every amount is a canonical string in that token's base units. |
+| Funder and signer | The original `G…` account pays transaction fees and deposits its selected tokens. The funding account must equal that funder. The host reads its secret only from the selected environment-variable name. |
+| Recipient | The actual merchant's `G…` or `C…` address that will collect earned commitments. The application's recipient fee signer supports `G…` accounts; a `C…` recipient uses that contract's own authorization. |
+| Commitment public key | The actual `G…` public key for the customer's off-chain commitments. The funder and commitment signer may use different keys. |
+| Initial amount | The selected nonnegative base-unit amount deposited by the original constructor. A zero deposit opens an empty channel for later top-up. |
+| Refund waiting period | An exact unsigned 32-bit number of ledgers. Select it with the merchant so the recipient has time to collect after a funder starts closing. |
+| Contract edition | The original source URL and the 64-character lowercase SHA-256 of its actual compiled WASM. |
+| Code mode | `existing` receives and retains the selected code already on that network. `upload` receives the selected compiled file from the native host and uploads it if that code is absent. |
+| Salt | Leave it blank on the first preparation to generate and retain 32 random bytes. Reuse the returned salt and opening ID for every continuation. |
+| Maximum fee | The operator's maximum stroops per transaction. The review also shows the total cap for the selected one- or two-transaction setup. |
+
+The browser imports and exports the complete setup document. **Prepare opening** captures the exact compiled code bytes and derives the final channel address without signing. Existing-code mode requires that exact code on the selected network. Upload mode reads the original host's absolute WASM path, checks its binary header and digest, and retains the complete bytes before authorization. Subsequent execution uses those retained bytes.
+
+The installed interface exposes the same selection:
+
+```sh
+starforge mpp-workspace channel opening-template --dir "$MPP_PRODUCT"
+starforge mpp-workspace channel opening-prepare --dir "$MPP_PRODUCT" \
+  --input "$COMPLETE_OPENING_INPUT"
+starforge mpp-workspace channel opening-execute --dir "$MPP_PRODUCT" \
+  --input "$ORIGINAL_OPENING_ID_INPUT"
+starforge mpp-workspace channel openings --dir "$MPP_PRODUCT" \
+  --id "$ORIGINAL_OPENING_ID"
+```
+
+The preparation input is `{openingId, profile}`. Copy the template profile returned by `opening-template` and complete its selections:
+
+```json
+{
+  "openingId": "customer-channel-opening-20261012",
+  "profile": {
+    "schema": "stellar-forge.mpp-channel-opening-profile.v1",
+    "title": "Selected customer and merchant recurring work",
+    "channel": {
+      "network": "stellar:testnet",
+      "address": "",
+      "token": "ACTUAL_TOKEN_CONTRACT",
+      "funder": "ACTUAL_FUNDER_ACCOUNT",
+      "recipient": "ACTUAL_MERCHANT_ADDRESS",
+      "commitmentKey": "ACTUAL_COMMITMENT_PUBLIC_KEY",
+      "decimals": 7,
+      "wasmSha256": "ACTUAL_COMPILED_CODE_SHA256",
+      "contractSource": "ORIGINAL_CONTRACT_SOURCE_URL",
+      "rpcUrl": "https://soroban-testnet.stellar.org/"
+    },
+    "dependencyRoot": "/absolute/private/selected-native-runtime",
+    "opening": {
+      "salt": "",
+      "initialAmountAtomic": "SELECTED_BASE_UNIT_AMOUNT",
+      "refundWaitingPeriod": "REPLACE_WITH_SELECTED_LEDGER_COUNT_NUMBER",
+      "codeMode": "existing"
+    },
+    "funding": {
+      "account": "ACTUAL_FUNDER_ACCOUNT",
+      "keyEnv": "MPP_CHANNEL_FUNDER_SECRET",
+      "maximumFeeStroops": "SELECTED_MAXIMUM_FEE_STROOPS",
+      "operator": "accountable-operator"
+    }
+  }
+}
+```
+
+This is a field guide with explicit replacement values. Supply actual Stellar addresses, source and amounts, and replace `refundWaitingPeriod` with the selected JSON number. For upload mode, set `codeMode:"upload"` and add `opening.wasmFile` with the absolute retained compiled-file path. Keep the generated salt and complete returned profile after the first preparation. Later execute, resume and cancel inputs contain only the original `openingId`; reconciliation also accepts a selected archival `rpcUrl`.
+
+### Authorize and continue the original opening
+
+**Authorize / resume** presents the original parties, exact source, deposit, refund period and fee limits in the product's controlling terminal. That authority covers the selected code upload, when required, and the channel creation. Task purchase budgets are selected separately after the channel opens.
+
+An optional code upload and the actual channel creation each retain their original signed XDR, transaction hash, fee, expiration, before-signing ledger, submission attempts and finality. Each envelope is saved before broadcast. Channel creation uses the native SDK's direct `createCustomContract` operation. The application checks its complete create-contract host function and source-account authorization, including the exact original constructor and selected token transfer.
+
+| State | Continue the existing operation |
+|---|---|
+| `DRAFT` | Correct the unsigned setup, or authorize its complete selected edition. |
+| `AUTHORIZED` | Resume the selected setup; its original terminal authority is already retained. |
+| `SIGNED`, `SUBMITTING`, `PENDING` | Resume the same signed stage or reconcile its original transaction hash. |
+| `CODE_READY` | The selected code upload succeeded. Resume the original opening to create the channel. |
+| `OPENING` | Creation succeeded; resume to finish the original channel observation and local setup. |
+| `OPENED` | Use the retained channel identity for merchant setup and recurring work. Reopening completes any interrupted local finalization. |
+| `HISTORY_REQUIRED` | Reconcile the same transaction through a selected RPC that retains its possible inclusion window. |
+| `FAILED`, `EXPIRED` | Retain this final transaction and history. A newly selected attempt uses a new opening ID and fresh authority. |
+| `CANCELLED` | An unsigned opening was cancelled. Its complete prior selection and any completed code-upload stage remain in the record. |
+
+An archival RPC must confirm the same network. A `NOT_FOUND` response is treated as definitive expiration only when its closed-ledger time is past the signed maximum time and its retained history covers the whole possible inclusion window. An original signed stage is always recovered with its original envelope.
+
+After successful creation, the application observes the actual code hash, token, funder, recipient, commitment key and refund period, then creates the original channel stream and its funder selection. The receipt carries the deployment hash, optional upload hash and observed balance. **Download channel identity** supplies that same selection to the merchant or customer workflow. The application resumes incomplete local finalization idempotently.
+
+**Cancel unsigned opening** is available before the creation envelope is signed. An outstanding signed code upload must first reach a final state. The cancellation is saved before its operation reservation is released; interrupted cleanup resumes from the retained cancelled state.
+
+### Receive an opening on another host
+
+A prepared or interrupted opening appears in the existing complete operating-handover selector. Export its original derived channel identity, then receive that same full file in the selected product. The bundle carries the complete selected WASM, profile, salt, original authority, both transaction stages, SDK records and executable source. Its receiving runtime binding supplies the actual installed SDK path without rewriting the original profile.
+
+Reopen `openings` with the original opening ID. Use `opening-resume` for its selected unfinished stage or `opening-reconcile` for the original signed transaction. Once `OPENED`, continue the merchant and customer's actual useful work in that same received channel.
+
 ## Select useful work and authorize its task budget
 
-1. Select the actual deployed channel, token, funder, recipient, commitment public key, deployed WASM hash, source edition and RPC. Channel creation uses the original contract deployment workflow; this application can fund the selected existing channel and collect earned commitments throughout its operating life.
+1. Open the selected channel through **Open a channel**, or select the actual original deployed channel, token, funder, recipient, commitment public key, WASM hash, source edition and RPC. Keep its returned identity throughout merchant setup and recurring work.
 2. Start the merchant with its real authorized source and useful priced route. Load its public `/_mpp/channel-contract` through **Load a merchant offer**, or open the saved complete contract.
 3. Select the offer, describe the recurring work and choose its accountable operator. Set a total budget in token base units, maximum amount per purchase, number of purchases and expiry.
 4. Save the task edition. **Authorize task budget** presents the full source, channel, task, endpoint, selected merchant edition, unit and cap in the original controlling terminal.
@@ -211,6 +316,7 @@ A failed or definitively expired transaction can be followed by a new operation 
 
 **Create operating handover** transfers the selected channel from its current workspace. It retains one immutable file before transferring operation, including:
 
+- Complete selected opening code, profile, salt, authority, signed upload/creation stages and original deployment receipt.
 - Complete task editions, task authority, budget reservations, signed cumulative commitments and original requests.
 - Native SDK state, merchant profiles, accepted deliveries and exact paid response bytes.
 - Funder profile editions, funding/refund authority, collection/close commitments, signed transactions, coherent chain observations, original finality responses and incomplete journals.
@@ -234,6 +340,8 @@ The receiving input selects `file` and `dependencyRoot`; the browser can send th
 
 ## Application and agent API
 
+The maintained client exposes 41 operations, including the six `opening-*` actions. The `openings` record kind returns the original setup and transaction-stage metadata; the native operating handover retains its complete code and signed envelopes.
+
 ```js
 import { connectMppChannel } from './stellar/scf-starforge-20261009/mpp-channel/client.mjs';
 
@@ -249,7 +357,7 @@ try {
 }
 ```
 
-The export path is also available directly from `mpp-channel/client.mjs`. The client checks the original console identity through `MppProductClient` on every operation. Its typed interface covers work lists, jobs, task, purchase, merchant contract, funder profile, funding, settlement and observation records, responses, handovers and complete operations. The installed CLI exposes those same operations to an agent using the current product session.
+The export path is also available directly from `mpp-channel/client.mjs`. The client checks the original console identity through `MppProductClient` on every operation. Its typed interface covers work lists, jobs, opening, task, purchase, merchant contract, funder profile, funding, settlement and observation records, responses, handovers and complete operations. The installed CLI exposes those same operations to an agent using the current product session.
 
 The original merchant MCP also exposes `merchant_mpp_channel_status`, `merchant_mpp_channel_record`, `merchant_mpp_channel_operate` and `merchant_mpp_channel_file`. Select its host-declared console alias. Channel operations return the original native job; `merchant_mpp_job` reads it. Large channel handovers stream from their original immutable file through the maintained reader, with the returned read ID, exact byte digest and next offset. An interrupted transfer resumes the same original file after the reader or process restarts.
 
@@ -269,10 +377,12 @@ Python also receives the complete operating handover directly to an immutable pr
 
 ## Native source and engineering boundaries
 
-The exact installed dependency set is `@stellar/mpp 0.7.1`, `mppx 0.6.29`, `@stellar/stellar-sdk 15.1.0`. The channel modules load through the existing native runtime resolver; dependency receiving stays with the original MPP product owner.
+The exact installed dependency set is `@stellar/mpp 0.7.1`, `mppx 0.6.29`, `@stellar/stellar-sdk 15.1.0`; the original lock resolves `@stellar/stellar-base 15.0.0` for native deployment operations. The channel modules load through the existing native runtime resolver; dependency receiving stays with the original MPP product owner.
 
 - [Stellar MPP v0.7.1](https://github.com/stellar/stellar-mpp-sdk/tree/9f2f8254421e09906dfb7e983e2491a273120adf): channel request/payload, cumulative client store, native merchant atomic acceptance and commitment preparation.
-- [One-way channel contract](https://github.com/stellar-experimental/one-way-channel/blob/main/contracts/channel/src/lib.rs): actual deployed edition is selected by its WASM digest in the channel profile.
+- [One-way channel contract](https://github.com/stellar-experimental/one-way-channel/blob/25dea1b303495a7a4184af7605bbb7671ff08da6/contracts/channel/src/lib.rs): actual deployed edition is selected by its WASM digest in the channel profile.
+- [Native SDK contract creation and code upload](https://github.com/stellar/js-stellar-base/blob/v15.0.0/src/operations/invoke_host_function.js): the exact `createCustomContract` and `uploadContractWasm` host operations used by opening.
+- [SDK contract ID derivation](https://github.com/stellar/js-stellar-base/blob/v15.0.0/src/asset.js): network-bound XDR contract-ID preimage and address encoding; opening uses its address-and-salt preimage variant.
 - [Stellar RPC getNetwork](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getNetwork): confirms the selected network before channel observations, submission and archival recovery.
 - [Stellar RPC getTransaction](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getTransaction): transaction status, retained ledger boundaries and ledger close times used by close recovery.
 - Original `mpp-charge/storage.mjs`, `products/mpp-workspace` and distribution contribution remain the native lease, product identity and installed application path.
