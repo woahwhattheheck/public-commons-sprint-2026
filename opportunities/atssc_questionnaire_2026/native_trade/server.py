@@ -15,8 +15,8 @@ from urllib.parse import parse_qs,urlparse,quote
 from questionnaire_workspace import OperationError,Workspace
 
 SOURCE = Path(__file__).resolve().parent
-RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","save_progress","import_workbook","inspect_workbook","outreach.respondent_contact","outreach.update_respondent_contact","calculate_workbook"}
-REPORT_MIMES = {"json":"application/json; charset=utf-8","csv":"text/csv; charset=utf-8","html":"text/html; charset=utf-8","pdf":"application/pdf","docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","save_progress","import_workbook","inspect_workbook","outreach.respondent_contact","outreach.update_respondent_contact","calculate_workbook","language.get_preference","language.set_preference","language.get_translations"}
+REPORT_MIMES = {"json":"application/json; charset=utf-8","csv":"text/csv; charset=utf-8","html":"text/html; charset=utf-8","pdf":"application/pdf","docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","pptx":"application/vnd.openxmlformats-officedocument.presentationml.presentation"}
 
 
 def main():
@@ -69,7 +69,7 @@ def main():
                     return self.send(200,(SOURCE/"RESPONDENT_OPERATIONS.md").read_bytes(),"text/plain; charset=utf-8")
                 if path in {"/respondent-operations","/respondent-operations/","/respondent-operations/contact"} or path.startswith("/public/entry/"):
                     return self.send(200,(SOURCE/"respondent-operations.html").read_bytes(),"text/html; charset=utf-8")
-                if path in {"/respondent-operations.mjs","/respondent-operations.css","/reporting-workbench.mjs"}:
+                if path in {"/respondent-operations.mjs","/respondent-operations.css","/reporting-workbench.mjs","/locale.mjs"}:
                     return self.send(200,(SOURCE/path[1:]).read_bytes(),"text/javascript; charset=utf-8" if path.endswith(".mjs") else "text/css; charset=utf-8")
                 if path == "/api/outreach/public":
                     token=parse_qs(parsed.query).get("token",[""])[0]
@@ -89,10 +89,22 @@ def main():
                         raw,filename,mime=workspace.outreach.file_bytes(resource[0],resource[1],resource[2])
                     else:return self.send(404,{"error":"Operating download not found"})
                     return self.send(200,raw,mime,{"Content-Disposition":"attachment; filename*=UTF-8''"+quote(Path(filename).name,safe=""),"X-Content-SHA256":__import__("hashlib").sha256(raw).hexdigest()})
+                if path.startswith("/api/workbooks/") and path.endswith(".xlsx"):
+                    record=self.session()
+                    if not record: return self.send(401,{"error":"Open the native workspace before downloading its workbook"})
+                    sha=path.removeprefix("/api/workbooks/").removesuffix(".xlsx")
+                    if record["role"]=="respondent":
+                        respondent=workspace.op_get_respondent({"respondent_id":record["respondent_id"]})
+                        if sha not in record["workbooks"] and sha not in respondent["definition"].get("source_workbooks",[]):
+                            return self.send(403,{"error":"Download this respondent's original template or retained workbook"})
+                    workbook=workspace.workbook(sha);raw=workspace.get_workbook_bytes(sha)
+                    return self.send(200,raw,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",{"Content-Disposition":"attachment; filename*=UTF-8''"+quote(Path(workbook["name"]).name,safe=""),"X-Content-SHA256":sha})
                 if path in {"/","/operator"} or path.startswith("/respondent/"):
                     return self.send(200,(SOURCE/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if path in {"/app.mjs","/style.css"}:
                     return self.send(200,(SOURCE/path[1:]).read_bytes(),"text/javascript; charset=utf-8" if path.endswith("mjs") else "text/css; charset=utf-8")
+                if path == "/ui-fr.json":
+                    return self.send(200,(SOURCE/"ui-fr.json").read_bytes())
                 if path == "/api/session":
                     record = self.session()
                     return self.send(200,{"authenticated":bool(record),"role":None if not record else record["role"],"respondent_id":None if not record else record.get("respondent_id")})
@@ -158,7 +170,7 @@ def main():
                 method,params = data.get("method"),data.get("params",{})
                 if record["role"] == "respondent":
                     if method not in RESPONDENT_METHODS: return self.send(403,{"error":"This operation requires the operator"})
-                    if method in {"get_respondent","workbook_answers","submit_revision","save_progress","outreach.respondent_contact","outreach.update_respondent_contact"}:
+                    if method in {"get_respondent","workbook_answers","submit_revision","save_progress","outreach.respondent_contact","outreach.update_respondent_contact","language.get_translations"}:
                         if params.get("respondent_id") != record["respondent_id"]: return self.send(403,{"error":"Open this respondent's own record"})
                     if method in {"inspect_workbook","workbook_answers"} and params.get("sha256") not in record["workbooks"]: return self.send(403,{"error":"Use an original workbook uploaded in this session"})
                     if method == "submit_revision" and params.get("workbook_sha256") and params["workbook_sha256"] not in record["workbooks"]: return self.send(403,{"error":"Upload this respondent's own workbook before submitting"})

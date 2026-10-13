@@ -56,7 +56,9 @@ the retained workspace.
    protected. Public calculations derived from protected inputs also stay
    protected. Submission records the respondent's confirmation of the public
    portion. A recorded public disclosure review releases that exact public
-   report. Both editions download as JSON, CSV, HTML, PDF and editable Word.
+   report. Both editions download as JSON, CSV, HTML, PDF, editable Word,
+   Excel and PowerPoint. Excel charts link to the delivered chart-data cells;
+   Word and PowerPoint charts contain editable embedded workbooks.
    A new report includes only the latest currently accepted revisions. Saved
    reports retain their original accepted references when later responses
    change.

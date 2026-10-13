@@ -26,8 +26,9 @@ from workbooks import cell_parts, cell_value, col_letters, col_number, read_xlsx
 
 ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,79}$")
 KINDS = {"text","number","integer","date","boolean","choice","table"}
+DISPLAY_QUESTION_FIELDS = ("id","label","kind","unit","disclosure","original_question_text","original_row_label","section","original_question_heading","original_french_text")
 SOURCE = Path(__file__).resolve().parent
-EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake")
+EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake","questionnaire_locale")
 
 
 class OperationError(ValueError):
@@ -175,7 +176,20 @@ def disclosure_projection(definition,values,disclosures=None,public_confirmed=Fa
             protected = q.get("native_protected_dependencies") is True
             for dependency in question_refs(q):
                 dep = choices[dependency]
-                if dep["classification"] == "protected" or any(cell["classification"] == "protected" for row in dep.get("cells",[]) for cell in row.values()):
+                cells = dep.get("cells",[])
+                referenced = []
+                original = questions[dependency]
+                native_ranges = q.get("native_source_coordinates")
+                if q.get("source_calculated") and isinstance(native_ranges,list) and original["kind"] == "table" and original.get("source"):
+                    binding = original["source"]
+                    for index,physical_row in enumerate(table_rows(binding)):
+                        if index >= len(cells): continue
+                        for column in original["columns"]:
+                            physical_column = col_number(column["source_column"])
+                            if any(ref["sheet"] == binding["sheet"] and ref["start_row"] <= physical_row <= ref["end_row"] and ref["start_column"] <= physical_column <= ref["end_column"] for ref in native_ranges):
+                                referenced.append(cells[index][column["id"]])
+                else: referenced = [cell for row in cells for cell in row.values()]
+                if dep["classification"] == "protected" or any(cell["classification"] == "protected" for cell in referenced):
                     protected = True
             if protected:
                 choices[key]["classification"] = classifications[key] = "protected"
@@ -629,14 +643,16 @@ class Workspace:
         return self._write("create_questionnaire",key,{"name":name},action)
 
     def op_save_definition(self,p):
+        cached = self._request_result("save_definition")
+        if cached is not None: return cached
         definition = validate_definition(p["definition"])
-        for sha in definition.get("source_workbooks",[]): self.workbook(sha)
+        source_books = {sha:self.workbook(sha) for sha in definition.get("source_workbooks",[])}
         for field in definition["questions"]:
             binding = field.get("source")
             if not binding: continue
             if binding.get("workbook_sha256") not in definition.get("source_workbooks",[]):
                 raise OperationError("DEFINITION","Every binding must name a retained source workbook in this definition")
-            book = self.workbook(binding["workbook_sha256"])
+            book = source_books[binding["workbook_sha256"]]
             if binding.get("sheet") not in {s["name"] for s in book["sheets"]}:
                 raise OperationError("DEFINITION","A question binding names an absent original worksheet")
             if field["kind"] == "table":
@@ -775,7 +791,8 @@ class Workspace:
         source_values = self.source_values(definition)
         native = None
         native_fields = {q["id"] for q in definition["questions"] if q.get("source_calculated")}
-        if native_fields:
+        native_intake = definition.get("source_intake",{})
+        if native_fields or isinstance(native_intake,dict) and native_intake.get("schema") == "atssc.original-family-definition.v1":
             if "calculate_response" not in self.extensions:
                 raise OperationError("NATIVE_CALCULATION","The original workbook calculation runtime is required to seal this edition")
             preflight = validate_answers(definition,answers,source_values=source_values)
@@ -849,7 +866,7 @@ class Workspace:
             if selected_respondents is not None and row["id"] not in selected_respondents: continue
             validation = json.loads(row["validation"])
             projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
-            responses.append({"respondent_id":row["id"],"name":row["name"],"status":row["status"],"latest_version":row["version"],"revision_id":row["accepted_revision"],"accepted_number":row["number"],"workbook_sha256":row["workbook_sha"],"values":validation["values"],"disclosures":projection["disclosures"],"public_values":projection["public_values"],"public_alternatives":projection["public_alternatives"],"public_confirmed":projection["public_confirmed"]})
+            responses.append({"respondent_id":row["id"],"name":row["name"],"status":row["status"],"latest_version":row["version"],"revision_id":row["accepted_revision"],"accepted_number":row["number"],"workbook_sha256":row["workbook_sha"],"values":validation["values"],"disclosures":projection["disclosures"],"public_values":projection["public_values"],"public_alternatives":projection["public_alternatives"],"public_confirmed":projection["public_confirmed"],"formula_issues":validation.get("formula_issues",[]),"native_calculation":validation.get("native_calculation")})
         if selected_respondents is not None and set(selected_respondents)!={r["respondent_id"] for r in responses}:
             raise OperationError("REPORT_SELECTION","Every selected respondent needs an accepted revision in this publication")
         if not responses:
@@ -857,7 +874,7 @@ class Workspace:
         protected = {"schema":"atssc.report.protected.v1","report_id":key,"publication":publication,"definition":definition,"questions":report_questions,"created":now(),"accepted_responses":responses}
         public_questions = []
         for q in report_questions:
-            item = {k:q[k] for k in ("id","label","kind","unit","disclosure") if k in q}
+            item = {k:q[k] for k in DISPLAY_QUESTION_FIELDS if k in q}
             if q["kind"] == "table":
                 item["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
             public_questions.append(item)
@@ -913,13 +930,13 @@ class Workspace:
         validation = validate_answers(definition,answers) if current is None else current["validation"]
         projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
         public = edition == "public"
-        questions = [{k:q[k] for k in ("id","label","kind","unit","disclosure","columns") if k in q} for q in definition["questions"]]
+        questions = [{k:q[k] for k in (*DISPLAY_QUESTION_FIELDS,"columns") if k in q} for q in definition["questions"]]
         if public:
             for q in questions:
                 if "columns" in q: q["columns"] = [{k:c[k] for k in ("id","label","kind","unit","disclosure") if k in c} for c in q["columns"]]
         values = projection["public_values"] if public else {**answers,**validation["values"]}
         response = {"values":values,"public_alternatives":projection["public_alternatives"],"disclosures":projection["disclosures"],"revision_number":record["respondent"]["version"]}
-        if not public: response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"]})
+        if not public: response.update({"respondent_id":respondent_id,"name":record["respondent"]["name"],"formula_issues":validation.get("formula_issues",[]),"native_calculation":validation.get("native_calculation")})
         stamp = record["respondent"]["created"] if current is None else current.get("updated",current.get("created"))
         return {"schema":"atssc.response-document."+edition+".v1","edition":edition,"questionnaire_title":definition.get("title","Questionnaire"),"created":now(),"updated":stamp,"questions":questions,"accepted_responses":[response],"state":"Saved draft" if record["draft"] else "Submitted revision" if current else "Empty questionnaire","document_state":"draft" if record["draft"] else "submitted" if current else "empty","sealed_revision":record["respondent"]["version"],"draft_version":None if not record["draft"] else record["draft"]["version"],"public_confirmed":projection["public_confirmed"],"validation_issues":validation["issues"] if not public else [],"numeric_totals":{}}
 
@@ -947,6 +964,9 @@ class Workspace:
         if format_name in {"pdf","docx"}:
             from document_exports import render_document
             return render_document({**report,"edition":edition},format_name)
+        if format_name in {"xlsx","pptx"}:
+            from office_reports import render_office_report
+            return render_office_report({**report,"edition":edition},format_name)
         if format_name == "json": return (json.dumps(report,ensure_ascii=False,indent=2)+"\n").encode()
         if "report_views" in report and format_name in {"html","csv"}:
             from reporting_workbench import render_summary_html,summary_csv
@@ -998,7 +1018,7 @@ class Workspace:
         directory.mkdir(parents=True,exist_ok=False)
         manifest = {"schema":"atssc.report-files.v1","report_id":report["id"],"released":bool(report["released"]),"files":[]}
         for edition in ("public","protected"):
-            for fmt in ("json","csv","html","pdf","docx"):
+            for fmt in ("json","csv","html","pdf","docx","xlsx","pptx"):
                 name = edition+"."+fmt
                 data = self.report_bytes(report["id"],edition,fmt)
                 (directory/name).write_bytes(data)
@@ -1033,7 +1053,7 @@ class Workspace:
             files = {"workspace/questionnaires.sqlite3":(temp/"questionnaires.sqlite3").read_bytes()}
             for source in sorted(SOURCE.rglob("*")):
                 relative = source.relative_to(SOURCE)
-                if source.is_file() and not source.is_symlink() and not any(part.startswith(".") or part in {"__pycache__","node_modules"} for part in relative.parts) and (source.name == "LICENSE" or source.suffix in {".py",".java",".mjs",".mts",".html",".css",".md",".json",".txt",".ttf",".otf"}):
+                if source.is_file() and not source.is_symlink() and not any(part.startswith(".") or part in {"__pycache__","node_modules"} for part in relative.parts) and (source.name == "LICENSE" or source.suffix in {".py",".java",".mjs",".mts",".html",".css",".md",".json",".txt",".ttf",".otf",".pptx"}):
                     files["application/"+relative.as_posix()] = source.read_bytes()
             for source in self.directory.glob("*.txt"):
                 if source.name == "operator-key.txt": files["workspace/"+source.name] = source.read_bytes()
@@ -1048,6 +1068,24 @@ class Workspace:
                     relative = Path(folder)/source.relative_to(base)
                     name = relative.as_posix() if folder.endswith("-runtime") else "workspace/"+relative.as_posix()
                     files[name] = source.read_bytes()
+            guide = SOURCE/"CUSTOMER_HANDOVER.md"
+            if guide.is_file(): files["START_HERE.md"] = guide.read_bytes()
+            with sqlite3.connect(temp/"questionnaires.sqlite3") as retained:
+                retained.row_factory = sqlite3.Row
+                state = {"workspace_id":retained.execute("SELECT value FROM settings WHERE key='workspace_id'").fetchone()[0]}
+                for table in ("questionnaires","publications","respondents","reports"):
+                    state[table] = [{k:v for k,v in dict(row).items() if k not in {"key_hash","edition"}} for row in retained.execute("SELECT * FROM "+table+" ORDER BY created")]
+                state["workbooks"] = [dict(row) for row in retained.execute("SELECT sha,name,source_url,created FROM workbooks ORDER BY created")]
+                counts = {table:retained.execute("SELECT COUNT(*) FROM "+table).fetchone()[0] for table in ("questionnaires","definitions","publications","respondents","revisions","drafts","reviews","reports","workbooks")}
+                tables = {row[0] for row in retained.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                native_jobs = [dict(row) for row in retained.execute("SELECT id,source_sha,state,created FROM calculations ORDER BY created")] if "calculations" in tables else []
+                intakes = [{"questionnaire_id":row["questionnaire_id"],"version":row["version"],"source_intake":json.loads(row["definition"])["source_intake"]} for row in retained.execute("SELECT questionnaire_id,version,definition FROM definitions ORDER BY questionnaire_id,version") if "source_intake" in json.loads(row["definition"])]
+                operating = None
+                if "outreach_meta" in tables:
+                    operating = {"revision":int(retained.execute("SELECT value FROM outreach_meta WHERE key='revision'").fetchone()[0]),"companies":retained.execute("SELECT COUNT(*) FROM outreach_entities WHERE kind='company'").fetchone()[0],"contacts":retained.execute("SELECT COUNT(*) FROM outreach_entities WHERE kind='contact'").fetchone()[0],"assignments":retained.execute("SELECT COUNT(*) FROM outreach_assignments").fetchone()[0],"sources":retained.execute("SELECT COUNT(*) FROM outreach_sources").fetchone()[0],"messages":retained.execute("SELECT COUNT(*) FROM outreach_messages").fetchone()[0]}
+            handover = {"schema":"atssc.customer-handover.v1","workspace_id":state["workspace_id"],"counts":counts,"questionnaires":state["questionnaires"],"publications":state["publications"],"respondents":state["respondents"],"reports":state["reports"],"workbooks":state["workbooks"],"native_jobs":native_jobs,"original_intakes":intakes,"native_database":"workspace/questionnaires.sqlite3","opening_guide":"START_HERE.md"}
+            if operating is not None: handover["operating_register"] = operating
+            files["HANDOVER.json"] = (json.dumps(handover,ensure_ascii=False,indent=2)+"\n").encode()
             manifest = {"schema":"atssc.project.v1","workspace_id":self.op_status({})["workspace_id"],"created":now(),"files":[{"path":name,"bytes":len(data),"sha256":digest(data)} for name,data in sorted(files.items())]}
             files["MANIFEST.json"] = (json.dumps(manifest,indent=2)+"\n").encode()
             pending = temp/"project.zip"
@@ -1063,7 +1101,7 @@ class Workspace:
                 os.chmod(staged,0o600)
                 os.link(staged,path)
             finally: Path(staged).unlink(missing_ok=True)
-            return {"path":str(path),"bytes":len(data),"sha256":digest(data),"manifest":manifest}
+            return {"path":str(path),"bytes":len(data),"sha256":digest(data),"manifest":manifest,"handover":handover}
 
 
 def receive_project(archive_path,destination,expected_sha256=None):

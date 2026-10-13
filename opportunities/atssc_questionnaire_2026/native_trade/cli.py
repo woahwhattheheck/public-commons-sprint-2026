@@ -20,9 +20,15 @@ def main():
     receive.add_argument("archive")
     receive.add_argument("--destination",required=True)
     receive.add_argument("--expected-sha256")
+    receive.add_argument("--expected-sha256-file",help="Read the delivery's SHA256 sidecar file")
     args = parser.parse_args()
     if args.command == "receive":
-        print(json.dumps(receive_project(args.archive,args.destination,args.expected_sha256),ensure_ascii=False))
+        expected = args.expected_sha256
+        if args.expected_sha256_file:
+            if expected is not None: parser.error("Choose a SHA256 value or its sidecar file")
+            expected = open(args.expected_sha256_file,encoding="utf-8").read().split()[0]
+            if len(expected)!=64 or any(c not in "0123456789abcdef" for c in expected): parser.error("The delivery sidecar must contain a complete lowercase SHA256")
+        print(json.dumps(receive_project(args.archive,args.destination,expected),ensure_ascii=False))
         return
     workspace = Workspace(args.workspace)
     if args.command == "invoke":

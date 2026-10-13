@@ -149,6 +149,18 @@ def document_model(payload):
                 "classification": classification,
                 "alternative": _text(alternatives.get(qid) or choice.get("public_alternative")),
             }
+            source_heading = question.get("original_question_heading")
+            if isinstance(source_heading,dict):
+                source_heading = source_heading.get("text")
+            section = question.get("section")
+            item["context"] = []
+            if isinstance(section,str) and section:
+                item["context"].append("Worksheet " + _text(section))
+            if source_heading and _text(source_heading) != item["label"]:
+                item["context"].append(_text(source_heading))
+            source_prompt = question.get("original_question_text")
+            if source_prompt and _text(source_prompt) not in {item["label"],_text(source_heading)}:
+                item["context"].append(_text(source_prompt))
             original = response["values"].get(qid)
             withheld = edition == "public" and classification == "protected"
             if item["kind"] == "table":
@@ -371,6 +383,7 @@ def _word(model):
                     for run in paragraph.runs:
                         run.font.size = Pt(10)
                         if index == 0:
+                            paragraph.paragraph_format.keep_with_next = True
                             run.font.bold = True
                             run.font.color.rgb = RGBColor(255, 255, 255)
         doc.add_paragraph().paragraph_format.space_after = Pt(3)
@@ -399,8 +412,14 @@ def _word(model):
     for response in model["responses"] if model["include_response_details"] else []:
         doc.add_paragraph(response["heading"], "Heading 1")
         for metadata in response["metadata"]:
-            doc.add_paragraph(metadata)
+            doc.add_paragraph(metadata).paragraph_format.keep_with_next = True
+        previous_context = None
         for question in response["questions"]:
+            context = tuple(question["context"])
+            if context and context != previous_context:
+                for value in context:
+                    doc.add_paragraph(value).paragraph_format.keep_with_next = True
+            previous_context = context
             doc.add_paragraph(question["label"], "Heading 2")
             disclosure = doc.add_paragraph(question["classification"].capitalize() + (". Unit " + question["unit"] if question["unit"] else ""))
             disclosure.paragraph_format.keep_with_next = True
@@ -448,7 +467,7 @@ def _pdf(model):
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.enums import TA_LEFT
         from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.platypus import SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, LongTable, TableStyle
+        from reportlab.platypus import SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, LongTable, TableStyle, CondPageBreak
     except ImportError as exc:
         raise DocumentExportError("Install requirements-documents.txt to enable PDF exports") from exc
     global _FONT_READY
@@ -487,7 +506,7 @@ def _pdf(model):
         story.append(paragraph("Questionnaire " + model["questionnaire_title"]))
     if model["description"]: story.append(paragraph(model["description"]))
     intro, story = story, []
-    def table(headers, rows, widths=None):
+    def table(headers, rows, widths=None, caption=None):
         content = [[paragraph(label, "header") for label in headers]] + [[paragraph(text, "cell") for text in row] for row in rows]
         widths = [x*width/511.2 for x in widths] if widths else [width/len(headers)]*len(headers)
         tallest_row = max((max(cell.wrap(widths[index]-14,1000000)[1] for index,cell in enumerate(row))+14 for row in content[1:]),default=0)
@@ -502,6 +521,14 @@ def _pdf(model):
             ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
             ("TOPPADDING", (0, 0), (-1, -1), 5 if compact else 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 5 if compact else 7),
         ]))
+        if caption is not None:
+            heading = paragraph(caption, "record")
+            padding = 10 if compact else 14
+            first_rows = sum(max(cell.wrap(widths[index]-14,1000000)[1] for index,cell in enumerate(row))+padding for row in content[:2])
+            minimum = heading.wrap(width,1000000)[1]+heading.getSpaceBefore()+heading.getSpaceAfter()+first_rows+8
+            # Protect the caption and first complete row, without keeping the
+            # entire long table together or creating a mostly empty page.
+            story.extend([CondPageBreak(min(minimum,page_size[1]-110)),heading])
         story.extend([result, Spacer(1, 8)])
     if model["numeric_totals"] and not model["view_sections"]:
         story.append(paragraph("Summary statistics", "heading"))
@@ -521,12 +548,16 @@ def _pdf(model):
                 story.append(paragraph(panel["title"],"question"))
                 story.extend([pdf_chart(panel,width=width,height=220 if width>360 else 210),Spacer(1,8)])
             for title,headers,rows in _view_tables(view,width/72):
-                story.append(paragraph(title,"record"))
-                table(headers,rows)
+                table(headers,rows,caption=title)
     for response in model["responses"] if model["include_response_details"] else []:
         story.append(paragraph(response["heading"], "heading"))
-        story.extend(paragraph(value) for value in response["metadata"])
+        story.extend(paragraph(value,"metadata") for value in response["metadata"])
+        previous_context = None
         for question in response["questions"]:
+            context = tuple(question["context"])
+            if context and context != previous_context:
+                story.extend(paragraph(value,"metadata") for value in context)
+            previous_context = context
             story.append(paragraph(question["label"], "question"))
             story.append(paragraph(question["classification"].capitalize() + (". Unit " + question["unit"] if question["unit"] else ""), "metadata"))
             if question["kind"] == "table":
@@ -547,6 +578,11 @@ def _pdf(model):
                 story.append(paragraph(question["alternative"]))
     output = io.BytesIO()
     def footer(canvas, document):
+        # Preserve deterministic bytes while giving the exported PDF the
+        # retained edition's actual UTC date rather than invariant's 1999 date.
+        created = _date(model["created"])
+        canvas.setDateFormatter(lambda *unused: created.strftime("D:%Y%m%d%H%M%S") + "+00'00'")
+        canvas.setCreator("Questionnaire Operations")
         canvas.saveState()
         canvas.setFont("QuestionnaireSans", 8)
         canvas.drawRightString(page_size[0]-50.4, 22, model["edition"].capitalize() + " edition  |  Page " + str(document.page))
