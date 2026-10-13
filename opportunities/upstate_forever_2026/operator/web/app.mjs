@@ -526,7 +526,7 @@ async function openItem(kind,id,focus=true){
   }else if(kind==='grids'){
     content=defs({state:row.state,selected_models:nativeModelLabel(row.spec),reused_original_grid:row.spec.base_grid_id||'Prepared from the selected original sources',reused_inputs:Object.keys(row.reused_inputs||{}),crs:row.grid?.crs_name,dimensions:row.grid?.width+' × '+row.grid?.height,resolution_m:row.grid?.resolution_m,pixel_area_ha:row.grid?.pixel_area_ha,bounds:row.grid?.bounds,transform:row.grid?.transform,upstream_context_m:row.spec.upstream_buffer_m})+table(['Input','Source edition','Units / source','Native minimum','Native maximum'],Object.entries(row.inputs||{}).map(([name,input])=>'<tr><td>'+esc(name)+'</td><td>'+esc(input.vintage)+'</td><td>'+external(input.source_uri)+'</td><td>'+number(input.minimum)+'</td><td>'+number(input.maximum)+'</td></tr>'));
   }else if(kind==='scenarios'){
-    content=defs({kind:row.kind,reason:row.reason,source_edition:named('sources',row.source_collection_id)})+table(['Original mask','From land-cover codes','To code','Reason','Selection'],row.patches.map(p=>'<tr><td>'+esc(sourceName(row.source_collection_id,p.mask_source_id))+'</td><td>'+esc(p.from_codes.join(', '))+'</td><td>'+p.to_code+'</td><td>'+esc(p.reason)+'</td><td>'+esc(pretty({layer:p.layer,where:p.where}))+'</td></tr>'))+button('scenario-clone','Create revised scenario','data-id="'+id+'"')+scenarioInputReview.scenarioPanel(row);
+    content=defs({kind:row.kind,reason:row.reason,source_edition:named('sources',row.source_collection_id)})+table(['Original mask','From land-cover codes','To code','Reason','Selection'],row.patches.map(p=>'<tr><td>'+esc(sourceName(p.source_collection_id||row.source_collection_id,p.mask_source_id))+'<br><small>'+esc(named('sources',p.source_collection_id||row.source_collection_id))+'</small>'+'</td><td>'+esc(p.from_codes.join(', '))+'</td><td>'+p.to_code+'</td><td>'+esc(p.reason)+'</td><td>'+esc(pretty({layer:p.layer,where:p.where}))+'</td></tr>'))+button('scenario-clone','Create revised scenario','data-id="'+id+'"')+scenarioInputReview.scenarioPanel(row);
   }else if(kind==='runs'){
     content='<div class="meta">'+badge(row.state)+'<span>InVEST '+esc(row.selection.invest_version)+'</span><span>'+esc(runTitle(row.id))+'</span></div>';
     content+=scientificInspection.run(row);
@@ -1021,8 +1021,14 @@ function scenarioMaskSources(collection){
 function scenarioMaskSource(collection,id){
  return sourceRows(collection,'vector|raster').find(row=>row.id===id);
 }
+function scenarioMaskCollections(selected){
+ const rows=sources().map(row=>[row.id,row.title||row.name||short(row.id)]);
+ if(selected&&!rows.some(row=>row[0]===selected))rows.push([selected,'Unavailable retained edition · '+selected]);
+ return rows;
+}
+function patchSourceCollection(node,collection){return val('mask_collection',node)||collection;}
 function updatePatchMask(node,collection,enabled=true){
- const source=scenarioMaskSource(collection,val('mask_source',node)),raster=source?.kind==='raster';
+ const source=scenarioMaskSource(patchSourceCollection(node,collection),val('mask_source',node)),raster=source?.kind==='raster';
  for(const section of $$('[data-patch-vector]',node)){
   section.hidden=raster;
   for(const control of $$('input,select,textarea,button',section))control.disabled=!enabled||raster;
@@ -1042,11 +1048,13 @@ function numberScenarioPatches(){
  });
 }
 function patchRow(collection,row={}){
+ const selectedCollection=row.source_collection_id||collection;
  const present=value=>value!==null&&typeof value==='object'?Object.keys(value).length>0:Boolean(value);
- if(scenarioMaskSource(collection,row.mask_source_id)?.kind==='raster'&&(present(row.layer)||present(row.where)))
+ if(scenarioMaskSource(selectedCollection,row.mask_source_id)?.kind==='raster'&&(present(row.layer)||present(row.where)))
   throw Error('This saved raster-mask patch contains a layer or attribute selection. Raster masks use band 1; correct the original scenario selection before revising it.');
- return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('patch-earlier','Earlier','','small')+button('patch-later','Later','','small')+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
- field('Original polygon or binary raster mask',select('mask_source',scenarioMaskSources(collection),row.mask_source_id))+
+ return '<fieldset class="patch" data-patch data-patch-original="'+esc(JSON.stringify(row))+'"><div class="patch-header"><legend>Land-cover change</legend>'+button('patch-earlier','Earlier','','small')+button('patch-later','Later','','small')+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
+ field('Mask source edition',select('mask_collection',scenarioMaskCollections(row.source_collection_id),row.source_collection_id||'',false).replace('>Choose…</option>','>Use scenario source edition</option>'),'Choose a retained edition for this change, or use the scenario source edition.')+
+ field('Original polygon or binary raster mask',select('mask_source',scenarioMaskSources(selectedCollection),row.mask_source_id))+
  '<p class="note full" data-patch-mask-note role="status"></p>'+
  field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a vector source with one layer.').replace('<label','<label data-patch-vector')+
  field('Original land-cover codes',input('from_codes','text',(row.from_codes||[]).join(', '),'required'),'Separate the exact integer codes with commas.')+field('Replacement land-cover code',input('to_code','number',row.to_code??'','required step="1"'))+
@@ -1069,8 +1077,10 @@ async function scenarioForm(id,initialSelection={}){
    const codes=val('from_codes',node).split(',').map(x=>x.trim());
    if(!codes.length||codes.some(x=>!x||!Number.isSafeInteger(Number(x))))throw Error('Enter the exact original integer land-cover codes.');
    const to=num('to_code',node);if(!Number.isSafeInteger(to))throw Error('The replacement land-cover code must be an integer.');
-   const patch={mask_source_id:val('mask_source',node),from_codes:codes.map(Number),to_code:to,reason:val('patch_reason',node)};
-   const source=scenarioMaskSource(val('collection'),patch.mask_source_id);
+   const patch={...JSON.parse(node.dataset.patchOriginal||'{}'),mask_source_id:val('mask_source',node),from_codes:codes.map(Number),to_code:to,reason:val('patch_reason',node)};
+   const patchCollection=val('mask_collection',node);if(patchCollection)patch.source_collection_id=patchCollection;else delete patch.source_collection_id;
+   delete patch.layer;delete patch.where;
+   const source=scenarioMaskSource(patchSourceCollection(node,val('collection')),patch.mask_source_id);
    if(!source)throw Error('Choose an original polygon or binary raster mask from this source edition.');
    if(source.kind==='vector'){
     const layer=val('mask_layer',node).trim(),where=readFilter('patch',node);if(layer)patch.layer=layer;if(where)patch.where=where;
@@ -1078,7 +1088,8 @@ async function scenarioForm(id,initialSelection={}){
    patches.push(patch);
   }
   if(kind==='landcover'&&!patches.length)throw Error('Add at least one actual land-cover change.');
-  return submitAction('scenario.save',{title:val('title'),kind,source_collection_id:val('collection'),reason:val('reason'),patches});
+  const original=Object.fromEntries(Object.entries(row||{}).filter(([key])=>!['id','schema','_downloads'].includes(key)));
+  return submitAction('scenario.save',{...original,title:val('title'),kind,source_collection_id:val('collection'),reason:val('reason'),patches});
  },()=>{
   const update=()=>{
    const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;
@@ -1088,11 +1099,13 @@ async function scenarioForm(id,initialSelection={}){
   };
   form.elements.namedItem('kind').addEventListener('change',update);
   form.elements.namedItem('collection').addEventListener('change',()=>{
-   for(const el of $$('[name="mask_source"]',form))setOptions(el,scenarioMaskSources(val('collection')));
+   for(const node of $$('[data-patch]',form))if(!val('mask_collection',node))setOptions(node.querySelector('[name="mask_source"]'),scenarioMaskSources(val('collection')));
    update();
   });
   $('#patch-list').addEventListener('change',event=>{
-   if(event.target.name==='mask_source')updatePatchMask(event.target.closest('[data-patch]'),val('collection'),val('kind')==='landcover');
+   const node=event.target.closest('[data-patch]');if(!node)return;
+   if(event.target.name==='mask_collection')setOptions(node.querySelector('[name="mask_source"]'),scenarioMaskSources(patchSourceCollection(node,val('collection'))));
+   if(['mask_source','mask_collection'].includes(event.target.name))updatePatchMask(node,val('collection'),val('kind')==='landcover');
   });
   update();
  });
