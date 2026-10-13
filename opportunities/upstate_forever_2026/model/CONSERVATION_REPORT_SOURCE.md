@@ -112,3 +112,23 @@ The source receipt adds maps.summary, maps.figure_spec and maps.figures, with ve
 Use include_maps:false in the original prepare dictionary, or append --no-maps to the CLI prepare command, to retain a source-only edition. This choice produces its own immutable source identity. It does not modify an existing mapped report or any original portfolio. Invalid geometry or missing source editions are surfaced by the maintained native readers; they are not silently repaired by the map renderer.
 
 See CONSERVATION_REPORT_MAPS.md for the exact geographic interfaces, retained-coordinate semantics, native receiving course and area distinctions.
+
+## Matched family source edition 4
+
+`conservation-saved-plan-report/4` retains the original saved plan and study while
+adding readable matched-family sections. Every family names its own original
+baseline/treatment pair, scientific setting and reference. The coverage table describes
+the complete shared grid per pollutant. The quantity tables describe the selected
+reporting union, with overlap removed, and preserve signed reduction/increase and
+separate valid, structural and missing areas.
+
+Common support includes every family declared in the study, even when an optimization
+compares a subset. Missing output in any declared family makes that pollutant unavailable
+for the cohort. Structural-only support has no modeled mass. Native-case tables retain
+both original alternative maps and matched-family maps, at the original fixed weights
+and resource limits. The attached original analysis, decision packet and support
+rasters carry the complete numerical/source records.
+
+The maintained typed Conservation transfer reader accepts this report edition and
+copies the complete study, all bound runs, support files, decision and report through
+the original portable restore interface. Older report editions remain readable.

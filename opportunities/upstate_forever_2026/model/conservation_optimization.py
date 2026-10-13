@@ -121,6 +121,9 @@ def _available(study, kind, alternative):
         return tuple(result)
     if study["mode"] != "native_model":
         raise ValueError("Choose source-context objectives or bind completed native cases first")
+    if kind in ("matched-restoration", "matched-disturbance"):
+        from .conservation_families import available
+        return available(study, alternative)
     runs = study["selection"]["bindings"]["runs"]
     baseline = study["selection"]["spec"]["baseline_run_id"]
     result = set(runs[baseline]["outputs"])
@@ -141,7 +144,7 @@ def _criterion(value, study):
         raise ValueError("Criterion IDs must begin with a letter and contain ASCII letters, digits or underscores")
     kind = value.get("kind")
     if kind not in ("source-context", "current-export", "restoration", "avoided-conversion",
-                    "published-method", "source-attribute"):
+                    "published-method", "source-attribute", "matched-restoration", "matched-disturbance"):
         raise ValueError("Choose an original physical, context, published-method or source-attribute criterion")
     direction = value.get("direction", "maximize")
     if direction not in ("maximize", "minimize"):
@@ -176,7 +179,15 @@ def _criterion(value, study):
     elif alternative is not None:
         raise ValueError("Only a paired native criterion selects an alternative")
     result.update(axis=axis, scenario_run_id=alternative)
-    result["available"] = axis in _available(study, kind, alternative)
+    if kind in ("matched-restoration", "matched-disturbance"):
+        from .conservation_families import binding
+        result["family_id"] = _text(value.get("family_id"), "Matched family ID")
+        result["source"] = binding(study, result["family_id"], axis)
+        result["available"] = axis in _available(study, kind, result["family_id"])
+    else:
+        if value.get("family_id") is not None:
+            raise ValueError("Only a matched-family criterion selects family_id")
+        result["available"] = axis in _available(study, kind, alternative)
     result["unit"] = (CONTEXT_UNITS[axis] if kind == "source-context" else
                       "points" if kind == "published-method" else conservation.POLLUTANTS[axis][2])
     if basis == "per-reporting-hectare":
@@ -186,7 +197,7 @@ def _criterion(value, study):
                 "high_quality_context": "high_quality_waters"}.get(axis)
         result["source"] = deepcopy(study["selection"]["bindings"]["sources"].get(role)) if role else {
             "geometry_inventory": deepcopy(study["files"]["geometries"])}
-    elif kind != "published-method":
+    elif kind not in ("published-method", "matched-restoration", "matched-disturbance"):
         bindings = study["selection"]["bindings"]["runs"]
         baseline = study["selection"]["spec"]["baseline_run_id"]
         result["source"] = {"baseline_run_id": baseline, "baseline": deepcopy(bindings[baseline]),
@@ -272,9 +283,11 @@ def _multi_request(value, study, engine):
         if name in case_names:
             raise ValueError("Scenario case names must be distinct")
         case_names.add(name)
-        supplied_runs = item.get("scenario_run_ids")
-        if not isinstance(supplied_runs, dict) or not supplied_runs:
-            raise ValueError("Each scenario case needs at least one actual alternative override")
+        supplied_runs = item.get("scenario_run_ids", {})
+        supplied_families = item.get("family_ids", {})
+        if (not isinstance(supplied_runs, dict) or not isinstance(supplied_families, dict)
+                or not (supplied_runs or supplied_families)):
+            raise ValueError("Each scenario case needs an actual alternative or matched-family override")
         runs = {}
         for key, run_id in supplied_runs.items():
             criterion = by_id.get(key)
@@ -283,7 +296,16 @@ def _multi_request(value, study, engine):
             run_id = identifier(run_id)
             _available(study, criterion["kind"], run_id)
             runs[key] = run_id
-        cases.append({"name": name, "scenario_run_ids": runs})
+        families = {}
+        for key, family_id in supplied_families.items():
+            criterion = by_id.get(key)
+            if not criterion or criterion["kind"] not in ("matched-restoration", "matched-disturbance"):
+                raise ValueError("Only declared matched-family criteria may vary family_ids")
+            family_id = _text(family_id, "Matched family ID")
+            _available(study, criterion["kind"], family_id)
+            families[key] = family_id
+        cases.append({"name": name, "scenario_run_ids": runs,
+                      **({"family_ids": families} if families else {})})
     result["scenario_stability"] = {"enabled": setting.get("enabled", True), "cases": cases}
     return result
 
@@ -311,7 +333,8 @@ def _multi_axis_values(candidate, request):
         else:
             single = dict(request)
             single["objective"] = {"kind": criterion["kind"], "basis": criterion["basis"],
-                                   "scenario_run_id": criterion["scenario_run_id"]}
+                                   "scenario_run_id": criterion["scenario_run_id"],
+                                   **({"family_id": criterion["family_id"]} if "family_id" in criterion else {})}
             if criterion["kind"] == "published-method":
                 single["published_method"] = criterion["published_method"]
             original_values, original_supports, original_units = _axis_values(candidate, single)
@@ -324,13 +347,20 @@ def _multi_axis_values(candidate, request):
         supports[key]["source_ref"] = request.get("_criterion_source_prefix", "/request/objective/criteria") + "/" + str(criterion_index)
         supports[key]["criterion"] = {"id": key, "label": criterion["label"], "kind": criterion["kind"],
                                      "direction": criterion["direction"], "basis": criterion["basis"],
-                                     "axis": criterion.get("axis"), "scenario_run_id": criterion["scenario_run_id"]}
+                                     "axis": criterion.get("axis"), "scenario_run_id": criterion["scenario_run_id"],
+                                     **({"family_id": criterion["family_id"]} if "family_id" in criterion else {})}
     return values, supports, units
 
 
 def _multi_case_request(request, case, study):
     selected = deepcopy(request)
     for criterion in selected["objective"]["criteria"]:
+        family_id = case.get("family_ids", {}).get(criterion["id"])
+        if family_id is not None:
+            from .conservation_families import binding
+            criterion["family_id"] = family_id
+            criterion["available"] = criterion["axis"] in _available(study, criterion["kind"], family_id)
+            criterion["source"] = binding(study, family_id, criterion["axis"])
         if criterion["id"] not in case["scenario_run_ids"]:
             continue
         run_id = case["scenario_run_ids"][criterion["id"]]
@@ -348,10 +378,10 @@ def _decision_rows(study, request, engine):
         return rows, normalization, []
     variants = []
     if request["scenario_stability"]["enabled"]:
-        seen = {tuple(item["scenario_run_id"] for item in request["objective"]["criteria"])}
+        seen = {tuple((item["scenario_run_id"], item.get("family_id")) for item in request["objective"]["criteria"])}
         for case in request["scenario_stability"]["cases"]:
             selected = _multi_case_request(request, case, study)
-            signature = tuple(item["scenario_run_id"] for item in selected["objective"]["criteria"])
+            signature = tuple((item["scenario_run_id"], item.get("family_id")) for item in selected["objective"]["criteria"])
             if signature in seen:
                 continue
             seen.add(signature)
@@ -417,6 +447,9 @@ def _scenario_comparison(rows, request, variants, scored, chosen, optimization, 
             "name": case["name"], "scenario_run_ids": {
                 criterion["id"]: criterion["scenario_run_id"] for criterion in case["request"]["objective"]["criteria"]
                 if criterion["kind"] in ("restoration", "avoided-conversion")},
+            **({"family_ids": {criterion["id"]: criterion["family_id"]
+                              for criterion in case["request"]["objective"]["criteria"] if "family_id" in criterion}}
+               if any("family_id" in criterion for criterion in case["request"]["objective"]["criteria"]) else {}),
             "criteria": deepcopy(case["request"]["objective"]["criteria"]),
             "selected_ids": sorted(selected_ids), "eligible_count": len(case["scored"]),
             "optimization": case["optimization"], "candidates": candidates,
@@ -459,8 +492,9 @@ def _request(value, study, engine):
         "published_method": "published-method",
     }.get(source_spec["score"]["basis"])
     kind = original.get("kind", default_kind)
-    if kind not in ("source-context", "current-export", "restoration", "avoided-conversion", "published-method"):
-        raise ValueError("Choose source-context, current-export, restoration, avoided-conversion or published-method")
+    if kind not in ("source-context", "current-export", "restoration", "avoided-conversion", "published-method",
+                    "matched-restoration", "matched-disturbance"):
+        raise ValueError("Choose an original context, physical, matched-family or published-method objective")
     basis = original.get("basis", "total")
     if basis not in ("total", "per-reporting-hectare"):
         raise ValueError("Objective basis must be total or per-reporting-hectare")
@@ -473,7 +507,12 @@ def _request(value, study, engine):
         raise ValueError("This objective does not select an alternative case")
     axes = (CONTEXT_AXES if kind == "source-context" else
             PUBLISHED_AXES if kind == "published-method" else PHYSICAL_AXES)
-    available = _available(study, kind, alternative)
+    family_id = None
+    if kind in ("matched-restoration", "matched-disturbance"):
+        family_id = _text(original.get("family_id"), "Matched family ID")
+    elif original.get("family_id") is not None:
+        raise ValueError("Only a matched-family objective selects family_id")
+    available = _available(study, kind, family_id if family_id is not None else alternative)
     if not available:
         raise ValueError("The selected scoring cases have no shared modeled pollutant")
     raw_weights = value.get("weights")
@@ -561,7 +600,8 @@ def _request(value, study, engine):
         "title": _text(value.get("title"), "Optimization title", study["title"] + " — selection"),
         "purpose": _text(value.get("purpose"), "Decision purpose",
                          "Compare retained land priorities under explicit resource constraints."),
-        "objective": {"kind": kind, "basis": basis, "scenario_run_id": alternative},
+        "objective": {"kind": kind, "basis": basis, "scenario_run_id": alternative,
+                      **({"family_id": family_id} if family_id is not None else {})},
         "axes": list(axes), "available_axes": list(available), "weights": weights,
         "filters": filters, "include_ineligible": allow_ineligible, "constraints": constraints,
         "solver": solver,
@@ -709,7 +749,19 @@ def _axis_values(candidate, request):
         unit = quantity["unit"]
         if unit != conservation.POLLUTANTS[axis][2]:
             raise ValueError("Retain the original separate annual mass units: " + axis)
-        if kind == "current-export":
+        family_pair = None
+        if kind in ("matched-restoration", "matched-disturbance"):
+            family_pair = quantity.get("matched_families", {}).get(request["objective"]["family_id"])
+            if not isinstance(family_pair, dict):
+                raise ValueError("The candidate is missing its retained matched-family quantities")
+            value = family_pair["reduction"] if kind == "matched-restoration" else family_pair["delta"]
+            coverage = family_pair["common_coverage_fraction"]
+            availability = family_pair["comparison_availability"]
+            reason = family_pair["comparison_availability_reason"]
+            support_basis = "All declared matched-family baseline and treatment runs on this pollutant's retained common footprint"
+            valid_area = family_pair["common_valid_area_ha"]
+            profile_changed = False
+        elif kind == "current-export":
             value = quantity["baseline"]
             coverage = quantity["coverage_fraction"]
             availability = quantity.get("availability", "modeled")
@@ -746,6 +798,13 @@ def _axis_values(candidate, request):
             "coverage_fraction": coverage, "valid_area_ha": valid_area,
             "support_basis": support_basis, "eligible_support": adequate,
             "profile_changed": profile_changed,
+            **({key: deepcopy(family_pair.get(key)) for key in (
+                "family_id", "baseline_run_id", "alternative_run_id", "support_id", "support_sha256",
+                "common_baseline", "common_alternative", "delta", "reduction",
+                "common_covered_area_ha", "common_structural_stream_area_ha", "selected_area_ha", "missing_area_ha")}
+               if family_pair is not None else {}),
+            **({"support_ref": "/input/matched_family_support/metrics/" + axis}
+               if family_pair is not None else {}),
         }
     return values, supports, units
 
@@ -1001,6 +1060,8 @@ def preview(workspace, selection):
             "selection": deepcopy(source_selection),
             "candidate_inventory": deepcopy(study["files"]["candidates"]),
             "geometry_inventory": deepcopy(study["files"]["geometries"]),
+            **({"matched_family_support": deepcopy(study["matched_family_support"])}
+               if study.get("matched_family_support") else {}),
         },
         "engine": {"module": "model.portfolios", "bytes": module.stat().st_size,
                    "sha256": file_digest(module), "numeric_solver_callable": "_optimize"},
@@ -1034,6 +1095,8 @@ def preview(workspace, selection):
                 "current-export": "Baseline modeled export within each original planning-unit reporting footprint",
                 "restoration": "Baseline minus selected alternative on common native support within each original reporting footprint",
                 "avoided-conversion": "Selected disturbance alternative minus baseline on common native support within each original reporting footprint",
+                "matched-restoration": "Selected family's same-profile baseline minus treatment on each pollutant's all-declared-family common footprint",
+                "matched-disturbance": "Selected family's same-profile treatment minus baseline on each pollutant's all-declared-family common footprint",
             }[request["objective"]["kind"]],
             "annual_units": {axis: conservation.POLLUTANTS[axis][2] for axis in PHYSICAL_AXES},
             "coverage": "Separate active-axis case or common-pair coverage; fractional hectares remain fractional",
@@ -1131,6 +1194,7 @@ def _html(analysis):
     candidates = analysis["candidates"]
     by_id = {row["feature_id"]: row for row in candidates}
     criterion_definitions = {row["id"]: row for row in objective.get("criteria", [])}
+    family_definitions = {row["id"]: row for row in analysis["input"]["selection"]["spec"].get("matched_families", [])}
     labels = {axis: criterion_definitions.get(axis, {}).get("label", axis.replace("_", " "))
               for axis in request["axes"]}
 
@@ -1205,6 +1269,12 @@ nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bo
             source_description += " · field: " + criterion["field"]
         if case:
             source_description += " · alternative: " + case
+        family_id = criterion.get("family_id", objective.get("family_id"))
+        if family_id is not None:
+            family = family_definitions[family_id]
+            source_description += " · family: " + family["label"] + " [" + family_id + "]"
+            source_description += " · baseline: " + family["baseline_run_id"]
+            source_description += " · treatment: " + family["alternative_run_id"]
         criteria_rows.append([
             esc(labels[axis]), esc(source_description), esc(unit),
             "Per reporting hectare" if basis == "per-reporting-hectare" else "Original total / source value",
@@ -1220,6 +1290,30 @@ nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bo
         parts.append('<p>The scales are fixed across the selected case and all explicitly compared native cases, and reused across preference profiles. Adding a case can change these scales and therefore defines a new decision analysis.</p>')
     else:
         parts.append('<p>The scales are fixed across the selected candidate universe and reused for the preference comparisons.</p>')
+    if family_definitions:
+        native_bindings = analysis["input"]["selection"]["bindings"]["runs"]
+        parts.append('<h2>Matched native families and common footprints</h2>')
+        parts.append('<p>Within each declared family the original baseline and treatment have the same profile and grid. Across families the model hypotheses may differ. Each pollutant has its own footprint shared by every declared pair; N, P and sediment footprints are not interchangeable. These cases have no assumed probabilities. Code 1 contributes mass; code 2 is a verified structural stream omission and contributes only coverage. A structural-only unit has unavailable mass, not measured zero.</p>')
+        family_rows = []
+        for family_id, family in family_definitions.items():
+            profile_id = native_bindings[family["baseline_run_id"]]["selection"]["profile_id"]
+            family_rows.append([esc(family["label"]) + '<br><code>' + esc(family_id) + '</code>',
+                                '<code>' + esc(profile_id) + '</code>',
+                                '<code>' + esc(family["baseline_run_id"]) + '</code>',
+                                '<code>' + esc(family["alternative_run_id"]) + '</code>',
+                                esc(family["reason"]), text(family.get("reference"))])
+        parts.append(table("Original matched pairs", ["Family", "Shared profile", "Baseline run", "Treatment run", "Reason", "Reference"],
+                           family_rows, wide=True))
+        support_rows = []
+        for pollutant, support in analysis["input"]["matched_family_support"]["metrics"].items():
+            support_rows.append([esc(pollutant), esc(support["unit"]), esc(support["state"]),
+                                 number(support.get("grid_valid_area_ha")), number(support.get("grid_structural_area_ha")),
+                                 number(support.get("grid_covered_area_ha")),
+                                 '<code>' + esc(support["mask"]["sha256"]) + '</code>' if support.get("mask") else text(support.get("reason"))])
+        parts.append(table("Per-pollutant masks — complete original grid", [
+            "Pollutant", "Annual mass unit", "Availability", "Finite-rate ha", "Structural-stream ha", "Covered ha", "Original mask SHA-256 / reason"
+        ], support_rows, wide=True))
+        parts.append('<p>These mask areas describe the complete original model grid. Candidate and saved-union coverage use exact intersections with their reporting polygons; they are not these grid totals.</p>')
     quantity_rows = []
     for axis, item in selection["independent_objective_sums"].items():
         quantity_rows.append([
@@ -1271,11 +1365,15 @@ nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bo
     if scenario is not None:
         parts.append('<h2>Native case comparisons</h2><p>' + esc(scenario["interpretation"]) + '.</p>')
         parts.append('<p>' + esc(scenario["preference_relation"]) + '.</p>')
-        parts.append('<p class="notice">Each paired criterion retains its own common valid baseline/alternative support. Differences in coverage or parameter profiles can contribute to a rank change; inspect the original quantities and coverage before attributing it to an intervention alone.</p>')
+        parts.append('<p class="notice">Legacy paired criteria retain their selected baseline/alternative support. Matched-family criteria use a fixed all-declared-family footprint separately for each pollutant, with same-profile baseline/treatment within each family. Rank changes across families describe sensitivity to the declared native hypotheses under the same decision weights; they are not calibrated uncertainty.</p>')
         case_rows = []
         for case in scenario["cases"]:
-            mappings = "; ".join(labels.get(key, key) + ": " + value
-                                 for key, value in case["scenario_run_ids"].items()) or "No paired criterion"
+            mapping_parts = [labels.get(key, key) + ": alternative " + value
+                             for key, value in case["scenario_run_ids"].items()]
+            mapping_parts += [labels.get(key, key) + ": family " +
+                              family_definitions[value]["label"] + " [" + value + "]"
+                              for key, value in case.get("family_ids", {}).items()]
+            mappings = "; ".join(mapping_parts) or "No paired criterion"
             result = case["optimization"]
             case_rows.append([
                 esc(case["name"]), esc(mappings), number(case["eligible_count"]),
@@ -1283,7 +1381,7 @@ nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bo
                 text(result.get("status")), percent(result.get("relative_gap")),
             ])
         parts.append(table("Selected weights across retained cases", [
-            "Case", "Original alternative runs", "Eligible units", "Selected units", "Objective", "Solver status", "Gap"
+            "Case", "Original alternatives / matched families", "Eligible units", "Selected units", "Objective", "Solver status", "Gap"
         ], case_rows, wide=True))
     stability_rows = []
     for row in candidates:
@@ -1435,7 +1533,8 @@ def _retained_preview(workspace, selection, original):
     if (original_input.get("study_id") != study["id"]
             or original_input.get("selection") != study["selection"]
             or original_input.get("candidate_inventory") != study["files"]["candidates"]
-            or original_input.get("geometry_inventory") != study["files"]["geometries"]):
+            or original_input.get("geometry_inventory") != study["files"]["geometries"]
+            or original_input.get("matched_family_support") != study.get("matched_family_support")):
         raise ValueError("Reopen the portfolio preview with its original study and inventories")
     verify_file(workspace.root, study["files"]["candidates"])
     verify_file(workspace.root, study["files"]["geometries"])

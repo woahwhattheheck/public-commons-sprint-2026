@@ -13,7 +13,7 @@ from pathlib import Path
 from . import conservation
 from .common import atomic_bytes, atomic_json, canonical, describe_file, digest, file_digest, read_json, verify_file
 
-EDITION = "conservation-decision-geography/1"
+EDITION = "conservation-decision-geography/2"
 SCHEMA = "upstate.conservation-decision-geography/v1"
 INVENTORY = "decision-geography.json"
 GPKG = "decision-geography.gpkg"
@@ -61,6 +61,7 @@ def _binding(workspace, study, plan, analysis, candidate_data, geometry_data):
             or recorded.get("selection") != study["selection"]
             or recorded.get("candidate_inventory") != study["files"]["candidates"]
             or recorded.get("geometry_inventory") != study["files"]["geometries"]
+            or recorded.get("matched_family_support") != study.get("matched_family_support")
             or plan["selection"].get("candidates_sha256") != study["files"]["candidates"]["sha256"]
             or plan["selection"].get("geometries_sha256") != study["files"]["geometries"]["sha256"]):
         raise ValueError("Decision geography source inventories changed")
@@ -189,7 +190,8 @@ def _criteria(analysis):
         return request["objective"]["criteria"]
     return [{"id": axis, "label": axis, "kind": request["objective"]["kind"], "axis": axis,
              "basis": request["objective"]["basis"], "direction": "maximize",
-             "scenario_run_id": request["objective"].get("scenario_run_id")}
+             "scenario_run_id": request["objective"].get("scenario_run_id"),
+             **({"family_id": request["objective"]["family_id"]} if "family_id" in request["objective"] else {})}
             for axis in request["axes"]]
 
 def _cases(analysis):
@@ -220,7 +222,12 @@ def _criterion_values(analysis):
                        "availability": support.get("availability"),
                        "coverage_fraction": support.get("coverage_fraction"),
                        "reason": support.get("availability_reason"),
-                       "analysis_source_ref": support.get("source_ref") or "/request/objective"}
+                       "analysis_source_ref": support.get("source_ref") or "/request/objective",
+                       "family_id": criterion.get("family_id"),
+                       **{key: support.get(key) for key in (
+                           "baseline_run_id", "alternative_run_id", "support_id", "support_sha256",
+                           "common_baseline", "common_alternative", "delta", "reduction", "valid_area_ha",
+                           "common_covered_area_ha", "common_structural_stream_area_ha", "missing_area_ha")}}
 
 def _case_values(analysis):
     for index, case in enumerate(_cases(analysis)):
@@ -228,6 +235,29 @@ def _case_values(analysis):
             yield {"unit_id": row["feature_id"], "case_index": index, "case_name": case["name"],
                    "selected": row["selected"], "eligible": row.get("eligible", row["rank"] is not None),
                    "rank": row["rank"], "score": row["score"], "exclusions": row["exclusions"]}
+
+
+def _family_values(study, plan, candidate_data):
+    """Original-unit and authoritative selected-union quantities stay separate."""
+    families = {row["id"]: row for row in study["selection"]["spec"]["matched_families"]}
+    runs = study["selection"]["bindings"]["runs"]
+    rows = [("planning_unit", row["id"], row["pollutants"]) for row in candidate_data["candidates"]]
+    rows.append(("selected_union", None, plan["summary"]["pollutants"]))
+    for scope, unit_id, pollutants in rows:
+        for pollutant, quantity in pollutants.items():
+            for family_id, value in quantity.get("matched_families", {}).items():
+                family = families[family_id]
+                yield {
+                    "scope": scope, "unit_id": unit_id, "family_id": family_id,
+                    "family_label": family["label"], "pollutant": pollutant, "unit": quantity["unit"],
+                    "profile_id": runs[family["baseline_run_id"]]["selection"]["profile_id"],
+                    **{key: value.get(key) for key in (
+                        "baseline_run_id", "alternative_run_id", "comparison_availability",
+                        "comparison_availability_reason", "common_baseline", "common_alternative",
+                        "delta", "reduction", "common_coverage_fraction", "common_valid_area_ha",
+                        "common_structural_stream_area_ha", "common_covered_area_ha", "selected_area_ha",
+                        "missing_area_ha", "support_id", "support_sha256")},
+                }
 
 def prepare(workspace, study, plan, analysis, directory):
     """Retain an editable counterpart of this exact completed decision."""
@@ -242,6 +272,8 @@ def prepare(workspace, study, plan, analysis, directory):
         "candidate_inventory": deepcopy(study["files"]["candidates"]),
         "geometry_inventory": deepcopy(study["files"]["geometries"]),
         "selected_ids": list(plan["selected_ids"]), "analysis_crs": crs.to_wkt(),
+        **({"matched_family_support_id": study["matched_family_support"]["id"]}
+           if study.get("matched_family_support") else {}),
     }
     index = directory / INVENTORY
     if index.exists():
@@ -261,14 +293,14 @@ def prepare(workspace, study, plan, analysis, directory):
     criteria = _criteria(analysis)
     path = directory / "criteria.csv"
     _write_csv(path, ["criterion_index", "criterion_id", "label", "kind", "axis", "units", "basis", "direction",
-                      "weight", "scale", "scenario_run_id", "analysis_source_ref"], (
+                      "weight", "scale", "scenario_run_id", "family_id", "analysis_source_ref"], (
         {"criterion_index": index, "criterion_id": item["id"], "label": item["label"],
          "kind": item["kind"], "axis": item.get("axis"),
          "units": sorted({row["objective_units"][item["id"]] for row in analysis["candidates"]}, key=str),
          "basis": item["basis"],
          "direction": item["direction"], "weight": analysis["request"]["weights"][item["id"]],
          "scale": analysis["normalization"]["scales"][item["id"]],
-         "scenario_run_id": item.get("scenario_run_id"),
+         "scenario_run_id": item.get("scenario_run_id"), "family_id": item.get("family_id"),
          "analysis_source_ref": "/request/objective/criteria/" + str(index)
              if analysis["request"]["objective"]["kind"] == "multi-criteria" else "/request/objective"}
         for index, item in enumerate(criteria)))
@@ -277,7 +309,10 @@ def prepare(workspace, study, plan, analysis, directory):
     _write_csv(path, ["unit_id", "case_index", "case_name", "criterion_id", "criterion_index",
                       "raw_value", "unit", "basis", "direction", "scale", "weight", "normalized_value",
                       "weighted_contribution", "eligible_support", "availability", "coverage_fraction",
-                      "reason", "analysis_source_ref"], _criterion_values(analysis))
+                      "reason", "analysis_source_ref", "family_id", "baseline_run_id", "alternative_run_id",
+                      "support_id", "support_sha256", "common_baseline", "common_alternative", "delta", "reduction",
+                      "valid_area_ha", "common_covered_area_ha", "common_structural_stream_area_ha", "missing_area_ha"],
+               _criterion_values(analysis))
     paths.append(path)
     path = directory / "case-candidates.csv"
     _write_csv(path, ["unit_id", "case_index", "case_name", "selected", "eligible", "rank", "score", "exclusions"],
@@ -287,6 +322,31 @@ def prepare(workspace, study, plan, analysis, directory):
     _write_csv(path, ["profile_index", "name", "weights", "eligible_count", "selected_ids", "optimization"], (
         {"profile_index": index, **item} for index, item in enumerate(analysis["stability"]["profiles"])))
     paths.append(path)
+    if study.get("matched_family_support"):
+        support = study["matched_family_support"]
+        # The original conservation packet carries each exact TIFF at its root.
+        # This sidecar records verified Workspace sources and the portable paths;
+        # it does not duplicate a raster for every criterion or planning unit.
+        members = []
+        for pollutant, metric in support["metrics"].items():
+            if metric["mask"] is not None:
+                original = verify_file(workspace.root, metric["mask"])
+                members.append({"pollutant": pollutant, "source": metric["mask"],
+                                "packet_path": "../../" + original.name})
+        path = directory / "matched-family-support.json"
+        atomic_json(path, {"schema": "upstate.conservation-decision-family-support/v1",
+                          "study_id": study["id"], "analysis_id": analysis["id"],
+                          "support": support, "mask_members": members}, immutable=True)
+        paths.append(path)
+        path = directory / "matched-family-values.csv"
+        _write_csv(path, [
+            "scope", "unit_id", "family_id", "family_label", "pollutant", "unit", "profile_id",
+            "baseline_run_id", "alternative_run_id", "comparison_availability", "comparison_availability_reason",
+            "common_baseline", "common_alternative", "delta", "reduction", "common_coverage_fraction",
+            "common_valid_area_ha", "common_structural_stream_area_ha", "common_covered_area_ha",
+            "selected_area_ha", "missing_area_ha", "support_id", "support_sha256",
+        ], _family_values(study, plan, candidate_data))
+        paths.append(path)
     readme = directory / "README.md"
     atomic_bytes(readme, _readme(analysis, plan).encode("utf-8"))
     paths.append(readme)
@@ -333,6 +393,17 @@ and criterion_id before a one-to-one join. criteria.csv explains selected weight
 directions, scales and original case IDs. preference-profiles.csv retains each
 actual profile's full weights, selected IDs and solver result. Dynamic criterion
 names are values in these tables, never unstable GIS column names.
+
+For matched families, matched-family-values.csv contains every retained pair and
+pollutant for each original unit, plus separately identified selected_union rows.
+Baseline and treatment share the same original profile within each family.
+Each pollutant uses its own all-declared-family common mask; do not equate the
+N, P and sediment footprints. matched-family-support.json retains the full native
+roster and verified mask file hashes. mask_members.packet_path is relative to this
+directory and locates the original TIFF in the complete decision ZIP. Mask code 1
+is common finite-rate support, code 2 is common structural stream omission and
+code 0 is excluded. Structural-only support has unavailable mass, never zero.
+The export compares named hypotheses, not confidence bounds or joint probabilities.
 
 CSV keeps exact string IDs for GIS joins; import ID columns as text. Treat source
 strings as data, not spreadsheet formulas. Full lossless analysis is ../analysis.json.
