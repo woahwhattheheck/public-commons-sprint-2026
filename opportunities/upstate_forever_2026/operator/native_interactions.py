@@ -39,8 +39,11 @@ def invoke(operator, task):
         execute = payload.get("run_models", False)
         if type(execute) is not bool:
             raise ValueError("Choose whether to execute the retained native cases")
-        state = native_interactions.apply_plan(workspace, plan_id, run_models=execute)
-        if state.get("state") == "failed":
+        workers = payload.get("workers", 1)
+        if type(workers) is not int or workers < 1:
+            raise ValueError("Choose a positive whole number of parallel native runs")
+        state = native_interactions.apply_plan(workspace, plan_id, run_models=execute, workers=workers)
+        if state.get("state") in {"failed", "interrupted"}:
             errors = state.get("errors", [])
             detail = errors[0].get("message", "Open the retained study for details") if errors else "Open the retained study for details"
             raise RuntimeError(str(len(errors)) + " native case error(s): " + str(detail))
@@ -50,6 +53,44 @@ def invoke(operator, task):
     raise ValueError("Choose a registered native combination action")
 
 
+def native_version_rows(result):
+    """Expose only the version provenance saved with this exact result."""
+    cohort = result.get("native_versions")
+    if not isinstance(cohort, dict):
+        return []
+    models, runs = cohort.get("models"), cohort.get("runs")
+    if not isinstance(models, list) or not isinstance(runs, dict):
+        return []
+    coalitions = {}
+    for record in result.get("runs", []):
+        coalitions.setdefault(record.get("run_id"), []).append(record.get("key"))
+    rows = []
+    for run_id, versions in runs.items():
+        if not isinstance(versions, dict):
+            continue
+        for model in models:
+            provenance = versions.get(model)
+            if not isinstance(provenance, dict):
+                continue
+            reused = provenance.get("reused_from")
+            reused = reused if isinstance(reused, dict) else {}
+            rows.append({
+                "run_id": run_id, "native_model": model,
+                "coalition_keys": coalitions.get(run_id, []),
+                "comparison_version": provenance.get("comparison_version"),
+                "version_basis": provenance.get("basis"),
+                "observed_stage_version": provenance.get("observed_stage_version"),
+                "observed_run_version": provenance.get("observed_run_version"),
+                "requested_version": provenance.get("requested_version"),
+                "differs_from_requested": provenance.get("differs_from_requested"),
+                "stage_completed_at": provenance.get("stage_completed_at"),
+                "reused_from_run_id": reused.get("run_id"),
+                "reused_from_model": reused.get("model"),
+                "reused_from": provenance.get("reused_from"),
+            })
+    return rows
+
+
 def report(result):
     sections = (
         ("Combination totals", "summaries"),
@@ -57,8 +98,11 @@ def report(result):
         ("Pair interactions", "pair_interactions"),
         ("Native coalition outcomes", "coalition_outcomes"),
     )
-    fields = sorted({key for _, member in sections for row in result.get(member, [])
-                     for key in row})
+    version_rows = native_version_rows(result)
+    section_rows = [(title, result.get(member, [])) for title, member in sections]
+    if version_rows:
+        section_rows.append(("Executed model provenance", version_rows))
+    fields = sorted({key for _, rows in section_rows for row in rows for key in row})
     preferred = ["scope_id", "zone_id", "metric", "units", "action_id",
                  "coalition_key", "common_valid_cells", "common_area_ha"]
     fields = [key for key in preferred if key in fields] + [key for key in fields if key not in preferred]
@@ -153,14 +197,47 @@ def report(result):
     if not summaries:
         documents.append("<p>This retained result has no reporting-area summaries.</p>")
     source_tables = []
-    for title, member in sections:
-        rows = result.get(member, [])
+    for title, rows in section_rows:
         for row in rows:
             writer.writerow([title] + [csv_value(row.get(key)) for key in fields])
         columns = [key for key in fields if any(key in row for row in rows)]
         source_tables.append("<details><summary>" + esc(title) + " — complete source table (" + str(len(rows)) + " rows)</summary>"
                              + table([key.replace("_", " ") for key in columns],
                                      [[plain(row.get(key)) for key in columns] for row in rows]) + "</details>")
+    cohort = result.get("native_versions") or {}
+    version_document = "<section><h2>Executed model versions</h2>"
+    if version_rows:
+        basis_labels = {
+            "completed_stage_runtime": "Completed native stage",
+            "observed_run_fallback": "Observed run metadata",
+            "requested_legacy": "Requested version (legacy)",
+            "unavailable": "Unavailable",
+        }
+        versions = cohort.get("versions") or {}
+        version_document += (
+            "<p>Each selected model uses a consistent comparison version across the retained combinations. "
+            "Different selected models can have different versions. The source column identifies how each "
+            "run's version was recorded.</p>"
+            + table(["Native model", "Comparison version"],
+                    [[str(model).upper(), versions.get(model)] for model in cohort.get("models", [])])
+            + "<p>Completed-stage records describe the executed stage, including a reused stage's origin. "
+              "Observed-run fallback uses the retained run metadata. A requested legacy version is the "
+              "saved request and is labeled separately from observed execution.</p>"
+            + table(["Run", "Model", "Comparison version", "Version source", "Requested version",
+                     "Stage completed", "Reused stage origin"],
+                    [[row["run_id"], str(row["native_model"]).upper(), row["comparison_version"],
+                      basis_labels.get(row["version_basis"], row["version_basis"] or "Not recorded"),
+                      row["requested_version"], row["stage_completed_at"],
+                      ((str(row["reused_from_run_id"]) + " / " + str(row["reused_from_model"] or row["native_model"]))
+                       if row["reused_from_run_id"] else "")]
+                     for row in version_rows])
+            + "<p>The complete source table and JSON retain observed stage/run versions, requested-version "
+              "differences and the original nested stage-reuse record.</p>")
+    else:
+        version_document += (
+            "<p>No per-model execution provenance was recorded in this saved result. "
+            "Its original run identities and native output records remain in the retained selection.</p>")
+    version_document += "</section>"
     title = result.get("title") or "Native combination analysis"
     metadata = {key: value for key, value in result.items()
                 if key not in {member for _, member in sections}}
@@ -170,7 +247,7 @@ def report(result):
         + "</title><style>body{font:14px system-ui;color:#171717;background:white;margin:28px;max-width:1100px}"
           "h1{font-size:24px}h2{font-size:19px;margin-top:28px}h3{font-size:16px;margin-top:22px}"
           ".table-scroll{overflow:auto}table{border-collapse:collapse;font-size:12px;width:100%;margin:12px 0}"
-          "th,td{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums}"
+          "th,td{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}"
           "th{background:#eee}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:16px 0}"
           "summary{cursor:pointer;font-weight:600}section{border-top:1px solid #bbb;margin-top:24px}"
           "@media print{body{margin:0;max-width:none}tr{break-inside:avoid}.table-scroll{overflow:visible}h2,h3{break-after:avoid}}</style></head><body><h1>" + esc(title)
@@ -178,7 +255,7 @@ def report(result):
           "Nitrogen and phosphorus remain kg/year; sediment remains metric tonnes/year.</p>"
         + "<p>Saved action order: " + esc(" → ".join(result.get("application_order", [])))
         + ". Each modeled combination applies its selected actions in this order.</p>"
-        + "".join(documents) + "<h2>Complete scientific tables</h2>" + "".join(source_tables)
+        + "".join(documents) + version_document + "<h2>Complete scientific tables</h2>" + "".join(source_tables)
         + "<details><summary>Retained selection and method</summary><pre>"
         + esc(json.dumps(metadata, ensure_ascii=False, sort_keys=True, indent=2))
         + "</pre></details></body></html>")
