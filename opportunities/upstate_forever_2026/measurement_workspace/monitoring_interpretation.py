@@ -733,7 +733,8 @@ class MonitoringInterpretations:
         destination = Path(destination); destination.mkdir(parents=True,exist_ok=True)
         self.store.export_study(body["binding"]["study_id"],destination/"original-study.zip",body["binding"]["version_id"])
         _atomic(destination/"interpretation.json",_json_bytes(value))
-        _atomic(destination/"report.html",report_html(value).encode("utf-8"))
+        source_index = json.loads((self.root/(identity+"-sources")/"source-index.json").read_bytes())["sources"]
+        _atomic(destination/"report.html",report_html(value, source_index).encode("utf-8"))
         _atomic(destination/"observations.csv",rows_csv(body["result"]["rows"]))
         _atomic(destination/"windows.csv",windows_csv(body["result"]["series"]))
         names = ["interpretation.json","report.html","observations.csv","windows.csv","original-study.zip"]
@@ -838,22 +839,206 @@ def rows_csv(rows):
 def windows_csv(series):
     return _csv([{**row,"series_id":s["id"],"site_id":s["site_id"],"parameter":s["parameter"],"method":s["method"]} for s in series for row in s["metrics"]],("series_id","site_id","parameter","method","metric_id","aggregation","window_start","window_end","n","supported_n","lower","upper","unit","criterion_unit","threshold","measurement_threshold","status","numeric_comparison","numeric_basis","reason_codes","record_ids","unassigned_record_ids"))
 
-def report_html(value):
-    body=value["content"];result=body["result"];esc=html.escape
-    def e(x):return esc(str(x if x is not None else "Unbounded / unavailable"))
-    def table(rows,fields):
-        return '<div class="table"><table><thead><tr>'+"".join("<th>"+e(k.replace("_"," "))+"</th>" for k in fields)+"</tr></thead><tbody>"+"".join("<tr>"+"".join("<td>"+e(json.dumps(r.get(k),ensure_ascii=False) if isinstance(r.get(k),(dict,list)) else r.get(k))+"</td>" for k in fields)+"</tr>" for r in rows)+"</tbody></table></div>"
-    doc='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(body["title"])+'</title><style>body{font:16px/1.5 system-ui;color:#202020;background:#fff;margin:0}main{max-width:88rem;margin:auto;padding:28px}h1{font-size:1.8rem}h2{margin-top:2rem}.table{overflow:auto}table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}td,th{border:1px solid #bbb;padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eee}a{color:inherit}p,li,dd{overflow-wrap:anywhere}.notice{border-left:4px solid #555;padding:10px;background:#f5f5f5}details{margin:1rem 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:480px){main{padding:14px}h1{font-size:1.5rem}}@media print{main{padding:0}body{font-size:10pt}.table{overflow:visible}table{font-size:8pt;min-width:0}thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}}</style><main><h1>'+e(body["title"])+'</h1><p>'+e(body["study_title"])+'</p><p><strong>'+e(body["profile"]["label"])+'</strong> · '+e(body["profile"]["authority"].get("kind"))+' · '+e(body["profile"]["authority"].get("edition"))+'</p><p class="notice">'+e(result["interpretation"])+'</p><p>'+e(result["applicability_state"])+' · '+e("; ".join(result["warnings"]))+'</p><p>'+e(body["request"]["period"]["start"])+' to '+e(body["request"]["period"]["end"])+'</p><p>'+e(result["censoring"])+'</p><p>'+e(result["window_convention"])+'</p>'
-    doc+='<nav><a href="observations.csv">All original observation comparisons CSV</a> · <a href="windows.csv">All analytical windows CSV</a> · <a href="interpretation.json">Complete editable selection and result</a> · <a href="original-study.zip">Complete original study</a></nav>'
-    doc+='<h2>Selected support</h2>'+table([result["summary"]],list(result["summary"]))
-    doc+='<h2>Analyst applicability</h2><pre>'+e(json.dumps(body["request"]["applicability"],indent=2,ensure_ascii=False))+'</pre>'
-    for s in result["series"]:
-        doc+='<h2>'+e(s["site_id"])+' · '+e(s["parameter"])+' · '+e(s["method"])+'</h2><p>'+e(s["n"])+' selected canonical routine records; units '+e(s["unit"])+'</p>'+table(s["metrics"],("metric_id","aggregation","window_start","window_end","n","supported_n","lower","upper","unit","criterion_unit","threshold","status","reason_codes"))
-    doc+='<h2>Original observation comparisons</h2>'+table(result["rows"],("site_id","date","activity_id","parameter","unit","lower","upper","status","reason_codes","source_file","source_csv_row"))
-    doc+='<h2>Source profile and limitations</h2><pre>'+e(json.dumps(body["profile"],indent=2,ensure_ascii=False))+'</pre><h2>Retained profile sources</h2><ul>'
+def report_html(value, source_index=None):
+    """Render the saved scientific result as a readable, self-contained report."""
+    body = value["content"]
+    result = body["result"]
+    profile = body["profile"]
+    request = body["request"]
+    esc = html.escape
+    labels = {
+        "ABOVE_THRESHOLD": "Above comparison threshold",
+        "AT_OR_BELOW_THRESHOLD": "At or below comparison threshold",
+        "INDETERMINATE": "Indeterminate",
+        "UNSUPPORTED": "Incomplete sampling or value support",
+        "NOT_ASSESSED": "Contextual rule; not calculated",
+        "EXCLUDED": "Excluded from numerical comparison",
+        "OUTSIDE_SCOPE": "Outside the selected comparison",
+        "ANALYST_CONFIRMED": "Analyst applicability review recorded",
+        "DESCRIPTIVE_COMPARISON": "Descriptive comparison; applicability review remains",
+        "geometric_mean": "Geometric mean",
+        "exceedance_fraction": "Fraction above the measurement threshold",
+        "single_sample": "Individual sample",
+        "seasonal_arithmetic_mean": "Seasonal arithmetic mean",
+    }
+    months = ("January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December")
+    def e(item):
+        return esc(str(item if item is not None and item != "" else "Not recorded"), quote=True)
+    def words(item):
+        return labels.get(str(item), str(item).replace("_", " ").replace("-", " "))
+    def cell(item):
+        if isinstance(item, bool):
+            return "Yes" if item else "No"
+        if isinstance(item, (list, tuple)):
+            return "; ".join(str(x) for x in item) if item else "None selected"
+        return item
+    def reason(items):
+        return "; ".join(words(x).capitalize() for x in (items or [])) or "No additional reason"
+    def table(rows, columns, caption=None):
+        heading = "<caption>"+e(caption)+"</caption>" if caption else ""
+        if not rows:
+            return '<p class="empty">No records in this selection.</p>'
+        return '<div class="table"><table>'+heading+"<thead><tr>"+"".join(
+            '<th scope="col">'+e(title)+"</th>" for _, title in columns
+        )+"</tr></thead><tbody>"+"".join(
+            "<tr>"+"".join("<td>"+e(cell(row.get(key)))+"</td>" for key, _ in columns)+"</tr>"
+            for row in rows
+        )+"</tbody></table></div>"
+    def definitions(items):
+        return "<dl>"+"".join("<dt>"+e(title)+"</dt><dd>"+e(cell(item))+"</dd>"
+            for title, item in items)+"</dl>"
+    def readable(item):
+        # Method and frequency metadata remain inspectable without requiring JSON literacy.
+        if isinstance(item, dict):
+            return "<dl>"+"".join("<dt>"+e(words(key).capitalize())+"</dt><dd>"+
+                readable(val)+"</dd>" for key, val in item.items() if val is not None)+"</dl>"
+        if isinstance(item, (list, tuple)):
+            return "<ul>"+"".join("<li>"+readable(val)+"</li>" for val in item)+"</ul>"
+        return e(cell(item))
+    def interval(row):
+        low, high = row.get("lower"), row.get("upper")
+        if low is None and high is None:
+            return "Unavailable"
+        if low == high and low is not None:
+            return str(low)
+        if low is None:
+            return ("Less than " if row.get("upper_open") else "At most ")+str(high)
+        if high is None:
+            return ("Greater than " if row.get("lower_open") else "At least ")+str(low)
+        return ("(" if row.get("lower_open") else "[")+str(low)+", "+str(high)+(
+            ")" if row.get("upper_open") else "]")
+    def season(values):
+        return ", ".join(months[m-1] for m in values) if values else "Full selected period"
+    authority = profile.get("authority", {})
+    applicability = request["applicability"]
+    rows = result["rows"]
+    selected = [r for r in rows if r.get("selected")]
+    series = result["series"]
+    actual_dates = [r["date"] for r in selected]
+    period = request["period"]
+    summary = result["summary"]
+    doc = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(body["title"])+r'''</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}body{font:16px/1.5 system-ui,-apple-system,sans-serif;color:#202020;background:#fff;margin:0}main{max-width:88rem;margin:auto;padding:28px}h1{font-size:1.9rem;line-height:1.2}h2{margin-top:2.2rem;font-size:1.35rem}h3{margin-top:1.6rem}p,li,dd,a{overflow-wrap:anywhere}a{color:inherit;text-underline-offset:.14em}nav{padding:12px 0;border-block:1px solid #aaa}nav a{display:inline-block;margin:4px 20px 4px 0}.notice{border-left:4px solid #555;padding:12px 16px;background:#f5f5f5}.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.fact{border:1px solid #bbb;padding:14px}.fact strong{display:block;font-size:1.5rem}.fact span{font-size:.88rem}.table{overflow:auto;border:1px solid #bbb;margin:1rem 0}table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}td,th{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eee}caption{text-align:left;font-weight:650;padding:10px}dl{display:grid;grid-template-columns:minmax(10rem,1fr) minmax(0,3fr);gap:7px 18px}dt{font-weight:650}dd{margin:0}dd dl{display:block}dd dt{margin-top:.5rem}details{border-top:1px solid #bbb;margin:1.2rem 0;padding-top:12px}summary{cursor:pointer;font-weight:650}.muted{color:#555;font-size:.9rem}.empty{padding:12px;background:#f5f5f5}.series{scroll-margin-top:20px}.sources li{margin:.75rem 0}.counts{font-variant-numeric:tabular-nums}@media(max-width:560px){main{padding:14px}h1{font-size:1.55rem}.facts{grid-template-columns:repeat(2,minmax(0,1fr))}dl{grid-template-columns:1fr;gap:3px}dd{margin-bottom:8px}nav a{display:block}}@media print{main{padding:0;max-width:none}body{font-size:10pt}.table{overflow:visible;border:0}table{font-size:7pt;min-width:0}thead{display:table-header-group}tr,.fact{break-inside:avoid}h2,h3{break-after:avoid}details{display:block}details>*{display:block}nav{font-size:8pt}a{overflow-wrap:anywhere}.facts{grid-template-columns:repeat(4,1fr)}}
+</style></head><body><main>'''
+    doc += "<header><p class=\"muted\">Monitoring interpretation · saved scientific comparison</p><h1>"+e(body["title"])+"</h1><p>"+e(body["study_title"])+"</p><p><strong>"+e(profile["label"])+"</strong></p></header>"
+    doc += '<p class="notice"><strong>'+e(words(result["applicability_state"]))+".</strong> "+e(result["interpretation"])+"</p>"
+    doc += '<nav aria-label="Report sections"><a href="#support">Selected evidence</a><a href="#criteria">Reference and method</a><a href="#results">Station results</a><a href="#analyst">Analyst choices</a><a href="#sources">Sources and downloads</a></nav>'
+    doc += '<h2 id="support">Selected evidence</h2><div class="facts counts">'
+    for amount, label in ((summary["total"], "Original rows retained"), (summary["selected"], "Rows selected by study filters"),
+                          (summary["eligible"], "Rows supporting numerical comparison"), (summary["series"], "Separate station and method series")):
+        doc += '<div class="fact"><strong>'+e(amount)+'</strong><span>'+e(label)+'</span></div>'
+    doc += "</div>"+definitions([
+        ("Requested dates", str(period["start"])+" to "+str(period["end"])),
+        ("Dates represented by selected rows", (min(actual_dates)+" to "+max(actual_dates)) if actual_dates else "No selected original rows"),
+        ("Reference parameter", profile["parameter"]["canonical"]),
+        ("Reference jurisdiction and edition", str(authority.get("jurisdiction", ""))+" · "+str(authority.get("edition", ""))),
+        ("Named site or spatial condition", profile.get("applicability", {}).get("spatialQualifier")),
+        ("Stations selected", request["selection"].get("site_ids") or "All stations in the retained study"),
+        ("Calendar months selected", season(request["selection"].get("months"))),
+        ("Calendar year selected", request["selection"].get("year") or "All years within the requested dates"),
+        ("Saved by", applicability.get("reviewer")),
+        ("Saved at", value.get("saved_at")),
+    ])
+    doc += "<p>Source rows remain available when their parameter, activity, qualification or sampling support prevents a numerical comparison. Each station, original unit, analytical method and source-support cohort remains separate. Window counts may overlap in time and are not a count of independent regulatory events.</p>"
+    if result["warnings"]:
+        doc += "<h3>Applicability to resolve</h3><ul>"+"".join("<li>"+e(words(w).capitalize())+"</li>" for w in result["warnings"])+"</ul>"
+    support_rows = []
+    supported_counts = Counter(r["series_id"] for r in rows if r.get("eligible") and r.get("canonical_weight") == 1)
+    for s in series:
+        counts = Counter(m["status"] for m in s["metrics"])
+        supported = supported_counts[s["id"]]
+        support_rows.append({"site": s["site_id"], "parameter": s["parameter"], "method": s["method"], "unit": s["unit"],
+            "records": s["n"], "supported": supported, "windows": len(s["metrics"]),
+            "above": counts["ABOVE_THRESHOLD"], "below": counts["AT_OR_BELOW_THRESHOLD"],
+            "unresolved": len(s["metrics"])-counts["ABOVE_THRESHOLD"]-counts["AT_OR_BELOW_THRESHOLD"]})
+    doc += table(support_rows, [("site","Station"),("parameter","Parameter"),("method","Method"),("unit","Measured unit"),
+        ("records","Selected canonical routine rows"),("supported","Rows with numerical support"),("windows","Reported metric windows"),
+        ("above","Windows above"),("below","Windows at or below"),("unresolved","Other or unresolved windows")], "Series and analytical support")
+    doc += '<h2 id="criteria">Reference and method</h2>'+definitions([
+        ("Profile", profile["label"]), ("Authority", words(authority.get("kind", ""))),
+        ("Edition", authority.get("edition")), ("Original clause or page", authority.get("locators")),
+        ("Reference unit", profile.get("units", {}).get("criterion")),
+        ("Applicable designated uses", profile.get("applicability", {}).get("designatedUses")),
+        ("Reference months", season(profile.get("applicability", {}).get("seasonMonths"))),
+    ])
+    metric_rows = []
+    for metric in profile["metrics"]:
+        rule = "Strictly greater than "+str(metric["threshold"])+" "+str(profile["units"]["criterion"])
+        if metric["aggregation"] == "exceedance_fraction":
+            rule += "; the resulting fraction is compared with "+str(metric["allowedExcursionFraction"])
+        metric_rows.append({"name": metric["id"], "calculation": words(metric["aggregation"]), "rule": rule,
+            "window": (str(metric["windowDays"])+" calendar days") if metric.get("windowDays") else season(metric.get("seasonMonths")),
+            "minimum": metric.get("minSamples"), "basis": metric.get("minSamplesBasis"),
+            "spacing": (str(metric["minSpacingHours"])+" hours") if metric.get("minSpacingHours") is not None else "No minimum spacing specified in this profile",
+            "mode": words(metric.get("assessment", "source-defined comparison"))})
+    doc += table(metric_rows,[("name","Metric"),("calculation","Calculation"),("rule","Comparison"),
+        ("window","Window or season"),("minimum","Required sample support"),("basis","Support basis"),
+        ("spacing","Minimum spacing"),("mode","Assessment scope")])
+    doc += "<p>"+e(result["window_convention"])+"</p><p>"+e(result["censoring"])+"</p>"
+    doc += "<p>Numerical bounds keep the measured cohort's own unit. The reference unit is shown separately. A method-applicability review does not convert MPN into CFU. For excursion fractions, the measurement threshold and permitted fraction are separate quantities.</p>"
+    if profile.get("limitations"):
+        doc += "<h3>Interpretation limits</h3><ul>"+"".join("<li>"+e(x)+"</li>" for x in profile["limitations"])+"</ul>"
+    if result.get("contextual_rules"):
+        doc += "<details><summary>Frequency and contextual rules</summary>"+readable(result["contextual_rules"])+"</details>"
+    doc += '<h2 id="results">Station results</h2>'
+    if not series:
+        doc += '<p class="empty">The selected original records do not form a routine observation series for this profile. Review the parameter, site and period selections using the retained source.</p>'
+    for s in series:
+        doc += '<section class="series" id="'+e(s["id"])+'"><h3>'+e(s["site_id"])+" · "+e(s["parameter"])+"</h3>"
+        doc += definitions([("Analytical method", s["method"]), ("Measured unit", s["unit"]), ("Selected canonical routine rows", s["n"])])
+        window_rows = []
+        for metric in s["metrics"]:
+            window_rows.append({"metric": words(metric["aggregation"]), "dates": metric["window_start"]+" to "+metric["window_end"],
+                "records": metric["n"], "supported": metric.get("supported_n"),
+                "bounds": interval(metric), "unit": metric["unit"], "reference_unit": metric.get("criterion_unit"),
+                "threshold": metric.get("threshold"), "measurement_threshold": metric.get("measurement_threshold"),
+                "status": words(metric["status"]), "reasons": reason(metric.get("reason_codes"))})
+        doc += table(window_rows,[("metric","Metric"),("dates","Dates"),("records","Selected rows"),("supported","Rows with support"),
+            ("bounds","Result or retained bounds"),("unit","Result unit"),("threshold","Comparison threshold"),
+            ("measurement_threshold","Measurement threshold"),("reference_unit","Reference measurement unit"),("status","Comparison"),("reasons","Sampling and source support")])
+        doc += "<details><summary>Original cohort and source support</summary>"+readable(s["cohort"])+"</details></section>"
+    doc += '<h2 id="analyst">Analyst choices</h2>'+definitions([
+        ("Reviewer", applicability.get("reviewer")), ("Review recorded", applicability.get("confirmed")),
+        ("Selected jurisdiction", applicability.get("jurisdiction")), ("Selected water use", applicability.get("water_use")),
+        ("Applicability rationale", applicability.get("note")), ("Method review", applicability.get("method_note")),
+        ("Qualified results included", request["options"]["include_qualified"]),
+        ("Qualification rationale", request["options"].get("qualified_note")),
+    ])
+    confirmations = applicability.get("confirmations", {})
+    confirmation_rows = []
+    for item in profile.get("applicability", {}).get("requiredConfirmations", []):
+        identity = item.get("id") if isinstance(item, dict) else item
+        title = item.get("label", identity) if isinstance(item, dict) else words(identity)
+        confirmation_rows.append({"condition": title, "confirmed": bool(confirmations.get(identity))})
+    doc += table(confirmation_rows,[("condition","Required site, source or method confirmation"),("confirmed","Recorded")])
+    observations = [{"site": r["site_id"], "date": r["date"], "activity": r.get("activity_id"), "parameter": r["parameter"],
+        "unit": r["unit"], "value": interval(r), "state": words(r["status"]), "reason": reason(r.get("reason_codes")),
+        "laboratory": r.get("laboratory_comment"), "file": r["source_file"], "row": r["source_csv_row"]} for r in rows]
+    doc += "<details><summary>All "+e(len(rows))+" original observation comparisons</summary>"+table(observations,
+        [("site","Station"),("date","Date"),("activity","Original activity"),("parameter","Parameter"),("value","Value or bounds"),
+         ("unit","Measured unit"),("state","Comparison"),("reason","Support"),("laboratory","Laboratory comment"),("file","Original file"),("row","Source CSV row")])+"</details>"
+    doc += '<h2 id="sources">Sources and downloads</h2><nav aria-label="Original downloads"><a href="observations.csv">All original observation comparisons — CSV</a><a href="windows.csv">All analytical windows — CSV</a><a href="interpretation.json">Complete editable result — JSON</a><a href="original-study.zip">Complete original study — ZIP</a></nav>'
+    references = {x["id"]: x for x in (source_index or []) if isinstance(x,dict) and x.get("id")}
+    doc += '<h3>Reference publications</h3><ul class="sources">'
+    for identity in authority.get("sourceIds", []):
+        source = references.get(identity, {})
+        title = source.get("title") or source.get("name") or identity
+        url = source.get("url") or ""
+        link = '<a href="'+e(url)+'">'+e(title)+"</a>" if str(url).startswith(("https://","http://")) else e(title)
+        doc += "<li>"+link
+        for key in ("publisher","edition","retrievedAt","locators","approvalStatus","notes"):
+            if source.get(key):
+                doc += "<br>"+e(words(key).capitalize())+": "+e(cell(source[key]))
+        doc += "</li>"
+    doc += "</ul><h3>Retained source files</h3><ul>"
     for item in body["source_files"]:
-        doc+='<li><a href="profile-sources/'+html.escape(item["path"],quote=True)+'">'+e(item["path"])+'</a> · '+e(item["bytes"])+' bytes</li>'
-    return doc+'</ul><details><summary>Exact study and source identities</summary><pre>'+e(json.dumps(body["binding"],indent=2))+'</pre></details></main></html>'
+        doc += '<li><a href="profile-sources/'+e(item["path"])+'">'+e(item["path"])+"</a> · "+e(item["bytes"])+" bytes</li>"
+    doc += "</ul><details><summary>Exact saved study and source identities</summary>"+readable(body["binding"])+definitions([
+        ("Saved interpretation", value.get("id")), ("Source catalogue SHA-256", body.get("catalog_sha256"))])+"</details>"
+    return doc+"</main></body></html>"
+
 
 def main(argv=None):
     import argparse

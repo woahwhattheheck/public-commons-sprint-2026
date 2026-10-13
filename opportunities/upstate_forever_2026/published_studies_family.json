@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "8e5cb23856eb6f141184c367954177e5722ec8ed",
@@ -133,13 +133,13 @@
     },
     {
       "path": "measurement_workspace/MONITORING_INTERPRETATION.md",
-      "bytes": 9793,
-      "sha256": "6847182482490d7ddb4ec7e23226d862ed020f02db88bebec901626d2f62d050"
+      "bytes": 11206,
+      "sha256": "b41e763c58d8cb7af63c93272ab9181f4cc482fd3220150ef5fb8494f9a156ee"
     },
     {
       "path": "measurement_workspace/monitoring_interpretation.py",
-      "bytes": 58785,
-      "sha256": "cbff399286375e871599cdb3691f330c59e939cfd4cb10236fe28b68e5bcb4ca"
+      "bytes": 72749,
+      "sha256": "73ae717c6c7839e1ab49bef075ae6f8927539b5b50c122265b63876d79c5f676"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -1708,8 +1708,8 @@
     },
     {
       "path": "operator/MONITORING_INTERPRETATION.md",
-      "bytes": 5409,
-      "sha256": "8346b7774a0de2c856dab21ef65a244dc9d016e684061663534591d8dc8ceee5"
+      "bytes": 6822,
+      "sha256": "276e49065fe5003f7ea6e3854b8f422f2689bb9d554f2750a28e69882e39c2d7"
     },
     {
       "path": "operator/published_report_preview.py",
@@ -3453,7 +3453,12 @@
       "source_reference_base": "8e5cb23856eb6f141184c367954177e5722ec8ed",
       "scope": "Exact original study edition and authoritative profile sources; retained measured units, censor bounds, sampling support and analyst applicability; immutable original interpretations and complete export/reopen in the maintained Published studies application.",
       "native_course": "Existing DE49/CLOUD13 application and workspace; ECO13-15227 owns the cumulative installer.",
-      "owner_direction": "CURRENT_OWNER_DIRECTION.md version 2026-10-13.4"
+      "owner_direction": "CURRENT_OWNER_DIRECTION.md version 2026-10-13.4",
+      "presentation": {
+        "edition": "readable-scientific-report/2",
+        "scope": "Readable support, date and cohort summary; full metric/result/criterion unit separation; analyst choices and original source links; complete original-row table and unchanged scientific downloads.",
+        "source_reference_base": "a2652dcaa99a830c76bf15752883bd805b4e3fcb"
+      }
     }
   }
 }

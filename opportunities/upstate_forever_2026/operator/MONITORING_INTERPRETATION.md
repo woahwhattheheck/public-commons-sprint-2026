@@ -45,3 +45,12 @@ The complete installed calculation and command-line guide is **measurement_works
 The monitoring component extends the existing Published studies family. Its module, stylesheet, source profiles, operator provider and current installer travel together. Preserve the current application, workspace, source editions and queued tasks during cumulative installation.
 
 Carry **CURRENT_OWNER_DIRECTION.md version 2026-10-13.4** and **AGENTS.md version 2026-10-13.1**. Use the existing native receiving course. The producing worker opens and operates the exact finished screen at desktop and 390-pixel width, including a populated comparison, no matching rows, an unavailable source, a corrected request, saved reopening and the original task/download controls. View every outgoing HTML/CSV/JSON/ZIP in its actual recipient-facing application and operate the cold-reopened workspace. Repair the affected product directly and retain the actual resulting files and images.
+
+
+## Readable scientific report
+
+The complete HTML download opens with the selected evidence, date support, separate station/method/unit series, comparison profile and actual applicability state. Station tables retain every metric window, original denominator, numerical-support count, result or censor bounds, measured unit, reference unit and source-support explanation. Excursion fractions distinguish the measurement threshold from the permitted fraction. Overlapping window counts are analytical windows, not independent regulatory events.
+
+Analyst choices, method rationale and every required site/source confirmation are readable fields. Profile rules, minimum-sample basis, minimum spacing, season, contextual frequency and limitations use readable tables and expandable method descriptions. Primary publication links come from the exact saved source index; the report retains its original catalogue when an installed source changes. Reading the result requires no JSON editing.
+
+The full original-row table remains in the report, including laboratory comments and exact CSV locators. CSV, JSON, original-study ZIP and every retained reference file remain ordinary downloads. The complete source ZIP includes the generated report and exact rendering module. This presentation preserves the saved calculation identity, observations, thresholds, numerical comparisons, request and original source bindings.
