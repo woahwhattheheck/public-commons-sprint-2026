@@ -329,6 +329,10 @@ def main():
         receiver_key = receiver.primary
         archive_path = Path(capture_task["result"]["path"])
         archive_bytes, archive_sha256 = archive_path.stat().st_size, file_digest(archive_path)
+        for field, actual in (("bytes", archive_bytes), ("sha256", archive_sha256)):
+            declared = capture_task["result"].get(field)
+            if declared is not None and declared != actual:
+                raise ValueError("The completed snapshot archive differs from its original " + field + ".")
         known_receive = existing("receive-with-microbial", engine=receiver, workspace_key=receiver_key)
         if known_receive:
             receive_payload = known_receive["payload"]
@@ -367,9 +371,13 @@ def main():
             raise ValueError("The receiving project identity differs from the original project.")
         restored_spatial = receiver.spatial_reviews[restored_key]
         restored_task_rows = received["recovery"]["tasks"]
-        retained_tasks = []
+        from project_continuity import HISTORY_ONLY
+        retained_tasks, history_only_task_ids = [], []
         for source_task_id in capture_payload["task_ids"]:
             original_task = operator.task(source_task_id)
+            if original_task["action"] in HISTORY_ONLY:
+                history_only_task_ids.append(source_task_id)
+                continue
             matching = [row for row in restored_task_rows
                         if row.get("operation_id") == original_task["operation_id"]]
             if len(matching) != 1:
@@ -400,7 +408,8 @@ def main():
             "workspace_key": restored_key, "workspace": str(restored_ws.root),
             "operator_state": str(receiver_state), "project": restored_ws.project,
             "archive_bytes": archive_bytes, "archive_sha256": archive_sha256,
-            "restored_tasks": retained_tasks, "reopened_views": reopened_views
+            "restored_tasks": retained_tasks, "history_only_task_ids": history_only_task_ids,
+            "reopened_views": reopened_views
         }
         atomic_json(ROOT / "working-project-native-result.json", result)
         print(json.dumps({"stage": "scientific context project received and reopened", "result": result}), flush=True)
