@@ -126,6 +126,18 @@ class Handler(BaseHandler):
         if len(t)==3 and t[0]=="selections"and t[2]=="candidates":
             q,offset,limit=self._page_args(target,("query",));return self._json(ws.directory_selection_page(t[1],offset,limit,q.get("query","")))
         if len(t)>=4 and t[:2]==["conformance","assessments"]:
+            if len(t)==4 and t[3]=="foreign-keys":
+                q,offset,limit=self._page_args(target,("table","state","ruleId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_keys(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("ruleId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-candidates":
+                q,offset,limit=self._page_args(target,("table","state","groupId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_key_candidates(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("groupId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-matches":
+                q,offset,limit=self._page_args(target,("outcomeId","candidateId"))
+                return self._json(ws.directory_conformance_foreign_key_matches(t[2],offset,limit,
+                    q.get("outcomeId"),q.get("candidateId")))
             if len(t)==4 and t[3]in {"findings","rows"}:
                 if t[3]=="findings":
                     q,offset,limit=self._page_args(target,("severity","table","code","sourceId","recordId"))

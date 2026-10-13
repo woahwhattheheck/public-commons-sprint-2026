@@ -12,6 +12,7 @@ from model.compute_programme import ComputeProgrammes
 
 ACTIONS = {
     "compute.programme.save",
+    "compute.programme.experiment",
     "compute.programme.run",
     "compute.programme.report",
     "compute.programme.delivery",
@@ -34,7 +35,8 @@ class Programmes:
         return key
 
     def catalogue(self, workspace):
-        return self._manager(workspace).catalog()
+        from model.programme_experiments import catalog
+        return {**self._manager(workspace).catalog(), **catalog(self.operator.ws(workspace))}
 
     def _decorate(self, workspace, result):
         result = json.loads(json.dumps(result))
@@ -51,7 +53,7 @@ class Programmes:
     def read(self, workspace, operation, payload):
         manager = self._manager(workspace)
         if operation == "catalog":
-            return {"workspace_key": workspace, **manager.catalog()}
+            return {"workspace_key": workspace, **self.catalogue(workspace)}
         key = self._id(payload)
         if operation == "detail":
             return {"workspace_key": workspace, **self._decorate(workspace, manager.status(key))}
@@ -64,6 +66,11 @@ class Programmes:
         if not isinstance(selection, dict):
             raise self.Fault("PROGRAMME_SELECTION", "Import or create a programme selection.")
         return {"workspace_key": workspace, **self._manager(workspace).preview(selection)}
+
+    def experiment_preview(self, workspace, payload):
+        from model.programme_experiments import preview
+        return {"workspace_key": workspace, **preview(self.operator.ws(workspace),
+            payload.get("experiment_id"), payload.get("offset", 0), payload.get("limit", 100))}
 
     def pause(self, workspace, payload):
         # This signal deliberately runs on the request thread. Enqueueing it in
@@ -82,6 +89,9 @@ class Programmes:
         manager = self._manager(workspace)
         payload = task["payload"]
         action = task["action"]
+        if action == "compute.programme.experiment":
+            from model.programme_experiments import create
+            return create(self.operator.ws(workspace), payload.get("experiment_id"))
         if action == "compute.programme.save":
             selection = payload.get("selection")
             if not isinstance(selection, dict):
@@ -89,7 +99,7 @@ class Programmes:
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
         if action == "compute.programme.run":
-            result = manager.execute(key, only_runs=payload.get("only_runs"))
+            result = manager.resume(key, only_runs=payload.get("only_runs"))
             if result.get("state") == "failed" or result.get("counts", {}).get("failed", 0):
                 counts = result.get("counts", {})
                 raise self.Fault(
@@ -97,6 +107,16 @@ class Programmes:
                     "Programme retained with " + str(counts.get("complete", 0)) +
                     " completed runs and " + str(counts.get("failed", 0)) +
                     " failed runs. Open the programme to inspect each cause and resume.")
+            if result.get("state") == "complete":
+                from model.programme_experiments import sync_completed
+                try:
+                    synchronized = sync_completed(self.operator.ws(workspace), result)
+                except Exception as exc:
+                    raise self.Fault(
+                        "EXPERIMENT_SUMMARY_INCOMPLETE",
+                        "Native programme completed; experiment result synchronization needs correction: " + str(exc)) from exc
+                if synchronized is not None:
+                    result = {**result, "experiment_sync": synchronized}
             return result
         if action == "compute.programme.report":
             return self._decorate(workspace, manager.report(key))
@@ -114,7 +134,7 @@ class Programmes:
         payload = task.get("payload", {})
         result = task.get("result", {})
         key = payload.get("programme_id")
-        if not key and task["action"] == "compute.programme.save":
+        if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
         if key:
             try:

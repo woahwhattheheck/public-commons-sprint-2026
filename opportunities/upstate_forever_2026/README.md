@@ -1,14 +1,12 @@
-# Upper Savannah scientific operator
+# Upper Savannah scientific workbench
 
-TokenJunkieLabs · maintained decision, source and native-model workflows
+TokenJunkieLabs · source preparation, native models and watershed decisions
 
-The modules in this directory extend the original Upper Savannah scientific application. They join source preparation, native-run work, saved scenario assessments, model programmes and source-bound water designations through the same Workspace, authenticated operator and task queue.
+This directory contains the complete scientific workbench: the local operator, retained Workspace, original source preparation, NDR/SDR programmes, scenario experiments, spatial and community review, seven-map delivery and portable receiving. The current extension registry also opens the maintained calibration, scenario, receptor and transfer workflows supplied with this checkout.
 
-Needs expert review: environmental model interpretation and regulatory source applicability. The application preserves the selected inputs, physical units, geography and decision settings needed for that review.
+Start with [START_HERE.md](START_HERE.md). Create the GIS environment from [environment.yml](environment.yml), then launch `operator/server.py` with the actual workspace directory. The environment pins InVEST 3.20.0. The server prints the authenticated local operator URL. Existing source selections and saved work remain in that workspace.
 
-Source preparation, annual-load calibration and operator extensions for the maintained Upper Savannah watershed application, authored by TokenJunkieLabs. The tools preserve the selected original inputs, native model runs and saved Workspace throughout acquisition, analysis and operator use.
-
-The public source directory also includes the maintained [native compute programmes](PROGRAMMES.md), [conservation analysis](model/CONSERVATION.md), [receiving-water analysis](model/RECEIVING_WATERS.md), [receptor experiments](model/RECEPTOR_EXPERIMENTS.md) and [operator extension framework](operator/EXTENSIONS.md). Adopt these components into the complete maintained native application so they use its current Workspace, source selections, task queue and portable delivery.
+The [native programme guide](PROGRAMMES.md) covers native execution and continuation; [paired ensembles](PAIRED_ENSEMBLES.md) covers completed baseline–alternative profile pairs. Source and result records preserve the selected geography, physical units, model parameters and original input editions throughout the workflow.
 
 ## Work with retained model results
 
@@ -18,11 +16,9 @@ Large assessments use resumable authenticated transfers within the original oper
 
 See [Scenario decisions](operator/SCENARIO_DECISIONS.md), the [component contract](operator/SCENARIO_DECISIONS_COMPONENT.md), and [performance notes](operator/SCENARIO_DECISIONS_PERFORMANCE.md).
 
-## Install in the complete application
+## Install additional source editions
 
-Compose these maintained source paths with the current complete Upper Savannah application and its original model/common.py, model/workspace.py, operator/server.py and operator/web/app.mjs. Keep the source-preparation and native-run component modules with their descriptors. The complete application receiver assembles these original dependencies and the current desk contributions together.
-
-Run the shared installer against that actual application directory:
+This checkout already joins the core operator and its current source/native descriptors. When adopting a maintained component into another existing application, keep that component's complete source and descriptor together and run the shared installer against the actual destination:
 
     python3 -B install_extensions.py --application /path/to/complete-application
 

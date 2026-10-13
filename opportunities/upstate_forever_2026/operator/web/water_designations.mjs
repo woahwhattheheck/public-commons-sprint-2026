@@ -146,7 +146,7 @@ export function mountWaterDesignations({
     preview: null, previewFingerprint: "", previewFeatures: [], previewNext: null,
     savedRecord: null, savedFingerprint: "", revisionOf: null, loading: false, inventoryLoading: false,
     loadingMore: false, previewBusy: false, previewMoreBusy: false,
-    exportBusy: false, saveBusy: false, saveAttempt: null,
+    exportBusy: false, deliveryBusy: false, saveBusy: false, saveAttempt: null,
     sourceEpoch: 0, previewEpoch: 0,
     map: { latitude: 0, cosLatitude: 1, home: null, view: null, entries: new Map(), drag: null }
   };
@@ -357,9 +357,9 @@ export function mountWaterDesignations({
     setButton("save", !canSave, state.saveBusy ? "Saving…" : alreadySaved ? "Revision saved" : retry ? "Retry save" : "Save revision");
     setButton("refresh", state.inventoryLoading, state.inventoryLoading ? "Refreshing…" : "Refresh sources");
     setButton("open-saved", !refs.savedSelect.value || state.loading || state.saveBusy);
-    setButton("copy-delivery", !(state.savedRecord && state.savedRecord.delivery_overlay));
+    setButton("copy-delivery", !(state.savedRecord && state.savedRecord.delivery_overlay) || state.deliveryBusy);
     setVisible("use-delivery", typeof onUseInDelivery === "function");
-    setButton("use-delivery", !(state.savedRecord && state.savedRecord.delivery_overlay) || typeof onUseInDelivery !== "function");
+    setButton("use-delivery", !(state.savedRecord && state.savedRecord.delivery_overlay) || state.deliveryBusy || typeof onUseInDelivery !== "function");
     setButton("export-selection", !state.source);
     setButton("export-geojson", !canExport);
     setButton("export-csv", !canExport);
@@ -1166,13 +1166,33 @@ export function mountWaterDesignations({
     } catch (error) { fail(error, "Could not export the selected data."); }
     finally { state.exportBusy = false; updateControls(); }
   }
+  async function prepareDeliverySelection() {
+    const record = state.savedRecord;
+    const selectionId = record && (record.id || record.selection_id);
+    if (!selectionId || !record.delivery_overlay) throw new Error("Open a saved revision before using it in delivery.");
+    const selectedWorkspace = workspace();
+    state.deliveryBusy = true; updateControls();
+    try {
+      const delivery = await post("/api/water-designations/apply", {
+        workspace: selectedWorkspace, selection_id: selectionId, delivery_selection: {}
+      });
+      if (destroyed || workspace() !== selectedWorkspace || state.savedRecord !== record) {
+        throw new Error("The saved revision changed before the delivery choice was ready.");
+      }
+      if (!delivery || !delivery.overlays || !delivery.source_roles) {
+        throw new Error("The operator did not return the saved overlay and its source references.");
+      }
+      return { record: record, delivery: delivery };
+    } finally {
+      state.deliveryBusy = false; updateControls();
+    }
+  }
   async function copyDelivery() {
-    if (!state.savedRecord || !state.savedRecord.delivery_overlay) return;
-    const purpose = state.savedRecord.purpose || (state.savedRecord.selection && state.savedRecord.selection.purpose) || refs.purpose.value;
-    const overlay = state.savedRecord.delivery_overlay;
-    const delivery = { overlays: {} };
-    delivery.overlays[purpose] = { source_collection_id: overlay.source_collection_id, source_id: overlay.source_id, layer: overlay.layer };
-    const value = JSON.stringify(delivery, null, 2);
+    if (!state.savedRecord || !state.savedRecord.delivery_overlay || state.deliveryBusy) return;
+    let prepared;
+    try { prepared = await prepareDeliverySelection(); }
+    catch (error) { fail(error, "Could not prepare the saved delivery selection."); return; }
+    const value = JSON.stringify(prepared.delivery, null, 2);
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(value);
@@ -1197,7 +1217,10 @@ export function mountWaterDesignations({
     else if (action === "reload-source") loadSource(state.sourceChoice || state.source);
     else if (action === "copy-delivery") copyDelivery();
     else if (action === "use-delivery" && state.savedRecord && typeof onUseInDelivery === "function") {
-      Promise.resolve().then(function () { return onUseInDelivery(state.savedRecord.delivery_overlay, state.savedRecord); })
+      prepareDeliverySelection()
+        .then(function (prepared) {
+          return onUseInDelivery(prepared.record.delivery_overlay, prepared.record, prepared.delivery);
+        })
         .catch(function (error) { fail(error, "Could not open the delivery editor."); });
     }
     else if (action === "select-classes") {
@@ -1443,12 +1466,7 @@ export function createWaterDesignationsExtension(context) {
           else if (typeof context.refresh === "function") await context.refresh();
         },
         onUseInDelivery: typeof context.openDelivery === "function"
-          ? function (overlay, record) {
-              const purpose = record.purpose || (record.selection && record.selection.purpose) || "high_quality_waters";
-              const delivery = { overlays: {} };
-              delivery.overlays[purpose] = {
-                source_collection_id: overlay.source_collection_id, source_id: overlay.source_id, layer: overlay.layer
-              };
+          ? function (_overlay, _record, delivery) {
               return context.openDelivery(delivery);
             } : undefined
       });

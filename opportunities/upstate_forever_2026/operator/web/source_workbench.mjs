@@ -33,6 +33,8 @@ export function createSourceWorkbench(host) {
   let tasksFingerprint = '', sourcesFingerprint = '', progressBusy = false, state = null;
   let selectedMethod = '', drafts = {}, mergeDraft = {title:'', prepared:[], collections:[], registered:[], import_sources:true};
   let requests = [], browser = null, browserGeneration = 0, controls = null;
+  let operationView = {query:'', status:'all', offset:0}, operationCache = null;
+  let resultTask = null, resultDocument = null, resultBusy = false, resultGeneration = 0;
   const local = () => 'upstate-source-workbench-v1:' + workspace;
   const storageRead = () => {
     try {
@@ -42,12 +44,16 @@ export function createSourceWorkbench(host) {
       mergeDraft = {...mergeDraft, ...(saved.merge || {})};
       requests = list(saved.requests);
       currentTask = saved.task_id || null;
+      operationView = {...operationView, ...(saved.operation_view || {})};
+      operationView.offset = Math.max(0, Number(operationView.offset) || 0);
+      operationView.query = String(operationView.query || '');
+      if (!['all','active','attention','complete'].includes(operationView.status)) operationView.status = 'all';
     } catch { selectedMethod = ''; drafts = {}; requests = []; currentTask = null; }
   };
   const save = () => {
     try {
       sessionStorage.setItem(local(), JSON.stringify({method:selectedMethod, drafts, merge:mergeDraft,
-        requests, task_id:currentTask}));
+        requests, task_id:currentTask, operation_view:operationView}));
     } catch { /* Native tasks remain retained even when browser storage is unavailable. */ }
   };
   const selected = () => list(catalog?.methods).find(method => method.id === selectedMethod);
@@ -85,6 +91,55 @@ export function createSourceWorkbench(host) {
   }
   function ownedTasks() {
     return list(state?.tasks).filter(task => ['source.prepare','source.compose'].includes(task.action));
+  }
+  function sourceOperations() {
+    const queue = state?.tasks, retained = catalog?.prepared;
+    if (operationCache?.queue === queue && operationCache?.retained === retained) return operationCache.rows;
+    const indexed = new Map();
+    for (const row of list(retained)) {
+      if (!row.task_id || !['source.prepare','source.compose'].includes(row.action)) continue;
+      indexed.set(row.task_id, {id:row.task_id, action:row.action, state:row.state, stage:row.stage,
+        payload:{title:row.title, method:row.method}, updated_at:row.updated_at,
+        ended_at:row.state === 'complete' ? row.updated_at : null, error:row.error, restored:true,
+        result:{source_collection_id:row.source_collection_id, source_count:row.source_count,
+          source_id:row.source_id, role:row.role}});
+    }
+    for (const task of ownedTasks()) {
+      const previous = indexed.get(task.id);
+      indexed.set(task.id, {...previous, ...task, restored:false, error:task.error || null,
+        payload:{...previous?.payload, ...task.payload},
+        result:{...previous?.result, ...task.result}});
+    }
+    const priority = row => ['queued','running'].includes(row.state) ? 0 :
+      ['failed','interrupted','cancelled'].includes(row.state) ? 1 : 2;
+    const activity = row => row.ended_at || row.updated_at || row.started_at || row.created_at || '';
+    const rows = [...indexed.values()].sort((a,b) => priority(a)-priority(b) ||
+      activity(b).localeCompare(activity(a)) || String(a.id).localeCompare(String(b.id)));
+    operationCache = {queue, retained, rows, byId:indexed};
+    return rows;
+  }
+  function sourceOperation(id) {
+    sourceOperations();
+    return operationCache.byId.get(id);
+  }
+  function selectPreparedOperation(id) {
+    const task = sourceOperation(id);
+    if (!task || task.state !== 'complete') throw new Error('Choose a completed source operation.');
+    const collectionId = task.result?.source_collection_id;
+    if (collectionId && list(state?.data?.sources).some(row => row.id === collectionId)) {
+      mergeDraft.collections = [...new Set([...mergeDraft.collections, collectionId])];
+      mergeDraft.prepared = mergeDraft.prepared.filter(value => value !== id);
+    } else {
+      mergeDraft.prepared = [...new Set([...mergeDraft.prepared, id])];
+      if (collectionId) mergeDraft.collections = mergeDraft.collections.filter(value => value !== collectionId);
+    }
+    mergeDraft.open = true;
+    save(); renderForm(); closeResult();
+    const target = container?.querySelector('[data-sp-merge-area]');
+    target?.scrollIntoView({block:'start', behavior:'smooth'});
+    target?.querySelector('[data-sp-compose-title]')?.focus({preventScroll:true});
+    message = taskName(task) + ' added to the combined source selection.';
+    notice();
   }
   function choices(field) {
     const kinds = list(field.kinds);
@@ -195,11 +250,8 @@ export function createSourceWorkbench(host) {
       (detail ? '<small>' + escapeHTML(detail) + '</small>' : '') + '</span></label>';
   }
   function mergeForm() {
-    const preparedById = new Map(list(catalog?.prepared).filter(row => row.action === 'source.prepare' && row.state === 'complete')
-      .map(row => [row.task_id, {id:row.task_id, title:row.title, ended_at:row.updated_at, restored:true}]));
-    for (const task of ownedTasks().filter(row => row.action === 'source.prepare' && row.state === 'complete'))
-      preparedById.set(task.id, {...task, title:taskName(task)});
-    const prepared = [...preparedById.values()];
+    const prepared = sourceOperations().filter(row => row.state === 'complete')
+      .map(row => ({...row, title:taskName(row)}));
     const collections = list(state?.data?.sources);
     const registered = list(state?.registered_sources);
     const items = prepared.map(task => selectionBox('prepared', task.id, task.title, 'Prepared ' + stamp(task.ended_at) + (task.restored ? ' · retained with this study' : ''), mergeDraft.prepared)).join('') +
@@ -227,28 +279,145 @@ export function createSourceWorkbench(host) {
     if (!container) return;
     const target = container.querySelector('[data-sp-tasks]');
     if (!target) return;
-    const tasks = ownedTasks();
-    target.innerHTML = tasks.length ? '<div class="table-scroll"><table><thead><tr><th>Source operation</th><th>Status</th><th>Started / completed</th><th>Result</th><th>Actions</th></tr></thead><tbody>' +
-      tasks.map(task => {
+    const all = sourceOperations(), query = String(operationView.query || '').trim().toLocaleLowerCase();
+    const filtered = all.filter(task => {
+      const matches = operationView.status === 'all' ||
+        (operationView.status === 'active' && ['queued','running'].includes(task.state)) ||
+        (operationView.status === 'attention' && ['failed','interrupted','cancelled'].includes(task.state)) ||
+        (operationView.status === 'complete' && task.state === 'complete');
+      return matches && (!query || [taskName(task),task.id,task.payload?.method,task.action,
+        task.result?.source_collection_id,task.result?.source_id].join(' ').toLocaleLowerCase().includes(query));
+    });
+    const pageSize = 50;
+    operationView.offset = Math.min(Math.max(0,operationView.offset), Math.max(0,Math.floor((filtered.length-1)/pageSize)*pageSize));
+    const rows = filtered.slice(operationView.offset,operationView.offset+pageSize);
+    const statusSelect = container.querySelector('[data-sp-operation-status]');
+    if (statusSelect) statusSelect.value = operationView.status;
+    const search = container.querySelector('[data-sp-operation-search]');
+    if (search && search.value !== operationView.query) search.value = operationView.query;
+    const summary = container.querySelector('[data-sp-operation-count]');
+    if (summary) summary.textContent = filtered.length ? (operationView.offset+1).toLocaleString() + '–' +
+      (operationView.offset+rows.length).toLocaleString() + ' of ' + filtered.length.toLocaleString() +
+      (filtered.length !== all.length ? ' matching / '+all.length.toLocaleString()+' total' : ' source operations') :
+      (all.length ? 'No matching source operations' : 'No source operations yet');
+    target.innerHTML = rows.length ? '<div class="table-scroll"><table><thead><tr><th>Source operation</th><th>Status</th><th>Last activity</th><th>Result</th><th>Actions</th></tr></thead><tbody>' +
+      rows.map(task => {
         const result = task.result || {}, collectionId = result.source_collection_id || result.collection_id || result.source_collection?.id;
+        const updated = task.ended_at || task.updated_at || task.started_at || task.created_at;
         return '<tr' + (task.id === currentTask ? ' class="sp-current"' : '') + '><td><strong>' + escapeHTML(taskName(task)) +
-          '</strong><small class="mono">' + escapeHTML(short(task.id)) + '</small></td><td><span class="sp-status">' + escapeHTML(task.state) +
-          '</span>' + (task.error ? '<small>' + escapeHTML(task.error.message) + '</small>' : '') + '</td><td>' + escapeHTML(stamp(task.started_at || task.created_at)) +
-          '<small>' + escapeHTML(task.ended_at ? stamp(task.ended_at) : (task.state === 'queued' ? 'Waiting in the native queue' : '')) + '</small></td><td>' +
-          (collectionId ? textButton('open-source','Open imported edition','data-sp-id="' + escapeHTML(collectionId) + '"') :
-            (task.state === 'complete' ? 'Prepared originals available for composition' : 'Preserved in this operation')) + '</td><td><div class="sp-row-actions">' +
+          '</strong><small class="mono">' + escapeHTML(short(task.id)) + '</small>' +
+          (task.restored ? '<small>Retained with this study</small>' : '') + '</td><td><span class="sp-status">' + escapeHTML(task.state) +
+          '</span>' + (task.error ? '<small>' + escapeHTML(task.error.message || task.error) + '</small>' : '') + '</td><td>' +
+          escapeHTML(stamp(updated)) + (task.stage && task.stage !== task.state ? '<small>' + escapeHTML(task.stage) + '</small>' : '') +
+          '</td><td>' + (collectionId ? textButton('open-source','Open imported edition','data-sp-id="' + escapeHTML(collectionId) + '"') :
+            (task.state === 'complete' ? 'Prepared originals available for composition' : 'Original selection retained')) +
+          (result.source_count ? '<small>'+Number(result.source_count).toLocaleString()+' original sources</small>' : '') +
+          '</td><td><div class="sp-row-actions">' +
           textButton('progress','Progress','data-sp-id="' + escapeHTML(task.id) + '"') +
-          textButton('open-task','Details / files','data-sp-id="' + escapeHTML(task.id) + '"') +
-          (['failed','interrupted','cancelled'].includes(task.state) ? textButton('resume','Resume','data-sp-id="' + escapeHTML(task.id) + '"') : '') +
-          (task.state === 'queued' ? textButton('cancel','Cancel queued','data-sp-id="' + escapeHTML(task.id) + '"') : '') + '</div></td></tr>';
-      }).join('') + '</tbody></table></div>' : '<p class="sp-empty">Source preparation operations will appear here as soon as they are queued. Closing the browser keeps them in the native queue.</p>';
+          textButton('open-result','Details / files','data-sp-id="' + escapeHTML(task.id) + '"') +
+          (task.state === 'complete' ? textButton('select-prepared','Use in combined edition','data-sp-id="' + escapeHTML(task.id) + '"') : '') +
+          (!task.restored && ['failed','interrupted','cancelled'].includes(task.state) ? textButton('resume','Resume','data-sp-id="' + escapeHTML(task.id) + '"') : '') +
+          (!task.restored && task.state === 'queued' ? textButton('cancel','Cancel queued','data-sp-id="' + escapeHTML(task.id) + '"') : '') +
+          '</div></td></tr>';
+      }).join('') + '</tbody></table></div>' :
+      '<p class="sp-empty">' + (all.length ? 'Change the search or status to see other retained operations.' :
+        'Source operations and their original files appear here after preparation begins. Completed sources remain available when this study is reopened.') + '</p>';
+    if (filtered.length > pageSize) target.innerHTML += '<div class="sp-operation-pages">' +
+      textButton('operations-previous','Previous 50',operationView.offset ? '' : 'disabled') +
+      textButton('operations-next','Next 50',operationView.offset+pageSize < filtered.length ? '' : 'disabled') + '</div>';
+  }
+  function closeResult() {
+    resultGeneration++;
+    resultTask = null; resultDocument = null; resultBusy = false;
+    container?.querySelector('[data-sp-result]')?.close();
+  }
+  function resultSummary(values) {
+    return '<dl class="sp-result-summary">' + values.filter(([,value]) => value !== undefined && value !== null && value !== '')
+      .map(([label,value]) => '<div><dt>'+escapeHTML(label)+'</dt><dd>'+escapeHTML(
+        typeof value === 'object' ? JSON.stringify(value) : value)+'</dd></div>').join('')+'</dl>';
+  }
+  function renderResult() {
+    const dialog = container?.querySelector('[data-sp-result]');
+    if (!dialog || !resultTask) return;
+    const task = sourceOperation(resultTask), document = resultDocument || {};
+    const result = document.result || task?.result || {}, observed = document.progress || {};
+    const entry = result.source_entry || {}, files = list(document._downloads);
+    const title = result.title || (task ? taskName(task) : 'Original source operation');
+    const collectionId = result.source_collection_id;
+    const status = observed.state || task?.state;
+    const details = resultSummary([
+      ['State',status], ['Last activity',observed.updated_at ? stamp(observed.updated_at) : null],
+      ['Method',result.method || task?.payload?.method], ['Original sources',result.source_count],
+      ['Physical sources',result.physical_source_count], ['Source',entry.title || result.source_id],
+      ['Role',entry.role || result.role], ['Units',entry.units], ['Edition',entry.vintage],
+      ['Native resolution',entry.source_resolution], ['Resampling',entry.resampling],
+      ['Null values',entry.null_policy]
+    ]);
+    const fileRows = files.map((file,index) => {
+      const url = String(file.url || ''), download = url + (url.includes('?') ? '&' : '?') + 'download=1';
+      return '<div class="sp-result-file"><div><strong>' + escapeHTML(file.label || file.filename || 'Original file') +
+        '</strong><small>'+escapeHTML(file.filename || '')+' · '+escapeHTML(size(file.bytes))+'</small>' +
+        (file.sha256 ? '<details><summary>File identity</summary><code>'+escapeHTML(file.sha256)+'</code></details>' : '') +
+        '</div><div class="sp-row-actions">' +
+        (typeof host.openFilePreview === 'function' ? textButton('preview-result-file','Preview','data-sp-file="'+index+'"') : '') +
+        (url.startsWith('/api/file/') ? '<a href="'+escapeHTML(download)+'" download>Download</a>' : '') + '</div></div>';
+    }).join('');
+    const stages = list(document.stages);
+    dialog.innerHTML = '<header><div><h2 id="sp-result-title">'+escapeHTML(title)+'</h2><p>' +
+      (task?.restored ? 'Saved source preparation in this study' : 'Original source operation') +
+      '</p></div>'+textButton('result-close','Close')+'</header>' +
+      (resultBusy ? '<p role="status">Reading the saved source result and original files…</p>' : '') +
+      (document.error ? '<p class="sp-inline-error" role="alert">'+escapeHTML(document.error)+'</p>' : '') + details +
+      (observed.error ? '<p class="sp-inline-error">'+escapeHTML(observed.error.message || observed.error)+'</p>' : '') +
+      '<div class="sp-actions">'+textButton('result-refresh','Refresh result',resultBusy ? 'disabled' : '')+
+      (collectionId ? textButton('open-source','Open imported edition','data-sp-id="'+escapeHTML(collectionId)+'"') : '')+
+      (status === 'complete' ? textButton('select-prepared','Use in combined edition','data-sp-id="'+escapeHTML(resultTask)+'"','primary') : '')+
+      (!task?.restored && task ? textButton('open-task','Task history','data-sp-id="'+escapeHTML(resultTask)+'"') : '')+'</div>'+
+      '<section><h3>Original files</h3>'+(fileRows || '<p class="sp-help">'+
+        (resultBusy ? 'The saved file list is loading.' : 'Original documents appear as the source operation records its result.')+'</p>')+'</section>'+
+      (stages.length ? '<details class="sp-result-stages"><summary>Preparation stages</summary><ol class="sp-steps">'+
+        stages.map(stage=>'<li><strong>'+escapeHTML(stage.name || stage.label || stage.id)+'</strong> · '+escapeHTML(stage.state || stage.status || '')+
+          (stage.started_at ? '<small>'+escapeHTML(stamp(stage.started_at))+(stage.ended_at ? ' — '+escapeHTML(stamp(stage.ended_at)) : '')+'</small>' : '')+'</li>').join('')+
+        '</ol></details>' : '')+
+      (Object.keys(entry).length ? '<details class="sp-result-native"><summary>Native source description</summary><pre class="sp-log">'+
+        escapeHTML(JSON.stringify(entry,null,2))+'</pre></details>' : '');
+  }
+  async function openResult(id, focus = true) {
+    if (!container || !id) return;
+    const expected = workspace, version = generation, request = ++resultGeneration;
+    resultTask = id; resultBusy = true;
+    if (focus) resultDocument = null;
+    let dialog = container.querySelector('[data-sp-result]');
+    if (!dialog) {
+      dialog = document.createElement('dialog');
+      dialog.className = 'sp-browser sp-result';
+      dialog.dataset.spResult = '';
+      dialog.setAttribute('aria-labelledby','sp-result-title');
+      container.append(dialog);
+      dialog.addEventListener('cancel',() => {resultGeneration++;resultTask=null;resultDocument=null;resultBusy=false;},
+        {signal:controls.signal});
+    }
+    renderResult();
+    if (focus && !dialog.open) dialog.showModal();
+    try {
+      const value = await read('result',{task_id:id},expected);
+      if (container && workspace === expected && version === generation && request === resultGeneration && resultTask === id)
+        resultDocument = value;
+    } catch (problem) {
+      if (container && workspace === expected && version === generation && request === resultGeneration)
+        resultDocument = {...resultDocument,error:problem.message};
+    } finally {
+      if (container && workspace === expected && version === generation && request === resultGeneration) {
+        resultBusy = false; renderResult();
+      }
+    }
   }
   function renderProgress() {
     const target = container?.querySelector('[data-sp-progress]');
     if (!target) return;
     if (!currentTask) { target.hidden = true; return; }
     target.hidden = false;
-    const task = ownedTasks().find(row => row.id === currentTask);
+    const task = sourceOperation(currentTask);
     const value = progress || {};
     const elapsed = value.elapsed_seconds ?? value.elapsed_s;
     const steps = list(value.stages || value.steps);
@@ -409,7 +578,8 @@ export function createSourceWorkbench(host) {
   }
   function change(event) {
     const node = event.target;
-    if (node.matches('[data-sp-method]')) {selectedMethod=node.value;error='';message='';renderForm();notice();}
+    if (node.matches('[data-sp-operation-status]')) {operationView.status=node.value;operationView.offset=0;save();renderTasks();}
+    else if (node.matches('[data-sp-method]')) {selectedMethod=node.value;error='';message='';renderForm();notice();}
     else if (node.matches('[data-sp-input]')) {draft().inputs[node.dataset.spInput]=node.value ? JSON.parse(node.value) : null;save();}
     else if (node.matches('[data-sp-option]')) {
       const field = list(selected()?.options).find(row=>row.name===node.dataset.spOption);
@@ -423,13 +593,23 @@ export function createSourceWorkbench(host) {
     else if (node.matches('[data-sp-compose-import]')) {mergeDraft.import_sources=node.checked;save();}
     else if (node.matches('[data-sp-merge-kind]')) {
       const kind=node.dataset.spMergeKind, values=new Set(mergeDraft[kind]);
-      node.checked?values.add(node.value):values.delete(node.value);mergeDraft[kind]=[...values];save();
+      node.checked?values.add(node.value):values.delete(node.value);mergeDraft[kind]=[...values];
+      if (node.checked && kind === 'prepared') {
+        const collectionId = sourceOperation(node.value)?.result?.source_collection_id;
+        if (collectionId) mergeDraft.collections = mergeDraft.collections.filter(id => id !== collectionId);
+      } else if (node.checked && kind === 'collections') {
+        mergeDraft.prepared = mergeDraft.prepared.filter(id => sourceOperation(id)?.result?.source_collection_id !== node.value);
+      }
+      save();
+      for (const checkbox of container.querySelectorAll('[data-sp-merge-kind]'))
+        checkbox.checked = mergeDraft[checkbox.dataset.spMergeKind].includes(checkbox.value);
     } else if (node.matches('[data-sp-upload]')) upload(node.dataset.spUpload,node.files?.[0]).catch(setError);
     else if (node.matches('[data-sp-root]') && browser) {browser.root_id=node.value;browser.path='';browse('').catch(setError);}
   }
   function input(event) {
     const node=event.target;
-    if(node.matches('[data-sp-title]')){draft().title=node.value;save();}
+    if(node.matches('[data-sp-operation-search]')){operationView.query=node.value;operationView.offset=0;save();renderTasks();}
+    else if(node.matches('[data-sp-title]')){draft().title=node.value;save();}
     else if(node.matches('[data-sp-compose-title]')){mergeDraft.title=node.value;save();}
   }
   async function click(event) {
@@ -444,8 +624,20 @@ export function createSourceWorkbench(host) {
       if(action==='go-sources')return host.navigate('sources');
       if(action==='browse')return await openBrowser(button.dataset.spField);
       if(action==='clear-input'){draft().inputs[button.dataset.spField]=null;renderForm();return;}
-      if(action==='open-source')return host.openItem('sources',id);
-      if(action==='open-task')return host.showTask(id);
+      if(action==='open-source'){closeResult();return host.openItem('sources',id);}
+      if(action==='open-task'){closeResult();return host.showTask(id);}
+      if(action==='open-result'){currentTask=id;progress=null;save();renderTasks();renderProgress();return await openResult(id);}
+      if(action==='result-close')return closeResult();
+      if(action==='result-refresh' && resultTask)return await openResult(resultTask,false);
+      if(action==='select-prepared')return selectPreparedOperation(id);
+      if(action==='preview-result-file'){
+        const file=list(resultDocument?._downloads)[Number(button.dataset.spFile)];
+        if(file && typeof host.openFilePreview==='function'){closeResult();return host.openFilePreview(file);}
+        return;
+      }
+      if(action==='operations-previous'||action==='operations-next'){
+        operationView.offset=Math.max(0,operationView.offset+(action==='operations-next'?50:-50));save();renderTasks();return;
+      }
       if(action==='progress'){currentTask=id;progress=null;save();renderTasks();renderProgress();return await fetchProgress();}
       if(action==='refresh-progress')return await fetchProgress();
       if(action==='resume'||action==='cancel'){
@@ -486,6 +678,7 @@ export function createSourceWorkbench(host) {
     const key=host.getWorkspace();
     if(container===target&&workspace===key&&target.querySelector('[data-sp-desk]')){update(currentState);return;}
     suspend();container=target;state=currentState;workspace=key;generation++;catalog=null;progress=null;loading=false;tasksFingerprint='';sourcesFingerprint='';busy=false;error='';message='';
+    operationView={query:'',status:'all',offset:0};operationCache=null;resultTask=null;resultDocument=null;resultBusy=false;
     mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};storageRead();
     container.innerHTML='<div data-sp-desk class="sp-desk"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>Prepare study inputs</h1><p>Prepare original elevation, land cover, rainfall and soil data, then import a complete source edition for modeling.</p></div><div class="page-actions">' +
@@ -493,7 +686,11 @@ export function createSourceWorkbench(host) {
       '<div class="sp-notice sp-error" role="alert" data-sp-error hidden></div><div class="sp-notice" role="status" aria-live="polite" data-sp-message hidden></div>' +
       '<section class="section sp-preparation"><div class="sp-method-row"><label for="sp-method">Source to prepare</label><select id="sp-method" data-sp-method></select>' +
       '<span data-sp-loading>Reading available original sources…</span></div><div data-sp-form-area></div></section>' +
-      '<section class="section"><header class="section-header"><div><h2>Source operations</h2><p>Inspect progress, resume an interrupted operation, and open its original files.</p></div></header>' +
+      '<section class="section"><header class="section-header"><div><h2>Source operations</h2><p>Inspect original files and progress, continue native work, and reuse saved preparations.</p></div></header>' +
+      '<div class="sp-operation-tools"><label class="sp-field"><span>Find an operation</span><input type="search" data-sp-operation-search placeholder="Source, method, or operation ID"></label>' +
+      '<label class="sp-field"><span>Status</span><select data-sp-operation-status><option value="all">All operations</option><option value="active">Queued or running</option>' +
+      '<option value="attention">Failed, interrupted or cancelled</option><option value="complete">Complete</option></select></label>' +
+      '<p data-sp-operation-count role="status" aria-live="polite"></p></div>' +
       '<div data-sp-tasks></div><section class="sp-progress" data-sp-progress hidden></section></section>' +
       '<section class="section" data-sp-merge-area></section>' +
       '<details class="sp-training"><summary>Explain this step</summary><dl><dt>What you do</dt><dd>Select an original file and the preparation choices, then choose Prepare selected source.</dd>' +
@@ -519,13 +716,19 @@ export function createSourceWorkbench(host) {
       if(catalog&&!busy){const target=container.querySelector('[data-sp-merge-area]');if(target)target.innerHTML=mergeForm();}
       const task=ownedTasks().find(row=>row.id===currentTask);
       if(task&&terminal(task.state))loadCatalog();
+      if(resultTask && !resultBusy) {
+        const opened=sourceOperation(resultTask);
+        if(opened && terminal(opened.state) && opened.state!==resultDocument?.progress?.state)
+          openResult(resultTask,false);
+      }
     }
     if(currentTask)fetchProgress();
   }
   function suspend() {
+    closeResult();
     controls?.abort();controls=null;
     container?.querySelector('[data-sp-browser]')?.close();
-    container=null;browser=null;generation++;browserGeneration++;loading=false;progressBusy=false;
+    container=null;browser=null;operationCache=null;generation++;browserGeneration++;loading=false;progressBusy=false;
   }
   return {mount,update,suspend};
 }

@@ -1,0 +1,106 @@
+id,waterbody_name,county_codes,class_raw,class_code,previous_class,site_specific,no_discharge_zone,rfp_high_quality_candidate,reach_description,source_pdf_page,source_printed_page,source_line_start,source_line_end
+sc-r61-69-2023-L0131,Abner Creek,Pkns,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Eastatoe Creek,6,3,131,131
+sc-r61-69-2023-L0277,Bad Creek,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the creek from the North Carolina line to Chattooga River,8,5,277,278
+sc-r61-69-2023-L0279,Bad Creek Reservoir,Ocne,FW,FW,,false,false,false,The entire reservoir,8,5,279,279
+sc-r61-69-2023-L0306,Battle Creek,Ocne,TPGT,TPGT,,false,false,true,The entire creek tributary to Tugaloo River,8,5,306,306
+sc-r61-69-2023-L0307,Bear Creek,Andn,FW,FW,,false,false,false,The entire creek tributary to Rocky Creek,8,5,307,307
+sc-r61-69-2023-L0400,Brasstown Creek,Ocne,TPGT,TPGT,,false,false,true,That portion of the creek from its headwaters to Tugaloo River,10,7,400,401
+sc-r61-69-2023-L0459,Burgess Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to Mill Creek,11,8,459,460
+sc-r61-69-2023-L0475,Camp Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Opossum Creek,11,8,475,475
+sc-r61-69-2023-L0477,Cane Creek,Pkns,TN,TN,,false,false,true,The entire creek tributary to Lake Keowee,11,8,477,477
+sc-r61-69-2023-L0481,Cantrell Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to Lake Cheohee,11,8,481,482
+sc-r61-69-2023-L0488,Carrick Creek,Pkns,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to Pinnacle Lake,11,8,488,489
+sc-r61-69-2023-L0492,Carrick Creek,Pkns,FW,FW,,false,false,false,That portion of the creek from the dam at Pinnacle Lake to the end of Table Rock State Park land,12,9,492,494
+sc-r61-69-2023-L0530,Chattooga River,Ocne,FW,FW,,false,false,false,That portion of the river from its confluence with Opossum Creek to Tugaloo River,12,9,530,531
+sc-r61-69-2023-L0532,Chattooga River,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the river from the North Carolina line to its confluence with Opossum Creek,12,9,532,533
+sc-r61-69-2023-L0534,Chauga Creek (also called Jerry Creek),Ocne,FW,FW,,false,false,false,The entire creek tributary to Chauga River,12,9,534,536
+sc-r61-69-2023-L0537,Chauga River,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the river from its headwaters to 1 mile above U.S. Rte 76,12,9,537,538
+sc-r61-69-2023-L0539,Chauga River,Ocne,FW,FW,,false,false,false,That portion of the river from 1 mile above U.S. Rte 76 to Tugaloo River,12,9,539,540
+sc-r61-69-2023-L0545,Cheohee Creek,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to end of U.S. Forest Service Land,12,9,545,546
+sc-r61-69-2023-L0549,Cheohee Creek,Ocne,FW,FW,,false,false,false,That portion of the creek from U.S. Forest Service Land to its confluence with Tamassee Creek,13,10,549,551
+sc-r61-69-2023-L0557,Choestoea Creek,Ocne,FW,FW,,false,false,false,The entire creek tributary to Hartwell Lake,13,10,557,557
+sc-r61-69-2023-L0569,Clark(s) Hill Reservoir (NDZ) (also called J. Strom Thurmond Lake),Abvl|Mcmk,FW,FW,,false,true,false,The entire reservoir on Savannah River,13,10,569,573
+sc-r61-69-2023-L0637,Corbin Creek,Ocne,ORW(TPGT),ORW,TPGT,false,false,true,The entire creek tributary to Devils Fork,14,11,637,637
+sc-r61-69-2023-L0657,Dark Creek,Ocne,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to East Fork Chattooga River,14,11,657,658
+sc-r61-69-2023-L0674,Devils Fork,Ocne,TN,TN,,false,false,true,That portion of the creek from its confluence of Corbin Creek and Howard Creek to Lake Jocassee,15,12,674,676
+sc-r61-69-2023-L0707,Eastatoe Creek,Pkns,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to its confluence with Laurel Creek,15,12,707,708
+sc-r61-69-2023-L0709,Eastatoe Creek,Pkns,TPGT,TPGT,,false,false,true,That portion of the creek from its confluence with Laurel Creek to Lake Keowee,15,12,709,710
+sc-r61-69-2023-L0717,East Fork Chattooga River,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the river from the North Carolina line to its confluence with Indian Camp Branch,16,13,717,720
+sc-r61-69-2023-L0721,East Fork Chattooga River,Ocne,TN,TN,,false,false,true,That portion of the river from its confluence with Indian Camp Branch to Chattooga River,16,13,721,724
+sc-r61-69-2023-L0736,Eighteen Mile Creek,Pkns|Andn,FW,FW,,false,false,false,The entire creek tributary to Hartwell Lake,16,13,736,736
+sc-r61-69-2023-L0737,Emory Creek,Pkns,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to the northern boundary of Table Rock Resort property,16,13,737,739
+sc-r61-69-2023-L0740,Emory Creek,Pkns,TN,TN,,false,false,true,That portion of the creek from northern boundary of Table Rock Resort property to its confluence with Oolenoy River,16,13,740,742
+sc-r61-69-2023-L0748,Fall Creek,Ocne,FW,FW,,false,false,false,The entire creek tributary to Chattooga River,16,13,748,748
+sc-r61-69-2023-L0825,Green Creek,Pkns,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Carrick Creek,17,14,825,825
+sc-r61-69-2023-L0847,Hartwell Lake (NDZ),Andn|Ocne|Pkns,FW,FW,,false,true,false,All that portion within South Carolina,18,15,847,851
+sc-r61-69-2023-L0877,Howard Creek,Ocne,ORW(TPGT),ORW,TPGT,false,false,true,That portion of the creek from its headwaters to 0.3 mile below S.C. Hwy 130 above the flow augmentation system at the Bad Creek pumped storage station dam,18,15,877,880
+sc-r61-69-2023-L0881,Howard Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from just above the flow augmentation system at the Bad Creek pumped storage station dam to Devils Fork,18,15,881,883
+sc-r61-69-2023-L0889,Indian Camp Branch,Ocne,ORW(FW),ORW,FW,false,false,true,The entire branch tributary to East Fork Chattooga River,19,16,889,892
+sc-r61-69-2023-L0896,Ira Branch,Ocne,ORW(FW),ORW,FW,false,false,true,The entire branch tributary to the Chattooga River,19,16,896,897
+sc-r61-69-2023-L0899,J. Strom Thurmond Lake (also called Clarks Hill Reservoir) (NDZ),Abvl|Mcmk,FW,FW,,false,true,false,The entire lake on Savannah River,19,16,899,903
+sc-r61-69-2023-L0904,Jackies Branch,Pkns,TN,TN,,false,false,true,The entire branch tributary to the confluence with Laurel Fork Creek,19,16,904,905
+sc-r61-69-2023-L0906,Jacks Creek,Ocne,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to the East Fork Chattooga River,19,16,906,907
+sc-r61-69-2023-L0937,Jumping Branch,Ocne,TN,TN,,false,false,true,That portion of the branch from its headwaters to Lake Cherokee,19,16,937,938
+sc-r61-69-2023-L0945,King Creek,Ocne,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Chattooga River,20,17,945,945
+sc-r61-69-2023-L0947,Knox Creek,Ocne,FW,FW,,false,false,false,That portion of the creek from Lake Cheohee Dam to the confluence with Cheohee Creek,20,17,947,948
+sc-r61-69-2023-L0963,Lake Jocassee,Ocne,TPGT,TPGT,,false,false,true,The entire lake,20,17,963,963
+sc-r61-69-2023-L0964,Lake Keowee (NDZ),Andn|Pkns,FW,FW,,false,true,false,The entire lake,20,17,964,964
+sc-r61-69-2023-L0990,Lake Tugaloo,Ocne,TPGT,TPGT,,false,false,true,The entire lake,20,17,990,990
+sc-r61-69-2023-L0998,Laurel Branch,Pkns,ORW(FW),ORW,FW,false,false,true,The entire branch tributary to Eastatoe Creek,20,17,998,998
+sc-r61-69-2023-L1000,Laurel Creek,Pkns,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Eastatoe Creek,20,17,1000,1000
+sc-r61-69-2023-L1001,Laurel Fork Creek,Pkns,TN,TN,,false,false,true,The entire creek tributary to Lake Jocassee,20,17,1001,1001
+sc-r61-69-2023-L1013,Lick Log Creek,Ocne,FW,FW,,false,false,false,That portion of the creek from its headwaters through Thrift Lake,21,18,1013,1014
+sc-r61-69-2023-L1015,Lick Log Creek,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the creek from Thrift Lake to Chattooga River,21,18,1015,1016
+sc-r61-69-2023-L1021,Limber Pole Creek,Ocne,TN,TN,,false,false,true,The entire creek tributary to Devils Fork,21,18,1021,1021
+sc-r61-69-2023-L1027,Little Eastatoe Creek,Pkns,TPGT,TPGT,,false,false,true,That portion of the creek from its headwaters to its confluence with Eastatoe Creek,21,18,1027,1030
+sc-r61-69-2023-L1053,Little River,Ocne,FW,FW,,false,false,false,The entire river tributary to Lake Hartwell,21,18,1053,1053
+sc-r61-69-2023-L1071,Long Creek,Ocne,FW,FW,,false,false,false,The entire creek tributary to Chattooga River,22,19,1071,1071
+sc-r61-69-2023-L1104,Martin Creek,Ocne,FW,FW,,false,false,false,The entire creek tributary to Lake Hartwell,22,19,1104,1104
+sc-r61-69-2023-L1124,McKinneys Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to S.C. Hwy 25,23,20,1124,1125
+sc-r61-69-2023-L1126,McKinneys Creek,Ocne,FW,FW,,false,false,false,That portion of the creek from S.C. Hwy 25 to Lake Keowee,23,20,1126,1127
+sc-r61-69-2023-L1153,Mill Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to Burgess Creek,23,20,1153,1154
+sc-r61-69-2023-L1155,Mill Creek,Pkns,TPGT,TPGT,,false,false,true,The entire creek tributary to Eastatoe Creek,23,20,1155,1155
+sc-r61-69-2023-L1164,Moody Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to its confluence with Cantrell Creek,23,20,1164,1165
+sc-r61-69-2023-L1169,Moss Mill Creek,Ocne,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Chattooga River,23,20,1169,1169
+sc-r61-69-2023-L1216,North Fork Little River,Ocne,TPGT,TPGT,,false,false,true,That portion of the river from the confluence of Mill Creek and Burgess Creek to S.C. Hwy 11,24,21,1216,1219
+sc-r61-69-2023-L1220,North Fork Little River,Ocne,FW,FW,,false,false,false,That portion of the river from S.C. Hwy 11 to its confluence with Little River,24,21,1220,1223
+sc-r61-69-2023-L1252,Oolenoy River,Pkns,TPGT,TPGT,,false,false,true,That portion of the river from its headwaters to Emory Creek,25,22,1252,1253
+sc-r61-69-2023-L1254,Oolenoy River,Pkns,FW,FW,,false,false,false,That portion of the river from Emory Creek to its confluence with South Saluda River,25,22,1254,1255
+sc-r61-69-2023-L1274,Pig Pen Branch,Ocne,ORW(FW),ORW,FW,false,false,true,The entire branch tributary to Lick Log Creek,25,22,1274,1274
+sc-r61-69-2023-L1275,Pinckney Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Chattooga River,25,22,1275,1275
+sc-r61-69-2023-L1276,Pinnacle Lake,Pkns,ORW(FW),ORW,FW,false,false,true,The entire lake,25,22,1276,1276
+sc-r61-69-2023-L1305,Ramsey Creek,Ocne,FW,FW,,false,false,false,The entire creek tributary to Chauga River,26,23,1305,1305
+sc-r61-69-2023-L1312,Reedy Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Chattooga River,26,23,1312,1312
+sc-r61-69-2023-L1313,Reedy Cove Creek,Pkns,FW,FW,,false,false,false,The entire creek tributary to Eastatoe Creek,26,23,1313,1313
+sc-r61-69-2023-L1320,Rock Creek,Pkns,TN,TN,,false,false,true,That portion of the creek within South Carolina,26,23,1320,1320
+sc-r61-69-2023-L1323,Rocky Bottom Creek,Pkns,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Eastatoe Creek,26,23,1323,1323
+sc-r61-69-2023-L1332,Rocky River,Abvl|Andn,FW,FW,,false,false,false,The entire river tributary to Savannah River,26,23,1332,1332
+sc-r61-69-2023-L1398,Savannah River,Abvl|Andn,TPGT,TPGT,,false,false,true,That portion of the river from Lake Hartwell Dam to the headwaters of Lake Richard B. Russell,27,24,1398,1399
+sc-r61-69-2023-L1400,Savannah River,Abvl|Aikn|Aldl|Andn|Brwl|Efld|Hmpt|Mcmk,FW,FW,,false,false,false,That portion of the river from the headwaters of Lake Richard B. Russell to Seaboard Coastline Railroad,27,24,1400,1406
+sc-r61-69-2023-L1415,Sawhead Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Opossum Creek,28,25,1415,1415
+sc-r61-69-2023-L1446,Side of Mountain Creek,Pkns,ORW(FW),ORW,FW,false,false,true,The entire creek tributary to Eastatoe Creek,28,25,1446,1448
+sc-r61-69-2023-L1451,Six and Twenty Creek,Andn,FW,FW,,false,false,false,The entire creek tributary to Lake Hartwell,28,25,1451,1453
+sc-r61-69-2023-L1465,Slatten Branch,Ocne,ORW(FW),ORW,FW,false,false,true,The entire branch tributary to East Fork Chattooga River,29,26,1465,1466
+sc-r61-69-2023-L1467,Smeltzer Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to S.C. Hwy 130,29,26,1467,1468
+sc-r61-69-2023-L1469,Smeltzer Creek,Ocne,TPGT,TPGT,,false,false,true,That portion of the creek from S.C. Hwy 130 to North Fork Little River,29,26,1469,1470
+sc-r61-69-2023-L1494,South Saluda River,Gnvl|Pkns,ORW(FW),ORW,FW,false,false,true,That portion of the river from its headwaters to Table Rock Reservoir Dam,29,26,1494,1495
+sc-r61-69-2023-L1496,South Saluda River,Gnvl|Pkns,TPGT,TPGT,,false,false,true,That portion of the river from Table Rock Reservoir Dam to Hwy 8,29,26,1496,1497
+sc-r61-69-2023-L1498,South Saluda River,Gnvl|Pkns,FW,FW,,false,false,false,That portion of the river from S.C. Hwy 8 to junction with North Saluda River,29,26,1498,1499
+sc-r61-69-2023-L1524,Stevens Creek,Efld|Mcmk,FW,FW,,false,false,false,The entire creek tributary to Savannah River,29,26,1524,1524
+sc-r61-69-2023-L1547,Swaford Creek,Ocne,TN,TN,,false,false,true,The entire creek tributary to Whetstone Creek,30,27,1547,1547
+sc-r61-69-2023-L1554,Tamassee Creek,Ocne,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to end of U.S. Forest Service Land,30,27,1554,1555
+sc-r61-69-2023-L1556,Tamassee Creek,Ocne,FW,FW,,false,false,false,That portion of the creek from U.S. Forest Service Land to its confluence with Cheohee Creek,30,27,1556,1558
+sc-r61-69-2023-L1562,Thompson River,Ocne,TN,TN,,false,false,true,That portion of the river from the State line to Lake Jocassee,30,27,1562,1563
+sc-r61-69-2023-L1565,Tilly Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Chattooga River,30,27,1565,1565
+sc-r61-69-2023-L1597,Townes Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from the confluence of West Fork and Crane Creek to Lake Cherokee,31,28,1597,1598
+sc-r61-69-2023-L1601,Tugaloo River,Ocne,FW,FW,,false,false,false,That portion of the river from Tugaloo Dam to Lake Hartwell,31,28,1601,1602
+sc-r61-69-2023-L1613,Turpin Branch,Ocne,FW,FW,,false,false,false,The entire branch tributary to Chattooga River,31,28,1613,1613
+sc-r61-69-2023-L1615,Twelvemile Creek,Pkns,FW,FW,,false,false,false,The entire creek tributary to Lake Hartwell,31,28,1615,1615
+sc-r61-69-2023-L1619,Three and Twenty Creek,Andn,FW,FW,,false,false,false,The entire creek tributary to Lake Hartwell,31,28,1619,1621
+sc-r61-69-2023-L1738,West Fork,Ocne,TN,TN,,false,false,true,That portion from its headwaters to its confluence with Crane Creek,33,30,1738,1739
+sc-r61-69-2023-L1745,Whetstone Creek,Ocne,TN,TN,,false,false,true,The entire creek tributary to Chattooga River,33,30,1745,1745
+sc-r61-69-2023-L1750,White Oak Creek,Ocne,TN,TN,,false,false,true,That portion of the creek from its headwaters to Knox Creek,33,30,1750,1751
+sc-r61-69-2023-L1752,Whitewater River,Ocne,ORW(TPGT),ORW,TPGT,false,false,true,That portion of the river from State line to Lake Jocassee,33,30,1752,1753
+sc-r61-69-2023-L1764,Willis Creek,Pkns,ORW(FW),ORW,FW,false,false,true,That portion of the creek from its headwaters to the northern boundary of Table Rock Resort property,34,31,1764,1766
+sc-r61-69-2023-L1767,Willis Creek,Pkns,TN,TN,,false,false,true,That portion of the creek from the northern boundary of Table Rock Resort property to its confluence with Oolenoy River,34,31,1767,1769
+sc-r61-69-2023-L1783,Wright Creek,Ocne,ORW(TPGT),ORW,TPGT,false,false,true,The entire creek tributary to Lake Jocassee,34,31,1783,1783

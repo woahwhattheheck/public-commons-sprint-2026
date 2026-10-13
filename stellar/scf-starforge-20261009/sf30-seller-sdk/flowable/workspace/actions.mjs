@@ -1,14 +1,23 @@
 // MIT. Shared action contract for Flowable's operator, installed SDK and agent tools.
 export const FLOWABLE_WORKSPACE_SCHEMA='stellar-forge.flowable-workspace.v1';
 export const FLOWABLE_MAX_JSON_BYTES=128*1024*1024;
+/** Resolve only the original CMMN ownership fields from shared native collections. */
+export function flowableCaseInstanceId(value){
+  if(!value||typeof value!=='object')return undefined;
+  if(value.scopeType!=null&&value.scopeType!==''&&value.scopeType!=='cmmn')return undefined;
+  if(typeof value.caseInstanceId==='string'&&value.caseInstanceId.length)return value.caseInstanceId;
+  if(value.scopeType==='cmmn'&&typeof value.scopeId==='string'&&value.scopeId.length)return value.scopeId;
+  return undefined;
+}
 const text=maximum=>({type:'string',maxLength:maximum});
 const id={type:'string',pattern:'^[a-f0-9]{24}$'};
 const sha={type:'string',pattern:'^[a-f0-9]{64}$'};
 const uuid={type:'string',pattern:'^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$'};
 const revision={type:'integer',minimum:1};
 export const FLOWABLE_RECORD_KINDS=Object.freeze(['connection','portfolio','release','process','task','migration',
-  'decisionPortfolio','decisionRelease','decisionEvaluation','delivery','receiving']);
-export const FLOWABLE_OPERATION_KINDS=Object.freeze(['release','process','task','migration','decisionRelease','decisionEvaluation']);
+  'decisionPortfolio','decisionRelease','decisionEvaluation','casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask','delivery','receiving']);
+export const FLOWABLE_OPERATION_KINDS=Object.freeze(['release','process','task','migration','decisionRelease','decisionEvaluation',
+  'caseRelease','caseInstance','casePlanItem','caseTask']);
 const kind={enum:FLOWABLE_RECORD_KINDS};
 const operationKind={enum:FLOWABLE_OPERATION_KINDS};
 const reference={type:'object',properties:{sha256:sha,bytes:{type:'integer',minimum:0},mediaType:text(200)},
@@ -59,6 +68,30 @@ export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
   prepareDecisionEvaluation:action('Prepare decision evaluation','Retain the complete native evaluation body and current decision definition selected by the engine.',true,
     preparation,['connectionId','selection']),
   dispatchDecisionEvaluation:action('Evaluate reviewed decisions','Submit the saved native DMN evaluation once and retain its complete result and available audit history.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  readCasePortfolio:action('Case portfolio','Page the captured native case definitions, work, milestones and history with their original source references.',false,
+    {id,revision,collection:text(100),...paging},['id','collection']),
+  readCaseDefinition:action('Case definition','Read the exact captured case definition and complete original CMMN deployment resources.',false,
+    {portfolioId:id,revision,definitionId:text(2000)},['portfolioId','definitionId']),
+  readCaseInstance:action('Case and work','Read one captured native case with its related work, milestones, variables and history.',false,
+    {portfolioId:id,revision,caseInstanceId:text(2000)},['portfolioId','caseInstanceId']),
+  captureCasePortfolio:action('Refresh cases','Capture complete native CMMN definitions, active cases, plan items, human work, milestones and history.',true,
+    {connectionId:id,label:text(300)},['connectionId']),
+  prepareCaseRelease:action('Prepare case release','Retain the complete original CMMN deployment and current native definition versions for review.',true,
+    preparation,['connectionId','selection']),
+  dispatchCaseRelease:action('Deploy reviewed case release','Submit the saved native CMMN deployment once and receive its original case definitions and resources.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareCaseInstance:action('Prepare case action','Retain the exact native case start or lifecycle request and its current source and case state.',true,
+    preparation,['connectionId','selection']),
+  dispatchCaseInstance:action('Execute reviewed case action','Submit the saved native case request once and read the resulting case, work and history.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareCasePlanItem:action('Prepare case work','Retain the selected native plan item or stage, its current state and complete requested action.',true,
+    preparation,['connectionId','selection']),
+  dispatchCasePlanItem:action('Execute reviewed case work','Submit the saved native plan-item or stage action once and read its resulting state and history.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareCaseTask:action('Prepare case task action','Retain the native case task and complete claim, delegation, resolution or completion request.',true,
+    preparation,['connectionId','selection']),
+  dispatchCaseTask:action('Execute reviewed case task','Submit the saved native case human-task request once and retain its current and historic result.',true,
     dispatch,['id','expectedRevision','planSha256']),
   prepareRelease:action('Prepare release','Retain the exact original BPMN deployment request and current engine preimage for review.',true,
     preparation,['connectionId','selection']),

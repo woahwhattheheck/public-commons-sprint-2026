@@ -134,6 +134,18 @@ export class FlowableProductClient {
   dispatchDecisionRelease(input) { return this.call('dispatchDecisionRelease', input); }
   prepareDecisionEvaluation(input) { return this.call('prepareDecisionEvaluation', input); }
   dispatchDecisionEvaluation(input) { return this.call('dispatchDecisionEvaluation', input); }
+  readCasePortfolio(input) { return this.call('readCasePortfolio', input); }
+  readCaseDefinition(input) { return this.call('readCaseDefinition', input); }
+  readCaseInstance(input) { return this.call('readCaseInstance', input); }
+  captureCasePortfolio(input) { return this.call('captureCasePortfolio', input); }
+  prepareCaseRelease(input) { return this.call('prepareCaseRelease', input); }
+  dispatchCaseRelease(input) { return this.call('dispatchCaseRelease', input); }
+  prepareCaseInstance(input) { return this.call('prepareCaseInstance', input); }
+  dispatchCaseInstance(input) { return this.call('dispatchCaseInstance', input); }
+  prepareCasePlanItem(input) { return this.call('prepareCasePlanItem', input); }
+  dispatchCasePlanItem(input) { return this.call('dispatchCasePlanItem', input); }
+  prepareCaseTask(input) { return this.call('prepareCaseTask', input); }
+  dispatchCaseTask(input) { return this.call('dispatchCaseTask', input); }
   reconcileOperation(input) { return this.call('reconcileOperation', input); }
   exportWorkspace(input) { return this.call('exportWorkspace', input); }
   inspectDelivery(input) { return this.call('inspectDelivery', input); }
