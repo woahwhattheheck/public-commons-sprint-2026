@@ -1,0 +1,316 @@
+{
+  "schema": "upstate.water-context/v1",
+  "title": "Four RFP focus HUCs — observed source-water context",
+  "source_reference": "ECO-SOURCE12-20261012",
+  "model_domain_huc12s": [
+    "030601010703",
+    "030601010704",
+    "030601020502",
+    "030601020507"
+  ],
+  "model_domain_huc_count": 4,
+  "nrcs_inventory": {
+    "edition": "FY26",
+    "state_huc_rows": 337,
+    "unique_source_hucs": 303,
+    "matched_state_huc_rows": 5,
+    "missing_domain_hucs": [],
+    "outside_domain_state_huc_rows": 332
+  },
+  "hucs": [
+    {
+      "huc12": "030601010703",
+      "nrcs_coverage": "matched_source_rows",
+      "nrcs_edition": "FY26",
+      "nrcs_state_rows": [
+        {
+          "huc12_code": "030601010703",
+          "huc12_name": "Upper Six And Twenty Creek",
+          "st_usps": "SC",
+          "fy26_status": "Not Selected",
+          "system_type": null,
+          "resource_concern": null,
+          "st_ac": 19129.11199361,
+          "huc12_ac": 19129.1,
+          "huc12_states": "SC",
+          "OBJECTID": 49299,
+          "last_edited_date": 1763749802000
+        }
+      ],
+      "nrcs_priority_states": []
+    },
+    {
+      "huc12": "030601010704",
+      "nrcs_coverage": "matched_source_rows",
+      "nrcs_edition": "FY26",
+      "nrcs_state_rows": [
+        {
+          "huc12_code": "030601010704",
+          "huc12_name": "Lower Six And Twenty Creek",
+          "st_usps": "SC",
+          "fy26_status": "Not Selected",
+          "system_type": null,
+          "resource_concern": null,
+          "st_ac": 27604.20274688,
+          "huc12_ac": 27604.19,
+          "huc12_states": "SC",
+          "OBJECTID": 49300,
+          "last_edited_date": 1763749802000
+        }
+      ],
+      "nrcs_priority_states": []
+    },
+    {
+      "huc12": "030601020502",
+      "nrcs_coverage": "matched_source_rows",
+      "nrcs_edition": "FY26",
+      "nrcs_state_rows": [
+        {
+          "huc12_code": "030601020502",
+          "huc12_name": "Choestoea Creek",
+          "st_usps": "SC",
+          "fy26_status": "Not Selected",
+          "system_type": null,
+          "resource_concern": null,
+          "st_ac": 24563.08015466,
+          "huc12_ac": 24563.07,
+          "huc12_states": "SC",
+          "OBJECTID": 49923,
+          "last_edited_date": 1763749802000
+        }
+      ],
+      "nrcs_priority_states": []
+    },
+    {
+      "huc12": "030601020507",
+      "nrcs_coverage": "matched_source_rows",
+      "nrcs_edition": "FY26",
+      "nrcs_state_rows": [
+        {
+          "huc12_code": "030601020507",
+          "huc12_name": "Lower Tugaloo River",
+          "st_usps": "GA",
+          "fy26_status": "High Priority Area",
+          "system_type": "Ground",
+          "resource_concern": "Water Quality",
+          "st_ac": 38264.28633246,
+          "huc12_ac": 59689.69,
+          "huc12_states": "GA,SC",
+          "OBJECTID": 47889,
+          "last_edited_date": 1763749802000
+        },
+        {
+          "huc12_code": "030601020507",
+          "huc12_name": "Lower Tugaloo River",
+          "st_usps": "SC",
+          "fy26_status": "High Priority Area",
+          "system_type": "Ground",
+          "resource_concern": "Water Quality",
+          "st_ac": 21425.42741381,
+          "huc12_ac": 59689.69,
+          "huc12_states": "GA,SC",
+          "OBJECTID": 49922,
+          "last_edited_date": 1763749802000
+        }
+      ],
+      "nrcs_priority_states": [
+        "GA",
+        "SC"
+      ]
+    }
+  ],
+  "classified_source_inventory": {
+    "feature_count": 1886,
+    "unique_source_hucs": 19,
+    "class_counts": {
+      "TPGT": 599,
+      "ORW": 1040,
+      "TN": 247
+    },
+    "source_huc_class_counts": [
+      {
+        "publisher_huc12": "030601010102",
+        "class_code": "TN",
+        "feature_count": 22,
+        "named_feature_count": 15
+      },
+      {
+        "publisher_huc12": "030601010102",
+        "class_code": "TPGT",
+        "feature_count": 20,
+        "named_feature_count": 18
+      },
+      {
+        "publisher_huc12": "030601010103",
+        "class_code": "TPGT",
+        "feature_count": 25,
+        "named_feature_count": 23
+      },
+      {
+        "publisher_huc12": "030601010104",
+        "class_code": "ORW",
+        "feature_count": 40,
+        "named_feature_count": 22
+      },
+      {
+        "publisher_huc12": "030601010104",
+        "class_code": "TN",
+        "feature_count": 20,
+        "named_feature_count": 12
+      },
+      {
+        "publisher_huc12": "030601010104",
+        "class_code": "TPGT",
+        "feature_count": 64,
+        "named_feature_count": 47
+      },
+      {
+        "publisher_huc12": "030601010105",
+        "class_code": "TPGT",
+        "feature_count": 56,
+        "named_feature_count": 44
+      },
+      {
+        "publisher_huc12": "030601010201",
+        "class_code": "TN",
+        "feature_count": 54,
+        "named_feature_count": 25
+      },
+      {
+        "publisher_huc12": "030601010201",
+        "class_code": "TPGT",
+        "feature_count": 1,
+        "named_feature_count": 0
+      },
+      {
+        "publisher_huc12": "030601010202",
+        "class_code": "ORW",
+        "feature_count": 79,
+        "named_feature_count": 39
+      },
+      {
+        "publisher_huc12": "030601010202",
+        "class_code": "TPGT",
+        "feature_count": 243,
+        "named_feature_count": 86
+      },
+      {
+        "publisher_huc12": "030601010301",
+        "class_code": "ORW",
+        "feature_count": 42,
+        "named_feature_count": 18
+      },
+      {
+        "publisher_huc12": "030601010301",
+        "class_code": "TN",
+        "feature_count": 23,
+        "named_feature_count": 15
+      },
+      {
+        "publisher_huc12": "030601010302",
+        "class_code": "TN",
+        "feature_count": 57,
+        "named_feature_count": 13
+      },
+      {
+        "publisher_huc12": "030601010302",
+        "class_code": "TPGT",
+        "feature_count": 36,
+        "named_feature_count": 14
+      },
+      {
+        "publisher_huc12": "030601020204",
+        "class_code": "ORW",
+        "feature_count": 169,
+        "named_feature_count": 135
+      },
+      {
+        "publisher_huc12": "030601020204",
+        "class_code": "TN",
+        "feature_count": 6,
+        "named_feature_count": 2
+      },
+      {
+        "publisher_huc12": "030601020209",
+        "class_code": "ORW",
+        "feature_count": 171,
+        "named_feature_count": 115
+      },
+      {
+        "publisher_huc12": "030601020209",
+        "class_code": "TN",
+        "feature_count": 65,
+        "named_feature_count": 26
+      },
+      {
+        "publisher_huc12": "030601020210",
+        "class_code": "ORW",
+        "feature_count": 28,
+        "named_feature_count": 28
+      },
+      {
+        "publisher_huc12": "030601020210",
+        "class_code": "TPGT",
+        "feature_count": 12,
+        "named_feature_count": 9
+      },
+      {
+        "publisher_huc12": "030601020301",
+        "class_code": "ORW",
+        "feature_count": 163,
+        "named_feature_count": 74
+      },
+      {
+        "publisher_huc12": "030601020302",
+        "class_code": "ORW",
+        "feature_count": 199,
+        "named_feature_count": 93
+      },
+      {
+        "publisher_huc12": "030601020304",
+        "class_code": "ORW",
+        "feature_count": 149,
+        "named_feature_count": 78
+      },
+      {
+        "publisher_huc12": "030601020403",
+        "class_code": "TPGT",
+        "feature_count": 40,
+        "named_feature_count": 32
+      },
+      {
+        "publisher_huc12": "030601030402",
+        "class_code": "TPGT",
+        "feature_count": 2,
+        "named_feature_count": 1
+      },
+      {
+        "publisher_huc12": "030601030404",
+        "class_code": "TPGT",
+        "feature_count": 2,
+        "named_feature_count": 2
+      },
+      {
+        "publisher_huc12": "030601030405",
+        "class_code": "TPGT",
+        "feature_count": 97,
+        "named_feature_count": 27
+      },
+      {
+        "publisher_huc12": "030601030410",
+        "class_code": "TPGT",
+        "feature_count": 1,
+        "named_feature_count": 1
+      }
+    ],
+    "assignment": "Original source HUC attributes; bind current model membership by spatial intersection.",
+    "geometry_role": "Classified stream reaches",
+    "source_crs": "EPSG:3857"
+  },
+  "interpretation": {
+    "nrcs_status": "Keep state rows, system type and resource concern together; a missing row differs from Not Selected.",
+    "nrcs_area": "st_ac is the state portion; huc12_ac describes the whole HUC and repeats on cross-state rows.",
+    "designation": "A mapped classified reach identifies receiving water; identify its contributing land with the native hydrologic network.",
+    "length": "Shape_Length is publisher Web Mercator length; calculate analytical ground length in the selected study CRS."
+  }
+}

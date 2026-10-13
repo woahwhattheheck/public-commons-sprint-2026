@@ -195,3 +195,9 @@ Ordinary catalogue refreshes read retained programme metadata. The create/copy f
 ## Original daily flow and calibration context
 
 **source_tools/usgs_flow.py** receives original USGS daily mean discharge for stations intersecting the retained watershed domain. It accepts the original Esri JSON, gzip or ZIP domain source, retains paginated response bodies and station metadata, and writes daily values plus monthly and annual coverage. Units, approval flags, station identifiers and source URLs travel with the retained observations. It imports ordinary Workspace sources with the original domain and response companions. See **source_tools/USGS_FLOW.md** for the receiving commands and the published station context under **source_data/**.
+
+## Complete missing matching calculations
+
+Use **Prepare matching calculations** in a programme’s paired-map section to review the exact missing or unfinished baseline/alternative calculations. The preview lists the retained profiles, scenarios, selected models and native IDs. Saving retains a derived programme containing every original named case and completed model source, and adds only the missing selections. The selected **Continue these native calculations after saving** option runs that complete programme through the ordinary native worker. Both programmes retain links to reopen the other after a restart.
+
+The retained preview identity prevents a changed set of requirements from being silently executed. Completed maps use the same paired-map workflow above. See **model/PAIR_COMPLETION.md** for the API, CLI, recovery and original-selection details.
