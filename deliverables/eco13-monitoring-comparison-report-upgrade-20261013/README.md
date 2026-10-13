@@ -29,7 +29,7 @@ python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STA
 python STAGE/integrations/monitoring/install_monitoring.py APP --source-root STAGE
 ```
 
-`stage.py` delegates decoding, safe source paths, byte/hash validation and immutable file publication to the original `source_tools.application_assembly`. It checks every part and member before writing the first staged source file. Repeating it with the same complete bank reuses identical staged files.
+`stage.py` first verifies the complete original `source_tools.application_assembly` body carried under `bootstrap/`, then delegates decoding, safe source paths, byte/hash validation and immutable file publication to that original module. The base application does not need to supply a matching staging API. It checks every part and member before writing the first staged source file. Repeating it with the same complete bank reuses identical staged files.
 
 The installer reads the maintained inventory beside its own script. Its `--check` output names every intended path and identity before the normal installation command. The installed inventory now includes the original installers and their five maintained source-custody documents, so a later upgrade sees the current predecessor history. Scientific report maps and the existing composer are integrated with the saved comparison feature.
 
@@ -45,7 +45,32 @@ The startup receipt supplies the private operator URL and actual workspace key. 
 
 This course consumes completed saved plans. Its budget comparison does not execute an optimizer or create another campaign.
 
-From `APP`, use the supplied native selection and a receiving-output directory outside the Workspace:
+Complete the whole native course with one command after the original installation:
+
+```sh
+python BANK/receive_native.py --application APP --workspace WORKSPACE \
+  --selection BANK/native-comparison-selection.json --output OUTPUT/native-report \
+  --report-title "Regional monitoring budget choices — scientific report" --transfer
+```
+
+The command reopens the completed frontier and source-bound comparison; retains its
+complete packet; prepares the original scientific source; renders the original
+HTML/PDF edition; exports its complete ZIP through the maintained operator provider;
+and copies every original report output into `OUTPUT/native-report/scientific-report/`.
+With `--transfer`, it also performs the original complete Workspace backup and
+independent restore, then reopens the exact comparison, report source and edition.
+`result.json` gives the actual IDs, file paths, byte counts and SHA256 values.
+
+The request, selected original source bytes and installed producer identities are
+recorded before native actions. Repeating the exact same invocation reopens its
+same records and files from the atomic journal. A changed selection, report title,
+contact or installed producer uses a new output directory. Optional `--contact
+CONTACT.json` supplies the existing scientific composer's contact object. Omitting
+`--transfer` completes all reports without another full archive; use the existing
+host's archive boundary when that broader receiving operation is already running.
+
+The equivalent original commands remain available individually. From `APP`, use
+the native selection and a receiving-output directory outside the Workspace:
 
 ```sh
 python -m model.monitoring_frontier_comparison --workspace WORKSPACE prepare \
