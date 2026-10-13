@@ -63,6 +63,24 @@ For example, the current native layer has 18 LAKE JOCASSEE / TPGT / Pickens obje
 
 The selected legal registry has 105 rows. The 290 named features without a literal match are absent from this selected table; that count does not establish that they are legally unlisted. Blank names and counties do not remove their positive native classification from the map. Existing downstream designation logic owns receiving-water relationships and explicit legal extent.
 
+## Inventory directly from the completed native capture
+
+The receiving chain can use the native collection already assembled by `high_quality_waters.py adopt`. Run from the project root:
+
+    node source_tools/high_quality_water_inventory_cli.mjs \
+      --capture /mnt/data/eco12-native-water/capture \
+      --registry source/high_quality_waters/r61-69-current.selected-reaches.json \
+      --mapping source/high_quality_waters/scdes-current.native-field-binding.json \
+      --out /mnt/data/eco12-water-inventory
+
+This mode reads the selected layer from `capture.json`, checks every retained member's byte count and SHA256, verifies the decoded collection, and resolves the true OID through the original field metadata. It reads the exact selection file retained by adoption. Omit `--selection` to use that file; an explicitly supplied selection must have identical bytes.
+
+The filesystem-independent `high_quality_water_inventory_capture.mjs` module validates the native attribute projection used by the existing inventory core. The projection preserves the native integer OBJECTID and the original inventory text values. Null text fields use the established blank-field semantics; their original null counts are recorded in `input_representation.null_source_values`, and the complete typed source attributes remain in the retained collection.
+
+The output retains the original capture document and every inventoried capture member beneath `inputs/native_capture/`, together with the current mapping and legal registry. The profile records `native_capture`, `native_features`, `native_metadata`, `retained_selection` and `legal_registry` input identities. The feature-index schema, source ID, source-review role and manifest contract remain the same. Source files are installed atomically so an interrupted copy does not leave a partial final member.
+
+The native attribute projection was compared across all 1,886 original retained attribute rows. Every inventory count and legal-name diagnostic matched, and the resulting complete feature-index SHA256 remains `bd32114f094f7951f1706ed4f47190cd248cce4de971e2de8c8c23c2a14d2624`. The receiving GIS runtime completes the original capture-file read and Workspace import.
+
 ## Reproduce and import
 
 The core source_tools/high_quality_water_inventory.mjs has no runtime dependencies. Its API is buildInventory(csvText, registry, mapping, selection, inputs), returning profile, featureIndex and featureIndexCsv. It verifies all native IDs, selected classes, publisher HUC prefixes and the exact 1886-feature/class/HUC totals. It was executed on the complete original CSV, and the emitted feature index was parsed back to 1886 rows.

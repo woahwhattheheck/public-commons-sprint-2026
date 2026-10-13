@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.scenario-lab-runs/v1",
+  "model_workspace": "./scientific-workspace",
+  "project_id": "upper-savannah",
+  "setup_id": "accepted-native-comparison",
+  "currency": "USD",
+  "baseline_run_id": "SET_ACTUAL_COMPLETED_BASELINE_RUN_ID",
+  "scenarios": [
+    {
+      "id": "restoration",
+      "run_id": "SET_ACTUAL_COMPLETED_ALTERNATIVE_RUN_ID",
+      "cost_cents": null
+    }
+  ]
+}

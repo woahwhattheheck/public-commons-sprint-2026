@@ -109,10 +109,14 @@ function sourceName(collection,id){return state?.data.sources.find(x=>x.id===col
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
 function render(){
   if(!state)return;
+  if(!extensions.hasView(view))extensions.detach();
+  if(typeof experiments!=='undefined'&&view!=='experiments')experiments.detach();
+  if(typeof experimentDiagnostics!=='undefined'&&view!=='experiment-diagnostics')experimentDiagnostics.detach();
+  if(typeof receivingWaters!=='undefined'&&view!=='receiving-waters')receivingWaters.detach();
   for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+  if(extensions.render(view,$('#content'),state)){community.detach();customerReviews.detach();spatialWorkspace.suspend();if(typeof programmes!=='undefined')programmes.detach();if(typeof conservation!=='undefined')conservation.detach();return;}
   if(view==='experiments'){extensions.detach();programmes.detach();spatialWorkspace.suspend();community.detach();customerReviews.detach();experiments.mount($('#content'),state);return;}
   experiments.detach();
-  if(extensions.render(view,$('#content'),state)){community.detach();customerReviews.detach();spatialWorkspace.suspend();if(typeof programmes!=='undefined')programmes.detach();return;}
   if(view==='spatial'){receivingWaters.detach();programmes.detach();community.detach();customerReviews.detach();spatialWorkspace.mount($('#content'),state);return;}
   spatialWorkspace.suspend();
   if(view==='programmes'){community.detach();customerReviews.detach();programmes.mount($('#content'),state);return;}
