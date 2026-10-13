@@ -15,7 +15,7 @@ from .implementation import ImplementationStore
 from .implementation_schema import make_plan, validate_plan, document_digest
 from .monitoring_common import ContractError, canonical_bytes, digest, file_sha256, held
 from .monitoring_sources import source_export_members
-from .monitoring_packet import add_member, bytes_member, retain_packet
+from .monitoring_packet import add_member, bytes_member, file_member, retain_packet
 
 FORMAT = "upstate.monitoring-fieldwork/v1"
 MAPPED = ("sites", "monitoring_plans", "visits", "tasks", "activities", "budget_lines")
@@ -48,8 +48,11 @@ def _selection(service, campaign_id, revision_id):
     retained_networks = {key: service.get("networks", key) for key in sorted(network_ids)}
     for original in retained_networks.values():
         service.verify_sources(original)
+    from .monitoring_field_return import source_binding
+    returned = {event["id"]: binding for event in events
+                if (binding := source_binding(service.workspace, event)) is not None}
     return {"revision": selected, "plan": plan, "network": network,
-            "events": events, "history": retained_history,
+            "events": events, "fieldwork_returns": returned, "history": retained_history,
             "retained_plans": retained_plans, "retained_networks": retained_networks}
 
 
@@ -66,6 +69,11 @@ def _packet(workspace, selected):
             if binding:
                 for name, member in source_export_members(workspace, label, binding):
                     add_member(files, "network_sources/" + key + "/" + name, member)
+    for binding in selected.get("fieldwork_returns", {}).values():
+        for name, original in binding["source_files"].items():
+            original = Path(original)
+            add_member(files, "fieldwork_returns/" + binding["request_id"] + "/" + name,
+                       file_member(original, original.stat().st_size, file_sha256(original)))
     manifest = canonical_bytes({
         "schema": FORMAT, "campaign_id": selected["revision"]["campaign_id"],
         "source_revision_id": selected["revision"]["id"],
@@ -149,14 +157,23 @@ def _rows(selected, source_id):
             continue
         if event["visit_key"] not in visit_ids or not event.get("sample_id"):
             raise ContractError("An original collected event needs its saved visit and sample ID")
-        result["activities"].append({
-            "id": _id("sample", [campaign_id, event["id"]]),
+        returned = selected.get("fieldwork_returns", {}).get(event["id"])
+        activity_id = (returned["activity"]["id"] if returned and returned["activity"] is not None
+                       else _id("sample", [campaign_id, event["id"]]))
+        generated = {
+            "id": activity_id,
             "visit_id": visit_ids[event["visit_key"]],
             "site_id": add_site(event["site_id"], event["station_id"]),
             "kind": "sample", "sample_id": event["sample_id"], "collected_at": event["occurred_at"],
             "notes": event.get("note", ""), "source_event_id": event["id"],
             "source_values": deepcopy(event.get("values", {})), "source_ref": source_id,
-            "monitoring_station_id": event.get("station_id")})
+            "monitoring_station_id": event.get("station_id")}
+        prior_activity = next((row for row in result["activities"] if row["id"] == activity_id), None)
+        if prior_activity is None:
+            result["activities"].append(generated)
+        else:
+            prior_activity.clear()
+            prior_activity.update(generated)
     result["monitoring_plans"][0]["site_ids"] = [row["id"] for row in result["sites"]]
     # Activities retain the actual event station. A separate historic visit keeps
     # an earlier station binding when a later event on the same scheduled slot
@@ -252,7 +269,7 @@ def _reconcile_references(document, before, previous, managed, conflicts):
                 fields["site_ids"] = _field_digest(row, "site_ids")
 
 
-def _merge(document, incoming, source_revision_id):
+def _merge(document, incoming, source_revision_id, *, fieldwork_baselines=None):
     """Apply source changes per field only when the fieldwork value is unchanged."""
     origin = document.get("monitoring_origin", {})
     previous = origin.get("managed_fields", {})
@@ -278,7 +295,13 @@ def _merge(document, incoming, source_revision_id):
                     key: _field_digest(current, key) for key in current}
                 continue
             if old_fields is None:
-                raise ContractError("An existing fieldwork row has a different source identity")
+                returned = (fieldwork_baselines or {}).get(current["id"]) if collection == "activities" else None
+                if returned is None:
+                    raise ContractError("An existing fieldwork row has a different source identity")
+                # Only a byte-bound original return may join its existing local
+                # activity. Track generated fields; keep its other field inputs.
+                old_fields = {key: _field_digest(returned, key) for key in new}
+                managed[collection][current["id"]] = deepcopy(old_fields)
             saved_fields = managed[collection][current["id"]]
             for key in set(old_fields) | set(new):
                 actual = _field_digest(current, key)
@@ -395,7 +418,11 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
                 "source_schema": revision["schema"], "snapshot": snapshot})
             origin = document.get("monitoring_origin", {})
             if revision["revision"] >= origin.get("campaign_revision", 0):
-                managed, conflicts = _merge(document, _rows(selected, source_id), revision["id"])
+                returned_baselines = {binding["activity"]["id"]: binding["activity"]
+                                      for binding in selected.get("fieldwork_returns", {}).values()
+                                      if binding["activity"] is not None}
+                managed, conflicts = _merge(document, _rows(selected, source_id), revision["id"],
+                                            fieldwork_baselines=returned_baselines)
                 calendar_fields, calendar_conflicts = _merge_calendar(document, selected, origin)
                 conflicts.extend(calendar_conflicts)
                 document["monitoring_origin"] = {
