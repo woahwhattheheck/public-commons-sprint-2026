@@ -19,7 +19,9 @@
         "operator/MEASURED_CHEMISTRY.md",
         "measurement_workspace/engine/workspace.mjs",
         "measurement_workspace/engine/http.mjs",
-        "measurement_workspace/ATOMIC_SNAPSHOT.md"
+        "measurement_workspace/ATOMIC_SNAPSHOT.md",
+        "source/run_measured_chemistry_receiving.py",
+        "source/MEASURED_CHEMISTRY_RECEIVING.md"
       ],
       "requires": [
         "measurement-collections",
