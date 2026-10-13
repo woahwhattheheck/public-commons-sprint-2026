@@ -1,0 +1,102 @@
+{
+  "schema": "upstate.native-outcome-delivery/v1",
+  "operation": "ECO-OUTCOME-READER-A0D5",
+  "edition": 1,
+  "source_bank": "F0C9PGZJYBA",
+  "original_packet": {
+    "path": "completed-native-consumer-packet.json",
+    "bytes": 1066937,
+    "sha256": "75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572",
+    "git_blob": "3eae73d8b83b3541435aa2c201200a6439d97be6"
+  },
+  "original_html": {
+    "path": "index.html",
+    "bytes": 236652,
+    "sha256": "9d6badb3d612d8a058c6855d1d8ce50112fa27dbfc9aaeacb9a749f01196b6c3",
+    "inner": {
+      "bytes": 406485,
+      "sha256": "94a79e9b342394d81bb59ae35d0e510a73ed9f641eb488629b3d2402b6c58336"
+    }
+  },
+  "classification": "Simulated Piedmont headwaters — conservation demonstration",
+  "counts": {
+    "selections": 12,
+    "landcover_contrasts": 24,
+    "parameter_contrasts": 9,
+    "support_groups": 12
+  },
+  "files": [
+    {
+      "path": "native-outcome-data.mjs",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 17845,
+      "sha256": "f7f19f4a47e68a529eda2a31ff5f5cb14802ce2d7aece6e91578be2fa0017282"
+    },
+    {
+      "path": "native-outcome-html.mjs",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 10469,
+      "sha256": "ab0beb3807455b74d0d75401ed84a4cc9b7c2b7f8dd5f032164b70e7b2f317e7"
+    },
+    {
+      "path": "native-outcome-runtime.mjs",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 9895,
+      "sha256": "129487d77a58ca79e0cdb22de050ec917efd797c341659a908274809b0d9944e"
+    },
+    {
+      "path": "build-native-outcome-reading.mjs",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 4771,
+      "sha256": "4184a4bf1e5e92d8ea4cf4d19208f9e2e871e3d2b2885b8b444c904d0b35060e"
+    },
+    {
+      "path": "NATIVE_OUTCOME_READING.md",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 8618,
+      "sha256": "e909826681e5c71163f98ba57e2b41291e1450ab05c82673ad7c0421d1ef56d3"
+    },
+    {
+      "path": "native-outcome-bindings.json",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 817,
+      "sha256": "9e28e6ad302a3e59fb7d1db364b9fd3f6f26388554a123c2ff23ed534e81138a"
+    },
+    {
+      "path": "index.html",
+      "provenance": "Unchanged original F0C9PGZJYBA edition 3",
+      "bytes": 236652,
+      "sha256": "9d6badb3d612d8a058c6855d1d8ce50112fa27dbfc9aaeacb9a749f01196b6c3"
+    },
+    {
+      "path": "completed-native-consumer-packet.json",
+      "provenance": "Unchanged public Git blob 3eae73d8b83b3541435aa2c201200a6439d97be6",
+      "bytes": 1066937,
+      "sha256": "75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572"
+    },
+    {
+      "path": "native-outcome-reading.json",
+      "provenance": "Exact parsed view-data from original wrapped index, formatted as JSON",
+      "bytes": 256770,
+      "sha256": "90ceca99fcdfd90d3032158efacccbec68d25fb865fec4da7a179db8c99da772"
+    },
+    {
+      "path": "START_HERE.md",
+      "provenance": "Current complete package guide",
+      "bytes": 8715,
+      "sha256": "d258106e4431d2b873ebdbd0b26500ad0cd3193808cc75c5fbbe4fd0842af046"
+    },
+    {
+      "path": "INTEGRATION_NOTES.md",
+      "provenance": "Original operation integration",
+      "bytes": 3477,
+      "sha256": "a7033e0af8c798e283c6d9fef011d127b7bb7402453782088b82aab9efbfaf37"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "provenance": "Unchanged current owner direction .4, public source bf68e73cc2819cfc807c40d3015644f3b8699e38",
+      "bytes": 5921,
+      "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c"
+    }
+  ]
+}
