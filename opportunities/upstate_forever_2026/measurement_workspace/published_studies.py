@@ -428,6 +428,7 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE, *, raw_w
             "activity_type": original.get("activity_type", original.get("ActivityTypeCode", "")),
             "activity_comment": original.get("activity_comment", original.get("ActivityCommentText", "")),
             "result_comment": original.get("result_comment", original.get("ResultCommentText", "")),
+            "laboratory_comment": original.get("laboratory_comment", original.get("ResultLaboratoryCommentText", "")),
         }
         for field in ("value", "detection_limit", "depth"):
             if raw[field] == "":
@@ -1577,6 +1578,9 @@ class PublishedStudyStore:
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
+            ("result_comment", "Original result comment"),
+            ("activity_comment", "Original activity comment"),
+            ("laboratory_comment", "Original laboratory comment"),
         ])
         cohort = context.get("cohort_reconciliation")
         if cohort:

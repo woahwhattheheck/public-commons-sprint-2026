@@ -53,8 +53,8 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 100098,
-      "sha256": "fae387d1608e322600b88cf0f35b245dbe3b23d1879f8f9562595c91d9608694"
+      "bytes": 100406,
+      "sha256": "932736aa1908bba1bf5a298834553848087ce9f0ea067a7311477f13e76f6549"
     },
     {
       "path": "measurement_workspace/source_observations.py",
@@ -73,8 +73,8 @@
     },
     {
       "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 20691,
-      "sha256": "953f6fc320ed53ab08ac3a08c01b8e9b1ce41b1c4c1ecf438a73dad262193fae"
+      "bytes": 21404,
+      "sha256": "a46599149a8b2ff2e08700ee65fe3d94cad5f2f58021a89caf557348f149f7f2"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -713,8 +713,8 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 43808,
-      "sha256": "81c44658fea5d4dba30965e3c993d2119047ba76a367ab28c8af4d231f72423b"
+      "bytes": 44120,
+      "sha256": "c18b584b70736f051c29223397e0e9cab70de80b1b264726a19ebf6a516e7b08"
     },
     {
       "path": "PUBLISHED_STUDIES.md",

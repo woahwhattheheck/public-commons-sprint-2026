@@ -192,6 +192,7 @@ def build_files(application=None):
         "Station, characteristic, year and month filters select original dated E. coli result rows. Every complete agency CSV remains in the exported study.",
         "Project, activity type, fraction, analytical method, result type, basis and original support-unit spelling define separate series. The field replicate remains its own activity-type series.",
         "Original result values, reported limits and missing values retain distinct source fields. Arithmetic means summarize quantified rows within each selected series.",
+        "Quantified means include every selected numeric original, including results whose original comment says Information Only. All 72 source markers remain visible beside the result rows; the retained original explorer and temporal sensitivity report provide explicit comment-based comparisons.",
         "Utility groups retain their original source-selection basis. Native Station geography joins the original datum-specific points to retained watershed polygons.",
     ]
     study = {"schema": "upstate.published-water-quality-study/v1", "study_id": BUILTIN_ID,
@@ -208,6 +209,7 @@ def build_files(application=None):
             "temporal_support": "Original sampling dates and methods; routine and field-replicate activity types remain distinct."}}
     notes = [
         {"code": "ORIGINAL_RECORDS", "context": "All 730 original WQP result rows retain all 63 source fields, six response identities and CSV row selectors."},
+        {"code": "ORIGINAL_COMMENTS", "context": "The original result comments identify 72 Information Only or Infomation Only records, including the reported 24,000 value at RV_01_14 on 2025-03-24. Result, activity and laboratory comments remain visible in the study; quantified means include all numeric rows selected by the study filters. The original explorer retains explicit comment-selection controls."},
         {"code": "DETECTION_CONDITIONS", "context": "554 quantified results; six above-limit, 67 below-limit and 102 not-detected results retain their original boundary fields; one not-reported result remains blank."},
         {"code": "SOURCE_UNITS", "context": "Original MPN/100mL and MPN/100 ml spellings remain separate series. A blank result-unit field stays blank; bound quantities use their original bound-unit field."},
         {"code": "ORIGINAL_DATUMS", "context": "The original station table and two derived native point sources use the unchanged CSV coordinate values in their declared WGS84/NAD83 datums. The preserved WQP GeoJSON files remain display-source documents."},
