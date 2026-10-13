@@ -345,7 +345,7 @@ export function attachScenarioReports(context) {
         '</select></label><p class="sr-note">Include this completed edition’s selected-zone costs, budgets, physical response and original decision package in the client report.</p>':'')+
       ((release.economic_issues||[]).length?'<p class="sr-note">'+esc(release.economic_issues.map(item=>item.message).join(' '))+'</p>':'')+
       (release.ready?'<div class="sr-actions">'+button('map-release','Build map release','data-report-id="'+esc(selectedReport)+'"')+'</div>':'')+
-      (release.ready&&choices.length?'<p class="sr-note">Complete the remaining choices in the atlas builder: '+esc(choices.join('; '))+'.</p>':'')+
+      (release.ready&&choices.length?'<p class="sr-note">The atlas builder applies the selected delivery mode. Regional RFP choices include: '+esc(choices.join('; '))+'.</p>':'')+
       (rows.length?'<h5>Saved map releases</h5><div class="sr-table-scroll"><table><thead><tr><th>Release</th><th>State</th><th>Saved</th><th></th></tr></thead><tbody>'+
         rows.map(row=>'<tr><td>'+esc(row.title)+'<small>'+esc(short(row.id))+'</small></td><td>'+esc(row.state)+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+
           button('open-release','Open release','data-release-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+

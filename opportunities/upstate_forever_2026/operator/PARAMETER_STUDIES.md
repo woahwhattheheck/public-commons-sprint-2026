@@ -36,7 +36,7 @@ Download the CSV, JSON, HTML report, profile selections and complete ZIP from th
 
 ## Operator integration
 
-The operator's parameter studies use `model/parameter_studies.py`. The regional scenario-by-profile experiment engine remains in `model/experiments.py`. Each engine reads its own saved layout: parameter studies use `parameter-study.json` and the `experiment-specs` registry; regional experiments use `plan.json`, `state.json` and per-case records. Existing study identifiers and source selections are retained.
+The operator's parameter studies use `model/parameter_studies.py`. The regional scenario-by-profile experiment engine remains in `model/experiments.py`. Each engine reads its own saved layout: parameter studies use `experiment.json` and the `experiment-specs` registry; regional experiments use `plan.json`, `state.json` and per-case records. Existing study identifiers and source selections are retained.
 
 Add the following files under `opportunities/upstate_forever_2026/`:
 
