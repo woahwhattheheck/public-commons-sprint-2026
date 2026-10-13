@@ -75,6 +75,10 @@ A compound lookup lists its keys in corresponding order. Unit dictionaries that 
 
 **Unit aliases** relabel explicitly selected original units. Quantity conversion uses the declared ratio; a unit label alone supplies no conversion factor.
 
+## Prepare supplier document tables
+
+Open **Prepare a supplier document** in Sources and mapping to work from complete source observations or a saved preparation record. Review exact supplier identifiers, original technical cells, package quantities, printed prices and compatibility; save reasoned product decisions, then use the prepared source and mapping through the existing upload and edition workflow. The [document preparation guide](DOCUMENT_PREPARATION.md) includes the complete 17-product AutomationDirect WAGO example, all 240 technical observations, and the native batch intake command.
+
 ## 2. Build and select the complete edition
 
 Open **Edition review**, choose a retained source and select one of the two interpretations:

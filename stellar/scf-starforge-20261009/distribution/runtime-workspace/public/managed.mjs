@@ -109,6 +109,7 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
       }
       article.append(actions);
       if (job.result) article.append(detail('Original result', job.result));
+      if (job.resultSource) article.append(node('p', 'Original receipt: ' + job.resultSource));
       element.append(article);
     }
   }

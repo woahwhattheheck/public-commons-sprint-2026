@@ -3,6 +3,10 @@ import {readFile,writeFile,mkdir,lstat,realpath,rename,copyFile,cp} from 'node:f
 import {createHash} from 'node:crypto';
 import {dirname,join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {gunzipSync} from 'node:zlib';
+const runFile=promisify(execFile);
 
 const SCHEMA='starforge.following-stac-applications-operation.v1';
 const SOURCE='stellar/scf-starforge-20261009';
@@ -42,6 +46,104 @@ async function checked(record){
   if(record.blob)need(gitBlob(bytes)===record.blob,'ORIGINAL_INPUT_GIT_BLOB_CHANGED',record.path);
   return bytes;
 }
+
+function sameValue(left,right){
+  const canonical=value=>Array.isArray(value)?value.map(canonical):
+    value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+  return JSON.stringify(canonical(left))===JSON.stringify(canonical(right));
+}
+async function immutableBytes(path,bytes){
+  if(await exists(path))need((await readFile(path)).equals(bytes),'ORIGINAL_OPERATION_INPUT_CHANGED',path);
+  else await writeFile(path,bytes,{mode:0o600,flag:'wx'});
+}
+async function receiveClosedInput(config,runtime){
+  const selected=config.closedInput;
+  if(!selected)return null;
+  need(selected.schema==='commons.stac-closed-processing-input.v1','ORIGINAL_CLOSED_INPUT_REQUIRED');
+  need(typeof selected.importOperationId==='string'&&selected.importOperationId&&
+    typeof selected.editionId==='string'&&selected.editionId,'ORIGINAL_IMPORT_IDENTITIES_REQUIRED');
+  need(selected.member?.name==='cirrus-native.processing.json.gz'&&
+    /^[a-f0-9]{64}$/.test(selected.manifestDigest??''),'ORIGINAL_PROCESSING_HANDOVER_REQUIRED');
+  const root=join(config.projectDirectory,'restored-inputs');
+  need(config.sourceWorkspace===join(root,'scenes')&&
+    config.sourceProcessingWorkspace===join(root,'processing')&&
+    selected.receivingDirectory===join(root,'received-inputs')&&
+    selected.handoverDirectory===join(root,'exports'),'SELECT_ORIGINAL_RECEIVING_DIRECTORIES');
+  for(const path of [selected.archive?.path,selected.receivingDirectory,selected.handoverDirectory])absolute(path);
+  const archive=await checked(selected.archive);
+  const inputDirectory=join(config.projectDirectory,'delivery','original-input');
+  await privateDirectory(inputDirectory);
+  await immutableBytes(join(inputDirectory,'STAC_Cirrus_Receiving_Case_20261012.zip'),archive);
+  const intent={
+    schema:'commons.stac-closed-input-intent.v1',operationId:config.operationId,
+    sourceCommit:config.sourceCommit,archive:selected.archive,member:selected.member,
+    manifestDigest:selected.manifestDigest,importOperationId:selected.importOperationId,
+    editionId:selected.editionId,sourceWorkspace:config.sourceWorkspace,
+    sourceProcessingWorkspace:config.sourceProcessingWorkspace,
+    receivingDirectory:selected.receivingDirectory,handoverDirectory:selected.handoverDirectory
+  };
+  const intentFile=join(config.projectDirectory,'input-restoration-intent.json');
+  await immutable(intentFile,intent);
+  const outputFile=join(config.projectDirectory,'input-restoration.json');
+  const prior=await exists(outputFile)?JSON.parse(await readFile(outputFile,'utf8')):null;
+  if(prior)need(prior.status==='COMPLETE'&&sameValue(prior.intent,intent),'ORIGINAL_CLOSED_INPUT_RECEIPT_CHANGED');
+  if(prior)for(const path of [config.sourceWorkspace,config.sourceProcessingWorkspace])
+    need(await exists(path),'RESTORE_ORIGINAL_RETAINED_INPUT_DIRECTORY',path);
+  await privateDirectory(root);
+  for(const path of [selected.receivingDirectory,selected.handoverDirectory])await privateDirectory(path);
+  const base=join(runtime.sourceRoot,SOURCE,'sf30-seller-sdk','stac');
+  await checked({path:join(base,'workspace.mjs'),blob:'a6634bc6453209c79609540230a1ed008acec626'});
+  await checked({path:join(base,'processing','workspace.mjs'),blob:'e74fc5a51ac11b1be76a869683d11375d97fa480'});
+  const {openStacWorkspace}=await import(pathToFileURL(join(base,'workspace.mjs')).href);
+  const {createProcessingController}=await import(pathToFileURL(join(base,'processing','workspace.mjs')).href);
+  const extraction=[
+    'import sys,zipfile',
+    'with zipfile.ZipFile(sys.argv[1]) as archive:',
+    ' matches=[item for item in archive.infolist() if item.filename==sys.argv[2]]',
+    ' if len(matches)!=1 or matches[0].is_dir(): raise ValueError("Use the one original processing member")',
+    ' sys.stdout.buffer.write(archive.read(matches[0]))'
+  ].join('\n');
+  const {stdout}=await runFile(config.pythonExecutable??'python3',
+    ['-B','-c',extraction,selected.archive.path,selected.member.name],
+    {encoding:'buffer',maxBuffer:selected.member.bytes+4096});
+  const body=Buffer.from(stdout);
+  need(body.length===selected.member.bytes&&sha256(body)===selected.member.sha256,
+    'ORIGINAL_PROCESSING_MEMBER_CHANGED');
+  const packed=JSON.parse(gunzipSync(body).toString('utf8'));
+  need(packed.schema==='scf-stac-processing-packed/v1'&&
+    packed.manifest?.digest===selected.manifestDigest,'ORIGINAL_PROCESSING_MANIFEST_CHANGED');
+  await immutableBytes(join(inputDirectory,selected.member.name),body);
+  let scenes=null,processing=null,observed=null;
+  try{
+    scenes=await openStacWorkspace({directory:config.sourceWorkspace,...(prior?{create:false}:{})});
+    processing=await createProcessingController({stacWorkspace:scenes,
+      directory:config.sourceProcessingWorkspace,config:{
+        receivingDirectory:selected.receivingDirectory,handoverDirectory:selected.handoverDirectory}});
+    const imported=prior?.imported??await processing.actions['import-handover']({
+      input:{bodyBase64:body.toString('base64')},operationId:selected.importOperationId,stacWorkspace:scenes});
+    const query={editionId:selected.editionId};
+    const sceneState=await scenes.getState();
+    const runs=await processing.reads.runs({query});
+    const statistics=await processing.reads.statistics({query});
+    need(Array.isArray(sceneState.editions)&&sceneState.editions.length>0,
+      'ORIGINAL_IMPORTED_SCENES_REQUIRED');
+    observed={imported,sceneState,runs,statistics};
+    if(prior)need(sameValue(prior.sceneState,sceneState)&&sameValue(prior.runs,runs)&&
+      sameValue(prior.statistics,statistics),'ORIGINAL_RESTORED_INPUT_CHANGED');
+  }finally{
+    try{if(processing)await processing.close();}
+    finally{if(scenes)await scenes.close();}
+  }
+  if(prior)return prior;
+  const result={schema:'commons.stac-closed-input-receiving.v1',status:'COMPLETE',
+    operationId:config.operationId,sourceCommit:config.sourceCommit,completedAt:now(),
+    closed:true,intent,...observed};
+  await save(outputFile,result);
+  await copyFile(outputFile,join(config.projectDirectory,'delivery','input-restoration.json'));
+  await copyFile(intentFile,join(config.projectDirectory,'delivery','input-restoration-intent.json'));
+  return result;
+}
+
 /**
  * Run with the maintained native ForegroundLaunch/artifact collector.
  * Runtime output may be a separate retained directory; all original inputs are read-only.
@@ -166,6 +268,12 @@ export async function continueStacApplications(config,{onProgress=()=>{}}={}){
     progress({phase:'READY',installationId:runtime.installationId,profileId:runtime.profileId,
       sourceCommit:runtime.sourceCommit,sourceManifestSha256:ready.sourceManifestSha256});
 
+    stage='INPUT_RESTORATION';
+    const inputRestoration=await receiveClosedInput(config,runtime);
+    if(inputRestoration)progress({phase:'ORIGINAL_CLOSED_INPUT_RECEIVED',
+      importOperationId:inputRestoration.intent.importOperationId,
+      sceneWorkspaceId:inputRestoration.sceneState.id,editionId:inputRestoration.intent.editionId});
+
     stage='APPLICATIONS';
     const root=join(runtime.sourceRoot,SOURCE);
     for(const record of config.installedSources??[]){
@@ -190,7 +298,7 @@ export async function continueStacApplications(config,{onProgress=()=>{}}={}){
     const outcome={
       schema:'starforge.following-stac-applications-result.v1',status:'COMPLETE',operationId:config.operationId,
       completedAt:now(),sourceCommit:config.sourceCommit,sourceTree:config.sourceTree,
-      distribution,runtime:ready,selection:profile.selection,receiving:result,
+      distribution,runtime:ready,selection:profile.selection,inputRestoration,receiving:result,
       retainedPaths:{applications:'delivery/apps-receiving',sourceArchive:'delivery/source.tgz'}
     };
     await save(join(project,'continuation.json'),outcome);
@@ -208,7 +316,8 @@ export async function continueStacApplications(config,{onProgress=()=>{}}={}){
     // runtime and provider data remain in their selected directories.
     for(const name of ['continuation-input.json','release-selection.json','input-receipts.json',
       'source-release.json','runtime-ready.json',
-      'apps-input.json','continuation.json','continuation-error.json']){
+      'apps-input.json','continuation.json','continuation-error.json',
+      'input-restoration-intent.json','input-restoration.json']){
       if(await exists(join(project,name)))await copyFile(join(project,name),join(delivery,name));
     }
     const distribution=join(project,'release/distribution.json');

@@ -35,3 +35,7 @@ The product connects original Open Referral HSDS source with HL7 FHIR Human Serv
 The source selection is `human-services-directory`. Native command: `starforge human-services-directory`. Connected command: `starforge merchant-human-services-directory`. Installed application: **Human Services Directory**.
 
 The product uses the original publisher files and the provider data selected by the operator. Its receiving programmes carry the accepted original inputs forward so a successor run can continue the same workspace and record lineage.
+
+## Complete returned customer procedures
+
+Receive full OperatingPlan histories, review divergent choices in the existing Directory operator, retain completed review intent and reconcile the native plan save with a separate applied receipt. Original source basis, every decision and all historical files survive complete customer workspace receiving. [The full operating and receiving guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_RETURNS.md) covers native/API/CLI, typed SDK/MCP, browser drafts and the complete customer reopening course.

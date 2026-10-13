@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import gzip
 import io
 import json
 import os
@@ -47,6 +48,53 @@ def decode_json(body, name):
 def check_bytes(body, descriptor, name):
     if len(body) != descriptor.get("bytes") or digest(body) != descriptor.get("sha256"):
         raise ValueError("Retained member differs from its native receipt: " + name)
+
+
+
+def _canonical_digest(value):
+    return digest(json.dumps(value, ensure_ascii=False, allow_nan=False,
+                             sort_keys=True, separators=(",", ":")).encode("utf-8"))
+
+
+def _verify_model_identity(argv, bank_files, report, selected):
+    """Bind the original invocation's inputs and selection without rerunning it."""
+    if not isinstance(argv, list) or any(not isinstance(value, str) for value in argv):
+        raise ValueError("The original invocation must retain its complete argument list.")
+    values = {}
+    for option, field in (
+            ("--source-context", "source_context"),
+            ("--classification-coverage", "classification_coverage"),
+            ("--network", "network")):
+        if option not in argv:
+            values[field] = None
+            continue
+        if argv.count(option) != 1:
+            raise ValueError("The original invocation repeats a model input: " + option)
+        try:
+            path = member_name(argv[argv.index(option) + 1])
+            body = bank_files[path]
+        except (IndexError, KeyError, TypeError) as error:
+            raise ValueError("The original source bank must retain " + option) from error
+        if option == "--network" and body.startswith(b"\x1f\x8b"):
+            body = gzip.decompress(body)
+        values[field] = decode_json(body, path)
+    selection = report.get("selection") or {}
+    payload = {
+        "schema": report["schema"], "analysis_version": report["analysis_version"],
+        **values, "selected_huc12s": selection.get("huc12s"),
+        "selection_requested": selection.get("requested"),
+    }
+    if "watershed-" + _canonical_digest(payload)[:20] != report["id"]:
+        raise ValueError("The original model inputs and selection differ from the native report identity.")
+    if selected.get("context_canonical_sha256") != _canonical_digest(report):
+        raise ValueError("The retained selection differs from its original complete report.")
+
+
+def _source_fingerprint(rows):
+    return _canonical_digest([
+        {"id": row["id"], "sha256": row["sha256"]}
+        for row in sorted(rows, key=lambda row: row["id"])
+    ])
 
 
 def receive_bundle(archive, expected_sha256, operation_id):
@@ -185,6 +233,7 @@ def receive_bundle(archive, expected_sha256, operation_id):
         [{"id": row["id"], "sha256": row["sha256"]} for row in source_inputs],
         sort_keys=True, separators=(",", ":"),
     ).encode("utf-8"))
+    _verify_model_identity(argv, bank_files, report, selected)
     for name in sorted(required):
         retained["receiving/" + name] = members[name]
     retained["receiving/original-native-result.zip"] = archive_body
@@ -193,6 +242,7 @@ def receive_bundle(archive, expected_sha256, operation_id):
         "archive_sha256": expected_sha256, "archive_bytes": len(archive_body),
         "source_bank_archive_sha256": digest(source_bank_body),
         "source_inputs": source_inputs, "source_files": source_files, "source_fingerprint": fingerprint,
+        "native_source_fingerprint": _source_fingerprint(source_files),
         "files": retained,
     }
 
@@ -215,16 +265,77 @@ def adopt(application, workspace, archive, expected_sha256, *, operation_id=OPER
         root.mkdir(parents=True, exist_ok=True)
         if destination.exists():
             record = read_json(destination / "operator-report.json")
+            legacy_fingerprint = bundle["native_source_fingerprint"]
+            old_fingerprint = record.get("source_fingerprint")
+            legacy = old_fingerprint == legacy_fingerprint and old_fingerprint != bundle["source_fingerprint"]
             if (record.get("schema") != OPERATOR_SCHEMA or record.get("id") != key
-                    or record.get("source_fingerprint") != bundle["source_fingerprint"]):
+                    or old_fingerprint not in {bundle["source_fingerprint"], legacy_fingerprint}):
                 raise ValueError("This report identity already has a different operator/source record.")
+            if _source_fingerprint(record.get("source_inputs") or []) != old_fingerprint:
+                raise ValueError("The saved native source identity differs from its input records.")
+            aliases = {"source/" + row["id"] for row in bundle["source_inputs"]}
+            additions = {}
             for name, body in bundle["files"].items():
                 path = destination / name
-                if not path.is_file() or path.read_bytes() != body:
+                if not path.is_file():
+                    if legacy and name in aliases and not path.exists() and not path.is_symlink():
+                        additions[name] = body
+                        continue
+                    raise ValueError("The saved native report member differs: " + name)
+                if path.read_bytes() != body:
                     raise ValueError("The saved native report member differs: " + name)
                 descriptor = record.get("files", {}).get(name)
-                if not descriptor or describe_file(destination, path) != descriptor:
+                if not descriptor:
+                    if legacy and name in aliases:
+                        additions[name] = body
+                        continue
                     raise ValueError("The saved native report descriptor differs: " + name)
+                if describe_file(destination, path) != descriptor:
+                    raise ValueError("The saved native report descriptor differs: " + name)
+            if legacy:
+                # Upgrade only a byte-verified predecessor of this exact archive.
+                # Existing native outputs and earlier selection exports stay intact.
+                files = dict(record["files"])
+                for name, body in additions.items():
+                    path = destination / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    if not path.exists():
+                        pending = None
+                        try:
+                            with tempfile.NamedTemporaryFile(
+                                    dir=path.parent, prefix="." + path.name + ".receiving-",
+                                    delete=False) as stream:
+                                pending = Path(stream.name)
+                                stream.write(body)
+                                stream.flush()
+                                os.fsync(stream.fileno())
+                            try:
+                                os.link(pending, path)
+                            except FileExistsError:
+                                if path.is_symlink() or not path.is_file() or path.read_bytes() != body:
+                                    raise ValueError("The source alias changed during receiving: " + name)
+                            directory_fd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                            try:
+                                os.fsync(directory_fd)
+                            finally:
+                                os.close(directory_fd)
+                        finally:
+                            if pending is not None:
+                                pending.unlink(missing_ok=True)
+                    files[name] = describe_file(destination, path)
+                history = list(record.get("source_identity_history") or [])
+                history.append({
+                    "source_inputs": record["source_inputs"],
+                    "source_fingerprint": old_fingerprint, "upgraded_at": now(),
+                })
+                record.update(
+                    source_inputs=bundle["source_inputs"],
+                    native_source_files=bundle["source_files"],
+                    source_fingerprint=bundle["source_fingerprint"],
+                    native_source_fingerprint=legacy_fingerprint,
+                    source_identity_history=history, files=files,
+                )
+                atomic_json(destination / "operator-report.json", record)
             return {
                 "schema": "upstate.received-watershed-result/v1",
                 "id": key, "state": "already_received", "workspace": str(ws.root),
@@ -248,6 +359,7 @@ def adopt(application, workspace, archive, expected_sha256, *, operation_id=OPER
                 "selection": bundle["report"]["selection"],
                 "source_inputs": bundle["source_inputs"],
                 "native_source_files": bundle["source_files"],
+                "native_source_fingerprint": bundle["native_source_fingerprint"],
                 "source_fingerprint": bundle["source_fingerprint"],
                 "source_validation": {
                     "state": "complete", "method": "original native archive and exact source bank",

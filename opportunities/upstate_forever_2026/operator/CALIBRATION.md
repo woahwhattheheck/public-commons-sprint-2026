@@ -269,3 +269,113 @@ CSV output retains additional scientific fields, serializes structured source de
 This edition adds `model/calibration_uncertainty.py` and `model/CALIBRATION_UNCERTAINTY.md` to the complete calibration source cohort. Use the receiving application's maintained `install_extensions.py` through the same calibration installer and cumulative assembly commands described above. The installer records the exact current observation-handoff browser and provider predecessors, preserving independent native core and shared host edits.
 
 The maintained portable workspace inventory walks the complete workspace, including `calibration-uncertainties` and `calibration-uncertainty-exports`. The registered `verify_workspace` hook reopens each retained sensitivity record through the scientific module's `inspect` validator. It checks the original calibration, plan, observation edition, source object bytes, source stamp, selected identities and fixed objective. Restore does not rerun the nominal model or sensitivity calculation.
+
+
+## Original-catchment residual maps
+
+A completed calibration now opens its original catchment geometry as a retained
+map source, grayscale atlas and editable GIS project. The same Calibration desk
+owns the selection, queue, saved result and reopening. The source-error page can
+also create a map edition using its exact retained standard-error multiplier and
+missing-error coverage.
+
+### Operate the complete map workflow
+
+1. Open a completed nominal calibration and choose **Prepare residual maps**.
+   From an observation sensitivity result choose **Map these reference ranges**
+   to preselect that retained sensitivity edition.
+2. Keep the original selected run. Optionally include eligible challenger runs
+   from the same saved calibration. The selected run includes calibration and
+   held-out descriptive rows; challenger layers contain calibration rows only.
+   The form identifies each original native candidate and its calibration loss.
+3. Submit **Prepare maps** through the existing workspace task queue. This calls
+   the maintained `model.calibration_maps.prepare` and retains the source collection,
+   map edition, CSV tables, SVG pages, PDF atlas and original scientific records.
+   The completed task exposes those verified file downloads immediately.
+4. Return to the same calibration. Its **Catchment residual maps** section lists
+   every retained map edition. Open one, filter the layer list by candidate or
+   pollutant, and choose **Atlas and files**. The page shows calibration/held-out
+   row counts, incomplete native rows, units and the shared per-pollutant residual
+   display cap. PDF opens its exact verified file ticket in the existing detail viewer; SVG pages appear directly
+   and remain downloadable.
+5. **Open source map** uses the original spatial viewer's `spatial-item` action
+   with kind `source-info`, exact source collection and source ID. That viewer
+   supplies boundaries and original scalar attribute inspection.
+6. **Save original spatial review** queues the science module's original
+   `SpatialReview.save` join. Calibration overlays are solid; held-out overlays
+   are dashed. The immutable `calibration-map-reviews` link retains map, layer and
+   original spatial review IDs. The saved-review button appears after the normal
+   task/state refresh and reopens the existing spatial desk.
+7. **Build editable GIS project** sends the map's exact `gis_selection` directly
+   to the maintained `gis.project.export` action. The selected vector sources and
+   their required context preserve GeoJSON, CSV, atlas pages and original source
+   records in the ordinary GIS project. The existing completed task and
+   **Editable GIS projects** view expose its ZIP, QGIS project and offline viewer.
+8. Back up and reopen the original workspace. Existing recursive workspace and
+   application collection includes `calibration-maps`, `calibration-map-reviews`,
+   `calibration-map-exports`, the ordinary source objects and original spatial
+   reviews. The extension receiving hook reopens each map through the science
+   validator and validates linked reviews through `SpatialReview.validate_saved`.
+
+### Scientific map meaning
+
+A residual is the saved predicted annual load minus the time-weighted original
+annual reference. Native modeled load and any explicitly retained delivered
+external load remain separate attributes. Pollutant mass units, temporal/source
+identities, native support and the calibration/held-out role travel with each
+catchment. Incomplete native support stays null.
+
+The atlas uses one absolute-residual display cap per pollutant across the chosen
+candidate maps. Each panel retains an original catchment, including holes and
+disconnected parts, in the actual saved model-grid CRS. GeoJSON uses EPSG:4326.
+Nested or overlapping upstream catchments stay separate; their loads and
+residuals are not summed into regional totals. The ordinary spatial source view
+shows outline geometry and scalar attributes; the PDF/SVG atlas carries the
+signed grayscale residual rendering.
+
+When a source-error analysis is selected, the map retains that exact analysis's
+reference bounds and missing-error state. It does not perform another native run,
+change the original nominal profile or rank challengers using held-out values.
+
+### Current implementation contract
+
+The extension adds these original queue actions:
+
+- `calibration.maps.prepare`: `{report_id, candidate_run_ids?, uncertainty_id?}`.
+  Omitted candidate IDs select only the nominal run. Every explicit selection
+  must include that run; all candidates must belong to the retained report.
+- `calibration.maps.review`: `{map_id, layer_id}`.
+
+`GET /api/calibration/maps?id=MAP_ID` returns `{workspace_key, map, reviews,
+artifacts, _downloads}`. Every `artifacts` entry contains the exact original
+relative file descriptor and its verified operator download ticket. Collection
+item kind `calibration-maps` uses that same read operation. State includes compact
+`calibration_maps` summaries and immutable `calibration_map_reviews` links.
+
+The separate browser source `operator/web/calibration_maps.mjs` is imported by
+the existing calibration module and declared in its maintained extension assets.
+It owns map view state and narrow controls; the current shared app, spatial
+viewer and GIS provider remain their own implementations. Workspace/request
+guards discard stale map reads and form submissions. Source and review buttons
+use the original app's native action contract.
+
+Receive the complete science files `model/calibration_maps.py` and
+`model/CALIBRATION_MAPS.md` with all eight operator/cohort files, then run the
+same `operator/install_calibration.py --application ACTUAL_APP --source COHORT`.
+The installer knows the exact merged PR2850 predecessors and still rejects
+unrecognized competing edits. The cumulative assembly driver includes the new
+module and browser asset while treating `model/spatial.py` as a shared native
+dependency.
+
+Native preparation needs the application's existing Fiona, Shapely, PyProj and
+Matplotlib environment. The maintained original SpatialReview and Editable GIS
+1.2.1 providers supply the review and GIS joins. Installed source should include
+the current `operator/extensions/gis-projects.json`; no new GIS exporter or
+shared-host fork is introduced. Scientific dependency and map-method details are
+in [CALIBRATION_MAPS.md](../model/CALIBRATION_MAPS.md).
+
+A focused native receiving check can compile `model/calibration_maps.py` and
+`operator/calibration.py`, import the original provider, then prepare one actual
+completed calibration's map edition, open its first PDF/SVG and scalar source,
+save a review, export its GIS project and reopen the same workspace. Use actual
+retained report IDs from that study.

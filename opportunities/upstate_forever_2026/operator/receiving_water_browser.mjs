@@ -135,7 +135,8 @@ const attr = (name, value) => '[' + name + '=' + JSON.stringify(String(value)) +
 async function openWater(kind, id) {
   await navigate('receiving-waters');
   await page.locator('[data-action="water-open"]' + attr('data-kind', kind) + attr('data-id', id)).click();
-  await page.locator('#water-selected h2').waitFor();
+  await page.locator('#water-selected' + attr('data-water-record-kind', kind)
+    + attr('data-water-record-id', id) + '[aria-busy="false"] h2').waitFor();
 }
 async function readyMap() {
   await page.waitForFunction(() => {
@@ -170,6 +171,18 @@ async function taskResult(stage) {
     if (task.state === 'complete') {
       stage.result = task.result; stage.completed_at = task.completed_at || new Date().toISOString();
       await checkpoint(); return task;
+    }
+    if (task.state === 'interrupted' && stage.request
+        && stage.resume_attempt !== report.attempts.length) {
+      assert.equal(task.action, stage.action);
+      assert.deepEqual(task.payload, stage.request.payload);
+      stage.resume_attempt = report.attempts.length;
+      stage.resumed_at = new Date().toISOString();
+      await checkpoint();
+      const resumed = await api('/api/task/resume', {id: task.id});
+      assert.equal(resumed.id, task.id);
+      assert.equal(resumed.workspace, workspace);
+      continue;
     }
     if (!['queued', 'running'].includes(task.state)) {
       stage.error = task.error; await checkpoint();
@@ -283,10 +296,14 @@ function verifyReview(review, target, catalog) {
 }
 async function openTarget(target) {
   await openWater(target.kind, target.id);
+  if (target.kind === 'plan' && target.subject) {
+    await page.locator('[data-water-filter="family"]').selectOption('');
+    await page.locator('[data-water-search]').fill(target.subject);
+  }
   if (target.kind === 'analysis' && target.subject) {
     await page.locator('[data-water-filter="kind"]').selectOption(target.subject_kind);
     await page.locator('[data-water-filter="family"]').selectOption('');
-    await page.locator('[data-water-search]').fill('');
+    await page.locator('[data-water-search]').fill(target.subject);
     await page.locator('[data-water-filter="run"]').selectOption(target.alternative_run_id || '');
     const quantity = target.statistic === 'increased_export_priority' ? 'increased'
       : target.statistic === 'avoided_export_priority' ? 'avoided' : 'physical';

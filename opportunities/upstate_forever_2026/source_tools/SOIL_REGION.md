@@ -8,7 +8,7 @@ Original application: `opportunities/upstate_forever_2026`, retained 72-file sou
 
 Acquire the full upstream region's soil geometry and native whole-soil K ratings while the national NLCD transfer proceeds. The existing `soil_sources.prepare` opens its actual NLCD reference before beginning USDA capture. The new `capture` command only requires the already retained upstream domain and the existing Shapely/pyproj runtime. The later `prepare` command places that same complete capture on the actual received NLCD grid.
 
-This is an additive two-file component. It reuses the existing `Sda` original-request storage, `_geometry_pages`, `_native_rule`, `_choice_coefficients` and `_polygons` behavior, and the original `source.capture_upstream_network.esri_polygon` reader. Existing source acquisition and scientific run identities continue in the same workspace.
+The maintained capture/preparation component reuses `Sda` original-request storage, `_geometry_pages`, `_native_rule`, `_choice_coefficients` and `_polygons` behavior, and the original `source.capture_upstream_network.esri_polygon` reader. The acquisition-throughput edition updates the complete `soil_sources.py`, `soil_region.py` and this guide together; its page-consumer argument is optional for every existing caller. Existing source acquisition and scientific run identities continue in the same workspace.
 
 ## Inputs and geography
 
@@ -79,6 +79,52 @@ python3 -B -m source_tools.soil_region inspect --capture "$UPSTATE_SOIL_REGION"
 ~~~
 
 For an interruption, preserve the same directory and continue the same `capture ... --resume` command. Completed requests and interpretation IDs are reused. The inherited original SDA transport retains attempts and honors provider Retry-After. The final manifest can be rebuilt from complete retained capture bytes if interruption occurs during its last save.
+
+## Capture throughput and interruption recovery
+
+The regional acquirer consumes each validated geometry page directly into the
+existing SQLite/R-tree transaction. The shared page reader still verifies the
+exact polygon IDs, source attributes, AOI, CRS and hexadecimal WKB before the
+consumer runs. It releases the page before receiving the next one. This removes
+the former second decompression and JSON decoding pass over the same page.
+
+Provider requests remain serial, with the existing 64 MiB geometry-response
+limit and original Retry-After handling. No additional tile queue or parallel
+download worker is created. The tile loop, geographic rectangles, original
+mapunit IDs, interpretation batches, null policy and final vector ordering use
+the same source selections as before.
+
+Each completed tile now commits its rows, R-tree entries and a small checkpoint
+in the same `soil-polygons.sqlite` transaction. That checkpoint binds the exact
+existing request documents, successful response records and compressed response
+bodies. It also binds a streamed hash/count of the derived WKB/index rows.
+Checkpoint data stays in the existing database; the original request/response
+files retain their existing names and formats.
+
+Run the same capture command with `--resume` and the same output directory.
+Completed tiles verify their original retained file identities and stream the
+stored index once, then reuse those rows directly. They do not decompress every
+geometry page, parse every WKB or delete/reinsert the completed index. A failed
+transaction leaves its previously committed state intact, while already received
+provider pages remain available to the ordinary request cache.
+
+An older incomplete capture without these checkpoints makes one normal pass
+over its existing cached pages and records each completed tile. A missing or
+changed derived row/index is rebuilt from those original pages. Changes to an
+original request or body are reported with their actual retained file path.
+Already complete captures retain their original complete manifest and members.
+
+The existing `progress.json` geometry stage includes `reused_indexed_tiles` and
+`newly_indexed_tiles` alongside completed tile and mapunit counts. These fields
+show work actually reused during this invocation. The improvement removes
+identified duplicate operations; elapsed time remains the accepting host's
+observed runtime result.
+
+Preparation continues to process the original raster in bounded windows
+(default 512 cells per side), retain independent copies of the complete source
+and use the unchanged grid/K/coverage methods. Place the existing capture on
+the accepting host's owned persistent storage, preserving its original source
+directory and lock when continuing the current operation.
 
 ## Prepare K on the actual NLCD grid
 

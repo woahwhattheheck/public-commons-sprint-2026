@@ -9,6 +9,7 @@ import argparse
 import base64
 import csv
 import hashlib
+import gzip
 import html
 import io
 import json
@@ -22,6 +23,11 @@ import sys
 import tempfile
 from typing import Any
 import zipfile
+
+if __package__:
+    from .observation_support import enrich_observation_context, report_html as support_report_html
+else:
+    from observation_support import enrich_observation_context, report_html as support_report_html
 
 STORE_SCHEMA = "upstate.published-study-record/v1"
 EXPORT_SCHEMA = "upstate.published-study-export/v1"
@@ -207,6 +213,37 @@ def _normalize_bundle(files: dict[str, bytes]) -> dict[str, bytes]:
     return normalized
 
 
+def _companion_document(data: bytes):
+    if len(data) > MAX_SOURCE_BYTES * 2:
+        raise ValueError("The study carrier exceeds the intake size limit.")
+    try:
+        return _json(data), data
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        markdown = data.decode("utf-8-sig").replace("\u00a0", " ")
+    blocks = re.findall(r"(?ms)^[ \t]*\x60{3}base64[ \t]*\r?\n(.*?)^[ \t]*\x60{3}[ \t]*$", markdown)
+    if blocks:
+        encoded = "".join(re.sub(r"\s+", "", block) for block in blocks)
+        compressed = base64.b64decode(encoded, validate=True)
+        if not compressed.startswith(b"\x1f\x8b"):
+            raise ValueError("Canvas base64 source blocks must contain the original gzip companion.")
+        with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as archive:
+            decoded = archive.read(MAX_SOURCE_BYTES + 1)
+        if len(decoded) > MAX_SOURCE_BYTES:
+            raise ValueError("The decoded Canvas companion exceeds the intake size limit.")
+        return _json(decoded), decoded
+    candidates = []
+    for block in re.findall(r"(?ms)^[ \t]*\x60{3}json[ \t]*\r?\n(.*?)^[ \t]*\x60{3}[ \t]*$", markdown):
+        try:
+            value = json.loads(block)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and value.get("schema") == COMPANION_SCHEMA:
+            candidates.append((value, block.encode("utf-8")))
+    if len(candidates) != 1:
+        raise ValueError("Choose the original study JSON, its complete Canvas Markdown, or a study ZIP.")
+    return candidates[0]
+
+
 def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
     """Read the original OBS12 JSON bank or this consumer's complete ZIP export."""
     if data.startswith(b"PK"):
@@ -241,7 +278,9 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
             return _normalize_bundle(files), {
                 "carrier_sha256": _hash(data), "source_format": "study_directory_zip"
             }
-    package = _json(data)
+    package, decoded = _companion_document(data)
+    if not isinstance(package, dict):
+        raise ValueError("The study companion must be a JSON object.")
     if package.get("schema") != COMPANION_SCHEMA:
         raise ValueError("Expected the published OBS12 study companion or a complete study export ZIP.")
     files = {}
@@ -258,6 +297,7 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
     return _normalize_bundle(files), {
         "carrier_sha256": _hash(data),
         "source_format": COMPANION_SCHEMA,
+        "decoded_companion_sha256": _hash(decoded),
         "operation_id": package.get("operation_id"),
     }
 
@@ -276,6 +316,404 @@ def companion_from_directory(directory: Path) -> tuple[dict[str, bytes], dict[st
         "source_format": "materialized_OBS12_companion",
         "original_directory": str(directory),
     }
+
+
+OBSERVATION_FILE = "wqp_20261013/three-lake-observations.csv"
+COHORT_FILE = "cohort_reconciliation_20261013/study_chlorophyll_cohort.csv"
+COHORT_CONTEXT = "cohort_reconciliation_20261013/cohort_reconciliation.json"
+COHORT_MANIFEST = "eighteenmile_chlorophyll_reconciled.sources.json"
+REPORT_MANIFEST = "eighteenmile_lake_observation_report.sources.json"
+PAIRED_MANIFEST = "eighteenmile_lake_paired_analysis.sources.json"
+WQP_FILE = "wqp/derived/measurements.csv"
+WQP_COHORT = "wqp/derived/selected_chlorophyll.csv"
+WQP_COVERAGE = "wqp/derived/coverage.csv"
+WQP_CALENDAR = "wqp/derived/calendar.csv"
+WQP_SUMMARY = "wqp/derived/summary.json"
+FLOW_FILE = "wqp/study_flow_dates.csv"
+FLOW_METHODS = "wqp/flow_context_methods.json"
+FLOW_METHODS_PUBLIC = "wqp/flow_context_methods.public.json"
+FIGURE_MANIFEST = "figures/model-sources.json"
+FIGURES = {
+    "figures/chlorophyll_time_series.svg": "Chlorophyll at the five original stations",
+    "figures/chlorophyll_distributions.svg": "All selected chlorophyll observations and distributions",
+    "figures/sampling_flow_context.svg": "Observed upstream flow on the original laboratory dates",
+    "figures/chlorophyll_antecedent_context.svg": "Chlorophyll and preceding upstream flow",
+}
+FIGURE_SCOPE = "These retained figures show the complete original 75-observation chlorophyll cohort and 16 laboratory dates. They retain their full source scope when the study tables are filtered."
+WQP_FIELDS = {
+    "monitoring_location_id": "station_id", "activity_id": "activity_id",
+    "date": "sample_date", "local_time": "sample_time", "source_timezone": "sample_timezone",
+    "project_id": "project_id", "parameter": "characteristic", "value": "reported_value",
+    "unit": "reported_unit", "detection_condition": "detection_condition",
+    "detection_limit": "detection_limit", "detection_limit_unit": "detection_limit_unit",
+    "depth": "activity_depth", "depth_unit": "activity_depth_unit",
+    "sample_fraction": "sample_fraction", "status": "result_status", "qualifier": "qualifier",
+    "method_id": "analytical_method_id", "method_authority": "analytical_method_context",
+}
+CONTEXT_FILES = (OBSERVATION_FILE, COHORT_FILE, WQP_FILE, WQP_COHORT, WQP_COVERAGE, WQP_CALENDAR, FLOW_FILE)
+
+COHORT_FIELDS = {
+    "monitoring_location_id": "MonitoringLocationIdentifier", "activity_id": "ActivityIdentifier",
+    "date": "ActivityStartDate", "local_time": "ActivityStartTime/Time",
+    "source_timezone": "ActivityStartTime/TimeZoneCode", "project_id": "ProjectIdentifier",
+    "parameter": "CharacteristicName", "value": "ResultMeasureValue",
+    "unit": "ResultMeasure/MeasureUnitCode", "detection_condition": "ResultDetectionConditionText",
+    "detection_limit": "DetectionQuantitationLimitMeasure/MeasureValue",
+    "detection_limit_unit": "DetectionQuantitationLimitMeasure/MeasureUnitCode",
+    "depth": "ActivityDepthHeightMeasure/MeasureValue", "depth_unit": "ActivityDepthHeightMeasure/MeasureUnitCode",
+    "sample_fraction": "ResultSampleFractionText", "status": "ResultStatusIdentifier",
+    "qualifier": "MeasureQualifierCode", "method_id": "ResultAnalyticalMethod/MethodIdentifier",
+    "method_authority": "ResultAnalyticalMethod/MethodIdentifierContext",
+}
+OBSERVATION_PARAMETERS = {
+    "Chlorophyll a, corrected for pheophytin": "total_chlorophyll_a",
+    "Microcystins/nodularin": "microcystins",
+}
+
+
+def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[dict[str, Any]]:
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig"), newline=""))
+    required = {
+        "station_id", "monitoring_location_id", "activity_id", "date", "local_time",
+        "source_timezone", "parameter", "value", "unit", "detection_condition",
+        "detection_limit", "detection_limit_unit", "depth", "depth_unit",
+    }
+    headers = reader.fieldnames or []
+    field_map = WQP_FIELDS if source_file in (WQP_FILE, WQP_COHORT) else COHORT_FIELDS if source_file == COHORT_FILE else None
+    expected = set(field_map.values()) if field_map else required
+    if len(headers) != len(set(headers)) or not expected.issubset(headers):
+        raise ValueError("The original observation CSV has an incompatible column contract.")
+    rows = []
+    for number, original in enumerate(reader, start=2):
+        raw = dict(original)
+        if field_map:
+            raw = {name: original[column] for name, column in field_map.items()}
+            raw["station_id"] = re.sub(r"^21SC60WQ(?:_WQX)?-", "", raw["monitoring_location_id"])
+        if None in original or any(value is None for value in original.values()):
+            raise ValueError(f"Malformed original observation at CSV row {number}.")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw["date"]):
+            raise ValueError(f"Invalid original observation date at CSV row {number}.")
+        row = {
+            **raw, "site_id": raw["station_id"], "parameter_original": raw["parameter"],
+            "parameter": OBSERVATION_PARAMETERS.get(raw["parameter"], raw["parameter"]),
+            "source_file": source_file, "source_csv_row": number, "raw_cells": original,
+            "source_depth_token": raw["depth"], "source_value_token": raw["value"],
+            "activity_type": original.get("activity_type", original.get("ActivityTypeCode", "")),
+            "activity_comment": original.get("activity_comment", original.get("ActivityCommentText", "")),
+            "result_comment": original.get("result_comment", original.get("ResultCommentText", "")),
+        }
+        for field in ("value", "detection_limit", "depth"):
+            if raw[field] == "":
+                row[field] = None
+            else:
+                row[field] = float(raw[field])
+                if not math.isfinite(row[field]):
+                    raise ValueError(f"Non-finite original observation {field} at row {number}.")
+        row["detection_limit_type"] = original.get(
+            "detection_limit_type", original.get("DetectionQuantitationLimitTypeName", "")
+        )
+        quantitation = original.get("quantitation_class", "")
+        lower_censored = quantitation == "censored_below" or bool(
+            re.search(r"below|not detected|less than", raw["detection_condition"], re.I)
+        )
+        upper_censored = quantitation == "censored_above" or bool(
+            re.search(r"above.*upper|greater than", raw["detection_condition"], re.I)
+        ) or bool(
+            row["value"] is None and row["detection_limit"] is not None
+            and raw["detection_condition"] == "Present Above Quantification Limit"
+            and re.search(r"upper quantitation limit", row["detection_limit_type"], re.I)
+        )
+        row["censor_direction"] = "above" if upper_censored else "below" if lower_censored else ""
+        row["censored"] = bool(row["censor_direction"])
+        if source_file in (WQP_FILE, WQP_COHORT):
+            row.update(
+                original_record_id=original["record_id"], original_source_path=original["source_path"],
+                original_source_sha256=original["source_sha256"], original_source_record_index=int(original["source_record_index"]),
+                quantitation_class=original["quantitation_class"], cohort_selection=original["study_chla_selection"],
+                selection_basis=original["selection_basis"],
+            )
+        row["record_id"] = "observed-row-" + _hash(_json_bytes({"source": source_file, "row": number, "cells": original}))[:24]
+        rows.append(row)
+    return rows
+
+
+def _combined_observations(files):
+    if WQP_FILE in files and WQP_COHORT in files:
+        measured = _observation_rows(files[WQP_FILE], WQP_FILE)
+        cohort = _observation_rows(files[WQP_COHORT], WQP_COHORT)
+        if any(row["parameter"] != "total_chlorophyll_a" for row in cohort):
+            raise ValueError("The selected chlorophyll source contains another characteristic.")
+        return [row for row in measured if row["parameter"] == "microcystins"] + cohort
+    observed = _observation_rows(files[OBSERVATION_FILE]) if OBSERVATION_FILE in files else []
+    if COHORT_FILE in files:
+        cohort = _observation_rows(files[COHORT_FILE], COHORT_FILE)
+        if any(row["parameter"] != "total_chlorophyll_a" for row in cohort):
+            raise ValueError("The retained chlorophyll cohort contains another characteristic.")
+        observed = [row for row in observed if row["parameter"] != "total_chlorophyll_a"] + cohort
+    return observed
+
+
+def _context_rows(data, source_file):
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig"), newline=""))
+    headers = reader.fieldnames or []
+    if not headers or len(headers) != len(set(headers)):
+        raise ValueError("Context CSV columns must be nonempty and unique.")
+    rows = []
+    for number, raw in enumerate(reader, start=2):
+        if None in raw or any(value is None for value in raw.values()):
+            raise ValueError("Malformed context row in " + source_file)
+        if all(value == "" for value in raw.values()):
+            continue
+        row = {**raw, "raw_cells": raw, "source_file": source_file, "source_csv_row": number}
+        if "station_id" in raw:
+            row["site_id"] = re.sub(r"^21SC60WQ(?:_WQX)?-", "", raw["station_id"])
+        if "characteristic" in raw:
+            row["parameter"] = OBSERVATION_PARAMETERS.get(raw["characteristic"], raw["characteristic"])
+        row["record_id"] = "context-row-" + _hash(_json_bytes({"source": source_file, "row": number, "cells": raw}))[:24]
+        rows.append(row)
+    return rows
+
+
+def _dated_context(complete, sites, parameters, observation_context):
+    rows = [row for row in complete["original_measurements"]
+            if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
+    coverage = [row for row in complete["wqp_coverage"]
+                if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
+    observed_dates = {row["date"] for row in observation_context["rows"]}
+    flow = [row for row in complete["flow_rows"] if row["sampling_date"] in observed_dates]
+    return {
+        "schema": "upstate.published-study-dated-context/v1",
+        "rows": rows, "coverage": coverage, "summary": complete["wqp_summary"],
+        "calendar": complete["wqp_calendar"], "flow_rows": flow,
+        "flow_methods": complete["flow_methods"],
+        "dates_without_flow_context": sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
+        "selection_notes": [
+            "WQP result rows retain the complete original acquisition year and original project identities. Station and parameter filters select these rows; continuous month/year and published depth-stratum filters apply to the published tables.",
+            "Chlorophyll comparisons use the explicit reconciled cohort. Microcystin comparisons show every original campaign activity, including additional visits, with their own calendar and detection limits.",
+            "Upstream flow context joins the retained agency reporting dates of the selected comparison activities. Original source response IDs, record indices and qualifiers remain in each row.",
+        ],
+    }
+
+
+def _manifest_path(manifest_name, value):
+    """Resolve a native companion within the retained study tree."""
+    if not isinstance(value, str) or not value or "\\" in value or "\x00" in value:
+        raise ValueError("A manifest source must use a relative POSIX path.")
+    reference = PurePosixPath(value)
+    if reference.is_absolute() or str(reference) != value or value == ".":
+        raise ValueError("A manifest source must use a canonical relative path.")
+    if manifest_name in (COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST):
+        value = _name(value)
+        prefix = "observations/eighteenmile_2023/"
+        if not value.startswith(prefix):
+            raise ValueError("Application-root study manifests must identify files inside the original study directory.")
+        return _name(value[len(prefix):])
+    parts = list(PurePosixPath(_name(manifest_name)).parent.parts)
+    for part in reference.parts:
+        if part == "..":
+            if not parts:
+                raise ValueError("A native companion must remain inside the retained study directory.")
+            parts.pop()
+        else:
+            parts.append(part)
+    return _name("/".join(parts))
+
+
+def _observation_context(rows, seasonal, study, sites, parameters, strata):
+    start = study.get("grab_sampling", {}).get("start", "")
+    end = study.get("grab_sampling", {}).get("end", "")
+    chosen = [
+        row for row in rows
+        if row["site_id"] in sites
+        and (not parameters or row["parameter"] in parameters)
+        and (not strata or "surface" in strata)
+        and (not start or row["date"] >= start)
+        and (not end or row["date"] <= end)
+    ]
+    groups = {}
+    for row in chosen:
+        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", "")), []).append(row)
+    series = []
+    for (site_id, parameter, project_id, activity_type), records in sorted(groups.items()):
+        numeric = [row["value"] for row in records if row["value"] is not None and not row["censored"]]
+        units = sorted({row["unit"] for row in records if row["value"] is not None and row["unit"]})
+        comparable_units = len(units) == 1 and all(
+            row["unit"] == units[0] for row in records if row["value"] is not None and not row["censored"]
+        )
+        if numeric and comparable_units:
+            mean = sum(numeric) / len(numeric)
+            sd = math.sqrt(sum((value - mean) ** 2 for value in numeric) / (len(numeric) - 1)) if len(numeric) > 1 else None
+            minimum, maximum = min(numeric), max(numeric)
+        else:
+            mean = sd = minimum = maximum = None
+        published = next((
+            row for row in seasonal
+            if row["site_id"] == site_id and row["parameter"] == parameter and row["stratum"] == "surface"
+        ), None)
+        identifiers = [row["activity_id"] for row in records]
+        dates = sorted(row["date"] for row in records)
+        depth_tokens = sorted({row["source_depth_token"] + " " + row["depth_unit"] for row in records})
+        qualifiers = sorted({row.get("qualifier", "") for row in records if row.get("qualifier")})
+        reference_dates = {
+            row["date"] for row in rows
+            if row["site_id"] == site_id and row["parameter"] == "total_chlorophyll_a"
+            and (not start or row["date"] >= start) and (not end or row["date"] <= end)
+        }
+        missing_reference_dates = sorted(reference_dates - set(dates))
+        additional_dates = sorted(set(dates) - reference_dates) if reference_dates else []
+        censored = sum(row["censored"] for row in records)
+        missing = sum(row["value"] is None and not row["censored"] for row in records)
+        basis = "Original quantified activities; arithmetic mean and sample SD; censored and missing values retain their source fields. Source project and activity type define separate series."
+        support = "Reconciled chlorophyll cohort" if parameter == "total_chlorophyll_a" and all(row["source_file"] in (COHORT_FILE, WQP_COHORT) for row in records) else "Original campaign activities"
+        if support == "Reconciled chlorophyll cohort":
+            basis += " " + " ".join(sorted({row.get("selection_basis", "") for row in records if row.get("selection_basis")}))
+        if parameter == "microcystins":
+            support = "Microcystin campaign context"
+            basis += " All original campaign microcystin activities are shown with their actual activity type and calendar; printed report statistics retain their separate analytical cohort."
+        if censored:
+            basis += " This quantified-only mean uses no substituted values; the published mean retains the report's separate censor treatment."
+        if parameter == "microcystins" and (missing_reference_dates or additional_dates):
+            basis += " The original microcystin calendar differs from the chlorophyll visit calendar; the exact missing and additional dates are retained."
+        if len(identifiers) != len(set(identifiers)):
+            basis += " Multiple result rows share an activity identifier; record count and distinct activity count are shown separately."
+        if qualifiers:
+            basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
+        series.append({
+            "site_id": site_id, "parameter": parameter, "project_id": project_id,
+            "activity_type": activity_type, "sample_support": support,
+            "parameter_original": sorted({row["parameter_original"] for row in records}),
+            "unit": units[0] if comparable_units else "; ".join(units),
+            "record_count": len(records), "activity_count": len(set(identifiers)),
+            "numeric_count": len(numeric), "censored_count": censored, "missing_count": missing,
+            "date_count": len(set(dates)), "period_start": dates[0], "period_end": dates[-1],
+            "depths_as_reported": [value.strip() or "not reported" for value in depth_tokens],
+            "qualifiers": qualifiers, "mean": mean, "sample_sd": sd,
+            "missing_chlorophyll_dates": missing_reference_dates,
+            "additional_dates": additional_dates,
+            "original_methods": sorted({row.get("method_authority", "") + " " + row.get("method_id", "") for row in records}),
+            "minimum": minimum, "maximum": maximum, "published": published,
+            "published_n": published["n"] if published else None,
+            "published_mean": published["mean"] if published else None,
+            "published_sd": published["sd"] if published else None,
+            "count_difference": len(records) - published["n"] if published else None,
+            "source_table": published.get("source_table") if published else None,
+            "source_pdf_page": published.get("source_pdf_page") if published else None,
+            "source_selector": records[0]["source_selector"], "basis": basis,
+            "complete_uncensored_campaign": bool(
+                parameter == "total_chlorophyll_a" and published and comparable_units and units[0] == published["units"]
+                and not censored and not missing and len(identifiers) == len(set(identifiers))
+                and len(set(dates)) == study.get("grab_sampling", {}).get("visits_per_site")
+                and not qualifiers
+            ),
+        })
+    return {
+        "schema": "upstate.published-study-observation-comparison/v1",
+        "rows": sorted(chosen, key=lambda row: (row["date"], row["local_time"], row["site_id"], row["parameter"], row["activity_id"])),
+        "series": series, "period_start": start, "period_end": end,
+        "temporal_support": "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries.",
+        "parameter_mapping": OBSERVATION_PARAMETERS,
+    }
+
+
+def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
+    """Register original map/table identities and every retained study document."""
+    manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST) if name in files]
+    for manifest_name in manifest_names:
+        parent = PurePosixPath(manifest_name).parent
+        native = _json(files[manifest_name])
+        if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
+            raise ValueError("The study map manifest must use upstate.sources/v1.")
+        for original in native["entries"]:
+            entry = dict(original)
+            name = _manifest_path(manifest_name, entry["path"])
+            source_id = entry.get("id")
+            if not isinstance(source_id, str) or not source_id:
+                raise ValueError("Study map source identifiers must be unique nonempty text.")
+            if name not in files:
+                raise ValueError("Each study map entry must identify one retained original source.")
+            if entry.get("kind") not in ("raster", "vector", "table", "document"):
+                raise ValueError("Unsupported study map source kind.")
+            raw = files[name]
+            if entry.get("sha256", _hash(raw)) != _hash(raw) or entry.get("bytes", len(raw)) != len(raw):
+                raise ValueError("Study map source bytes changed: " + name)
+            companions = []
+            for original_companion in entry.get("companions", []):
+                companion = dict(original_companion)
+                companion_name = _manifest_path(manifest_name, companion["path"])
+                if companion_name not in files:
+                    raise ValueError("Study map companion is missing: " + companion_name)
+                body = files[companion_name]
+                if companion.get("sha256", _hash(body)) != _hash(body) or companion.get("bytes", len(body)) != len(body):
+                    raise ValueError("Study map companion bytes changed: " + companion_name)
+                companion.update(path="source/" + companion_name, sha256=_hash(body), bytes=len(body))
+                companions.append(companion)
+            entry.update(path="source/" + name, sha256=_hash(raw), bytes=len(raw), companions=companions)
+            entry["metadata"] = {
+                **entry.get("metadata", {}), "study_id": study_id,
+                "study_version_id": version_id, "source_relative_path": name,
+            }
+            previous = native_ids.get(source_id)
+            if previous:
+                if previous["path"] != entry["path"] or previous["sha256"] != entry["sha256"] or previous["kind"] != entry["kind"]:
+                    raise ValueError("Original source manifests assign conflicting bodies to " + source_id)
+                existing_companions = {item["path"]: item for item in previous["companions"]}
+                for companion in companions:
+                    if companion["path"] in existing_companions and existing_companions[companion["path"]]["sha256"] != companion["sha256"]:
+                        raise ValueError("Original source manifests assign conflicting companions.")
+                    existing_companions[companion["path"]] = companion
+                previous["companions"] = list(existing_companions.values())
+            else:
+                manifest_entries.append(entry)
+                native_ids[source_id] = entry
+            source_entries.setdefault(name, source_id)
+            seen_ids.add(source_id)
+    original_sources = {}
+    if "wqp/capture.json" in files:
+        capture = _json(files["wqp/capture.json"])
+        original_sources = {item["source_path"]: item for item in [*capture.get("sources", []), *capture.get("additional_queries", [])]}
+    for name, raw in sorted(files.items()):
+        if name in source_entries:
+            continue
+        suffix = PurePosixPath(name).suffix.lower()
+        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".txt", ".html", ".svg"):
+            continue
+        source_id = "study-" + _hash(name.encode("utf-8"))[:16]
+        if source_id in seen_ids:
+            raise ValueError("Study document source identifier conflicts with the original map manifest.")
+        kind = "table" if suffix == ".csv" else "vector" if suffix == ".geojson" else "document"
+        entry = {
+            "id": source_id, "title": f"{study['title']} / {PurePosixPath(name).name}",
+            "uri": study.get("original_url", ""), "vintage": study.get("publication", ""),
+            "kind": kind, "path": "source/" + name, "sha256": _hash(raw), "bytes": len(raw),
+            "metadata": {
+                "study_id": study_id, "study_version_id": version_id, "source_relative_path": name,
+                "observation_support": "published_study_context",
+                "source_pdf_page_numbering": "one_based_viewer_page",
+            },
+        }
+        captured = original_sources.get(name)
+        if captured:
+            if captured["sha256"] != _hash(raw) or captured["bytes"] != len(raw):
+                raise ValueError("Original WQP capture bytes changed: " + name)
+            entry["uri"] = captured["source_url"]
+            entry["vintage"] = "2023"
+            entry["metadata"].update(original_station_id=captured["station_id"], original_record_count=captured["record_count"])
+        if suffix == ".geojson":
+            vector = _json(raw)
+            if vector.get("type") != "FeatureCollection":
+                raise ValueError("Study GeoJSON sources must be FeatureCollections.")
+            source_crs = vector.get("crs", {}).get("properties", {}).get("name")
+            if not isinstance(source_crs, str) or not source_crs:
+                raise ValueError("A study vector must retain its explicit original coordinate reference system.")
+            entry["source_crs"] = source_crs
+            entry["metadata"]["feature_count"] = len(vector.get("features", []))
+        manifest_entries.append(entry)
+        source_entries[name] = source_id
+        seen_ids.add(source_id)
+    return {
+        "schema": "upstate.sources/v1", "title": study["title"], "entries": manifest_entries,
+    }, source_entries
 
 
 class PublishedStudyStore:
@@ -345,7 +783,16 @@ class PublishedStudyStore:
             name: _csv_rows(files[filename], name)
             for name, filename in TABLE_FILES.items() if filename in files
         }
+        observed = _combined_observations(files)
+        measurements = _observation_rows(files[WQP_FILE], WQP_FILE) if WQP_FILE in files else []
+        result_counts = {
+            "observed_activities": len(observed), "original_result_rows": len(measurements),
+            "original_activity_count": len({(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"]) for row in measurements}),
+            "flow_dates": len(_context_rows(files[FLOW_FILE], FLOW_FILE)) if FLOW_FILE in files else 0,
+        }
         station_ids = [row["site_id"] for row in tables["stations"]]
+        if any(row["site_id"] not in station_ids for row in observed):
+            raise ValueError("An original observation references a station outside this study.")
         if len(station_ids) != len(set(station_ids)):
             raise ValueError("Study station identifiers must be unique.")
         for table, rows in tables.items():
@@ -382,7 +829,7 @@ class PublishedStudyStore:
                     "operation_id": operation_id or origin.get("operation_id"),
                     "origin": origin,
                     "source_files": entries,
-                    "counts": {name: len(rows) for name, rows in tables.items()},
+                    "counts": {**{name: len(rows) for name, rows in tables.items()}, **result_counts},
                     "source_note_count": len(source_notes),
                     "source_collection_id": None,
                     "source_entries": {},
@@ -401,38 +848,8 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id"):
-            manifest_entries = []
-            source_entries = {}
-            for entry in entries:
-                name = entry["path"]
-                suffix = PurePosixPath(name).suffix.lower()
-                if suffix not in (".csv", ".json", ".md", ".pdf", ".png", ".jpg", ".jpeg"):
-                    continue
-                source_id = "study-" + _hash(name.encode("utf-8"))[:16]
-                source_entries[name] = source_id
-                kind = "table" if suffix == ".csv" else "document"
-                manifest_entries.append({
-                    "id": source_id,
-                    "title": f"{study['title']} / {PurePosixPath(name).name}",
-                    "uri": study.get("original_url", ""),
-                    "vintage": study.get("publication", ""),
-                    "kind": kind,
-                    "path": "source/" + name,
-                    "sha256": entry["sha256"],
-                    "metadata": {
-                        "study_id": study_id,
-                        "study_version_id": version_id,
-                        "source_relative_path": name,
-                        "observation_support": "published_study_context",
-                        "source_pdf_page_numbering": "one_based_viewer_page",
-                    },
-                })
-            source_manifest = {
-                "schema": "upstate.sources/v1",
-                "title": study["title"],
-                "entries": manifest_entries,
-            }
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v7":
+            source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
             collection = self.workspace.import_sources(manifest_path)
@@ -441,7 +858,9 @@ class PublishedStudyStore:
                 "path": str(manifest_path.resolve()), "bytes": len(manifest_bytes),
                 "sha256": _hash(manifest_bytes), "schema": "upstate.sources/v1",
             }
+            record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
+            record["source_registration_schema"] = "upstate.published-study-sources/v7"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -468,6 +887,38 @@ class PublishedStudyStore:
             for row in rows:
                 row["source_selector"] = selector
         notes = _json(original("source_notes.json"))
+        context_files = {name: original(name) for name in CONTEXT_FILES if name in record["source_entries"]}
+        observed = _combined_observations(context_files)
+        measurements = _observation_rows(context_files[WQP_FILE], WQP_FILE) if WQP_FILE in context_files else []
+        coverage = _context_rows(context_files[WQP_COVERAGE], WQP_COVERAGE) if WQP_COVERAGE in context_files else []
+        calendar = _context_rows(context_files[WQP_CALENDAR], WQP_CALENDAR) if WQP_CALENDAR in context_files else []
+        flow = _context_rows(context_files[FLOW_FILE], FLOW_FILE) if FLOW_FILE in context_files else []
+        for row in observed + measurements + coverage + calendar + flow:
+            row["source_selector"] = {
+                "source_collection_id": record["source_collection_id"],
+                "source_id": record["source_entries"][row["source_file"]],
+            }
+            raw_path = row.get("original_source_path")
+            if raw_path in record["source_entries"]:
+                row["original_source_selector"] = {
+                    "source_collection_id": record["source_collection_id"],
+                    "source_id": record["source_entries"][raw_path],
+                }
+        summary = _json(original(WQP_SUMMARY)) if WQP_SUMMARY in record["source_entries"] else {}
+        methods_name = next((name for name in (FLOW_METHODS, FLOW_METHODS_PUBLIC)
+                             if name in record["source_entries"]), None)
+        flow_methods = _json(original(methods_name)) if methods_name else {}
+        available_stations = {row["site_id"]: row for row in tables["stations"]}
+        for source in summary.get("source_row_counts", []):
+            site_id = source["station_id"]
+            if site_id not in available_stations:
+                available_stations[site_id] = {
+                    "site_id": site_id, "description": "Original WQP source context",
+                    "original_record_count": source["record_count"], "source_path": source["source_path"],
+                }
+        cohort_reconciliation = _json(original(COHORT_CONTEXT)) if COHORT_CONTEXT in record["source_entries"] else None
+        reconciliation_name = "wqp_20261013/report-reconciliation.json"
+        reconciliation = _json(original(reconciliation_name)) if reconciliation_name in record["source_entries"] else None
         visual = []
         for entry in record["source_files"]:
             if entry["path"].endswith(".json") and (
@@ -480,6 +931,11 @@ class PublishedStudyStore:
             "record": record, "study": study, "tables": tables,
             "source_notes": notes, "visual_context": visual,
             "unit_definitions": UNIT_DEFINITIONS,
+            "observation_rows": observed, "observation_reconciliation": reconciliation,
+            "cohort_reconciliation": cohort_reconciliation,
+            "original_measurements": measurements, "wqp_coverage": coverage, "wqp_calendar": calendar,
+            "wqp_summary": summary, "flow_rows": flow, "flow_methods": flow_methods,
+            "available_stations": list(available_stations.values()),
             "source_artifacts": [
                 {**entry, "source_selector": {
                     "source_collection_id": record["source_collection_id"],
@@ -501,7 +957,7 @@ class PublishedStudyStore:
         months: list[int] | None = None,
     ) -> dict[str, Any]:
         complete = self.get_study(study_id, version_id)
-        stations = complete["tables"]["stations"]
+        stations = complete["available_stations"]
         known_sites = {row["site_id"] for row in stations}
         sites = set(site_ids or known_sites)
         unknown = sites - known_sites
@@ -576,6 +1032,11 @@ class PublishedStudyStore:
                 continue
             relevant_notes.append(note)
         seasonal = selected.get("seasonal", [])
+        observation_context = _observation_context(
+            complete["observation_rows"], selected.get("seasonal", []), complete["study"],
+            sites, parameter_set, stratum_set,
+        )
+        observation_context = enrich_observation_context(observation_context)
         return {
             "schema": "upstate.published-study-context/v1",
             "record": complete["record"],
@@ -586,6 +1047,10 @@ class PublishedStudyStore:
             },
             "tables": selected,
             "surface_parameter_ranges": expanded_ranges,
+            "observations": observation_context,
+            "dated_context": _dated_context(complete, sites, parameter_set, observation_context),
+            "observation_reconciliation": complete["observation_reconciliation"],
+            "cohort_reconciliation": complete["cohort_reconciliation"],
             "source_notes": relevant_notes,
             "visual_context": [
                 item for item in complete["visual_context"]
@@ -678,7 +1143,98 @@ class PublishedStudyStore:
             writer.writerows(row["raw_cells"] for row in rows)
             _atomic(destination / original, output.getvalue().encode("utf-8"))
             written.append(original)
+        for source_file, filename in (
+            (OBSERVATION_FILE, "original-activities-selected.csv"),
+            (COHORT_FILE, "chlorophyll-cohort-selected.csv"),
+            (WQP_FILE, "campaign-microcystin-selected.csv"),
+            (WQP_COHORT, "reconciled-chlorophyll-selected.csv"),
+        ):
+            selected_rows = [row for row in context["observations"]["rows"] if row["source_file"] == source_file]
+            if not selected_rows:
+                continue
+            source, _ = self.source_file(study_id, source_file, context["record"]["version_id"])
+            headers = csv.DictReader(io.StringIO(source.read_text(encoding="utf-8-sig"))).fieldnames or []
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=headers, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(row["raw_cells"] for row in selected_rows)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+
+        for key, filename in (
+            ("rows", "wqp-results-selected.csv"), ("coverage", "wqp-coverage-selected.csv"),
+            ("flow_rows", "upstream-flow-selected.csv"),
+        ):
+            rows = context["dated_context"][key]
+            if not rows:
+                continue
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=list(rows[0]["raw_cells"]), lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(row["raw_cells"] for row in rows)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+        support_output = io.StringIO(newline="")
+        support_columns = (
+            "site_id", "parameter", "project_id", "activity_type", "sample_support",
+            "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
+            "unresolved_count", "unit", "mean_lower", "mean_upper",
+            "mean_upper_inclusive", "complete_interval_support", "basis",
+        )
+        support_writer = csv.DictWriter(support_output, fieldnames=support_columns, lineterminator="\n")
+        support_writer.writeheader()
+        for series in context["observations"]["series"]:
+            support = series.get("observation_support", {})
+            support_writer.writerow({
+                **{name: series.get(name, "") for name in support_columns[:5]},
+                **{name: support.get(name, "") for name in support_columns[5:]},
+            })
+        _atomic(destination / "observation-support-selected.csv", support_output.getvalue().encode("utf-8"))
+        written.append("observation-support-selected.csv")
         report_context = dict(context)
+        report_context["related_reports"] = []
+        report_context["scientific_figures"] = []
+        record = context["record"]
+        version_root = self._version_root(study_id, record["version_id"])
+        manifest_bytes = (version_root / "sources.json").read_bytes()
+        expected_manifest = record["source_manifest"]
+        if len(manifest_bytes) != expected_manifest["bytes"] or _hash(manifest_bytes) != expected_manifest["sha256"]:
+            raise ValueError("The retained study source manifest changed.")
+        bindings = {entry["id"]: entry for entry in _json(manifest_bytes)["entries"]}
+        inventory = {entry["path"]: entry for entry in record["source_files"]}
+        copied = set()
+        for artifact in context["source_artifacts"]:
+            name = artifact["path"]
+            is_html = PurePosixPath(name).suffix.lower() in (".html", ".htm")
+            if not is_html and not name.startswith("figures/"):
+                continue
+            binding = bindings[record["source_entries"][name]]
+            members = [name]
+            for companion in binding.get("companions", []):
+                relative = companion["path"]
+                if not relative.startswith("source/"):
+                    raise ValueError("A report companion must belong to the retained study source directory.")
+                members.append(_name(relative[len("source/"):]))
+            for member in members:
+                if member in copied:
+                    continue
+                expected = inventory[member]
+                raw = (version_root / "source" / member).read_bytes()
+                if len(raw) != expected["bytes"] or _hash(raw) != expected["sha256"]:
+                    raise ValueError("Retained report companion changed: " + member)
+                report_member = "original-sources/" + member
+                _atomic(destination / report_member, raw)
+                written.append(report_member)
+                copied.add(member)
+            if is_html:
+                report_context["related_reports"].append({
+                    "filename": "original-sources/" + name,
+                    "title": binding.get("title") or PurePosixPath(name).name,
+                })
+            if name in FIGURES:
+                report_context["scientific_figures"].append({
+                    "filename": "original-sources/" + name, "title": FIGURES[name],
+                })
         report_context["embedded_images"] = []
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
@@ -690,10 +1246,23 @@ class PublishedStudyStore:
                         "title": name, "data_uri": "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
                     })
         _atomic(destination / "study-report.html", self.report_html(report_context).encode("utf-8"))
+        # One download preserves relative links in the selected report and each
+        # original HTML/companion tree without rewriting original source bytes.
+        with tempfile.NamedTemporaryFile(dir=destination, suffix=".zip", delete=False) as temp:
+            temporary = Path(temp.name)
+        try:
+            with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
+                for name in sorted(set(written)):
+                    archive.write(destination / name, name)
+            os.replace(temporary, destination / "selected-study-report.zip")
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+        written.append("selected-study-report.zip")
         return {
             "directory": str(destination.resolve()),
             "files": [
-                {"filename": path.name, "path": str(path.resolve()), "bytes": path.stat().st_size,
+                {"filename": path.name, "relative_path": str(path.relative_to(destination)), "path": str(path.resolve()), "bytes": path.stat().st_size,
                  "sha256": _hash(path.read_bytes()),
                  "mime_type": mimetypes.guess_type(path.name)[0] or "application/octet-stream"}
                 for path in (destination / name for name in sorted(written))
@@ -708,11 +1277,16 @@ class PublishedStudyStore:
             return html.escape("" if value is None else str(value), quote=True)
 
         def value(row: dict[str, Any], field: str) -> Any:
+            if field == "value" and "source_value_token" in row:
+                return row["source_value_token"]
+            if field == "depth" and "source_depth_token" in row:
+                return row["source_depth_token"]
             if field == "sd" and row.get("sd_published_token"):
                 return row["sd_published_token"]
             if field == "minimum" and row.get("minimum_qualifier") == "below_detection_limit":
                 return "< " + str(row.get("minimum_detection_limit"))
-            return row.get("raw_cells", {}).get(field, row.get(field))
+            result = row.get("raw_cells", {}).get(field, row.get(field))
+            return "; ".join(map(str, result)) if isinstance(result, list) else result
 
         def table(title: str, rows: list[dict[str, Any]], columns: list[tuple[str, str]]) -> str:
             cells = "<tr>" + "".join(f"<th>{esc(label)}</th>" for _, label in columns) + "</tr>"
@@ -773,6 +1347,78 @@ class PublishedStudyStore:
             ("npdes_permit_id", "NPDES permit"), ("report_facility_name", "Reported facility"),
             ("edition", "Source edition"), ("source_pdf_page", "PDF page"),
         ])
+        observations = context.get("observations", {})
+        observed = table("Original activities and published summaries", observations.get("series", []), [
+            ("site_id", "Station"), ("parameter", "Parameter"), ("unit", "Unit"),
+            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_support", "Sample support"),
+            ("record_count", "Original rows"), ("activity_count", "Activities"),
+            ("numeric_count", "Quantified"), ("censored_count", "Censored"),
+            ("published_n", "Printed n"), ("mean", "Quantified mean"),
+            ("sample_sd", "Quantified sample SD"), ("published_mean", "Printed mean"),
+            ("published_sd", "Printed SD"), ("period_start", "First date"),
+            ("period_end", "Last date"), ("depths_as_reported", "Original depths"),
+        ])
+        observed += "".join("<p class='meta'>" + esc(item["site_id"]) + " / " +
+            esc(item["parameter"]) + ": " + esc(item["basis"]) + "</p>"
+            for item in observations.get("series", []))
+        observed += table("Original observation calendars and methods", observations.get("series", []), [
+            ("site_id", "Station"), ("parameter", "Parameter"),
+            ("missing_chlorophyll_dates", "Dates absent from the chlorophyll calendar"),
+            ("additional_dates", "Additional dates"), ("original_methods", "Source methods"),
+        ])
+        observed += table("Original activity chronology", observations.get("rows", []), [
+            ("site_id", "Station"), ("date", "Date"), ("local_time", "Local time"),
+            ("source_timezone", "Source time zone"), ("project_id", "Source project"),
+            ("activity_type", "Original activity type"), ("parameter_original", "Source parameter"),
+            ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
+            ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
+            ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
+        ])
+        cohort = context.get("cohort_reconciliation")
+        if cohort:
+            observed += "<section><h2>Original chlorophyll cohort selection</h2><p>" + esc(cohort["cohort_basis"]) + (
+                "</p><p>The same-date visit assignment is an inference from the publisher-displayed local clocks, routine-project records and reproduced report summaries. Original EST and EDT labels remain unchanged.</p>"
+            )
+            for evidence in cohort.get("exclusion_evidence", []):
+                if evidence["site_id"] not in selection["site_ids"]:
+                    continue
+                observed += "<p>" + esc(evidence["site_id"]) + " on " + esc(evidence["date"]) + (
+                    ": retained activity " + esc(evidence["retained_original_record"]["activity_id"]) +
+                    "; separate routine activity " + esc(evidence["excluded_original_record"]["activity_id"]) +
+                    ". " + esc(evidence["timezone_interpretation"]) + "</p>"
+                )
+            observed += "</section>"
+        dated = context.get("dated_context", {})
+        observed += table("Retained WQP source coverage", dated.get("coverage", []), [
+            ("site_id", "Station"), ("project_id", "Source project"), ("characteristic", "Original characteristic"),
+            ("sample_fraction", "Fraction"), ("reported_unit", "Source unit"), ("record_count", "Rows"),
+            ("numeric_reported_count", "Numeric reported"), ("quantified_count", "Quantified"),
+            ("censored_below_count", "Censored below"), ("censored_above_count", "Censored above"),
+        ])
+        observed += table("Original upstream flow context", dated.get("flow_rows", []), [
+            ("sampling_date", "Sampling date"), ("gauge_id", "Upstream gauge"),
+            ("same_date_mean_cfs", "Daily mean (ft3/s)"), ("same_date_qualifiers", "Agency qualifiers"),
+            ("annual_flow_percentile_midrank", "Annual percentile"),
+            ("prior_3d_mean_cfs", "Previous 3-day mean (ft3/s)"),
+            ("prior_7d_mean_cfs", "Previous 7-day mean (ft3/s)"),
+            ("prior_7d_maximum_daily_cfs", "Previous 7-day max (ft3/s)"),
+            ("prior_7d_maximum_dates", "Maximum reporting dates"),
+            ("prior_7d_valid_days", "Valid prior days"), ("prior_7d_expected_days", "Expected prior days"),
+        ])
+        observed += "<section><h2>Dated source context</h2>" + "".join(
+            "<p>" + esc(note) + "</p>" for note in dated.get("selection_notes", [])
+        ) + "<p>Selected activity dates outside the retained flow-date table: " + esc(
+            ", ".join(dated.get("dates_without_flow_context", [])) or "none"
+        ) + ".</p></section>"
+        observed += support_report_html(context)
+        related_reports = "".join('<p><a href="' + esc(item["filename"]) + '">' + esc(item["title"]) + "</a></p>" for item in context.get("related_reports", []))
+        figures = ""
+        if context.get("scientific_figures"):
+            figures = "<section><h2>Original scientific figures</h2><p>" + esc(FIGURE_SCOPE) + "</p>" + "".join(
+                '<figure><img src="' + esc(item["filename"]) + '" alt="' + esc(item["title"]) +
+                '" style="max-width:100%;height:auto"><figcaption>' + esc(item["title"]) + "</figcaption></figure>"
+                for item in context["scientific_figures"]
+            ) + "</section>"
         url = study.get("original_url", "")
         source_link = (
             '<a href="' + esc(url) + '">Original publisher report</a>'
@@ -802,7 +1448,7 @@ class PublishedStudyStore:
             "<div class='source'><p>" + source_link + "</p><p>Seasonal rows retain their original sample support, "
             "depths and concentration units. Monthly n values count days. Original numeric cells remain available "
             "in the accompanying CSV files.</p>" + visuals + "</div>" +
-            seasonal + monthly + ranges + stations + permits +
+            related_reports + seasonal + observed + figures + monthly + ranges + stations + permits +
             "<section><h2>Source notes</h2><ul>" + notes + "</ul></section></body></html>"
         )
 
