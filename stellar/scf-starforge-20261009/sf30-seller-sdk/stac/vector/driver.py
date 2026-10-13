@@ -6,7 +6,11 @@ import io
 import json
 import math
 import os
+import re
+import shutil
+import sqlite3
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from decimal import Decimal
@@ -238,19 +242,101 @@ def layers(path, source):
                     "coordinateOrder": "x,y"})
         return result
 
+@contextlib.contextmanager
+def geopackage_sqlite_path(path, source):
+    """Expose only the exact selected GeoPackage member to SQLite's native reader."""
+    if not source.get("archiveMember"):
+        yield Path(path)
+        return
+    checked_archive(path, source)
+    with zipfile.ZipFile(path) as archive:
+        selected = archive.getinfo(source["archiveMember"])
+        need(not selected.is_dir(), "VECTOR_GPKG_MEMBER_REQUIRED")
+        with tempfile.TemporaryDirectory(prefix="starforge-vector-gpkg-") as directory:
+            os.chmod(directory, 0o700)
+            target = Path(directory) / "selected.gpkg"
+            with archive.open(selected) as original, target.open("xb") as output:
+                os.chmod(target, 0o600)
+                shutil.copyfileobj(original, output, 1024 * 1024)
+                output.flush()
+                os.fsync(output.fileno())
+            need(target.stat().st_size == selected.file_size, "VECTOR_GPKG_MEMBER_INCOMPLETE")
+            yield target
+
+def native_records(path, driver, dataset):
+    """Keep native schema/geometry/FIDs and read GeoPackage temporal TEXT exactly.
+
+    Fiona's floating-second datetime conversion can shift a millisecond source
+    value by a microsecond. GeoPackage DATE/DATETIME columns already retain the
+    original TEXT. Bind those columns through the actual INTEGER primary key;
+    no timestamp tolerance or row-order association is used.
+    """
+    from fiona.model import to_dict
+    temporal = {name: value.split(":")[0].lower()
+                for name, value in dataset.schema["properties"].items()
+                if value.split(":")[0].lower() in ("date", "datetime")}
+    if driver != "GPKG" or not temporal:
+        for feature in dataset:
+            yield to_dict(feature)
+        return
+    def quoted(value):
+        need(isinstance(value, str) and value and "\0" not in value,
+             "VECTOR_GPKG_IDENTIFIER_INVALID")
+        return '"' + value.replace('"', '""') + '"'
+    layer = dataset.name
+    with contextlib.closing(sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro",
+                                           uri=True)) as database:
+        registered = database.execute(
+            "SELECT data_type FROM gpkg_contents WHERE table_name=?", (layer,)).fetchone()
+        need(registered is not None and registered[0] == "features",
+             "VECTOR_GPKG_FEATURE_TABLE_REQUIRED", layer)
+        table = database.execute(
+            "SELECT type FROM sqlite_master WHERE name=?", (layer,)).fetchone()
+        need(table is not None and table[0] == "table",
+             "VECTOR_GPKG_TEMPORAL_VIEW_REQUIRES_REVIEW", layer)
+        columns = database.execute("PRAGMA table_info(" + quoted(layer) + ")").fetchall()
+        primary = [column for column in columns if column[5]]
+        need(len(primary) == 1 and primary[0][5] == 1 and
+             primary[0][2].upper() == "INTEGER",
+             "VECTOR_GPKG_INTEGER_FID_REQUIRED", layer)
+        key = primary[0][1]
+        types = {column[1]: column[2].upper() for column in columns}
+        need(all(types.get(name) == kind.upper() for name, kind in temporal.items()),
+             "VECTOR_GPKG_TEMPORAL_COLUMN_CHANGED", layer)
+        names = list(temporal)
+        statement = ("SELECT " + ",".join(quoted(name) for name in [key, *names]) +
+                     " FROM " + quoted(layer) + " WHERE " + quoted(key) + "=?")
+        for feature in dataset:
+            raw = to_dict(feature)
+            fid = str(feature.id)
+            need(re.fullmatch(r"-?(?:0|[1-9][0-9]*)", fid) is not None,
+                 "VECTOR_GPKG_NATIVE_FID_INVALID", fid)
+            original = database.execute(statement, (int(fid),)).fetchone()
+            need(original is not None and type(original[0]) is int and original[0] == int(fid),
+                 "VECTOR_GPKG_NATIVE_FID_MISSING", fid)
+            properties = raw["properties"]
+            for index, name in enumerate(names, 1):
+                value = original[index]
+                need(value is None or isinstance(value, str),
+                     "VECTOR_GPKG_TEMPORAL_TEXT_REQUIRED", {"layer": layer, "field": name, "fid": fid})
+                properties[name] = value
+            yield raw
+
 def native_features(path, source, layer):
     driver = source_driver(source)
     if driver in ("GeoJSON", "GeoJSONSeq"):
         yield from geojson_features(path, source)
         return
     fiona = fiona_module()
-    from fiona.model import to_dict
     options = {"layer": layer["name"], "enabled_drivers": [driver]}
     if source.get("encoding"):
         options["encoding"] = source["encoding"]
     with vector_environment(), fiona.open(native_path(path, source), "r", **options) as dataset:
-        for feature in dataset:
-            yield to_dict(feature)
+        if driver == "GPKG":
+            with geopackage_sqlite_path(path, source) as sqlite_path:
+                yield from native_records(sqlite_path, driver, dataset)
+        else:
+            yield from native_records(path, driver, dataset)
 
 def crs(value):
     from fiona.crs import CRS
