@@ -17,6 +17,7 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "model/parameter_case_status.py", "model/parameter_result_query.py",
            "model/parameter_views.py", "model/parameter_report_source.py",
            "model/parameter_scientific_figures.py", "model/ensemble_parameter_studies.py",
+           "model/ensemble_study_scope.py",
            "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
            "integration/ensemble-parameter-core-joins.json",
            "model/record_catalog.py", "model/delivery_catalogue.py",
@@ -141,6 +142,16 @@ PREVIOUS.setdefault("install_native_supervision.py", []).append("cafba0143ee9ea9
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("c84ee4a4d82299a4313333115d0855f2392cd2b7bfa8af668321d35a4e351306")
 PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("cbe458d5a2c855ae5cb5ed6065722644f3314f9a96f91be2518422ed31e3c468")
 PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("f28995782aef9c6143ec0bad1135844791d22162130c92d01304bd4977982b04")
+
+# Exact original source-report/scope editions before the complete Parameter scope join.
+PREVIOUS.setdefault("install_native_supervision.py", []).append("b644279729e118343ea315ce19f896e8b0926efe9c110416f94cb9b0ea6fe57e")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("cb6e8a65670929e607d218afb6df524ec5460b1f35837d9ef9e85c1aee2428d0")
+PREVIOUS.setdefault("model/parameter_report_source.py", []).append("c4adf7c4c1f27bfc2e4c11d86a7624f6d2d23b649fbb1bec046c2fcbd0ab6ff9")
+PREVIOUS.setdefault("docs/PARAMETER_SCIENTIFIC_REPORTS.md", []).append("8a4a999143427daa537d658cb40de60715d0720b55704c1721568007a6f4b74d")
+PREVIOUS.setdefault("model/ensemble_study_scope.py", []).append("9a7c9ccb11acd004d79276faa698f93a066e8bbe40cb6e8ae77f4ee356e006b3")
+PREVIOUS.setdefault("model/ensemble_study_scope.py", []).append("b38c9f4faf3dfcf98d2c764fe04ddbffe71f15cbc852b389b9478a5eca0844ef")
+
+PREVIOUS.setdefault("model/parameter_report_source.py", []).append("ad4f6fa11af45a1383b4324450065b33695058a618b8004271e6797c3e197818")
 
 
 def sha(data):
@@ -690,6 +701,26 @@ def retained_reader_dependencies(application):
                        "policy": "retain installed shared SourceReports controller unchanged"}
     return bodies, records
 
+def source_scope_dependency(body):
+    """Check the incoming shared source presenter before any application writes."""
+    name = "model/ensemble_study_scope.py"
+    tree = ast.parse(body.decode("utf-8"), filename=name)
+    functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+    signatures = {
+        "capture": ("workspace", "directory", "grid", "profiles", "bindings", "collections"),
+        "sections": ("scope",),
+    }
+    for symbol, expected in signatures.items():
+        node = functions.get(symbol)
+        actual = tuple(arg.arg for arg in (*node.args.posonlyargs, *node.args.args)) if node else ()
+        if actual != expected:
+            raise ValueError("Incoming original source presenter needs " + symbol + str(expected))
+    constants = {target.id for node in tree.body if isinstance(node, ast.Assign)
+                 for target in node.targets if isinstance(target, ast.Name)}
+    if not {"SCOPE_FILE", "VERSION"} <= constants:
+        raise ValueError("Incoming original source presenter lacks SCOPE_FILE or VERSION")
+
+
 def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
     originals = {name: (application / name).read_bytes()
@@ -727,6 +758,8 @@ def install(application, increment, *, retention=False):
             raise ValueError("The Ensemble continuation ledger changed during installation preflight.")
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"))
+        if name == "model/ensemble_study_scope.py":
+            source_scope_dependency(body)
         destination = application / name
         if destination.exists():
             current = destination.read_bytes()
