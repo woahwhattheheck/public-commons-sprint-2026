@@ -34,6 +34,7 @@ from . import terrain_conditioning_study_transfer as terrain_transfer
 from . import climate_management_study_transfer as climate_management_transfer
 from . import management_case_study_transfer as management_transfer
 from . import calibration_study_transfer as calibration_transfer
+from . import calibration_native_study_transfer as calibration_native
 from . import parameter_study_transfer as parameter_transfer
 from . import parameter_working_transfer as working_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
@@ -57,7 +58,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "par
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
               *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *joint_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
-              *management_transfer.ROOT_KINDS)
+              *management_transfer.ROOT_KINDS, *calibration_native.ROOT_KINDS)
 IMMUTABLE_KINDS = ("parameter-working", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
@@ -186,7 +187,7 @@ class _Closure:
                  report_source_keys=None, implementation_source_keys=None,
                  geographic_native_studies=None, climate_forcing_studies=None,
                  management_case_studies=None, climate_management_records=None,
-                 joint_parameter_lineage=True):
+                 joint_parameter_lineage=True, calibration_studies=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -204,6 +205,8 @@ class _Closure:
         self.monitoring_reports = {}
         self.report_source_records = {}
         self.parameter_study_records = {}
+        self.calibration_native_selection = copy.deepcopy(calibration_studies)
+        self.calibration_native_records = []
         self.joint_parameter_records = {}
         self.joint_parameter_lineage_enabled = joint_parameter_lineage
         self.scientific_report_records = {}
@@ -617,6 +620,7 @@ class _Closure:
         self.read("workspace.json")
         for item in self.selection["roots"]:
             self.need(item["kind"], item["id"], "Selected study")
+        calibration_native.prepare(self)
         for item in additional:
             kind = item.get("kind")
             if kind not in LABELS or type(item.get("required", True)) is not bool:
@@ -647,6 +651,9 @@ class _Closure:
                 if len(self.nodes) == count:
                     break
             self.related_issues = list({canonical(row): row for row in self.related_issues}.values())
+        calibration_native.capture(self)
+        while self.pending:
+            self._visit(*self.pending.popleft())
         self.assert_unchanged()
         return self
 
@@ -709,6 +716,7 @@ class _Closure:
             "climate_management_records": climate_management_transfer.receipt(self),
             "management_case_studies": management_transfer.receipt(self),
             "parameter_studies": parameter_transfer.native_receipt(self),
+            "calibration_studies": calibration_native.receipt(self),
             "joint_parameter_studies": joint_transfer.receipt(self),
             "parameter_working": working_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
@@ -743,6 +751,7 @@ def _capture_locks(stack, closure, already):
             already.add(token)
     implementation_transfer.capture_locks(stack, closure, already)
     for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
+                     *calibration_native.lock_paths(closure),
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure), *receptor_transfer.lock_paths(closure),
                      *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
                      *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
@@ -1000,6 +1009,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["parameter_working"] = working_transfer.receipt(closure)
         if closure.joint_parameter_records:
             identity["joint_parameter_studies"] = joint_transfer.receipt(closure)
+        if closure.calibration_native_records:
+            identity["calibration_studies"] = calibration_native.receipt(closure)
         if closure.parameter_study_records:
             identity["parameter_studies"] = parameter_transfer.native_receipt(closure)
         if closure.geographic_native_records:
@@ -1098,6 +1109,7 @@ def verify_received_studies(workspace, *, joint_only=False):
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"],
+                           calibration_studies=receipt["identity"].get("calibration_studies", []),
                            geographic_native_studies=receipt["identity"].get("geographic_native_studies", []),
                            climate_forcing_studies=receipt["identity"].get("climate_forcing_studies", []),
                            climate_management_records=receipt["identity"].get("climate_management_records", []),
@@ -1112,6 +1124,7 @@ def verify_received_studies(workspace, *, joint_only=False):
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         joint_transfer.verify_receipt(closure, receipt["identity"].get("joint_parameter_studies", []))
+        calibration_native.verify_receipt(closure, receipt["identity"].get("calibration_studies", []))
         parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
         working_transfer.verify_receipt(closure, receipt["identity"].get("parameter_working", []))
         forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
@@ -1175,6 +1188,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind == joint_transfer.KIND:
             for row in joint_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in calibration_native.ROOT_KINDS:
+            for row in calibration_native.catalogue(workspace, selected_kind):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

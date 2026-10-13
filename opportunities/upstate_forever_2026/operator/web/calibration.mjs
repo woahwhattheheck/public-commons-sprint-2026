@@ -29,7 +29,7 @@ const notesList = values => (values??[]).length ? '<ul class="calibration-notes"
 
 export function createCalibrationDesk(host){return attachCalibration(host);}
 
-export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery,openScientificReport,openCalibrationParameterStudy}){
+export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast,openDelivery,openScientificReport,openCalibrationParameterStudy,openExtension}){
   let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
   let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null,formRequest=0;
   let activeUncertainty=null,resultRequest=0;
@@ -780,11 +780,16 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(!val('calibration_layer')&&value.selected_layer)$('[name="calibration_layer"]',form()).value=value.selected_layer;
     captureDraft();
   }
-  async function openPlan(id){
-    const packet=await read('plan',{id}),plan=packet.plan,selection=plan.selection,progress=packet.progress;
+  async function openPlan(id,{isCurrent=()=>true}={}){
+    const opening=formOpening(),request=++resultRequest;
+    const packet=await openingRead(opening,()=>read('plan',{id}));
+    if(!opening.current()||request!==resultRequest||!isCurrent())return;
+    if(packet?.plan?.id!==id)throw Error('The saved design response belongs to another Calibration.');
+    const plan=packet.plan,selection=plan.selection,progress=packet.progress;
     const groups=plan.spatial_groups?.groups??[];
     const body='<div class="page-actions">'+button('revise','Revise selection',id)+button('analyze',progress.state==='failed'?'Resume analysis':'Analyze selection',id,true)+
-      (progress.result_id?button('report','Open results',progress.result_id):'')+'</div>'+
+      (progress.result_id?button('report','Open results',progress.result_id):'')+
+      button('study','Share editable Study',id,false,'data-kind="calibration-plans"')+'</div>'+
       '<dl class="definition"><dt>State</dt><dd>'+stateBadge(progress)+'</dd><dt>Observation edition</dt><dd>'+esc(named('observations',selection.observation_id))+'</dd><dt>Candidate runs</dt><dd>'+number(selection.candidate_run_ids.length)+'</dd><dt>Distinct profiles</dt><dd>'+number(plan.distinct_profile_count??new Set((plan.candidates??[]).map(row=>row.profile_id)).size)+'</dd><dt>Modeled pollutants</dt><dd>'+esc((plan.predicted_parameters??Object.keys(selection.objective??{}).filter(parameter=>Number(selection.objective[parameter]?.weight)>0)).map(human).join(', '))+'</dd><dt>Catchment source</dt><dd>'+esc(named('sources',selection.catchments.source_collection_id))+' / '+esc(selection.catchments.source_id)+'</dd><dt>ID field</dt><dd>'+esc(selection.catchments.id_field)+'</dd></dl>'+
       section('Candidate native runs','Every candidate uses the same original baseline and grid.',table(['Profile','Native outputs','Run',''],(plan.candidates??[]).map(row=>'<tr><td>'+esc(row.title||named('profiles',row.profile_id))+'</td><td>'+esc(candidateModels(row))+'<small>'+esc(candidateParameters(row).map(human).join(', '))+'</small></td><td class="mono">'+esc(short(row.run_id||row.id))+'</td><td>'+nativeButton('runs',row.run_id||row.id,'Open native run')+'</td></tr>')))+
       section('Retained catchment groups','The saved split is used exactly as selected.',table(['Group','Catchments','Partition'],groups.map(group=>'<tr><td class="mono">'+esc(short(group.id))+'</td><td>'+esc((group.catchment_ids??[]).join(', '))+'</td><td>'+badge(selection.validation_group_ids?.includes(group.id)?'validation':'calibration')+'</td></tr>')))+
@@ -792,11 +797,12 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       '<details class="technical"><summary>Original selection and analysis progress</summary><pre class="json-view">'+esc(pretty({selection,progress}))+'</pre></details>';
     detail(plan.selection.title,body,{kind:'calibration-plan',id});
   }
-  async function openReport(id){
+  async function openReport(id,{isCurrent=()=>true}={}){
+    const opening=formOpening(),request=++resultRequest;
+    const packet=await openingRead(opening,()=>read('report',{id}));
+    if(!opening.current()||request!==resultRequest||!isCurrent())return;
+    if(packet?.report?.id!==id)throw Error('The saved evaluation response belongs to another Calibration.');
     reviewsDesk.reset();mapsDesk.reset();
-    const request=++resultRequest;
-    const packet=await read('report',{id});
-    if(request!==resultRequest)return;
     activeUncertainty=null;activeReport=packet;activeTab='ranking';page=0;query='';sortKey='rank';sortDirection=1;
     $('#detail-dialog')?.close();
     if(!mounted){
@@ -876,7 +882,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const selected=view.ranking.find(row=>row.run_id===report.selected_run_id);
     const independent=(view.groups??[]).filter(group=>group.partition==='validation').length;
     return header(view.title||report.title,report.selected_run_id?'Original observations and completed native model runs. Lower calibration loss selects the retained parameter profile; validation describes that selected profile on the reserved catchment groups.':'The retained candidate outcomes identify the observations and native catchment support needed to complete parameter selection.',
-      button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true)+(report.selected_run_id?button('continue-profile','Continue selected profile',report.id):''))+
+      button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true)+button('study','Share editable Study',report.id,false,'data-kind="calibrations"')+(report.selected_run_id?button('continue-profile','Continue selected profile',report.id):''))+
       referenceHistoryHTML(report.reference_history)+
       '<div class="cards">'+[
         ['Selected parameter profile',report.selected_run_id?(selected?.title||named('profiles',report.selected_profile_id)):'No eligible candidate',report.selected_run_id?candidateModels(selected||{selected_models:report.selected_models})+' · native run '+short(report.selected_run_id):'Inspect the retained candidate outcomes below.'],
@@ -1084,6 +1090,21 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(action==='uncertainty-new')return uncertaintyForm(id);
     if(action==='uncertainty')return openUncertainty(id);
     if(action==='uncertainty-nominal')return openReport(id);
+    if(action==='study'){
+      const kind=node.dataset.kind,selectedWorkspace=current();
+      if(!['calibration-plans','calibrations'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+        throw Error('Choose the original Calibration design or evaluation to share.');
+      if(typeof openExtension!=='function')throw Error('Open the current Study transfer desk.');
+      const opening=formOpening(),request=++resultRequest;
+      const isCurrent=()=>current()===selectedWorkspace&&opening.current()&&request===resultRequest;
+      const packet=await openingRead(opening,()=>read(kind==='calibrations'?'report':'plan',{id}));
+      if(!isCurrent())return;
+      const original=kind==='calibrations'?packet.report:packet.plan;
+      if(original?.id!==id)throw Error('The retained Calibration changed while preparing its Study selection.');
+      $('#detail-dialog')?.close();
+      return openExtension('study-transfer','openForStudies',{workspace_key:selectedWorkspace,
+        roots:[{kind,id,title:original.title||original.selection?.title,state:original.state||packet.progress?.state||'prepared'}],isCurrent});
+    }
     if(action==='history-export')return submitAction('calibration.history.export',{report_id:id});
     if(action==='uncertainty-export')return submitAction('calibration.uncertainty.export',{uncertainty_id:id});
     if(action==='design-holdout'){
@@ -1127,6 +1148,17 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       return;
     }
   }
+  async function openForStudy(selection){
+    if(!selection||selection.workspace_key!==current()||
+       !['calibration-plans','calibrations'].includes(selection.kind)||!/^[0-9a-f]{64}$/.test(selection.id||''))
+      throw Error('Open an original Calibration design or evaluation in its received Workspace.');
+    const selectedWorkspace=current();
+    const isCurrent=()=>current()===selectedWorkspace&&(typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!isCurrent())return;
+    if(activeDraft?.workspace===selectedWorkspace)captureDraft();
+    if(selection.kind==='calibration-plans')return openPlan(selection.id,{isCurrent});
+    return openReport(selection.id,{isCurrent});
+  }
   async function openForReview(selection){
     const workspace=current();
     if(!selection||selection.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection.review_id||''))throw Error('Open a retained calibration review from the current workspace.');
@@ -1137,5 +1169,5 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(selection.preview&&reviewsDesk.active())return reviewsDesk.dispatch({dataset:{action:'calibration-review-preview',id:selection.review_id}});
     return {workspace_key:workspace,review_id:selection.review_id};
   }
-  return {render,mount,update,detach,dispatch,taskActions,openForObservations,openForReview,openForCandidates};
+  return {render,mount,update,detach,dispatch,taskActions,openForObservations,openForReview,openForCandidates,openForStudy};
 }

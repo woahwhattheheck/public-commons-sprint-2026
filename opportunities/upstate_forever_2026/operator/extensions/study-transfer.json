@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "study-transfer",
   "title": "Study transfer",
-  "version": "1",
+  "version": "1.calibration-studies1",
   "order": 88,
   "assets": [
     "extensions/study_transfer.mjs",
@@ -18,7 +18,8 @@
     "received_published_reviews.mjs",
     "received_published_reviews.css",
     "assessment_received_studies.mjs",
-    "parameter_received_studies.mjs"
+    "parameter_received_studies.mjs",
+    "calibration_received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
