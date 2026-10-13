@@ -11,11 +11,12 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_
                      describe_file, digest, held, identifier, now, read_json, verify_file)
 from . import cartography, portable, rasters
 from .delivery_archive import package_archive
+from . import scientific_report, receiving_water_delivery
 from . import receiving_water_delivery
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
-DELIVERY_FORMAT_VERSION = "native-grid-metadata-2"
+DELIVERY_FORMAT_VERSION = "native-grid-receiving-report-3"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -61,6 +62,10 @@ def _source_records(workspace, selection, grid, baseline):
     return [records[key] for key in sorted(records)]
 
 def _overlay(workspace, choice, grid_crs, reporting, *, label):
+    display_label = choice.get("label", label)
+    if not isinstance(display_label, str) or not display_label.strip():
+        raise ValueError("A source overlay label must be nonempty text")
+    display_label = display_label.strip()
     path, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
     if entry["kind"] != "vector":
         raise ValueError(label + " requires an original vector source")
@@ -69,7 +74,7 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
     features = [row for row in rows if row["geometry"].intersects(reporting)]
     if not features:
         raise ValueError(label + " source contains no geometry intersecting the reporting basin")
-    return {"label": label + " · " + str(entry["vintage"]), "features": features,
+    return {"label": display_label + " · " + str(entry["vintage"]), "features": features,
             "source": {"uri": entry["uri"], "vintage": entry["vintage"],
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
@@ -248,6 +253,7 @@ def build(workspace, selection):
     profile = workspace._get("profiles", baseline["selection"]["profile_id"])
     key = digest({"selection": selection, "baseline": baseline["id"], "version": INVEST_VERSION,
                   "map_renderer": cartography.MAP_RENDERER_VERSION,
+                  "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
@@ -305,7 +311,7 @@ def build(workspace, selection):
                 if name not in overlay_choices:
                     raise ValueError("Select the actual " + name.replace("_", " ") + " source overlay")
             overlays = {name: _overlay(workspace, overlay_choices[name], crs, reporting, label=label)
-                        for name, label in (("drinking_water", "Source-water catchments"),
+                        for name, label in (("drinking_water", "Drinking-water source areas"),
                                             ("high_quality_waters", "Designated high-quality waters"))}
             if "protected_lands" in overlay_choices:
                 overlays["protected_lands"] = _overlay(workspace, overlay_choices["protected_lands"],
@@ -423,6 +429,14 @@ def build(workspace, selection):
                         all_specs[family] = ([focused_panel],
                             all_specs[family][1] + [receptor_overlays[role]])
             receiving_water_delivery.apply_map_specs(all_specs, water_product)
+            receiving_water_product = receiving_water_delivery.collect(
+                workspace, selection, directory / "receiving-waters",
+                priority_settings=state["priority"],
+            )
+            receiving_water_delivery.attach_state(state, directory, receiving_water_product)
+            receiving_water_delivery.apply_map_specs(all_specs, receiving_water_product)
+            if receiving_water_product is not None:
+                atomic_json(state_path, state)
             future_maps = {}
             for alternative in comparison["alternatives"]:
                 scenario = workspace._get("scenarios", alternative["selection"]["scenario_id"])
@@ -453,6 +467,11 @@ def build(workspace, selection):
                     subtitle = scenario["title"] + " · alternative minus baseline; positive values indicate greater modeled export."
                 elif family == "combined_pollutant_export":
                     subtitle = "Explicit pollutant weights " + json.dumps(state["priority"]["weights"], sort_keys=True)
+                elif (receiving_water_product and family in receiving_water_product["inventory"]["families"]
+                      and receiving_water_product["inventory"]["families"][family]["current_priority"]):
+                    subtitle = ("Selected receiving-water contribution footprint; " +
+                                receiving_water_product["inventory"]["quantity_scope"].replace("_", " ") +
+                                " quantities; recorded pollutant normalization and weights.")
                 elif receptor_product and family in ("critical_drinking_water", "high_quality_waters"):
                     role = "drinking_water" if family == "critical_drinking_water" else "high_quality_waters"
                     if role in receptor_product["inventory"]["priority_rasters"]:
@@ -475,7 +494,7 @@ def build(workspace, selection):
                                    for value in selection.get("observation_comparison_ids", [])]
             if any(v["run_id"] not in [baseline["id"]] + scenario_ids for v in observation_results):
                 raise ValueError("Observation comparison is not bound to a selected delivery run")
-            if "report" not in state["files"]:
+            if not all(name in state["files"] for name in ("report", "report_html", "report_data")):
                 sections = [
                     ("Study scope", [selection.get("title", workspace.project["title"]),
                      "The reporting polygon is retained separately from the model domain and its " +
@@ -552,10 +571,29 @@ def build(workspace, selection):
                      "application. Restore it into a new directory with the included CLI. The accompanying "
                      "original delivery navigator and audit inspect the actual final GIS files."]),
                 ]
+                sections = scientific_report.refine_sections(
+                    sections, workspace=workspace, baseline=baseline, alternatives=alternatives,
+                    comparison=comparison, profile=profile, grid=grid, priority=state["priority"],
+                    observation_results=observation_results,
+                    receptor_inventory=state.get("receptor_inventory"),
+                )
+                sections.extend(scientific_report.receiving_sections(receiving_water_product))
                 target = directory / "report.pdf"
                 sections.extend(receiving_water_delivery.report_section(water_product))
-                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),
+                scientific_report.report_pdf(target, selection.get("title", workspace.project["title"]),
                                        sections, contact=contact, source_records=records)
+                state["files"].update(scientific_report.write_companions(
+                    directory, selection.get("title", workspace.project["title"]), sections,
+                    contact=contact, source_records=records,
+                    binding={
+                        "delivery_id": key, "baseline_run_id": baseline["id"],
+                        "scenario_run_ids": scenario_ids, "profile_id": profile["id"],
+                        "grid_id": grid["id"], "comparison_id": comparison["id"],
+                        "observation_comparison_ids": selection.get("observation_comparison_ids", []),
+                        "receiving_water_identity": (receiving_water_product["inventory"]["identity"]
+                                                     if receiving_water_product else None),
+                    },
+                ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
             working = directory / "working" / "scientific-workspace.zip"
@@ -584,6 +622,11 @@ def build(workspace, selection):
                     "fgdc_xml": state["files"][name + "_metadata"]["path"], "units": rasters.MASS_UNITS[name]}
             manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
                                              if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_")))
+            receiving_water_delivery.extend_assets(manifest, state)
+            for report_name in ("report_html", "report_data"):
+                report_path = state["files"][report_name]["path"]
+                if report_path not in manifest["project_assets"]:
+                    manifest["project_assets"].append(report_path)
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
             atomic_json(audit_manifest, manifest)

@@ -6,6 +6,22 @@ readable tables. PDF and offline HTML share the same ordered report blocks.
 The structured report companion retains those exact blocks, full source editions
 and the selected original record IDs.
 
+## Generate a complete delivery
+
+The maintained model/delivery.py applies the formatter, selected receiving-water
+map panels, original GIS assets and report companions in the normal delivery
+operation. Use the current complete application and the retained Workspace:
+
+    python -B -m model.cli --workspace ACTUAL_WORKSPACE delivery-build ORIGINAL_DELIVERY_SELECTION.json
+
+The existing selection supplies the completed baseline, explicit land-cover
+alternatives, source roles, overlays and responsible metadata contact. To use a
+retained receiving-water analysis or plan, include the existing receiving_waters
+selection described in RECEIVING_WATERS.md. The resulting report.pdf, report.html
+and report-data.json share the same native records and report sections. The final
+project archive includes all three and the complete selected receiving-water GIS
+records. Original delivery IDs and report editions remain independently saved.
+
 ## Scientific data contract
 
 The formatter consumes the existing completed Workspace records. It does not
@@ -38,7 +54,13 @@ calculate new model results or choose scenarios.
 - Receiving-water rows retain their exact contribution relationship, geographic
   area, quantity scope, source designation, paired support and positive increase
   and avoided-export components. Per-receptor overlap is explained alongside
-  the quantities.
+  the quantities. Native family_union baseline and alternative totals appear as
+  unduplicated tables using families[family].baseline_physical and
+  families[family].alternatives[run_id].metrics; receptors are never summed to
+  manufacture these totals. Different families can overlap. The original
+  change-statistic sum_basis remains visible: net changes sum the stored Float32
+  difference pixels, while increased and avoided components retain native
+  Float64 paired-difference sums. Their small rounding differences are preserved.
 
 The pinned [InVEST 3.20 NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
 defines the native export rasters in kg/hectare/year. The pinned
@@ -47,15 +69,14 @@ defines sediment export density in metric tons/hectare/year. The existing native
 adapter multiplies those rates by actual pixel area once. This formatter consumes
 its retained mass artifacts and preserves their units.
 
-## Integrate in the maintained delivery
+## Maintained delivery interfaces
 
-The additive module is model/scientific_report.py. The inspected delivery source
-is the full scientific application at commit
-586dc91a6cb66a9fb1e87afaf69311f3ce4b5437. Apply these narrow hooks to the current
-composed model/delivery.py, preserving its receiving-water and other installed
-features.
+The complete application already binds model/scientific_report.py through
+model/delivery.py. The following interfaces describe the preserved integration
+for source consumers. Existing receptor, atlas, saved spatial review and native
+delivery operations remain part of the same build.
 
-Add the module import:
+The module import is:
 
     from . import scientific_report
 
@@ -146,8 +167,8 @@ network or browser script. report-data.json retains the displayed section
 structure and full selection/source binding. All three belong in the original
 delivery archive and normal authenticated file inventory.
 
-Receive this module in the complete application, compose the hooks above, and
-open the current completed native delivery through the existing operator.
+Receive the current complete application and open its completed native delivery
+through the existing operator.
 Inspect its PDF and offline HTML scenario-change tables, receive the full archive,
 then reopen the same Workspace and report IDs. The actual native rendering and
 reopening operation uses the existing completed model outputs.
