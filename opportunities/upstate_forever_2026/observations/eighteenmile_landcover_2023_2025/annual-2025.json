@@ -1,0 +1,365 @@
+{
+  "schema": "upstate.landcover-zonal-summary/v1",
+  "metadata": {
+    "operation_id": "ECOSYSTEM-SCIENCES-NLCD-READER-20261013",
+    "domain_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+    "domain_source_uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+    "raster_sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+    "raster_bytes": 9443751,
+    "year": 2025,
+    "epsg": 5070,
+    "nodata": 250,
+    "source_time": "2025-01-01T00:00:00.000Z",
+    "source_uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+    "footprint": "whole upstream catchments; includes downstream local-catchment portion"
+  },
+  "grid": {
+    "width": 6443,
+    "height": 6319,
+    "affine": [
+      29.999999995403137,
+      0,
+      1114859.9994590343,
+      0,
+      -30.000000026127967,
+      1428209.9983569037
+    ]
+  },
+  "source_epsg": 4326,
+  "method": {
+    "pixel_rule": "centre inclusion; half-open scanline edges; even-odd ring parity",
+    "coordinate_conversion": {
+      "source_epsg": 4326,
+      "target_epsg": 5070,
+      "description": "Inverse of NAD83 to WGS 84 (1) + Conus Albers",
+      "definition": "proj=pipeline step proj=unitconvert xy_in=deg xy_out=rad step proj=aea lat_0=23 lon_0=-96 lat_1=29.5 lat_2=45.5 x_0=0 y_0=0 ellps=GRS80",
+      "datum_operation": "NAD83/WGS84 (1) null geographic shift, matching the original native domain operation",
+      "stated_accuracy_m": 4
+    },
+    "polygon_edges": "straight segments between transformed original vertices",
+    "cell_area_m2": 900.0000006459331,
+    "source_vertex_count": 480,
+    "coverage": "every original polygon is wholly inside the supplied native raster rectangle"
+  },
+  "raster": {
+    "cell_count": 40713317,
+    "nodata_count": 0,
+    "classes": [
+      {
+        "class_code": 11,
+        "cells": 1105669,
+        "area_m2": 995102100.7141882,
+        "area_ha": 99510.21007141883
+      },
+      {
+        "class_code": 12,
+        "cells": 0,
+        "area_m2": 0,
+        "area_ha": 0
+      },
+      {
+        "class_code": 21,
+        "cells": 3509200,
+        "area_m2": 3158280002.2667084,
+        "area_ha": 315828.0002266708
+      },
+      {
+        "class_code": 22,
+        "cells": 1822272,
+        "area_m2": 1640044801.1770658,
+        "area_ha": 164004.48011770658
+      },
+      {
+        "class_code": 23,
+        "cells": 605923,
+        "area_m2": 545330700.3913858,
+        "area_ha": 54533.070039138576
+      },
+      {
+        "class_code": 24,
+        "cells": 212075,
+        "area_m2": 190867500.1369863,
+        "area_ha": 19086.750013698627
+      },
+      {
+        "class_code": 31,
+        "cells": 89408,
+        "area_m2": 80467200.0577516,
+        "area_ha": 8046.72000577516
+      },
+      {
+        "class_code": 41,
+        "cells": 10025616,
+        "area_m2": 9023054406.475878,
+        "area_ha": 902305.4406475878
+      },
+      {
+        "class_code": 42,
+        "cells": 8130872,
+        "area_m2": 7317784805.252,
+        "area_ha": 731778.4805252
+      },
+      {
+        "class_code": 43,
+        "cells": 4204909,
+        "area_m2": 3784418102.71609,
+        "area_ha": 378441.810271609
+      },
+      {
+        "class_code": 52,
+        "cells": 1072801,
+        "area_m2": 965520900.6929578,
+        "area_ha": 96552.09006929578
+      },
+      {
+        "class_code": 71,
+        "cells": 1551681,
+        "area_m2": 1396512901.0022821,
+        "area_ha": 139651.29010022822
+      },
+      {
+        "class_code": 81,
+        "cells": 7010479,
+        "area_m2": 6309431104.5283,
+        "area_ha": 630943.11045283
+      },
+      {
+        "class_code": 82,
+        "cells": 243722,
+        "area_m2": 219349800.15742812,
+        "area_ha": 21934.98001574281
+      },
+      {
+        "class_code": 90,
+        "cells": 1105091,
+        "area_m2": 994581900.7138149,
+        "area_ha": 99458.19007138148
+      },
+      {
+        "class_code": 95,
+        "cells": 23599,
+        "area_m2": 21239100.015243378,
+        "area_ha": 2123.9100015243375
+      }
+    ]
+  },
+  "domain": {
+    "unique_cells": 143520,
+    "overlap_cells": 0,
+    "outside_domain_cells": 40569797,
+    "nodata_cells": 0,
+    "classes": [
+      {
+        "class_code": 11,
+        "cells": 249,
+        "area_m2": 224100.00016083734,
+        "area_ha": 22.410000016083735
+      },
+      {
+        "class_code": 12,
+        "cells": 0,
+        "area_m2": 0,
+        "area_ha": 0
+      },
+      {
+        "class_code": 21,
+        "cells": 25013,
+        "area_m2": 22511700.016156726,
+        "area_ha": 2251.1700016156724
+      },
+      {
+        "class_code": 22,
+        "cells": 16922,
+        "area_m2": 15229800.01093048,
+        "area_ha": 1522.980001093048
+      },
+      {
+        "class_code": 23,
+        "cells": 4693,
+        "area_m2": 4223700.003031365,
+        "area_ha": 422.37000030313646
+      },
+      {
+        "class_code": 24,
+        "cells": 1050,
+        "area_m2": 945000.0006782298,
+        "area_ha": 94.50000006782298
+      },
+      {
+        "class_code": 31,
+        "cells": 78,
+        "area_m2": 70200.00005038279,
+        "area_ha": 7.020000005038279
+      },
+      {
+        "class_code": 41,
+        "cells": 35500,
+        "area_m2": 31950000.022930626,
+        "area_ha": 3195.0000022930626
+      },
+      {
+        "class_code": 42,
+        "cells": 19947,
+        "area_m2": 17952300.012884427,
+        "area_ha": 1795.2300012884427
+      },
+      {
+        "class_code": 43,
+        "cells": 7843,
+        "area_m2": 7058700.005066054,
+        "area_ha": 705.8700005066054
+      },
+      {
+        "class_code": 52,
+        "cells": 1868,
+        "area_m2": 1681200.0012066031,
+        "area_ha": 168.1200001206603
+      },
+      {
+        "class_code": 71,
+        "cells": 3042,
+        "area_m2": 2737800.0019649286,
+        "area_ha": 273.78000019649284
+      },
+      {
+        "class_code": 81,
+        "cells": 24406,
+        "area_m2": 21965400.015764643,
+        "area_ha": 2196.5400015764644
+      },
+      {
+        "class_code": 82,
+        "cells": 245,
+        "area_m2": 220500.00015825362,
+        "area_ha": 22.05000001582536
+      },
+      {
+        "class_code": 90,
+        "cells": 2645,
+        "area_m2": 2380500.001708493,
+        "area_ha": 238.0500001708493
+      },
+      {
+        "class_code": 95,
+        "cells": 19,
+        "area_m2": 17100.00001227273,
+        "area_ha": 1.710000001227273
+      }
+    ],
+    "overlaps": []
+  },
+  "basins": [
+    {
+      "basin_id": "USGS-02186702",
+      "title": "USGS-02186702 whole upstream catchments",
+      "properties": {
+        "basin_id": "USGS-02186702",
+        "name": "USGS-02186702 whole upstream catchments",
+        "footprint": "Original NLDI simplified=false; splitCatchment=false"
+      },
+      "ring_count": 1,
+      "selected_cells": 143520,
+      "nodata_cells": 0,
+      "area_m2": 129168000.09270433,
+      "valid_area_m2": 129168000.09270433,
+      "classes": [
+        {
+          "class_code": 11,
+          "cells": 249,
+          "area_m2": 224100.00016083734,
+          "area_ha": 22.410000016083735
+        },
+        {
+          "class_code": 12,
+          "cells": 0,
+          "area_m2": 0,
+          "area_ha": 0
+        },
+        {
+          "class_code": 21,
+          "cells": 25013,
+          "area_m2": 22511700.016156726,
+          "area_ha": 2251.1700016156724
+        },
+        {
+          "class_code": 22,
+          "cells": 16922,
+          "area_m2": 15229800.01093048,
+          "area_ha": 1522.980001093048
+        },
+        {
+          "class_code": 23,
+          "cells": 4693,
+          "area_m2": 4223700.003031365,
+          "area_ha": 422.37000030313646
+        },
+        {
+          "class_code": 24,
+          "cells": 1050,
+          "area_m2": 945000.0006782298,
+          "area_ha": 94.50000006782298
+        },
+        {
+          "class_code": 31,
+          "cells": 78,
+          "area_m2": 70200.00005038279,
+          "area_ha": 7.020000005038279
+        },
+        {
+          "class_code": 41,
+          "cells": 35500,
+          "area_m2": 31950000.022930626,
+          "area_ha": 3195.0000022930626
+        },
+        {
+          "class_code": 42,
+          "cells": 19947,
+          "area_m2": 17952300.012884427,
+          "area_ha": 1795.2300012884427
+        },
+        {
+          "class_code": 43,
+          "cells": 7843,
+          "area_m2": 7058700.005066054,
+          "area_ha": 705.8700005066054
+        },
+        {
+          "class_code": 52,
+          "cells": 1868,
+          "area_m2": 1681200.0012066031,
+          "area_ha": 168.1200001206603
+        },
+        {
+          "class_code": 71,
+          "cells": 3042,
+          "area_m2": 2737800.0019649286,
+          "area_ha": 273.78000019649284
+        },
+        {
+          "class_code": 81,
+          "cells": 24406,
+          "area_m2": 21965400.015764643,
+          "area_ha": 2196.5400015764644
+        },
+        {
+          "class_code": 82,
+          "cells": 245,
+          "area_m2": 220500.00015825362,
+          "area_ha": 22.05000001582536
+        },
+        {
+          "class_code": 90,
+          "cells": 2645,
+          "area_m2": 2380500.001708493,
+          "area_ha": 238.0500001708493
+        },
+        {
+          "class_code": 95,
+          "cells": 19,
+          "area_m2": 17100.00001227273,
+          "area_ha": 1.710000001227273
+        }
+      ]
+    }
+  ]
+}

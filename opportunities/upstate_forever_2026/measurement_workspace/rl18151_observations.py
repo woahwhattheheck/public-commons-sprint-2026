@@ -217,12 +217,17 @@ def build_files(application=None):
     })
     native = json.loads(originals[MANIFEST])
     recipe = next(entry for entry in native["entries"] if entry.get("role") == "OBSERVED_CONTEXT")
-    report_name = ROOT + "/" + SOURCE_DIRECTORY + "/report.html"
-    report = files[report_name]
-    files["model-sources.json"] = _json({
-        "schema": "upstate.sources/v1", "title": TITLE, "entries": [{
-            "id": "rl18151-original-lake-report-html",
-            "title": "RL-18151 original lake observations — offline inspector",
+    reports = [("report.html", "rl18151-original-lake-report-html",
+                "RL-18151 original lake observations — offline inspector")]
+    if SOURCE_DIRECTORY + "/sampling-review.html" in originals:
+        reports.append(("sampling-review.html", "rl18151-original-sampling-support-html",
+                        "RL-18151 sampling support — original results and activities"))
+    report_entries = []
+    for filename, source_id, title in reports:
+        report_name = ROOT + "/" + SOURCE_DIRECTORY + "/" + filename
+        report = files[report_name]
+        report_entries.append({
+            "id": source_id, "title": title,
             "kind": "document", "role": "ORIGINAL_STUDY_REPORT", "path": report_name,
             "uri": recipe["uri"], "vintage": recipe["vintage"],
             "bytes": len(report), "sha256": _sha(report),
@@ -231,7 +236,9 @@ def build_files(application=None):
             "metadata": {"media_type": "text/html", "original_report_recipe_id": recipe["id"],
                          "source_manifest": ROOT + "/" + MANIFEST,
                          "source_manifest_sha256": _sha(originals[MANIFEST])},
-        }],
+        })
+    files["model-sources.json"] = _json({
+        "schema": "upstate.sources/v1", "title": TITLE, "entries": report_entries,
     })
     files["README.md"] = (
         "# RL-18151 original observations\n\n"

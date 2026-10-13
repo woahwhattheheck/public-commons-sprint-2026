@@ -80,6 +80,214 @@ def source_layer(workspace, selection: dict) -> dict:
     return row
 
 
+DELIVERY_ADAPTER_VERSION = "delivery-gis-project/v1"
+
+
+def _delivery_state(workspace, delivery_id):
+    import re
+    if not isinstance(delivery_id, str) or not re.fullmatch(r"[0-9a-f]{64}", delivery_id):
+        raise ValueError("Choose an original completed delivery identity")
+    path = gis.local(workspace.root, "deliveries/" + delivery_id + "/delivery-state.json")
+    directory = path.parent
+    original = gis.record(workspace.root, path)
+    value = gis.load(path)
+    if (value.get("schema") != "upstate.delivery/v1" or value.get("id") != delivery_id
+            or value.get("state") != "complete"):
+        raise ValueError("Complete the selected delivery before preparing its editable GIS project")
+    return directory, value, original
+
+
+def delivery_layers(workspace, delivery_id):
+    """Translate the captured delivery datasets into the existing GIS request."""
+    directory, state, original = _delivery_state(workspace, delivery_id)
+    dataset_set = state.get("gis_datasets")
+    if (not isinstance(dataset_set, dict)
+            or dataset_set.get("schema") != "upstate.atlas-datasets/v1"
+            or dataset_set.get("delivery_id") != delivery_id
+            or not isinstance(dataset_set.get("datasets"), list)
+            or not dataset_set["datasets"]):
+        raise ValueError("Build the current delivery edition with its map-dataset catalogue before GIS export")
+    declared = {}
+    for item in [*state.get("files", {}).values(), *state.get("maps", {}).values()]:
+        if not isinstance(item, dict) or not {"path", "bytes", "sha256"} <= item.keys():
+            raise ValueError("The delivery has an incomplete original file descriptor")
+        previous = declared.get(item["path"])
+        if previous and any(previous[key] != item[key] for key in ("bytes", "sha256")):
+            raise ValueError("The delivery repeats a member with conflicting original identities")
+        declared[item["path"]] = item
+    captured = {}
+    def capture(item):
+        if not isinstance(item, dict):
+            raise ValueError("Select an original declared delivery member")
+        actual = declared.get(item.get("path"))
+        if actual is None or any(item.get(key) != actual[key] for key in ("bytes", "sha256")):
+            raise ValueError("GIS dataset refers to a different or undeclared delivery member")
+        if actual["path"] not in captured:
+            captured[actual["path"]] = _artifact(workspace, directory, actual)
+        return captured[actual["path"]]
+    files = state["files"]
+    atlas_descriptor = capture(files["map_atlas_index"])
+    atlas = gis.load(gis.local(workspace.root, atlas_descriptor["path"]))
+    if (atlas.get("schema") != "upstate.map-atlas/v1"
+            or atlas.get("delivery_id") != delivery_id
+            or atlas.get("datasets") != dataset_set
+            or atlas.get("grid_id") != dataset_set["grid_id"]):
+        raise ValueError("The original atlas and delivery datasets describe different selections")
+    datasets = {row["id"]: row for row in dataset_set["datasets"]}
+    if len(datasets) != len(dataset_set["datasets"]):
+        raise ValueError("Choose distinct original delivery dataset identities")
+    relationships = {key: [] for key in datasets}
+    for page in atlas["pages"]:
+        capture(page["file"])
+        for number, panel in enumerate(page["panels"], 1):
+            link = panel.get("dataset")
+            if not isinstance(link, dict) or link.get("id") not in datasets:
+                raise ValueError("Every atlas panel must select a retained delivery dataset")
+            row = datasets[link["id"]]
+            if (link.get("file") != row["file"] or link.get("metadata") != row["metadata"]
+                    or link.get("companions") != [value["file"] for value in row["companions"]]
+                    or panel["units"] != row["units"]
+                    or bool(panel.get("signed")) != row["signed"]):
+                raise ValueError("An atlas panel differs from its original GIS dataset")
+            relationships[row["id"]].append({
+                "map_key": page["map_key"], "family": page["family"],
+                "panel": number, "title": panel["title"],
+                "display_scale": panel.get("display_scale"),
+                "overlays": page["overlays"],
+            })
+    if any(not value for value in relationships.values()):
+        raise ValueError("A retained delivery dataset has no original map relationship")
+    grid = workspace.get_grid(dataset_set["grid_id"])
+    if grid["grid"] != atlas["grid"]:
+        raise ValueError("The delivery atlas differs from its original prepared grid")
+    attachment_id = "delivery-context:" + delivery_id
+    layers = []
+    for dataset_id, row in datasets.items():
+        if (row.get("schema") != "upstate.atlas-dataset/v1"
+                or row["grid_id"] != grid["id"]
+                or row["baseline_run_id"] != atlas["baseline_run_id"]):
+            raise ValueError("A delivery dataset belongs to another original grid or baseline")
+        if sorted(row["maps"], key=lambda item: (item["map_key"], item["panel"])) != sorted(
+                relationships[dataset_id], key=lambda item: (item["map_key"], item["panel"])):
+            raise ValueError("The original dataset and atlas map relationships differ")
+        kind = row["kind"]
+        if kind not in {"baseline_export", "scenario_difference", "relative_priority",
+                        "receptor_priority", "receiving_water_priority"}:
+            raise ValueError("Choose a supported original delivery dataset quantity")
+        signed = kind == "scenario_difference"
+        if bool(row["signed"]) != signed:
+            raise ValueError("The dataset subtraction direction differs from its retained quantity")
+        runs = row["runs"]
+        if (not runs or runs[0]["id"] != atlas["baseline_run_id"]
+                or (signed and len(runs) != 2)):
+            raise ValueError("The dataset has incomplete original producing-run identities")
+        selected_run = runs[-1] if signed else runs[0]
+        if signed and (selected_run["id"] not in atlas["scenario_run_ids"]
+                       or row["derivation"].get("direction") != "alternative minus baseline"):
+            raise ValueError("Choose the retained alternative-minus-baseline dataset")
+        purpose = "difference" if signed else "physical" if kind == "baseline_export" else "priority"
+        scenario = selected_run["scenario"]
+        # Priority normalizations/footprints remain separate scientific metrics.
+        # Full-native physical/difference ranges retain the existing shared policy.
+        metric = (row["pollutant"] if purpose in {"physical", "difference"}
+                  else "delivery-priority:" + gis.fingerprint({
+                      "kind": kind, "support": row["support"], "derivation": row["derivation"]}))
+        source = {"kind": "original completed delivery dataset",
+                  "delivery_id": delivery_id, "delivery_state": original,
+                  "atlas_index": atlas_descriptor, "context_attachment_id": attachment_id,
+                  "dataset": deepcopy(row)}
+        layers.append({
+            "id": "delivery:" + delivery_id + ":" + dataset_id,
+            "title": row["title"] + (" · " + scenario["title"] if signed else ""),
+            "kind": "raster", "file": capture(row["file"]),
+            "companions": [capture(value["file"]) for value in row["companions"]],
+            "group": ("Signed changes · " + scenario["title"] if signed else
+                      "Current annual exports" if purpose == "physical" else "Selected export priorities"),
+            "purpose": purpose, "metric": metric, "units": row["units"],
+            "run_id": selected_run["id"], "scenario_id": scenario["id"],
+            "profile_id": row["profile_id"],
+            **({"direction": "alternative minus baseline"} if signed else {}),
+            "visible": kind == "baseline_export" and row.get("pollutant") == "nitrogen_export",
+            "source": source,
+        })
+        capture(row["metadata"])
+    # Retain original extent geometry as its own editable context, never as a
+    # substitute for the native reporting-mask support of each raster.
+    grid_root = workspace.root / "grids" / grid["id"]
+    for role in ("model_domain", "reporting_area"):
+        item = grid["files"][role]
+        layers.append({
+            "id": "delivery-grid:" + delivery_id + ":" + role,
+            "title": role.replace("_", " ").capitalize(), "kind": "vector",
+            "file": _artifact(workspace, grid_root, item), "layer": role,
+            "group": "Original model and reporting extent", "purpose": "context",
+            "units": "source geometry", "visible": role == "reporting_area",
+            "source": {"delivery_id": delivery_id, "grid_id": grid["id"],
+                       "role": role, "spec": grid["spec"], "original_artifact": item},
+        })
+    # The original maps, metadata and numerical data are one common-root
+    # attachment. Existing ../../ FGDC links still resolve after independent
+    # receiving. Self-contained PDF reports travel with that same hierarchy.
+    for name in ("map_atlas", "map_atlas_csv", "map_atlas_sources", "native_execution",
+                 "native_grid_record", "display_scales"):
+        capture(files[name])
+    for item in files.values():
+        if str(item["path"]).lower().endswith(".pdf"):
+            capture(item)
+    documents = [atlas_descriptor] + [captured[key] for key in sorted(captured)
+                                     if key != files["map_atlas_index"]["path"]]
+    attachment = {
+        "id": attachment_id, "title": "Original delivery maps, datasets, metadata and PDF reports",
+        "kind": "document", "file": documents[0], "companions": documents[1:],
+        "source": {
+            "kind": "complete original atlas dataset and map context",
+            "delivery_id": delivery_id, "delivery_state": original,
+            "baseline_run_id": atlas["baseline_run_id"],
+            "scenario_run_ids": atlas["scenario_run_ids"], "grid_id": grid["id"],
+            "atlas_index": atlas_descriptor, "dataset_ids": list(datasets),
+            "retained_members": list(sorted(captured)),
+            "attachment_scope": "Original atlas/index, datasets, FGDC XML, actual companions, maps, native/grid provenance and self-contained PDF reports.",
+            "source_archive_descriptors": {name: files[name] for name in
+                ("working_archive", "delivery_archive") if name in files},
+        },
+    }
+    # Detect a changed record while its selected member identities were captured.
+    gis.checked(workspace.root, original)
+    return {
+        "layers": layers, "attachments": [attachment], "grid": grid,
+        "binding": {"version": DELIVERY_ADAPTER_VERSION, "delivery_id": delivery_id,
+                    "delivery_state": original, "atlas_index": atlas_descriptor,
+                    "grid_id": grid["id"], "dataset_ids": list(datasets),
+                    "baseline_run_id": atlas["baseline_run_id"],
+                    "scenario_run_ids": atlas["scenario_run_ids"],
+                    "context_attachment_id": attachment_id},
+    }
+
+
+def delivery_choices(workspace):
+    """Compact chooser metadata; numerical files are verified inside export."""
+    result = []
+    for path in sorted((workspace.root / "deliveries").glob("*/delivery-state.json")):
+        value = gis.load(path)
+        if value.get("schema") != "upstate.delivery/v1" or value.get("id") != path.parent.name:
+            raise ValueError("The original delivery catalogue has a different identity")
+        dataset_set = value.get("gis_datasets") or {}
+        atlas = value.get("atlas") or {}
+        eligible = (value.get("state") == "complete"
+                    and dataset_set.get("schema") == "upstate.atlas-datasets/v1"
+                    and dataset_set.get("delivery_id") == value["id"]
+                    and bool(dataset_set.get("datasets")))
+        result.append({
+            "id": value["id"], "state": value.get("state"),
+            "title": value.get("selection", {}).get("title") or atlas.get("title") or value["id"][:12],
+            "eligible": eligible, "dataset_count": len(dataset_set.get("datasets") or []),
+            "map_count": atlas.get("map_count", 0), "grid_id": atlas.get("grid_id"),
+            "project_crs": (atlas.get("grid") or {}).get("crs_name") or (atlas.get("grid") or {}).get("crs"),
+            "reason": ("" if eligible else "Complete the current delivery edition with its map-dataset catalogue."),
+        })
+    return result
+
+
 def request(workspace, selection: dict) -> dict:
     """Select retained source editions, prepared grids and completed run artifacts.
 
@@ -87,6 +295,10 @@ def request(workspace, selection: dict) -> dict:
     must be complete. No invented native-stage unit mappings are supplied here.
     """
     layers, attachments, grid_ids, run_ids = [], [], [], []
+    delivery = delivery_layers(workspace, selection["delivery_id"]) if selection.get("delivery_id") else None
+    if delivery is not None:
+        layers.extend(delivery["layers"])
+        attachments.extend(delivery["attachments"])
     source_selections = list(selection.get("sources", []))
     collection_id = selection.get("source_collection_id")
     if collection_id and not source_selections:
@@ -202,6 +414,8 @@ def request(workspace, selection: dict) -> dict:
     if not layers:
         raise ValueError("Choose actual source layers, a prepared grid or completed runs")
     project_crs=selection.get("project_crs")
+    if not project_crs and delivery is not None:
+        project_crs=delivery["grid"]["grid"]["crs"]
     if not project_crs and grids:
         # Read the real retained reference rather than assuming a grid-JSON spelling.
         import rasterio
@@ -219,9 +433,11 @@ def request(workspace, selection: dict) -> dict:
     result={"schema":gis.REQUEST_SCHEMA,"title":selection.get("title",workspace.project["title"]+" · editable GIS"),
             "project_crs":project_crs,"layers":layers,"attachments":attachments,
             "provenance":{"project_id":workspace.project["id"],"project_title":workspace.project["title"],
-                          "runs":runs,"grid_ids":list(dict.fromkeys(grid_ids)),
+                          "runs":runs,"grid_ids":list(dict.fromkeys(grid_ids +
+                              ([delivery["grid"]["id"]] if delivery is not None else []))),
                           "source_collection_ids":list(dict.fromkeys(x["source_collection_id"] for x in source_selections)),
-                          "notes":selection.get("notes",[])}}
+                          "notes":selection.get("notes",[]),
+                          **({"delivery":delivery["binding"]} if delivery is not None else {})}}
     if focus:
         result["focus_layer_id"]=focus
     return result
@@ -258,7 +474,8 @@ def catalogue(workspace) -> dict:
                      "artifacts":[{"id":k,"units":v.get("units")} for k,v in r.get("artifacts",{}).items()]})
     exports=[gis.load(p) for p in sorted((workspace.root/"gis-exports").glob("*/export.json"))]
     return {"schema":"upstate.gis-catalogue/v1","project_id":workspace.project["id"],
-            "sources":sources,"runs":runs,"exports":exports}
+            "sources":sources,"runs":runs,"exports":exports,
+            "deliveries":delivery_choices(workspace)}
 
 
 def received(workspace, receipt_id: str):
@@ -311,27 +528,65 @@ def receive(workspace, archive: str | Path, *, source_upload_id: str | None=None
         return value
 
 
+def adoption_choices(project: dict) -> dict:
+    """Describe retained selections without opening every original table body."""
+    layers = [{'id': row['id'], 'title': row['title'],
+               'kind': row['data']['kind'], 'units': row['data']['units']}
+              for row in project['layers']]
+    attachments = []
+    for row in project.get('attachments', []):
+        metadata = gis.attachment_metadata(project, row)
+        source = row.get('source') or {}
+        attachments.append({'id': row['id'], 'title': row['title'],
+            'kind': metadata['kind'], 'units': metadata.get('units'),
+            'vintage': source.get('vintage'),
+            'geography_basis': source.get('geography_basis'),
+            'filename': row['files'][0]['path'].rsplit('/', 1)[-1],
+            'bytes': row['files'][0]['bytes'], 'companions': len(row['files']) - 1})
+    return {'layer_choices': layers, 'attachment_choices': attachments}
+
+
+def _adoption_selection(project: dict, selection: dict):
+    def selected(name, fallback):
+        value = selection.get(name, fallback)
+        if (not isinstance(value, list) or any(not isinstance(x, str) or not x for x in value)
+                or len(set(value)) != len(value)):
+            raise ValueError('Choose each received source identity once: ' + name)
+        return value
+    layers = {row['id']: row for row in project['layers']}
+    attachments = {row['id']: row for row in project.get('attachments', [])}
+    chosen = selected('layer_ids', [])
+    original = selected('attachment_ids', list(attachments) if chosen else [])
+    if set(chosen) - set(layers) or set(original) - set(attachments):
+        raise ValueError('Choose existing received layer and attachment identities')
+    if not chosen and not original:
+        raise ValueError('Choose at least one working layer, original table or document')
+    if chosen and set(original) != set(attachments):
+        raise ValueError('Working layers retain their complete original context. Select all attachments, '
+                         'or clear the working layers to adopt selected tables and documents only.')
+    return chosen, original, layers, attachments
+
+
 def adopt_sources(workspace, selection: dict) -> dict:
-    """Adopt selected received working layers through the ORIGINAL source importer.
+    """Adopt received layers or original tables/documents through the source importer.
 
     This appends an independent source edition; it does not edit any original
     source collection, grid, parameter profile, scenario, numerical run or receipt.
     """
+    if not isinstance(selection, dict):
+        raise ValueError('Select retained GIS sources for adoption')
     parent,receipt,result=received(workspace,selection['receipt_id'])
     root=parent/'project';project=gis.load(root/'project.json')
     reason=selection.get('reason','').strip()
     title=selection.get('title','').strip()
     if not reason or not title:
         raise ValueError('Name the new source edition and explain the adoption')
-    chosen=selection.get('layer_ids')
-    if not isinstance(chosen,list) or not chosen or len(set(chosen))!=len(chosen) or any(not isinstance(x,str) for x in chosen):
-        raise ValueError('Choose each received working layer once')
-    byid={l['id']:l for l in project['layers']}
-    if set(chosen)-set(byid):raise ValueError('Choose existing received layer identities')
+    chosen,attachments,byid,documents=_adoption_selection(project,selection)
     adopted={'schema':'upstate.gis-source-adoption-selection/v1','adopter_version':gis.VERSION,
+             'adoption_format_version':2,
              'project_id':workspace.project['id'],'receipt_id':receipt['id'],
              'received_edition_id':project['edition_id'],'fingerprint':result['fingerprint'],
-             'title':title,'reason':reason,'layer_ids':chosen}
+             'title':title,'reason':reason,'layer_ids':chosen,'attachment_ids':attachments}
     key=gis.fingerprint(adopted)
     directory=workspace.root/'gis-source-adoptions'/key
     directory.mkdir(parents=True,exist_ok=True)
@@ -376,6 +631,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
             if data['kind']=='vector':entry['layer']=data['layer']
             entries.append(entry)
         seen_context=set()
+        context_sources=[]
         def context(title, records, *, context_id, context_role, metadata=None, source=None):
             metadata = deepcopy(metadata or {"kind": "document"})
             source = deepcopy(source or {})
@@ -400,7 +656,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                    'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
                    'uri':source.get('uri') or 'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
                    'vintage':source.get('vintage') or 'Received GIS edition '+project['edition_id'],
-                   'gis_context_group':key,'gis_required_context':True,
+                   'gis_context_group':key,'gis_required_context':bool(chosen) or context_role!='attachment',
                    'received_gis':{'receipt_id':receipt['id'],'edition_id':project['edition_id'],
                                    'context_id':context_id,'context_role':context_role,
                                    'originals':deepcopy(records),'source':source,
@@ -417,11 +673,15 @@ def adopt_sources(workspace, selection: dict) -> dict:
                 if 'units' in metadata:
                     entry['units'] = deepcopy(metadata['units'])
             entries.append(entry)
+            if context_role == 'attachment':
+                context_sources.append({'attachment_id':context_id,'source_id':entry['id'],
+                                        'title':title,'kind':kind})
         for layer_id in chosen:
             layer = byid[layer_id]
             context('Retained originals · '+layer['title'],layer['originals'],
                     context_id=layer_id,context_role='layer_originals',source=layer.get('source'))
-        for document in project.get('attachments',[]):
+        for attachment_id in attachments:
+            document=documents[attachment_id]
             context(document['title'],document['files'],
                     context_id=document['id'],context_role='attachment',
                     metadata=gis.attachment_metadata(project,document),source=document.get('source'))
@@ -430,7 +690,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                 [gis.record(root,root/'project.json'),*history],
                 context_id=project['edition_id'],context_role='edition_history')
         manifest={'schema':'upstate.sources/v1','title':title,'entries':entries,
-                  'notes':[reason,'Selected independently editable working layers adopted from a complete received GIS edition.'],
+                  'notes':[reason,'Selected working layers and/or complete original tables and documents adopted from a received GIS edition.'],
                   'scope':{'gis_source_adoption':adopted}}
         manifest_path=parent/('source-adoption-'+key+'.json')
         if manifest_path.exists() and gis.load(manifest_path)!=manifest:
@@ -442,6 +702,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                'source_collection_id':collection['id'],'title':title,
                'sources':[{'layer_id':layer_id,'source_id':'GIS_'+byid[layer_id]['key']}
                           for layer_id in chosen],
+               'context_sources':context_sources,
                'manifest':gis.record(workspace.root,manifest_path)}
         gis.save(state,value)
         return value

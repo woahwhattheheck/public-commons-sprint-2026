@@ -14,7 +14,6 @@ from model import scientific_briefing
 from model import observed_context
 from model import scientific_report_editions as retained_editions
 from model import scientific_report_review
-from model import observed_report_render as renderer
 
 KIND = "scientific-report-editions"
 SCHEMA = "upstate.scientific-report-edition/v1"
@@ -54,7 +53,8 @@ class ScientificReportEditions:
             for entry in collection.get("entries", []):
                 metadata = entry.get("metadata") or {}
                 if (entry.get("kind") == "document"
-                        and metadata.get("report_schema") == observed_context.SCHEMA):
+                        and (metadata.get("report_schema") == observed_context.SCHEMA
+                             or entry.get("role") == observed_context.ROLE)):
                     rows.append({"source_collection_id": collection["id"], "source_id": entry["id"],
                                  "title": entry["title"], "vintage": entry["vintage"],
                                  "uri": entry["uri"], "body_sha256": entry["body"]["sha256"],
@@ -63,35 +63,14 @@ class ScientificReportEditions:
         return {"workspace_key": workspace, "sources": rows, "editions": self.saved(workspace)}
 
     def preview(self, workspace, payload):
-        ws = self.operator.ws(workspace)
-        result = renderer.prepare(ws, payload.get("sources"), title=payload.get("title"),
-                                  contact=payload.get("contact"))
-        key = digest(result["render_identity"])
-        record_path = self._directory(ws, key) / "edition.json"
-        return {"workspace_key": workspace, **result, "id": key,
-                "existing": record_path.is_file()}
+        result = retained_editions.preview(self.operator.ws(workspace), payload)
+        return {"workspace_key": workspace, **result}
 
     def render(self, workspace, payload):
-        ws = self.operator.ws(workspace)
-        preview = self.preview(workspace, payload)
-        if payload.get("preview_id") != preview["id"]:
-            raise self.Fault("SCIENTIFIC_REPORT_PREVIEW",
-                             "Preview this exact ordered study selection before preparing its report.", 409)
-        key = preview["id"]
-        directory = self._directory(ws, key)
-        # This lock also participates in the original complete Workspace backup.
-        with held(ws.root / ".workspace.lock"):
-            result = renderer.render(ws, preview, directory)
-            record = {"schema": SCHEMA, "id": key, "project_id": ws.project["id"],
-                      "title": preview["title"], "render_identity": preview["render_identity"],
-                      **{name: result[name] for name in (
-                          "state", "operation_id", "source_count", "section_count",
-                          "figure_count", "sources", "files")}}
-            atomic_json(directory / "edition.json", record, immutable=True)
-        self._inspect(ws, key)
-        return {"scientific_report_edition_id": key, "title": record["title"],
-                "state": "complete", "source_count": record["source_count"],
-                "operation_id": record["operation_id"]}
+        try:
+            return retained_editions.render(self.operator.ws(workspace), payload)
+        except retained_editions.PreviewChanged as error:
+            raise self.Fault("SCIENTIFIC_REPORT_PREVIEW", str(error), 409) from error
 
     def _files(self, record, directory):
         return retained_editions.files(record, directory)

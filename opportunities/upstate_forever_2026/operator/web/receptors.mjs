@@ -1020,6 +1020,33 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
   }
 
 
+  function sourceReportForm() {
+    if(!['network','source-areas'].includes(result?._kind))
+      throw Error('Open a saved original watershed study or prepared area result.');
+    const saved=result, context=viewContext(), epoch=generation, requested=workspace;
+    const available=catalog?.report_map_capability?.available===true;
+    const versions=catalog?.report_map_capability?.libraries||{};
+    openForm('Prepare scientific report source',
+      'Retain the original watershed study and its complete source files for the scientific report composer.',
+      '<div class="form-grid"><label class="full">Report source title<input name="rc_report_title" required maxlength="240" value="'+esc(saved.title+' — source geography')+'"></label>'+
+      '<label class="full"><input type="checkbox" name="rc_report_maps" '+(available?'':'disabled')+'> Include projected original watershed maps</label>'+
+      '<p class="note full">'+(available?
+        'The installed native renderer draws the original upstream HUC12 polygons and dark anchor outlines. Numbered labels identify receiving areas. Grid north and scale use the original projected CRS. Geometry interpretation and any repairs remain in the source inventory.':
+        'Projected maps become available when the original Esri reader, shared map renderer, pyproj, Shapely and ReportLab are installed. The complete source geography, memberships and original files are available now.')+'</p>'+
+      (available?'<p class="note full">Installed renderer: ReportLab '+esc(versions.reportlab)+' · Shapely '+esc(versions.shapely)+' · PROJ '+esc(versions.proj)+'. Published area quantities retain the original AreaSqKm attributes.</p>':'')+
+      '</div>', 'Prepare retained report source',()=>{
+        if(!currentView(context)||generation!==epoch||result!==saved)
+          throw Error('Reopen this report form on the intended saved watershed result.');
+        const form=operationForm(), selection=saved._kind==='network'?{network_id:saved.id}:{preparation_id:saved.id};
+        selection.title=form.elements.namedItem('rc_report_title').value.trim();
+        if(!selection.title)throw Error('Give the retained report source a title.');
+        const requestedMaps=form.elements.namedItem('rc_report_maps').checked;
+        if(requestedMaps&&!available)throw Error('The native projected-map renderer is unavailable in this host.');
+        if(requestedMaps)selection.include_maps=true;
+        return submitFormAction('receptor.report-source.build',{selection},requested);
+      });
+  }
+
   function renderSourceReport() {
     const saved=result, summary=saved.summary, report=ticketURL(saved._report);
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(saved.title)+'</h2>'+
@@ -1034,7 +1061,8 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       summary.areas.map(area=>'<tr><td>'+esc(area.title)+'</td><td>'+number(area.huc12_count)+'</td><td>'+esc(area.anchor_huc12s.join(', '))+'</td><td>'+
         esc(area.published_area.complete?area.published_area.value:'Unavailable: '+area.published_area.missing_units+' original values missing')+'</td><td>'+number(area.maximum_links_to_anchor)+'</td></tr>').join('')+'</tbody></table></div>';
     node('[data-rc-products]').innerHTML='<h3>Scientific source and original companions</h3><p>The retained report preserves the original watershed geography, drainage links, memberships and prepared polygon sources. Published areas sum the original AreaSqKm attributes over distinct HUC12 members. The report composer can combine this source with selected observation and native process reports in reading order.</p>'+
-      '<p>'+number(summary.shared_huc12_count)+' HUC12 units are shared by selected areas. The selected union counts every original unit once.</p>';
+      '<p>'+number(summary.shared_huc12_count)+' HUC12 units are shared by selected areas. The selected union counts every original unit once.</p>'+
+      (summary.projected_maps?'<p><strong>'+number(summary.projected_maps.figures)+' native projected map figures</strong> · '+esc(summary.projected_maps.crs)+'. Separate upstream-unit boundaries and original anchors remain visible. Grid scale uses projected metres. '+number(summary.projected_maps.native_geometry_operations)+' recorded reader operations are retained with the original geometry and native renderer source.</p>':'<p>This retained edition includes the original source geography and membership tables. To add projected vector figures, reopen the original study and select maps when preparing a new report source.</p>');
     node('[data-rc-downloads]').innerHTML='<details class="rc-detail"><summary>Complete original report files</summary><p class="rc-download-links">'+downloadLinks(saved._downloads||[])+'</p><p>Original decoded source: <code>'+esc(saved.source_binding.decoded_sha256)+'</code></p></details>';
   }
   async function openSourceReportComposer() {
@@ -1103,11 +1131,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
 
   async function act(action,target) {
     if(action==='scientific-compose')return openSourceReportComposer();
-    if(action==='scientific-source'){
-      if(!['network','source-areas'].includes(result?._kind))throw Error('Open a saved original watershed study or prepared area result.');
-      const selection=result._kind==='network'?{network_id:result.id}:{preparation_id:result.id};
-      return submit('receptor.report-source.build',{selection});
-    }
+    if(action==='scientific-source')return sourceReportForm();
     if(action==='prepare-areas')return prepareAreaForm();
     if(action==='prepared-analysis')return usePreparedAnalysis();
     if(action==='prepared-scenario')return interventionForm();

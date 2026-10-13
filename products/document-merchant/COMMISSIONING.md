@@ -156,6 +156,8 @@ DOCUMENT_CUSTOMER=/absolute/original/document-customer
 
 These are operating variables: replace their values with the actual retained paths. `DOCUMENT_COMMISSION` is this installation's private preparation directory. Keep it distinct from the original commerce directory and its operator. `DOCUMENT_CUSTOMER` is the one original Jobs customer directory to use for the ensuing requests. If that customer already has a complete options file, use it directly in step 3.
 
+Keep the commissioning installation and Jobs customer in separate directory trees: neither can contain the other. This applies to both `--customer-directory` and the `directory` in a complete customer options file, for direct-account and retained-commerce commissioning. Review rejects a conflicting selection before setup writes any files. Sibling directories beneath the same private parent are supported.
+
 An original commerce seller and this document seller cannot own the same native facilitator signer simultaneously. Finish the original seller through its original close operation before starting the commissioned service. The facilitator's existing signer-ownership mechanism handles admission. A stopped or timed-out native process must be reconciled through its original operation before another process acquires that same account.
 
 ## 2. Read the original offers

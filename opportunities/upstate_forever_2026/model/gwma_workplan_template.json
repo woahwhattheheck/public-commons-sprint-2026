@@ -1,0 +1,203 @@
+{
+  "schema": "upstate.gwma-workplan-template/v1",
+  "title": "Regional Pathogen Reduction Study — data management workplan",
+  "owners": {
+    "study": "",
+    "laboratory": "",
+    "risk": "",
+    "communications": "Craftwater project management team"
+  },
+  "sources": [
+    {
+      "title": "GWMA RFQ",
+      "url": "https://gatewaywater.org/wp-content/uploads/2026/09/Final-RFQ-with-Attachments-Technical-Services-for-the-Regional-Pathogen-Reduction-Study.pdf"
+    },
+    {
+      "title": "GWMA Addendum No. 1 and revised attachments",
+      "url": "https://gatewaywater.org/wp-content/uploads/2026/10/RFQ-Tech-Services-for-Regional-Pathogen-Study-Addendum-No.-1_QA_Final.pdf",
+      "retained_sha256": "98bcfe2e020c0eaab81351ff31adc41cecbea315ac7cf8b6bb0de798aea5efe6"
+    },
+    {
+      "title": "Official nine watershed areas",
+      "url": "https://safecleanwaterla.org/la-county-watersheds/"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "beach-weather",
+      "title": "Confirm wet and dry beach monitoring scope",
+      "status": "open",
+      "owner": "Study lead and TAC",
+      "note": "RFQ section 2 and Attachment C describe the beach wet/dry scope differently. Resolve the collection design in the approved Health Risk Assessment Work Plan."
+    },
+    {
+      "id": "constituents",
+      "title": "Select indicator bacteria, pathogen and source-tracking constituents",
+      "status": "open",
+      "owner": "Laboratory and risk leads",
+      "note": "Retain analyte, method, matrix and sample fraction separately. Final scientific design determines constituents and risk-relevant detection limits."
+    },
+    {
+      "id": "collection-time",
+      "title": "Approve sample/event identifiers and time conventions",
+      "status": "open",
+      "owner": "Monitoring lead",
+      "note": "Bind station, sampling event, collection timezone, wet/dry classification and sample/replicate identity. Preserve original strings and document corrections."
+    },
+    {
+      "id": "nondetect-contract",
+      "title": "Approve nondetect, DNQ, qualifier and sentinel interpretation",
+      "status": "open",
+      "owner": "Laboratory and risk leads",
+      "note": "CEDEN 2.0 and legacy exports have different source contracts. Preserve original result text, MDL, MRL/RL, qualifier and QA codes; select explicit analytical contracts."
+    },
+    {
+      "id": "culture-duplicates",
+      "title": "Define microbiology and molecular QC review",
+      "status": "open",
+      "owner": "Laboratory lead",
+      "note": "Use method-specific culture duplicate confidence intervals or Rlog and separate field duplicate assessment. Record PCR-specific quality controls."
+    },
+    {
+      "id": "risk-contract",
+      "title": "Select and version the risk model inputs and outputs",
+      "status": "open",
+      "owner": "Risk lead",
+      "note": "Define hazards, exposure, dose-response assumptions, uncertainty and sensitivity with the scientific team. The intake software preserves measured inputs and explicit contracts."
+    },
+    {
+      "id": "cost-denominators",
+      "title": "Approve control-cost and source-strength scenario definitions",
+      "status": "open",
+      "owner": "Risk management lead",
+      "note": "Keep costs per retained volume, linear foot and managed area distinct. Record control, source-strength assumptions, model version and uncertainty."
+    },
+    {
+      "id": "sponsor-approval",
+      "title": "Record accepted workplans and implementation authorization",
+      "status": "open",
+      "owner": "Study Sponsors and GWMA",
+      "note": "Initial notice to proceed covers technical stakeholder participation and the Health Risk Assessment and Risk Management Work Plans. Preserve Sponsor review/acceptance and GWMA implementation decision."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "hra-draft",
+      "title": "Draft Health Risk Assessment Work Plan",
+      "depends_on": [],
+      "owner": "Risk and monitoring leads",
+      "duration_months": 1,
+      "phase": "initial_workplans"
+    },
+    {
+      "id": "risk-management-draft",
+      "title": "Draft Risk Management Work Plan",
+      "depends_on": [],
+      "owner": "Risk management lead",
+      "duration_months": 1,
+      "phase": "initial_workplans"
+    },
+    {
+      "id": "stakeholder-review",
+      "title": "Study Sponsor, TAC and stakeholder review",
+      "depends_on": [
+        "hra-draft",
+        "risk-management-draft"
+      ],
+      "owner": "Craftwater coordination; technical team support",
+      "duration_months": 2,
+      "phase": "initial_workplans"
+    },
+    {
+      "id": "final-workplans",
+      "title": "Resolve comments and submit final workplans",
+      "depends_on": [
+        "stakeholder-review"
+      ],
+      "owner": "Technical leads",
+      "duration_months": 1,
+      "phase": "initial_workplans"
+    },
+    {
+      "id": "implementation-decision",
+      "title": "Record Sponsor acceptance and GWMA implementation authorization",
+      "depends_on": [
+        "final-workplans"
+      ],
+      "owner": "Study Sponsors and GWMA",
+      "duration_months": 0,
+      "phase": "approval_milestone"
+    },
+    {
+      "id": "current-conditions",
+      "title": "Current-condition monitoring and analysis",
+      "depends_on": [
+        "implementation-decision"
+      ],
+      "owner": "Monitoring and laboratory leads",
+      "duration_months": 24,
+      "phase": "implementation",
+      "duration_basis": "Attachment C minimum two years; detailed schedule in approved workplan"
+    },
+    {
+      "id": "source-strength",
+      "title": "Source-strength monitoring and analysis",
+      "depends_on": [
+        "implementation-decision"
+      ],
+      "owner": "Monitoring and source-tracking leads",
+      "duration_months": 12,
+      "phase": "implementation",
+      "duration_basis": "Attachment C minimum one year"
+    },
+    {
+      "id": "control-effectiveness",
+      "title": "Control-effectiveness studies",
+      "depends_on": [
+        "implementation-decision"
+      ],
+      "owner": "Risk management and monitoring leads",
+      "duration_months": 12,
+      "phase": "implementation",
+      "duration_basis": "Attachment C minimum one year"
+    },
+    {
+      "id": "planning-application",
+      "title": "Integrate accepted water-quality, BMP and risk-model contracts",
+      "depends_on": [
+        "current-conditions",
+        "source-strength",
+        "control-effectiveness"
+      ],
+      "owner": "Scientific and software leads",
+      "duration_months": null,
+      "phase": "implementation",
+      "duration_basis": "Detailed implementation duration is selected in approved workplans",
+      "duration_status": "to_be_agreed"
+    },
+    {
+      "id": "nine-watershed-transfer",
+      "title": "Document one watershed example and transfer the nine-area application",
+      "depends_on": [
+        "planning-application"
+      ],
+      "owner": "Technical team",
+      "duration_months": null,
+      "phase": "implementation",
+      "duration_basis": "Detailed receiving and training schedule is selected in approved workplans",
+      "duration_status": "to_be_agreed"
+    }
+  ],
+  "scenarios": [],
+  "watersheds": [
+    "Central Santa Monica Bay",
+    "Lower Los Angeles River",
+    "Lower San Gabriel River",
+    "North Santa Monica Bay",
+    "Rio Hondo",
+    "Santa Clara River",
+    "South Santa Monica Bay",
+    "Upper Los Angeles River",
+    "Upper San Gabriel River"
+  ]
+}

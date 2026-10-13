@@ -1,3 +1,4 @@
+import {attachParameterCaseConsole} from './parameter_case_console.mjs';
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const format = value => value === null || value === undefined ? '—' : typeof value === 'number' ? value.toLocaleString(undefined, {maximumFractionDigits: 7}) : escapeHTML(value);
 const short = value => String(value || '').slice(0, 12);
@@ -12,6 +13,32 @@ const pretty = value => JSON.stringify(value, null, 2);
 const references = value => (Array.isArray(value) ? value : [value]).filter(Boolean);
 const modelNames = selection => (selection?.models || ['ndr', 'sdr']).map(value => String(value).toUpperCase()).join(' + ');
 const readLines = value => String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+
+function nativeFailureMarkup(error) {
+  if (!error) return '';
+  const message = '<div class="notice error">' + escapeHTML(error.message || error) + '</div>';
+  if (error.kind !== 'native_process_interrupted') return message;
+  const delta = error.memory_events?.delta || {};
+  const local = delta['memory.events.local'] || delta['memory.events'];
+  const observed = error.memory_events?.state === 'observed';
+  const rows = [
+    ['Native run', error.run_id || '—'],
+    ['Process exit', Number.isInteger(error.return_code) ? error.return_code : 'Unavailable after reconnection'],
+    ['Signal', error.signal?.name || 'Not observed'],
+    ['Process ID', error.process?.pid ?? '—'],
+    ['Shared-group OOM kills during this attempt', observed ? (local?.oom_kill ?? 'Not recorded') : 'Not observed'],
+    ['Original request', error.process?.request_sha256 || '—'],
+  ];
+  return message + '<p class="note">' + escapeHTML(error.recovery || '') + '</p>' +
+    '<details class="technical"><summary>Original process interruption</summary>' +
+    '<dl class="definition">' + rows.map(([name, value]) =>
+      '<dt>' + escapeHTML(name) + '</dt><dd class="mono" style="overflow-wrap:anywhere">' +
+      escapeHTML(value) + '</dd>').join('') + '</dl>' +
+    '<p>Group counters include other processes. They record a shared-group event, without identifying its victim.</p>' +
+    '<pre>' + escapeHTML(pretty({process: error.process, memory_events: error.memory_events,
+      resources_before: error.resources_before, resources_after: error.resources_after})) + '</pre></details>';
+}
 
 function versionRows(bindings, labels = {}, guides = {}) {
   const rows = [];
@@ -125,6 +152,7 @@ export function parseParameterStudyValues(text) {
 }
 
 export function attachParameterStudies(host) {
+  const caseConsole = attachParameterCaseConsole(host);
   let root = null, controller = null, selected = null, currentWorkspace = null, pendingOpen = null;
   let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0};
   let caseFilter = '', caseOffset = 0, draftCatalog = null, draftRoot = null;
@@ -284,7 +312,7 @@ export function attachParameterStudies(host) {
       escapeHTML(progress.completed || 0) + '" aria-label="Native cases complete"></progress></div>' +
       (activeCase && isBusy ? '<p class="note">Executing ' + escapeHTML(activeCase.label) + ' · native run ' + escapeHTML(short(activeCase.run_id)) + '</p>' : '') +
       aggregationProgress(item) +
-      (item.error ? '<div class="notice error">' + escapeHTML(item.error.message || item.error) + '</div>' : '') +
+      nativeFailureMarkup(item.error) +
       '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' + baselineExecution(item) +
       '<details class="technical"><summary>Selected axes and scientific rationale</summary>' + axesSummary(item.selection.axes) + '</details>' +
       '<div data-parameter-study-error></div></div></section>' +
@@ -313,10 +341,12 @@ export function attachParameterStudies(host) {
     const rows = page.map(row => '<tr><td class="name-cell"><strong>' + escapeHTML(row.label) + '</strong><small class="mono">' +
       escapeHTML(short(row.run_id)) + '</small></td><td>' + status(row.state) + (row.error ? '<small>' +
       escapeHTML(row.error.message || row.error) + '</small>' : '') +
+      (row.process_interruption && !row.error ? '<small>' + escapeHTML(row.process_interruption.message) + '</small>' : '') +
       (row.native_version_labels ? '<small>' + Object.entries(row.native_version_labels).map(([model, value]) =>
         escapeHTML(model.toUpperCase() + ': ' + value)).join('<br>') + '</small>' : '') + '</td><td class="mono">' +
       (Object.entries(row.overrides || {}).map(([name, value]) => escapeHTML(name) + ' = ' + format(value)).join('<br>') || 'Baseline values') +
-      '</td><td class="actions-cell"><button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
+      '</td><td class="actions-cell">' + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
+      '<button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
       '">Open native run</button><button type="button" data-action="run-log" data-id="' + escapeHTML(row.run_id) +
       '">Log</button><button type="button" data-action="item" data-kind="profiles" data-id="' + escapeHTML(row.profile_id) + '">Profile</button></td></tr>');
     panel.innerHTML = rows.length ? gridTable(['Case', 'State', 'Parameter changes', ''], rows) + '<div class="parameter-study-pager">' +
@@ -589,6 +619,7 @@ export function attachParameterStudies(host) {
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
       throw new Error('Open this task in its original Workspace before opening its parameter study.');
     }
+    if (action === 'case-console') return caseConsole.open(id, node.dataset.runId);
     if (action === 'new' || action === 'revise') return newStudy(action === 'revise' ? id : null, node.dataset.baselineId);
     if (action === 'open') {
       currentWorkspace = workspace(); study = null; results = null;

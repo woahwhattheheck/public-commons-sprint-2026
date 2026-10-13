@@ -1,0 +1,145 @@
+{
+  "schema": "tjlabs.budibase-workshare-input.v1",
+  "currency": "USD",
+  "fee": 9600,
+  "startDate": null,
+  "illustrativeStartDate": "2026-10-19",
+  "holidays": [],
+  "invoiceNetDays": 15,
+  "contributorPayDays": 14,
+  "reworkReserveFraction": 0.1,
+  "unpricedHoursFraction": 0,
+  "accessDelayBusinessDays": 0,
+  "reviewDelayBusinessDays": 0,
+  "cutoverDelayBusinessDays": 0,
+  "roles": [
+    {
+      "id": "platform",
+      "name": "Platform and integration engineer",
+      "costPerHour": 75,
+      "productiveHoursPerDay": 6,
+      "seat": "platform-role"
+    },
+    {
+      "id": "operations",
+      "name": "Workflow and acceptance specialist",
+      "costPerHour": 55,
+      "productiveHoursPerDay": 6,
+      "seat": "operations-role"
+    },
+    {
+      "id": "lead",
+      "name": "Delivery lead",
+      "costPerHour": 100,
+      "productiveHoursPerDay": 6,
+      "seat": "lead-role"
+    }
+  ],
+  "phases": [
+    {
+      "id": "source",
+      "name": "Select the real workflow and configure the receiving environment",
+      "businessDays": 5,
+      "hours": {
+        "platform": 12,
+        "operations": 1,
+        "lead": 2
+      }
+    },
+    {
+      "id": "implement",
+      "name": "Implement the agreed workflow, connectors and role configuration",
+      "businessDays": 5,
+      "hours": {
+        "platform": 20,
+        "operations": 3,
+        "lead": 2
+      }
+    },
+    {
+      "id": "accept",
+      "name": "Operate customer acceptance, correct behaviour and rehearse recovery",
+      "businessDays": 5,
+      "hours": {
+        "platform": 20,
+        "operations": 4,
+        "lead": 2
+      }
+    },
+    {
+      "id": "handover",
+      "name": "Publish, receive, train and transfer continuing operation",
+      "businessDays": 5,
+      "hours": {
+        "platform": 8,
+        "operations": 4,
+        "lead": 2
+      }
+    }
+  ],
+  "milestones": [
+    {
+      "id": "start",
+      "name": "Agreed start and source/environment responsibilities",
+      "phase": "start",
+      "fraction": 0.4
+    },
+    {
+      "id": "ready",
+      "name": "Complete selected workflow ready for customer acceptance",
+      "phase": "implement",
+      "fraction": 0.4
+    },
+    {
+      "id": "accepted",
+      "name": "Production handover and independent receiving accepted",
+      "phase": "handover",
+      "fraction": 0.2
+    }
+  ],
+  "selectedScope": {
+    "workflowCount": 1,
+    "targetEnvironmentPairs": 1,
+    "datasources": 2,
+    "existingScreens": 12,
+    "existingTables": 10,
+    "existingAutomations": 5,
+    "applicationRoles": 4,
+    "initialNamedUsers": 20,
+    "agreedBehaviourChanges": 4,
+    "internalRowsForTransfer": 10000,
+    "attachmentBytesForTransfer": 104857600,
+    "formatRoute": "Select workspace-new, workspace-update or project after actual inventory",
+    "interpretation": "Authored fixed-fee planning ceiling for a selected existing workflow; choose actual source quantities and changes before the customer offer is finalized."
+  },
+  "care": {
+    "selected": false,
+    "monthlyFee": 900,
+    "platformHours": 4,
+    "operationsHours": 1,
+    "leadHours": 1,
+    "monthlyThirdPartyCost": 0
+  },
+  "customerEconomics": {
+    "months": 12,
+    "loadedHourValue": 100,
+    "incrementalPlatformMonthly": 0,
+    "platformUpfront": 0,
+    "currentManualHoursPerMonth": null
+  },
+  "agencyEconomics": {
+    "customerProjectPrice": 12000,
+    "agencyAccountManagementHours": 8,
+    "agencyAccountManagementCostPerHour": 75
+  },
+  "referral": {
+    "eligibilityConfirmed": false,
+    "rate": null,
+    "minimumInitialNet": 7200,
+    "confirmedEligibleInitialNet": 0,
+    "netReceipts": [],
+    "includeInServiceCash": false
+  },
+  "collectionOnBusinessDays": true,
+  "collectionDelayCalendarDays": 0
+}

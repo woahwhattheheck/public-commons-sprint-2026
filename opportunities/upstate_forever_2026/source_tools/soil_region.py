@@ -328,7 +328,7 @@ def _reuse_tile(client, db, expected, plan_sha256):
     return saved["ids"], tile
 
 
-def _capture_tile(client, db, expected, *, page_size, plan_sha256):
+def _capture_tile(client, db, expected, *, page_size, plan_sha256, page_workers=1):
     existing = _reuse_tile(client, db, expected, plan_sha256)
     if existing is not None:
         return existing[0], existing[1], True
@@ -343,7 +343,8 @@ def _capture_tile(client, db, expected, *, page_size, plan_sha256):
             nonlocal count
             count += _store_rows(db, tile, rows)
 
-        ids, pages = _geometry_pages(client, tile, page_size=page_size, on_page=consume)
+        ids, pages = _geometry_pages(client, tile, page_size=page_size, on_page=consume,
+                                     page_workers=page_workers)
         tile.update(polygons=len(ids), pages=pages, indexed_polygons=count)
         index = _tile_index_state(db, tile["name"])
         if index is None or index["rows"] != count:
@@ -445,10 +446,12 @@ def _finish_capture(root, record, source_plan):
 
 def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
             capture_crs="EPSG:5070", tile_edge_m=15000, halo_m=60,
-            page_size=128, rating_batch=1000, metadata_path=None,
+            page_size=128, rating_batch=1000, page_workers=1, metadata_path=None,
             metadata_receipt=None, resume=False):
     from pyproj import Transformer
     from shapely.geometry import box
+    if type(page_workers) is not int or page_workers not in (1, 2):
+        raise ValueError("Choose one or two native soil page workers")
     if (not vintage or not math.isfinite(buffer_m) or buffer_m <= 0
             or not math.isfinite(tile_edge_m) or not 300 <= tile_edge_m <= 15000
             or not math.isfinite(halo_m) or halo_m < 60
@@ -509,7 +512,8 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
                     expected = {"name": name, "capture_bounds": list(bounds),
                                 "native_aoi_wkt": wkt}
                     ids, tile, reused = _capture_tile(
-                        client, db, expected, page_size=page_size, plan_sha256=digest(plan))
+                        client, db, expected, page_size=page_size, plan_sha256=digest(plan),
+                        page_workers=page_workers)
                     reused_tiles += int(reused)
                     for row in ids:
                         mukey = _int(row["MapUnitKey"])
@@ -527,7 +531,8 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
                         "plan_sha256": digest(plan), "stage": "geometry",
                         "completed_tiles": len(tiles), "mapunits_seen": len(keys),
                         "reused_indexed_tiles": reused_tiles,
-                        "newly_indexed_tiles": len(tiles) - reused_tiles})
+                        "newly_indexed_tiles": len(tiles) - reused_tiles,
+                        "geometry_page_workers": page_workers})
             if not tiles or not keys:
                 raise ValueError("The domain returned no original soil mapunits")
             batches, parameters = [], None
@@ -806,6 +811,8 @@ def main(argv=None):
     c.add_argument("--tile-edge-m", type=float, default=15000)
     c.add_argument("--halo-m", type=float, default=60)
     c.add_argument("--page-size", type=int, default=128)
+    c.add_argument("--page-workers", type=int, choices=(1, 2), default=1,
+                   help="Overlap up to two original geometry requests; preserve ordered tile ingest")
     c.add_argument("--rating-batch", type=int, default=1000)
     c.add_argument("--attribute-metadata")
     c.add_argument("--metadata-capture")
@@ -824,6 +831,7 @@ def main(argv=None):
                          vintage=args.vintage, buffer_m=args.buffer_m,
                          capture_crs=args.capture_crs, tile_edge_m=args.tile_edge_m,
                          halo_m=args.halo_m, page_size=args.page_size,
+                         page_workers=args.page_workers,
                          rating_batch=args.rating_batch, metadata_path=args.attribute_metadata,
                          metadata_receipt=args.metadata_capture, resume=args.resume)
     elif args.command == "prepare":

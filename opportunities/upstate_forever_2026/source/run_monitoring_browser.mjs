@@ -8,13 +8,13 @@ import { parseArgs } from 'node:util';
 
 const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},'restored-selection':{type:'string'},workspace:{type:'string'},
- 'context-id':{type:'string'},output:{type:'string'},
+ 'context-id':{type:'string'},'comparison-selection':{type:'string'},output:{type:'string'},
  resume:{type:'boolean',default:false},video:{type:'boolean',default:false},
  headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE (--opening MONITORING_OPENING.json --receiving RECEIVING.json | --restored-selection SELECTION.json --workspace KEY) --output DIRECTORY [--context-id SAVED_CONTEXT] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
+ console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE (--opening MONITORING_OPENING.json --receiving RECEIVING.json | --restored-selection SELECTION.json --workspace KEY) --output DIRECTORY [--context-id SAVED_CONTEXT] [--comparison-selection BUDGET_SELECTION.json] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','monitoring-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -23,7 +23,7 @@ const canonical=value=>JSON.stringify(value,(_key,item)=>item&&!Array.isArray(it
 const required=(value,message)=>{if(!value)throw Error(message);};
 const stopped=new Set(['failed','interrupted','cancelled']);
 let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='';
-let opening,receiving,requestState,selection,baseline,journalWritable=false;
+let opening,receiving,requestState,selection,baseline,comparisonSelection=null,journalWritable=false;
 let journal={schema:'upstate.monitoring-browser/v1',prepared_by:'TokenJunkieLabs engineering',
  started_at:new Date().toISOString(),status:'running',steps:[],screenshots:[],downloads:[],browser_errors:[]};
 async function readOptional(path){
@@ -94,6 +94,16 @@ async function initializeContinuation(){
    network_id:receiving.network_id,plan_id:receiving.plan_id,campaign_id:receiving.campaign_id,
    context_id:args['context-id']||null};
   input={opening_sha256:hash(openingBytes),receiving_sha256:hash(receivingBytes),...selection};
+ }
+ if(args['comparison-selection']){
+  const bytes=await readFile(resolve(args['comparison-selection'])),chosen=JSON.parse(bytes.toString('utf8'));
+  required(chosen.schema==='upstate.monitoring-budget-browser-selection/v1','Choose an original saved budget comparison browser selection.');
+  required(typeof chosen.frontier_id==='string'&&chosen.frontier_id.trim(),'Select an existing original frontier.');
+  required(chosen.baseline_plan_id==null||(typeof chosen.baseline_plan_id==='string'&&chosen.baseline_plan_id.trim()),'Select a retained baseline plan or omit it.');
+  required(chosen.context_ids===undefined||(Array.isArray(chosen.context_ids)&&chosen.context_ids.every(id=>typeof id==='string'&&id.trim())&&new Set(chosen.context_ids).size===chosen.context_ids.length),'Context IDs must be distinct original saved contexts.');
+  required(typeof chosen.title==='string'&&chosen.title.trim(),'Give the saved comparison a title.');
+  comparisonSelection={frontier_id:chosen.frontier_id,baseline_plan_id:chosen.baseline_plan_id||null,context_ids:chosen.context_ids||[],title:chosen.title.trim()};
+  input={...input,comparison:{selection_sha256:hash(bytes),selection:comparisonSelection}};
  }
  const retained=await readOptional(join(output,'request-state.json')),previous=await readOptional(join(output,'journey.json'));
  if(args.resume){
@@ -331,6 +341,7 @@ async function freshBrowser(){
   await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(selection.workspace_key);await openDesk();await chooseCampaign();
   const value=await readSelection();required(canonical(identity(value))===canonical(requestState.selection),'A fresh browser opened another native campaign revision.');
   await verifyRendered(value);await openObservedContext();await shot('06-fresh-browser-campaign');
+  if(comparisonSelection){await reopenBudgetComparison('fresh-browser');await chooseCampaign();}
   await record('Reopened the complete original campaign in a fresh browser',{...identity(value)});
  }finally{await fresh.close();page=originalPage;currentWorkspace=originalWorkspace;}
 }
@@ -347,9 +358,97 @@ async function transferWorkspace(archive){
  await openWorkspace(task.result.workspace_key);await openDesk();await chooseCampaign();
  const value=await readSelection();required(canonical(identity(value))===canonical(requestState.selection),'Independent workspace receiving changed the original network, design, campaign, calendar or retained source bindings.');
  await verifyRendered(value);await openObservedContext();await shot('07-received-campaign');
+ if(comparisonSelection){await reopenBudgetComparison('received-workspace');await chooseCampaign();}
  await record('Reopened the original campaign after independent workspace receiving',{workspace_key:currentWorkspace,archive_sha256:archive.sha256,...identity(value)});
  journal.received_workspace_key=currentWorkspace;
 }
+
+async function visibleComparison(){
+ return page.locator(desk('[data-frontier-result] > details:last-child > pre')).evaluate(node=>JSON.parse(node.textContent));
+}
+async function waitComparison(expected){
+ await page.waitForFunction(expected=>{
+  const node=document.querySelector('eco-monitoring');
+  const pre=node?.shadowRoot?.querySelector('[data-frontier-result] > details:last-child > pre');
+  if(!node||node.busy||!pre)return false;
+  try{
+   const value=JSON.parse(pre.textContent);
+   return (!expected.id||value.id===expected.id)&&value.frontier_id===expected.frontier_id&&
+    (!expected.baseline_plan_id||value.baseline_plan_id===expected.baseline_plan_id)&&
+    (!expected.title||value.title===expected.title);
+  }catch{return false;}
+ },expected);
+ return visibleComparison();
+}
+async function comparisonLibrary(){
+ await idle();await page.locator(desk('[data-frontier-refresh]')).click();await idle();
+}
+async function reopenBudgetComparison(label){
+ const retained=requestState.comparison;
+ required(retained?.comparison_id,'The original browser request has no retained comparison.');
+ const native=await monitoring('comparison.get',{comparison_id:retained.comparison_id});
+ required(hash(canonical(native))===retained.sha256,'The saved comparison or original plan/source identities changed.');
+ await comparisonLibrary();
+ await page.locator(desk('[data-comparison-picker]')).selectOption(retained.comparison_id);
+ const visible=await waitComparison({id:retained.comparison_id,frontier_id:comparisonSelection.frontier_id});
+ required(canonical(visible)===canonical(native),'The reopened visible comparison differs from its retained native record.');
+ await shot('budget-'+label);
+ await record('Reopened saved budget comparison in '+label,{comparison_id:native.id,sha256:retained.sha256,workspace_key:currentWorkspace,plan_ids:native.plan_ids});
+ return native;
+}
+async function operateBudgetComparison(){
+ await stage('open-saved-budget-frontier');
+ const frontier=await monitoring('get',{kind:'frontiers',record_id:comparisonSelection.frontier_id});
+ required(frontier.network_id===selection.network_id&&frontier.plan_ids?.length,'Choose a saved frontier from this exact original network.');
+ const baselineId=comparisonSelection.baseline_plan_id||frontier.plan_ids[0];
+ required(frontier.plan_ids.includes(baselineId),'The chosen comparison baseline is absent from the saved frontier.');
+ const contexts=[];
+ for(const contextId of comparisonSelection.context_ids){
+  const value=await monitoring('context.get',{context_id:contextId});
+  required(value.network_id===selection.network_id&&frontier.plan_ids.includes(value.plan_id),'A comparison context belongs to another original network or plan.');
+  contexts.push(value);
+ }
+ required(new Set(contexts.map(value=>value.plan_id)).size===contexts.length,'Select at most one original observed context per frontier plan.');
+ const chosen={frontier_id:frontier.id,baseline_plan_id:baselineId,
+  context_ids:frontier.plan_ids.map(id=>contexts.find(context=>context.plan_id===id)?.id).filter(Boolean),title:comparisonSelection.title};
+ const nativePreview=await monitoring('comparison.preview',chosen);
+ const nativeSelection={frontier_id:frontier.id,frontier_sha256:hash(canonical(frontier)),
+  preview_sha256:hash(canonical(nativePreview)),plan_ids:nativePreview.plan_ids,plan_digests:nativePreview.plan_digests,context_digests:nativePreview.context_digests};
+ if(requestState.comparison_source)required(canonical(requestState.comparison_source)===canonical(nativeSelection),'The original comparison frontier, plans or observed context changed.');
+ else{requestState.comparison_source=nativeSelection;await persistRequests();}
+ await page.locator(desk('[data-frontier-picker]')).selectOption(frontier.id);
+ await waitComparison({frontier_id:frontier.id});
+ await page.locator(desk('[data-frontier-baseline]')).selectOption(baselineId);
+ for(const value of contexts)await page.locator(desk('[data-frontier-context-plan="'+value.plan_id+'"]')).selectOption(value.id);
+ await page.locator(desk('[data-comparison-title]')).fill(chosen.title);
+ await page.locator(desk('[data-frontier-preview]')).click();
+ const preview=await waitComparison(chosen);
+ required(canonical(preview)===canonical(nativePreview),'The visible budget preview differs from the actual native comparison.');
+ await shot('budget-preview');
+ await record('Compared original saved budget choices',{...nativeSelection,selection:chosen,rows:preview.rows.map(row=>({plan_id:row.plan_id,status:row.status,budget_cents:row.budget_cents,cost:row.cost,coverage:row.coverage,delta:row.delta,calendar:row.calendar}))});
+ await stage('save-native-budget-comparison');
+ const prepared=await queue('budget-comparison-save',desk('[data-frontier-save]'),'monitoring.comparison.prepare',chosen);
+ const comparisonId=prepared.result?.id;
+ required(comparisonId&&prepared.result.frontier_id===frontier.id,'The original queue did not retain this native budget comparison.');
+ const saved=await monitoring('comparison.get',{comparison_id:comparisonId});
+ const identity={comparison_id:comparisonId,sha256:hash(canonical(saved))};
+ if(requestState.comparison)required(canonical(requestState.comparison)===canonical(identity),'The saved comparison identity differs from the original browser request.');
+ else{requestState.comparison=identity;await persistRequests();}
+ await idle();await reopenBudgetComparison('saved-library');
+ const first=saved.rows[0];
+ await page.locator(desk('[data-frontier-plan="'+first.plan_id+'"] [data-frontier-action="open-plan"]')).click();
+ await page.waitForFunction(id=>{const node=document.querySelector('eco-monitoring');return node&&!node.busy&&node.plan?.id===id&&node.campaign===null;},first.plan_id);
+ const plan=await monitoring('get',{kind:'plans',record_id:first.plan_id});
+ required(await page.locator(desk('#map path')).count()===Object.keys(baseline.network.nodes).length,'Opening the original budget plan changed its native network map.');
+ const renderedPlan=await page.locator('eco-monitoring').evaluate(node=>node.plan);
+ required(canonical(renderedPlan)===canonical(plan),'The native desk opened another plan after selecting a comparison row.');
+ await shot('budget-original-plan');await record('Opened the exact original comparison plan',{plan_id:first.plan_id,status:plan.status,calendar_site_capacity:plan.calendar_site_capacity,configuration:plan.configuration});
+ await stage('export-native-budget-comparison');
+ const exported=await queue('budget-comparison-export',desk('[data-frontier-export]'),'monitoring.comparison.export',{comparison_id:comparisonId});
+ const packet=await taskDownload(exported,'.zip','monitoring-budget-comparison.zip');
+ await record('Downloaded complete original budget comparison',{comparison_id:comparisonId,...packet});
+}
+
 async function main(){
  await mkdir(join(output,'exports'),{recursive:true});
  required(args['url-file'],'Supply the private original operator URL file.');await initializeContinuation();
@@ -406,12 +505,14 @@ async function main(){
  await stage('open-selected-observed-context');
  const observed=await openObservedContext();
  if(observed){await shot('04-original-observed-support');await record('Opened exact retained observational support',{context_id:observed.id,summary:observed.summary,sha256:requestState.context_sha256});}
+ if(comparisonSelection){await operateBudgetComparison();await chooseCampaign();await verifyRendered(baseline);await openObservedContext();}
  await exportCampaign('html');await exportCampaign('bundle');
  const archive=await exportCampaign('workspace');await shot('05-campaign-exports');
  await stage('fresh-browser-reopen');await freshBrowser();
  await stage('receive-native-workspace');await transferWorkspace(archive);
  required(!journal.browser_errors.length,'Browser exception: '+journal.browser_errors.join('; '));
  journal.current_step='complete';journal.status='complete';journal.network_id=selection.network_id;journal.plan_id=selection.plan_id;journal.campaign_id=selection.campaign_id;
+ if(comparisonSelection)journal.comparison_id=requestState.comparison.comparison_id;
 }
 try{await main();}catch(error){
  journal.status='failed';journal.error=redact(error.stack||error.message);process.exitCode=1;

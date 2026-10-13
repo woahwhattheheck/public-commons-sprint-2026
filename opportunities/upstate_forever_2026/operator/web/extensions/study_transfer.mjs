@@ -7,6 +7,16 @@ const ROOTS = [
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['receiving-water-plans', 'Receiving-water source plans'],
+  ['receiving-water-analyses', 'Receiving-water analyses'],
+  ['community-tables', 'Community source tables'],
+  ['community-plans', 'Editable Community plans'],
+  ['community-reports', 'Saved Community reports'],
+  ['community-plan-comparisons', 'Community revision handovers'],
+  ['conservation', 'Conservation study'],
+  ['conservation-plans', 'Conservation portfolio'],
+  ['conservation-exports', 'Conservation decision packet'],
+  ['conservation-report-sources', 'Conservation report source'],
   ['monitoring_networks', 'Monitoring networks'],
   ['monitoring_plans', 'Monitoring designs'],
   ['monitoring_frontiers', 'Monitoring budget comparisons'],
@@ -14,6 +24,7 @@ const ROOTS = [
   ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
+const monitoringOpenKinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
   staging:'Preparing original study files', decisions:'Saving decision history', investigations:'Saving investigation history',
@@ -88,7 +99,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved scientific reports, analyses or Monitoring studies. The receiving workspace keeps ordered report sources, original results and available editable study history.</p>'+
+      '<p>Choose saved reports and scientific, Monitoring, Community or Conservation studies. The receiving workspace keeps original source editions, results and editable study history.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
@@ -103,7 +114,7 @@ export function attachStudyTransfer(host) {
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study contents</h3></div>'+
       '<div class="st-export-fields"><label><span>Archive title</span><input type="text" data-study-field="title" maxlength="240"></label>'+
       '<label class="st-check"><input type="checkbox" data-study-field="related"><span>Include saved comparisons for the selected cohort</span></label></div>'+
-      '<p class="st-description">Shared source editions and prepared grids are included once. Saved scientific reports keep their original source order and files, with recorded local diagnostic, Monitoring and calibration history for further analysis.</p>'+
+      '<p class="st-description">Shared source editions and prepared grids are included once. Saved reports keep their original source order and files, with recorded local scientific and planning history for further work.</p>'+
       '<div class="st-actions">'+button('preview','Preview contents')+button('export','Export editable study','class="st-primary"')+'</div>'+
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+
@@ -145,6 +156,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
+    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
   }
 
   function renderCatalogue() {
@@ -168,6 +180,8 @@ export function attachStudyTransfer(host) {
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
             (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+
+            (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
+              ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -402,7 +416,13 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='reload'){await loadCatalogue();}
+      if(action==='open-monitoring'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
+          throw new Error('Choose an available saved Monitoring record.');
+        if(typeof host.openDesk!=='function')throw new Error('Use the current native Monitoring desk to open this study.');
+        await host.openDesk('monitoring','openStudy',{workspace_key:workspace,kind:row.kind,id:row.id});
+      }else if(action==='reload'){await loadCatalogue();}
       else if(action==='select-page'){
         for(const row of visiblePage().items)if(row.state!=='unreadable')selected.set(keyOf(row),row);
         invalidatePlan();renderCatalogue();
@@ -428,7 +448,7 @@ export function attachStudyTransfer(host) {
         await transferHandler({workspace_key:workspace,task_id:task.id,
           study_id:task.result?.id,title:task._study_transfer?.title||task.payload?.title,archive:file});
       }
-    }catch(error){fail(error);}
+    }catch(error){fail(error);if(!root&&typeof host.toast==='function')host.toast(error.message||String(error));}
   }
 
   function reset(nextWorkspace) {

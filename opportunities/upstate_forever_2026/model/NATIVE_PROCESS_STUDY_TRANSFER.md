@@ -28,7 +28,7 @@ A report source imported from another project retains its complete original CAS 
 
 A source can legitimately describe a completed NDR stage while the parent run is still unfinished. The adapter validates the selected stage's original completion, files, arguments, input signature, reuse binding and producing execution. It uses the maintained native run visitor, whose existing completed-run check permits an unfinished parent.
 
-An unselected stage can finish later. Stage-specific producing runtime remains checked exactly. For the producer's historical observed-run fallback, the adapter validates the captured model's actual observed version and implementation while allowing unrelated runtime fields to advance. The report keeps its original fallback label and captured full runtime; it is not relabeled as stage-specific evidence.
+An unselected stage can finish later. Stage-specific producing runtime remains checked exactly. For the producer's historical observed-run fallback, native continuation can retain that prior runtime on the completed stage before another model updates the parent runtime. The adapter checks that retained stage runtime first, otherwise the observed run runtime. It validates the captured model's actual version and implementation while allowing unrelated runtime fields to advance. The report keeps its original fallback label and captured full runtime; it is not relabeled as stage-specific evidence.
 
 A changed selected native stage is a different source condition. If a selected stage's original files, completion, arguments, reuse or producing implementation no longer agree with the saved report, preview identifies the mismatch. Preserve the existing report/source edition and prepare a new report from the current selected stages through the normal producer.
 
@@ -51,7 +51,7 @@ It returns `False` for another producer and `True` after validating and retainin
 
 The helper writes its typed original binding into the existing `closure.report_source_records`. The maintained report lineage receipt and receiving verification preserve it. Generic source traversal stays unchanged, so older selected-study receipts keep their original dependency semantics.
 
-Reads use original CAS objects and recorded Workspace members. The adapter never calls `Workspace.source_file`, creates source views or invokes the native process producer. Existing exclusive Workspace/native-model guards, per-run locks, unchanged-file checks, verified archive writer and ordinary restore remain the transfer owner's responsibility.
+Reads use original CAS objects and recorded Workspace members. The adapter never calls `Workspace.source_file`, creates source views or invokes the native process producer. The helper exposes `lock_paths(closure)` for each selected same-project capture's original `.operation.lock`. The maintained transfer capture holds these locks with its original Workspace/native-model guards and per-run locks while staging. Unchanged-file checks, the verified archive writer and ordinary restore remain in the same transfer workflow.
 
 The component fragment extends `study-transfer` and `native-process-reports` with this helper and guide. The actual generic scientific-report dispatcher is maintained by the scientific-report transfer owner and composes the single call above.
 

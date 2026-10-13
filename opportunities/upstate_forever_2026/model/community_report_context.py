@@ -513,20 +513,254 @@ def prepare(workspace, report_id, *, report_sha256, delivery_id=None, import_sou
         return result
 
 
+def _archived_copy(original, target, expected):
+    """Retain one verified ZIP member without replacing an earlier received byte."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        raise ValueError("Keep archived Community members as regular received files")
+    if target.exists():
+        verify_file(target.parent, {**expected, "path": target.name})
+        return
+    handle, temporary = tempfile.mkstemp(prefix=".write-community-member-", dir=target.parent)
+    try:
+        size, sha = 0, hashlib.sha256()
+        with os.fdopen(handle, "wb") as output:
+            while block := original.read(1024 * 1024):
+                size += len(block)
+                if size > expected["bytes"]:
+                    raise ValueError("An archived Community member exceeds its retained length")
+                sha.update(block)
+                output.write(block)
+            output.flush()
+            os.fsync(output.fileno())
+        if size != expected["bytes"] or sha.hexdigest() != expected["sha256"]:
+            raise ValueError("An archived Community member differs from its retained bytes")
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            verify_file(target.parent, {**expected, "path": target.name})
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def prepare_archive(workspace, archive_path, report_record, *, original_project_id,
+                    report_sha256, delivery_id=None, import_source=True):
+    """Receive an original report edition as source, retaining its donor identities.
+
+    The destination is an actual Workspace. Original Community IDs remain source
+    provenance; this entry point does not create editable table or plan records.
+    """
+    import stat
+    import uuid
+    import zipfile
+
+    donor = str(uuid.UUID(original_project_id))
+    if donor != original_project_id:
+        raise ValueError("Use the exact original Community project UUID")
+    report_sha256 = identifier(report_sha256)
+    report_record = Path(report_record).absolute()
+    record_bytes = report_record.read_bytes()
+    report = json.loads(record_bytes)
+    key = identifier(report.get("id"))
+    if (report.get("schema") != "upstate.community-reports/v1"
+            or digest({name: value for name, value in report.items() if name != "id"}) != key):
+        raise ValueError("The original saved Community report record changed")
+    selection_id = identifier(report.get("selection_id"))
+    if digest({"schema": "upstate.community-report-selection/v1", "plan_id": report["plan_id"],
+               "title": report["title"], "format_version": report["format_version"]}) != selection_id:
+        raise ValueError("The saved Community report selection changed")
+    files = report.get("files")
+    required = {"REPORT.json", "community-report.json", "community-report.zip"}
+    if not isinstance(files, dict) or not required <= files.keys():
+        raise ValueError("Receive the complete original Community report inventory")
+    prefix = "community-reports/" + selection_id + "/"
+    for name, item in files.items():
+        _relative(name)
+        if (not isinstance(item, dict) or item.get("path") != prefix + name
+                or type(item.get("bytes")) is not int or item["bytes"] < 0):
+            raise ValueError("A Community report member belongs to another saved edition")
+        identifier(item.get("sha256"))
+    if files["community-report.json"]["sha256"] != report_sha256:
+        raise ValueError("The selected original Community report JSON changed")
+    if donor == workspace.project["id"] and workspace._get(REPORT_KIND, key) != report:
+        raise ValueError("The same-project Community source must match its original saved record")
+    archive_path = Path(archive_path).absolute()
+    if archive_path.is_symlink():
+        raise ValueError("Receive the original Community archive as a regular file")
+    expected_archive = files["community-report.zip"]
+    record_descriptor = {"path": report_record.name, "bytes": len(record_bytes),
+                         "sha256": hashlib.sha256(record_bytes).hexdigest()}
+    identity = {
+        "schema": SCHEMA, "version": VERSION, "receiving": "original-report-archive-v1",
+        "project_id": workspace.project["id"], "original_project_id": donor,
+        "report_id": key, "report_sha256": report_sha256,
+        "archive": {name: expected_archive[name] for name in ("bytes", "sha256")},
+        "saved_record": {name: record_descriptor[name] for name in ("bytes", "sha256")},
+        "producer_sha256": file_digest(Path(__file__)),
+        "report_loader_edition": observed_context.EDITION,
+    }
+    operation_id = digest(identity)
+    directory = workspace.root / "community-report-contexts" / operation_id
+    lock = workspace.root / "locks" / ("community-report-context-" + operation_id + ".lock")
+
+    def file_state(value):
+        return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+    with held(lock), archive_path.open("rb") as source:
+        initial = os.fstat(source.fileno())
+        if not stat.S_ISREG(initial.st_mode) or initial.st_size != expected_archive["bytes"]:
+            raise ValueError("The original Community archive has a different size or file type")
+        checksum = hashlib.sha256()
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            checksum.update(block)
+        if checksum.hexdigest() != expected_archive["sha256"]:
+            raise ValueError("The original complete Community report archive changed")
+        source.seek(0)
+        inputs = []
+        with zipfile.ZipFile(source) as bundle:
+            members = bundle.infolist()
+            names = [item.filename for item in members]
+            expected_names = set(files) - {"community-report.zip"}
+            if len(names) != len(set(names)) or set(names) != expected_names:
+                raise ValueError("The original Community ZIP member inventory differs")
+            for member in members:
+                _relative(member.filename)
+                mode = (member.external_attr >> 16) & 0xFFFF
+                if (member.is_dir() or member.flag_bits & 1 or stat.S_ISLNK(mode)
+                        or stat.S_IFMT(mode) not in (0, stat.S_IFREG)
+                        or member.file_size != files[member.filename]["bytes"]):
+                    raise ValueError("Keep each original Community ZIP member as its declared regular file")
+            # Every member is length/hash/CRC checked before its JSON is trusted.
+            for name in sorted(expected_names):
+                target = directory / "retained" / name
+                if not target.parent.resolve().is_relative_to(directory.resolve()):
+                    raise ValueError("Keep original Community members inside their receiving directory")
+                with bundle.open(name) as original:
+                    _archived_copy(original, target, files[name])
+                inputs.append(describe_file(directory, target))
+        retained = directory / "retained"
+        index = read_json(retained / "REPORT.json")
+        payload = read_json(retained / "community-report.json")
+        plan, table = payload.get("plan", {}), payload.get("original_table", {})
+        for kind, record, expected in (("community-plans", plan, report["plan_id"]),
+                                       ("community-tables", table, report["table_id"])):
+            if (record.get("id") != expected or record.get("schema") != "upstate." + kind + "/v1"
+                    or digest({name: value for name, value in record.items() if name != "id"}) != expected):
+                raise ValueError("The archived Community " + kind + " identity changed")
+        if (index.get("schema") != "upstate.community-report-files/v1"
+                or payload.get("schema") != "upstate.community-report/v1"
+                or any(index.get(name) != report.get(name) for name in ("plan_id", "table_id", "title"))
+                or payload.get("title") != report["title"] or plan.get("table_id") != table["id"]
+                or report.get("source") != plan.get("source") or plan.get("source") != table.get("source")
+                or plan.get("context", {}).get("snapshot_sha256") != report.get("context_snapshot_sha256")):
+            raise ValueError("The archived report differs from its original plan, table or scientific context")
+        indexed = index.get("files")
+        if not isinstance(indexed, dict) or set(indexed) != set(files) - {"REPORT.json", "community-report.zip"}:
+            raise ValueError("The archived Community report index is incomplete")
+        for name, item in indexed.items():
+            if any(item.get(field) != files[name].get(field) for field in ("path", "bytes", "sha256")):
+                raise ValueError("The archived original report index changed: " + name)
+        if report.get("plan_revision") != payload.get("plan_revision"):
+            raise ValueError("The archived Community plan revision register changed")
+        revision = payload.get("plan_revision")
+        if revision:
+            if (revision.get("schema") != "upstate.community-plan-revision/v1"
+                    or revision.get("plan_id") != plan["id"]
+                    or revision.get("previous_plan_id") != plan.get("previous_plan_id")
+                    or revision.get("table_id") != table["id"]
+                    or not {"plan-revision-summary.json", "plan-revision-changes.csv",
+                            "previous-plan.json"} <= expected_names
+                    or read_json(retained / "plan-revision-summary.json") != revision):
+                raise ValueError("Receive the original complete Community revision register")
+            previous = read_json(retained / "previous-plan.json")
+            if (previous.get("id") != revision["previous_plan_id"]
+                    or digest({name: value for name, value in previous.items() if name != "id"}) != previous["id"]):
+                raise ValueError("The archived previous Community plan changed")
+        # Keep the byte-exact saved record and original ZIP alongside all members.
+        _copy(report_record, retained / "saved-report.json", record_descriptor)
+        inputs.append(describe_file(directory, retained / "saved-report.json"))
+        source.seek(0)
+        _archived_copy(source, retained / "community-report.zip", expected_archive)
+        inputs.append(describe_file(directory, retained / "community-report.zip"))
+        if (file_state(os.fstat(source.fileno())) != file_state(initial)
+                or file_state(archive_path.lstat()) != file_state(initial)):
+            raise ValueError("The original Community archive changed during receiving")
+        title = report["title"] + " — community planning context"
+        recipe = {
+            "schema": observed_context.SCHEMA, "title": title,
+            "edition": "community-planning-archive-" + VERSION,
+            "report_context_kind": "community_planning",
+            "project_id": donor, "community_report_id": key, "plan_id": plan["id"],
+            "report_sha256": report_sha256, "inputs": inputs,
+            "sections": _sections(payload, key, report_sha256),
+            "source_links": [item["path"] for item in inputs], "figures": [],
+            "archive_receiving": identity,
+        }
+        atomic_json(directory / RECIPE, recipe, immutable=True)
+        source_id = "community-planning-report-" + operation_id[:20]
+        manifest = {
+            "schema": "upstate.sources/v1", "title": title,
+            "scope": {"original_project_id": donor, "plan_id": plan["id"],
+                      "community_report_id": key, "report_sha256": report_sha256},
+            "entries": [{
+                "id": source_id, "kind": "document", "title": title,
+                "role": "community-planning-report-context", "path": RECIPE,
+                "uri": "workspace://" + donor + "/" + REPORT_KIND + "/" + key,
+                "vintage": "Retained Community report format " + str(report["format_version"])
+                           + "; selection " + selection_id,
+                "sha256": file_digest(directory / RECIPE),
+                "metadata": {"report_schema": observed_context.SCHEMA,
+                             "report_context_kind": "community_planning",
+                             "plan_id": plan["id"], "community_report_id": key},
+                "companions": inputs,
+            }],
+        }
+        atomic_json(directory / MANIFEST, manifest, immutable=True)
+        result = {**identity, "id": operation_id, "title": title, "source_id": source_id,
+                  "community_report_id": key, "plan_id": plan["id"],
+                  "original_member_count": len(files),
+                  "files": [describe_file(workspace.root, directory / name) for name in (MANIFEST, RECIPE)]
+                           + [describe_file(workspace.root, retained / "community-report.zip")]}
+        if import_source:
+            collection = workspace.import_sources(directory / MANIFEST)
+            choice = {"source_collection_id": collection["id"], "source_id": source_id}
+            result.update(source=choice, observed_context_binding=observed_context.bind(
+                workspace, {"observed_context_sources": [choice]}))
+            atomic_json(directory / "registered-context.json", result, immutable=True)
+            result["delivery_selection"] = delivery_selection(workspace, choice, delivery_id)
+            result["selected_delivery_id"] = delivery_id
+        return result
+
+
 def main(argv=None):
     from .workspace import Workspace
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
-    parser.add_argument("--report-id", required=True)
+    selected = parser.add_mutually_exclusive_group(required=True)
+    selected.add_argument("--report-id")
+    selected.add_argument("--report-archive")
+    parser.add_argument("--report-record")
+    parser.add_argument("--original-project-id")
     parser.add_argument("--report-sha256", required=True)
     parser.add_argument("--delivery-id")
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args(argv)
     if args.prepare_only and args.delivery_id:
         parser.error("--delivery-id requires source import")
-    result = prepare(Workspace(args.workspace), args.report_id,
-                     report_sha256=args.report_sha256, delivery_id=args.delivery_id,
-                     import_source=not args.prepare_only)
+    if args.report_archive:
+        if not args.report_record or not args.original_project_id:
+            parser.error("--report-archive requires --report-record and --original-project-id")
+        result = prepare_archive(
+            Workspace(args.workspace), args.report_archive, args.report_record,
+            original_project_id=args.original_project_id, report_sha256=args.report_sha256,
+            delivery_id=args.delivery_id, import_source=not args.prepare_only)
+    else:
+        if args.report_record or args.original_project_id:
+            parser.error("--report-record and --original-project-id require --report-archive")
+        result = prepare(Workspace(args.workspace), args.report_id,
+                         report_sha256=args.report_sha256, delivery_id=args.delivery_id,
+                         import_source=not args.prepare_only)
     print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
 
 

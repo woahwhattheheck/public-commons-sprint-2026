@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "wqp-complete-delivery",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/2f26547c24321a007589abebf214922b7ec7430a",
+  "components": {
+    "wqp-complete-delivery": {
+      "title": "Original WQP field observations: complete delivery",
+      "paths": [
+        "model/implementation.py",
+        "model/implementation_schema.py",
+        "model/implementation_reporting.py",
+        "model/implementation_evidence.py",
+        "model/implementation_lab_results.py",
+        "model/implementation_observations.py",
+        "model/portable_implementation.py",
+        "source_tools/receive_wqp_field_results.py",
+        "source_tools/receive_wqp_delivery.py",
+        "source_tools/WQP_COMPLETE_DELIVERY.md",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/coverage.json",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/mapping.json",
+        "observations/eighteenmile_2023/wqp_20261013/field-intake/plan.json",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+        "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv"
+      ],
+      "requires": [
+        "core",
+        "implementation",
+        "observed-context"
+      ]
+    }
+  },
+  "required_components": [
+    "wqp-complete-delivery"
+  ]
+}

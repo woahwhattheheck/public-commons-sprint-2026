@@ -70,3 +70,61 @@ received = observed_report_render.archive_report(
 Use distinct paths outside the active application and Workspace. The existing receiver verifies the complete archive inventory, project identity, original source selection and restored report files. The archive includes the original land-cover edition, its imported input collections, newly prepared report source and saved scientific report. Existing land-cover CLI receiving can independently inspect the original ledger through the restored application's own interpreter command.
 
 The additive component depends on the maintained land-cover source adapter and Scientific Reports components. The current Land-cover installer carries the model, provider, descriptor, UI and guide together while preserving the installed shared route policy.
+
+
+## Export this report as an editable selected Study
+
+A saved Scientific Report can be selected in the existing **Study transfer**
+workflow. When one of its ordered sources is a land-cover ledger from this same
+project, the original source resolver includes:
+
+- The complete original land-cover edition, input binding and declared outputs.
+- Its retained reducer database and checkpoints, with ordinary concurrent-file
+  and directory checks performed by Study transfer.
+- The complete prepared report-source receipt, imported source document and its
+  original companions.
+- The exact raster and polygon source collections for annual-source mode.
+- The exact original prepared grid, scenarios, profiles and selected run
+  dependencies for retained-run mode, using the existing native run visitor.
+
+The restored project keeps the ledger's original ID. Open **Land-cover changes**
+and select that edition, or use the original Workspace CLI's inspect command.
+The copied application and original source collections allow the normal source
+reader to rehydrate its view when the ledger opens. Transfer itself reads raw CAS
+objects and original records; it does not reconstruct source views or execute
+geospatial/model code.
+
+The lineage record distinguishes an original source produced by this same
+project from one imported from another project. An external report source keeps
+its contained original inputs, outputs and source identities. It does not bind
+those identities to coincidentally matching local ledger or run paths.
+
+The dispatcher calls `landcover_study_transfer.include_source` only for sources
+explicitly ordered in a saved Scientific Report. Generic source traversal and
+older unrelated Study selections retain their original contracts. The helper,
+its dependency declaration and the maintained ScientificReport resolver join
+must be installed together. The additive fragment also includes the helper in
+`study-transfer` itself, so a report exporter does not depend on selecting the
+Land-cover desk. That addition introduces no reverse component dependency.
+Full Workspace backup remains available through the
+original separate archive path described above.
+
+### Same-operation receiving
+
+After the existing native course produces the land-cover report source and its
+saved ScientificReport edition, use that actual report ID in the existing Study
+transfer selection. Keep the returned original project/transfer/report/ledger
+IDs. Export and restore through the maintained Study APIs, then reopen both the
+saved report and the original land-cover ledger in the restored application.
+
+The resulting Study lineage retains the original source-body SHA, complete member
+SHA inventory, input mode, selected operands and bands, native area basis and
+fractional polygon-overlap method. A later unrelated run stage may complete;
+the original captured land-cover raster descriptor and its bytes must still
+match. Missing or differing original producing records surface before packaging.
+
+## Geographic and numerical figures
+
+Newly prepared report sources also contain the full original reporting-polygon map and three native vector figures for each selected comparison: unique-union class areas, signed group changes, and per-polygon support/change coverage. The completed ledger remains the numerical authority; each percentage retains its original denominator and every unavailable quantity remains in the attached figure data. The existing PDF and HTML composer consumes the retained specification and SVGs.
+
+See [Land-cover scientific figures](LANDCOVER_REPORT_FIGURES.md) for the full figure definitions, original geometry and implementation identities, output inventory and same-operation receiving course. Existing immutable report sources and their editable Study lineage remain readable.

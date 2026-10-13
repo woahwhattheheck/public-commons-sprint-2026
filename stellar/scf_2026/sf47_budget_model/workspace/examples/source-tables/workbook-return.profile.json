@@ -1,0 +1,12 @@
+{
+  "schema": "stellar-forge.planning-workbook-return-profile.v1",
+  "modeByRole": {
+    "packages": "merge",
+    "milestones": "merge",
+    "contributors": "merge",
+    "assignments": "merge"
+  },
+  "orphanPolicy": "preserve",
+  "includeHiddenRows": false,
+  "note": "Review every returned row and selected native change while retaining other existing records."
+}

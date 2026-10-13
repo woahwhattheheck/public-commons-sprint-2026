@@ -11,6 +11,7 @@ import math
 from .common import digest
 
 KIND = "projected_geometry_map"
+ROLE_LABELS_VERSION = 1
 _GEOMETRIES = {"Point", "MultiPoint", "LineString", "MultiLineString",
                "Polygon", "MultiPolygon", "GeometryCollection"}
 
@@ -64,6 +65,16 @@ def positions(geometry, depth=0):
             yield from positions({"type": "Polygon", "coordinates": polygon}, depth + 1)
 
 
+def _role_labels(panel):
+    labels = panel.get("role_labels", {})
+    if not isinstance(labels, dict) or set(labels) - {"contribution", "receptor"}:
+        raise ValueError("Map role labels may name only the two declared visual roles")
+    for label in labels.values():
+        if not isinstance(label, str) or not label.strip() or len(label) > 160:
+            raise ValueError("Map role labels must be nonempty text of at most 160 characters")
+    return {"contribution": "Contribution area", "receptor": "Source / receptor", **labels}
+
+
 def validate_panel(panel, geometries):
     from pyproj import CRS
     if panel.get("kind") != KIND or not isinstance(geometries, dict):
@@ -80,6 +91,7 @@ def validate_panel(panel, geometries):
             or declared.get("axes") != "XY" or len(crs.axis_info) < 2
             or any(abs(axis.unit_conversion_factor - 1.0) > 1e-12 for axis in crs.axis_info[:2])):
         raise ValueError("Map figure requires original projected XY metre coordinates")
+    _role_labels(panel)
     layers = panel.get("layers")
     if not isinstance(layers, list) or not layers:
         raise ValueError("Projected map requires original bound layers")
@@ -191,7 +203,12 @@ def panel_drawing(panel, geometries, width, *, validated=False):
     width = _number(width)
     if width < 300:
         raise ValueError("Map report requires a usable page width")
-    height = 466.0
+    role_labels = _role_labels(panel)
+    custom_labels = role_labels != {"contribution": "Contribution area", "receptor": "Source / receptor"}
+    label_lines = {role: _wrap(label, (width - 36) / 2 - 22, 7)
+                   for role, label in role_labels.items()}
+    label_extra = 9 * (max(len(lines) for lines in label_lines.values()) - 1) if custom_labels else 0
+    height = 466.0 + label_extra
     drawing = Drawing(width, height)
     ink, edge = colors.Color(.10, .10, .10), colors.Color(.60, .60, .60)
     drawing.add(Rect(0, 0, width, height, strokeColor=None, fillColor=colors.white))
@@ -199,7 +216,7 @@ def panel_drawing(panel, geometries, width, *, validated=False):
         drawing.add(String(12, height - 17 - index * 12, line, fontName="Helvetica", fontSize=10, fillColor=ink))
     # Constant projected metres per point on both axes; all bounds receive margin
     # in the producer, so no clipping or omitted vertices are needed.
-    left, bottom, box_w, box_h = 16.0, 140.0, width - 32.0, 276.0
+    left, bottom, box_w, box_h = 16.0, 140.0 + label_extra, width - 32.0, 276.0
     x0, y0, x1, y1 = panel["bounds"]
     scale = min(box_w / (x1 - x0), box_h / (y1 - y0))
     map_w, map_h = (x1 - x0) * scale, (y1 - y0) * scale
@@ -253,10 +270,19 @@ def panel_drawing(panel, geometries, width, *, validated=False):
     drawing.add(String(sx + length * scale / 2, sy - 11, label, textAnchor="middle", fontSize=7))
     drawing.add(String(width - 18, sy - 2, str(panel["crs"].get("name", "Projected CRS")),
                        textAnchor="end", fontName="Helvetica", fontSize=7))
-    drawing.add(Rect(18, 100, 11, 7, fillColor=colors.Color(.87, .87, .87), strokeColor=edge, strokeWidth=.5))
-    drawing.add(String(34, 100, "Contribution area", fontSize=7))
-    drawing.add(Line(145, 104, 160, 104, strokeColor=ink, strokeWidth=1.1))
-    drawing.add(String(166, 100, "Source / receptor", fontSize=7))
+    label_y = 100 + label_extra
+    drawing.add(Rect(18, label_y, 11, 7, fillColor=colors.Color(.87, .87, .87), strokeColor=edge, strokeWidth=.5))
+    if custom_labels:
+        right_x = 18 + (width - 36) / 2
+        drawing.add(Line(right_x, label_y + 4, right_x + 15, label_y + 4, strokeColor=ink, strokeWidth=1.1))
+        for role, x in (("contribution", 34), ("receptor", right_x + 21)):
+            for index, line in enumerate(label_lines[role]):
+                drawing.add(String(x, label_y - index * 9, line, fontSize=7))
+    else:
+        # Preserve original Receiving waters swatch labels and positions exactly.
+        drawing.add(String(34, 100, "Contribution area", fontSize=7))
+        drawing.add(Line(145, 104, 160, 104, strokeColor=ink, strokeWidth=1.1))
+        drawing.add(String(166, 100, "Source / receptor", fontSize=7))
     for index, item in enumerate(panel.get("legend", [])):
         column, row = index % 2, index // 2
         x, y = 18 + column * (width / 2), 85 - row * 23

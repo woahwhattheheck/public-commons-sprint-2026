@@ -8,12 +8,15 @@
         "operator/web/ensembles.mjs",
         "operator/extensions/ensembles.json",
         "model/ENSEMBLE_CONSUMERS.md",
-        "integration/component_fragments/ensemble-scientific-report-composer.json"
+        "integration/component_fragments/ensemble-scientific-report-composer.json",
+        "model/ensemble_study_source.py",
+        "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
+        "model/ensemble_consumers_cli.py"
       ],
       "requires": [
         "scientific-report-editions"
       ]
     }
   },
-  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/aeed653906f9397f058cde3bf080011ac852e9f5/opportunities/upstate_forever_2026"
+  "source_reference": "Saved native Ensembles report source and ordered scientific composer, continuing merged PR3506 / 31320e6f0c96a2aab94caee2cf2d47cabf6644ae. Exact original paired quantities, support masks and selected profile/scenario provenance; original native engines and decisions remain unchanged."
 }

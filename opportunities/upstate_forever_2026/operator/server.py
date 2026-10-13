@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import contextlib
+import gzip
 import hashlib
 import hmac
 import importlib.metadata
@@ -49,6 +50,57 @@ from task_requests import TaskRequests
 from team_access import TeamAccess, CONTEXT
 from study_catalogues import StudyCatalogues
 from programme_activity import ProgrammeActivity
+
+JSON_GZIP_MIN_BYTES = 32 * 1024
+JSON_ENCODING_QUALITY = re.compile(r"(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\Z")
+
+
+def _json_encoding_qualities(header: str | None) -> tuple[float, float]:
+    """Return gzip/identity preferences; absent or empty headers use identity."""
+    if not header or not header.strip():
+        return 0.0, 1.0
+    choices: dict[str, float] = {}
+    for item in header.split(","):
+        fields = [field.strip() for field in item.split(";")]
+        coding = fields[0].lower()
+        if not coding:
+            continue
+        weight = 1.0
+        if len(fields) > 1:
+            parameter = fields[1].split("=", 1)
+            if (len(fields) != 2 or len(parameter) != 2
+                    or parameter[0].strip().lower() != "q"
+                    or not JSON_ENCODING_QUALITY.fullmatch(parameter[1].strip())):
+                weight = 0.0
+            else:
+                weight = float(parameter[1].strip())
+        # A repeated explicit refusal must not be undone by a later duplicate.
+        choices[coding] = min(choices.get(coding, 1.0), weight)
+    wildcard = choices.get("*")
+    gzip_weight = choices.get("gzip", wildcard if wildcard is not None else 0.0)
+    identity_weight = choices.get("identity", 0.0 if wildcard == 0.0 else 1.0)
+    return gzip_weight, identity_weight
+
+
+def _encode_json_response(body: bytes, accept_encoding: str | None) -> tuple[bytes, str | None] | None:
+    """Return wire bytes and coding, or None when both supported forms are refused.
+
+    JSON serialization stays with the original caller. Gzip is chosen only when
+    accepted and at least as preferred as identity, and normally only when it
+    reduces a response of 32 KiB or more. An explicit identity refusal permits
+    gzip at any size. No archive, source file, range, or original digest changes.
+    """
+    gzip_weight, identity_weight = _json_encoding_qualities(accept_encoding)
+    if gzip_weight <= 0.0:
+        return (body, None) if identity_weight > 0.0 else None
+    if identity_weight > gzip_weight:
+        return body, None
+    if len(body) < JSON_GZIP_MIN_BYTES and identity_weight > 0.0:
+        return body, None
+    compressed = gzip.compress(body, compresslevel=1, mtime=0)
+    if len(compressed) >= len(body) and identity_weight > 0.0:
+        return body, None
+    return compressed, "gzip"
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -1095,8 +1147,16 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self, status, value, *, cookie=False):
         self.close_connection = True
         body = canonical(value) + b"\n"
+        prepared = _encode_json_response(body, ", ".join(self.headers.get_all("Accept-Encoding", [])))
+        if prepared is None:
+            status, body, encoding = 406, b"", None
+        else:
+            body, encoding = prepared
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Vary", "Accept-Encoding")
+        if encoding:
+            self.send_header("Content-Encoding", encoding)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
         self.send_header("Cache-Control", "no-store")
@@ -1175,7 +1235,9 @@ class Handler(BaseHTTPRequestHandler):
                 parameter_study_reads = {"/api/parameter-studies/" + name: name for name in PARAMETER_STUDY_READS}
                 if url.path in parameter_study_reads:
                     return self.send_json(200, self.app.parameter_studies.read(workspace, parameter_study_reads[url.path],
-                        {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit")}))
+                        {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit",
+                                                     "run_id", "attempt_id", "stream", "log_offset",
+                                                     "expected_attempt_id", "history_offset")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],
@@ -1248,7 +1310,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Connection", "close")
             self.send_header("Cache-Control", "no-store")
             self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(data)

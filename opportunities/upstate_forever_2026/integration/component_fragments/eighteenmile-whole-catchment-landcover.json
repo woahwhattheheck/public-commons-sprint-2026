@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "eighteenmile-whole-catchment-landcover",
+  "components": {
+    "eighteenmile-whole-catchment-landcover": {
+      "title": "Eighteenmile original whole-catchment annual land cover",
+      "paths": [
+        "observations/eighteenmile_landcover_2023_2025/original-whole-basin.geojson",
+        "observations/eighteenmile_landcover_2023_2025/annual-2023.json",
+        "observations/eighteenmile_landcover_2023_2025/annual-2025.json",
+        "observations/eighteenmile_landcover_2023_2025/transitions-2023-2025.json",
+        "observations/eighteenmile_landcover_2023_2025/classes-2023-2025.csv",
+        "observations/eighteenmile_landcover_2023_2025/transitions-2023-2025.csv",
+        "observations/eighteenmile_landcover_2023_2025/group-transitions-2023-2025.csv",
+        "observations/eighteenmile_landcover_2023_2025/group-margins-2023-2025.csv",
+        "observations/eighteenmile_landcover_2023_2025/analysis-recipe.json",
+        "observations/eighteenmile_landcover_2023_2025/README.md",
+        "source_tools/run_basin_landcover.mjs",
+        "observations/eighteenmile_landcover_2023_2025/model-sources.json",
+        "integration/component_fragments/eighteenmile-whole-catchment-landcover.json"
+      ],
+      "requires": [
+        "annual-landcover-observed-2023-2025",
+        "original-landcover-analysis"
+      ],
+      "source_manifests": [
+        "observations/eighteenmile_landcover_2023_2025/model-sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "eighteenmile-whole-catchment-landcover"
+  ],
+  "source_reference": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false"
+}

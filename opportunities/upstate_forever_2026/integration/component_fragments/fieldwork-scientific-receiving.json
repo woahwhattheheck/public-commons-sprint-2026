@@ -7,15 +7,22 @@
         "IMPLEMENTATION_SOURCE_IMPORT.md",
         "build_implementation_offline.py",
         "docs/BRIEFING_FOLLOWUP.md",
+        "docs/FIELD_CREW_DEPLOYMENT.md",
         "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
+        "docs/IMPLEMENTATION_EVIDENCE_INTEGRATION.md",
         "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
         "docs/IMPLEMENTATION_LAB_DISPATCH.md",
+        "docs/IMPLEMENTATION_LAB_METHOD_DEFINITIONS.md",
         "docs/IMPLEMENTATION_LAB_RESULTS.md",
+        "docs/IMPLEMENTATION_METHOD_CONTEXT.md",
         "docs/IMPLEMENTATION_NATIVE_RECEIVING.md",
         "docs/IMPLEMENTATION_OBSERVATIONS.md",
         "docs/IMPLEMENTATION_PLAN_REPORT_SOURCE.md",
         "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
+        "docs/IMPLEMENTATION_REPORT_STUDY_TRANSFER.md",
         "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
+        "docs/IMPLEMENTATION_SOURCE_REPORTS.md",
+        "docs/OBSERVED_REPORT_RENDERING.md",
         "docs/SCIENTIFIC_REPORT_BRIEFING.md",
         "docs/implementation-native-guide.md",
         "docs/implementation-operator-guide.md",
@@ -25,10 +32,12 @@
         "model/IMPLEMENTATION_QC.md",
         "model/briefing_implementation.py",
         "model/client_briefing.py",
+        "model/field_deployment.py",
         "model/implementation.py",
         "model/implementation_cli.py",
         "model/implementation_dispatch_report.py",
         "model/implementation_economics.py",
+        "model/implementation_evidence.py",
         "model/implementation_lab_dispatch.py",
         "model/implementation_lab_results.py",
         "model/implementation_observation_quality.py",
@@ -38,9 +47,12 @@
         "model/implementation_qc.py",
         "model/implementation_qc_actions.py",
         "model/implementation_report_source.py",
+        "model/implementation_report_transfer.py",
         "model/implementation_reporting.py",
         "model/implementation_schema.py",
         "model/implementation_sources.py",
+        "model/monitoring_common.py",
+        "model/monitoring_packet.py",
         "model/portable_implementation.py",
         "model/scientific_briefing.py",
         "model/scientific_report.py",
@@ -53,10 +65,12 @@
         "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
         "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
         "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "operator/extensions/field-deployment.json",
         "operator/extensions/implementation-outcomes.json",
         "operator/extensions/implementation-qc.json",
         "operator/extensions/implementation-report-source.json",
         "operator/extensions/implementation.json",
+        "operator/field_deployment.py",
         "operator/implementation_operator.py",
         "operator/implementation_outcomes.py",
         "operator/implementation_qc.py",
@@ -66,7 +80,10 @@
         "operator/web/implementation_briefing.mjs",
         "operator/web/implementation_catalog.json",
         "operator/web/implementation_core.mjs",
+        "operator/web/implementation_deployment.mjs",
         "operator/web/implementation_dispatch.mjs",
+        "operator/web/implementation_evidence.mjs",
+        "operator/web/implementation_evidence_ui.mjs",
         "operator/web/implementation_forms.mjs",
         "operator/web/implementation_lab.mjs",
         "operator/web/implementation_outcomes.mjs",
@@ -81,6 +98,7 @@
         "source_tools/prepare_scientific_briefing.py",
         "source_tools/receive_briefing_followup.py",
         "source_tools/receive_implementation.py",
+        "source_tools/receive_implementation_outcome_context.py",
         "source_tools/receive_wqp_field_results.py",
         "source_tools/receive_wqp_laboratory_cycle.py"
       ],
@@ -136,8 +154,13 @@
     },
     "parameter-studies": {
       "paths": [
-        "source_tools/receive_parameter_studies.py",
-        "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md"
+        "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md",
+        "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
+        "model/parameter_case_status.py",
+        "operator/parameter_study_jobs.py",
+        "operator/web/parameter_case_console.mjs",
+        "source_tools/receive_parameter_studies.py"
       ],
       "requires": [
         "project-transfer"
@@ -152,15 +175,31 @@
     },
     "watershed-context": {
       "paths": [
-        "model/watershed_briefing.py",
+        "docs/UTILITY_MONITORING.md",
+        "docs/UTILITY_MONITORING_RECEIVING.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
-        "model/client_briefing.py"
+        "model/client_briefing.py",
+        "model/utility_monitoring.py",
+        "model/watershed_briefing.py",
+        "source_tools/receive_utility_monitoring.py"
+      ],
+      "requires": [
+        "monitoring",
+        "receiving-waters"
       ]
     },
     "utility-source-receiving": {
       "paths": [
+        "docs/UTILITY_MONITORING.md",
+        "docs/UTILITY_MONITORING_RECEIVING.md",
+        "docs/UTILITY_SOURCE_BRIEFING.md",
+        "model/utility_monitoring.py",
         "model/watershed_briefing.py",
-        "docs/UTILITY_SOURCE_BRIEFING.md"
+        "source_tools/receive_utility_monitoring.py"
+      ],
+      "requires": [
+        "monitoring",
+        "receiving-waters"
       ]
     },
     "scientific-report-editions": {
@@ -169,6 +208,22 @@
         "model/client_briefing.py",
         "model/scientific_briefing.py",
         "source_tools/prepare_scientific_briefing.py"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "docs/IMPLEMENTATION_REPORT_STUDY_TRANSFER.md",
+        "model/field_deployment.py",
+        "model/implementation.py",
+        "model/implementation_observation_quality.py",
+        "model/implementation_observations.py",
+        "model/implementation_outcomes.py",
+        "model/implementation_report_transfer.py",
+        "model/implementation_reporting.py",
+        "model/implementation_schema.py",
+        "model/monitoring_common.py",
+        "model/monitoring_packet.py",
+        "model/portable_implementation.py"
       ]
     }
   },
@@ -184,6 +239,17 @@
     "streaming_monitoring_export": "4a1f317a98218baca9df009fd3454dd69af91a48",
     "utility_source_briefing": "45287114e35e80af5df222484bb60713cddc816e",
     "scientific_report_briefing": "3ed9093dcf110015719170e5133aa4dcbabd81b7",
-    "whole_plan_report_source": "146c1c61114d484d46d6c334a906d401961fe0c7"
+    "whole_plan_report_source": "146c1c61114d484d46d6c334a906d401961fe0c7",
+    "wqp_receiving_closure": {
+      "source_commit": "418453a5bad356c2d039b5b30c4a839244dc626f",
+      "native_course": "Original88-result field receiving → saved Outcomes → laboratory reconciliation → evidence handover → full report/archive/reopen",
+      "evidence_merge": "7a4728fdf79d7a51080ef87334742e4e02ed0a95",
+      "outcome_receiving_merge": "7378d095d455f53871f61779f77e9c67955a59be"
+    },
+    "field_crew_deployment": "3681b505b81d1b2e0e19a85db7413d974ba391fa",
+    "utility_monitoring": "0d7ec3bd2d40c05a211a109b29c8cedb98a22d01",
+    "utility_monitoring_receiving": "9f6a6ca4e8529f38416e3f8869091267c75c7326",
+    "parameter_native_recovery": "10730eac84000f38c1ac33b54c61ec6402bd0634",
+    "parameter_case_console": "3edfb2f55b0b80dc31edcc477d12348d4cf95486"
   }
 }

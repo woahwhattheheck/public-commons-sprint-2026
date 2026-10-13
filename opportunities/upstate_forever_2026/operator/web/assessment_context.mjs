@@ -6,6 +6,20 @@ const sourceLinks=result=>{
  if(!references.length&&result.assessment?.reference)references.push(result.assessment.reference);
  return references.map(reference=>/^https?:\/\/[^\s|]+$/i.test(reference)?'<a href="'+esc(reference)+'" target="_blank" rel="noopener noreferrer">'+esc(reference)+'</a>':esc(reference)).join(' · ');
 };
+const geographicSources=value=>{
+ const sources=list(value?.geographic_context_tables);
+ if(!sources.length)return '';
+ return '<section class="ac-inventory"><h3>Geographic source context</h3>'+
+  '<p>Original station locations and watershed comparisons remain with this saved study. Choose assessment inventories above for cause, use, edition and support.</p>'+
+  sources.map(source=>{
+   const uri=String(source.uri||''),link=/^https?:\/\/[^\s|]+$/i.test(uri)?
+    '<a href="'+esc(uri)+'" target="_blank" rel="noopener noreferrer">Open original source</a>':esc(uri);
+   return '<div><strong>'+esc(source.title||source.reference?.source_id||'Original geographic source')+'</strong>'+
+    '<p>'+esc(source.row_count)+' retained geographic rows · '+esc(source.vintage||'Source vintage not recorded')+'</p>'+
+    '<p>'+link+'</p><details><summary>Retained source identity</summary><p>'+esc(source.reference?.source_id)+
+    '</p><p>SHA256 '+esc(source.source_sha256)+'</p></details></div>';
+  }).join('')+'</section>';
+};
 const key=v=>v?String(v.collection_id)+'/'+String(v.source_id):'';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
@@ -23,6 +37,7 @@ export function attachAssessmentContext(host){
  let parcelEdition=null,selectedParcelEdition=null,parcelQuery='',parcelPage=0;
  let optionsRequest=0,editionRequest=0,parcelRequest=0,pendingEdition=null,optionsLoading=false;
  let reportDelivery='',reportReady=null;
+ let catalogRequest=0,geographyRequest=0,geographyOpening=false;
  const parcelActions=new Set(['assessment.context.parcels','assessment.context.receive_parcels']);
  const read=(operation,value={})=>host.api('/api/assessment-context/'+operation,{method:'POST',body:{workspace,...value},signal:controller?.signal});
  function persist(){
@@ -70,12 +85,13 @@ export function attachAssessmentContext(host){
       '<div class="ac-fields">'+['title','status','vintage','reference'].map(f=>'<label>Assessment '+esc(f)+'<input required '+(list(t.assessment_locked_fields).includes(f)?'readonly aria-readonly="true"':'')+' data-ac-inventory="'+esc(identity)+'" data-ac-assessment="'+f+'" value="'+esc(item.assessment[f])+'"></label>').join('')+'</div>'+
       '<p class="ac-explanation">Source metadata stays attached to this inventory; original row fields retain their specific editions and support. Context title is editable. Original SHA256 '+esc(t.source_sha256)+'.</p></details>':'')+'</section>';
   }).join('');
-  target.innerHTML='<form data-ac-form><div class="ac-fields"><label>Saved original station study<select required data-ac-field="station_geography_id">'+
+  target.innerHTML='<form data-ac-form'+(geographyOpening?' inert':'')+'><div class="ac-fields"><label>Saved original station study<select required data-ac-field="station_geography_id">'+
    opts(catalog?.geographies,draft.station_geography_id,r=>r.title+' · '+(r.summary?.station_count??0)+' stations')+'</select></label>'+
    '<label>Original watershed source<select required data-ac-watershed>'+opts(list(options?.watershed_sources).map(r=>({...r,id:key(r.reference)})),key(draft.watershed_source),r=>r.title)+'</select></label>'+
    '<label>Association used for context<select data-ac-field="relationship_basis"><option value="published_watershed" '+(draft.relationship_basis==='published_watershed'?'selected':'')+'>Original assessment watershed label</option>'+
    '<option value="station_membership" '+(draft.relationship_basis==='station_membership'?'selected':'')+'>Computed station / polygon membership</option></select></label></div>'+
-   '<h3>Original assessment inventories</h3>'+(optionsLoading?'<p>Loading the selected study’s retained inventories…</p>':'')+'<p>'+chosen.length+' selected inventories · '+chosen.reduce((sum,item)=>sum+(table(item.table)?.row_count||0),0)+' original rows before filters.</p>'+cards+
+   '<h3>Original assessment inventories</h3>'+(optionsLoading?'<p>Loading the selected study’s retained inventories…</p>':'')+
+   (options&&!optionsLoading&&!list(options.tables).length?'<p>This saved study has no assessment inventory. Choose a saved assessment study above, or open Station geography to prepare the 87-, 159- or 164-station assessment study.</p>'+btn('open-stations','Open Station geography'):'')+'<p>'+chosen.length+' selected inventories · '+chosen.reduce((sum,item)=>sum+(table(item.table)?.row_count||0),0)+' original rows before filters.</p>'+cards+geographicSources(options)+
    '<p class="ac-explanation">Each source retains its edition, status, cause, use and support. A station listing supplies geographic context for a polygon. Both original published and computed geographic relationships remain in the saved result.</p>'+
    '<div class="ac-fields">'+filterInput('causes','cause','Original causes')+filterInput('uses','use','Original uses')+filterInput('supports','support','Original use support')+filterInput('counties','county','Original counties')+filterInput('editions','assessment_edition','Original assessment editions')+'</div>'+
    '<label>Context title<input required data-ac-field="title" value="'+esc(draft.title)+'"></label>'+
@@ -95,16 +111,17 @@ export function attachAssessmentContext(host){
    persist();renderForm();}catch(e){if(gen===epoch&&request===optionsRequest){optionsLoading=false;fail(e);renderForm();}}
  }
  async function loadCatalog(initial=false){
-  const gen=epoch;
-  try{const value=await read('catalog');if(gen!==epoch)return;catalog=value;
+  const gen=epoch,request=++catalogRequest;
+  try{const value=await read('catalog');if(gen!==epoch||request!==catalogRequest)return;catalog=value;
    node.querySelector('[data-ac-editions]').innerHTML=opts(value.editions,selectedEdition,r=>r.title+' · '+r.summary.assessment_row_count+' rows');
    if(initial){if(!draft.station_geography_id&&value.geographies.length)draft.station_geography_id=value.geographies[value.geographies.length-1].id;
-    await loadOptions(draft.station_geography_id,true);if(gen!==epoch)return;if(selectedEdition)await openEdition(selectedEdition);}
+    await loadOptions(draft.station_geography_id,true);if(gen!==epoch||request!==catalogRequest)return;if(selectedEdition)await openEdition(selectedEdition);}
    else renderForm();
-   if(gen!==epoch)return;if(initial&&selectedParcelEdition)await openParcels(selectedParcelEdition);
-   if(gen!==epoch)return;renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch)fail(e);}
+   if(gen!==epoch||request!==catalogRequest)return;if(initial&&selectedParcelEdition)await openParcels(selectedParcelEdition);
+   if(gen!==epoch||request!==catalogRequest)return;renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch&&request===catalogRequest)fail(e);}
  }
  async function openEdition(id){
+  cancelGeographyOpening();
   const gen=epoch,request=++editionRequest;
   try{const value=await read('edition',{id});if(gen!==epoch||request!==editionRequest)return;edition=value;selectedEdition=id;
    if(!list(value.geojson?.features).some(f=>f.id===selectedPolygon))selectedPolygon='';
@@ -145,6 +162,7 @@ export function attachAssessmentContext(host){
    btn('next','Next',(page+1)*40>=filtered.length?'disabled':'')+'</div>';
  }
  async function openParcels(id){
+  cancelGeographyOpening();
   const gen=epoch,request=++parcelRequest;
   try{const value=await read('parcels',{id});if(gen!==epoch||request!==parcelRequest)return;
    parcelEdition=value;selectedParcelEdition=id;persist();renderParcelResult();}catch(e){if(gen===epoch&&request===parcelRequest)fail(e);}
@@ -308,6 +326,7 @@ export function attachAssessmentContext(host){
   }
   else if(a==='use-context'&&edition){draft={...empty(),...clone(edition.selection||edition.result.selection)};await loadOptions(draft.station_geography_id,true);persist();}
   else if(a==='open-result'){if(t.dataset.parcels==='1')await openParcels(t.dataset.id);else await openEdition(t.dataset.id);}
+  else if(a==='open-stations'){persist();host.navigate('station-geography');}
   else if(a==='reload'){await loadCatalog();await loadOptions(draft.station_geography_id,true);}
   else if(a==='clear-polygon'){selectedPolygon='';page=0;persist();renderMap();renderRows();}
   else if(a==='previous'||a==='next'){page+=a==='previous'?-1:1;persist();renderRows();}
@@ -382,6 +401,51 @@ export function attachAssessmentContext(host){
    if(['failed','interrupted','cancelled'].includes(t?.state)&&t.error)fail(t.error);
   }
  }
- function detach(){persist();controller?.abort();controller=null;epoch++;node=null;edition=null;parcelEdition=null;options=null;catalog=null;busy=false;optionsLoading=false;}
- return {mount,update,detach,taskActions,dispatch};
+
+ function cancelGeographyOpening(){
+  if(!geographyOpening)return;
+  geographyOpening=false;optionsLoading=false;geographyRequest++;
+  renderForm();
+ }
+ async function openForGeography(value){
+  const current=host.getWorkspace()||host.getState()?.workspace_key;
+  if(!node||!value||value.workspace_key!==workspace||current!==workspace||
+     !/^[a-f0-9]{64}$/.test(String(value.geography_id||'')))
+   throw Error('Open the saved station study in its original Workspace first.');
+  if(busy)throw Error('Finish submitting the current context operation before opening another study.');
+  const target=value.geography_id,workspaceNow=workspace,gen=epoch,request=++geographyRequest;
+  ++catalogRequest;++optionsRequest;++editionRequest;++parcelRequest;
+  currentTask=null;geographyOpening=true;optionsLoading=true;error='';
+  message='Opening the saved study and its original assessment inventories…';renderForm();notice();
+  const active=()=>Boolean(node)&&workspaceNow===workspace&&gen===epoch&&request===geographyRequest&&
+   workspaceNow===(host.getWorkspace()||host.getState()?.workspace_key);
+  try{
+   const [freshCatalog,available]=await Promise.all([read('catalog'),read('options',{geography_id:target})]);
+   if(!active())return false;
+   const saved=list(freshCatalog.geographies).find(row=>row.id===target);
+   if(!saved||available.geography_id!==target)throw Error('The selected saved station study is absent from this Workspace.');
+   if(!list(available.tables).some(row=>Number(row.row_count)>0))
+    throw Error('This saved study has no retained assessment inventory to prepare.');
+   if(!list(available.watershed_sources).length)
+    throw Error('Build this station study with its retained watershed geometry before preparing assessment context.');
+   catalog=freshCatalog;options=available;
+   draft={...empty(),title:(available.title||saved.title||'Saved station study')+' — assessment context',
+    station_geography_id:target,inventories:list(available.tables).filter(row=>Number(row.row_count)>0).map(inventory),
+    watershed_source:ref(available.watershed_sources[0].reference)};
+   edition=null;selectedEdition=null;selectedPolygon='';query='';page=0;
+   parcelEdition=null;selectedParcelEdition=null;parcelQuery='';parcelPage=0;
+   reportReady=null;reportDelivery='';pendingEdition=null;
+   node.querySelector('[data-ac-editions]').innerHTML=opts(catalog.editions,'',row=>row.title+' · '+row.summary.assessment_row_count+' rows');
+   optionsLoading=false;geographyOpening=false;persist();renderForm();renderResult();renderParcels();renderParcelResult();
+   const count=draft.inventories.reduce((total,item)=>total+Number(table(item.table)?.row_count||0),0);
+   message='Prepared '+draft.inventories.length+' original inventories and '+count+
+    ' assessment records from '+(available.title||saved.title)+'. Choose the relationship basis and build the context.';
+   notice();node.querySelector('[data-ac-field="title"]')?.focus();
+   return {geography_id:target,inventory_count:draft.inventories.length,assessment_record_count:count};
+  }catch(problem){if(active()){fail(problem);throw problem;}return false;}
+  finally{if(active()&&geographyOpening){geographyOpening=false;optionsLoading=false;renderForm();}}
+ }
+
+ function detach(){geographyRequest++;catalogRequest++;geographyOpening=false;persist();controller?.abort();controller=null;epoch++;node=null;edition=null;parcelEdition=null;options=null;catalog=null;busy=false;optionsLoading=false;}
+ return {mount,update,detach,taskActions,dispatch,openForGeography};
 }

@@ -324,8 +324,13 @@ def parser():
     plan_options(target, expected=True)
     target.add_argument("--name", required=True)
     request_options(target)
-    target = command("export", "Export the original complete plan ZIP with every saved revision")
-    plan_options(target, expected=True)
+    target = command("export", "Export a complete saved plan ZIP with its consecutive original history")
+    plan_options(target)
+    selected_export = target.add_mutually_exclusive_group(required=True)
+    selected_export.add_argument("--expected-revision", type=positive_revision,
+                                 help="Export the reviewed current revision; reject later changes")
+    selected_export.add_argument("--revision", type=positive_revision,
+                                 help="Export this saved revision and its complete earlier history")
     target.add_argument("--output", required=True, help="New output ZIP filename")
     target = command("import-bundle", "Receive an original complete plan ZIP with its history and source")
     target.add_argument("--file", required=True)
@@ -409,8 +414,9 @@ def operate(args):
         if name == "clone":
             return workspace.clone(args.plan, args.expected_revision, args.name, args.request_id)
         if name == "export":
-            plan = selected_plan(workspace, args.plan, args.expected_revision)
-            output = publish(args.output, workspace.export(args.plan))
+            plan = (workspace.read(args.plan, args.revision) if args.revision is not None
+                    else selected_plan(workspace, args.plan, args.expected_revision))
+            output = publish(args.output, workspace.export(args.plan, revision=plan["revision"]))
             return {"plan": summary(plan), "output": output}
         if name == "import-bundle":
             plan = workspace.import_bundle(raw, args.name, args.request_id)

@@ -23,7 +23,7 @@ from .model_selection import (grid_models, models as normalize_models,
                               validate_completed_run)
 from .native_versions import comparison_versions, guide_url, model_versions, version_label
 from . import rasters
-from .native_execution import storage_exhausted
+from .native_execution import process_interrupted, storage_exhausted
 from .parameter_exports import (EDITION as EXPORT_EDITION, retain_differences,
                                 retain_member_manifest, write_archive)
 from .reuse import copy_verified
@@ -571,7 +571,10 @@ def _compatible_aggregation_implementations():
         segment = ast.get_source_segment(source, node) if node is not None else None
         if segment is None or hashlib.sha256(segment.encode("utf-8")).hexdigest() != checksum:
             return ()
-    return ({"engine_sha256": "467abced7106c569b80576e16a7e465cafc8921a2402ca13f9c488b4bfd49a0d","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
+    return ({"engine_sha256": "5da6f3fad2485eaf957f6b2e36fc3a1bfa16a0e83cce33239100ab8ca233ba71","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "e7bd1aea4ba50903ee4880feb2ddb7f47c3d5febd26edb0b1f616d93c5e1032c","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "bc16ad49224303546624465a67a30544ead368b9f5c4deb1e29d5273801d5296","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "467abced7106c569b80576e16a7e465cafc8921a2402ca13f9c488b4bfd49a0d","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
             {"engine_sha256": "2294aa27eae35c1d60f3526cbf1e3dcc58e97ec3006a8d89e2839e063ad95687","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
             {"engine_sha256": "7bd58c5e1a3e6334b127fd584df34f6cbe478481147586806198ce16e4059a20","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"})
 
@@ -917,6 +920,70 @@ def _exports(workspace, state):
     return artifacts
 
 
+def native_case_context(workspace, key, run_id):
+    """Bind an isolated worker to the original saved study and scientific case."""
+    state = _read(workspace, key)
+    run = workspace.inspect_run(run_id)
+    active = selected(state["baseline_selection"])
+    matches = []
+    for case in state["cases"]:
+        if case["run_id"] != run_id:
+            continue
+        if (run["selection"]["profile_id"] != case["profile_id"]
+                or run_models(run) != active
+                or any(run["selection"][field] != state["baseline_selection"][field]
+                       for field in ("grid_id", "scenario_id"))):
+            raise ValueError("The supervised case changed its original native selection")
+        if "run_selection" in case:
+            if run["selection"] != case["run_selection"]:
+                raise ValueError("The supervised case differs from its retained original run")
+        elif run["selection"].get("invest_version") != state["baseline_selection"].get("invest_version"):
+            raise ValueError("The supervised legacy case changed its requested native version")
+        if case["id"] == "baseline" and (
+                run_id != state["selection"]["baseline_run_id"]
+                or run["selection"] != state["baseline_selection"]):
+            raise ValueError("The supervised baseline differs from the saved study")
+        matches.append({name: deepcopy(case[name]) for name in (
+            "id", "run_id", "profile_id", "run_selection", "overrides", "axis_values")
+                        if name in case})
+    if not matches:
+        raise ValueError("The native worker run is outside this saved parameter study")
+    return {"schema": "upstate.parameter-study-worker-context/v1", "study_id": state["id"],
+            "run_id": run_id, "selection_sha256": digest(state["selection"]),
+            "bindings_sha256": digest(matches)}
+
+
+
+def record_interruption(workspace, key, error):
+    """Retain a pre-coordinator worker interruption on its original study."""
+    if not process_interrupted(error):
+        return None
+    key = identifier(key)
+    directory = workspace.root / "experiments" / key
+    failure = deepcopy(error.native_failure)
+    with held(directory / ".experiment.lock", blocking=False):
+        native_case_context(workspace, key, failure["run_id"])
+        state = inspect(workspace, key)
+        matches = [case for case in state["cases"] if case["run_id"] == failure["run_id"]]
+        if not matches:
+            raise ValueError("The interrupted native run is outside this saved study")
+        for case in matches:
+            case["process_interruption"] = deepcopy(failure)
+            if case["state"] != "complete":
+                case["state"] = "failed"
+                case["error"] = deepcopy(failure)
+        history = state.setdefault("interruption_history", [])
+        if not history or history[-1] != failure:
+            history.append(deepcopy(failure))
+        state.update(state="partial", active_case_id=None, active_run_id=None,
+                     error=failure, updated_at=now())
+        state["progress"] = {"total": len(state["cases"]),
+                             "completed": sum(case["state"] == "complete" for case in state["cases"]),
+                             "failed": sum(case["state"] == "failed" for case in state["cases"])}
+        atomic_json(directory / "experiment.json", state)
+        return state
+
+
 def execute(workspace, key, *, progress=None):
     state = _read(workspace, key)
     directory = workspace.root / "experiments" / key
@@ -956,11 +1023,22 @@ def execute(workspace, key, *, progress=None):
                         raise RuntimeError("Native parameter case has not completed")
                     case["state"] = "complete"
                     case.pop("error", None)
+                    case.pop("process_interruption", None)
                 except Exception as error:
-                    case["state"] = "failed"
-                    case["error"] = deepcopy(getattr(error, "native_failure", None)) or {
+                    failure = deepcopy(getattr(error, "native_failure", None)) or {
                         "type": type(error).__name__, "message": str(error)}
-                    if storage_exhausted(error):
+                    interrupted = process_interrupted(error)
+                    current = workspace.inspect_run(case["run_id"]) if interrupted else None
+                    if current and current.get("state") == "complete":
+                        validate_completed_run(current)
+                        case["state"] = "complete"
+                        case.pop("error", None)
+                    else:
+                        case["state"] = "failed"
+                        case["error"] = failure
+                    if interrupted:
+                        case["process_interruption"] = failure
+                    if storage_exhausted(error) or interrupted:
                         raise
                     save()
                     if case["id"] == "baseline":
@@ -983,7 +1061,11 @@ def execute(workspace, key, *, progress=None):
             failure = deepcopy(getattr(error, "native_failure", None)) or {
                 "type": type(error).__name__, "message": str(error)}
             try:
-                save(state="failed", active_case_id=None, active_run_id=None, error=failure)
+                interrupted = process_interrupted(error)
+                if interrupted:
+                    state.setdefault("interruption_history", []).append(deepcopy(failure))
+                save(state="partial" if interrupted else "failed",
+                     active_case_id=None, active_run_id=None, error=failure)
             except OSError:
                 # The original run journal has reserved recovery capacity.
                 # Preserve its primary failure if this larger study cannot save.

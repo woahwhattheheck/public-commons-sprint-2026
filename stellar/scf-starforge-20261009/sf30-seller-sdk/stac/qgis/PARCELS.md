@@ -421,3 +421,36 @@ Three separate frozen portfolios preserve County assessed value, municipal/schoo
 The original complete export then receives into a separate workspace under that edition's continuation directory. The programme compares its archived state, events, domain requests and analyst requests; verifies every retained project file; and repeats the read-only buyer walkthrough. The result is `successors/<manifest-sha256>/result.json`, with `status: "PARCEL_RECEIVING_COMPLETED"` after domain receiving or `status: "COMPLETED"` after the selected native QGIS inspection, saved map, render, feature readback and independent native receiving. Each stage retains its exact archive and original request IDs.
 
 Resume with the same operation directory and later manifest digest. A further publisher edition uses its own new manifest digest and a new reviewed successor phase. Resource declarations must cover the actual whole later source, indexed projections, review and portfolio files, native outputs, exported archives and independently received copies.
+
+## 14. Preserve reviews when a City export format changes
+
+The selected City JSON response and a later full CSV can represent the same original records. The programme keeps both original file sets and every existing record, claim and fact hash. The comparison first uses those exact fact hashes. When a City family changes between its JSON and CSV representation, it additionally reads the selected original rows and compares every published field except the datastore-only `_id`. Only the original JSON null and its empty CSV cell are treated as equivalent; all other scalar text, including case, whitespace, dates and numerical representation, remains exact.
+
+Source identity, stable record ID, parcel key, geometry and every source assertion must bind one-to-one. County and geometry records retain their exact original identities. Duplicate or ambiguous equivalent records remain changed and require review. A changed business value also remains changed.
+
+An otherwise unchanged parcel appears in `unchanged` with an explicit `sourceFormatEquivalence` receipt containing the old/new fact hashes, source formats, and original-to-target record and claim bindings. The receipt participates in the comparison hash reviewed by the operator. Carrying its existing review uses the target edition's actual claims and fact hash, preserves the original accountable-entity version and selected evidence, and records `carriedFrom` plus the equivalence receipt. The old review and raw inputs remain available in the original edition. Subsequent preview, save, portfolio and independent receiving therefore use the actual current source identities while preserving the earlier staff decision.
+
+## 15. Recover the original receiving operation after a host directory is lost
+
+A complete saved project carries the original SQLite snapshot, parcel source objects, reviews, frozen portfolios, domain history and analyst request journal. If the host's outer operation directory is lost, restore that saved project and the complete published software first. Preserve the original operation ID, responsible actor, workspace ID and absolute output location from the saved request inputs.
+
+The preparation entrypoint reconstructs the original receiving programme's outer request files and initial source folder from that saved workspace:
+
+```sh
+python3 parcel-operation-restore.py \
+  --archive /selected/Urban3_Reviewed_Parcel_Workspace.zip \
+  --expected-archive-sha256 ORIGINAL_SAVED_ARCHIVE_SHA256 \
+  --workspace-id ORIGINAL_WORKSPACE_ID \
+  --source-manifest-sha256 ORIGINAL_COMPLETE_SOURCE_MANIFEST_SHA256 \
+  --operation-id ORIGINAL_OPERATION_ID \
+  --actor 'Original responsible analyst' \
+  --output /original/operation/location
+```
+
+Run this preparation inside the same maintained native continuation allocation. It checks the exact archive hash and all 20 completed original programme requests, including their actor, workspace, location and input hashes. The original project receiver restores the saved database and complete file closure. The helper then reopens the retained initial-edition objects and copies their exact original manifest and source bytes into `inputs/original-scope`. This preserves the original selected subset's creation time and manifest hash. Rebuilding that initial manifest from the present clock would create a different source edition.
+
+The original outer request files are reconstructed from the archived request journal, including their original revisions and payloads. The database journal remains unchanged. A subsequent invocation of `parcel-native-receiving.py` with the original source, manifest digest, operation ID, actor and output location finds the completed request IDs and continues the buyer workflow from its retained results.
+
+The preparation returns `ORIGINAL_OPERATION_PREPARED` and writes an immutable receipt under `recovery/worked-workspace-<archive-sha256>.json`. It starts no listener or publisher acquisition. Repeating preparation for the same saved archive reopens its received workspace and requires that all saved events and analyst requests remain intact, including when later buyer work has advanced the workspace. A different received archive, actor, path, missing completed stage or changed saved request is rejected. If the current workspace already exists from its original creation and is healthy, continue that workspace directly.
+
+Retain any separately saved read-only observation captured after the selected archive as a separate original observation in the handoff. Do not fabricate missing journal timestamps or treat the older archive as containing that later observation. The saved snapshot and its completed domain outcomes remain the recovery authority.

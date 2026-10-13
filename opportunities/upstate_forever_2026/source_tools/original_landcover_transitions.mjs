@@ -77,7 +77,7 @@ async function summarizeAnnualTransitions(features,sourceEpsg,beforeGrid,afterGr
     for(const e of starts[row]){if(!active.has(e.zone))active.set(e.zone,[]);active.get(e.zone).push(e);}
     for(const [z,edges]of active){
       const xs=edges.map(e=>e.u1+(row+0.5-e.v1)*e.slope).sort((a,b)=>a-b);
-      if(xs.length%2)throw Error("Odd original polygon intersections at "+zones[z].huc12+" row "+row);
+      if(xs.length%2)throw Error("Odd original polygon intersections at "+zones[z].id+" row "+row);
       for(let k=0;k<xs.length;k+=2){
         const first=Math.max(0,Math.ceil(xs[k]-0.5)),last=Math.min(width,Math.ceil(xs[k+1]-0.5));
         for(let col=first;col<last;col++){
@@ -96,6 +96,7 @@ async function summarizeAnnualTransitions(features,sourceEpsg,beforeGrid,afterGr
       interpretation:"Annual product class transitions. A changed classification alone does not identify cause, timing within the interval, or classification accuracy."},
     raster:describe(full,area),domain:{...describe(union,area),overlap_cells:overlapCells,
       outside_domain_cells:width*height-union.cells},
-    watersheds:zones.map((z,i)=>({huc12:z.huc12,properties:z.properties,...describe(counts[i],area)}))};
+    [prepared.identifier_kind==="basin"?"basins":"watersheds"]:zones.map((z,i)=>({...(
+      prepared.identifier_kind==="basin"?{basin_id:z.id,title:z.title}:{huc12:z.id}),properties:z.properties,...describe(counts[i],area)}))};
 }
 export {summarizeAnnualTransitions};

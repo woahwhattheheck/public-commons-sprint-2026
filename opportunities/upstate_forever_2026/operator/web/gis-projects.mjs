@@ -12,6 +12,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
   function stateSignature(state){return JSON.stringify({workspace:state?.workspace_key,
     sources:state?.data?.sources?.map(x=>x.id),grids:state?.data?.grids?.map(x=>[x.id,x.state]),
     runs:state?.data?.runs?.map(x=>[x.id,x.state]),comparisons:state?.data?.comparisons?.map(x=>x.id),
+    deliveries:state?.data?.deliveries?.map(x=>[x.id,x.state]),
     tasks:state?.tasks?.filter(x=>x.action?.startsWith('gis.project.')).map(x=>[x.id,x.state])});}
   function selected(name){return root?.querySelector('[name="'+name+'"]');}
   function sourceChoices(collection,saved){
@@ -19,37 +20,97 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     const all=catalogue?.sources.find(x=>x.id===collection)?.entries||[];
     const rows=all.filter(x=>!x.gis_required_context),context=all.filter(x=>x.gis_required_context);
     const keys=saved?.sources?new Set(saved.sources.map(x=>x.source_id)):null;
-    list.innerHTML=rows.length?rows.map(x=>'<label class="gis-choice"><input type="checkbox" name="source" value="'+esc(x.id)+'" '+((keys?keys.has(x.id):['vector','raster'].includes(x.kind))?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(x.units||'original source metadata')+'</small></span></label>').join(''):'<p>Select an original source edition or use completed model results below.</p>';
-    if(context.length)list.insertAdjacentHTML('beforeend','<details class="gis-context"><summary>'+pretty(context.length)+' original and attribution documents carried automatically</summary><p>These files accompany the associated selected working layers, including their original source companions and edition history.</p><ul>'+context.map(x=>'<li>'+esc(x.title)+'</li>').join('')+'</ul></details>');
+    list.innerHTML=rows.length?rows.map(x=>'<label class="gis-choice"><input type="checkbox" name="source" value="'+esc(x.id)+'" '+((keys?keys.has(x.id):['vector','raster'].includes(x.kind))?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(describe(x.units)||'original source metadata')+'</small></span></label>').join(''):'<p>Select an original source edition or use completed model results below.</p>';
+    if(context.length)list.insertAdjacentHTML('beforeend','<details class="gis-context"><summary>'+pretty(context.length)+' source context files carried automatically</summary><p>These files accompany the associated selected sources, including their original companions, dated context and edition history.</p><ul>'+context.map(x=>'<li>'+esc(x.title)+'</li>').join('')+'</ul></details>');
   }
   function fillForm(saved){
     if(!root||!catalogue)return;
     selected('title').value=saved?.title||'Editable GIS · '+(getState()?.data?.project?.title||'Selected study');
     selected('project_crs').value=saved?.project_crs||'EPSG:5070';
-    const original=catalogue.sources.some(x=>x.id===saved?.source_collection_id)?saved.source_collection_id:catalogue.sources[0]?.id||'';
+    selected('delivery_id').value=saved?.delivery_id||'';
+    const original=catalogue.sources.some(x=>x.id===saved?.source_collection_id)?saved.source_collection_id:
+      (saved&&Array.isArray(saved.sources)?'':catalogue.sources[0]?.id||'');
     selected('source_collection_id').value=original;sourceChoices(original,saved);
     for(const name of ['grid_id','baseline_run_id'])if(saved?.[name])selected(name).value=saved[name];
     for(const name of ['scenario_run_ids','comparison_ids'])for(const input of root.querySelectorAll('[name="'+name+'"]'))input.checked=(saved?.[name]||[]).includes(input.value);
     selected('notes').value=(saved?.notes||[]).join('\n');
   }
   function links(record){return '<div class="gis-links"><a target="_blank" rel="noopener" href="'+esc(record.viewer_url)+'">Open layer view</a><a href="'+esc(record.archive_download.url)+'?download=1">Download complete editable ZIP</a></div>';}
+  const describe=value=>value==null?'':typeof value==='object'?JSON.stringify(value):String(value);
+  const adoptionKey=(workspace,receipt)=>'upstate-gis-adoption:'+workspace+':'+receipt;
+  function adoptionDraft(receipt){try{return JSON.parse(localStorage.getItem(adoptionKey(activeWorkspace,receipt))||'null');}catch{return null;}}
+  function adoptionPayload(form){
+    const checked=name=>[...form.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
+    const payload={receipt_id:form.dataset.gisAdopt,
+      title:form.querySelector('[name="adoption_title"]').value.trim(),
+      reason:form.querySelector('[name="adoption_reason"]').value.trim(),
+      layer_ids:checked('adoption_layer'),attachment_ids:checked('adoption_attachment')};
+    if(!payload.layer_ids.length&&!payload.attachment_ids.length)
+      throw new Error('Select a received working layer, original table or document.');
+    if(!payload.title||!payload.reason)throw new Error('Name the source edition and explain its adoption.');
+    return payload;
+  }
+  function retainAdoption(form){
+    const draft={title:form.querySelector('[name="adoption_title"]').value,
+      reason:form.querySelector('[name="adoption_reason"]').value};
+    for(const name of ['adoption_layer','adoption_attachment'])
+      draft[name]=[...form.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
+    try{localStorage.setItem(adoptionKey(activeWorkspace,form.dataset.gisAdopt),JSON.stringify(draft));}catch{}
+  }
+  function syncAdoption(form){
+    const layers=form.querySelectorAll('[name="adoption_layer"]:checked').length>0;
+    for(const input of form.querySelectorAll('[name="adoption_attachment"]')){
+      if(layers)input.checked=true;
+      input.disabled=layers;
+    }
+    const help=form.querySelector('[data-gis-adoption-help]');
+    if(help)help.textContent=layers?'Working layers keep all original tables, documents and companions. Clear the working layers to choose only original tables or documents.':'Only the selected original tables or documents and this received edition’s provenance will be adopted. Complete declared companions remain attached.';
+  }
   function adoptionForm(record){
     if(record.kind!=='received')return '';
-    return '<details class="gis-adoption"><summary>Use edited working layers as new study sources</summary><p>This adds a new original source edition. Existing sources, grids, profiles and model runs stay unchanged.</p><form data-gis-adopt="'+esc(record.id)+'"><label>New source edition title<input name="adoption_title" value="'+esc('Received GIS sources · '+record.title)+'" required maxlength="240"></label><fieldset><legend>Working layers to adopt</legend>'+record.layer_choices.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_layer" value="'+esc(x.id)+'" checked><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(x.units)+'</small></span></label>').join('')+'</fieldset><label>Reason for this source edition<textarea name="adoption_reason" required rows="2"></textarea></label><button type="submit">Adopt selected study sources</button></form></details>';
+    const saved=adoptionDraft(record.id), layers=record.layer_choices||[], attachments=record.attachment_choices||[];
+    const chosen=(name,id)=>saved&&Array.isArray(saved[name])?saved[name].includes(id):true;
+    return '<details class="gis-adoption"><summary>Use received layers, tables or documents as study sources</summary><p>Choose a complete working-layer edition or select original tables and documents on their own.</p><form data-gis-adopt="'+esc(record.id)+'"><label>New source edition title<input name="adoption_title" value="'+esc(saved?.title??('Received GIS sources · '+record.title))+'" required maxlength="240"></label><fieldset><legend>Working layers</legend>'+layers.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_layer" value="'+esc(x.id)+'" '+(chosen('adoption_layer',x.id)?'checked':'')+'><span>'+esc(x.title)+'<small>'+esc(x.kind)+' · '+esc(describe(x.units))+'</small></span></label>').join('')+'</fieldset><fieldset><legend>Original tables and documents</legend>'+attachments.map(x=>'<label class="gis-choice"><input type="checkbox" name="adoption_attachment" value="'+esc(x.id)+'" '+(chosen('adoption_attachment',x.id)?'checked':'')+'><span>'+esc(x.title)+'<small>'+[x.kind,x.vintage,x.geography_basis,describe(x.units)].filter(x=>x!=null&&x!=='').map(esc).join(' · ')+' · '+pretty(x.companions)+' companions</small></span></label>').join('')+(attachments.length?'':'<p>No original attachments in this received edition.</p>')+'</fieldset><p data-gis-adoption-help class="gis-help"></p><label>Reason for this source edition<textarea name="adoption_reason" required rows="2">'+esc(saved?.reason??'')+'</textarea></label><button type="submit">Adopt selected study sources</button></form></details>';
   }
   function records(rows){return rows.length?rows.map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.layers)+' layers · '+pretty(x.bytes)+' bytes · '+esc(x.kind==='received'?'Received independent edition':'Retained scientific-workspace export')+'</p><p class="gis-id">Edition '+esc(x.result.edition_id)+'</p>'+links(x)+adoptionForm(x)+'</article>').join(''):'<p>No GIS projects in this section yet.</p>';}
-  function adopted(){return (catalogue.adoptions||[]).map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.sources.length)+' working layers adopted through the original source importer.</p><p class="gis-id">Source edition '+esc(x.source_collection_id)+'</p><button type="button" data-gis-use-source="'+esc(x.source_collection_id)+'">Select this source edition for export</button></article>').join('')||'<p>Received working layers can be adopted below each independent edition.</p>';}
+  function adopted(){return (catalogue.adoptions||[]).map(x=>'<article class="gis-record"><h3>'+esc(x.title)+'</h3><p>'+pretty(x.sources?.length)+' working layers · '+(Array.isArray(x.context_sources)?pretty(x.context_sources.length)+' original tables and documents adopted.':'original source context retained.')+'</p><p class="gis-id">Source edition '+esc(x.source_collection_id)+'</p><button type="button" data-gis-open-source="'+esc(x.source_collection_id)+'">Open original source files</button>'+((x.sources||[]).length?'<button type="button" data-gis-use-source="'+esc(x.source_collection_id)+'">Select this source edition for GIS export</button>':'<p class="gis-help">These original sources are available in Sources and Investigations. Tables keep their original geography and dates.</p>')+'<div data-gis-source-files="'+esc(x.source_collection_id)+'"></div></article>').join('')||'<p>Adopt received layers or original tables and documents below each independent edition.</p>';}
+  async function openSource(collection){
+    const workspace=activeWorkspace,target=root?.querySelector('[data-gis-source-files="'+CSS.escape(collection)+'"]');
+    if(!target)return;
+    target.textContent='Opening original source files…';
+    try{
+      const record=await api('/api/item?'+new URLSearchParams({workspace,kind:'sources',id:collection}));
+      if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace||!target.isConnected)return;
+      if(record.id!==collection)throw new Error('The returned source edition has another identity.');
+      const downloads=record._downloads||[];
+      const file=body=>downloads.find(row=>row.sha256===body.sha256&&row.bytes===body.bytes&&row.filename===body.filename);
+      target.innerHTML=(record.entries||[]).map(row=>'<section><h4>'+esc(row.title)+'</h4><p>'+[row.kind,row.vintage,row.geography_basis,describe(row.units)].filter(x=>x!=null&&x!=='').map(esc).join(' · ')+'</p><ul>'+[row.body,...(row.companions||[])].map(body=>{const link=file(body);return '<li>'+(link?'<a href="'+esc(link.url)+'?download=1">'+esc(body.filename)+'</a>':esc(body.filename))+' · '+pretty(body.bytes)+' bytes</li>';}).join('')+'</ul></section>').join('');
+    }catch(e){if(target.isConnected&&activeWorkspace===workspace)target.textContent=e.message;}
+  }
 
   function render(){
     if(!root||!catalogue)return;
     const saved=lastSelection||readSaved();
     const completeRuns=catalogue.runs.filter(x=>x.state==='complete');
     const runName=x=>(x.title||'Native run')+' · '+x.id.slice(0,12);
-    root.innerHTML='<section class="gis-workspace"><header><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Editable GIS projects</h1><p>Export retained sources and physical results as a complete QGIS working directory. Receive a colleague’s revised edition without changing the original study.</p></header><p data-gis-error class="gis-error" role="alert" hidden></p><div class="gis-columns"><form data-gis-export><h2>Prepare a GIS handover</h2><label>Project title<input name="title" required maxlength="240"></label><label>Display coordinate system<input name="project_crs" required placeholder="EPSG:5070"></label><p class="gis-help">Display projection only. Working files retain their native coordinates, numerical cells and masks.</p><label>Original source edition<select name="source_collection_id">'+options(catalogue.sources,x=>x.title)+'</select></label><fieldset><legend>Complete retained source files</legend><div data-gis-sources></div></fieldset><label>Prepared study grid<select name="grid_id">'+options(catalogue.grids.filter(x=>x.state==='complete'),x=>(x.spec?.title||'Model grid')+' · '+x.id.slice(0,12))+'</select></label><label>Completed baseline run<select name="baseline_run_id">'+options(completeRuns,runName)+'</select></label><fieldset><legend>Completed alternative runs</legend>'+(completeRuns.length?completeRuns.map(x=>'<label class="gis-choice"><input type="checkbox" name="scenario_run_ids" value="'+esc(x.id)+'"><span>'+esc(runName(x))+'</span></label>').join(''):'<p>Complete native runs will appear here. Source-only GIS handover is available now.</p>')+'</fieldset><fieldset><legend>Existing signed comparisons</legend>'+(catalogue.comparisons.length?catalogue.comparisons.map(x=>'<label class="gis-choice"><input type="checkbox" name="comparison_ids" value="'+esc(x.id)+'"><span>'+esc(x.direction||'Retained comparison')+' · '+esc(x.id.slice(0,12))+'</span></label>').join(''):'<p>No saved comparison yet.</p>')+'</fieldset><label>Operator notes<textarea name="notes" rows="3" placeholder="Explain this selected handover in ordinary language."></textarea></label><button type="submit">Build complete GIS project</button><p class="gis-help">Uses the original retained task queue. The source scientific models are not rerun.</p></form><aside><section class="gis-receive"><h2>Receive an edited project</h2><p>Choose the complete ZIP after the sender seals its saved GIS edition. All working data, original files and history enter a new receiving directory.</p><form data-gis-receive><label>Complete GIS archive<input name="archive" type="file" accept=".zip" required></label><button type="submit">Receive independent edition</button></form></section><section class="gis-steps"><h2>Continue in desktop GIS</h2><ol><li>Download and extract the <strong>complete ZIP</strong>.</li><li>Open <strong>OPEN_GIS.html</strong> to inspect geography, layer provenance and units.</li><li>Open <strong>project.qgz</strong> in QGIS. Keep every accompanying directory together.</li><li>Edit the independent GeoPackage attributes or geometry; retain source layer identities.</li><li>Save and close editing, then follow the included <strong>seal → pack → receive</strong> instructions.</li></ol><p>Native layer metadata distinguishes physical results, signed changes, categorical data and contextual geometry.</p></section><button type="button" data-gis-refresh>Refresh retained projects</button></aside></div><section class="gis-outputs"><h2>Exported from this study</h2>'+records(catalogue.exports)+'</section><section class="gis-outputs"><h2>Received independent editions</h2>'+records(catalogue.received)+'</section><section class="gis-outputs"><h2>Adopted study source editions</h2>'+adopted()+'</section></section>';
+    const deliveries=catalogue.deliveries||[];
+    const deliveryOptions='<option value="">No delivery selected</option>'+deliveries.map(row=>
+      '<option value="'+esc(row.id)+'"'+(!row.eligible?' disabled':'')+'>'+
+      esc(row.title+' · '+(row.eligible?row.dataset_count+' GIS datasets':row.reason||row.state))+'</option>').join('')+
+      (saved?.delivery_id&&!deliveries.some(row=>row.id===saved.delivery_id)?
+       '<option value="'+esc(saved.delivery_id)+'" disabled>Unavailable retained delivery · '+esc(saved.delivery_id.slice(0,12))+'</option>':'');
+    root.innerHTML='<section class="gis-workspace"><header><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Editable GIS projects</h1><p>Export retained sources and physical results as a complete QGIS working directory. Receive a colleague’s revised edition without changing the original study.</p></header><p data-gis-error class="gis-error" role="alert" hidden></p><div class="gis-columns"><form data-gis-export><h2>Prepare a GIS handover</h2><label>Project title<input name="title" required maxlength="240"></label><label>Display coordinate system<input name="project_crs" required placeholder="EPSG:5070"></label><p class="gis-help">Display projection only. Working files retain their native coordinates, numerical cells and masks.</p><label>Completed map delivery<select name="delivery_id">'+deliveryOptions+'</select></label><p class="gis-help">Include the delivery’s actual exports, signed changes and selected priorities, with original maps, metadata and PDF reports. Choosing a delivery starts with those datasets; add other retained study selections explicitly below.</p><label>Original source edition<select name="source_collection_id">'+options(catalogue.sources,x=>x.title)+'</select></label><fieldset><legend>Complete retained source files</legend><div data-gis-sources></div></fieldset><label>Prepared study grid<select name="grid_id">'+options(catalogue.grids.filter(x=>x.state==='complete'),x=>(x.spec?.title||'Model grid')+' · '+x.id.slice(0,12))+'</select></label><label>Completed baseline run<select name="baseline_run_id">'+options(completeRuns,runName)+'</select></label><fieldset><legend>Completed alternative runs</legend>'+(completeRuns.length?completeRuns.map(x=>'<label class="gis-choice"><input type="checkbox" name="scenario_run_ids" value="'+esc(x.id)+'"><span>'+esc(runName(x))+'</span></label>').join(''):'<p>Complete native runs will appear here. Source-only GIS handover is available now.</p>')+'</fieldset><fieldset><legend>Existing signed comparisons</legend>'+(catalogue.comparisons.length?catalogue.comparisons.map(x=>'<label class="gis-choice"><input type="checkbox" name="comparison_ids" value="'+esc(x.id)+'"><span>'+esc(x.direction||'Retained comparison')+' · '+esc(x.id.slice(0,12))+'</span></label>').join(''):'<p>No saved comparison yet.</p>')+'</fieldset><label>Operator notes<textarea name="notes" rows="3" placeholder="Explain this selected handover in ordinary language."></textarea></label><button type="submit">Build complete GIS project</button><p class="gis-help">Uses the original retained task queue. The source scientific models are not rerun.</p></form><aside><section class="gis-receive"><h2>Receive an edited project</h2><p>Choose the complete ZIP after the sender seals its saved GIS edition. All working data, original files and history enter a new receiving directory.</p><form data-gis-receive><label>Complete GIS archive<input name="archive" type="file" accept=".zip" required></label><button type="submit">Receive independent edition</button></form></section><section class="gis-steps"><h2>Continue in desktop GIS</h2><ol><li>Download and extract the <strong>complete ZIP</strong>.</li><li>Open <strong>OPEN_GIS.html</strong> to inspect geography, layer provenance and units.</li><li>Open <strong>project.qgz</strong> in QGIS. Keep every accompanying directory together.</li><li>Edit the independent GeoPackage attributes or geometry; retain source layer identities.</li><li>Save and close editing, then follow the included <strong>seal → pack → receive</strong> instructions.</li></ol><p>Native layer metadata distinguishes physical results, signed changes, categorical data and contextual geometry.</p></section><button type="button" data-gis-refresh>Refresh retained projects</button></aside></div><section class="gis-outputs"><h2>Exported from this study</h2>'+records(catalogue.exports)+'</section><section class="gis-outputs"><h2>Received independent editions</h2>'+records(catalogue.received)+'</section><section class="gis-outputs"><h2>Adopted study source editions</h2>'+adopted()+'</section></section>';
     fillForm(saved);
     root.querySelector('[data-gis-export]').addEventListener('submit',submitExport);
     root.querySelector('[data-gis-receive]').addEventListener('submit',submitReceive);
-    for(const form of root.querySelectorAll('[data-gis-adopt]'))form.addEventListener('submit',submitAdoption);
+    for(const form of root.querySelectorAll('[data-gis-adopt]')){
+      syncAdoption(form);
+      form.addEventListener('submit',submitAdoption);
+      form.addEventListener('input',()=>{syncAdoption(form);retainAdoption(form);});
+      form.addEventListener('change',()=>{syncAdoption(form);retainAdoption(form);});
+    }
+    for(const button of root.querySelectorAll('[data-gis-open-source]'))
+      button.addEventListener('click',()=>openSource(button.dataset.gisOpenSource));
     for(const button of root.querySelectorAll('[data-gis-use-source]'))button.addEventListener('click',()=>{
       const source=catalogue.sources.find(x=>x.id===button.dataset.gisUseSource);
       if(!source)return error('Refresh the original source edition before selecting it.');
@@ -57,9 +118,15 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       render();root.querySelector('[data-gis-export]').scrollIntoView({block:'start'});
     });
     selected('source_collection_id').addEventListener('change',event=>sourceChoices(event.target.value,null));
+    selected('delivery_id').addEventListener('change',event=>{
+      const id=event.target.value;if(!id)return;
+      const delivery=(catalogue.deliveries||[]).find(row=>row.id===id&&row.eligible);
+      if(!delivery)return error('Choose a current completed delivery with its retained dataset catalogue.');
+      try{const value=deliverySelection(delivery);saveSelection(value);render();}catch(failure){error(failure.message);}
+    });
     root.querySelector('[data-gis-refresh]').addEventListener('click',()=>load(true));
   }
-  function formSelection(){
+  function formSelection(validate=true){
     const selectedIDs=name=>[...root.querySelectorAll('[name="'+name+'"]:checked')].map(x=>x.value);
     const sourceIDs=selectedIDs('source');const collection=selected('source_collection_id').value;
     const value={title:selected('title').value.trim(),project_crs:selected('project_crs').value.trim(),
@@ -67,26 +134,48 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       scenario_run_ids:selectedIDs('scenario_run_ids'),comparison_ids:selectedIDs('comparison_ids'),
       include_grid:true,notes:selected('notes').value.split('\n').map(x=>x.trim()).filter(Boolean)};
     if(sourceIDs.length)value.source_collection_id=collection;
-    for(const name of ['grid_id','baseline_run_id'])if(selected(name).value)value[name]=selected(name).value;
-    if(value.scenario_run_ids.includes(value.baseline_run_id))throw new Error('Choose the baseline once; remove it from alternative runs.');
-    if(!sourceIDs.length&&!value.grid_id&&!value.baseline_run_id&&!value.scenario_run_ids.length&&!value.comparison_ids.length)throw new Error('Select original source files, a completed grid, run or comparison.');
+    for(const name of ['grid_id','baseline_run_id','delivery_id'])if(selected(name).value)value[name]=selected(name).value;
+    if(validate&&value.scenario_run_ids.includes(value.baseline_run_id))throw new Error('Choose the baseline once; remove it from alternative runs.');
+    if(validate&&value.delivery_id&&!(catalogue.deliveries||[]).some(row=>row.id===value.delivery_id&&row.eligible))
+      throw new Error('Choose a current completed delivery with its retained dataset catalogue.');
+    if(validate&&!sourceIDs.length&&!value.delivery_id&&!value.grid_id&&!value.baseline_run_id&&!value.scenario_run_ids.length&&!value.comparison_ids.length)throw new Error('Select a completed delivery, original source files, a completed grid, run or comparison.');
     return value;
   }
+  const canonical=value=>JSON.stringify(value,(key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(name=>[name,item[name]])):item);
+  const operationKey=workspace=>'upstate-gis-operation:'+workspace;
+  function saveOperation(workspace,value=pending){try{localStorage.setItem(operationKey(workspace)+':'+encodeURIComponent(value.key),JSON.stringify(value));}catch{}}
   function operation(action,payload){
-    const key=JSON.stringify({workspace:activeWorkspace,action,payload});
+    const key=canonical({workspace:activeWorkspace,action,payload});
     if(pending?.key===key)return pending;
+    try{const retained=JSON.parse(localStorage.getItem(operationKey(activeWorkspace)+':'+encodeURIComponent(key))||'null');
+      if(retained?.key===key&&typeof retained.operation_id==='string'&&/^gis-[0-9a-f]{32}$/.test(retained.operation_id)){
+        pending=retained;return pending;
+      }
+    }catch{}
     const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
-    pending={key,operation_id:'gis-'+[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')};return pending;
+    pending={key,operation_id:'gis-'+[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('')};
+    saveOperation(activeWorkspace);return pending;
   }
   async function submit(action,payload){
-    const workspace=activeWorkspace,op=operation(action,payload);
+    const workspace=activeWorkspace,body=JSON.parse(JSON.stringify(payload)),op=operation(action,body);
     let task;
-    try{task=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:op.operation_id}});}
+    try{task=await api('/api/actions',{method:'POST',body:{workspace,action,payload:body,operation_id:op.operation_id}});}
     catch(original){
-      // A lost response can already have committed the original queued operation.
-      try{const state=await api('/api/state?'+new URLSearchParams({workspace}));task=state.tasks.find(x=>x.operation_id===op.operation_id);}catch{}
+      // Reconcile the same retained request after a lost response, including reload.
+      try{const state=await api('/api/state?'+new URLSearchParams({workspace}));
+        task=state.tasks.find(x=>x.operation_id===(op.accepted_operation_id||op.operation_id));
+      }catch{}
       if(!task)throw original;
     }
+    if(task?.workspace!==workspace||task.action!==action||canonical(task.payload)!==canonical(body))
+      throw new Error('The returned GIS task belongs to a different original selection.');
+    const accepted=op.accepted_operation_id||op.operation_id;
+    if(task.operation_id!==accepted){
+      if(op.accepted_operation_id||!['queued','running'].includes(task.state))
+        throw new Error('The returned GIS task changed its accepted operation identity.');
+      op.accepted_operation_id=task.operation_id;
+    }
+    saveOperation(workspace,op);
     if(!root||activeWorkspace!==workspace||getState()?.workspace_key!==workspace)return;
     toast('GIS operation queued in the original task list.');await showTask(task.id);await refreshState({force:true});
   }
@@ -106,10 +195,8 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
   async function submitAdoption(event){
     event.preventDefault();event.stopPropagation();error('');const form=event.currentTarget,button=event.submitter;button.disabled=true;
     try{
-      const layer_ids=[...form.querySelectorAll('[name="adoption_layer"]:checked')].map(x=>x.value);
-      if(!layer_ids.length)throw new Error('Choose at least one received working layer.');
-      const payload={receipt_id:form.dataset.gisAdopt,title:form.querySelector('[name="adoption_title"]').value.trim(),reason:form.querySelector('[name="adoption_reason"]').value.trim(),layer_ids};
-      if(!payload.title||!payload.reason)throw new Error('Name the source edition and explain its adoption.');
+      syncAdoption(form);retainAdoption(form);
+      const payload=adoptionPayload(form);
       await submit('gis.project.adopt-sources',payload);
     }catch(e){error(e.message);}finally{button.disabled=false;}
   }
@@ -153,15 +240,60 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       return JSON.parse(JSON.stringify(value));
     }finally{if(token===intakeVersion)intakeLoading=false;}
   }
+
+  function deliverySelection(delivery){
+    if(typeof delivery.project_crs!=='string'||!delivery.project_crs.trim())
+      throw new Error('The completed delivery has no retained display coordinate system.');
+    return {title:(delivery.title+' · editable GIS').slice(0,240),project_crs:delivery.project_crs,
+      delivery_id:delivery.id,sources:[],scenario_run_ids:[],comparison_ids:[],
+      include_grid:true,notes:[]};
+  }
+  async function createForDelivery(request){
+    const frozen=JSON.parse(JSON.stringify(request||{}));
+    const workspace=getState()?.workspace_key;
+    if(!root||!workspace||frozen.workspace_key!==workspace)
+      throw new Error('Open the original delivery workspace before preparing its GIS project.');
+    if(!/^[0-9a-f]{64}$/.test(frozen.delivery_id||''))
+      throw new Error('Choose an original completed delivery identity.');
+    const token=++intakeVersion,element=root;
+    controller?.abort();const own=new AbortController();controller=own;intakeLoading=true;
+    try{
+      const data=await api('/api/gis/projects?'+new URLSearchParams({workspace}),{signal:own.signal});
+      if(token!==intakeVersion||own.signal.aborted||root!==element||getState()?.workspace_key!==workspace)
+        throw new Error('The workspace or delivery selection changed while opening the GIS project.');
+      if(data.workspace_key!==workspace)throw new Error('GIS response belongs to a different workspace.');
+      const delivery=data.deliveries?.find(row=>row.id===frozen.delivery_id);
+      if(!delivery?.eligible){
+        activeWorkspace=workspace;catalogue=data;signature=stateSignature(getState());
+        // Keep the selected historical edition visible in the existing desk;
+        // its original download and atlas remain unchanged.
+        saveSelection({title:delivery?.title||'Retained delivery',delivery_id:frozen.delivery_id,
+          project_crs:delivery?.project_crs||'',sources:[],scenario_run_ids:[],
+          comparison_ids:[],include_grid:true,notes:[]});
+        render();
+        const reason=delivery?.reason||'Receive the current GIS component and complete the delivery dataset catalogue.';
+        error(reason);
+        return {delivery_id:frozen.delivery_id,eligible:false,reason};
+      }
+      const value=deliverySelection(delivery);
+      activeWorkspace=workspace;catalogue=data;signature=stateSignature(getState());
+      saveSelection(value);render();
+      root.querySelector('[data-gis-export]')?.scrollIntoView({block:'start'});
+      return JSON.parse(JSON.stringify(value));
+    }finally{if(token===intakeVersion)intakeLoading=false;}
+  }
   async function load(force=false){
     if(!root||intakeLoading)return;const state=getState();const key=state?.workspace_key;if(!key)return;
     const next=stateSignature(state);if(!force&&signature===next)return;
     if(activeWorkspace!==key){activeWorkspace=key;lastSelection=null;pending=null;catalogue=null;}
-    if(catalogue&&root.querySelector('[data-gis-export]')){try{lastSelection=formSelection();}catch{}}
+    if(catalogue&&root.querySelector('[data-gis-export]')){try{lastSelection=formSelection(false);}catch{}}
     controller?.abort();const own=new AbortController();controller=own;
     try{const data=await api('/api/gis/projects?'+new URLSearchParams({workspace:key}),{signal:own.signal});
       if(own.signal.aborted||getState()?.workspace_key!==key||!root)return;
       if(data.workspace_key!==key)throw new Error('GIS response belongs to a different workspace.');
+      // Preserve edits made while this catalogue request was in flight,
+      // including an intentionally incomplete selection.
+      if(catalogue&&root.querySelector('[data-gis-export]'))lastSelection=formSelection(false);
       catalogue=data;signature=next;render();
     }catch(e){if(e.name!=='AbortError')error(e.message);}
   }
@@ -171,6 +303,6 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
       else render();void load(true);},
     update(state){if(root&&getState()?.workspace_key===state?.workspace_key)void load();},
     detach(){intakeVersion++;intakeLoading=false;controller?.abort();controller=null;root=null;},
-    createForSources
+    createForSources,createForDelivery
   };
 }
