@@ -1,0 +1,155 @@
+Title: C17002: Ratio of Income to Poverty ...
+
+URL Source: https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US
+
+Published Time: Wed, 30 Sep 2026 10:28:22 GMT
+
+Markdown Content:
+View important guidance for comparing ACS data over time or to other sources [here](https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data.html).
+
+Table controls. Navigate with tab or arrow keys. In a column header, press enter to toggle sorting. Press control enter to open the column menu. Row groups can be expanded or contracted with the enter key.
+
+![Image 1](https://data.census.gov/assets/chevron-down-38f57bb8.svg)Total:
+
+Under .50
+
+.50 to .99
+
+1.00 to 1.24
+
+1.25 to 1.49
+
+1.50 to 1.84
+
+1.85 to 1.99
+
+2.00 and over
+
+332,143,258
+
+±27,427
+
+20,032,302
+
+±156,822
+
+20,321,965
+
+±169,986
+
+11,653,744
+
+±131,250
+
+12,265,588
+
+±131,711
+
+17,922,976
+
+±134,422
+
+8,675,171
+
+±108,231
+
+241,271,512
+
+±430,338
+
+* * *
+
+Key Table Information
+
+Table Title
+
+## Ratio of Income to Poverty Level in the Past 12 Months
+
+Table ID
+
+ACSDT1Y2024.C17002
+
+Survey/Program
+
+American Community Survey
+
+Year
+
+2024
+
+Dataset
+
+ACS 1-Year Estimates Detailed Tables
+
+Source
+
+U.S. Census Bureau, 2024 American Community Survey, 1-Year Estimates
+
+Dataset Universe
+
+The dataset universe of the American Community Survey (ACS) is the U.S. resident population and housing. For more information about ACS residence rules, see the [ACS Design and Methodology Report](https://www.census.gov/programs-surveys/acs/methodology/design-and-methodology.html). Note that each table describes the specific universe of interest for that set of estimates.
+
+Methodology
+
+Unit(s) of Observation
+
+American Community Survey (ACS) data are collected from individuals living in housing units and group quarters, and about housing units whether occupied or vacant. For more information about ACS sampling and data collection, see the [ACS Design and Methodology Report](https://www.census.gov/programs-surveys/acs/methodology/design-and-methodology.html).
+
+Geography Coverage
+
+ACS data generally reflect the geographic boundaries of legal and statistical areas as of January 1 of the estimate year. For more information, see [Geography Boundaries by Year](https://www.census.gov/programs-surveys/acs/geography-acs/geography-boundaries-by-year.html).
+
+Estimates of urban and rural populations, housing units, and characteristics reflect boundaries of urban areas defined based on 2020 Census data. As a result, data for urban and rural areas from the ACS do not necessarily reflect the results of ongoing urbanization.
+
+Sampling
+
+The ACS consists of two separate samples: housing unit addresses and group quarters facilities. Independent housing unit address samples are selected for each county or county-equivalent in the U.S. and Puerto Rico, with sampling rates depending on a measure of size for the area. For more information on sampling in the ACS, see the [Accuracy of the Data document](https://www.census.gov/programs-surveys/acs/technical-documentation/code-lists.html).
+
+Confidentiality
+
+The Census Bureau has modified or suppressed some estimates in ACS data products to protect respondents' confidentiality. Title 13 United States Code, Section 9, prohibits the Census Bureau from publishing results in which an individual's data can be identified. For more information on confidentiality protection in the ACS, see the [Accuracy of the Data document](https://www.census.gov/programs-surveys/acs/technical-documentation/code-lists.html).
+
+Technical Documentation/Methodology
+
+Information about the American Community Survey (ACS) can be found on the [ACS website](https://www.census.gov/programs-surveys/acs.html). Supporting documentation including code lists, subject definitions, data accuracy, and statistical testing, and a full list of ACS tables and table shells (without estimates) can be found on the [Technical Documentation](https://www.census.gov/programs-surveys/acs/technical-documentation/code-lists.html) section of the ACS website.
+
+Sample size and data quality measures (including coverage rates, allocation rates, and response rates) can be found on the American Community Survey website in the [Methodology](https://www.census.gov/acs/www/methodology/sample_size_and_data_quality/) section.
+
+Data are based on a sample and are subject to sampling variability. The degree of uncertainty for an estimate arising from sampling variability is represented through the use of a margin of error. The value shown here is the 90 percent margin of error. The margin of error can be interpreted roughly as providing a 90 percent probability that the interval defined by the estimate minus the margin of error and the estimate plus the margin of error (the lower and upper confidence bounds) contains the true value. In addition to sampling variability, the ACS estimates are subject to nonsampling error (for a discussion of nonsampling variability, see [ACS Technical Documentation](https://www.census.gov/programs-surveys/acs/technical-documentation.html)). The effect of nonsampling error is not represented in these tables.
+
+Users must consider potential differences in geographic boundaries, questionnaire content or coding, or other methodological issues when comparing ACS data from different years. Statistically significant differences shown in ACS Comparison Profiles, or in data users' own analysis, may be the result of these differences and thus might not necessarily reflect changes to the social, economic, housing, or demographic characteristics being compared. For more information, see [Comparing ACS Data](https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data.html).
+
+Weights
+
+ACS estimates are obtained from a raking ratio estimation procedure that results in the assignment of two sets of weights: a weight to each sample person record and a weight to each sample housing unit record. Estimates of person characteristics are based on the person weight. Estimates of family, household, and housing unit characteristics are based on the housing unit weight. For any given geographic area, a characteristic total is estimated by summing the weights assigned to the persons, households, families or housing units possessing the characteristic in the geographic area. For more information on weighting and estimation in the ACS, see the [Accuracy of the Data document](https://www.census.gov/programs-surveys/acs/technical-documentation/code-lists.html).
+
+Although the American Community Survey (ACS) produces population, demographic and housing unit estimates, the decennial census is the official source of population totals for April 1st of each decennial year. In between censuses, the Census Bureau's Population Estimates Program produces and disseminates the official estimates of the population for the nation, states, counties, cities, and towns and estimates of housing units and the group quarters population for states and counties.
+
+Table Information
+
+API Information
+
+American Community Survey (ACS) data is available via API. For more information on available APIs, please see Census Developers page at [API Information](https://www.census.gov/data/developers/data-sets.html).
+
+Symbols
+
+Explanation of Symbols:
+
+-The estimate could not be computed because there were an insufficient number of sample observations. For a ratio of medians estimate, one or both of the median estimates falls in the lowest interval or highest interval of an open-ended distribution. For a 5-year median estimate, the margin of error associated with a median was larger than the median itself.
+N The estimate or margin of error cannot be displayed because there were an insufficient number of sample cases in the selected geographic area.
+(X)The estimate or margin of error is not applicable or not available.
+median-The median falls in the lowest interval of an open-ended distribution (for example "2,500-")
+median+The median falls in the highest interval of an open-ended distribution (for example "250,000+").
+**The margin of error could not be computed because there were an insufficient number of sample observations.
+***The margin of error could not be computed because the median falls in the lowest interval or highest interval of an open-ended distribution.
+*****A margin of error is not appropriate because the corresponding estimate is controlled to an independent population or housing estimate. Effectively, the corresponding estimate has no sampling error and the margin of error may be treated as zero.
+
+Additional Information
+
+Contact Information
+
+Contact the Census Bureau Customer Help Center at 1-800-923-8282 or submit a question at ask.census.gov.
+
+Suggested Citation
+
+U.S. Census Bureau. "Ratio of Income to Poverty Level in the Past 12 Months" American Community Survey, ACS 1-Year Estimates Detailed Tables, Table C17002, 2024, https://data.census.gov/table/ACSDT1Y2024.C17002?q=C17002: Accessed on October 13, 2026.

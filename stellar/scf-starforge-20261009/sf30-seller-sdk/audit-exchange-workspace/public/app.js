@@ -1,3 +1,4 @@
+import {mountRecipientOperator} from "/recipient-operator.js";
 import {mountCorrectionDesk} from "/corrections.js";
 import {AuditExchangeClient, AuditExchangeError, auditRequestId, auditFileBase64, auditSha256} from "/client.mjs";
 
@@ -12,7 +13,7 @@ const S={
   analysisPollTimer:null,analysisPollBusy:false,analysisRefreshPaused:false,activeAnalysisId:null,
   tabId:sessionStorage.getItem("audit-exchange-tab")||auditRequestId()
 };
-let correctionDesk=null;
+let correctionDesk=null,recipientDesk=null;
 sessionStorage.setItem("audit-exchange-tab",S.tabId);
 const pendingKey=id=>"audit-exchange:pending:"+id;
 const requestOf=row=>row?.envelope?.requestId||row?.requestId;
@@ -102,6 +103,7 @@ function updateControls(){
   for(const form of all("form"))form.inert=S.busy;
   document.body.setAttribute("aria-busy",String(S.busy));
   correctionDesk?.sync();
+  recipientDesk?.sync();
 }
 async function run(label,work){
   if(S.busy)return;
@@ -706,7 +708,7 @@ $("recover-file-form").addEventListener("submit",event=>{event.preventDefault();
   }).then(restored=>{if(!restored)throw new Error("Another original request is already retained for this workspace.");});
   await reconcilePending();notice("Opened the complete original request. Recover it with its original identity and inputs.");
 });});
-$("recover-request").addEventListener("click",()=>run("Recover original retained request",async()=>{await reconcilePending();const actionName=S.pending?.envelope.action,originalInputs=clone(S.pending?.envelope.inputs||{}),result=await executePending();await refresh();if(result?.sourceId&&result?.revisionId)await openSource(result.sourceId,result.revisionId);else if(["analysis.run","analysis.resume"].includes(actionName))renderAnalysisResult(result);else if(actionName==="export.create")await download(result);else if(actionName==="return.apply")await correctionDesk.recovered(result,originalInputs);else if(actionName==="workspace.receive"){$("receive-result").hidden=false;$("receive-result-json").textContent=json(result);}notice("Recovered the original "+actionName+" result.");}));
+$("recover-request").addEventListener("click",()=>run("Recover original retained request",async()=>{await reconcilePending();const actionName=S.pending?.envelope.action,originalInputs=clone(S.pending?.envelope.inputs||{}),result=await executePending();await refresh();if(result?.sourceId&&result?.revisionId)await openSource(result.sourceId,result.revisionId);else if(["analysis.run","analysis.resume"].includes(actionName))renderAnalysisResult(result);else if(actionName==="export.create")await download(result);else if(actionName==="return.apply")await correctionDesk.recovered(result,originalInputs);else if(actionName.startsWith("recipient."))await recipientDesk.recovered(actionName,result);else if(actionName==="workspace.receive"){$("receive-result").hidden=false;$("receive-result-json").textContent=json(result);}notice("Recovered the original "+actionName+" result.");}));
 $("download-request").addEventListener("click",()=>{if(S.pending)downloadBytes(json(S.pending)+"\n","audit-original-request-"+S.pending.envelope.requestId+".json","application/json");});
 $("close-refused").addEventListener("click",()=>run("Close refused original request",async()=>{await reconcilePending();if(S.pending?.status!=="refused")throw new Error("Recover the original result before closing this request.");await closePending(null,"server refused");await refresh();notice("Closed the refused request. Review the current workspace before preparing a new change.");}));
 document.addEventListener("input",event=>{if(event.target.matches("[data-draft]")){if(event.target.form?.id)S.dirtyForms.add(event.target.form.id);queueDraft();}if(event.target===$("actor"))localStorage.setItem("audit-exchange:operator",$("actor").value);});
@@ -718,4 +720,5 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 $("server-url").value=location.origin+"/";$("actor").value=localStorage.getItem("audit-exchange:operator")||"";
 try{const previous=JSON.parse(localStorage.getItem("audit-exchange:last-connection")||"null");if(previous&&new URL(previous.url).origin===location.origin){$("server-url").value=previous.url;$("workspace-pin").value=previous.workspaceId;}}catch{}
 correctionDesk=mountCorrectionDesk({state:()=>S.state,busy:()=>S.busy,pending:()=>S.pending,tabId:()=>S.tabId,read:(...args)=>S.client.read(...args),mutate,run,operator,download,downloadBytes,exportFile,openSource,notice,fileBase64:auditFileBase64});
+recipientDesk=mountRecipientOperator({state:()=>S.state,busy:()=>S.busy,pending:()=>S.pending,read:(...args)=>S.client.read(...args),mutate,run,operator,download,downloadBytes,notice,fileBase64:auditFileBase64,table});
 syncNativeOptions();updateControls();

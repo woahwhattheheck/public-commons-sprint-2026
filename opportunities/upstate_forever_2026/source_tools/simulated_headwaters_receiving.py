@@ -535,7 +535,8 @@ def _latest_native_study_source(ws, files, ensemble_id, captured_operation_id):
     return latest_id
 
 
-def _native_study_source(ws, files, check, case, delivery=None, *, report_selection=None):
+def _native_study_source(ws, files, check, case, delivery=None, *, report_selection=None,
+                         reference_basis=None):
     """Reopen the report-bound study source from the same captured native course."""
     from model.common import digest, identifier
     from model import observed_context
@@ -555,11 +556,28 @@ def _native_study_source(ws, files, check, case, delivery=None, *, report_select
     selection = operation.get("selection", {})
     if (operation.get("schema") != "upstate.ensemble-study-source/v1"
             or operation.get("id") != operation_id or digest(selection) != operation_id
-            or operation.get("state") != "complete" or operation.get("native_state") != "complete"
+            or operation.get("state") != "complete"
+            or (reference_basis is None and operation.get("native_state") != "complete")
             or operation.get("workspace_id") != ws.project["id"]
             or selection.get("workspace_id") != ws.project["id"]
             or operation.get("ensemble_id") != key or selection.get("ensemble_id") != key):
         raise ValueError("Receiving changed the original completed scientific study operation")
+    if reference_basis is not None:
+        from source_tools.geographic_archive import reference_snapshot
+        from model import ensemble_report
+        from model.ensembles import Ensembles
+        snapshot = reference_snapshot(ws, case, reference_basis)
+        native_release = files.json("ensemble_reports/" + selection["report_id"] + "/report.json")
+        native_report = native_release["report"]
+        records = {item["run_id"]: ws.inspect_run(item["run_id"])
+                   for member in snapshot["plan"]["members"] for item in member["runs"]}
+        if (operation.get("native_state") != native_report["state"]
+                or operation.get("progress") != native_report.get("progress", {})
+                or native_report.get("progress") != reference_basis["native_progress"]
+                or selection["summary_signature"] != ensemble_report.summary_signature(native_report)
+                or selection["run_signature"] != native_report["run_signature"]
+                or selection["run_signature"] != Ensembles(ws)._signature(records)):
+            raise ValueError("Reference source does not retain the original full-design progress")
     latest_operation_id = _latest_native_study_source(ws, files, key, operation_id)
     source = operation["source"]
     rendered = operation["report"]
@@ -609,6 +627,8 @@ def _native_study_source(ws, files, check, case, delivery=None, *, report_select
         raise ValueError("The final mapped report does not contain this exact scientific study source")
     return {
         "kind": "native_study_source", **actual,
+        **({"completion_scope": "reference", "native_state": operation["native_state"],
+            "reference_basis": reference_basis} if reference_basis is not None else {}),
         "latest_source_operation_id": latest_operation_id,
         "selected_source_is_latest": latest_operation_id == operation_id,
         "state": "complete", "delivery_id": delivery["id"] if delivery is not None else None,
@@ -741,6 +761,32 @@ def _field_qc_comparison(ws, files, check, receipt, delivery):
     observed_context.bind(ws, result["delivery_selection"])
     return {"kind": "field_qc_comparison", "operation_id": key,
             "inspection": result}
+
+
+def _field_report_adoption(ws, files, check, receipt):
+    """Reopen the same original five-report adoption using received modules."""
+    from model import field_report_adoption
+    from model.common import identifier
+    key = identifier(check["operation_id"])
+    captured = receipt.get("field_report_adoption")
+    binding = receipt.get("field_report_adoption_archive")
+    if (not isinstance(captured, dict) or captured.get("operation_id") != key
+            or captured.get("status") != "complete"
+            or captured.get("project_id") != ws.project["id"]
+            or captured.get("field_operation_id") != receipt["fieldwork_operation_id"]
+            or captured.get("plan_id") != receipt["fieldwork_plan_id"]
+            or not isinstance(binding, dict) or binding != check.get("expected")):
+        raise ValueError("Retain the explicit same-case field report adoption")
+    # These comparisons bind the original and selected reports, journal and
+    # historical plan revisions to the actual complete archive manifest.
+    files.descriptors(ws.root, binding["retained_files"])
+    actual = field_report_adoption.inspect_adoption(ws, key)
+    actual_binding = field_report_adoption.archive_binding(ws, key)
+    if actual != captured or actual_binding != binding:
+        raise ValueError("Cold receiving changed the adopted original field presentation")
+    files.descriptors(ws.root, actual_binding["retained_files"])
+    return {"kind": "field_report_adoption", "operation_id": key,
+            "inspection": actual, "archive_binding": actual_binding}
 
 
 def _customer_review(ws, files, check, receipt):
@@ -995,6 +1041,11 @@ def _inspect(request):
     checks = request["extra_checks"]
     if not isinstance(checks, list):
         raise ValueError("Extra receiving checks must be an explicit list")
+    if receipt.get("field_report_adoption") is not None:
+        adoption_checks = [item for item in checks
+                           if isinstance(item, dict) and item.get("kind") == "field_report_adoption"]
+        if len(adoption_checks) != 1:
+            raise ValueError("Cold receiving requires the selected field adoption exactly once")
     extra = []
     for check in checks:
         if not isinstance(check, dict):
@@ -1014,6 +1065,8 @@ def _inspect(request):
             extra.append(_customer_review(ws, files, check, receipt))
         elif check.get("kind") == "field_qc_comparison":
             extra.append(_field_qc_comparison(ws, files, check, receipt, delivery))
+        elif check.get("kind") == "field_report_adoption":
+            extra.append(_field_report_adoption(ws, files, check, receipt))
         elif check.get("kind") == "field_campaign":
             from model.simulated_fieldwork import inspect_campaign
             result = inspect_campaign(ws, check["operation_id"])

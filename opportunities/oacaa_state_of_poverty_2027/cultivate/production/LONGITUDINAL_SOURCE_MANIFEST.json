@@ -1,0 +1,195 @@
+{
+  "schema": "tjl.oacaa.longitudinal-source-manifest.v1",
+  "retrievedAt": "2026-10-13",
+  "sources": {
+    "current": {
+      "title": "Census 2024 five-year C17002 via Census Reporter",
+      "url": "https://data.census.gov/table/ACSDT5Y2024.C17002?g=040XX00US39",
+      "locator": "Ohio and all 88 counties / C17002 cells 001–008",
+      "publisher": "U.S. Census Bureau; structured data served by Census Reporter",
+      "retrievedAt": "2026-10-13",
+      "note": "Exact 2020–2024 source response retained.",
+      "rights": "U.S. Census statistical data"
+    },
+    "sf3": {
+      "title": "Census 2000 SF3 P088",
+      "url": "https://data.census.gov/table/DECENNIALSF32000.P088?g=040XX00US39,050XX00US39",
+      "locator": "Ohio / ten original cells / income in 1999",
+      "publisher": "U.S. Census Bureau",
+      "retrievedAt": "2026-10-13",
+      "note": "Retained complete public table text.",
+      "rights": "U.S. Census statistical data"
+    },
+    "acs2010": {
+      "title": "2006–2010 ACS five-year C17002",
+      "url": "https://data.census.gov/table/ACSDT5Y2010.C17002?g=040XX00US39",
+      "locator": "Ohio / eight estimate/MOE pairs / source footnote",
+      "publisher": "U.S. Census Bureau",
+      "retrievedAt": "2026-10-13",
+      "note": "Retained complete public table text.",
+      "rights": "U.S. Census statistical data"
+    }
+  },
+  "inputs": {
+    "current": {
+      "path": "sources/Ohio-ACS2024-fiveyear-C17002-original.json",
+      "bytes": 35915,
+      "sha256": "d2d9d70df9b49ca20bc6270d40664b82687d11e4bca0986b0930c6bb1d568c1e"
+    },
+    "sf3": {
+      "path": "sources/Ohio-Census2000-SF3-P088-original-public-table.txt",
+      "bytes": 10410,
+      "sha256": "edac67b48fac758527c44b710926a5b9cb67cc8db9e57de381492b3aa5372086"
+    },
+    "acs2010": {
+      "path": "sources/Ohio-ACS2010-fiveyear-C17002-original-public-table.txt",
+      "bytes": 4634,
+      "sha256": "bf07cd5b4ade7feb5fca70084439ef2c2694680174396de316b545a4831705f2"
+    },
+    "ocr": {
+      "path": "sources/OACAA2026-Tables8-9-11-retained-OCR.json",
+      "bytes": 19138,
+      "sha256": "c04896bc774e150a54390ce202135a8abf66c07274d1c232d3b4de2644ee520d"
+    },
+    "redistribution2024": {
+      "path": "sources/ACS2024-oneyear-C17002-Ohio-US-original-redistribution.json",
+      "bytes": 1498,
+      "sha256": "3b412c3044178f82d51aff0a255a321ee334ae567c42ecb0a79e86934b636d41"
+    }
+  },
+  "annual": [
+    {
+      "year": 2018,
+      "geo": "Ohio",
+      "url": "https://data.census.gov/table/ACSDT1Y2018.C17002?g=040XX00US39",
+      "format": "census-public-table",
+      "path": "sources/ACS2018-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4606,
+      "sha256": "b205efa061e6beeff6ca20e6c9e8eeb3bb1292fb900b32e90bf2b9d92e2a7c87"
+    },
+    {
+      "year": 2018,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2018.C17002?g=010XX00US",
+      "format": "census-public-table",
+      "path": "sources/ACS2018-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4631,
+      "sha256": "c277a8ce26f417197209c7cc81826e6a811008cc58597999cb0e0ac6dda9f95c"
+    },
+    {
+      "year": 2019,
+      "geo": "Ohio",
+      "url": "https://data.census.gov/table/ACSDT1Y2019.C17002?g=040XX00US39",
+      "format": "census-public-table",
+      "path": "sources/ACS2019-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4604,
+      "sha256": "8ed0d6551283333710e11671d684184153a5c919a41c1da2aee054fd60bcc6e3"
+    },
+    {
+      "year": 2019,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2019.C17002?g=010XX00US",
+      "format": "census-public-table",
+      "path": "sources/ACS2019-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4629,
+      "sha256": "3d273d813343c9e5f2e89f2195c659a557241adace8a3941e0a51644e369a383"
+    },
+    {
+      "year": 2021,
+      "geo": "Ohio",
+      "url": "https://data.census.gov/table/ACSDT1Y2021.C17002?g=040XX00US39",
+      "format": "census-public-table",
+      "path": "sources/ACS2021-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4409,
+      "sha256": "94bd80766ce6f1f8122a314c1c8b790740fd6849899d9ed5643d7f28d7d5bf08"
+    },
+    {
+      "year": 2021,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2021.C17002?g=010XX00US&y=2021",
+      "format": "census-public-table",
+      "path": "sources/ACS2021-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4442,
+      "sha256": "0381c491f1e3a8b0f020f9cd78afdf8a6e0a5bfde683e483db97a18faa45bcf5"
+    },
+    {
+      "year": 2022,
+      "geo": "Ohio",
+      "url": "https://data.census.gov/table/ACSDT1Y2022.C17002?g=040XX00US39",
+      "format": "census-public-table",
+      "path": "sources/ACS2022-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 4738,
+      "sha256": "e5430f3d0df9a119c320fc1acc371bfbe91d85c000ebfd9d78201c1446241e50"
+    },
+    {
+      "year": 2022,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2022.C17002?g=010XX00US",
+      "format": "census-public-table",
+      "path": "sources/ACS2022-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 4763,
+      "sha256": "11644cf5d246f96898fc9d2ffe68966d14891a0c0a2e4dab2e1f75959e639bad"
+    },
+    {
+      "year": 2023,
+      "geo": "Ohio",
+      "url": "https://data.census.gov/table/ACSDT1Y2023.C17002?g=040XX00US39",
+      "format": "census-public-table",
+      "path": "sources/ACS2023-oneyear-C17002-Ohio-original-public-table.txt",
+      "bytes": 5059,
+      "sha256": "94f299c2cf774e1dd4ec355192c831445cc8c27357e093a6290649be9ac96731"
+    },
+    {
+      "year": 2023,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2023.C17002?g=010XX00US",
+      "format": "census-public-table",
+      "path": "sources/ACS2023-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 5037,
+      "sha256": "4f06b22d4240c695f201d7dac3294f10e8ade5c2c8a49e0a1f9316444f621b28"
+    },
+    {
+      "year": 2024,
+      "geo": "Ohio",
+      "url": "https://api.censusreporter.org/1.0/data/show/acs2024_1yr?table_ids=C17002&geo_ids=04000US39,01000US",
+      "format": "census-reporter",
+      "path": "sources/ACS2024-oneyear-C17002-Ohio-US-original-redistribution.json",
+      "bytes": 1498,
+      "sha256": "3b412c3044178f82d51aff0a255a321ee334ae567c42ecb0a79e86934b636d41"
+    },
+    {
+      "year": 2024,
+      "geo": "US",
+      "url": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US",
+      "format": "census-public-table",
+      "path": "sources/ACS2024-oneyear-C17002-US-original-public-table.txt",
+      "bytes": 8944,
+      "sha256": "aba2ffc6fe6bba12592fca0e036c3b029ee089b13e8f3b292bf314f6a9c743bc"
+    }
+  ],
+  "originalCurrentApiUrl": "https://api.censusreporter.org/1.0/data/show/acs2024_5yr?table_ids=C17002&geo_ids=04000US39,05000US39001,05000US39003,05000US39005,05000US39007,05000US39009,05000US39011,05000US39013,05000US39015,05000US39017,05000US39019,05000US39021,05000US39023,05000US39025,05000US39027,05000US39029,05000US39031,05000US39033,05000US39035,05000US39037,05000US39039,05000US39041,05000US39043,05000US39045,05000US39047,05000US39049,05000US39051,05000US39053,05000US39055,05000US39057,05000US39059,05000US39061,05000US39063,05000US39065,05000US39067,05000US39069,05000US39071,05000US39073,05000US39075,05000US39077,05000US39079,05000US39081,05000US39083,05000US39085,05000US39087,05000US39089,05000US39091,05000US39093,05000US39095,05000US39097,05000US39099,05000US39101,05000US39103,05000US39105,05000US39107,05000US39109,05000US39111,05000US39113,05000US39115,05000US39117,05000US39119,05000US39121,05000US39123,05000US39125,05000US39127,05000US39129,05000US39131,05000US39133,05000US39135,05000US39137,05000US39139,05000US39141,05000US39143,05000US39145,05000US39147,05000US39149,05000US39151,05000US39153,05000US39155,05000US39157,05000US39159,05000US39161,05000US39163,05000US39165,05000US39167,05000US39169,05000US39171,05000US39173,05000US39175",
+  "selection": {
+    "national2024": "Primary Census table values selected; unchanged redistribution retained for exact comparison.",
+    "currentCounty": "Complete2020–2024 source,89geographies; every estimate and margin of error preserved."
+  },
+  "outputs": [
+    {
+      "key": "county",
+      "path": "datasets/ohio-acs5-poverty-ratios-2024.json",
+      "rows": 89,
+      "columns": 28
+    },
+    {
+      "key": "history",
+      "path": "datasets/ohio-poverty-ratio-history.json",
+      "rows": 3,
+      "columns": 13
+    },
+    {
+      "key": "annual",
+      "path": "datasets/ohio-us-annual-poverty-ratios-2018-2024.json",
+      "rows": 14,
+      "columns": 28
+    }
+  ]
+}

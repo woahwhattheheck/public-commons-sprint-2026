@@ -1,0 +1,3164 @@
+{
+  "schema": "tjl.oacaa.longitudinal-concordance.v1",
+  "sourceRepresentation": "The original report excerpts are unchanged retained OCR text; page images have not been visually checked in this source arm.",
+  "table11": {
+    "originalBaselineLabel": "2010",
+    "originalOhio": {
+      "population": "11046987",
+      "below200": "2919858",
+      "rate": "26.4"
+    },
+    "resolvedOhioSource": "2000 Census SF3 P088, income in 1999",
+    "workingDisposition": "Keep the 1999 benchmark clearly identified; show the actual 2006–2010 and 2020–2024 ACS five-year sources separately.",
+    "currentSourcePeriod": "2020–2024",
+    "currentRowsChecked": 88,
+    "currentRowsMatchingEveryCheckedCell": 78,
+    "unmatchedGeographies": [
+      {
+        "geoid": "05000US39059",
+        "name": "Guernsey County, OH",
+        "reason": "OCR row contains merged footer text; original complete span retained."
+      }
+    ],
+    "rows": [
+      {
+        "geography": "Ohio",
+        "geoid": "04000US39",
+        "originalCells": [
+          "Ohio",
+          "11,046,987",
+          "2,919,858",
+          "26.4%",
+          "11,512,055",
+          "3,372,969",
+          "29.3%",
+          "2.9%",
+          "10.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "11,512,055",
+            "received": "11512055",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "3,372,969",
+            "received": "3372969",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "29.3%",
+            "received": "29.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Adams",
+        "geoid": "05000US39001",
+        "originalCells": [
+          "Adams",
+          "27,002",
+          "11,422",
+          "42.3%",
+          "27,097",
+          "12,134",
+          "44.8%",
+          "2.5%",
+          "5.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "27,097",
+            "received": "27097",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "12,134",
+            "received": "12134",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "44.8%",
+            "received": "44.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Allen",
+        "geoid": "05000US39003",
+        "originalCells": [
+          "Allen",
+          "102,300",
+          "31,103",
+          "30.4%",
+          "98,208",
+          "32,864",
+          "33.5%",
+          "3.1%",
+          "10.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "98,208",
+            "received": "98208",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "32,864",
+            "received": "32864",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "33.5%",
+            "received": "33.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Ashland",
+        "geoid": "05000US39005",
+        "originalCells": [
+          "Ashland",
+          "50,238",
+          "13,315",
+          "26.5%",
+          "50,873",
+          "15,884",
+          "31.2%",
+          "4.7%",
+          "17.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "50,873",
+            "received": "50873",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "15,884",
+            "received": "15884",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.2%",
+            "received": "31.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Ashtabula",
+        "geoid": "05000US39007",
+        "originalCells": [
+          "Ashtabula",
+          "100,870",
+          "32,803",
+          "32.5%",
+          "93,883",
+          "37,288",
+          "39.7%",
+          "7.2%",
+          "22.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "93,883",
+            "received": "93883",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "37,288",
+            "received": "37288",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "39.7%",
+            "received": "39.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Athens",
+        "geoid": "05000US39009",
+        "originalCells": [
+          "Athens",
+          "53,844",
+          "25,513",
+          "47.4%",
+          "54,170",
+          "22,671",
+          "41.9%",
+          "-5.5%",
+          "-11.7%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "54,170",
+            "received": "54170",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "22,671",
+            "received": "22671",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "41.9%",
+            "received": "41.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Auglaize",
+        "geoid": "05000US39011",
+        "originalCells": [
+          "Auglaize",
+          "45,636",
+          "9,263",
+          "20.3%",
+          "45,524",
+          "9,053",
+          "19.9%",
+          "-0.4%",
+          "-2.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "45,524",
+            "received": "45524",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,053",
+            "received": "9053",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "19.9%",
+            "received": "19.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Belmont",
+        "geoid": "05000US39013",
+        "originalCells": [
+          "Belmont",
+          "66,997",
+          "24,728",
+          "36.9%",
+          "61,591",
+          "21,116",
+          "34.3%",
+          "-2.6%",
+          "-7.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "61,591",
+            "received": "61591",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "21,116",
+            "received": "21116",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.3%",
+            "received": "34.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Brown",
+        "geoid": "05000US39015",
+        "originalCells": [
+          "Brown",
+          "41,684",
+          "13,185",
+          "31.6%",
+          "43,229",
+          "15,032",
+          "34.8%",
+          "3.1%",
+          "9.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "43,229",
+            "received": "43229",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "15,032",
+            "received": "15032",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.8%",
+            "received": "34.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Butler",
+        "geoid": "05000US39017",
+        "originalCells": [
+          "Butler",
+          "321,387",
+          "68,274",
+          "21.2%",
+          "380,888",
+          "99,652",
+          "26.2%",
+          "4.9%",
+          "23.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "380,888",
+            "received": "380888",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "99,652",
+            "received": "99652",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "26.2%",
+            "received": "26.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Carroll",
+        "geoid": "05000US39019",
+        "originalCells": [
+          "Carroll",
+          "28,404",
+          "9,054",
+          "31.9%",
+          "26,199",
+          "8,651",
+          "33.0%",
+          "1.1%",
+          "3.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "26,199",
+            "received": "26199",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "8,651",
+            "received": "8651",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "33.0%",
+            "received": "33.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Champaign",
+        "geoid": "05000US39021",
+        "originalCells": [
+          "Champaign",
+          "38,096",
+          "8,940",
+          "23.5%",
+          "38,293",
+          "9,398",
+          "24.5%",
+          "1.1%",
+          "4.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "38,293",
+            "received": "38293",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,398",
+            "received": "9398",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "24.5%",
+            "received": "24.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Clark",
+        "geoid": "05000US39023",
+        "originalCells": [
+          "Clark",
+          "141,106",
+          "37,904",
+          "26.9%",
+          "131,956",
+          "45,234",
+          "34.3%",
+          "7.4%",
+          "27.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "131,956",
+            "received": "131956",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "45,234",
+            "received": "45234",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.3%",
+            "received": "34.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Clermont",
+        "geoid": "05000US39025",
+        "originalCells": [
+          "Clermont",
+          "176,027",
+          "34,425",
+          "19.6%",
+          "208,925",
+          "48,025",
+          "23.0%",
+          "3.4%",
+          "17.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "208,925",
+            "received": "208925",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "48,025",
+            "received": "48025",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "23.0%",
+            "received": "23.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Clinton",
+        "geoid": "05000US39027",
+        "originalCells": [
+          "Clinton",
+          "39,397",
+          "9, 878",
+          "25.1%",
+          "40,829",
+          "12,946",
+          "31.7%",
+          "6.6%",
+          "26.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "40,829",
+            "received": "40829",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "12,946",
+            "received": "12946",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.7%",
+            "received": "31.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Columbiana",
+        "geoid": "05000US39029",
+        "originalCells": [
+          "Columbiana",
+          "108,138",
+          "35,283",
+          "32.6%",
+          "97,293",
+          "33,611",
+          "34.5%",
+          "1.9%",
+          "5.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "97,293",
+            "received": "97293",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "33,611",
+            "received": "33611",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.5%",
+            "received": "34.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Coshocton",
+        "geoid": "05000US39031",
+        "originalCells": [
+          "Coshocton",
+          "36,240",
+          "11,579",
+          "32.0%",
+          "36,159",
+          "13,707",
+          "37.9%",
+          "6.0%",
+          "18.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "36,159",
+            "received": "36159",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "13,707",
+            "received": "13707",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "37.9%",
+            "received": "37.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Crawford",
+        "geoid": "05000US39033",
+        "originalCells": [
+          "Crawford",
+          "46,296",
+          "14069 ,",
+          "30.4%",
+          "41,131",
+          "14,522",
+          "35.3%",
+          "4.9%",
+          "16.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "41,131",
+            "received": "41131",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "14,522",
+            "received": "14522",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "35.3%",
+            "received": "35.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Cuyahoga",
+        "geoid": "05000US39035",
+        "originalCells": [
+          "uyahoga C",
+          "1,365,658",
+          "397,268",
+          "29.1%",
+          "1,221,489",
+          "392,741",
+          "32.2%",
+          "3.1%",
+          "10.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "1,221,489",
+            "received": "1221489",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "392,741",
+            "received": "392741",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "32.2%",
+            "received": "32.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Darke",
+        "geoid": "05000US39037",
+        "originalCells": [
+          "Darke",
+          "52,534",
+          "13,752",
+          "26.2%",
+          "50,951",
+          "15,810",
+          "31.0%",
+          "4.9%",
+          "18.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "50,951",
+            "received": "50951",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "15,810",
+            "received": "15810",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.0%",
+            "received": "31.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Defiance",
+        "geoid": "05000US39039",
+        "originalCells": [
+          "Defiance",
+          "38,723",
+          "7,573",
+          "19.6%",
+          "37,681",
+          "9,563",
+          "25.4%",
+          "5.8%",
+          "29.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "37,681",
+            "received": "37681",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,563",
+            "received": "9563",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "25.4%",
+            "received": "25.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Delaware",
+        "geoid": "05000US39041",
+        "originalCells": [
+          "Delaware",
+          "107,078",
+          "11895 ,",
+          "11.1%",
+          "224,242",
+          "22,806",
+          "10.2%",
+          "-0.9%",
+          "-8.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "224,242",
+            "received": "224242",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "22,806",
+            "received": "22806",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "10.2%",
+            "received": "10.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Erie",
+        "geoid": "05000US39043",
+        "originalCells": [
+          "Erie",
+          "77,628",
+          "17,993",
+          "23.2%",
+          "73,205",
+          "20,263",
+          "27.7%",
+          "4.5%",
+          "19.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "73,205",
+            "received": "73205",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "20,263",
+            "received": "20263",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.7%",
+            "received": "27.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Fairfield",
+        "geoid": "05000US39045",
+        "originalCells": [
+          "Fairfield",
+          "119,747",
+          "23068 ,",
+          "19.3%",
+          "159,487",
+          "36,002 I",
+          "22.6%",
+          "3.3%",
+          "17.2% ---"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "159,487",
+            "received": "159487",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "36,002 I",
+            "received": "36002",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200_rate",
+            "original": "22.6%",
+            "received": "22.6",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Fayette",
+        "geoid": "05000US39047",
+        "originalCells": [
+          "Fayette",
+          "27,822",
+          "8,122",
+          "29.2%",
+          "28,306",
+          "9,620",
+          "34.0%",
+          "4.8%",
+          "16.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "28,306",
+            "received": "28306",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,620",
+            "received": "9620",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.0%",
+            "received": "34.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Franklin",
+        "geoid": "05000US39049",
+        "originalCells": [
+          "Franklin",
+          "1,045,966",
+          "273,900",
+          "26.2%",
+          "1,303,117",
+          "401,805",
+          "30.8%",
+          "4.6%",
+          "17.7%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "1,303,117",
+            "received": "1303117",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "401,805",
+            "received": "401805",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "30.8%",
+            "received": "30.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Fulton",
+        "geoid": "05000US39051",
+        "originalCells": [
+          "Fulton",
+          "41,597",
+          "8,384",
+          "20.2%",
+          "41,777",
+          "10,831",
+          "25.9%",
+          "5.8%",
+          "28.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "41,777",
+            "received": "41777",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "10,831",
+            "received": "10831",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "25.9%",
+            "received": "25.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Gallia",
+        "geoid": "05000US39053",
+        "originalCells": [
+          "Gallia",
+          "30,069",
+          "12,278",
+          "40.8%",
+          "28,438",
+          "11,474",
+          "40.3%",
+          "-0.5%",
+          "-1.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "28,438",
+            "received": "28438",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "11,474",
+            "received": "11474",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "40.3%",
+            "received": "40.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Geauga",
+        "geoid": "05000US39055",
+        "originalCells": [
+          "Geauga",
+          "89,980",
+          "14,404",
+          "16.0%",
+          "94,451",
+          "16,543",
+          "17.5%",
+          "1.5%",
+          "9.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "94,451",
+            "received": "94451",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "16,543",
+            "received": "16543",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "17.5%",
+            "received": "17.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Greene",
+        "geoid": "05000US39057",
+        "originalCells": [
+          "Greene",
+          "140,103",
+          "29,478",
+          "21.0%",
+          "162,315",
+          "36,044",
+          "22.2%",
+          "1.2%",
+          "5.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "162,315",
+            "received": "162315",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "36,044",
+            "received": "36044",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "22.2%",
+            "received": "22.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Hamilton",
+        "geoid": "05000US39061",
+        "originalCells": [
+          "Hamilton",
+          "826,628",
+          "214,755",
+          "26.0%",
+          "811,927",
+          "240,610",
+          "29.6%",
+          "3.7% \"m",
+          "14.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "811,927",
+            "received": "811927",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "240,610",
+            "received": "240610",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "29.6%",
+            "received": "29.6",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Hancock",
+        "geoid": "05000US39063",
+        "originalCells": [
+          "Hancock",
+          "69,451",
+          "15,123",
+          "21.8%",
+          "73,0",
+          "17 18,427",
+          "25.2%",
+          "3.5%",
+          "15.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "73,0",
+            "received": "73017",
+            "status": "transcription differs; inspect original page"
+          },
+          {
+            "field": "below200",
+            "original": "17 18,427",
+            "received": "18427",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200_rate",
+            "original": "25.2%",
+            "received": "25.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Hardin",
+        "geoid": "05000US39065",
+        "originalCells": [
+          "Hardin",
+          "29,825",
+          "9,503",
+          "31.9%",
+          "28365 ,",
+          "9,338",
+          "32.9%",
+          "1.1%",
+          "3.3%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "28365 ,",
+            "received": "28365",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,338",
+            "received": "9338",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "32.9%",
+            "received": "32.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Harrison",
+        "geoid": "05000US39067",
+        "originalCells": [
+          "Harrison",
+          "15,551",
+          "5,772",
+          "37.1%",
+          "14,043",
+          "5,369",
+          "38.2%",
+          "1.1%",
+          ""
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "14,043",
+            "received": "14043",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "5,369",
+            "received": "5369",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "38.2%",
+            "received": "38.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Henry",
+        "geoid": "05000US39069",
+        "originalCells": [
+          "Henry",
+          "28,649",
+          "6,254",
+          "21.8%",
+          "27,186",
+          "6,657",
+          "24.5%",
+          "2.7%",
+          "12.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "27,186",
+            "received": "27186",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "6,657",
+            "received": "6657",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "24.5%",
+            "received": "24.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Highland",
+        "geoid": "05000US39071",
+        "originalCells": [
+          "Highland",
+          "40,286",
+          "13,362",
+          "33.2%",
+          "42,881",
+          "16,185",
+          "37.7%",
+          "",
+          "13.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "42,881",
+            "received": "42881",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "16,185",
+            "received": "16185",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "37.7%",
+            "received": "37.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Hocking",
+        "geoid": "05000US39073",
+        "originalCells": [
+          "Hocking",
+          "27,447",
+          "9,068",
+          "33.0%",
+          "27,487",
+          "9,898",
+          "36.0%",
+          "3.0%",
+          "9.0% -..m..m"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "27,487",
+            "received": "27487",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,898",
+            "received": "9898",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "36.0%",
+            "received": "36.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Holmes",
+        "geoid": "05000US39075",
+        "originalCells": [
+          "Holmes",
+          "37,953",
+          "15,195",
+          "40.0%",
+          "43,612",
+          "12,397",
+          "28.4%",
+          "11.6% -",
+          "-29.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "43,612",
+            "received": "43612",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "12,397",
+            "received": "12397",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "28.4%",
+            "received": "28.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Huron",
+        "geoid": "05000US39077",
+        "originalCells": [
+          "Huron",
+          "58,652",
+          "15,445",
+          "26.3%",
+          "57,698",
+          "18,288",
+          "31.7%",
+          "5.4%",
+          "20.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "57,698",
+            "received": "57698",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "18,288",
+            "received": "18288",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.7%",
+            "received": "31.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Jackson",
+        "geoid": "05000US39079",
+        "originalCells": [
+          "Jackson",
+          "32,103",
+          "12,532",
+          "39.0%",
+          "32,083",
+          "12,2523",
+          "8.2%",
+          "0.8% -",
+          "-2.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "32,083",
+            "received": "32083",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "12,2523",
+            "received": "12252",
+            "status": "transcription differs; inspect original page"
+          },
+          {
+            "field": "below200_rate",
+            "original": "8.2%",
+            "received": "38.2",
+            "status": "transcription differs; inspect original page"
+          }
+        ]
+      },
+      {
+        "geography": "Jefferson",
+        "geoid": "05000US39081",
+        "originalCells": [
+          "Jefferson",
+          "71,820",
+          "25,103",
+          "35.0%",
+          "62,206",
+          "21,202",
+          "34.1%",
+          "0.9%",
+          "-2.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "62,206",
+            "received": "62206",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "21,202",
+            "received": "21202",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.1%",
+            "received": "34.1",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Knox",
+        "geoid": "05000US39083",
+        "originalCells": [
+          "Knox",
+          "50,963",
+          "15,027",
+          "29.5%",
+          "59,536",
+          "18,185",
+          "30.5%1",
+          ".1%",
+          "3.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "59,536",
+            "received": "59536",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "18,185",
+            "received": "18185",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "30.5%1",
+            "received": "30.5",
+            "status": "transcription differs; inspect original page"
+          }
+        ]
+      },
+      {
+        "geography": "Lake",
+        "geoid": "05000US39085",
+        "originalCells": [
+          "Lake",
+          "224,680",
+          "36,556",
+          "16.3%",
+          "229,226",
+          "48,132",
+          "21.0%",
+          "4.7%",
+          "29.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "229,226",
+            "received": "229226",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "48,132",
+            "received": "48132",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "21.0%",
+            "received": "21.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Lawrence",
+        "geoid": "05000US39087",
+        "originalCells": [
+          "Lawrence",
+          "61,639",
+          "25,968",
+          "42.1%",
+          "56,053",
+          "20,810",
+          "37.1%",
+          "5.0%",
+          "-11.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "56,053",
+            "received": "56053",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "20,810",
+            "received": "20810",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "37.1%",
+            "received": "37.1",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Licking",
+        "geoid": "05000US39089",
+        "originalCells": [
+          "Licking",
+          "141,726",
+          "31,863",
+          "22.5%",
+          "..s.-a... 177,896",
+          "40,836",
+          "23.0%",
+          "0.5%",
+          "2.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "..s.-a... 177,896",
+            "received": "177896",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200",
+            "original": "40,836",
+            "received": "40836",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "23.0%",
+            "received": "23.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Logan",
+        "geoid": "05000US39091",
+        "originalCells": [
+          "Logan",
+          "45,208",
+          "10,974",
+          "24.3%",
+          "45",
+          ",486 13,0552",
+          "8.7%",
+          "4.4%",
+          "18.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "45",
+            "received": "45486",
+            "status": "transcription differs; inspect original page"
+          },
+          {
+            "field": "below200",
+            "original": ",486 13,0552",
+            "received": "13055",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200_rate",
+            "original": "8.7%",
+            "received": "28.7",
+            "status": "transcription differs; inspect original page"
+          }
+        ]
+      },
+      {
+        "geography": "Lorain",
+        "geoid": "05000US39093",
+        "originalCells": [
+          "Lorain",
+          "275,784",
+          "64,023",
+          "23.2%",
+          "308,214",
+          "86,095",
+          "27.9%",
+          "4.7%",
+          "20.3%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "308,214",
+            "received": "308214",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "86,095",
+            "received": "86095",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.9%",
+            "received": "27.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Lucas",
+        "geoid": "05000US39095",
+        "originalCells": [
+          "Lucas",
+          "446,417",
+          "135,038",
+          "30.2%",
+          "419,352",
+          "",
+          "34.8%",
+          "4.6%",
+          "15.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "419,352",
+            "received": "419352",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "",
+            "received": "146071",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.8%",
+            "received": "34.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Madison",
+        "geoid": "05000US39097",
+        "originalCells": [
+          "Madison",
+          "35,612",
+          "8,155",
+          "22.9%",
+          "39,919",
+          "9,161",
+          "22.9%",
+          "0.0%",
+          "0.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "39,919",
+            "received": "39919",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,161",
+            "received": "9161",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "22.9%",
+            "received": "22.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Mahoning",
+        "geoid": "05000US39099",
+        "originalCells": [
+          "Mahoning",
+          "250,542",
+          "77,925",
+          "31.1%",
+          "220,522",
+          "80,371",
+          "36.4%",
+          "5.3%",
+          "17.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "220,522",
+            "received": "220522",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "80,371",
+            "received": "80371",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "36.4%",
+            "received": "36.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Marion",
+        "geoid": "05000US39101",
+        "originalCells": [
+          "Marion",
+          "61,415",
+          "16,780",
+          "27.3%",
+          "59,436",
+          "21,740",
+          "36.6%",
+          "9.3%",
+          "33.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "59,436",
+            "received": "59436",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "21,740",
+            "received": "21740",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "36.6%",
+            "received": "36.6",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Medina",
+        "geoid": "05000US39103",
+        "originalCells": [
+          "--Medina -",
+          "149,347",
+          "21,430",
+          "14.3%",
+          "182,007",
+          "30,967",
+          "17.0%",
+          "",
+          ""
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "182,007",
+            "received": "182007",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "30,967",
+            "received": "30967",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "17.0%",
+            "received": "17.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Meigs",
+        "geoid": "05000US39105",
+        "originalCells": [
+          "Meigs",
+          "22,768",
+          "10,189",
+          "44.8%",
+          "21,514",
+          "10,132",
+          "47.1%",
+          "",
+          ""
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "21,514",
+            "received": "21514",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "10,132",
+            "received": "10132",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "47.1%",
+            "received": "47.1",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Mercer",
+        "geoid": "05000US39107",
+        "originalCells": [
+          "Mercer",
+          "40,359",
+          "8,503",
+          "21.1%",
+          "41,656",
+          "9,416",
+          "22.6%",
+          "1.5%",
+          "7.3%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "41,656",
+            "received": "41656",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,416",
+            "received": "9416",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "22.6%",
+            "received": "22.6",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Miami",
+        "geoid": "05000US39109",
+        "originalCells": [
+          "Miami",
+          "97,256",
+          "21,045",
+          "21",
+          "26, 109,175.6%",
+          "127",
+          "2.3%",
+          "23.9% 10.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "26, 109,175.6%",
+            "received": "109175",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200",
+            "original": "127",
+            "received": "26127",
+            "status": "transcription differs; inspect original page"
+          },
+          {
+            "field": "below200_rate",
+            "original": "2.3%",
+            "received": "23.9",
+            "status": "transcription differs; inspect original page"
+          }
+        ]
+      },
+      {
+        "geography": "Monroe",
+        "geoid": "05000US39111",
+        "originalCells": [
+          "Monroe",
+          "14,995",
+          "5,700",
+          "38.0%",
+          "13,120",
+          "5,096",
+          "38.8%",
+          "0.8%",
+          "2.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "13,120",
+            "received": "13120",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "5,096",
+            "received": "5096",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "38.8%",
+            "received": "38.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Montgomery",
+        "geoid": "05000US39113",
+        "originalCells": [
+          "Montgomery",
+          "542,982",
+          "145,454",
+          "26.8%",
+          "519,255",
+          "164,729",
+          "31.7%",
+          "4.9%",
+          "18.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "519,255",
+            "received": "519255",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "164,729",
+            "received": "164729",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.7%",
+            "received": "31.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Morgan",
+        "geoid": "05000US39115",
+        "originalCells": [
+          "Morgan",
+          "14,614",
+          "6,315",
+          "43.2%",
+          "13,469",
+          "4,810",
+          "35.7%",
+          "-7.5%",
+          "-17.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "13,469",
+            "received": "13469",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "4,810",
+            "received": "4810",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "35.7%",
+            "received": "35.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Morrow",
+        "geoid": "05000US39117",
+        "originalCells": [
+          "Morrow",
+          "31,172",
+          "8,119",
+          "26.0%",
+          "34,941",
+          "9,908",
+          "28.4%",
+          "2.3%",
+          "8.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "34,941",
+            "received": "34941",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "9,908",
+            "received": "9908",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "28.4%",
+            "received": "28.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Muskingum",
+        "geoid": "05000US39119",
+        "originalCells": [
+          "Muskingum",
+          "81,903",
+          "26,560",
+          "32.4%",
+          "84,346",
+          "29,224",
+          "34.6%",
+          "2.2%",
+          "6.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "84,346",
+            "received": "84346",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "29,224",
+            "received": "29224",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.6%",
+            "received": "34.6",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Noble",
+        "geoid": "05000US39121",
+        "originalCells": [
+          "Noble",
+          "",
+          "4,236",
+          "35.8%",
+          "",
+          "3,250",
+          "27.4%",
+          "8.4%",
+          "23.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "",
+            "received": "11852",
+            "status": "OCR alignment review"
+          },
+          {
+            "field": "below200",
+            "original": "3,250",
+            "received": "3250",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.4%",
+            "received": "27.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Ottawa",
+        "geoid": "05000US39123",
+        "originalCells": [
+          "Ottawa",
+          "40,239",
+          "7,919",
+          "19.7%",
+          "39,367",
+          "8,332",
+          "21.2%",
+          "1.5%",
+          "7.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "39,367",
+            "received": "39367",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "8,332",
+            "received": "8332",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "21.2%",
+            "received": "21.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Paulding",
+        "geoid": "05000US39125",
+        "originalCells": [
+          "Paulding",
+          "20,156",
+          "5,234",
+          "26.0% .",
+          "18589 ,",
+          "5,534",
+          "29.8%",
+          "3.8%",
+          "14.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "18589 ,",
+            "received": "18589",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "5,534",
+            "received": "5534",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "29.8%",
+            "received": "29.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Perry",
+        "geoid": "05000US39127",
+        "originalCells": [
+          "Perry",
+          "33,741",
+          "11,570",
+          "34.3%",
+          "35,190",
+          "12,001",
+          "34.1%",
+          "-0.2%",
+          "-0.S% □ -"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "35,190",
+            "received": "35190",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "12,001",
+            "received": "12001",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "34.1%",
+            "received": "34.1",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Pickaway",
+        "geoid": "05000US39129",
+        "originalCells": [
+          "Pickaway",
+          "46,174",
+          "12,065",
+          "26.1%",
+          "55,942",
+          "14,543",
+          "26.0%",
+          "-0.1%",
+          "-0.5% .•"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "55,942",
+            "received": "55942",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "14,543",
+            "received": "14543",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "26.0%",
+            "received": "26.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Pike",
+        "geoid": "05000US39131",
+        "originalCells": [
+          "Pike",
+          "27,226",
+          "11,211",
+          "41.2%",
+          "26,692",
+          "11,407",
+          "42.7%",
+          "1.6%",
+          "3.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "26,692",
+            "received": "26692",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "11,407",
+            "received": "11407",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "42.7%",
+            "received": "42.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Portage",
+        "geoid": "05000US39133",
+        "originalCells": [
+          "Portage",
+          "144,317",
+          "34,149",
+          "23.7%",
+          "154,676",
+          "42,435",
+          "27.4%",
+          "3.8%",
+          "15.9%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "154,676",
+            "received": "154676",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "42,435",
+            "received": "42435",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.4%",
+            "received": "27.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Preble",
+        "geoid": "05000US39135",
+        "originalCells": [
+          "Preble",
+          "41,755",
+          "9,394",
+          "22.5%",
+          "40,388",
+          "11,225",
+          "27.8%",
+          "5.3%",
+          "23.5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "40,388",
+            "received": "40388",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "11,225",
+            "received": "11225",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.8%",
+            "received": "27.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Putnam",
+        "geoid": "05000US39137",
+        "originalCells": [
+          "Putnam",
+          "34,353",
+          "6,715",
+          "19.5%",
+          "33,927",
+          "6,339",
+          "18.7%",
+          "-0.9%",
+          "-4.4%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "33,927",
+            "received": "33927",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "6,339",
+            "received": "6339",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "18.7%",
+            "received": "18.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Richland",
+        "geoid": "05000US39139",
+        "originalCells": [
+          "Richland",
+          "122,277",
+          "36,372",
+          "29.7%",
+          "117,599",
+          "39,867",
+          "33.9%",
+          "4.2%",
+          "14.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "117,599",
+            "received": "117599",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "39,867",
+            "received": "39867",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "33.9%",
+            "received": "33.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Ross",
+        "geoid": "05000US39141",
+        "originalCells": [
+          "Ross",
+          "67,870",
+          "21,422",
+          "31.6%",
+          "71,183",
+          "25,802",
+          "36.2%",
+          "4.7%",
+          "14.8% -"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "71,183",
+            "received": "71183",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "25,802",
+            "received": "25802",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "36.2%",
+            "received": "36.2",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Sandusky",
+        "geoid": "05000US39143",
+        "originalCells": [
+          "Sandusky",
+          "60,823",
+          "14,556",
+          "23.9%",
+          "57,735",
+          "18,376",
+          "31.8%",
+          "7.9%",
+          "33.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "57,735",
+            "received": "57735",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "18,376",
+            "received": "18376",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "31.8%",
+            "received": "31.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Scioto",
+        "geoid": "05000US39145",
+        "originalCells": [
+          "Scioto",
+          "75,683",
+          "32219 ,",
+          "42.6%",
+          "69,371",
+          "29,877",
+          "43.1%",
+          "0.5%",
+          "1.2% -."
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "69,371",
+            "received": "69371",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "29,877",
+            "received": "29877",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "43.1%",
+            "received": "43.1",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Seneca",
+        "geoid": "05000US39147",
+        "originalCells": [
+          "Seneca",
+          "57,264",
+          "16,02 1",
+          "28.1%",
+          "51,984",
+          "16,523",
+          "318%",
+          "3.7%",
+          "13.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "51,984",
+            "received": "51984",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "16,523",
+            "received": "16523",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "318%",
+            "received": "31.8",
+            "status": "transcription differs; inspect original page"
+          }
+        ]
+      },
+      {
+        "geography": "Shelby",
+        "geoid": "05000US39149",
+        "originalCells": [
+          "Shelby",
+          "46,961",
+          "9,938",
+          "21.2%",
+          "47,307",
+          "13,246",
+          "28.0%",
+          "6.8%",
+          "32.3%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "47,307",
+            "received": "47307",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "13,246",
+            "received": "13246",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "28.0%",
+            "received": "28.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Stark",
+        "geoid": "05000US39151",
+        "originalCells": [
+          "Stark",
+          "368,573",
+          "95,337",
+          "25.9%",
+          "365,487",
+          "109,647",
+          "30.0%",
+          "4.1%",
+          "16.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "365,487",
+            "received": "365487",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "109,647",
+            "received": "109647",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "30.0%",
+            "received": "30.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Summit",
+        "geoid": "05000US39153",
+        "originalCells": [
+          "Summit",
+          "533,162",
+          "130,220",
+          "24.4% A",
+          "529,215",
+          "152,079",
+          "28.7%",
+          "4.3%",
+          "17.7%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "529,215",
+            "received": "529215",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "152,079",
+            "received": "152079",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "28.7%",
+            "received": "28.7",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Trumbull",
+        "geoid": "05000US39155",
+        "originalCells": [
+          "Trumbull",
+          "220,572",
+          "62,432",
+          "28.3%",
+          "196,864",
+          "71,389",
+          "36.3%",
+          "8.0%",
+          "28.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "196,864",
+            "received": "196864",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "71,389",
+            "received": "71389",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "36.3%",
+            "received": "36.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Tuscarawas",
+        "geoid": "05000US39157",
+        "originalCells": [
+          "Tuscarawas",
+          "89,481",
+          "27,490",
+          "30.7%",
+          "91,232",
+          "28,067",
+          "30.8%",
+          "0.0%",
+          "0.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "91,232",
+            "received": "91232",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "28,067",
+            "received": "28067",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "30.8%",
+            "received": "30.8",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Union",
+        "geoid": "05000US39159",
+        "originalCells": [
+          "Union",
+          "38,511",
+          "6,359",
+          "16.5%",
+          "64,595",
+          "8,622",
+          "13.3%",
+          "-3.2%",
+          "-19.2%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "64,595",
+            "received": "64595",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "8,622",
+            "received": "8622",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "13.3%",
+            "received": "13.3",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Van Wert",
+        "geoid": "05000US39161",
+        "originalCells": [
+          "Van Wert",
+          "29,168",
+          "6,853",
+          "23.5%",
+          "28,508",
+          "7,816",
+          "27.4%",
+          "3.9%",
+          "16.7%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "28,508",
+            "received": "28508",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "7,816",
+            "received": "7816",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "27.4%",
+            "received": "27.4",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Vinton",
+        "geoid": "05000US39163",
+        "originalCells": [
+          "Vinton",
+          "12,643",
+          "5,409",
+          "42.8%",
+          "12,423",
+          "4,913",
+          "39.5%",
+          "-3.2%",
+          "-7.6%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "12,423",
+            "received": "12423",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "4,913",
+            "received": "4913",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "39.5%",
+            "received": "39.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Warren",
+        "geoid": "05000US39165",
+        "originalCells": [
+          "Warren",
+          "152,000",
+          "20,637",
+          ". 13.6%",
+          "244,474",
+          "36,353",
+          "14.9%",
+          "1.3%",
+          "9,5%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "244,474",
+            "received": "244474",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "36,353",
+            "received": "36353",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "14.9%",
+            "received": "14.9",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Washington",
+        "geoid": "05000US39167",
+        "originalCells": [
+          "Washington",
+          "61,383",
+          "20,328",
+          "33.1%",
+          "57,322",
+          "19,228",
+          "33.5%",
+          "0.4%",
+          "1.3%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "57,322",
+            "received": "57322",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "19,228",
+            "received": "19228",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "33.5%",
+            "received": "33.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Wayne",
+        "geoid": "05000US39169",
+        "originalCells": [
+          "Wayne",
+          "108,474",
+          "27,855",
+          "25.7%",
+          "112,220",
+          "32,488",
+          "29.0%",
+          "3.3%",
+          "12.7%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "112,220",
+            "received": "112220",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "32,488",
+            "received": "32488",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "29.0%",
+            "received": "29.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Williams",
+        "geoid": "05000US39171",
+        "originalCells": [
+          "Williams",
+          "37,996",
+          "9,157",
+          "24.1%",
+          "35,636",
+          "11,745",
+          "33.0%",
+          "8.9%",
+          "36.8%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "35,636",
+            "received": "35636",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "11,745",
+            "received": "11745",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "33.0%",
+            "received": "33.0",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Wood",
+        "geoid": "05000US39173",
+        "originalCells": [
+          "Wood",
+          "113,406",
+          "26,012",
+          "22.9%",
+          "125,891",
+          "32,081",
+          "25.5%",
+          "2.5%",
+          "11.1%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "125,891",
+            "received": "125891",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "32,081",
+            "received": "32081",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "25.5%",
+            "received": "25.5",
+            "status": "matches"
+          }
+        ]
+      },
+      {
+        "geography": "Wyandot",
+        "geoid": "05000US39175",
+        "originalCells": [
+          "Wyandot",
+          "22,457",
+          "5,420",
+          "24.1%",
+          "21,289",
+          "5,600",
+          "26.3%",
+          "2.2%",
+          "9.0%"
+        ],
+        "fields": [
+          {
+            "field": "population",
+            "original": "21,289",
+            "received": "21289",
+            "status": "matches"
+          },
+          {
+            "field": "below200",
+            "original": "5,600",
+            "received": "5600",
+            "status": "matches"
+          },
+          {
+            "field": "below200_rate",
+            "original": "26.3%",
+            "received": "26.3",
+            "status": "matches"
+          }
+        ]
+      }
+    ]
+  },
+  "table8": {
+    "standardYears": [
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "missingStandardYear": 2020,
+    "workingDisposition": "Original 2020 transcription retained. Standard-series tables use empty 2020 cells and bars over available years, excluding experimental 2020 estimates.",
+    "guidance": "https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data/2020.html"
+  },
+  "table9": {
+    "years": [
+      2019,
+      2024
+    ],
+    "populationChange": "221392",
+    "povertyCountChange": "-16879",
+    "povertyCountPercentChange": "-1.1",
+    "workingDisposition": "Received annual source counts match the original reported Ohio counts. Changes are descriptive; no significance assertion."
+  },
+  "national2024": {
+    "selectedSource": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US",
+    "redistributionSource": "https://api.censusreporter.org/1.0/data/show/acs2024_1yr?table_ids=C17002&geo_ids=04000US39,01000US",
+    "differences": [
+      {
+        "variable": "C17002001",
+        "redistributedValue": 332143260,
+        "primaryValue": 332143258,
+        "selectedSource": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US"
+      },
+      {
+        "variable": "C17002003",
+        "redistributedValue": 20321964,
+        "primaryValue": 20321965,
+        "selectedSource": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US"
+      },
+      {
+        "variable": "C17002008",
+        "redistributedValue": 241271520,
+        "primaryValue": 241271512,
+        "selectedSource": "https://data.census.gov/table/ACSDT1Y2024.C17002?g=010XX00US"
+      }
+    ],
+    "workingDisposition": "The original redistribution remains unchanged in the archive. The national row uses exact primary Census table values, whose seven bins sum to its total. Ohio values from the same redistribution remain unchanged."
+  },
+  "likeProductChange": {
+    "periods": [
+      "2006–2010",
+      "2020–2024"
+    ],
+    "population": 312413,
+    "below200": -188545,
+    "percentagePoints": "-2.5",
+    "relativeRatePercent": "-7.9",
+    "significance": "Not assessed; retained component MOEs do not by themselves supply a published change interval."
+  }
+}
