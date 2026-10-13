@@ -26,9 +26,9 @@ ACTIONS = frozenset({
     "implementation.plan.save", "implementation.plan.report",
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
-    "implementation.observations.import",
+    "implementation.observations.import", "implementation.lab.import",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview"})
+READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -39,6 +39,7 @@ WRITE_ROUTES = {
     "source-import": "implementation.source.import",
     "selection-import": "implementation.selection.import",
     "observations-import": "implementation.observations.import",
+    "lab-import": "implementation.lab.import",
 }
 
 
@@ -228,6 +229,8 @@ class ImplementationOperator:
             return self.list(workspace)
         if operation == "selections":
             return self.selections(workspace)
+        if operation in ("lab-inspect", "lab-preview"):
+            return self._lab(workspace, payload, operation=operation)
         if operation == "observations-preview":
             return self._observations(workspace, payload, preview=True)
         if operation == "catalog":
@@ -438,6 +441,61 @@ class ImplementationOperator:
         )
 
 
+    def _lab(self, workspace, value, *, operation, actor=""):
+        """Receive original CSV bytes through the host's verified upload ticket."""
+        from model.implementation_lab_results import (
+            inspect_lab_csv, preview_lab_results, import_lab_results,
+        )
+        if not isinstance(value, dict):
+            raise self.Fault("IMPLEMENTATION_LAB_INPUT", "Supply the selected CSV and mapping.")
+        if any(key in value for key in ("path", "csv_path", "document", "source_document")):
+            raise self.Fault("IMPLEMENTATION_LAB_INPUT",
+                             "Use an original upload ticket and saved plan revision.")
+        ws = self.operator.ws(workspace)
+        upload_id = value.get("upload_id")
+        if not isinstance(upload_id, str) or not upload_id:
+            raise self.Fault("IMPLEMENTATION_LAB_UPLOAD", "Upload the original laboratory CSV.")
+        upload = self.operator.upload(upload_id)
+        path = Path(upload["path"])
+        filename = upload["filename"]
+        if operation == "lab-inspect":
+            result = inspect_lab_csv(path, delimiter=value.get("delimiter", ","),
+                                     encoding=value.get("encoding", "utf-8-sig"),
+                                     filename=filename)
+            return dict(result, workspace_key=workspace, upload_id=upload_id)
+        plan_id = self._id(value.get("plan_id"))
+        revision = self._integer(value.get("revision"), "revision")
+        document = self.store(workspace).get(plan_id, revision)
+        digest = document_digest(document)
+        supplied = value.get("document_digest")
+        if supplied is not None and supplied != digest:
+            raise self.Fault("IMPLEMENTATION_LAB_BINDING",
+                             "The saved plan differs from the reviewed laboratory revision.", 409)
+        mapping = value.get("mapping")
+        if not isinstance(mapping, dict):
+            raise self.Fault("IMPLEMENTATION_LAB_MAPPING", "Map the original CSV columns explicitly.")
+        if operation == "lab-preview":
+            result = preview_lab_results(ws, document, path, mapping, filename=filename)
+            return dict(result, workspace_key=workspace, upload_id=upload_id,
+                        plan_id=plan_id, revision=revision, document_digest=digest)
+        operation_id = value.get("lab_operation_id")
+        if supplied != digest or not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
+            raise self.Fault("IMPLEMENTATION_LAB_BINDING",
+                             "Preview the exact saved plan, original CSV and mapping before importing.", 409)
+        result = import_lab_results(
+            ws, document, path, mapping, expected_operation_id=operation_id,
+            actor=actor, filename=filename,
+        )
+        if (not isinstance(result, dict)
+                or result.get("schema") != "upstate.implementation-lab-import/v1"
+                or result.get("operation_id") != operation_id
+                or result.get("plan", {}).get("id") != plan_id):
+            raise self.Fault("IMPLEMENTATION_LAB_RESULT",
+                             "The saved laboratory result differs from the selected operation.", 409)
+        return dict(result, workspace_key=workspace, upload_id=upload_id,
+                    plan_id=plan_id, revision=result["applied_revision"],
+                    base_revision=revision, base_document_digest=digest)
+
     def _observations(self, workspace, value, *, preview=False):
         """Register an exact saved field revision through the original registry."""
         from model.implementation_observations import (
@@ -632,7 +690,8 @@ class ImplementationOperator:
         else:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
-        if (action not in ("implementation.plan.report", "implementation.observations.import")
+        if (action not in ("implementation.plan.report", "implementation.observations.import",
+                           "implementation.lab.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -671,6 +730,8 @@ class ImplementationOperator:
                 return self._source_import(store, task, plan_id, expected, actor)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
+            if action == "implementation.lab.import":
+                return self._lab(workspace, value, operation="lab-import", actor=actor)
             if action == "implementation.observations.import":
                 return self._observations(workspace, value)
         except RevisionConflict as error:
