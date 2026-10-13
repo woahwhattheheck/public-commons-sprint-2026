@@ -44,7 +44,12 @@ FILES = [
     "requirements-chemistry.txt",
     "install_chemistry.py",
     "operator/install_chemistry.py",
-    "integration/reach_chemistry/install_chemistry_legacy.py"
+    "integration/reach_chemistry/install_chemistry_legacy.py",
+    "model/reach_chemistry/OBSERVATIONS.md",
+    "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
+    "integration/component_fragments/chemistry-compound-observations.json",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json",
+    "integration/reach_chemistry/SOURCE_MANIFEST.json"
 ]
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
@@ -109,6 +114,35 @@ COMPOSITE_PREVIOUS_SHA256 = {
     "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
 }
 
+# Exact maintained editions before native 0.3 compound/interval composition.
+INTERVAL_PREVIOUS_SHA256 = {
+    "model/chemistry.py": "2b18e2beacf8502a153e8165a0b9cd8f609f725511dc263cde75a2f7b4aa8227",
+    "model/chemistry_report_source.py": "3d220bf11a90d8b5847d538c0bf7ae46eae5663d2965c6161c341921cb2f7f19",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "c6ca14075df5be717572b6dddaeff420c7f78813784214fcaa960a330be5ceeb",
+    "model/CHEMISTRY_REPORTS.md": "195b5cc99403f96fb61048c175bfd3ab32ea4a913f85986242d3d45cda6ed99c",
+    "model/reach_chemistry/reporting.py": "0fc43c3e115fff7fac4b0c52e13e19456d24175c5d65b8ead2f8be85891e7641",
+    "model/reach_chemistry/__init__.py": "a1c644213e39975b64f2e40485cb64ef14bd1b841d49714a33ce3af3767005c9",
+    "model/reach_chemistry/inference.py": "d44b9649541a8841466482810796e20497c8f7ed91ac3686b3be1eb75f668e69",
+    "model/reach_chemistry/io.py": "936c4931e102d1f565c1d5598a298d097a353db9c5ccc3a922b4f9c57c7c5d10",
+    "operator/web/chemistry.mjs": "9e3474fbf3c5ed4dd9a8b0ca5466f56c4e8f22f9be57c195724e8ce865735521",
+    "operator/install_chemistry.py": "94b636cc9f27d72b1e09ddd350d15bf163241c82bce7fbc2f77a2712e6874195",
+    "integration/component_fragments/chemistry_reports.json": "4b63a1d685ac1dee5165fd90d32b17a213d519077d1aa31d2c3ac11de240dd33"
+}
+PUBLISHED_INTERVAL_PREVIOUS_SHA256 = {
+    "model/reach_chemistry/reporting.py": "a44610ef9f5b6782b1732bf5265cbb81943033d24aa23a4f01183689f6d45d0d",
+    "model/chemistry_report_source.py": "c9ee409f00e34a77153a43bcc3566a5b9a81ff4bd446b5f5799161464209495f",
+    "operator/web/chemistry.mjs": "ba4cf205bada0325f496bfc9dc903c74c41dc29070870c2a9876b66b52e4fc22",
+    "model/CHEMISTRY_REPORTS.md": "549adb84f00167d2e2d3892c571126b1fcf3eaa5080b6e370a70227ea4c2555b",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "cfeba48f9639d9c3626bdd4256dfdca4701aee6d57b53f02418f612f1e77e578",
+    "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
+}
+
+COMPOSED_INTERVAL_PREVIOUS_SHA256 = {
+    "model/chemistry_report_source.py": "5b5940571a3667e4a09fcd1c4459d82316295a8286f6f30a4050409531989bba",
+    "operator/install_chemistry.py": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "75df65613e75aa3a505a5154ea451f4b88921ce75ffc36561308c42caaca4d4e"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -154,7 +188,9 @@ def install(application, source_root=None, dry_run=False):
                     and hashlib.sha256(current).hexdigest() not in
                     {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
                      REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name),
-                     STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name)}):
+                     STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
+                     PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name),
+                     COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         composer = "source_tools/chemistry_study_composition.py"

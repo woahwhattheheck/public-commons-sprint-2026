@@ -212,3 +212,12 @@ selection when a source is prepared. Inspection reopens the saved original
 selection and its own producer hash rather than regenerating old artifacts.
 The original report, project, request, result and complete editable ZIP remain
 exact companions of each source edition.
+
+## Compound and interval presentation edition
+
+New compound/interval sources use `native-chemistry-scientific-source-v2`.
+Inspection still accepts the original v1 source and verifies its own original
+selection, producer hash, report and retained files. Preparing v2 does not alter a
+saved v1 source. Interval tables and figures carry the original two limits,
+endpoint inclusion flags and native predicted values; they do not substitute a
+point concentration. The original figure specification renders both SVG and PDF.

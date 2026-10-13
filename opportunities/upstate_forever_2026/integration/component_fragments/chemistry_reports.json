@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "chemistry_reports",
-  "source_reference": "Original completed Chemistry result presentation / reach-chemistry-scientific-report/2",
+  "source_reference": "Original completed Chemistry result presentation / reach-chemistry-scientific-report/3",
   "extend_components": {
     "chemistry": {
       "paths": [
