@@ -5,6 +5,7 @@ import json
 import sys
 
 from questionnaire_workspace import OperationError,Workspace,receive_project
+from workbook_exchange import ExchangeError
 
 
 def main():
@@ -48,6 +49,6 @@ def main():
 
 if __name__ == "__main__":
     try: main()
-    except OperationError as error:
+    except (OperationError,ExchangeError) as error:
         print(json.dumps({"error":{"code":error.code,"message":str(error),"detail":error.detail}}),file=sys.stderr)
         raise SystemExit(2)
