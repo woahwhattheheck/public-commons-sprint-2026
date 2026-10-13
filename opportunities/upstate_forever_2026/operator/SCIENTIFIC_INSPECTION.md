@@ -19,10 +19,11 @@ The HTML opens without the service or a JavaScript runtime. It is an inspection 
 The production files are:
 
 - `operator/web/scientific_inspection.mjs`
+- `operator/web/scientific_inspection.css`
 - `operator/extensions/scientific-inspection.json`
 - The narrow joins in the existing `operator/web/app.mjs`
 
-The small manifest uses the original extension registry to serve this module. It creates no new desk, backend action, model route or task. The owner of the original operator may reopen that service after the normal source composition so its original registry sees the asset. Preserve the same Workspace, operator-state directory, access configuration and other installed extensions.
+The small manifest uses the original extension registry to serve this module and its stylesheet. The operator loads the stylesheet from the same origin because its existing Content Security Policy blocks inline styles. Keep `scientific_inspection.css` byte-identical to the module's `SCIENTIFIC_INSPECTION_CSS` constant: the standalone HTML embeds that same CSS so the downloaded inspection still opens offline. It creates no new desk, backend action, model route or task. The owner of the original operator may reopen that service after the normal source composition so its original registry sees the assets. Preserve the same Workspace, operator-state directory, access configuration and other installed extensions.
 
 The full source bank at `operations/eco-operator-scientific-inspection-22b7-20261013.source.json` contains every complete changed file and exact app joins. If another operator author has advanced `app.mjs`, compose each supplied before/after join against that current body; reject a missing or multiply matched hunk and reconcile with its owner. Do not replace a later complete app with this bank's older full app image. The untouched original source and registry remain the dependency.
 
