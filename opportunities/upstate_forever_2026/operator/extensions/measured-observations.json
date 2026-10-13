@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "measured-observations",
   "title": "Measured observations",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "order": 45,
   "assets": [
     "measured_observations.mjs",
@@ -24,7 +24,8 @@
     "measured_native_observations.mjs",
     "observation_editions.mjs",
     "observation_editions.css",
-    "sediment.mjs"
+    "sediment.mjs",
+    "result_handback.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",

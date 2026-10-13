@@ -1,6 +1,7 @@
 import {mountSediment} from './sediment.mjs';
 import {mountObservationEditions} from './observation_editions.mjs';
 import {mountSourceHandback} from './source_handback.mjs';
+import {validateResultSourceSelection,createResultHandbackDraft,renderResultSourceSelection} from './result_handback.mjs';
 import {mountGuidedIntake} from './measured_intake.mjs';
 import {describeResult,renderResult,resultHTML,resultCSV,renderSourceInspection,reasonText,measurementValue,renderObservationContext} from './measured_results.mjs';
 import {mountFlowEditions} from './flow_editions.mjs';
@@ -16,7 +17,7 @@ const stamp=value=>value?new Date(value).toLocaleString():'—';
 export function mountMeasurements(host,{base='/api/measurement-workspace',css='/measurements/workspace.css',transport,initialBenchmarkState=null,initialSedimentState=null,sedimentScope='',onSedimentState=()=>{},sourceHandbackState=null,onSourceHandbackState=()=>{},sourceHandbackCss='/measurements/source_handback.css',observationEditionState=null,onObservationEditionState=()=>{},observationEditionCss=null}={}){
   if(!(host instanceof Element))throw new TypeError('An existing DOM element is required');
   const style=document.createElement('link');style.rel='stylesheet';style.href=css;document.head.append(style);
-  const controller=new AbortController();let dead=false,source=null,preview=null,summary=null,page=null,tab='sources',offset=0,filters={},selected=null,busy=false,handbackDesk=null,handbackSnapshot=sourceHandbackState,handbackGeneration=0,flowDesk=null,flowSnapshot=null,benchmarkDesk=null,benchmarkSnapshot=initialBenchmarkState,benchmarkLeavePrepared=false,sedimentDesk=null,sedimentSnapshot=initialSedimentState,sedimentLeavePrepared=false,sourceReviewDesk=null,sourceReviewSnapshot=null,observationEditionDesk=null,observationEditionSnapshot=observationEditionState,result=null,resultId='',resultOffsets={},history=null,historyOffset=0;
+  const controller=new AbortController();let dead=false,source=null,preview=null,summary=null,page=null,tab='sources',offset=0,filters={},selected=null,busy=false,handbackDesk=null,handbackSnapshot=sourceHandbackState,handbackGeneration=0,flowDesk=null,flowSnapshot=null,benchmarkDesk=null,benchmarkSnapshot=initialBenchmarkState,benchmarkLeavePrepared=false,sedimentDesk=null,sedimentSnapshot=initialSedimentState,sedimentLeavePrepared=false,sourceReviewDesk=null,sourceReviewSnapshot=null,observationEditionDesk=null,observationEditionSnapshot=observationEditionState,result=null,resultId='',resultSelection=null,resultOffsets={},history=null,historyOffset=0;
   host.classList.add('mw');
   host.innerHTML=`<header class="mw-head"><div><div class="mw-eyebrow">UPPER SAVANNAH / OPERATOR WORKSPACE</div><h1>Measured data</h1><p>Receive originals. Inspect measurements. Assign native reaches. Export reviewed inputs.</p></div><button data-action="refresh">Refresh</button></header><div class="mw-stats" aria-label="Workspace totals"></div><nav class="mw-nav" aria-label="Measured data"><button data-tab="sources">Receive sources</button><button data-tab="records">Measurements</button><button data-tab="stations">Station assignments</button><button data-tab="flow">Daily flow</button><button data-tab="benchmarks">Benchmarks</button><button data-tab="sediment">Sediment models</button><button data-tab="source-review">Source versions</button><button data-tab="observation-editions">Observation editions</button><button data-tab="exports">Exports &amp; handover</button><button data-tab="handback">Source returns</button><button data-tab="results">Saved results</button><button data-tab="archive">Source archive</button></nav><div class="mw-status" role="status" aria-live="polite">Opening saved workspace…</div><section class="mw-content"></section>`;
   const area=host.querySelector('.mw-content'),status=host.querySelector('.mw-status');
@@ -82,7 +83,7 @@ export function mountMeasurements(host,{base='/api/measurement-workspace',css='/
   function renderExports(){area.innerHTML=`<div class="mw-grid"><section class="mw-panel"><h2>Reviewed measurement inputs</h2><p>Complete accepted and excluded populations, exact units and fractions, explicit reach IDs, source references, and exclusion reasons. Downstream calibration retains control of model and temporal matching.</p><p class="mw-notice">The native annual quantities PO4_KG, NH4_KG and NO3_KG require a scientific load derivation. They are not aliases for discrete concentrations.</p><div class="mw-buttons"><button data-action="calibration">Create input package</button><a class="mw-button" href="${base}/export.csv" download>All measurements CSV</a></div><div id="mw-export-result"></div></section><section class="mw-panel"><h2>Independently editable handover</h2><p>Export originals, canonical records, source-row provenance, station metadata, assignments, reviews, alternative revisions and saved exports. The receiver reparses originals and verifies canonical values before committing.</p><button data-action="portable">Export complete workspace</button><form id="mw-receive">${label('Complete workspace JSON','<input type="file" name="file" accept=".json" required>')}<p>Receiving creates data only in an empty measurement workspace. Existing work is retained.</p><button>Receive verified workspace</button></form></section></div><section class="mw-panel"><h2>Explicit concentration–discharge pairing</h2><p>Pairs a discrete total-nitrogen or total-phosphorus measurement with one approved daily mean discharge on the same source calendar date. Retains unpaired rows and ambiguity reasons.</p><form id="mw-loads"><div class="mw-two">${label('Chemistry station',`<select name="stationId" required>${stationOptions()}</select>`)}${label('Discharge station',`<select name="flowStationId" required>${stationOptions()}</select>`)}</div>${label('Constituent',`<select name="parameter">${option('tn','Total nitrogen, as N')}${option('tp','Total phosphorus, as P')}</select>`)}${label('Pairing rationale','<textarea name="rationale" required rows="2" placeholder="Why this discharge station and date support this sample"></textarea>')}<button>Create paired-load report</button></form><div id="mw-load-result"></div></section><section class="mw-panel"><h2>Reopen previous results</h2><p>Saved result snapshots preserve their original source revision, selected settings and full populations.</p><button data-tab="results">Open saved results</button></section>`;}
   function renderArchive(){area.innerHTML=`<section class="mw-panel"><h2>Complete retained sources</h2><p>Original text is immutable. Reimports deduplicate; revised source results remain inspectable alternatives.</p>${!summary.imports.length?'<p class="mw-empty">No sources have been imported.</p>':''}${summary.imports.map(s=>`<details class="mw-station"><summary><strong>${esc(s.label)}</strong> <span>${num(s.summary.rows)} rows · ${num(s.summary.rejectedCount)} rejected</span></summary><dl><dt>Imported</dt><dd>${esc(stamp(s.createdAt))}</dd><dt>SHA-256</dt><dd class="mw-mono">${esc(s.sha)}</dd></dl><div class="mw-buttons"><a class="mw-button" href="${base}/sources/${s.id}/original" download>Original file</a><a class="mw-button" href="${base}/sources/${s.id}/rejected" download>Complete rejected rows</a><button data-source="${s.id}">Inspect retrieval provenance</button></div><div data-source-detail="${s.id}"></div></details>`).join('')}</section>`;}
   async function loadHistory(){history=await api('/exports?offset='+historyOffset+'&limit=20');if(dead)return;renderResults();}
-  async function showResult(report,id){result=report;resultId=id||'';resultOffsets={};tab='results';summary=await api();if(dead)return;statBar();await loadHistory();}
+  async function showResult(report,id){result=report;resultId=id||'';resultSelection=null;resultOffsets={};tab='results';summary=await api();if(dead)return;statBar();await loadHistory();}
   function renderResults(){
     for(const b of host.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===tab));
     const rows=history?.rows||[];
@@ -98,6 +99,7 @@ export function mountMeasurements(host,{base='/api/measurement-workspace',css='/
       try{content=renderResult(result,{id:resultId,currentRevision:summary.revision,offsets:resultOffsets});}
       catch(error){content='<section class="mw-panel"><h2>Retained original result</h2><p>'+esc(error.message)+'</p><button data-result-download="json">Download complete original JSON</button></section>';}
       box.innerHTML='<button data-action="result-close">Close result</button>'+content;
+      if(resultSelection)box.insertAdjacentHTML('beforeend',renderResultSourceSelection(resultSelection,{existing:handbackSnapshot}));
     }
   }
   function download(name,value,type='application/json'){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
@@ -115,6 +117,26 @@ export function mountMeasurements(host,{base='/api/measurement-workspace',css='/
     if(b.dataset.record){await inspect(b.dataset.record);return;}
     if(b.dataset.source){const data=await api('/sources/'+b.dataset.source);const el=area.querySelector(`[data-source-detail="${b.dataset.source}"]`);el.innerHTML=renderSourceInspection(data);return;}
     if(b.dataset.resultOpen){const report=await api('/exports/'+encodeURIComponent(b.dataset.resultOpen));await showResult(report,b.dataset.resultOpen);return;}
+    if(b.dataset.resultReturn){
+      const choice=b.dataset.resultReturn;
+      if(choice==='pending'){tab='handback';render();return;}
+      if(!result||!resultId)throw new Error('Open an original saved result first.');
+      if(choice==='inspect'){
+        const id=resultId,original=result;
+        const value=await api('/exports/'+encodeURIComponent(id)+'/source-selection');
+        const checked=await validateResultSourceSelection(value,{id,report:original});
+        if(dead||resultId!==id||result!==original)return;
+        resultSelection=checked;renderResults();message('Original result and complete source associations loaded. Review the selection before opening Source returns.');return;
+      }
+      if(!resultSelection||resultSelection.result.id!==resultId)throw new Error('Inspect the original source selection first.');
+      if(choice==='evidence'){download('measurement-result-'+resultId+'-source-selection.json',resultSelection);return;}
+      if(choice==='draft'){download('source-return-result-'+resultId+'.json',createResultHandbackDraft(resultSelection));return;}
+      if(choice==='open'){
+        const next=createResultHandbackDraft(resultSelection,handbackSnapshot);
+        onSourceHandbackState(JSON.parse(JSON.stringify(next)));handbackSnapshot=next;
+        tab='handback';render();message('The original Source returns desk has this result and its available original files. Inspect the full preview before publishing.');return;
+      }
+    }
     if(b.dataset.resultDownload){if(!result)throw new Error('Open a saved result first.');const filename='measurement-result-'+resultId;
       if(b.dataset.resultDownload==='json')download(filename+'.json',result);
       else if(b.dataset.resultDownload==='html')download(filename+'.html',resultHTML(result,{id:resultId}),'text/html;charset=utf-8');
@@ -124,7 +146,7 @@ export function mountMeasurements(host,{base='/api/measurement-workspace',css='/
     if(b.dataset.resultPage){resultOffsets[b.dataset.resultPage]=Number(b.dataset.offset);renderResults();return;}
     const action=b.dataset.action;
     if(action==='history-next'||action==='history-previous'){historyOffset=Math.max(0,historyOffset+(action==='history-next'?20:-20));await loadHistory();return;}
-    if(action==='result-close'){result=null;resultId='';resultOffsets={};renderResults();return;}
+    if(action==='result-close'){result=null;resultId='';resultSelection=null;resultOffsets={};renderResults();return;}
 
     if(action==='refresh')await refresh();
     if(action==='query'){const data=Object.fromEntries(new FormData(area.querySelector('#mw-provider'))),q=await api('/provider-query','POST',data);const box=area.querySelector('#mw-query');box.replaceChildren();const p=document.createElement('p');p.textContent=q.url; p.className='mw-mono';box.append(p);message('Complete source query prepared; use an authorized network-enabled session to retrieve this exact file when needed.');}
