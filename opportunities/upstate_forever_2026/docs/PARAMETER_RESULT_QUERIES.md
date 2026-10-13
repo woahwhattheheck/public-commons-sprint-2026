@@ -39,7 +39,7 @@ Existing area_id, pollutant, offset and limit retain their meaning. New optional
 | Field | Meaning |
 |---|---|
 | range_offset | Original filtered range offset, starting at zero. |
-| range_limit | Number of ranges, 1–1000. Omission retains the earlier complete matching-range response. |
+| range_limit | Number of ranges, 1–1000. Omission returns all matching ranges from range_offset; the default offset zero retains the earlier complete matching-range response. |
 | expected_artifact_sha256 | Previously displayed result identity. A changed edition resets both offsets and returns edition_changed=true. |
 
 Response additions include total_ranges, filtered_ranges, range_offset, range_limit, artifact_bytes, query_edition and effective area_id/pollutant. saved_study_state/progress come from the current bound execution checkpoint; completed_cases/total_cases and scientific quantities remain from the selected original result edition.

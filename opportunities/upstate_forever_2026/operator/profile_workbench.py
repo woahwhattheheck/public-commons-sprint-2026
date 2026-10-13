@@ -11,7 +11,7 @@ from model.common import describe_file, verify_file
 CUSTOMER_ACTIONS = frozenset({"profile.customer_review.create", "profile.customer_review.apply"})
 BIOPHYSICAL_ACTIONS = frozenset({
     "profile.biophysical.evidence.save", "profile.biophysical.ranges.prepare",
-    "profile.biophysical.experiment.prepare",
+    "profile.biophysical.experiment.prepare", "profile.biophysical.evidence.populate",
 })
 ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS
 READS = frozenset({"catalog", "inspect", "table", "preview", "compare", "methods",
@@ -138,6 +138,23 @@ class ProfileWorkbench:
     def invoke(self, task):
         ws = self.operator.ws(task["workspace"])
         action = task["action"]
+        if action == "profile.biophysical.evidence.populate":
+            from source_tools.receive_biophysical_evidence import populate
+            value = task["payload"]
+            if not isinstance(value, dict) or set(value) - {"profile_id", "source_collection_id", "source_id"}:
+                raise self.Fault("PROFILE_EVIDENCE", "Choose the original profile and optional retained citation CSV.")
+            supplied = None
+            if value.get("source_collection_id") or value.get("source_id"):
+                if not value.get("source_collection_id") or not value.get("source_id"):
+                    raise self.Fault("PROFILE_EVIDENCE", "Choose both the original citation source and collection.")
+                supplied, entry = ws.source_file(value["source_collection_id"], value["source_id"])
+                if entry["kind"] != "table":
+                    raise self.Fault("PROFILE_EVIDENCE", "Choose an original citation CSV table.")
+            output = self.operator.root / "outputs" / ("biophysical-" + task["id"])
+            received = populate(ws, value.get("profile_id"), output,
+                                evidence_csv=supplied, resume=output.exists())
+            result = evidence.inspect_evidence(ws, received["evidence_id"])
+            return {**result, "attribution": received["attribution"]}
         if action == "profile.biophysical.evidence.save":
             return evidence.save_evidence(ws, task["payload"])
         if action == "profile.biophysical.ranges.prepare":
@@ -162,7 +179,7 @@ class ProfileWorkbench:
         result = value["result"]
         ws = self.operator.ws(value["workspace"])
         if task["action"] in BIOPHYSICAL_ACTIONS:
-            if task["action"] == "profile.biophysical.evidence.save":
+            if task["action"] in {"profile.biophysical.evidence.save", "profile.biophysical.evidence.populate"}:
                 detail = evidence.inspect_evidence(ws, result["id"])
                 value["_downloads"] = self._evidence_downloads(value["workspace"], detail, evidence.EVIDENCE_KIND)
             elif task["action"] == "profile.biophysical.ranges.prepare":

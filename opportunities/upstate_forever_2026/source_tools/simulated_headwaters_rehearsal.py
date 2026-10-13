@@ -6,6 +6,7 @@ rehearsal input. operator/rehearsal_receiving.py owns tasks, media and receiving
 """
 from __future__ import annotations
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ APP = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP))
 from model.common import atomic_bytes, atomic_json, file_digest, held, identifier, read_json
 from model.workspace import Workspace
+from source_tools.demo_deadline import CUTOFF, DemoDeadlineReached, cutoff_guard
 
 DEMO_ID = "upstate-simulated-piedmont-headwaters-v1"
 RECEIPT_SCHEMA = "upstate.simulated-demo-receiving/v1"
@@ -382,6 +384,19 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
         "fresh_run_ids": [], "step_notes": teaching_notes(case),
         "task_timeout_seconds": 7200, "browser": browser,
     }
+    if receipt.get("programme_id") is not None:
+        from model.common import verify_file
+        programme = receipt.get("programme")
+        if (not isinstance(programme, dict)
+                or programme.get("programme_id") != receipt["programme_id"]):
+            raise ValueError("Retain the selected Programme and its frozen adoption descriptor")
+        adopted = read_json(verify_file(ws.root, programme["adoption"]))
+        if (adopted.get("programme_id") != receipt["programme_id"]
+                or adopted.get("project_id") != ws.project["id"]
+                or not isinstance(adopted.get("operator_opening"), dict)):
+            raise ValueError("Retain the Programme's completed original operator opening")
+        value["programme_receiving"] = {
+            **programme["adoption"], "programme_id": receipt["programme_id"]}
     # Use the maintained validator, preserving its current input contract.
     sys.path.insert(0, str(APP / "operator"))
     from rehearsal_receiving import validate
@@ -402,6 +417,69 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
             "selected_case_sha256": file_digest(teaching / "selected-case.json"),
             "selected_case_guide": str(teaching / "selected-case.md")}
 
+def retain_rehearsal_interruption(args, error, result):
+    """Retain the caller's actual bound selection without changing its source receipt."""
+    checkpoint = {
+        "schema": "upstate.simulated-rehearsal-checkpoint/v1",
+        "operation_id": args.operation_id,
+        "cutoff": CUTOFF.isoformat(),
+        "stopped_at": datetime.now(timezone.utc).isoformat(),
+        "state": "cutoff" if isinstance(error, DemoDeadlineReached) else "interrupted",
+        "stage": "recorded_rehearsal" if result is not None else "bind_recorded_rehearsal",
+        "source_receipt": str(args.receipt.resolve()),
+        "output_directory": str(args.output.resolve()),
+        "error": {"type": type(error).__name__, "message": str(error)},
+        "automatic_resume": False,
+        "continuation": ("Retain the original input, requests, recordings and saved Workspace. "
+                         "Continue only after an explicit new owner request."),
+    }
+    if result is None:
+        # Binding can be interrupted before a safe independent output is established.
+        # Keep that original exception; do not write into an unvalidated directory.
+        return checkpoint
+    input_path = Path(result["input"]).resolve(strict=True)
+    value = read_json(input_path)
+    output = Path(value["output_directory"]).resolve(strict=True)
+    if (input_path != output / "input.json"
+            or value["operation_id"] != args.operation_id
+            or output != args.output.resolve()):
+        raise ValueError("The original bound rehearsal output changed")
+    checkpoint["input"] = {"path": str(input_path), "sha256": file_digest(input_path)}
+    checkpoint["project_id"] = result["project_id"]
+    checkpoint["workspace_directory"] = value["workspace_directory"]
+    checkpoint["selection"] = result["selection"]
+    checkpoint["source_receipt_sha256"] = result["receipt_sha256"]
+    frozen_path = output / "uploads" / "simulated-headwaters" / "original-demo-receiving.json"
+    if file_digest(frozen_path) != result["receipt_sha256"]:
+        raise ValueError("The original teaching receipt changed")
+    frozen = read_json(frozen_path)
+    checkpoint["frozen_source_receipt"] = str(frozen_path.relative_to(output))
+    names = ("project_id", "source_collection_id", "grid_id", "profile_id",
+             "baseline_run_id", "alternative_run_ids", "comparison_id", "delivery_id",
+             "spatial_review_id", "spatial_review_ids", "fieldwork_operation_id",
+             "programme_id", "ensemble_id")
+    checkpoint["source_ids"] = {name: frozen[name] for name in names if name in frozen}
+    customer = frozen.get("customer_review")
+    if isinstance(customer, dict):
+        checkpoint["customer_review_ids"] = {
+            name: customer[name] for name in (
+                "operation_id", "original_review_id", "response_id",
+                "planning_handback_id", "revised_review_id", "handback_id")
+            if name in customer}
+    checkpoint["retained_progress"] = [
+        {"path": str(path.relative_to(output)), "bytes": path.stat().st_size,
+         "sha256": file_digest(path)}
+        for path in (output / "results" / "native.json",
+                     output / "results" / "complete.json",
+                     output / "browser" / "results" / "browser-progress.json",
+                     output / "browser" / "result.json")
+        if path.is_file()
+    ]
+    path = output / "results" / "demo-rehearsal-checkpoint.json"
+    atomic_json(path, checkpoint)
+    return checkpoint
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--receipt", type=Path, required=True)
@@ -419,14 +497,25 @@ def main():
     parser.add_argument("--native-only", action="store_true",
                         help="Retain native phase before the configured authorized browser continuation")
     args = parser.parse_args()
-    browser = read_json(args.browser_config) if args.browser_config else None
-    result = bind(args.receipt, args.output, workspace=args.workspace,
-                  browser=browser, operation_id=args.operation_id,
-                  save_spatial_review=args.save_spatial_review)
-    if args.run:
-        from rehearsal_receiving import run
-        result["receiving"] = run(Path(result["input"]), skip_browser=args.native_only)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    result = None
+    try:
+        with cutoff_guard():
+            browser = read_json(args.browser_config) if args.browser_config else None
+            result = bind(args.receipt, args.output, workspace=args.workspace,
+                          browser=browser, operation_id=args.operation_id,
+                          save_spatial_review=args.save_spatial_review)
+            if args.run:
+                from rehearsal_receiving import run
+                result["receiving"] = run(Path(result["input"]), skip_browser=args.native_only)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+    except KeyboardInterrupt as error:
+        try:
+            checkpoint = retain_rehearsal_interruption(args, error, result)
+            print(json.dumps(checkpoint, ensure_ascii=False, indent=2), file=sys.stderr)
+        except (OSError, ValueError, KeyError, TypeError) as save_error:
+            if hasattr(error, "add_note"):
+                error.add_note("Rehearsal interruption checkpoint could not be saved: " + str(save_error))
+        raise
 
 if __name__ == "__main__":
     main()

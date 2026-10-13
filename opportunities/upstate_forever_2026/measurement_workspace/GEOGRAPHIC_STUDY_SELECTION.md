@@ -34,7 +34,15 @@ Use `--version study-...` to bind a specific retained study version, or let the 
 
 The result is `geographic-study-review-receiving.json`, with the original geography descriptor, requested/matched/missing IDs, exact study and collection IDs, saved review ID, source row counts, files and `reopened_review_matches`. Each review's existing `saved-review.zip` and `review.json` are beneath its immutable review ID in the receiving directory.
 
-For the already completed original 640a regional project, the actual saved Station geography edition is `3bf6c45056785bedd914d0dc6dd201cbd9cc8222431e4ba7dbf1a7a99b0144a7`. Its original study contains 36 stations and 730 E. coli records; the same-operation Published studies importer must retain that original study before this command is run. Use the latest accepted Workspace path from that receiving operation.
+For the already completed original regional project, the actual saved `station-geographies` record is `20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b`. The distinct `utility-microbial-studies/3bf6c45056785bedd914d0dc6dd201cbd9cc8222431e4ba7dbf1a7a99b0144a7` is the original source-study lineage. Its original study contains 36 stations and 730 E. coli records; the same-operation Published studies importer must retain that original study before this command is run. Use the latest accepted Workspace path from that receiving operation.
+
+## Continue through the scientific report and editable Study
+
+Add `--scientific-report` to the same command to carry this exact review through the maintained scientific source producer, original report queue, complete exports and independent project/selected-Study restoration. The final `geographic-scientific-receiving.json` binds the original review, source edition, scientific edition, matched stations and both reopened study versions.
+
+Use `--resume` with the same directory and selections after interruption, including when adopting the existing completed review-only result. A first invocation freezes the selected study version; completed review exports and scientific source products are verified and reused. New report options or a different cohort use a separate output directory. The source-only command above keeps its existing behavior.
+
+The complete operator and native course is documented in [PUBLISHED_REVIEW_REPORTS.md](../operator/PUBLISHED_REVIEW_REPORTS.md). The report continuation delegates its render/export/backup/restore tasks and optional desktop/mobile browser journey to `source/observed-report-20261013/receive_operator.py`. Its retained task IDs, selection and queued results remain in the same report output; no second renderer or model run is introduced.
 
 ## Installation and source contract
 

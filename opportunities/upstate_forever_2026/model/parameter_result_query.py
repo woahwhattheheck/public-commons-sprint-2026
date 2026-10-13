@@ -402,10 +402,15 @@ class ParameterResults:
         total = db.execute("SELECT coalesce(sum(n),0) FROM counts WHERE " + where, params).fetchone()[0]
         if limit is not None and offset >= total:
             offset = max(0, ((total - 1) // limit) * limit)
+        elif limit is None:
+            offset = min(offset, total)
         query = "SELECT start,length,sha256,area_id,pollutant FROM spans WHERE " + where + " ORDER BY ordinal"
         if limit is not None:
             query += " LIMIT ? OFFSET ?"
             params += [limit, offset]
+        elif offset:
+            query += " LIMIT -1 OFFSET ?"
+            params.append(offset)
         rows = []
         for start, length, checksum, area, substance in db.execute(query, params):
             if start < 0 or length < 0:

@@ -126,7 +126,7 @@ class ColdReopenError(RuntimeError):
 def cold_reopen(restored, manifest, receipt, output, extra_checks=None, *, selected_study=None):
     """Verify restored source and inspect selected results in a new interpreter.
 
-    extra_checks names original parameter, field, customer, source or report identities.
+    extra_checks names original parameter, field, customer, Programme, source or report identities.
     selected_study selects the same saved report's editable dependency archive.
     A new attempt is retained for every invocation.
     """
@@ -232,9 +232,31 @@ class _ScienceFiles:
         previous = self.checked.get(relative)
         if previous is None:
             self.checked[relative] = _check_file(path, expected)
-        elif _identity(path.lstat()) != previous:
-            raise ValueError("Scientific file changed during inspection: " + relative)
+        else:
+            self._unchanged(relative)
         return path
+
+    def _unchanged(self, relative):
+        """Accept a source-view hardlink only after rechecking archived bytes."""
+        path = _member(self.root, relative)
+        previous = self.checked[relative]
+        current = _identity(path.lstat())
+        if current == previous:
+            return
+        # Source views are omitted from portable archives. The restored product
+        # may create them while opening maps or customer evidence, changing CAS
+        # ctime. Keep the original inode/size/mtime and check its complete digest
+        # and permissions; a same-length edit with restored mtime still fails.
+        if current[:4] != previous[:4]:
+            raise ValueError("Scientific file changed during inspection: " + relative)
+        verified = _check_file(path, self.members["workspace/" + relative])
+        if verified[:4] != previous[:4]:
+            raise ValueError("Scientific file changed during rechecking: " + relative)
+        self.checked[relative] = verified
+
+    def verify_unchanged(self):
+        for relative in self.checked:
+            self._unchanged(relative)
 
     def json(self, relative):
         expected = self.members.get("workspace/" + relative)
@@ -272,7 +294,7 @@ def _run(ws, files, key, expected=None):
     scope = ws.root / "runs" / key
     files.descriptors(scope, run["artifacts"])
     for stage in run.get("stages", {}).values():
-        for field in ("arguments", "files", "companions", "additional_files", "registry_outputs"):
+        for field in ("arguments", "artifact", "files", "companions", "additional_files", "registry_outputs"):
             files.descriptors(scope, stage.get(field))
     return run
 
@@ -317,6 +339,45 @@ def _spatial_reviews(ws, files, receipt):
         reviews.append({"id": key, "baseline_run_id": receipt["baseline_run_id"],
                         "alternative_run_id": alternative_id, "identity": "MATCH"})
     return reviews
+
+
+def _paired_product(ws, files, product, plan):
+    """Reopen the saved paired product without rebuilding its source-bound kernel."""
+    from model.common import digest
+    from model.paired_ensemble import EnsembleWorkspace
+    key = product["analysis_id"]
+    directory = ws.root / "ensemble-products" / key
+    files.json("ensemble-products/" + key + "/analysis.json")
+    files.json("ensemble-products/" + key + "/reports.json")
+    result = EnsembleWorkspace(ws).describe(key)
+    selected = result["selection"]
+    if result["state"] != "complete":
+        raise ValueError("Retain the completed original paired raster product")
+    reference = selected["source_references"]
+    if (reference["project_id"] != ws.project["id"] or reference["grid_id"] != plan["grid_id"]
+            or reference["baseline_scenario"]["id"] != plan["baseline_scenario_id"]
+            or reference["alternative_scenario"]["id"] != product["scenario_id"]):
+        raise ValueError("Receiving changed the paired product's original case")
+    expected = {}
+    for member in plan["members"]:
+        runs = {item["scenario_id"]: item["run_id"] for item in member["runs"]}
+        expected[member["profile_id"]] = (
+            runs[plan["baseline_scenario_id"]], runs[product["scenario_id"]], product["scenario_id"])
+    actual = {member["profile_id"]: (
+        member["baseline_run_id"], member["alternative_run_id"], member["scenario_id"])
+        for member in selected["members"]}
+    if (actual != expected or len(actual) != len(selected["members"])
+            or selected["planned_member_count"] != len(plan["members"])
+            or selected["selected_member_count"] != len(plan["members"])):
+        raise ValueError("Receiving changed the paired product's original member selection")
+    reports = result["reports"]
+    if reports["ensemble_id"] != key or digest(reports) != product["report_signature"]:
+        raise ValueError("Receiving changed the paired product's original report edition")
+    files.descriptors(directory, result["artifacts"])
+    files.descriptors(directory, reports["files"])
+    files.file(ws.root, product["archive"])
+    return {"id": key, "scenario_id": product["scenario_id"],
+            "report_signature": product["report_signature"], "identity": "MATCH"}
 
 
 def _parameter_course(ws, files, check, case):
@@ -406,13 +467,15 @@ def _parameter_course(ws, files, check, case):
     raster_products = operation.get("raster_products", [])
     if products_requested and [item["scenario_id"] for item in raster_products] != plan["alternative_scenario_ids"]:
         raise ValueError("Retain every selected paired raster product")
+    paired_products = []
     for product in raster_products:
         if product["state"] != "complete" or not product.get("archive"):
             raise ValueError("Retain the completed selected raster product and archive")
-        files.file(ws.root, product["archive"])
+        paired_products.append(_paired_product(ws, files, product, plan))
     return {"kind": "parameter_course", "ensemble_id": key,
             "native_runs": sum(len(item["runs"]) for item in plan["members"]),
-            "decision_report_ids": [item["report_id"] for item in products]}
+            "decision_report_ids": [item["report_id"] for item in products],
+            "paired_products": paired_products}
 
 
 def _native_study_source(ws, files, check, case, delivery=None, *, report_selection=None):
@@ -661,9 +724,7 @@ def _finish(request, application, ws, files, payload):
             raise ValueError("Imported application source is absent from its archive: " + relative)
         _check_file(path, expected)
         imported[name] = {"path": relative, "sha256": expected["sha256"]}
-    for relative, identity in files.checked.items():
-        if _identity(_member(ws.root, relative).lstat()) != identity:
-            raise ValueError("Scientific file changed during receiving: " + relative)
+    files.verify_unchanged()
     return {
         "schema": SCHEMA, "attempt_id": request["attempt_id"], "state": "complete",
         "completed_at": _now(), "project": ws.project,
@@ -672,6 +733,60 @@ def _finish(request, application, ws, files, payload):
         "verified_scientific_files": len(files.checked), "imported_modules": imported,
         "process": {"pid": os.getpid(), "python": sys.executable, "isolated": bool(sys.flags.isolated)},
     }
+
+
+def _programme(ws, files, check, case):
+    from model.compute_programme import ComputeProgrammes
+    run_ids = [case["baseline_run_id"], *case["alternative_run_ids"]]
+    source_path = files.file(ws.root, check["input"])
+    adoption_path = files.file(ws.root, check["adoption"])
+    original, adopted = _read(source_path), _read(adoption_path)
+    fields = ("schema", "operation", "demo_id", "classification", "project_id",
+              "recipe_sha256", "input_summary", "source_collection_id", "source_ids",
+              "grid_id", "profile_id", "baseline_run_id", "baseline_scenario_id",
+              "alternative_run_ids", "alternative_scenario_ids", "control", "delivery_id")
+    if any(original.get(name) != case.get(name) for name in fields):
+        raise ValueError("Receiving changed the frozen Programme input selection")
+    if (adopted.get("schema") != "upstate.simulated-programme-receiving/v1"
+            or adopted.get("programme_id") != check["programme_id"]
+            or adopted.get("project_id") != ws.project["id"]
+            or adopted.get("recipe_sha256") != case["recipe_sha256"]
+            or adopted.get("existing_delivery_id") != case["delivery_id"]
+            or [row["run_id"] for row in adopted.get("native_runs", [])] != run_ids
+            or any(adopted["original_receipt"].get(name) != check["input"][name]
+                   for name in ("bytes", "sha256"))):
+        raise ValueError("Receiving changed the original Programme adoption")
+    key = check["programme_id"]
+    record = files.json("compute-programmes/" + key + "/programme.json")
+    files.json("compute-programmes/" + key + "/progress.json")
+    if record.get("workspace_id") != ws.project["id"]:
+        raise ValueError("The Programme belongs to another original project")
+    manager = ComputeProgrammes(ws)
+    status = manager.status(key, include_ensemble_candidates=False)
+    if (status["state"] != "complete" or [row["run_id"] for row in status["runs"]] != run_ids
+            or any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
+                   for row in status["runs"])):
+        raise ValueError("Receiving changed completed native Programme reuse")
+    for row in status["runs"][1:]:
+        comparison = status["comparisons"].get(row["key"])
+        if not comparison or comparison.get("kind") != "native":
+            raise ValueError("Retain each original native Programme comparison")
+        _comparison(ws, files, comparison["id"], [run_ids[0], row["run_id"]])
+    report = manager.read_report(key)
+    if report.get("id") != check["report_id"]:
+        raise ValueError("Receiving changed the original Programme report")
+    for name in ("schema", "rows", "files"):
+        if report.get(name) != adopted["report"].get(name):
+            raise ValueError("Receiving changed Programme report " + name)
+    files.descriptors(ws.root, report["files"])
+    preview = manager.delivery_preview(key, adopted["native_study_selection"])
+    if (not preview["ready"] or preview["selection"]["baseline_run_id"] != run_ids[0]
+            or preview["selection"]["scenario_run_ids"] != run_ids[1:]):
+        raise ValueError("Receiving changed the Programme's original mapped selection")
+    return {"kind": "compute_programme", "programme_id": key,
+            "state": status["state"], "run_ids": run_ids, "report_id": report["id"],
+            "input": check["input"], "adoption": check["adoption"],
+            "files": report["files"], "native_study_selection": preview["selection"]}
 
 
 def _inspect(request):
@@ -760,6 +875,8 @@ def _inspect(request):
                 raise ValueError("Select the captured ordered scientific report")
             _, report = _scientific_report(ws, files, receipt["scientific_report"])
             extra.append({"kind": "scientific_report", **report})
+        elif check.get("kind") == "compute_programme":
+            extra.append(_programme(ws, files, check, receipt))
         elif check.get("kind") == "customer_review":
             extra.append(_customer_review(ws, files, check, receipt))
         elif check.get("kind") == "field_campaign":
