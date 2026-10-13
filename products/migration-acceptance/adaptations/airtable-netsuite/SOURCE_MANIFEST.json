@@ -1,0 +1,206 @@
+{
+  "schema": "tjlabs.source-manifest.v1",
+  "description": "Complete additive Airtable / NetSuite provider review and original native receiving application",
+  "files": [
+    {
+      "path": "provider-input.mjs",
+      "bytes": 28992,
+      "sha256": "7cf6ec65e9102685f86d70f5d26853f8651399886451aae7b45c7406488e38e3"
+    },
+    {
+      "path": "sha256.mjs",
+      "bytes": 18412,
+      "sha256": "52a44d3fdb0c1e94282051fe073af67a9c1c57b16c9c94946bd5ebfdade394a6"
+    },
+    {
+      "path": "capture-providers.mjs",
+      "bytes": 13737,
+      "sha256": "3bb23b88c4fc228f77cb38babccba6098583614f8b00bb772be18fd7d90079e0"
+    },
+    {
+      "path": "prepare-provider.mjs",
+      "bytes": 3349,
+      "sha256": "7609116349aa34f25368c93680a44caf9b75dd908a5cc1e38d3dfe8ccd4f5fba"
+    },
+    {
+      "path": "examples/capture.json",
+      "bytes": 11295,
+      "sha256": "918e7a819302fb7928f17fc99e17faf5ceceb5dfb98724a5668417ecfc3672ad"
+    },
+    {
+      "path": "examples/mapping.json",
+      "bytes": 5147,
+      "sha256": "ea2eabe884a5990bedf0b851893abfd09ba7262dfdd094b32ecb85d12802dec1"
+    },
+    {
+      "path": "examples/configuration.json",
+      "bytes": 2854,
+      "sha256": "7618dfeb2eec9e285a66efd69a9c9e7f4559a8733aafa279185e7c718eeb4ad1"
+    },
+    {
+      "path": "examples/prepared/inputs/customers.json",
+      "bytes": 395,
+      "sha256": "8b88101f475c74711406515dc803f84807ccad2a190701b432146c8274bbd4cb"
+    },
+    {
+      "path": "examples/prepared/expected/customers.json",
+      "bytes": 1311,
+      "sha256": "8ccf80a90d2a6758ccc8785a5f8e12f104a485464cae140ece14b321916e72ac"
+    },
+    {
+      "path": "examples/prepared/inputs/orders.json",
+      "bytes": 114,
+      "sha256": "15490fcb3ea0e125dc5c411c1db025a8d9df66dbc0ec9d1260a8996ed04ffbbc"
+    },
+    {
+      "path": "examples/prepared/expected/orders.json",
+      "bytes": 565,
+      "sha256": "df3ddd8525e22957b6e1ee67e7e4ef4dcf24e3acc624acfb3c1426cc56ddba35"
+    },
+    {
+      "path": "examples/prepared/inputs/order_customers.json",
+      "bytes": 276,
+      "sha256": "15b5cfcb91e3c0ec64ec1cba2d389842a87a745318ed16f281e50bc153af0516"
+    },
+    {
+      "path": "examples/prepared/expected/order_customers.json",
+      "bytes": 1008,
+      "sha256": "b6394382161647d612ec24a58622aef9f2b518afaa0a01a8dfb9e8f4be717e9e"
+    },
+    {
+      "path": "examples/prepared/capture.json",
+      "bytes": 11295,
+      "sha256": "918e7a819302fb7928f17fc99e17faf5ceceb5dfb98724a5668417ecfc3672ad"
+    },
+    {
+      "path": "examples/prepared/mapping.json",
+      "bytes": 5147,
+      "sha256": "ea2eabe884a5990bedf0b851893abfd09ba7262dfdd094b32ecb85d12802dec1"
+    },
+    {
+      "path": "examples/prepared/projection.json",
+      "bytes": 10594,
+      "sha256": "30115df7c7931a5b115929aa29c7a3736b5f2ae2fdb23a45429b843602e4712d"
+    },
+    {
+      "path": "examples/prepared/PREPARED.json",
+      "bytes": 6975,
+      "sha256": "be937c510f983f44ae145ea51dc5cce79e278fe22fa6e52b3584cf50be4abdcf"
+    },
+    {
+      "path": "examples/pipeline-input.json",
+      "bytes": 6251,
+      "sha256": "b4cadb83f012107ebae6239c65f8a814cac1e096c3fa19d7d50f7d6c377e6ba8"
+    },
+    {
+      "path": "examples/source-ids.json",
+      "bytes": 303,
+      "sha256": "95f91a95289fd6a99526aa0f9d9b0cd9c5401e7589fbc19b756c372363c37c9b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8007,
+      "sha256": "ae0ce0e901ec2b9d5358cf57f953ff627ef11792914baadedc61c7c400778bbd"
+    },
+    {
+      "path": "MAPPING.md",
+      "bytes": 5924,
+      "sha256": "6f6b3559b4ca5d7e57bd4cebc575824fe0e09ae4578842fc847f933178dea474"
+    },
+    {
+      "path": "SOURCE-CONTRACT.md",
+      "bytes": 3681,
+      "sha256": "710744b69e74637d303bdd05f038d732d5e9418b46058a6129bccdcbdf596a81"
+    },
+    {
+      "path": "configuration.template.json",
+      "bytes": 1188,
+      "sha256": "c1808cb062617f9d0cfa2d34fed015e633395d99a926087af1a3ba811151f1c4"
+    },
+    {
+      "path": "mapping.template.json",
+      "bytes": 774,
+      "sha256": "df6b00cb3cecc1c81bf06644ca6118d23fad0b740171f64d10bcfc4a85f55dc6"
+    },
+    {
+      "path": "OPERATED.md",
+      "bytes": 1433,
+      "sha256": "9d5cdbd070877384275f996814b9e3899f03fb80a1e1e4acb3c8406c252e5b3e"
+    },
+    {
+      "path": "DEPENDENCIES.json",
+      "bytes": 850,
+      "sha256": "6dd6ae8dc5b87865b75720e868f612e537e9286024fe25c384fae419bc469f01"
+    },
+    {
+      "path": "project.mjs",
+      "bytes": 6336,
+      "sha256": "fa16d1f5382e3f1c7fe124cdc525770481d26a9580ee452a70d1d6e41524a909"
+    },
+    {
+      "path": "acceptance.mjs",
+      "bytes": 1763,
+      "sha256": "b6d82cea828b87409ecbbd810865b8b6df135100f6d97bd3a61e8fa75f917253"
+    },
+    {
+      "path": "native-intake.mjs",
+      "bytes": 10158,
+      "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+    },
+    {
+      "path": "receive.mjs",
+      "bytes": 22078,
+      "sha256": "eba36c92b397ef9f425a16d4f272c58a9d421b1e79690cac3d24d15b740d0ceb"
+    },
+    {
+      "path": "index.html",
+      "bytes": 5143,
+      "sha256": "a7b61cf2a98712d1052ae0fb6136c98f13376b83b9d1ab7df6c2ab9b5f684711"
+    },
+    {
+      "path": "style.css",
+      "bytes": 2523,
+      "sha256": "fd445952cc4d27ecded7a9dc38ad873448a92478a72e1bb331f584d4be22b01a"
+    },
+    {
+      "path": "app.mjs",
+      "bytes": 13449,
+      "sha256": "9852e079b7a62f96df2204d5a3343f96bd50c3dfcdeb6cfea92357680a390d19"
+    },
+    {
+      "path": "OPERATING.md",
+      "bytes": 10439,
+      "sha256": "867563fd813edfc924f7e4dbcd0202744a18e326d0515d44038f45f6d16262b4"
+    },
+    {
+      "path": "browser-receive.mjs",
+      "bytes": 9697,
+      "sha256": "5bb69dfd8196c56cd18ce2ebcc075ebcde53bfafbd9321b8ef2cabedfab58c1b"
+    },
+    {
+      "path": "examples/reviewed-project.json",
+      "bytes": 39077,
+      "sha256": "579b1fc8b14dbf1acde412cc05484a67ffbcd13a8b5a0932a5d2fba33f98dade"
+    },
+    {
+      "path": "examples/CORE-OPERATION.json",
+      "bytes": 776,
+      "sha256": "d730d8808ac11a21a1e4b764646c31ac536570889b6a8f55f73abb905f7429e4"
+    },
+    {
+      "path": "build-review.mjs",
+      "bytes": 9304,
+      "sha256": "6fa067ea3533cfc5db15e0eba3e61a3e011aa8b165176fecc85874e5b0831261"
+    },
+    {
+      "path": "INSTALLED.md",
+      "bytes": 12736,
+      "sha256": "f121248ff9fd72a1308e4e8c8d097a3a9a922fdfc74b2ca3a92c42b0782a6eb2"
+    },
+    {
+      "path": "PUBLIC_ADOPTION.json",
+      "bytes": 1504,
+      "sha256": "fb512b508bdce14ce2288c742ad1d6ee17b43464850a463d19e472a074d375af"
+    }
+  ]
+}

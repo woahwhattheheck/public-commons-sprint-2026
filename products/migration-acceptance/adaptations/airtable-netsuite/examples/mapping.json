@@ -1,0 +1,231 @@
+{
+  "schema": "airtable-netsuite.mapping.v1",
+  "id": "example_customers_orders_v1",
+  "evidenceMode": "authored-demonstration",
+  "tables": [
+    {
+      "name": "customers",
+      "airtableTableId": "tblCustomers",
+      "netsuiteQueryId": "customers",
+      "primaryKey": [
+        "customer_id"
+      ],
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldCustomerId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "customer_id",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldName",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "customer_name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "balance",
+          "type": "decimal",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldBalance",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "balance",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "precision": 22,
+          "scale": 4
+        },
+        {
+          "name": "inactive",
+          "type": "boolean",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldInactive",
+            "missing": {
+              "mode": "value",
+              "value": false
+            }
+          },
+          "netsuite": {
+            "alias": "inactive",
+            "missing": {
+              "mode": "error"
+            },
+            "valueMap": {
+              "string:T": true,
+              "string:F": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "airtableTableId": "tblOrders",
+      "netsuiteQueryId": "orders",
+      "primaryKey": [
+        "order_id"
+      ],
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldOrderId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "order_id",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "total",
+          "type": "decimal",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldTotal",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "total",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "precision": 22,
+          "scale": 4
+        }
+      ]
+    },
+    {
+      "name": "order_customers",
+      "airtableTableId": "tblOrders",
+      "airtableRows": {
+        "mode": "links",
+        "fieldId": "fldCustomers",
+        "missing": {
+          "mode": "value",
+          "value": []
+        }
+      },
+      "netsuiteQueryId": "order_customers",
+      "primaryKey": [
+        "order_id",
+        "ordinal"
+      ],
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "integer",
+          "nullable": false,
+          "airtable": {
+            "fieldId": "fldOrderId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "order_id",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "customer_id",
+          "type": "integer",
+          "nullable": false,
+          "airtable": {
+            "linkedFieldId": "fldCustomerId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "netsuite": {
+            "alias": "customer_id",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "ordinal",
+          "type": "integer",
+          "nullable": false,
+          "airtable": {
+            "linkOrdinal": true
+          },
+          "netsuite": {
+            "alias": "ordinal",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "order_customer_order",
+      "childTable": "order_customers",
+      "childColumns": [
+        "order_id"
+      ],
+      "parentTable": "orders",
+      "parentColumns": [
+        "order_id"
+      ],
+      "nulls": "reject"
+    },
+    {
+      "id": "order_customer_customer",
+      "childTable": "order_customers",
+      "childColumns": [
+        "customer_id"
+      ],
+      "parentTable": "customers",
+      "parentColumns": [
+        "customer_id"
+      ],
+      "nulls": "reject"
+    }
+  ]
+}

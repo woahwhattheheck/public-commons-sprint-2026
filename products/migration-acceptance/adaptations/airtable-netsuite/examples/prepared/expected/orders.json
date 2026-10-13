@@ -1,0 +1,38 @@
+{
+  "schema": "dlthub.expected-table.v1",
+  "table": "orders",
+  "complete": true,
+  "rowCount": 2,
+  "columns": [
+    {
+      "name": "order_id",
+      "type": "BIGINT"
+    },
+    {
+      "name": "total",
+      "type": "DECIMAL(22,4)"
+    }
+  ],
+  "rows": [
+    [
+      {
+        "type": "integer",
+        "value": "1001"
+      },
+      {
+        "type": "decimal",
+        "value": "12.3000"
+      }
+    ],
+    [
+      {
+        "type": "integer",
+        "value": "1002"
+      },
+      {
+        "type": "decimal",
+        "value": "0.0000"
+      }
+    ]
+  ]
+}

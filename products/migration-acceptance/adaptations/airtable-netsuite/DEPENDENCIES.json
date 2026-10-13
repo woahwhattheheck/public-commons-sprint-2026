@@ -1,0 +1,26 @@
+{
+  "schema": "airtable-netsuite.dependencies.v1",
+  "nativeProduct": "products/migration-acceptance",
+  "nativeRepository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "files": [
+    {
+      "path": "workbench/vendor/dlt/vendor/sling/vendor/stellar-expert/exact-json.mjs",
+      "gitBlob": "f24ed2620ee2460c780e6efea22c738edffbff75"
+    },
+    {
+      "path": "workbench/vendor/dlt/pipeline/plan.mjs",
+      "gitBlob": "530507d160e5f048e66e67f4e67be24d3d6c23cc"
+    },
+    {
+      "path": "workbench/pipeline/worker.py",
+      "gitBlob": "d36cf9fa4bfa4919185bde2596749c8577b86844"
+    }
+  ],
+  "hashUpstream": {
+    "repository": "emn178/js-sha256",
+    "version": "1.0.0",
+    "commit": "9a54fb31d4594762987e1b5d175265f6bac921de",
+    "blob": "e3a08633357cb7ca248e14751f9270d95fbbbdf2",
+    "license": "MIT retained in sha256.mjs"
+  }
+}
