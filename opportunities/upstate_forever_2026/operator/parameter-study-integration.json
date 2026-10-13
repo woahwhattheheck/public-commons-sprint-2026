@@ -24,7 +24,7 @@
   "server": {
     "module": "operator/parameter_study_api.py",
     "class": "ParameterStudyAPI",
-    "constructor": "ParameterStudyAPI(operator, OperationFault)",
+    "constructor": "ParameterStudyAPI(operator, Fault)",
     "action_members": [
       "parameter-study.prepare",
       "parameter-study.run",
@@ -50,7 +50,7 @@
   },
   "browser": {
     "module": "./parameter_studies.mjs",
-    "stylesheet": "/parameter_studies.css",
+    "stylesheet": "/web/parameter_studies.css",
     "factory": "attachParameterStudies",
     "instance": "parameterStudies",
     "view": "parameter-studies",
