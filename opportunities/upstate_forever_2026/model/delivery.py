@@ -11,6 +11,7 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_
                      describe_file, digest, held, identifier, now, read_json, verify_file)
 from . import cartography, portable, rasters
 from .delivery_archive import package_archive
+from . import receiving_water_delivery
 
 NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html"
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
@@ -339,6 +340,11 @@ def build(workspace, selection):
                 atomic_json(state_path, state)
             comparison = workspace.compare_runs([baseline["id"]] + scenario_ids)
             comparison_root = workspace.root / "comparisons" / comparison["id"]
+            water_product = receiving_water_delivery.collect(
+                workspace, selection, directory / "receiving-waters",
+                priority_settings=state["priority"])
+            receiving_water_delivery.attach_state(state, directory, water_product)
+            atomic_json(state_path, state)
             receptor_product = None
             receptor_overlays = {}
             if selection.get("receptor_spec"):
@@ -416,6 +422,7 @@ def build(workspace, selection):
                             "label": "Relative export priority in contributing land"}
                         all_specs[family] = ([focused_panel],
                             all_specs[family][1] + [receptor_overlays[role]])
+            receiving_water_delivery.apply_map_specs(all_specs, water_product)
             future_maps = {}
             for alternative in comparison["alternatives"]:
                 scenario = workspace._get("scenarios", alternative["selection"]["scenario_id"])
@@ -546,6 +553,7 @@ def build(workspace, selection):
                      "original delivery navigator and audit inspect the actual final GIS files."]),
                 ]
                 target = directory / "report.pdf"
+                sections.extend(receiving_water_delivery.report_section(water_product))
                 cartography.report_pdf(target, selection.get("title", workspace.project["title"]),
                                        sections, contact=contact, source_records=records)
                 state["files"]["report"] = describe_file(directory, target)
@@ -577,6 +585,7 @@ def build(workspace, selection):
             manifest["project_assets"].extend(item["path"] for name, item in state["files"].items()
                                              if name.startswith(("parcel_", "spatial_review_", "spatial_export_", "receptor_")))
             audit_manifest = directory / "delivery.json"
+            receiving_water_delivery.extend_assets(manifest, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
