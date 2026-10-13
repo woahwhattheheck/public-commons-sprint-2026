@@ -6,7 +6,7 @@ import { nativeStore, clientCumulativeKey } from './runtime.mjs';
 export const groups=Object.freeze({
   tasks:'channel-tasks', streams:'channel-streams', purchases:'channel-purchases',
   deliveries:'channel-deliveries', settlements:'channel-settlements', receiving:'channel-receiving', settings:'channel-settings',
-  funding:'channel-funding',funders:'channel-funders',observations:'channel-observations'
+  funding:'channel-funding',funders:'channel-funders',observations:'channel-observations',openings:'channel-openings'
 });
 const operations=new WeakMap(),operationContext=new AsyncLocalStorage();
 export function serialChannel(workspace, terms, operation) {
@@ -110,7 +110,8 @@ export async function snapshot(workspace) {
     deliveries:(await workspace.list(groups.deliveries)).map(deliveryView),
     settlements:(await workspace.list(groups.settlements)).map(({signedXdr,signature,...row})=>row),
     funding:(await workspace.list(groups.funding)).map(({signedXdr,...row})=>row),
-    funderProfiles:await workspace.list(groups.funders),observations:await workspace.list(groups.observations)};
+    funderProfiles:await workspace.list(groups.funders),observations:await workspace.list(groups.observations),
+    openings:(await workspace.list(groups.openings)).map(openingView)};
 }
 function responseView(response) {
   return response?{status:response.status,bytes:response.bytes,sha256:response.sha256,
@@ -137,4 +138,17 @@ export async function rememberObservation(workspace,terms,observation,origin) {
       origin,updatedAt:now()};
     return {op:'set',value:row,result:row};
   });
+}
+
+export function openingView(row) {
+  const {codeData,environment,...rest}=row;
+  return {...rest,codeData:codeData?{sha256:codeData.sha256,bytes:codeData.bytes,source:codeData.source}:null,
+    transactions:Object.fromEntries(Object.entries(row.transactions ?? {}).map(([stage,value])=>{
+      const {signedXdr,config,finality,...transaction}=value;
+      if(finality) {
+        const {envelopeXdr,resultXdr,resultMetaXdr,...summary}=finality;
+        transaction.finality=summary;
+      }
+      return [stage,transaction];
+    }))};
 }

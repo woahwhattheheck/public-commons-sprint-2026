@@ -14,7 +14,7 @@ const HELP=[
  '  starforge mpp-workspace channel state --dir PRIVATE_PRODUCT',
  '  starforge mpp-workspace channel OPERATION --dir PRIVATE_PRODUCT --input OPERATION.json [--wait-ms 30000] [--out RESULT.json]',
  '  starforge mpp-workspace channel run --dir PRIVATE_PRODUCT --input WORK.json [--out RESULT.json]',
- '  starforge mpp-workspace channel tasks|purchases|contracts|funders|funding|settlements|observations --dir PRIVATE_PRODUCT --id ORIGINAL_ID',
+ '  starforge mpp-workspace channel tasks|purchases|contracts|funders|funding|settlements|observations|openings --dir PRIVATE_PRODUCT --id ORIGINAL_ID',
  '  starforge mpp-workspace channel job --dir PRIVATE_PRODUCT --id ORIGINAL_JOB_ID',
  '  starforge mpp-workspace channel response --dir PRIVATE_PRODUCT --id PURCHASE_ID --out RESPONSE_FILE',
  '  starforge mpp-workspace channel handover --dir PRIVATE_PRODUCT --id BUNDLE_SHA256 --out HANDOVER.json','',
@@ -24,6 +24,9 @@ const HELP=[
  '  node stellar/scf-starforge-20261009/mpp-channel/cli.mjs serve --workspace ORIGINAL_WORKSPACE','',
  'Operations:',
  '  '+actions.join(', '),'',
+ 'opening-template input: {}; opening-prepare input: {openingId, profile: <complete source/channel/funder selection>}',
+ 'opening-execute/resume/reconcile/cancel input: {openingId, rpcUrl?: <reconcile archival RPC>}',
+ 'Opening uses the selected WASM, stable salt, original constructor and deposit, and total reviewed fee cap.',
  'task-save input: {config: <complete selected task>, expectedRevision: <current revision or 0>}',
  'task-authorize input: {taskId, expectedRevision}; original operator terminal authorizes its cap.',
  'purchase-prepare input: {taskId, purchaseId, request: {url, method, json?}}',
@@ -41,7 +44,7 @@ const HELP=[
  'export input: {channel: <original channel identity>, handoverId}; transfers operation with its complete source.',
  'receive input: {file: <complete handover path>, dependencyRoot: <installed exact native SDK>}',
  'run input: {schema: "stellar-forge.mpp-channel-work.v1", purchases: [{taskId, purchaseId, request}]}','',
- 'The browser has task forms, merchant offers, output downloads, funding, collection, refund and complete receiving.',
+ 'The browser has channel opening, task forms, merchant offers, output downloads, funding, collection, refund and complete receiving.',
  'Use README.md for original source and operating instructions. No secret keys belong in JSON inputs.',''
 ].join('\n');
 const print=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
@@ -93,7 +96,7 @@ export async function main(args=process.argv.slice(2)){
    client=await connectMppChannel({directory:full(directory)});
    if(command==='state')result=await client.state();
    else if(command==='job')result=await client.job(values.get('--id'));
-   else if(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(command))result=await client.record(command,values.get('--id'));
+   else if(['tasks','purchases','contracts','funders','funding','settlements','observations','openings'].includes(command))result=await client.record(command,values.get('--id'));
    else if(command==='run')result=await client.runPurchases(input,{waitMs});
    else if(command==='response')bytes=(await client.response(values.get('--id'))).bytes;
    else if(command==='handover')bytes=(await client.handover(values.get('--id'))).bytes;
@@ -101,7 +104,7 @@ export async function main(args=process.argv.slice(2)){
   }else{
    workspace=await openWorkspace(full(nativeDirectory));workbench=createChannelWorkbench({workspace});
    if(command==='state')result=await workbench.state();
-   else if(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(command))result=await workbench.read(command,values.get('--id'));
+   else if(['tasks','purchases','contracts','funders','funding','settlements','observations','openings'].includes(command))result=await workbench.read(command,values.get('--id'));
    else if(command==='response')bytes=Buffer.from(await(await workbench.response(values.get('--id'))).arrayBuffer());
    else if(command==='handover')bytes=Buffer.from(await(await workbench.handover(values.get('--id'))).arrayBuffer());
    else{
