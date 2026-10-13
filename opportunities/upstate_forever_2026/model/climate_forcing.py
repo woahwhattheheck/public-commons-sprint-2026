@@ -186,7 +186,10 @@ def _selection(ws, raw):
                 "artifacts": {k: deepcopy(run["artifacts"][k])
                               for k in required_outputs(run_models(run))},
                 "grid": deepcopy(grid), "profile": deepcopy(profile),
-                "scenario": deepcopy(scenario), "native_versions": versions}
+                "scenario": deepcopy(scenario), "native_versions": versions,
+                "landcover_artifact": deepcopy(run.get("stages", {}).get("landcover", {}).get("artifact"))}
+    if scenario["kind"] == "landcover" and not baseline["landcover_artifact"]:
+        raise ValueError("The original land-cover scenario lacks its retained native prepared raster")
     identity = {"schema": SCHEMA, "version": VERSION, "workspace_id": ws.project["id"],
                 "selection": selection, "baseline": baseline,
                 "sources": previews, "reporting_sources": bound_areas}
@@ -728,6 +731,15 @@ def report(ws, key):
     for run in runs.values():
         if run_models(run) != active:
             raise ValueError("A forcing case changed the selected native output scope")
+    landcover_binding = {}
+    if identity["baseline"]["scenario"]["kind"] == "landcover":
+        expected_lulc = identity["baseline"]["landcover_artifact"]
+        for run in runs.values():
+            actual_lulc = run.get("stages", {}).get("landcover", {}).get("artifact")
+            if actual_lulc is None or _body(actual_lulc) != _body(expected_lulc):
+                raise ValueError("Forcing-only comparisons require the same actual native prepared land cover")
+            verify_file(ws.root / "runs" / run["id"], actual_lulc)
+            landcover_binding[run["id"]] = deepcopy(actual_lulc)
     for source in identity["reporting_sources"]:
         entry, _ = forcing_sources._retained_entry(ws, source["selection"]["source_collection_id"],
                                                    source["selection"]["source_id"])
@@ -737,6 +749,7 @@ def report(ws, key):
                "workspace_id": ws.project["id"], "study_identity": identity,
                "runs": deepcopy(runs), "native_versions": versions,
                "case_snapshot": deepcopy(state["cases"]), "progress": deepcopy(state["progress"]),
+               "landcover_binding": landcover_binding,
                "implementation": {"forcing_sha256": file_digest(Path(__file__)),
                                   "paired_sha256": file_digest(Path(parameter_studies.__file__))}}
     report_id = digest(context)
@@ -814,6 +827,7 @@ def report(ws, key):
                   "completed_cases": len(completed), "total_cases": state["progress"]["total"],
                   "rows": rows, "areas": [{k: v for k, v in a.items() if k != "geometry"} for a in areas],
                   "forcing_diagnostics": diagnostics, "native_versions": versions,
+                  "landcover_binding": landcover_binding,
                   "aggregation": aggregation, "difference_maps": maps, "limitations": list(LIMITATIONS),
                   "comparison_basis": "Alternative minus original baseline on common finite retained annual-mass pixels.",
                   "mean_basis": "Native own valid full model-domain proxy support; reporting-mask totals never define NDR normalization."}
