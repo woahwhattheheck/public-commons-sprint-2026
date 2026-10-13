@@ -159,6 +159,21 @@ python -B model/receiving_water_journey.py \
   --archive-and-reopen
 ```
 
+The original preparation command also writes `public-water-preparation.json`.
+Pass that actual result directly to avoid copying Workspace paths and plan IDs:
+
+```sh
+python -B model/receiving_water_journey.py \
+  --preparation /absolute/path/to/public-water-preparation.json \
+  --output-dir /absolute/path/to/receiving-journeys \
+  --archive-and-reopen
+```
+
+The command checks the preparation schema, completed plan state, absolute
+Workspace path, retained source collection and original receptor IDs. Explicit
+`--workspace` or `--plan-id` values must agree with the prepared result. The
+actual receipt byte identity is retained with the journey.
+
 The output directory must be outside the Workspace. With
 `--archive-and-reopen`, the command also creates the original complete portable
 Workspace archive, restores it into a new receiving directory, and reopens every
@@ -216,3 +231,35 @@ Apply the journey to the matching original geography: the four South Carolina
 utility polygons use their regional source-plan Workspace; a retained Gura run
 uses its original Gura source/catchment plan. Numerical receiving-water analysis
 continues to use completed model rasters for the selected Workspace.
+
+## Broad catalogs and recovery checkpoints
+
+Every computed contribution geometry retains its own immediate, verified
+`summary.json` recovery checkpoint, including its original raster artifacts.
+Subjects sharing a geometry reuse those same numerical results in memory.
+After interruption, the analysis verifies retained geometry summaries and their
+files before reusing them.
+
+The growing aggregate `analysis.json` is written after at least 32 subjects,
+then at increasing batches of approximately half the completed count, or when
+five seconds have elapsed at the next completed subject. This avoids serializing
+the entire growing subject and file inventory for every fast geometry reuse.
+Normalization, successful completion and failure always write the aggregate.
+Progress callbacks still report each original subject in order; the saved
+aggregate reflects its latest checkpoint.
+
+The saved `execution` section reports aggregate write counts, completed prior
+write bytes/time, and computed, restored and in-memory reused geometry counts.
+Geometry-summary read timing includes source-file verification. Timings describe
+the current attempt; the current aggregate write's own duration is omitted
+because recording it would require another full write. Numerical quantities,
+pixel selections, normalization and final per-subject artifacts are unchanged.
+
+Ordinary Operator state polling caches only compact receiving-water summaries.
+Every poll enumerates actual manifest paths and compares device, inode,
+modification time, change time and byte length; a changed manifest is read and
+validated again through the original inspector. A file replaced during the read
+is returned as that read's snapshot and is not cached. Deleted manifests are
+removed. The cache retains at most 16 workspaces with 1,024 summaries each.
+Explicit plan/analysis inspection and verified downloads retain their original
+behavior.
