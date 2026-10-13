@@ -574,19 +574,8 @@ def restore_selected_study(archive, saved, destination):
     if destination.is_symlink():
         raise ValueError("Keep selected-study receiving in its own actual directory")
     if destination.exists():
-        for name, expected in manifest["members"].items():
-            _check_file(_member(destination, name), expected)
-        if _read(destination / "workspace" / "workspace.json") != manifest["project"]:
-            raise ValueError("Reopened selected-study project identity differs")
-        restored = {
-            "schema": "upstate.scientific-workspace-receiving/v1",
-            "project": manifest["project"], "directory": str(destination),
-            "workspace": str(destination / "workspace"),
-            "application": str(destination / "application"),
-            "archive_sha256": saved["sha256"], "members": len(manifest["members"]),
-            "selection": manifest["selection"], "identity": "MATCH",
-            "recovered_existing_receiving": True,
-        }
+        restored = portable.resume_restore(
+            archive, destination, expected_archive_sha256=saved["sha256"])
     else:
         restored = portable.restore(archive, destination)
     return restored, manifest
