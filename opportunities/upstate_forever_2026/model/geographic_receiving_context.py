@@ -16,6 +16,7 @@ from .common import (atomic_json, digest, file_digest, held, identifier,
                      now, read_json, verify_file)
 from . import observed_context, receiving_waters as waters
 from . import receiving_water_report_source as reports
+from .geographic_utility_groups import augment as augment_utility_groups
 
 SCHEMA = "upstate.geographic-receiving-context/v1"
 FOLDER = "geographic-receiving-contexts"
@@ -169,6 +170,7 @@ def _source_choices(workspace, prepared):
                      "expected_union_huc12s": sorted(expected),
                      "support": "Full original HUC polygons; quantity scope is selected separately"},
     }
+    upstream = augment_utility_groups(workspace, prepared, upstream)
     spec_path = Path(__file__).resolve().parents[1] / PUBLIC_SPEC
     public = read_json(spec_path)
     protection = deepcopy(public)
@@ -296,6 +298,9 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
         "report_implementation_sha256": file_digest(reports.__file__),
         "allocation_implementation_sha256": file_digest(allocation.__file__),
         "allocation_rendering_sha256": file_digest(allocation.rendering.__file__),
+        "allocation_contrasts_sha256": file_digest(allocation.contrasts.__file__),
+        "allocation_utility_profile_sha256": file_digest(
+            Path(__file__).resolve().parents[1] / "source/receptor-profiles/utility-focus-20261012.json"),
         "plan_selections": specs, "quantity_scopes": list(scopes),
         "runs": [{"id": run["id"], "selection": run["selection"], "artifacts": run["artifacts"]}
                  for run in runs],
@@ -352,6 +357,7 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
                     "units": {name: waters.TOTAL_UNITS[name] for name in outputs},
                     "subjects": [
                         {"id": row["id"], "kind": row["kind"], "title": row["title"],
+                         "classification": deepcopy(row.get("classification", {})),
                          "relationship_precision": row["relationship_precision"],
                          "contribution_area_ha": row["contribution_area_ha"],
                          "area_in_quantity_scope_ha": row["area_in_quantity_scope_ha"],
