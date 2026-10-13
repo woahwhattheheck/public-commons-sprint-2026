@@ -44,3 +44,16 @@ A complete study export retains the exact source edition and all original native
 wqp_profiles.py handles the original NarrowResult-to-metadata join. source_observations.py validates original source bytes and declared station/characteristic/date scopes, preserves all record IDs, and groups method specification alongside fraction, analytical method, result type, measurement basis and original unit. Other WQP Result cohorts use their existing parser.
 
 sv833_observations.py builds the installed cohort from the maintained forty-file native source family. study_context.py supplies the same complete source closure to import, cold installation and transfer. No profile is inferred from a filename: the observation index declares the format, original source scope, role, byte length, hash and metadata dependencies.
+
+
+## One resumable native receiving command
+
+The maintained receiver performs the complete original-data journey in the actual application: import, original result/metadata inspection, selected report export, complete-study re-import, full Workspace archive, and restored original source access. It uses the existing Workspace, PublishedStudyStore and portable-project implementation.
+
+    python APP/source_tools/receive_sv833_study.py --application APP --workspace RECEIVING/sv833-observed-workspace --output RECEIVING/sv833-native --create-workspace
+
+Use the existing Workspace path when one has already been chosen. The explicit create flag creates that Workspace only when its workspace.json does not exist. The output and Workspace must be outside the application tree, and the output must be outside the Workspace. The default selection is SV-833, Escherichia coli, 2025; --year and --parameter select another original subset.
+
+The command prints its actual PID, operation ID, Workspace identity and each completed phase immediately. operation.json retains the exact source edition and selection. A rerun reconnects those same identities, preserves saved selected-report/complete-study outputs, and resumes project receiving. Changed source editions or selections use a new output directory. Original source files and saved Workspace histories remain under their native ownership.
+
+Selected files remain in Workspace/published_study_exports/OPERATION_ID. The complete project archive and reopened-project directory are under the explicit output path. The receiving result returns actual study/version/collection IDs and resolves the first original CSV through the restored Workspace source selector. Open the restored application and original Published studies view to inspect the same source-bound records and report/figure links.

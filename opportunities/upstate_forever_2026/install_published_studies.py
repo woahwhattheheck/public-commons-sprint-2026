@@ -18,6 +18,7 @@ CODE_FILES = (
     "measurement_workspace/source_observations.py",
     "measurement_workspace/wqp_profiles.py",
     "measurement_workspace/sv833_observations.py",
+    "source_tools/receive_sv833_study.py",
     "measurement_workspace/SV833_OBSERVATIONS.md",
     "measurement_workspace/utility_microbiology.py",
     "measurement_workspace/utility_microbiology_context.py",
