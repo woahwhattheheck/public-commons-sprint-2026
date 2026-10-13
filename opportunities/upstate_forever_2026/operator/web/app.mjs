@@ -833,11 +833,16 @@ function bindDeliverySource(name,requiredField,withFilters){
   form.elements.namedItem(name+'_enabled').addEventListener('change',update);update();
  }
 }
-function readDeliverySource(name,requiredField=true,withFilters=false){
+function readDeliverySource(name,requiredField=true,withFilters=false,retained=null){
  if(!requiredField&&!form.elements.namedItem(name+'_enabled').checked)return null;
  const row={source_collection_id:val(name+'_collection'),source_id:val(name+'_source')};
  if(withFilters){const layer=val(name+'_layer').trim(),where=readFilter(name);if(layer)row.layer=layer;if(where)row.where=where;}
- return row;
+ if(!retained||row.source_collection_id!==retained.source_collection_id||row.source_id!==retained.source_id)return row;
+ if(withFilters){
+  const exact=value=>JSON.stringify(Object.entries(value||{}).sort(([a],[b])=>a.localeCompare(b)));
+  if((row.layer||'')!==(retained.layer||'')||exact(row.where)!==exact(retained.where))return row;
+ }
+ return {...retained,...row};
 }
 async function deliveryForm(id,initialSelection){
  requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;
@@ -868,9 +873,15 @@ async function deliveryForm(id,initialSelection){
  field('Delivery notes',area('notes',(row?.notes||[]).join('\n')),'One original interpretation or delivery note per line.',true)+'</div>',
  'Build complete original delivery',()=>{
   const alternatives=chosen('alternatives');if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
-  const source_roles={},selectedOverlays={},weights={},caps={};
-  for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key);
-  for(const [key,,requiredField]of overlays){const x=readDeliverySource('overlay_'+key,requiredField,true);if(x)selectedOverlays[key]=x;}
+  const source_roles={...(row?.source_roles||{})},selectedOverlays={},weights={},caps={};
+  for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
+  for(const [key,,requiredField]of overlays){
+   const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
+   if(x)selectedOverlays[key]=x;
+  }
+  for(const [key,role]of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS']]){
+   if(selectedOverlays[key])source_roles[role]=selectedOverlays[key];else delete source_roles[role];
+  }
   for(const key of ['nitrogen_export','phosphorus_export','sediment_export']){
    weights[key]=num('weight_'+key);const cap=num('cap_'+key,form,true);if(cap!==undefined){if(cap<=0)throw Error('A priority cap must be positive.');caps[key]=cap;}
   }
