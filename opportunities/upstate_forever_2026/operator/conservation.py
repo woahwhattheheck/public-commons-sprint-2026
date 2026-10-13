@@ -15,9 +15,9 @@ class Conservation:
         "conservation.prepare", "conservation.build",
         "conservation.plan.save", "conservation.export", "conservation.scenario.create",
         "conservation.criteria.prepare", "conservation.experiment.prepare",
-        "conservation.sources.capture",
+        "conservation.sources.capture", "conservation.report.source.prepare",
     })
-    READS = frozenset({"overview", "study", "plan", "source-capture"})
+    READS = frozenset({"overview", "study", "plan", "source-capture", "report-source"})
 
     def __init__(self, operator, fault):
         self.operator = operator
@@ -78,6 +78,8 @@ class Conservation:
             result = dict(model.overview(ws))
             result["published_methods"] = keowee_priority.catalog()
             result["scenario_bridges"] = conservation_scenarios.list_scenarios(ws)
+            from model import conservation_report_source
+            result["report_sources"] = conservation_report_source.list_sources(ws)
             from source_tools import parcel_criteria
             result["criteria_operations"] = parcel_criteria.overview(ws)["operations"]
             from source_tools import soil_floodplain_sources
@@ -106,6 +108,12 @@ class Conservation:
                 ],
             }
             return result
+        if operation == "report-source":
+            from model import conservation_report_source
+            result = conservation_report_source.get(ws, self._identifier(value, "report_source_id"))
+            decorated = self.decorate_task({"action": "conservation.report.source.prepare",
+                                            "workspace": workspace, "result": result})
+            return {**result, "_downloads": decorated.get("_downloads", [])}
         if operation == "source-capture":
             from source_tools import soil_floodplain_sources
             result = soil_floodplain_sources.inspect(ws, self._identifier(value, "operation_id"))
@@ -124,6 +132,9 @@ class Conservation:
                              "Unknown conservation action.", status=404)
         ws = self.operator.ws(task["workspace"])
         value = self._mapping(task.get("payload"))
+        if action == "conservation.report.source.prepare":
+            from model import conservation_report_source
+            return conservation_report_source.prepare(ws, self._mapping(value.get("spec", value), "Report source"))
         if action == "conservation.sources.capture":
             from source_tools import soil_floodplain_sources
             if value.get("operation_id"):
@@ -236,6 +247,8 @@ class Conservation:
         if action == "conservation.export":
             add(result, "Conservation project packet")
         add(result.get("files"), "Conservation files")
+        if action == "conservation.report.source.prepare":
+            add(result.get("packet"), "Original Conservation decision packet")
         handoff = result.get("experiment_handoff")
         if isinstance(handoff, dict):
             add(handoff.get("files"), "Paired experiment files")

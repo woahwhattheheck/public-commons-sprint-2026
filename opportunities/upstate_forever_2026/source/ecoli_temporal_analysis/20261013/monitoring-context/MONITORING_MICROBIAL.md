@@ -73,4 +73,4 @@ The pure `deriveMicrobialMonitoring` function consumes those same originals. It 
 | `build-microbial-monitoring.mjs` | Hash-checked reproduction command |
 | `input-manifest.json` | Exact input and output byte/hash identities |
 
-The application-root source manifest retains the complete original utility source family, original USGS response, analysis module, derivation and derived outputs. Original publisher request URLs are preserved in the utility family's `source-inputs.json`.
+The application-root source manifest retains immutable copies of the complete original 22-file utility source family under `original-utility/`, the original USGS response under `original-usgs/` and the exact maintained analysis module under `original-analysis/`, beside the derivation and derived outputs. Original paths and commit identities remain in the input manifest. This complete local source edition remains reproducible while the wider utility application continues to evolve. Original publisher request URLs are preserved in the utility family's `source-inputs.json`.

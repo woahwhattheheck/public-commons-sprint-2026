@@ -19,7 +19,8 @@
         "source_tools/receive_gauge_support.py",
         "operator/GAUGE_SUPPORT.md",
         "operator/install_gauge_support.py",
-        "model/gauge_report_context.py"
+        "model/gauge_report_context.py",
+        "source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md"
       ]
     },
     "regional-soil": {
@@ -53,7 +54,8 @@
         "source/annual-nlcd-native-20261013/source/source-entry.json",
         "source/annual-nlcd-native-20261013/source/source-manifest.json",
         "source/annual-nlcd-native-20261013/README.md",
-        "source/annual-nlcd-native-20261013/source/land-cover.tif"
+        "source/annual-nlcd-native-20261013/source/land-cover.tif",
+        "source/annual-nlcd-native-20261013/replay.mjs"
       ],
       "source_manifests": [
         "source/annual-nlcd-native-20261013/source/source-manifest.json"

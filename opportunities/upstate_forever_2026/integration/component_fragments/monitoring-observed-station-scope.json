@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-observed-station-scope",
+  "source_reference": "ECO13-MONITORING-MICROBIAL-CONTEXT-20261013",
+  "extend_components": {
+    "monitoring": {
+      "paths": [
+        "integration/component_fragments/monitoring-observed-station-scope.json",
+        "microbial_monitoring_context.sources.json"
+      ],
+      "source_manifests": [
+        "microbial_monitoring_context.sources.json"
+      ]
+    }
+  },
+  "required_components": []
+}

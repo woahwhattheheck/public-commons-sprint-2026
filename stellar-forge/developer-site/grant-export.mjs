@@ -1,12 +1,16 @@
+import {inflateRawSync} from 'node:zlib';
+import {receiveIssuerContext} from './grant-issuer-context.mjs';
+import {selectedIssuerContext,MAX_ISSUER_BYTES} from './dist/grant-issuer-core.mjs';
+import {selectIssuerProgramme,reopenIssuerProgramme,issuerContextSection} from './dist/grant-issuer-source.mjs';
 import {readFile, stat, mkdir, writeFile} from 'node:fs/promises';
-import {resolve, dirname, join} from 'node:path';
+import {resolve, dirname, join, basename} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {ENVELOPE, MAX_BYTES, validateDraft, makeSource, createDraft, importFormMap, exportFormMap, measureText, applicationOutput} from './dist/grant-submission-core.mjs';
 import {emptyHandover} from './dist/grant-handover-core.mjs';
 import {openDraftEnvelope, createDraftEnvelope, verifyHandover, createSourceBundle, retainSourceBundle, prepareSubmission,
-  MAX_SOURCE_PACKAGE_BYTES,openReviewerSourcePackage,receiveReviewerSource,reviewerSourceFromDraft,createReviewerSourcePackage} from './dist/grant-handover-source.mjs';
+  fileBytes,MAX_SOURCE_PACKAGE_BYTES,openReviewerSourcePackage,receiveReviewerSource,reviewerSourceFromDraft,createReviewerSourcePackage} from './dist/grant-handover-source.mjs';
 
 // MIT. Command-line receiving for the original SCF submission model.
 const EXPORT_SCHEMA = 'stellar-forge.grant-cli-export.v1';
@@ -14,6 +18,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const gitBlob = bytes => createHash('sha1').update('blob ' + bytes.length + '\0').update(bytes).digest('hex');
 const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const copy = value => JSON.parse(JSON.stringify(value));
+const nativePlanningOptions={digest:async bytes=>sha256(bytes),inflate:async(bytes,maximum)=>new Uint8Array(inflateRawSync(bytes,{maxOutputLength:maximum}))};
 
 function requireValue(condition, message) {
   if (!condition) throw new Error(message);
@@ -49,10 +54,10 @@ export function renderExportReview(prepared) {
     '@media print{body{background:white}main{max-width:none;padding:0}button,textarea,#copy-status{display:none}section{break-inside:auto}section header{break-after:avoid}.print-value{display:block;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace}}</style></head><body><main>' +
     '<h1>' + escapeHtml(prepared.title) + '</h1><p>' + prepared.fields.length + ' ' + (prepared.selection === 'fields' ? 'mapped issuer fields' : 'canonical answers') + ' · ' + escapeHtml(prepared.format) + ' output</p>' +
     '<p>These values come from the complete saved submission draft. Keep draft.json to reopen its source editions, manual edits, planning and review history in the existing submission workspace.</p><p id="copy-status" role="status" aria-live="polite"></p>' +
-    cards + '<footer>Each text file contains exactly its displayed value. Printing includes complete answers across as many pages as needed. Use the original submission workspace to edit the draft or its issuer field map.</footer></main><script>' + script + '</script></body></html>\n';
+    cards + (prepared.issuerContextHtml||'') + '<footer>Each text file contains exactly its displayed value. Printing includes complete answers across as many pages as needed. Use the original submission workspace to edit the draft or its issuer field map.</footer></main><script>' + script + '</script></body></html>\n';
 }
 
-export async function prepareGrantExport(input, {selection='auto', format='plain', generatedAt=new Date().toISOString()} = {}) {
+export async function prepareGrantExport(input, {selection='auto', format='plain', generatedAt=new Date().toISOString(), planningOptions=nativePlanningOptions} = {}) {
   let draft = copy(validateDraft(input));
   requireValue(['auto','answers','fields'].includes(selection), 'Select auto, answers or fields.');
   requireValue(['plain','markdown'].includes(format), 'Select plain or markdown output.');
@@ -61,7 +66,7 @@ export async function prepareGrantExport(input, {selection='auto', format='plain
   requireValue(selected !== 'fields' || draft.fields.length > 0, 'This draft has no mapped issuer fields.');
   draft.handover ||= emptyHandover();
   Object.assign(draft.handover.selection,{outputKind:selected,format});
-  const received = await prepareSubmission(draft,{at:generatedAt});
+  const received = await prepareSubmission(draft,{at:generatedAt,planningOptions});
   draft = received.draft;
   const edition = received.edition;
   const fields = edition.body.output.items.map((item,index) => {
@@ -73,18 +78,28 @@ export async function prepareGrantExport(input, {selection='auto', format='plain
       counts:status.counts,wordLimit:original.wordLimit,characterLimit:original.characterLimit,characterMethod:original.characterMethod,
       issues:[...status.issues],overLimit:exceeded(original,status.counts)};
   });
+  const issuer=selectedIssuerContext(draft,edition.body.issuerProgrammeId??null);
   const prepared = {schema:EXPORT_SCHEMA,generatedAt,draftId:draft.id,title:draft.title,currentSource:draft.currentSource,
     editionId:edition.id,selection:selected,format,form:copy(draft.form),fields,
+    issuerProgramme:issuer?{id:issuer.id,caseId:issuer.body.programme.id,caseVersion:issuer.body.programme.version,terms:copy(issuer.body.selection),plan:copy(issuer.body.plan),stage:issuer.body.document.stage,proposalTrack:issuer.body.document.proposalTrack,issuerTrack:issuer.body.document.issuerTrack}:null,
     overLimit:fields.some(field=>field.overLimit),needsFieldReview:fields.some(field=>field.issues.length>0)};
   const files = new Map();
-  files.set('draft.json',await createDraftEnvelope(draft,{exportedAt:generatedAt}));
+  files.set('draft.json',await createDraftEnvelope(draft,{exportedAt:generatedAt,planningOptions}));
   files.set('form-map.json',JSON.stringify(exportFormMap(draft),null,2)+'\n');
   if(draft.handover.selection.bundleId)files.set('source-package.json',await createReviewerSourcePackage(
     await reviewerSourceFromDraft(draft,draft.handover.selection.bundleId),{exportedAt:generatedAt}));
   files.set('application.md',applicationOutput(draft,{format:'markdown',useFields:false}));
   files.set('prepared.txt',edition.body.output.text);
   files.set('prepared.json',JSON.stringify(prepared,null,2)+'\n');
-  files.set('review.html',renderExportReview(prepared));
+  const issuerHtml=issuer?issuerContextSection(draft,issuer.id):'';
+  files.set('review.html',renderExportReview({...prepared,issuerContextHtml:issuerHtml}));
+  if(issuer){
+    const receivedIssuer=await reopenIssuerProgramme(draft,issuer.id,{planningOptions});
+    files.set('issuer-programme.zip',fileBytes(draft,issuer.body.file.sha256));
+    files.set('issuer-context.json',JSON.stringify(issuer,null,2)+'\n');
+    files.set('issuer-native-planning.zip',receivedIssuer.files.get('planning.zip'));
+    files.set('issuer-context.html','<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Issuer programme</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:1080px;margin:auto;padding:2rem;color:#181818;background:white}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{border:1px solid #aaa;text-align:left;vertical-align:top;padding:.6rem;overflow-wrap:anywhere}.table{overflow:auto}h2{border-top:2px solid #222;padding-top:1rem}p,code{overflow-wrap:anywhere}@media print{body{padding:0}}</style></head><body>'+issuerHtml+'</body></html>\n');
+  }
   for (const field of fields) files.set('fields/'+field.filename,field.value);
   return {draft,edition,prepared,files};
 }
@@ -109,15 +124,17 @@ export async function writeGrantExport(options) {
   requireValue(fromDraft !== Boolean(options.source), 'Choose a saved draft or an application source.');
   requireValue(options.out, 'Choose a new output directory with --out.');
   requireValue(!options['receive-source-package'] || fromDraft, 'Receive a source package into the original saved draft with --draft.');
+  requireValue(Boolean(options['receive-issuer-case'])===Boolean(options['issuer-profile']),'Receive an issuer case together with its explicit --issuer-profile.');
+  requireValue(!(options['receive-issuer-case']&&options['issuer-context']),'Receive a new issuer case or select an existing context.');
   if (fromDraft) requireValue(!options['source-index'] && !options['source-url'] && !options.budget && !options.companion && !options.id && !options.title, 'A saved draft retains its own source, identity and title.');
   let draft;
   if (fromDraft) {
     const saved = await readBounded(resolve(options.draft),'Saved submission',MAX_BYTES*2+65536);
     const document = JSON.parse(saved.text.replace(/^\uFEFF/,''));
-    draft = document.schema === ENVELOPE ? await openDraftEnvelope(saved.text) : await verifyHandover(document);
+    draft = document.schema === ENVELOPE ? await openDraftEnvelope(saved.text,{planningOptions:nativePlanningOptions}) : await verifyHandover(document,{planningOptions:nativePlanningOptions});
     if(options['receive-source-package']) {
       const incoming=await readBounded(resolve(options['receive-source-package']),'Reviewer source package',MAX_SOURCE_PACKAGE_BYTES);
-      draft=await receiveReviewerSource(draft,await openReviewerSourcePackage(incoming.text));
+      draft=await receiveReviewerSource(draft,await openReviewerSourcePackage(incoming.text),{planningOptions:nativePlanningOptions});
     }
   } else {
     requireValue(options['source-index'] && options['source-url'], 'A new draft needs --source-index and --source-url from the same application edition.');
@@ -135,6 +152,15 @@ export async function writeGrantExport(options) {
       draft = retainSourceBundle(draft,bundle);
     }
   }
+  if(options['receive-issuer-case']){
+    const issuerPath=resolve(options['receive-issuer-case']),size=(await stat(issuerPath)).size;
+    requireValue(size>0&&size<=MAX_ISSUER_BYTES,'Receive the complete original issuer case up to 32 MiB.');
+    const bytes=await readFile(issuerPath);
+    requireValue(bytes.length===size,'Keep the original issuer file stable during reception.');
+    const profile=await readJson(resolve(options['issuer-profile']),'Issuer receiving profile');
+    draft=(await receiveIssuerContext(draft,new Uint8Array(bytes),profile,{filename:basename(issuerPath),planningOptions:nativePlanningOptions})).draft;
+  }
+  if(options['issuer-context'])draft=selectIssuerProgramme(draft,options['issuer-context']==='none'?null:options['issuer-context']);
   if (options['form-map']) draft = importFormMap(draft,await readJson(resolve(options['form-map']),'Issuer form map'));
   const exported = await prepareGrantExport(draft,{selection:options.select || 'auto',format:options.format || 'plain'});
   draft = exported.draft;
@@ -146,9 +172,10 @@ export async function writeGrantExport(options) {
   await mkdir(join(directory,'fields'),{mode:0o700});
   const manifest = {schema:EXPORT_SCHEMA,generatedAt:prepared.generatedAt,draftId:draft.id,currentSource:draft.currentSource,editionId:prepared.editionId,
     selection:prepared.selection,format:prepared.format,fields:prepared.fields.length,overLimit:prepared.overLimit,needsFieldReview:prepared.needsFieldReview,
+    issuerProgramme:prepared.issuerProgramme,
     sources:draft.sources.map(source=>({sha256:source.sha256,gitBlob:source.gitBlob,bytes:source.bytes,url:source.url,receivedAt:source.receivedAt})),files:[]};
   for (const [name,text] of files) {
-    const bytes = Buffer.from(text,'utf8');
+    const bytes = typeof text==='string'?Buffer.from(text,'utf8'):Buffer.from(text);
     await writeFile(join(directory,name),bytes,{flag:'wx',mode:0o600});
     manifest.files.push({path:name,bytes:bytes.length,sha256:sha256(bytes)});
   }
@@ -159,16 +186,19 @@ export async function writeGrantExport(options) {
 export async function runCLI(args=process.argv.slice(2)) {
   const {values} = parseArgs({args,options:{
     help:{type:'boolean'},draft:{type:'string'},source:{type:'string'},'source-index':{type:'string'},'source-url':{type:'string'},budget:{type:'string'},companion:{type:'string'},
-    'receive-source-package':{type:'string'},'form-map':{type:'string'},out:{type:'string'},select:{type:'string'},format:{type:'string'},id:{type:'string'},title:{type:'string'}
+    'receive-source-package':{type:'string'},'receive-issuer-case':{type:'string'},'issuer-profile':{type:'string'},'issuer-context':{type:'string'},'form-map':{type:'string'},out:{type:'string'},select:{type:'string'},format:{type:'string'},id:{type:'string'},title:{type:'string'}
   },allowPositionals:false});
   if (values.help) {
     process.stdout.write('Export the existing SCF submission model.\n\n' +
       '  node grant-export.mjs --draft saved-submission.json --out /private/new-export\n' +
       '  node grant-export.mjs --draft saved-submission.json --receive-source-package source-package.json --out /private/received-export\n' +
+      '  node grant-export.mjs --draft saved-submission.json --receive-issuer-case complete-issuer-case.zip --issuer-profile issuer-profile.json --out /private/issuer-export\n' +
       '  node grant-export.mjs --source application.md --source-index source-index.json --source-url https://original/source --out /private/new-export\n\n' +
       'Options: --budget budget.csv --companion product-and-finance.md; --form-map native-map.json; --select auto|answers|fields; --format plain|markdown.\n' +
       'New source drafts may use --id and --title. Saved draft identities and all history are retained.\n' +
-      'A selected complete reviewer bundle is also exported as source-package.json for source receiving.\n');
+      'A selected complete reviewer bundle is also exported as source-package.json for source receiving.\n' +
+      'Issuer receiving retains the original case, terms, correspondence and exact selected native plan. The profile explicitly chooses whether to receive that plan.\n' +
+      'Select an existing issuer context with --issuer-context ID, or clear the working selection with --issuer-context none. Complete receiving guide: GRANT_ISSUER_CONTEXT.md.\n');
     return 0;
   }
   const result = await writeGrantExport(values);

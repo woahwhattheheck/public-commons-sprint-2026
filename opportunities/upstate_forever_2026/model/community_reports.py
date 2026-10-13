@@ -12,9 +12,9 @@ import zipfile
 
 from .common import atomic_bytes, canonical, describe_file, digest, held, verify_file
 from .communities import (PLAN_KIND, TABLE_KIND, REPORT_KIND, PHYSICAL_NAMES,
-                          get_plan, get_table, text, verify_plan_context)
+                          get_plan, get_table, text, verify_plan_context, INTERVENTION_FIELDS)
 
-FORMAT_VERSION = 5
+FORMAT_VERSION = 6
 
 SCIENTIFIC_SCOPE_NOTES = (
     "Community summaries describe the selected whole source block groups. "
@@ -195,7 +195,108 @@ def _area(value):
     return "Unspecified" if value is None else format(Decimal(str(value)), ",.2f")
 
 
-def _contents(plan, table, title):
+def _plan_revision(workspace, plan):
+    """Compare the saved plan with its actual immutable parent edition."""
+    previous_id = plan.get("previous_plan_id")
+    if not previous_id:
+        return None, None
+    previous = get_plan(workspace, previous_id)
+    if (previous["table_id"] != plan["table_id"] or previous["source"] != plan["source"]
+            or plan["revision_number"] != previous["revision_number"] + 1):
+        raise ValueError("The plan revision must retain its original table and immediate parent")
+    left = {row["id"]: row for row in previous["interventions"]}
+    right = {row["id"]: row for row in plan["interventions"]}
+    fields = ("position",) + tuple(field for field in INTERVENTION_FIELDS if field != "id")
+    changes, changed_ids = [], set()
+    for item in plan["interventions"]:
+        key = item["id"]
+        if key not in left:
+            changes.append({"change": "added", "intervention_id": key, "title": item["title"],
+                            "field": "intervention", "before": None, "after": item})
+            continue
+        for field in fields:
+            before, after = left[key].get(field), item.get(field)
+            if before != after:
+                changes.append({"change": "changed", "intervention_id": key, "title": item["title"],
+                                "field": field, "before": before, "after": after})
+                changed_ids.add(key)
+    for item in previous["interventions"]:
+        if item["id"] not in right:
+            changes.append({"change": "removed", "intervention_id": item["id"], "title": item["title"],
+                            "field": "intervention", "before": item, "after": None})
+    before_geoids = {row["geoid"] for row in previous["selected_groups"]}
+    after_geoids = {row["geoid"] for row in plan["selected_groups"]}
+
+    def cost_context(saved):
+        cost = saved["cost_summary"]
+        return {"entered_total_usd": cost["known_estimate_total"],
+                "known_estimate_count": cost["known_estimate_count"],
+                "unknown_estimate_count": cost["intervention_count"] - cost["known_estimate_count"]}
+
+    before_cost, after_cost = cost_context(previous), cost_context(plan)
+    context_fields = ("source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids",
+                      "delivery_id", "watershed_context_id")
+    before_context, after_context = previous["context"], plan["context"]
+    before_import = previous.get("intervention_import") or {}
+    after_import = plan.get("intervention_import") or {}
+    summary = {
+        "schema": "upstate.community-plan-revision/v1",
+        "plan_id": plan["id"], "previous_plan_id": previous["id"],
+        "revision_number": plan["revision_number"],
+        "previous_revision_number": previous["revision_number"],
+        "table_id": plan["table_id"], "source_sha256": plan["source"]["sha256"],
+        "counts": {
+            "added_interventions": len(set(right) - set(left)),
+            "removed_interventions": len(set(left) - set(right)),
+            "changed_interventions": len(changed_ids),
+            "unchanged_interventions": len((set(left) & set(right)) - changed_ids),
+            "changed_fields": sum(row["change"] == "changed" for row in changes),
+        },
+        "changes": changes,
+        "plan_changes": [
+            {"field": field, "before": previous.get(field), "after": plan.get(field)}
+            for field in ("title", "purpose", "notes") if previous.get(field) != plan.get(field)],
+        "selection": {
+            "before": previous["selection"], "after": plan["selection"],
+            "added_geoids": sorted(after_geoids - before_geoids),
+            "removed_geoids": sorted(before_geoids - after_geoids),
+            "before_summary": previous["summaries"]["all"], "after_summary": plan["summaries"]["all"],
+            "basis": "Selected whole source block groups; changes describe membership, not population trends.",
+        },
+        "costs": {
+            "currency": "USD", "before": before_cost, "after": after_cost,
+            "entered_estimate_difference_usd": format(
+                Decimal(after_cost["entered_total_usd"]) - Decimal(before_cost["entered_total_usd"]), ".2f"),
+            "basis": "Change in entered planning estimates only. Unknown estimates remain unspecified; "
+                     "this difference does not estimate programme savings or environmental benefit.",
+        },
+        "scientific_context": {
+            "before_snapshot_sha256": before_context["snapshot_sha256"],
+            "after_snapshot_sha256": after_context["snapshot_sha256"],
+            "snapshot_changed": before_context["snapshot_sha256"] != after_context["snapshot_sha256"],
+            "identifier_changes": [
+                {"field": field, "before": before_context.get(field), "after": after_context.get(field)}
+                for field in context_fields if before_context.get(field) != after_context.get(field)],
+        },
+        "received_csv": {
+            "before_sha256": before_import.get("source", {}).get("sha256"),
+            "after_sha256": after_import.get("source", {}).get("sha256"),
+            "before_import_plan_id": before_import.get("previous_plan_id"),
+            "after_import_plan_id": after_import.get("previous_plan_id"),
+        },
+    }
+    return summary, previous
+
+
+def _revision_value(value):
+    if value is None:
+        return "Unspecified"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
+    return str(value)
+
+
+def _contents(plan, table, title, revision=None, previous_plan=None):
     aggregate = plan["summaries"]["all"]
     communities = _community_rows(plan)
     interventions = _intervention_rows(plan)
@@ -229,6 +330,7 @@ def _contents(plan, table, title):
                "utility_summaries": utility_rows, "watershed_summaries": plan["summaries"]["watersheds"],
                "interventions": interventions, "physical_context": physical,
                "regional_watershed_context": regional,
+               "plan_revision": revision,
                "watershed_scope_notes": list(WATERSHED_SCOPE_NOTES) if regional else [],
                "scientific_scope_notes": list(SCIENTIFIC_SCOPE_NOTES) if physical else [],
                "csv_text_handling": "Formula-like free text is prefixed with an apostrophe in derived CSV; JSON preserves original text."}
@@ -312,14 +414,52 @@ def _contents(plan, table, title):
             ("Watershed planning evidence", regional_heads, regional_display),
             ("NRCS state portions", state_heads, state_display),
         ]
+    if revision:
+        revision_rows = [
+            [row["change"], row["intervention_id"] + " / " + row["title"], row["field"],
+             _revision_value(row["before"]), _revision_value(row["after"])]
+            for row in revision["changes"]]
+        sections.insert(0, ("Saved plan changes",
+                           ["Change", "Intervention", "Field", "Previous saved value", "Current saved value"],
+                           revision_rows))
+        plan_changes = revision["plan_changes"] + revision["scientific_context"]["identifier_changes"]
+        if plan_changes:
+            sections.insert(1, ("Plan and scientific selection changes",
+                               ["Field", "Previous saved value", "Current saved value"],
+                               [[row["field"], _revision_value(row["before"]), _revision_value(row["after"])]
+                                for row in plan_changes]))
+        before_summary, after_summary = (revision["selection"][key]
+                                         for key in ("before_summary", "after_summary"))
+        before_cost, after_cost = (revision["costs"][key] for key in ("before", "after"))
+        sections.insert(2, ("Revision selection and entered estimates",
+                            ["Recorded measure", "Previous edition", "Current edition"],
+                            [
+                                ["Utility filters", _revision_value(revision["selection"]["before"]["utility_ids"]),
+                                 _revision_value(revision["selection"]["after"]["utility_ids"])],
+                                ["Watershed filters", _revision_value(revision["selection"]["before"]["watershed_ids"]),
+                                 _revision_value(revision["selection"]["after"]["watershed_ids"])],
+                                ["Selected whole block-group GEOIDs", _revision_value(before_summary["geoids"]),
+                                 _revision_value(after_summary["geoids"])],
+                                ["Whole block groups", before_summary["geoid_count"], after_summary["geoid_count"]],
+                                ["Whole-block-group population", _number(before_summary["population_total"]),
+                                 _number(after_summary["population_total"])],
+                                ["Whole-block-group households", _number(before_summary["households_total"]),
+                                 _number(after_summary["households_total"])],
+                                ["Entered planning estimates (USD)", before_cost["entered_total_usd"],
+                                 after_cost["entered_total_usd"]],
+                                ["Interventions with estimates", before_cost["known_estimate_count"],
+                                 after_cost["known_estimate_count"]],
+                                ["Interventions with unspecified estimates", before_cost["unknown_estimate_count"],
+                                 after_cost["unknown_estimate_count"]],
+                            ]))
     imported = plan.get("intervention_import")
     if imported:
-        revision = imported["summary"]
+        import_summary = imported["summary"]
         sections.insert(3, (
             "Received intervention programme",
             ["Original edited CSV", "Rows", "Added", "Changed", "Removed"],
-            [[imported["source"]["filename"], revision["row_count"],
-              len(revision["added_ids"]), len(revision["changed_ids"]), len(revision["removed_ids"])]],
+            [[imported["source"]["filename"], import_summary["row_count"],
+              len(import_summary["added_ids"]), len(import_summary["changed_ids"]), len(import_summary["removed_ids"])]],
         ))
     estimate = plan["cost_summary"]
     cost_statement = (
@@ -347,6 +487,22 @@ def _contents(plan, table, title):
     html_sections = []
     markdown_sections = []
     for heading, heads, rows in sections:
+        if heading == "Saved plan changes":
+            counts = revision["counts"]
+            explanation = (
+                "Saved revision " + str(revision["previous_revision_number"]) + " to "
+                + str(revision["revision_number"]) + ": "
+                + str(counts["added_interventions"]) + " added, "
+                + str(counts["removed_interventions"]) + " removed, "
+                + str(counts["changed_interventions"]) + " changed and "
+                + str(counts["unchanged_interventions"]) + " unchanged interventions. "
+                + str(counts["changed_fields"]) + " individual saved fields changed. "
+                + "Entered-estimate difference: " + revision["costs"]["entered_estimate_difference_usd"]
+                + " USD. " + revision["costs"]["basis"] + " " + revision["selection"]["basis"]
+                + " Previous plan: " + revision["previous_plan_id"] + ".")
+            html_sections.append("<section><h2>Reading this saved revision</h2><p>"
+                                 + escape(explanation) + "</p></section>")
+            markdown_sections.append("## Reading this saved revision\n\n" + explanation)
         if heading == "Watershed planning evidence":
             coverage = regional.get("classification_coverage") or {}
             codes = ", ".join(coverage.get("selected_classes") or [])
@@ -417,6 +573,17 @@ def _contents(plan, table, title):
         "scientific-context.csv": csv_text(physical_columns, physical),
         "plan.json": json.dumps(plan, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n",
     }
+    if revision:
+        outputs["plan-revision-summary.json"] = json.dumps(
+            revision, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
+        outputs["previous-plan.json"] = json.dumps(
+            previous_plan, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
+        change_rows = [{**row,
+                        "before_json": json.dumps(row["before"], ensure_ascii=False, sort_keys=True, allow_nan=False),
+                        "after_json": json.dumps(row["after"], ensure_ascii=False, sort_keys=True, allow_nan=False)}
+                       for row in revision["changes"]]
+        outputs["plan-revision-changes.csv"] = csv_text(
+            ["change", "intervention_id", "title", "field", "before_json", "after_json"], change_rows)
     if regional:
         regional_columns = [
             "regional_report_id", "utility_ids", "huc12", "watershed_name",
@@ -445,13 +612,14 @@ def build(workspace, selection):
     plan = get_plan(workspace, selection.get("plan_id"))
     table = get_table(workspace, plan["table_id"])
     verify_plan_context(workspace, plan)
+    revision, previous_plan = _plan_revision(workspace, plan)
     title = text(selection.get("title") or plan["title"], "Report title", required=True, maximum=300)
     key = digest({"schema": "upstate.community-report-selection/v1", "plan_id": plan["id"],
                   "title": title, "format_version": FORMAT_VERSION})
     directory = workspace.root / REPORT_KIND / key
     directory.mkdir(parents=True, exist_ok=True)
     with held(directory / ".report.lock"):
-        outputs, payload = _contents(plan, table, title)
+        outputs, payload = _contents(plan, table, title, revision, previous_plan)
         original, _ = workspace.source_file(table["source"]["collection_id"], table["source"]["source_id"])
         records = {}
         for name, body in outputs.items():
@@ -504,5 +672,6 @@ def build(workspace, selection):
         value = {"title": title, "plan_id": plan["id"], "table_id": table["id"],
                  "selection_id": key, "format_version": FORMAT_VERSION,
                  "source": plan["source"], "summaries": plan["summaries"],
-                 "context_snapshot_sha256": plan["context"]["snapshot_sha256"], "files": records}
+                 "context_snapshot_sha256": plan["context"]["snapshot_sha256"],
+                 "plan_revision": revision, "files": records}
         return workspace._save(REPORT_KIND, value)

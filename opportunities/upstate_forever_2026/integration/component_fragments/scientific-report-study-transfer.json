@@ -1,0 +1,43 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-report-study-transfer",
+  "source_reference": "https://chatgpt.com/space/page_e45af29821208191823fae1eb904f864",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "model/SCIENTIFIC_REPORT_STUDY_TRANSFER.md",
+        "model/scientific_report_study_transfer.py",
+        "operator/SCIENTIFIC_REPORT_EDITIONS.md",
+        "operator/web/source_report_editions.mjs"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/SCIENTIFIC_REPORT_STUDY_TRANSFER.md",
+        "model/scientific_report_study_transfer.py",
+        "model/calibration_study_transfer.py",
+        "model/study_report_transfer.py",
+        "model/monitoring_study_transfer.py",
+        "model/calibration.py",
+        "model/calibration_maps.py",
+        "model/calibration_report_source.py",
+        "model/calibration_review.py",
+        "model/calibration_uncertainty.py",
+        "model/observed_context.py",
+        "model/observed_report_render.py",
+        "operator/source_report_editions.py",
+        "operator/SCIENTIFIC_REPORT_EDITIONS.md",
+        "operator/web/source_report_editions.mjs",
+        "operator/web/extensions/study_transfer.mjs",
+        "operator/CALIBRATION_REPORT_TRANSFER.md"
+      ],
+      "requires": [
+        "calibration"
+      ]
+    }
+  },
+  "required_components": []
+}

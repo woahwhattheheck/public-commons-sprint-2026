@@ -29,7 +29,8 @@ def parser():
                        help="Continue original native receiving/planning before delivery")
     value.add_argument("--max-count", type=int, default=3)
     value.add_argument("--area-ha", type=float)
-    value.add_argument("--min-coverage", type=float, default=0.95)
+    value.add_argument("--min-coverage", type=float, default=0.90,
+                       help="Minimum retained common-valid subwatershed coverage (default: 90%%); measured coverage remains visible")
     value.add_argument("--feature-id-field")
     value.add_argument("--solver", choices=("deterministic", "scipy-milp"), default="deterministic")
     value.add_argument("--source-report-id", help="Optional exact saved watershed report for this cohort")

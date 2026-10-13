@@ -50,7 +50,7 @@ class Progression:
         self.regional_args = regional_args
         existing = item(self.path)
         documents = {}
-        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving", "monitoring_restored_selection"):
+        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving", "monitoring_restored_selection", "chemistry_restored_selection"):
             path = getattr(args, key)
             if path:
                 resolved = str(path.resolve(strict=True))
@@ -315,11 +315,29 @@ class Progression:
                         and opening.get("selection") == receiving.get("selection"),
                         "The completed Monitoring browser belongs to another original campaign or source selection")
         elif script == "source/run_chemistry_browser.mjs":
-            if not bound:
-                return False
-            require(journal.get("schema") == "upstate.chemistry-browser/v1"
-                    and journal.get("workspace_key") == workspace,
-                    "The completed chemistry browser belongs to another retained request")
+            if "--restored-selection" in choices:
+                selected_path = Path(choices["--restored-selection"])
+                selected = read_json(selected_path)
+                expected_input = {"mode": "restored-native",
+                    "restored_selection_sha256":
+                        describe_file(selected_path.parent, selected_path)["sha256"],
+                    "workspace": workspace, "project_id": selected["project_id"],
+                    "case_id": selected["case_id"], "run_ids": selected["run_ids"],
+                    "receive": "--receive" in arguments, "transfer": "--transfer" in arguments}
+                require(selected["project_id"] == self.operator.ws(workspace).project["id"]
+                        and journal.get("schema") == "upstate.chemistry-browser/v1"
+                        and journal.get("workspace_key") == workspace
+                        and journal.get("input") == expected_input
+                        and journal.get("case_id") == selected["case_id"]
+                        and journal.get("run_ids") == selected["run_ids"]
+                        and journal.get("run_id") == selected["run_ids"][0],
+                        "The completed Chemistry browser belongs to another received case or analysis selection")
+            else:
+                if not bound:
+                    return False
+                require(journal.get("schema") == "upstate.chemistry-browser/v1"
+                        and journal.get("workspace_key") == workspace,
+                        "The completed chemistry browser belongs to another retained request")
         else:
             # Optional browser integrations retain the exact invocation before
             # dispatch; older unbound journals keep their original retry path.
@@ -570,7 +588,69 @@ class Progression:
         atomic_bytes(target, body, immutable=True)
         return target
 
+    def restored_chemistry(self):
+        """Continue original completed analyses already retained in this project."""
+        from model.chemistry import Chemistry
+        self.current_step = "chemistry-adoption"
+        selected_path = self.frozen_input(
+            self.request["documents"]["chemistry_restored_selection"],
+            "chemistry-restored-selection.json")
+        choice = read_json(selected_path)
+        require(isinstance(choice, dict) and
+                choice.get("schema") == "upstate.chemistry-browser-selection/v1",
+                "Choose an explicit native restored Chemistry selection")
+        for field in ("project_id", "case_id"):
+            require(isinstance(choice.get(field), str) and choice[field].strip(),
+                    "The restored Chemistry selection must name its original " + field)
+        run_ids = choice.get("run_ids")
+        require(isinstance(run_ids, list) and run_ids and
+                all(isinstance(key, str) and key.strip() for key in run_ids) and
+                len(set(run_ids)) == len(run_ids),
+                "Select distinct original completed chemical analysis IDs")
+        receive = choice.get("receive", True)
+        require(isinstance(receive, bool), "Chemistry receive must be true or false")
+        workspace = self.operator.ws(self.key)
+        require(choice["project_id"] == workspace.project["id"],
+                "The restored Chemistry selection belongs to another scientific project")
+        native = Chemistry(workspace)
+        case = native.get_case(choice["case_id"])
+        runs = []
+        for key in run_ids:
+            run = native.get_run(key)
+            require(run["id"] == key and run.get("state") == "complete" and
+                    run.get("case_id") == case["id"] and
+                    run.get("selection", {}).get("case_id") == case["id"] and
+                    run["selection"].get("project_sha256") == case["project_sha256"],
+                    "Select a completed original analysis of this retained chemical case")
+            native._verified_artifacts(key, run)
+            runs.append(run)
+        snapshot = {"case_sha256": digest(case),
+                    "runs": [{"id": run["id"], "sha256": digest(run)} for run in runs]}
+        adoption = {"schema": "upstate.chemistry-restored-adoption/v1",
+                    "selection": {"workspace_key": self.key, "project_id": choice["project_id"],
+                                  "case_id": case["id"], "run_ids": run_ids, "receive": receive},
+                    "input": describe_file(self.output, selected_path),
+                    "source_refs": case["source_refs"], "snapshot": snapshot}
+        report = self.output / "chemistry" / "restored-selection.json"
+        retained = item(report)
+        require(retained is None or retained == adoption,
+                "This receiving operation retains other original chemical records; continue that exact selection or use a new output")
+        atomic_json(report, adoption, immutable=True)
+        record = {"journal": describe_file(self.output, report), "snapshot": snapshot,
+                  "case_id": case["id"], "run_ids": run_ids}
+        previous = self.state["steps"].get("chemistry-adoption")
+        require(previous is None or previous == record,
+                "The retained Chemistry adoption changed after its original continuation")
+        if previous is None:
+            self.record("chemistry-adoption", record)
+        arguments = ["--restored-selection", str(selected_path)]
+        if receive:
+            arguments.append("--receive")
+        return self.browser("chemistry", "source/run_chemistry_browser.mjs", arguments)
+
     def chemistry(self):
+        if self.args.chemistry_restored_selection:
+            return self.restored_chemistry()
         if not self.args.chemistry_selection:
             return
         document = self.request["documents"]["chemistry_selection"]
@@ -924,6 +1004,8 @@ def main(argv=None):
     parser.add_argument("--opening", type=Path, help="Retained regional opening; otherwise pass original regional arguments after --")
     parser.add_argument("--run-selection", type=Path, help="Actual native grid/scenario/models JSON; otherwise reuse the opening's run or original saved view")
     parser.add_argument("--chemistry-selection", type=Path, help="Original chemistry driver case/source/request selection JSON")
+    parser.add_argument("--chemistry-restored-selection", type=Path,
+                        help="Open original retained chemical case and completed analysis IDs from the received full Workspace")
     parser.add_argument("--monitoring-selection", type=Path, help="Original monitoring receiver network/cost/calendar selection JSON")
     parser.add_argument("--monitoring-opening", type=Path, help="Prepared regional Monitoring opening; operate its actual saved campaign in the native browser")
     parser.add_argument("--monitoring-receiving", type=Path, help="Adopt this completed original Monitoring receiver and its saved campaign")
@@ -944,6 +1026,8 @@ def main(argv=None):
     args = parser.parse_args(known)
     require(not (args.browser_channel and args.browser_executable),
             "Choose either --browser-channel or --browser-executable before starting native work")
+    require(not (args.chemistry_selection and args.chemistry_restored_selection),
+            "Choose new Chemistry editing/calculation inputs or original completed analyses")
     require(not args.monitoring_restored_selection or
             not (args.monitoring_selection or args.monitoring_opening or args.monitoring_receiving),
             "Choose restored Monitoring native IDs or original preparation/receiving journals")

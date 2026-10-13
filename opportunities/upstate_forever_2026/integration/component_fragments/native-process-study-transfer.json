@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-process-study-transfer",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/work/native-process-study-transfer-20261013",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/native_process_study_transfer.py",
+        "model/NATIVE_PROCESS_STUDY_TRANSFER.md"
+      ]
+    },
+    "native-process-reports": {
+      "paths": [
+        "model/native_process_study_transfer.py",
+        "model/NATIVE_PROCESS_STUDY_TRANSFER.md"
+      ],
+      "requires": [
+        "study-transfer",
+        "scientific-report-editions"
+      ]
+    }
+  },
+  "required_components": []
+}

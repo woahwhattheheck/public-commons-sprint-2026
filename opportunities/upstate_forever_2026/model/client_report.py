@@ -22,7 +22,7 @@ from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-observed-outcomes-14"
+REPORT_EDITION = "2026-10-13-client-report-observed-figures-15"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -756,6 +756,13 @@ def render_markdown(report):
             lines.append("| " + " | ".join("---" for _ in table["columns"]) + " |")
             lines.extend("| " + " | ".join(_md_cell(x) for x in row) + " |" for row in table["rows"])
             lines.append("")
+        for figure in section.get("figures", []):
+            path = _safe_path(figure.get("path"))
+            if path:
+                title = str(figure.get("alt") or figure["title"]).replace("[", "\\[").replace("]", "\\]")
+                lines.extend(["![" + title + "](<" + path + ">)", ""])
+                if figure.get("caption"):
+                    lines.extend([str(figure["caption"]), ""])
         for asset in section.get("assets", []):
             path = _safe_path(asset.get("path"))
             if path:
@@ -780,6 +787,16 @@ def render_html(report, *, briefing_href=None):
             for row in table["rows"]:
                 chunks.append("<tr>" + "".join("<td>" + esc(str(c)) + "</td>" for c in row) + "</tr>")
             chunks.append("</tbody></table></div>")
+        for figure in section.get("figures", []):
+            path = _safe_path(figure.get("path"))
+            if path:
+                chunks.append('<figure class="scientific-source-figure"><h3>' +
+                              esc(str(figure["title"])) + '</h3><img loading="lazy" src="' +
+                              esc(path, quote=True) + '" alt="' +
+                              esc(str(figure.get("alt") or figure["title"]), quote=True) + '">')
+                if figure.get("caption"):
+                    chunks.append("<figcaption>" + esc(str(figure["caption"])) + "</figcaption>")
+                chunks.append("</figure>")
         links = []
         for asset in section.get("assets", []):
             path = _safe_path(asset.get("path"))
@@ -808,6 +825,7 @@ def render_html(report, *, briefing_href=None):
 header,main,footer{max-width:1120px;margin:0 auto;padding:32px 36px;background:#fff}
 header{border-bottom:3px solid #333f4b}header .label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#59636e}
 h1{font-size:30px;line-height:1.2;margin:12px 0}h2{font-size:21px;line-height:1.3;border-bottom:1px solid #cdd2d7;padding-bottom:8px;margin-top:0}
+.scientific-source-figure{margin:24px 0;break-inside:avoid}.scientific-source-figure img{display:block;width:100%;height:auto}.scientific-source-figure figcaption{font-size:12px;margin-top:12px}
 .meta{color:#58626d;font-size:12px;overflow-wrap:anywhere}nav{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px}
 nav a{font-size:12px}a{color:#243b50}section{padding:14px 0 30px;break-inside:auto}p{max-width:940px}
 .table-scroll{overflow-x:auto;margin:16px 0}table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.45;table-layout:fixed}
@@ -900,6 +918,13 @@ def render_pdf(path, report):
                 ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8f9fa")])
             ]))
             story.extend([tbl, Spacer(1, 12)])
+        for figure in section.get("figures", []):
+            from .scientific_figures import panel_drawings
+            story.append(p(figure["title"], "ClientHeading"))
+            if figure.get("caption"):
+                story.append(p(figure["caption"], "ClientMeta"))
+            for drawing in panel_drawings(figure["spec"], width):
+                story.extend([drawing, Spacer(1, 12)])
         for asset in section.get("assets", []):
             relative = _safe_path(asset.get("path"))
             if relative:
@@ -973,7 +998,7 @@ def _observed_sections(product):
     sections = []
     for index, (heading, blocks) in enumerate(product["sections"]):
         section = {"id": "observed-context-" + str(index + 1), "title": _text(heading),
-                   "paragraphs": [], "tables": [], "assets": []}
+                   "paragraphs": [], "tables": [], "assets": [], "figures": []}
         for block in blocks:
             if isinstance(block, str):
                 section["paragraphs"].append(block)
@@ -993,8 +1018,14 @@ def _observed_sections(product):
             elif isinstance(block, dict) and block.get("kind") == "figure":
                 relative = original_path(block["path"])
                 title = block.get("title") or "Original scientific source figure"
-                if block.get("caption"):
-                    section["paragraphs"].append(str(block["caption"]))
+                from .scientific_figures import _validate_figure
+                specification = block.get("spec")
+                _validate_figure(specification)
+                section["figures"].append({
+                    "path": relative, "title": title, "caption": str(block.get("caption") or ""),
+                    "alt": str(block.get("alt") or title), "spec": specification,
+                    "bytes": block["bytes"], "sha256": block["sha256"],
+                })
                 section["assets"].append({"path": relative, "title": title})
             else:
                 raise ValueError("An observed report block has no supported client representation.")

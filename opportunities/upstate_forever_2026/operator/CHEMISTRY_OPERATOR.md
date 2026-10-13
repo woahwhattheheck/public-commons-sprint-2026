@@ -62,3 +62,8 @@ After receiving, open Reach chemistry, choose the received case, inspect a compl
 Original REACT12 source version: `0.1.0`, whose complete 31-member manifest is retained in `integration/reach_chemistry/SOURCE_MANIFEST.json`. Its eight solver/model/service modules remain unchanged.
 
 This operator continuation adds the native extension descriptor, per-workspace browser lifecycle, read-only source-reference verification, receiving hook and current installer. The original distribution installer is retained at `integration/reach_chemistry/install_chemistry_legacy.py`; the root entry point now installs through the current registry without rewriting shared server or application files.
+
+
+## Saved scientific reports
+
+Open a completed analysis and select **Prepare scientific report**. The existing queued action renders the saved result with its physical units, source provenance, fit/held-out records, convergence and supplied prior assumptions. Open the completed edition under **Saved scientific reports**. The inline report uses original authenticated file tickets; the complete ZIP opens offline with all original members and the editable project. See [Chemistry scientific reports](../model/CHEMISTRY_REPORTS.md) for the source contract, native CLI and receiving course.
