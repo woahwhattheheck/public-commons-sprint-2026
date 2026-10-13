@@ -302,15 +302,19 @@
     },
     {
       "path": "model/monitoring_study_transfer.py",
-      "bytes": 25411,
-      "sha256": "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3",
-      "predecessor_sha256": []
+      "bytes": 27108,
+      "sha256": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
+      "predecessor_sha256": [
+        "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3"
+      ]
     },
     {
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 7841,
-      "sha256": "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692",
-      "predecessor_sha256": []
+      "bytes": 8459,
+      "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
+      "predecessor_sha256": [
+        "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+      ]
     },
     {
       "path": "operator/web/monitoring-study-transfer.mjs",
@@ -390,6 +394,15 @@
     "guide": "model/MONITORING_STUDY_TRANSFER.md",
     "receiving_option": {
       "archive_scope": "selected"
+    },
+    "fieldwork_return": {
+      "source_commit": "1c008cb2785175dfd654ec60b9874b758fcb557a",
+      "validator": "model.monitoring_field_return.source_binding",
+      "members": [
+        "monitoring_field_returns/<request_id>/request.json",
+        "monitoring_field_returns/<request_id>/field-plan.json"
+      ],
+      "reviewed_campaign_revision": true
     }
   }
 }

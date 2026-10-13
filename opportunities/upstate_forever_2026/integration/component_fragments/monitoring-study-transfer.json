@@ -32,7 +32,8 @@
         "model/study_transfer_cli.py",
         "operator/study_transfer.py",
         "operator/web/extensions/study_transfer.css",
-        "operator/web/extensions/study_transfer.mjs"
+        "operator/web/extensions/study_transfer.mjs",
+        "model/monitoring_field_return.py"
       ]
     }
   },
