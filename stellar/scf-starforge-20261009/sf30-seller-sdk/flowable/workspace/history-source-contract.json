@@ -15,6 +15,18 @@
       {
         "path": "modules/flowable-rest/src/main/java/org/flowable/rest/service/api/history/HistoricActivityInstanceResponse.java",
         "gitBlob": "a7d691af6e9e3c0907d0373db39b755814e4626b"
+      },
+      {
+        "path": "modules/flowable-engine/src/main/java/org/flowable/engine/impl/runtime/callback/ProcessInstanceState.java",
+        "gitBlob": "60d300bc42d10a95216e4f84c441a32e3a356dee"
+      },
+      {
+        "path": "modules/flowable-engine/src/main/java/org/flowable/engine/impl/persistence/entity/ExecutionEntityManagerImpl.java",
+        "gitBlob": "268df7b8f8017647e89cd143a9bc934332612107"
+      },
+      {
+        "path": "modules/flowable-engine/src/main/java/org/flowable/engine/impl/history/DefaultHistoryManager.java",
+        "gitBlob": "7f49def688260aee7710310a0bcb8d97c6c58699"
       }
     ]
   },
@@ -39,6 +51,8 @@
     ],
     "duration": "durationInMillis is retained as an audit comparison; elapsed metrics use exact parsed UTC start/end milliseconds.",
     "taskCompletion": "Native task endTime with absent/null/completed deleteReason is normal completion; all other nonempty deletion reasons are separate.",
-    "source": "The original workspace inventory and native page/resource blobs are retained in the complete workspace export."
+    "source": "The original workspace inventory and native page/resource blobs are retained in the complete workspace export.",
+    "processCompletion": "Native state completed/cancelled controls ended process classification regardless of caller-supplied deletion reason. Missing state has explicit reason-based inference; unknown states remain unknown-ended.",
+    "activityCompletion": "The native historic activity REST response omits deletion reason/state, although the engine retains a reason. Report ended duration with completion unknown; never infer activity completion/termination from its parent."
   }
 }
