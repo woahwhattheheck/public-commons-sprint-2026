@@ -65,7 +65,47 @@ def replace(path: Path, data: bytes):
         if os.path.exists(temp): os.unlink(temp)
 
 
-def install(target: Path, *, check: bool = False) -> dict:
+def _body(root: Path, name: str) -> bytes:
+    path = root / name
+    if (not name or "\\" in name or Path(name).is_absolute()
+            or any(part in (".", "..") for part in Path(name).parts)
+            or str(Path(name)) != name):
+        raise ValueError("Choose an application-relative original source path: " + name)
+    if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
+        raise ValueError("Monitoring source leaves its original application: " + name)
+    if any(parent.is_symlink() for parent in path.parents if parent != root.parent):
+        raise ValueError("Monitoring source has a directory alias: " + name)
+    return path.read_bytes()
+
+
+def _application_source(source_root: Path | None):
+    bundle = Path(__file__).resolve().parent
+    if source_root is None:
+        candidate = bundle.parents[1]
+        if not (candidate / "model/monitoring_implementation.py").is_file():
+            return None, None
+    else:
+        candidate = source_root.expanduser().resolve()
+        if (candidate / RELATIVE / "model/workspace.py").is_file():
+            candidate = candidate / RELATIVE
+    manifest_path = bundle / "current_application_files.json"
+    if manifest_path.is_symlink():
+        raise ValueError("Receive the original Monitoring file inventory as a regular file")
+    spec = json.loads(manifest_path.read_bytes())
+    if spec.get("schema") != "upstate.monitoring-application-files/v1":
+        raise ValueError("Receive the current Monitoring application file inventory")
+    for key in ("files", "requires"):
+        paths = spec.get(key)
+        if (not isinstance(paths, list) or not paths
+                or any(not isinstance(name, str) for name in paths)
+                or len(paths) != len(set(paths))):
+            raise ValueError("Invalid current Monitoring " + key + " inventory")
+        for name in paths:
+            _body(candidate, name)
+    return candidate.resolve(), spec
+
+
+def install(target: Path, *, check: bool = False, source_root: Path | None = None) -> dict:
     target = target.expanduser().resolve()
     application = target / RELATIVE if (target / RELATIVE / "model/workspace.py").is_file() else target
     if not (application / "model/workspace.py").is_file():
@@ -77,22 +117,43 @@ def install(target: Path, *, check: bool = False) -> dict:
     registered_host = registry and 'self.extensions = ExtensionRegistry' in server_source
     if registry and not registered_host:
         raise ValueError("Install the current shared extension host on this application before adding its registered monitoring desk")
-    source_root = Path(__file__).resolve().parent / "src"
+    source_application, source_spec = _application_source(source_root)
+    if source_application is not None and not registered_host:
+        raise ValueError("Install the maintained shared extension host before the current Monitoring application")
+    if source_spec is not None:
+        for name in source_spec["requires"]:
+            _body(application, name)
+    package_root = Path(__file__).resolve().parent / "src"
     changes = {}
+    source_identities = {}
+    preimages = {}
     predecessor_file = Path(__file__).resolve().parent / "PREDECESSORS.json"
     predecessors = json.loads(predecessor_file.read_text()) if predecessor_file.exists() else {}
-    for source in sorted(source_root.rglob("*")):
-        if not source.is_file() or "__pycache__" in source.parts: continue
-        rel = prefix / source.relative_to(source_root / RELATIVE)
+    if source_application is not None:
+        selected_files = [(name, _body(source_application, name)) for name in source_spec["files"]]
+    else:
+        selected_files = [(source.relative_to(package_root / RELATIVE).as_posix(), source.read_bytes())
+                          for source in sorted(package_root.rglob("*"))
+                          if source.is_file() and "__pycache__" not in source.parts]
+    for name, data in selected_files:
+        rel = prefix / name
         destination = target / rel
-        data = source.read_bytes()
-        if destination.exists() and destination.read_bytes() != data:
-            old_hash = hashlib.sha256(destination.read_bytes()).hexdigest()
-            canonical = "src/" + str(RELATIVE / source.relative_to(source_root / RELATIVE))
-            if not any(edition.get(canonical) == old_hash for edition in predecessors.values()):
-                raise ValueError(f"owned source already differs: {rel}; reconcile rather than overwrite")
+        if destination.is_symlink() or not destination.resolve().is_relative_to(application):
+            raise ValueError("Monitoring destination leaves its application: " + name)
+        old = _body(application, name) if destination.exists() else None
+        source_identities[name] = {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+        if old != data:
+            if old is not None:
+                old_hash = hashlib.sha256(old).hexdigest()
+                canonical = "src/" + str(RELATIVE / name)
+                packaged = package_root / RELATIVE / name
+                known = [edition.get(canonical) for edition in predecessors.values()]
+                if source_application is not None and packaged.is_file():
+                    known.append(hashlib.sha256(packaged.read_bytes()).hexdigest())
+                if old_hash not in known:
+                    raise ValueError(f"owned source already differs: {rel}; compose its current source before replacing it")
             changes[rel] = data
-        if not destination.exists(): changes[rel] = data
+            preimages[rel] = old
     server_rel = prefix / "operator/server.py"
     if registered_host:
         from install_native_monitoring import remove_server, remove_app, remove_index
@@ -108,11 +169,17 @@ def install(target: Path, *, check: bool = False) -> dict:
     for rel, transform in transforms:
         before = (target/rel).read_bytes()
         after = transform(before.decode("utf-8")).encode("utf-8")
-        if after != before: changes[rel] = after
+        if after != before:
+            changes[rel] = after
+            preimages[rel] = before
     for rel, data in changes.items():
         if rel.suffix == ".py": ast.parse(data.decode("utf-8"))
     result = {"target": str(target), "check_only": check, "integration": "shared-extension-registry" if registered_host else "original-direct-join", "changed_paths": [str(p) for p in changes],
-              "source_sha256": {str(p): hashlib.sha256(data).hexdigest() for p,data in changes.items()}}
+              "source_sha256": {str(p): hashlib.sha256(data).hexdigest() for p,data in changes.items()},
+              "source_mode": "maintained-application" if source_application else "retained-original-package",
+              "source_application": str(source_application) if source_application else None,
+              "source_edition": source_spec["edition"] if source_spec else None,
+              "source_files": source_identities}
     if check or not changes: return result
     # Local lock excludes two installers, and preimages are rechecked under it.
     import fcntl
@@ -122,8 +189,11 @@ def install(target: Path, *, check: bool = False) -> dict:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         # Every integration preimage is captured before preparation above; rerun
         # check now catches concurrent peer edits instead of replacing their work.
-        latest = install(target, check=True)
-        if latest["source_sha256"] != result["source_sha256"]:
+        latest = install(target, check=True, source_root=source_root)
+        if (latest["source_sha256"] != result["source_sha256"]
+                or latest["source_files"] != result["source_files"]
+                or any(((target / rel).read_bytes() if (target / rel).exists() else None) != body
+                       for rel, body in preimages.items())):
             raise ValueError("source changed during installation; rerun against the latest composition")
         backup = target / ".monitoring-install-backups" / hashlib.sha256(json.dumps(result,sort_keys=True).encode()).hexdigest()[:16]
         backup.mkdir(parents=True,exist_ok=True)
@@ -149,8 +219,10 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("source_root",type=Path)
     p.add_argument("--check",action="store_true")
+    p.add_argument("--source-root", dest="maintained_source", type=Path,
+                   help="Pinned complete application or repository containing the current Monitoring source")
     a=p.parse_args()
-    try: print(json.dumps(install(a.source_root,check=a.check),indent=2))
+    try: print(json.dumps(install(a.source_root,check=a.check,source_root=a.maintained_source),indent=2))
     except (ValueError,OSError,SyntaxError) as exc: p.exit(2,f"monitoring install: {exc}\n")
 
 

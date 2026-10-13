@@ -71,7 +71,9 @@
     "gauge-support",
     "observed-context",
     "workspace-finder",
-    "monitoring-report"
+    "monitoring-report",
+    "parameter-studies",
+    "utility-source-receiving"
   ],
   "components": {
     "core": {
@@ -79,6 +81,7 @@
       "paths": [
         "audit.py",
         "delivery_snapshot.py",
+        "docs/COMPLETE_APPLICATION_RECEIVING.md",
         "install_extensions.py",
         "integration/a74f-component-inventory-20261013.json",
         "integration/application_components.json",
@@ -125,6 +128,7 @@
         "install_economic_desk.py",
         "install_experiments.py",
         "install_gis_projects.py",
+        "install_implementation.py",
         "install_intelligence.py",
         "install_intelligence_operator.py",
         "install_landcover.py",
@@ -132,8 +136,8 @@
         "install_published_studies.py",
         "install_source_refresh.py",
         "install_terrain.py",
-        "operator/install_diagnostics.py",
-        "operator/install_conservation.py"
+        "operator/install_conservation.py",
+        "operator/install_diagnostics.py"
       ],
       "requires": [
         "core"
@@ -919,7 +923,11 @@
     "project-transfer": {
       "title": "Original incremental transfer and restore",
       "paths": [
+        "model/PARAMETER_STUDY_RECEIVING.md",
         "model/PROJECT_TRANSFER.md",
+        "model/portable_acquisitions.py",
+        "model/portable_implementation.py",
+        "model/portable_parameter_studies.py",
         "model/project_transfer.py",
         "model/project_transfer_cli.py",
         "model/project_transfer_desk.py",
@@ -1976,9 +1984,39 @@
       }
     },
     "implementation": {
-      "title": "Implementation & fieldwork",
+      "title": "Implementation, original fieldwork evidence, native reports and receiving",
       "paths": [
-        "operator/extensions/implementation.json"
+        "build_implementation_offline.py",
+        "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
+        "docs/IMPLEMENTATION_LAB_RESULTS.md",
+        "docs/IMPLEMENTATION_NATIVE_RECEIVING.md",
+        "docs/IMPLEMENTATION_OBSERVATIONS.md",
+        "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
+        "docs/implementation-native-guide.md",
+        "docs/implementation-operator-guide.md",
+        "install_implementation.py",
+        "model/implementation.py",
+        "model/implementation_cli.py",
+        "model/implementation_economics.py",
+        "model/implementation_lab_results.py",
+        "model/implementation_observations.py",
+        "model/implementation_reporting.py",
+        "model/implementation_schema.py",
+        "model/implementation_sources.py",
+        "model/portable_implementation.py",
+        "operator/extensions/implementation.json",
+        "operator/implementation_operator.py",
+        "operator/web/implementation.css",
+        "operator/web/implementation.mjs",
+        "operator/web/implementation_catalog.json",
+        "operator/web/implementation_core.mjs",
+        "operator/web/implementation_forms.mjs",
+        "operator/web/implementation_lab.mjs",
+        "operator/web/implementation_workbench.html",
+        "source/implementation/20261013/greenwood-review-plan.json",
+        "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+        "source/keowee-native-receiving-20261013/source-interval-journey.json",
+        "source_tools/receive_implementation.py"
       ],
       "requires": [
         "core"
@@ -1986,20 +2024,31 @@
       "source_reference": {
         "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
         "git_blob": "4309452cb20771a86169b201a109e851ac6c889a"
-      }
+      },
+      "family_source_references": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "native_receiving_merge": "316402c267178b08a40b196ba4b08503ab80dda0",
+          "installer_closure_merge": "ba1d0e55590d444ad1fe472add589c0197d29d6d"
+        }
+      ]
     },
     "monitoring": {
       "title": "Monitoring design and complete original native receiving package",
       "paths": [
+        "eighteenmile_monitoring_context.sources.json",
         "integration/completed_component_adoption.json",
+        "integration/monitoring_observed_sources.json",
         "integrations/monitoring/API.md",
         "integrations/monitoring/HANDOFF.md",
         "integrations/monitoring/MANIFEST.json",
         "integrations/monitoring/PREDECESSORS.json",
         "integrations/monitoring/README.md",
         "integrations/monitoring/RECEIVING.md",
+        "integrations/monitoring/current_application_files.json",
         "integrations/monitoring/install_monitoring.py",
         "integrations/monitoring/install_native_monitoring.py",
+        "integrations/monitoring/install_observed_context.py",
         "integrations/monitoring/requirements-monitoring.txt",
         "integrations/monitoring/source_adoption.json",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/MONITORING.md",
@@ -2028,29 +2077,19 @@
         "integrations/monitoring/tests/test_monitoring.py",
         "integrations/monitoring/tests/test_native_contract.py",
         "model/MONITORING.md",
+        "model/MONITORING_FIELDWORK.md",
+        "model/MONITORING_OBSERVED_CONTEXT.md",
         "model/monitoring_actions.py",
         "model/monitoring_campaign.py",
         "model/monitoring_cli.py",
         "model/monitoring_common.py",
         "model/monitoring_design.py",
+        "model/monitoring_implementation.py",
         "model/monitoring_network.py",
+        "model/monitoring_observed_context.py",
         "model/monitoring_sources.py",
         "model/monitoring_workspace.py",
         "model/requirements-monitoring.txt",
-        "operator/MONITORING_API.md",
-        "operator/extensions/monitoring.json",
-        "operator/monitoring.py",
-        "operator/monitoring_native.py",
-        "operator/monitoring_receiving.py",
-        "operator/static/monitoring.js",
-        "operator/web/monitoring-component.mjs",
-        "operator/web/monitoring.css",
-        "operator/web/monitoring.mjs",
-        "eighteenmile_monitoring_context.sources.json",
-        "integration/monitoring_observed_sources.json",
-        "integrations/monitoring/install_observed_context.py",
-        "model/MONITORING_OBSERVED_CONTEXT.md",
-        "model/monitoring_observed_context.py",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2020_2020.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2021_2021.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/daily/usgs_02186702_2022_2022.json",
@@ -2061,7 +2100,17 @@
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/original/eighteenmile_station_metadata.json",
         "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
         "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+        "operator/MONITORING_API.md",
+        "operator/extensions/monitoring.json",
+        "operator/monitoring.py",
+        "operator/monitoring_native.py",
+        "operator/monitoring_receiving.py",
+        "operator/static/monitoring.js",
+        "operator/web/monitoring-component.mjs",
         "operator/web/monitoring-observed.mjs",
+        "operator/web/monitoring.css",
+        "operator/web/monitoring.mjs",
+        "operator/web/monitoring_fieldwork.mjs",
         "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
         "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
         "source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
@@ -2105,7 +2154,14 @@
         "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv"
       ],
       "requires": [
-        "core"
+        "core",
+        "implementation"
+      ],
+      "family_source_references": [
+        {
+          "repository": "woahwhattheheck/public-commons-sprint-2026",
+          "campaign_fieldwork_merge": "80a0b3fd5394e2726df049aa718319ad156c5150"
+        }
       ]
     },
     "portfolio-pairing": {
@@ -3365,6 +3421,67 @@
         "monitoring",
         "observed-context"
       ]
+    },
+    "parameter-studies": {
+      "title": "Native parameter studies, paired results and complete GIS/report suite exports",
+      "paths": [
+        "model/parameter_studies.py",
+        "model/parameter_pair_cache.py",
+        "model/parameter_exports.py",
+        "model/PARAMETER_PAIR_RESULTS.md",
+        "model/PARAMETER_GIS_RESULTS.md",
+        "operator/parameter_study_api.py",
+        "operator/PARAMETER_STUDIES.md",
+        "operator/parameter-study-integration.json",
+        "operator/web/parameter_studies.css",
+        "operator/web/parameter_studies.mjs",
+        "source_tools/receive_gura_studies.py",
+        "model/parameter_suite_exports.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "import_roots": [
+        "source_tools"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "paired_results_merge": "a68d6acc6852752cc4792d006546e605ddbcc472",
+        "gis_results_merge": "0833c8fef3f9ba8e9c0a79966c6aa4157b3efd04",
+        "native_continuation_merge": "13f2d109ed3db0b7ddb1a725f67f47a637a2d6c0",
+        "suite_exports_merge": "5ee4ab267fc691d77611c31f5b52715599135b2e"
+      }
+    },
+    "utility-source-receiving": {
+      "title": "Original utility-source and observation context with complete native receiving packets",
+      "paths": [
+        "source_tools/receive_utility_source_context.py",
+        "source_tools/utility_source_context.mjs",
+        "source_tools/utility_source_context_cli.mjs",
+        "source_tools/utility_observed_context.mjs",
+        "source_tools/build_utility_observed_context.mjs",
+        "model/utility_observed_context.py",
+        "model/utility_watershed_context.py",
+        "model/watershed_brief.py",
+        "utility_observed_context.sources.json",
+        "source/utility-source-context-20261013.json",
+        "source/utility-source-context/20261013/inputs.json",
+        "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/utility-observed-context/20261013/inputs.json"
+      ],
+      "source_manifests": [
+        "utility_observed_context.sources.json",
+        "source/utility-source-context-20261013.json"
+      ],
+      "requires": [
+        "watershed-context",
+        "utility-microbial-study"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "native_receiving_merge": "8d1bc0396aa8e281bf4430828e9cb01c02ed6e02",
+        "complete_observed_packet_merge": "5c5be94df794257a4ef5ffed663ad96d8296f14a"
+      }
     }
   }
 }
