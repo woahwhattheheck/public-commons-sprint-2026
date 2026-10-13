@@ -1,9 +1,10 @@
+import {renderRequirementReviews} from './grant-requirement-review-workspace.mjs';
 import {renderProductSources} from './grant-product-authoring-workspace.mjs';
 // MIT. Uses the maintained application source and original shared IndexedDB drafts.
 import {SCHEMA,ENVELOPE,MAX_BYTES,ANSWERS,REQUIREMENTS,OFFICIAL,makeSource,createDraft,validateDraft,
   retainVersion,restoreVersion,compareSource,receiveSource,useSourceAnswer,newField,rebuildField,
   outputText,measureText,fieldStatus,applicationOutput,importFormMap,exportFormMap,receivePlanningSource,
-  fieldSourceStatus,reviewFieldSources,refreshUneditedFormFields,formSourceReview} from './grant-submission-core.mjs';
+  fieldSourceStatus,reviewFieldSources,refreshUneditedFormFields,formSourceReview,recordRequirementReview} from './grant-submission-core.mjs';
 import {listDrafts,loadDraft,saveDraft} from './drafts.mjs';
 import {MAX_PLAN_BYTES,receivePlanningFile,verifyPlanningSource} from './grant-plan-source.mjs';
 import {renderPlanning} from './grant-plan-workspace.mjs';
@@ -313,15 +314,10 @@ function fieldView(root){
   root.append(node('p','The counts describe the selected copy format. Word counts use whitespace. Match the form’s own counting rule when recording and checking a limit.','muted'));
 }
 function reviewView(root){
-  root.append(node('h2','Required content'),node('p','Use the issuer criteria to review the complete answers. Each status and note is your saved editorial decision.'));
-  const refs=node('div',undefined,'row');refs.append(link('Submission criteria',OFFICIAL.criteria),link('Budget guidance',OFFICIAL.budget),link('Official rules',OFFICIAL.rules));root.append(refs,node('p','Requirements source reviewed '+OFFICIAL.reviewedAt+'. The current application selects Open Track. Record any applicable issuer-specific condition in the corresponding answer.','muted'));
-  for(const rule of REQUIREMENTS){
-    const review=draft.reviews.find(x=>x.id===rule.id),card=node('section',undefined,'card');card.append(node('h3',rule.title),node('p',rule.detail));
-    card.append(select('Your review',review.status,[['unreviewed','To review'],['covered','Covered in the answers'],['needs-edit','Answer needs editing'],['not-applicable','Not applicable to this application']],value=>{review.status=value;touch();}).wrap);
-    const row=node('div',undefined,'choice-list');
-    for(const id of review.answers)row.append(button(titleOf(id),()=>{$('view').value='answers';selectedAnswer=id;render();}));
-    card.append(row,input('Review note and location of the supporting content',review.note,value=>{review.note=value;touch();},{area:true}).wrap);root.append(card);
-  }
+  renderRequirementReviews(root,{node,button,input,select,link,touch,render,status,download,retainVersion,
+    getDraft:()=>draft,setDraft:value=>{draft=value;},ANSWERS,REQUIREMENTS,OFFICIAL,recordReview:recordRequirementReview,
+    showAnswer:id=>{selectedAnswer=id;$('view').value='answers';render();},
+    showField:id=>{selectedField=id;$('view').value='fields';render();}});
 }
 function reviewerFiles(bundle){
   const list=node('ul',undefined,'source-files');

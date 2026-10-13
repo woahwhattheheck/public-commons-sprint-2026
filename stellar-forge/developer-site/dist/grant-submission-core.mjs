@@ -1,3 +1,4 @@
+import {validateRequirementReviews,captureRequirementReview} from './grant-requirement-review-core.mjs';
 import {validateGrantOperatingSelection} from './grant-operating-plan-core.mjs';
 import {validateProductSourceAuthoring,productSourceSelectionOf,restoreProductSourceSelection} from './grant-product-authoring-core.mjs';
 import {validatePlanningUpdateState,selectPlanningRevision} from './grant-plan-update-core.mjs';
@@ -129,6 +130,14 @@ function validateState(state,sources,planSources=[]){
     need(['unreviewed','covered','needs-edit','not-applicable'].includes(item.status),'Select an explicit review status.');
     string(item.note,'Review note');list(item.answers,'Review answer selection');unique(item.answers,'review answer identities');need(item.answers.every(x=>ids.includes(x)),'Select original answers for review.');
   }
+  validateRequirementReviews(state,ids);
+}
+export function recordRequirementReview(draft,id,input,at=new Date().toISOString()){
+  validateDraft(draft);
+  const review=captureRequirementReview(draft,id,input,{at,criteria:{url:OFFICIAL.criteria,reviewedAt:OFFICIAL.reviewedAt}});
+  const result=retainVersion(draft,'Before recording required-content review '+id,at);
+  result.reviews[result.reviews.findIndex(row=>row.id===id)]=review;
+  return validateDraft(result);
 }
 export function validateDraft(input){
   need(input&&typeof input==='object'&&input.schema===SCHEMA,'Open a complete SCF submission draft.');

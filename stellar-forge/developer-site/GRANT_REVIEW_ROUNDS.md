@@ -204,3 +204,44 @@ A completed individual download is verified and reused before another download c
 On error, the callback leaves the original Page open and attaches `receivingCheckpoint` and browser observations to the error. When possible it reads the still-open complete review export and unrecorded form values into that same returned checkpoint. A saved newer native result is preserved as a separate browser copy on continuation, rather than replaying it under another request or overwriting a concurrent record. Preserve the original error and complete checkpoint; do not claim the browser journey passed from the source-model result alone.
 
 Keep the original existing reviewer and Site publication operations. The source integration, browser receiving, issuer submission and Site publication remain separate facts in the final delivery.
+
+## Complete working copies
+
+A recorded review is an editorial journal. A working copy contains that entire journal plus the work needed to continue it: every unfinished decision, requested change, author response, reviewer resolution, receiving note and finish/reopen note; their exact original edition and participant; all unfinished supporting references; the complete selected incoming draft and carry choices; the complete starting draft and unfinished review name/person/format; the participant-name input; and current view selections.
+
+Invalid text stays visible and downloadable. For example, an unfinished HTTP reference is retained exactly even though the original recorded-review action requires HTTPS. Only **Record decision**, **Record author reply**, or another original explicit action creates a journal entry. Working-copy persistence does not approve text, authenticate a person, finish a review or submit an application.
+
+### Save, reload and separate windows
+
+The page saves after a short pause and after completed staff actions using the original revision-checked IndexedDB store. **Save working copy now** waits for that store transaction. Read **Complete working copy saved** before closing the page. Pending or failed saves trigger the ordinary unload warning; a failed save keeps all current fields available for complete download.
+
+Each page load has an independent working identity. Its URL selects the last complete working copy; reload verifies that saved original and opens a separate copy for this window. Opening the same link in another tab also creates an independent copy. Neither window silently overwrites the other's unfinished text. This deliberately retains earlier copies, which are listed under **Saved reviews → Complete working copies**.
+
+Opening a saved working copy or receiving a working package gives its recorded review a new unsaved browser binding. An action continues the same logical review history in that separate native record. The original saved round remains available under **Saved review rounds**. Working-copy identity, native browser record identity and logical review identity have separate meanings.
+
+**Save working as separate copy** retains local values after a conflict. **Open latest saved working version** first saves the local values independently, then opens the selected stored version as another independent copy. It never replaces the current fields until their complete local copy is durable. If storage is unavailable or full, download the complete working package and resolve storage before switching.
+
+The original native review save continues to use its own expected browser revision. If another tab changed that native record, the existing conflict behavior keeps the complete local review and offers a separate saved record. A successful working save is not reported as a successful native-record overwrite.
+
+### Download and receive all unfinished work
+
+Use **Download complete working copy**, then **Open working package** on the receiving installation. The complete JSON includes the native review body and exact original start/incoming exports. Its whole-body SHA-256 is checked, every original native source is verified through the unchanged review/submission verifier, and each unfinished form retains its original source/participant context. The receiver validates everything before changing the open copy, and first saves the preceding local work.
+
+A package does not import sender-local IndexedDB record IDs as a target for writes. Receiving creates a separate working identity and an unsaved native browser binding. The unchanged review engine validates any subsequent recorded action normally. Full working files support at most112 MiB; original recorded reviews retain their64 MiB limit and original submission drafts their16 MiB limit. Oversize source selection or unavailable storage does not truncate the selected work.
+
+**Retained unfinished forms** exposes every unfinished form, including a form for an older received draft. Open its original context or read its exact raw values. A note from an older edition never becomes a decision about a new edition. Recording a revised draft does not erase unrelated older unfinished notes.
+
+The three existing recorded downloads keep their original semantics: the complete native review, the readable recorded review report, and the selected exact original submission draft. They do not mislabel unfinished values as recorded decisions. Use the separate working package for unfinished work.
+
+### Source and installation
+
+The additive module is **dist/grant-review-working-copy.mjs**. Its exported contracts are:
+
+- **newWorkingCopy** creates a complete empty working model.
+- **validateWorkingCopy**, **exportWorkingCopy** and **importWorkingCopy** retain/verify the complete original sources and raw unfinished values.
+- **forkWorkingCopy** creates a separate identity and by default clears sender-native record targeting.
+- **saveWorkingCopy**, **loadWorkingCopy** and **listWorkingCopies** use the unchanged **drafts.mjs** transaction and revision contract.
+
+The original review workspace and page integrate these controls. **grant-review-round.mjs** and **browser-assets.json** include the new browser route, so both the source server and original static-reader exporter ship the entire module. The canonical application, cumulative source package and existing native/Site operation remain with their original owners.
+
+For actual browser receiving, use the existing review Page and original complete draft/round. Enter an unfinished decision note and reference, select a revised original draft and retain carry notes, then save/download the complete working copy. Reload and verify every unfinished value and both source identities. Open that exact package in a separate existing browser context, continue one original review action, download/reopen its whole native review, and confirm that the sender's working copy and original recorded history remain intact. Keep the actual browser result separate from source review and parsing; this source change starts no browser or listener.
