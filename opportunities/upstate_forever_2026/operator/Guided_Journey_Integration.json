@@ -13,13 +13,24 @@
       "id": "journey-controller-slot",
       "before": "const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
       "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
-      "marker": "let operatingJourney=null;"
+      "marker": "let operatingJourney=null;",
+      "compatible_after": [
+        {
+          "after": "let operatingJourney=null;\nconst journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};\nconst extensions=createExtensionHost({\n openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),\n openNativeProgramme:options=>experiments.openForInvestigation(options),\ngetState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,",
+          "marker": "let operatingJourney=null;"
+        }
+      ]
     },
     {
       "id": "journey-original-capabilities",
       "before": " getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
-      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
-      "marker": "setJourneyController:controller=>{operatingJourney=controller;}"
+      "after": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n captureCommunityView:()=>community.capture(),\n validateCommunityView:value=>community.validateView(value),\n restoreCommunityView:value=>community.restoreView(value),\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});",
+      "marker": "captureCommunityView:()=>community.capture(),",
+      "compatible_before": [
+        {
+          "before": " getView:()=>view,reportError:globalError,selectWorkspace,\n setJourneyController:controller=>{operatingJourney=controller;},\n openExperiment:id=>experiments.dispatch({dataset:{action:'experiment-show',id}}),\n openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},\n openScenario:id=>journeyForm(()=>scenarioForm(id)),\n openProfile:id=>journeyForm(()=>profileForm(id)),\n openGrid:id=>journeyForm(()=>gridForm(id)),\n openRun:selection=>journeyForm(()=>runForm(selection)),\n openComparison:selection=>journeyForm(()=>compareForm(selection)),\n openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),\n openBackup:()=>journeyForm(()=>backupForm()),\n openRestore:()=>journeyForm(()=>restoreForm()),\n getProgramme:()=>typeof programmes==='undefined'?null:programmes});"
+        }
+      ]
     },
     {
       "id": "journey-original-request",
@@ -115,7 +126,13 @@
       "id": "rehearsal-navigation-elements",
       "before": "    for(const node of $('[data-view]'))node.setAttribute",
       "after": "    for(const node of $$('[data-view]'))node.setAttribute",
-      "marker": "    for(const node of $$('[data-view]'))node.setAttribute"
+      "marker": "    for(const node of $$('[data-view]'))node.setAttribute",
+      "compatible_after": [
+        {
+          "after": "    for(const node of document.querySelectorAll('[data-view]'))node.setAttribute",
+          "marker": "    for(const node of document.querySelectorAll('[data-view]'))node.setAttribute"
+        }
+      ]
     }
   ],
   "server_patches": [
@@ -123,7 +140,13 @@
       "id": "original-stage-reuse-projection",
       "before": "if x in {\"started_at\", \"completed_at\"}",
       "after": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\"}",
-      "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\"}"
+      "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\"}",
+      "compatible_after": [
+        {
+          "after": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\", \"runtime\"}",
+          "marker": "if x in {\"started_at\", \"completed_at\", \"reused_from\", \"reused_at\", \"runtime\"}"
+        }
+      ]
     }
   ],
   "optional_file_patches": {

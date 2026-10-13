@@ -4,28 +4,28 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 19265,
-      "sha256": "9f48a87fa421dcc1340f889aedc6c5ca7c02622dec033426fdad2729c8ef8fb9"
+      "bytes": 21317,
+      "sha256": "e10117bfd3a5c58a988546c57e2af5272c6ef475021459bfa71b0f3312d3a0fe"
     },
     "operator/Guided_Journey_Integration.json": {
-      "bytes": 11712,
-      "sha256": "6e65a9f432d86b16176161a47c15455f79354da5604cafcf100d5ad6c5ca103b"
+      "bytes": 13904,
+      "sha256": "f1af6a86817ecc2ac6773807eecfd93cd578f18075e36a4f3b5653621fb2ce8e"
     },
     "operator/extensions/guided-journey.json": {
       "bytes": 1405,
       "sha256": "2755b6dcd057097d980d85fa186fdc7d560a8bcf45678d56052bb9fe7f448734"
     },
     "operator/web/journey.mjs": {
-      "bytes": 70413,
-      "sha256": "50104cfae414b8cb68fc8d380f7f7898939b376fa761a48969efba148c45c059"
+      "bytes": 73365,
+      "sha256": "b035e3b3e60c4c254a0ed019fd8bf19f93ead03616721d83dbd74f0ca83d30bf"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 26934,
-      "sha256": "3a7dc94ad9e9cf575e21b71d4d07e53d6594e9fe24ec22ae70327d3d70d70ae5"
+      "bytes": 27719,
+      "sha256": "60f116de907383b8a4d2d85647b3e7998b0bfb00a669e207cba4b7242786fd19"
     }
   },
   "source_context": {
@@ -50,6 +50,13 @@
       "selection": "calibration_review_id",
       "route": "Original saved dossier → optional guided review → native saved view → project continuity",
       "validation": "Current native session method composed by operator/install_calibration.py"
-    }
+    },
+    "community_saved_view": {
+      "schema": "upstate.community-view/v1",
+      "source_base": "eaa20367bd7d2bc7e30046683eeda9102ee9b4ce",
+      "route": "Retained community table and selections → native saved project view → complete workspace restore",
+      "controller": "operator/web/community.mjs"
+    },
+    "current_host_forms": "Preserve current parameter-study/native-programme host callbacks, rehearsal navigation and runtime stage metadata."
   }
 }

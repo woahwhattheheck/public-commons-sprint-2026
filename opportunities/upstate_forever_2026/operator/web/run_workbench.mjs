@@ -9,6 +9,8 @@ const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
 const activeStates = new Set(['queued', 'running']);
 const resumableStates = new Set(['failed', 'interrupted', 'cancelled']);
 const idPattern = /^[0-9a-f]{64}$/;
+const pairedProgrammeTask = task => task?.action === 'compute.programme.pair-completion' && task.payload?.run === true;
+const executingProgrammeTask = task => task?.action === 'compute.programme.run' || pairedProgrammeTask(task);
 const pageSize = 50;
 const modelOrder = ['ndr', 'sdr'];
 const modelOutputs = {ndr: ['nitrogen_export', 'phosphorus_export'], sdr: ['sediment_export']};
@@ -91,7 +93,7 @@ function runDeskIndex(snapshot) {
   const preparationBySelection = new Map(), startByRun = new Map(), runningTasks = new Map();
   const activeComparisons = new Map(), comparisons = new Map();
   for (const task of tasks) {
-    if (task.action === 'compute.programme.run' && task.state === 'running') runningTasks.set(task.id, task);
+    if (executingProgrammeTask(task) && task.state === 'running') runningTasks.set(task.id, task);
     if (task.action === 'run.compare' && activeStates.has(task.state) && Array.isArray(task.payload?.run_ids)) {
       const key = comparisonKey(task.payload.run_ids[0], task.payload.run_ids.slice(1));
       if (!activeComparisons.has(key)) activeComparisons.set(key, task);
@@ -298,19 +300,18 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     programmeActivityMode = 'unknown'; programmeActivityRecords = new Map();
   }
   function runningProgrammeTasks(snapshot) {
-    const byProgramme = new Map();
-    const tasks = (snapshot?.tasks || []).filter(task => task.action === 'compute.programme.run' && task.state === 'running' &&
+    return (snapshot?.tasks || []).filter(task => executingProgrammeTask(task) && task.state === 'running' &&
       (!task.workspace || task.workspace === snapshot.workspace_key) && idPattern.test(task.payload?.programme_id || ''))
       .sort((left, right) => String(left.started_at || left.created_at || '').localeCompare(String(right.started_at || right.created_at || '')));
-    for (const task of tasks) if (!byProgramme.has(task.payload.programme_id)) byProgramme.set(task.payload.programme_id, task);
-    return [...byProgramme.values()];
   }
-  async function readProgrammeActivity(target, id, request) {
+  async function readProgrammeActivity(target, task, request) {
+    const id = task.payload.programme_id, paired = pairedProgrammeTask(task);
     const currentRequest = () => request.epoch === programmeEpoch && programmeRead === request &&
       getState()?.workspace_key === target;
     if (programmeActivityMode !== 'legacy') {
-      const cached = programmeActivityRecords.get(id);
+      const cached = programmeActivityRecords.get(task.id);
       const query = '?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(id) +
+        (paired ? '&task_id=' + encodeURIComponent(task.id) : '') +
         (cached ? '&bindings_id=' + encodeURIComponent(cached.bindingsId) + '&request_id=' + encodeURIComponent(cached.requestId) : '');
       let value;
       try {
@@ -320,10 +321,14 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
           if (currentRequest()) programmeActivityMode = 'legacy';
         } else throw error;
       }
-      if (value) {
-        if (value.schema !== 'upstate.programme-activity/v1' || value.programme_id !== id ||
-            value.bindings_id !== id || !idPattern.test(value.request_id || '') || typeof value.active !== 'boolean')
-          throw Error('The compact programme activity does not match its original retained programme.');
+      // Older activity providers ignore task_id and return the parent. Resolve
+      // their decorated original task below, never mistake parent for child.
+      if (value && (!paired || value.source_task_id !== undefined)) {
+        if (value.schema !== 'upstate.programme-activity/v1' ||
+            !idPattern.test(value.programme_id || '') || value.bindings_id !== value.programme_id ||
+            !idPattern.test(value.request_id || '') || typeof value.active !== 'boolean' ||
+            (paired ? value.source_task_id !== task.id || value.parent_programme_id !== id : value.programme_id !== id))
+          throw Error('The compact programme activity does not match its original retained programme task.');
         const bindings = Array.isArray(value.bindings) ? value.bindings : cached?.bindingsId === value.bindings_id ? cached.bindings : null;
         const requested = Array.isArray(value.requested_runs) ? value.requested_runs : cached?.requestId === value.request_id ? cached.requested : null;
         if (!bindings || !requested)
@@ -336,12 +341,26 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
           throw Error('The programme activity contains an invalid requested case.');
         if (currentRequest()) {
           programmeActivityMode = 'compact';
-          programmeActivityRecords.set(id, {bindingsId: value.bindings_id, requestId: value.request_id, bindings, requested});
+          programmeActivityRecords.set(task.id, {bindingsId: value.bindings_id, requestId: value.request_id, bindings, requested});
         }
         return {...value, runs: bindings, requested_runs: requested};
       }
     }
-    return api('/api/programmes/detail?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(id));
+    let selected = id;
+    if (paired) {
+      const retained = await api('/api/task?workspace=' + encodeURIComponent(target) + '&id=' + encodeURIComponent(task.id));
+      if (retained?.id !== task.id || retained.workspace !== target ||
+          !pairedProgrammeTask(retained) || retained.payload.programme_id !== id)
+        throw Error('The paired programme task changed while its continuation was opening.');
+      selected = retained._native_job?.programme_context?.programme_id ||
+        retained._native_context?.programme_id || retained.result?.id || retained.programme?.id;
+      if (!idPattern.test(selected || '') || selected === id)
+        throw Error('The matching calculation programme is being retained. Its task remains available.');
+    }
+    const value = await api('/api/programmes/detail?workspace=' + encodeURIComponent(target) + '&programme_id=' + encodeURIComponent(selected));
+    if ((value?.programme_id || value?.id) !== selected)
+      throw Error('The programme detail response belongs to another retained selection.');
+    return paired ? {...value, source_task_id: task.id, parent_programme_id: id} : value;
   }
   async function refreshProgrammeActivity(required = false) {
     const snapshot = getState(), target = snapshot?.workspace_key;
@@ -360,9 +379,11 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       request = {workspace: target, signature, epoch: programmeEpoch, promise: null};
       programmeRead = request;
       request.promise = Promise.allSettled(tasks.map(async task => {
-        const status = await readProgrammeActivity(target, task.payload.programme_id, request);
+        const status = await readProgrammeActivity(target, task, request);
         if (!status || !Array.isArray(status.runs) || typeof status.active !== 'boolean' ||
-            (status.programme_id || status.id) !== task.payload.programme_id)
+            (pairedProgrammeTask(task) ?
+              status.source_task_id !== task.id || status.parent_programme_id !== task.payload.programme_id :
+              (status.programme_id || status.id) !== task.payload.programme_id))
           throw Error('The programme detail response does not match its retained operation.');
         return {task_id: task.id, status};
       })).then(results => {
