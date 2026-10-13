@@ -169,7 +169,7 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
     escaped = lambda value: html.escape(str(value), quote=True)
     rows = []
     for item in studies:
-        progress = item.get("progress", {})
+        study_progress = item.get("progress", {})
         links = " ".join(
             '<a href="' + escaped(value["path"]) + '">' + escaped({"export_manifest": "Complete file manifest"}.get(name, name)) + "</a>"
             for name, value in item.get("artifacts", {}).items()
@@ -177,8 +177,8 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
         rows.append(
             "<tr><td>" + escaped(item["landscape"]) + "</td><td>" +
             escaped(item["model_scope"].upper()) + "</td><td>" + escaped(item["state"]) +
-            "</td><td>" + escaped(progress.get("completed", 0)) + " / " +
-            escaped(progress.get("total", 0)) + "</td><td>" + links + "<br><small>" +
+            "</td><td>" + escaped(study_progress.get("completed", 0)) + " / " +
+            escaped(study_progress.get("total", 0)) + "</td><td>" + links + "<br><small>" +
             escaped(item.get("export_layout", {}).get("mode", "pending")) +
             " layout</small></td></tr>")
     report = """<!doctype html><html lang="en"><meta charset="utf-8">

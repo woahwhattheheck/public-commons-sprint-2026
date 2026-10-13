@@ -47,6 +47,21 @@ def _supervised(workspace, run, directory):
     records = {name: _worker_receipt(workspace, directory, name + ".json", request)
                for name in ("worker", "launch", "heartbeat", "failure", "finished",
                             "supervision", "result")}
+    interruption = _worker_receipt(workspace, directory, "completed-interruption.json", request)
+    if interruption is not None:
+        failure = interruption.get("error")
+        process = failure.get("process") if isinstance(failure, dict) else None
+        if (interruption.get("schema") != "upstate.completed-native-interruption/v1"
+                or interruption.get("request_sha256") != request["request_sha256"]
+                or interruption.get("run_id") != run["id"]
+                or not isinstance(failure, dict) or failure.get("run_id") != run["id"]
+                or failure.get("completed_result_retained") is not True
+                or type(failure.get("return_code")) is not int or failure["return_code"] >= 0
+                or not isinstance(process, dict)
+                or process.get("execution_id") != request["execution_id"]
+                or process.get("request_sha256") != request["request_sha256"]):
+            raise ValueError("The retained completed-worker interruption differs from its original request")
+    records["completed_interruption"] = interruption
     worker = records["worker"] or records["launch"] or {}
     identity = worker.get("identity")
     alive = bool(isinstance(identity, dict) and identity_matches(identity))
@@ -57,7 +72,11 @@ def _supervised(workspace, run, directory):
                    or result["result"].get("selection") != run["selection"]
                    or result["result"].get("state") != "complete"):
         raise ValueError("The saved worker result differs from this original native case")
-    status = ("complete" if result else "running" if alive else
+    # Process history survives a later successful verification of the same result.
+    # The native result and latest supervision remain separately available.
+    original_failure = interruption["error"] if interruption is not None else None
+    status = ("interrupted_after_completion" if original_failure else
+              "complete" if result else "running" if alive else
               supervision.get("state") or ("failed" if failure else "ended_without_receipt"))
     heartbeat = records["heartbeat"] or {}
     resources = None
@@ -72,8 +91,11 @@ def _supervised(workspace, run, directory):
             "task_id": request.get("task_id"), "execution_id": request["execution_id"],
             "request_sha256": request["request_sha256"],
             "request_body_sha256": file_digest(directory / "request.json"),
-            "return_code": supervision.get("returncode"),
-            "error": supervision.get("error") or failure or None,
+            "return_code": (original_failure["return_code"] if original_failure
+                            else supervision.get("returncode")),
+            "error": original_failure or supervision.get("error") or failure or None,
+            "completed_result_retained": bool(result),
+            "latest_supervision_state": supervision.get("state"),
             "resources": resources, "request": request, "records": records,
             "directory": directory.relative_to(workspace.root).as_posix(),
             "logs": {"process": "process.log"}}
@@ -215,42 +237,50 @@ def _log(workspace, run_id, attempt, stream, offset, expected_attempt):
             "available_streams": list(streams)}
 
 
-def read(workspace, study_id, run_id, *, attempt_id=None, stream="native",
-         log_offset=None, expected_attempt_id=None, history_offset=0, limit=25):
-    """Read one exact saved case; no native calculation or state mutation occurs."""
-    study_id, run_id = identifier(study_id), identifier(run_id)
-    context = native_case_context(workspace, study_id, run_id)
-    study = _read(workspace, study_id)
-    cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
-             for case in study["cases"] if case["run_id"] == run_id]
+def read_run(workspace, run_id, *, attempt_id=None, stream="native",
+             log_offset=None, expected_attempt_id=None, history_offset=0, limit=25):
+    """Read the common original native receipts after the caller binds its case."""
+    run_id = identifier(run_id)
     native = inspect_execution(workspace, run_id, log_bytes=0)
     run = workspace.inspect_run(run_id)
     records = _attempts(workspace, run)
-    selected = (next((record for record in records if record["id"] == attempt_id), None)
-                if attempt_id else next((record for record in records
-                                         if record["state"] != "unavailable"), None))
-    if attempt_id and selected is None:
+    chosen = (next((record for record in records if record["id"] == attempt_id), None)
+              if attempt_id else next((record for record in records
+                                       if record["state"] != "unavailable"), None))
+    if attempt_id and chosen is None:
         raise ValueError("Choose an attempt retained for this original native case")
-    if selected and selected["state"] == "unavailable":
-        raise ValueError(selected["error"]["message"])
+    if chosen and chosen["state"] == "unavailable":
+        raise ValueError(chosen["error"]["message"])
     offset = _page_number(history_offset, "Attempt offset", 0)
     size = _page_number(limit, "Attempt page size", 25, maximum=100)
     if size == 0:
         raise ValueError("Attempt page size must be positive")
     offset = min(offset, max(0, ((len(records) - 1) // size) * size))
     columns = ("id", "kind", "created_at", "state", "alive", "pid", "task_id",
-               "execution_id", "return_code", "request_sha256", "error")
+               "execution_id", "return_code", "request_sha256", "error",
+               "completed_result_retained", "latest_supervision_state")
     history = [{name: row.get(name) for name in columns}
                for row in records[offset:offset + size]]
-    return {"schema": SCHEMA, "workspace_id": workspace.project["id"],
-            "study_id": study_id, "title": study["selection"]["title"], "study_state": study["state"],
-            "coordinator_active": _coordinator_active(workspace),
-            "case_bindings": cases, "context": context, "native": native,
-            "attempt": selected, "history": {"offset": offset, "limit": size,
-                                             "total": len(records), "rows": history},
-            "log": _log(workspace, run_id, selected, stream, log_offset, expected_attempt_id),
-            "continuation": {"action": "parameter-study.run", "payload": {"experiment_id": study_id},
-                             "scope": "The original saved study and its remaining cases",
-                             "native_run_argv": native["continue_argv"]},
+    return {"schema": "upstate.native-case-attempts/v1", "workspace_id": workspace.project["id"],
+            "coordinator_active": _coordinator_active(workspace), "native": native,
+            "attempt": chosen, "history": {"offset": offset, "limit": size,
+                                           "total": len(records), "rows": history},
+            "log": _log(workspace, run_id, chosen, stream, log_offset, expected_attempt_id),
             "resource_basis": "Saved observations retain their original observing process. "
                               "Cgroup counters include other processes; a group event does not identify its victim."}
+
+
+def read(workspace, study_id, run_id, **options):
+    """Read one exact saved study case without changing its original state."""
+    study_id, run_id = identifier(study_id), identifier(run_id)
+    context = native_case_context(workspace, study_id, run_id)
+    study = _read(workspace, study_id)
+    cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
+             for case in study["cases"] if case["run_id"] == run_id]
+    value = read_run(workspace, run_id, **options)
+    return {**value, "schema": SCHEMA, "study_id": study_id,
+            "title": study["selection"]["title"], "study_state": study["state"],
+            "case_bindings": cases, "context": context,
+            "continuation": {"action": "parameter-study.run", "payload": {"experiment_id": study_id},
+                             "scope": "The original saved study and its remaining cases",
+                             "native_run_argv": value["native"]["continue_argv"]}}

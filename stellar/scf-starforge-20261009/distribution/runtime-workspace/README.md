@@ -364,3 +364,8 @@ The Operations and Managed releases views expose **Refresh operation status** fo
 The pane and `procedure-state`, `procedure-open`, `procedure-create`, `procedure-save`, `procedure-record`, `procedure-return`, `procedure-decide`, `procedure-apply`, `procedure-receive` and `procedure-export` commands use the existing Runtime workspace. They retain exact requests and compare the current record before changes. Runtime installation, application starts and archive restore remain explicit actions in their original controls.
 
 Read [Runtime operating procedures](RUNTIME_PROCEDURES.md) for complete source selection, browser request recovery, revision and returned-work review, carried files, full JSON/HTML delivery and original CLI request formats.
+
+
+## Original application files
+
+Use the Applications **Original input files** shelf to retain complete device or CLI files, resume interrupted uploads, and prepare separate working copies for an application's existing file setting. The original bytes, selection requests and working copies stay in the same workspace and its complete backup. See [Application input files](APPLICATION_INPUTS.md) for browser, CLI and independent receiving instructions.

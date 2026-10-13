@@ -3,6 +3,7 @@ import { createArchiveCodec } from "./archive_codec.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
 import { renderNativeAssessmentReviewer } from "./native_assessment_reviewer.mjs";
+import { bindNativeMicrobiology, renderNativeMicrobiology } from "./native_assessment_microbiology.mjs";
 import { NATIVE_CONTEXT_SCHEMA, bindNativeAssessmentGeography } from "./native_assessment_geography.mjs";
 
 export const REPORT_SCHEMA = "upstate.assessment-association-report/v1";
@@ -77,7 +78,7 @@ function nativeGeography(text, records) {
       sha256: sha(text), bytes: codec.utf8Encode(text).length }, stations: result };
 }
 
-export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext }) {
+export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations }) {
   const joined = joinAssessmentIdentities(assessments, identityCrosswalk);
   const programme = parse(priorities, "original programme crosswalk");
   if (programme.schema !== "upstate.source-priority-assessment-crosswalk/v2" ||
@@ -121,6 +122,10 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
       nativeAnnual.schema !== "upstate.annual-reference-assessment-context/v1" ||
       nativeAnnual.input_sha256 !== mapped.source.input_sha256))
     fail("the annual-reference context must match the completed native geography");
+  if ((nativeMicrobialContext === undefined) !== (nativeMicrobialObservations === undefined))
+    fail("retain both the microbial context and complete original observation CSV");
+  const microbial = nativeMicrobialContext === undefined ? null :
+    bindNativeMicrobiology(nativeMicrobialContext, nativeMicrobialObservations, parse(geography,"completed native geography"));
   const records = joined.records.map(row => {
     const assessment = nrcs(row.huc12), station = nrcs(row.station_publisher_huc12);
     const exact = Boolean(row.station_publisher_huc12);
@@ -192,6 +197,7 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
       "NRCS priority, published assessment status, mapped point membership, classified reaches and modelled export retain their separate meanings."
     ], programme_source_reference: programme.source_reference, assessment_sources: programme.assessment_sources,
     records, differences, coarser_station_memberships: coarser, watershed_comparison: watershedRows };
+  if (microbial) result.microbial_source_context = microbial.source;
   const files = { ...joined.files,
     "inputs/assessment-records-domain217.csv": assessments,
     "inputs/assessment159-native-identity-crosswalk.csv": identityCrosswalk,
@@ -199,6 +205,10 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     ...(geography !== undefined ? {
       [mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ? "inputs/assessment-native-huc-context.json" :
         "inputs/station-geography-analysis.json"]: geography } : {}) };
+  if (microbial) {
+    files["inputs/microbial-assessment-overlap.json"] = nativeMicrobialContext;
+    files["inputs/microbial-assessment-observations.csv"] = nativeMicrobialObservations;
+  }
   result.inputs = Object.entries(files).filter(([path]) => path.startsWith("inputs/")).map(([path,text]) => identity(path,text));
   files["assessment-associations.json"] = json(result);
   const flattened = records.map(row => ({ ...row,
@@ -225,6 +235,8 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
   const reviewHtml = renderAssociationReviewer(result, renderAssociationReport(result));
   files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = mapped?.source?.schema === NATIVE_CONTEXT_SCHEMA ?
     renderNativeAssessmentReviewer({result,context:parse(geography,"completed native geography"),annual:nativeAnnual,html:reviewHtml}) : reviewHtml;
+  if (microbial) files["OPEN_ASSESSMENT_ASSOCIATIONS.html"] = renderNativeMicrobiology({
+    html:files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],bound:microbial});
   const reportIdentity = identity("assessment-associations.json", files["assessment-associations.json"]);
   const sourceId = "assessment-association-report-" + reportIdentity.sha256.slice(0,20);
   files["artifacts.json"] = json({schema:"commons.artifacts/v1",source_id:sourceId,files:Object.entries(files).map(([path,text])=>identity(path,text))});

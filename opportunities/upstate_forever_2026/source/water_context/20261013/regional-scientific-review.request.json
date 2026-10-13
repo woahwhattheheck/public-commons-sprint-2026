@@ -1,0 +1,51 @@
+{
+  "title": "Upper Savannah — review of regional observation and annual land-cover sources",
+  "purpose": "Internal scientific and delivery review of the completed original regional observation atlas and any explicitly selected completed annual land-cover report source, for the Ecosystem Sciences project discussion. Assess what the retained geographic and observational support permits the report to say, and record actionable changes through the existing Customer review workflow.",
+  "requirements": [
+    {
+      "id": "regional-original-scope",
+      "title": "Original regional geography and selected source editions",
+      "detail": "Check the actual retained 217-HUC12 domain, 36 monitoring stations and selected microbial source inventory against the atlas source register and native spatial membership. The published atlas describes 730 original records and 729 routine records; keep its separate field replicate and original result qualifiers identifiable. Preserve the actual project, source collection, report and geometry identities."
+    },
+    {
+      "id": "source-water-area",
+      "title": "Source-water area and raster support",
+      "detail": "Review the original source-water polygon union and its intersections with the selected watersheds. The atlas reports 15,189.437123 ha of vector union and 15,194.43 ha of native 30 m geographic-cell area; keep these separate measurements and retain overlap removal. Published drinking-water source protection is not conservation ownership, a pollutant export estimate or demonstrated treatment effectiveness."
+    },
+    {
+      "id": "sampling-support",
+      "title": "Changing station and calendar coverage",
+      "detail": "Keep the full station-year coverage beside annual microbial summaries. The selected routine inventory contains 174, 105, 119, 144 and 187 records in 2021–2025, respectively, with 11 stations present in every year. Repeated stations can still have different sampling dates and months. Review exact method/unit strata and original QA comments before treating any temporal comparison as comparable."
+    },
+    {
+      "id": "original-calendar-comparison",
+      "title": "Same-station calendar comparison",
+      "detail": "For the retained SV-833 APHA 9223-B example, review the all-date and common-calendar-month selections, source members, medians and sample counts together. Calendar matching changes the selected sample support and does not align discharge, weather, exact sampling dates or management. Preserve the original descriptive reversal without a causal trend claim."
+    },
+    {
+      "id": "flow-and-censoring",
+      "title": "Hydrologic context and censored observations",
+      "detail": "Review the original USGS-02177000 station-year daily discharge and 16 same-station microbial sample dates. Distinguish daily mean flow from instantaneous flow or microbial load. Preserve quantified-only summaries separately from below-limit rank sensitivity ranges; those ranges are not confidence intervals. Keep below-limit, above-limit, not-detected and unreported records and original Information Only comments in their recorded categories."
+    },
+    {
+      "id": "annual-landcover",
+      "title": "Selected annual land-cover ledger",
+      "detail": "When a completed land-cover report source is selected, inspect its actual classification editions and calendar years, reference/comparison order, native rasters, original class definitions, polygon union, per-zone and common-support areas, transitions and figure quantities. Distinguish annual classification change from modeled annual nutrient or sediment export and from observed microbial responses. If no annual source is selected, leave this question as source-scope context rather than inventing its results."
+    },
+    {
+      "id": "combined-interpretation",
+      "title": "Combined regional interpretation",
+      "detail": "Keep the regional atlas and annual land-cover source documents in their explicitly selected reading order, with separate source provenance and measurement support. Geographic coexistence or shared watershed identifiers does not establish downstream transport, causal attribution or equivalence between an observation sample and a modeled grid. Review domain and time differences before drawing a combined conclusion."
+    },
+    {
+      "id": "review-package",
+      "title": "Complete readable report and reusable source package",
+      "detail": "Open the scientific HTML/PDF, original numeric figures, cartographic SVG/map sheets, GIS package, source tables and record-level links from the retained review package. Verify that the saved edition and restored Workspace reopen the same ordered sources and original authored request. Record any requested scientific or presentation changes through the existing response and worklist."
+    }
+  ],
+  "notes": [
+    "Authored internal review request for the original Upper Savannah regional atlas and explicitly selected scientific sources.",
+    "The actual retained manifests and completed editions determine this report's scope. Annual land-cover content is reviewed only when its real completed source is included.",
+    "Observation support, geographic source-water coverage, annual classification and native model outcomes retain distinct physical meanings and source identities."
+  ]
+}

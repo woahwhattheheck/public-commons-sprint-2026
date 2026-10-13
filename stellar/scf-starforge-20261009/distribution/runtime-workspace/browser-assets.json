@@ -190,6 +190,13 @@
         "../RUNTIME_PROCEDURES.md",
         "text/markdown; charset=utf-8"
       ]
+    ],
+    [
+      "/application-inputs.mjs",
+      [
+        "application-inputs.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

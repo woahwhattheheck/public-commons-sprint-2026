@@ -381,7 +381,10 @@ class MonitoringWorkspace:
         visits = campaign["calendar"] if campaign else plan["calendar"]["visits"]
         events = campaign["events"] if campaign else []
         title = campaign["revision"]["title"] if campaign else plan["title"]
-        report = report_html(title, plan, network, visits, events)
+        from . import utility_monitoring_report
+        utility_contexts = utility_monitoring_report.contexts(self.workspace, plan, network, visits)
+        report = utility_monitoring_report.attach(
+            report_html(title, plan, network, visits, events), utility_contexts, links=format == "bundle")
         if observed_context:
             context_html = observed.report_html(observed_context).split("</style>", 1)[1].rsplit("</html>", 1)[0]
             closing = "</body>" if "</body>" in report else "</html>"
@@ -424,6 +427,8 @@ class MonitoringWorkspace:
                 for name, member in source_export_members(self.workspace, label, binding):
                     add_member(files, name, member)
         add_member(files, "report.html", bytes_member(report.encode("utf-8")))
+        for name, member in utility_monitoring_report.export_members(self.workspace, utility_contexts):
+            add_member(files, name, member)
         if observed_context:
             for name, member in observed._export_members(self.workspace, observed_context):
                 add_member(files, name, member)

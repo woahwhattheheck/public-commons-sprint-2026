@@ -1,0 +1,126 @@
+{
+  "schema": "commons.artifact-manifest/v1",
+  "revision": 3,
+  "files": [
+    {
+      "path": "results/station-assessment-context.json",
+      "bytes": 1187125,
+      "sha256": "9bce42134d1c9434539c2982eef8f511f9966fd4f1a52150852ae04d2e9bc54a"
+    },
+    {
+      "path": "results/station-assessment-context.csv",
+      "bytes": 109332,
+      "sha256": "4ca9e11c10f2da79144622a9aec5bf89f7dadad5d2adbbd4972f7df3aa0d21d9"
+    },
+    {
+      "path": "results/station-assessment-summary.json",
+      "bytes": 2075,
+      "sha256": "51a2f02fa357d409f49150d4ff0916e3022512ef72f522f9377bf5972a8bb5ce"
+    },
+    {
+      "path": "results/OPEN_STATION_ASSESSMENTS.html",
+      "bytes": 39730,
+      "sha256": "90c554509eeea8f99c1762c8ca470aa17a0099807f0fdf11a005c53d39d428cd"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/README.md",
+      "bytes": 2209,
+      "sha256": "ca70ca241bbf5d93e9bdbea04f7e9df2351e3012b400d2c5f06b16e2a6d8a46b"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/assessment159_native_identity_crosswalk.csv",
+      "bytes": 42751,
+      "sha256": "b5a658b16a9cb0b891426d53db78de01429f4363b83f2ff30625f9dbf932d84c"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/sources.json",
+      "bytes": 2222,
+      "sha256": "3cd6a6b9a7244808ca45491f45d851330b2321fb903efddcf859ba5bc1531fc6"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_monitoring_sites.geojson",
+      "bytes": 2433,
+      "sha256": "5588a64fbae5229687aef7063948083f05b5f0639dfd108ae0c3db40614677cd"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_source_metadata.json",
+      "bytes": 2502,
+      "sha256": "72be42d0b6294b9950641cf75bd51dc0db0065bacf847bb6e0902a5ab89f943f"
+    },
+    {
+      "path": "source_data/wqp_assessment159_additional_two_20261013/wqp_two_station_page_extractions.json",
+      "bytes": 12827,
+      "sha256": "eaa608090903f409ddd89ac93982c580f60da709ab09075ce5bcf97f55a0ba6b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5613,
+      "sha256": "14ca780aeeb1c04cd39ad6c3ed9c0bc4b5649b9d222b8c8b4cd0f52672e6f855"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+      "bytes": 1043696,
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/original-count-response.html",
+      "bytes": 41,
+      "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/source-provenance.json",
+      "bytes": 931,
+      "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/sources.json",
+      "bytes": 1525,
+      "sha256": "4f586bfe326c485ce917622e5d091082c17e407b0d5005ae9fe2f79a39dd273a"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/sources.json",
+      "bytes": 1533,
+      "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+      "bytes": 17794,
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+      "bytes": 3640,
+      "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+      "bytes": 4364,
+      "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+      "bytes": 50756,
+      "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f"
+    },
+    {
+      "path": "source_data/wqp_coordinate_context73_20261013/wqp_station_pages.json",
+      "bytes": 489141,
+      "sha256": "059da5e2e898286b6249356c9ef4a1771516eccb6462a5fd0e1ae523dd1e8640"
+    },
+    {
+      "path": "source_data/wqp_coordinate_context73_20261013/wqp_coordinate_context.geojson",
+      "bytes": 90279,
+      "sha256": "2c9a06c77e9d55320c779af7edea68fd091c0c8458b85b0ec32de9d999cc687e"
+    },
+    {
+      "path": "source_data/wqp_coordinate_context73_20261013/sources.json",
+      "bytes": 1523,
+      "sha256": "e7be50103b7034d89eba19216ce4170f23f94aebf98f04356190fb31614aeb3e"
+    },
+    {
+      "path": "assessment-context-sources.json",
+      "bytes": 2618,
+      "sha256": "b81ae2360bf075c6117428e733dd7bd3255b70477f68214fe8624ec697657ea5"
+    }
+  ]
+}

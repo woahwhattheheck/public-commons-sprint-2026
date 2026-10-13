@@ -1,0 +1,18 @@
+{
+  "schema": "gwma.public-source-acquisition/v1",
+  "operation_id": "GWMA-STUDY-DATA-OPERATOR-103D-20261013",
+  "resource_id": "15a63495-8d9f-4a49-b43a-3092ef3106b9",
+  "api": "https://publish.data.ca.gov/api/3/action/datastore_search",
+  "filters": {
+    "RegionNumber": "4",
+    "StationCode": "412LARAIH",
+    "Analyte": "E. coli",
+    "Project": "Lower LA River Restoration Access Feb24-Jan25"
+  },
+  "sort": "_id asc",
+  "page_size": 40,
+  "source_url": "https://publish.data.ca.gov/api/3/action/datastore_search?resource_id=15a63495-8d9f-4a49-b43a-3092ef3106b9&filters=%7B%22RegionNumber%22%3A%224%22%2C%22StationCode%22%3A%22412LARAIH%22%2C%22Analyte%22%3A%22E.%20coli%22%2C%22Project%22%3A%22Lower%20LA%20River%20Restoration%20Access%20Feb24-Jan25%22%7D&limit=40&offset=0&sort=_id%20asc",
+  "transport": "connected-public-https-source",
+  "original_source_request": "C0BTTA66TK3/1791876349.292809",
+  "source_owner": "ECO-CLOUD-7C92 with R103D provider-reading support"
+}

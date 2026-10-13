@@ -1,0 +1,293 @@
+{
+  "schema": "upstate.microbial-temporal-analysis/v1",
+  "selection": {
+    "activity_type": "Sample-Routine",
+    "source_records": 730,
+    "routine_records": 729,
+    "replicate_records": 1,
+    "stations": 36
+  },
+  "method": {
+    "intervals": "Numerical [value,value]; below-limit/not-detected [0,reported limit]; above-limit [reported limit,infinity]; no substitution for missing limits. Inclusive endpoints are conservative bounds.",
+    "median_bounds": "Median of lower endpoints and median of upper endpoints among records with interpretable intervals; numerical-result-only median retained separately.",
+    "seasons": "Calendar month groups DJF, MAM, JJA, SON, pooled across the requested period; annual summaries use original calendar year.",
+    "units": "MPN/100mL and MPN/100 ml are equivalent physical units; original strings retained. Analytical methods remain separate.",
+    "replicate": "Quality control records retained in separate output and excluded from routine sampling summaries.",
+    "comment_sensitivity": "All original routine observations are retained. A separate sensitivity excludes only records whose original result comment explicitly says Information Only (including publisher typo Infomation). ECOL power-failure and other-analyte BOD comments are separately flagged; no rewritten publisher detection status.",
+    "temporal_scope": "Descriptive sampling support and censoring-aware summaries; station and method identity retained."
+  },
+  "overall": {
+    "records": 729,
+    "measured": 553,
+    "above_limit": 6,
+    "below_limit": 67,
+    "not_detected": 102,
+    "not_reported": 1,
+    "information_only_comments": 72,
+    "interrupted_ecoli_comments": 3,
+    "other_analyte_comments": 1,
+    "interval_records": 728,
+    "unbounded_or_unreported_records": 1,
+    "sample_dates": 318,
+    "first_date": "2021-01-06",
+    "last_date": "2025-12-10",
+    "months_observed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "years_observed": [
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025"
+    ],
+    "source_units": [
+      "MPN/100 ml",
+      "MPN/100mL"
+    ],
+    "station_count": 36
+  },
+  "utility_support": [
+    {
+      "utility_id": "ARJWS",
+      "records": 142,
+      "measured": 134,
+      "above_limit": 6,
+      "below_limit": 2,
+      "not_detected": 0,
+      "not_reported": 0,
+      "information_only_comments": 0,
+      "interrupted_ecoli_comments": 0,
+      "other_analyte_comments": 0,
+      "interval_records": 142,
+      "unbounded_or_unreported_records": 0,
+      "sample_dates": 109,
+      "first_date": "2021-01-06",
+      "last_date": "2025-12-02",
+      "months_observed": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "years_observed": [
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025"
+      ],
+      "source_units": [
+        "MPN/100mL"
+      ],
+      "station_count": 5
+    },
+    {
+      "utility_id": "PRWD",
+      "records": 587,
+      "measured": 419,
+      "above_limit": 0,
+      "below_limit": 65,
+      "not_detected": 102,
+      "not_reported": 1,
+      "information_only_comments": 72,
+      "interrupted_ecoli_comments": 3,
+      "other_analyte_comments": 1,
+      "interval_records": 586,
+      "unbounded_or_unreported_records": 1,
+      "sample_dates": 254,
+      "first_date": "2021-01-06",
+      "last_date": "2025-12-10",
+      "months_observed": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "years_observed": [
+        "2021",
+        "2022",
+        "2023",
+        "2024",
+        "2025"
+      ],
+      "source_units": [
+        "MPN/100 ml",
+        "MPN/100mL"
+      ],
+      "station_count": 31
+    }
+  ],
+  "sampling_coverage": {
+    "complete_panel_station_ids": [
+      "21GAEPD_WQX-LK_01_10",
+      "21GAEPD_WQX-LK_01_11",
+      "21GAEPD_WQX-LK_01_7",
+      "21GAEPD_WQX-LK_01_8",
+      "21GAEPD_WQX-LK_01_9",
+      "21SC60WQ_WQX-SV-111",
+      "21SC60WQ_WQX-SV-199",
+      "21SC60WQ_WQX-SV-200",
+      "21SC60WQ_WQX-SV-344",
+      "21SC60WQ_WQX-SV-363",
+      "21SC60WQ_WQX-SV-833"
+    ],
+    "annual": [
+      {
+        "year": "2021",
+        "records": 174,
+        "stations": 18,
+        "new_stations": 18,
+        "complete_panel_records": 103
+      },
+      {
+        "year": "2022",
+        "records": 105,
+        "stations": 15,
+        "new_stations": 1,
+        "complete_panel_records": 80
+      },
+      {
+        "year": "2023",
+        "records": 119,
+        "stations": 14,
+        "new_stations": 2,
+        "complete_panel_records": 93
+      },
+      {
+        "year": "2024",
+        "records": 144,
+        "stations": 16,
+        "new_stations": 5,
+        "complete_panel_records": 92
+      },
+      {
+        "year": "2025",
+        "records": 187,
+        "stations": 21,
+        "new_stations": 10,
+        "complete_panel_records": 82
+      }
+    ],
+    "complete_panel_records": 450,
+    "hydrologic_condition_counts": {
+      "(blank)": 714,
+      "Not determined": 16
+    }
+  },
+  "flow": {
+    "station_id": "USGS-02177000",
+    "original_daily_records_2022": 365,
+    "joined_sample_dates": 16,
+    "numerical_samples": 14,
+    "not_detected_samples": 2,
+    "sample_date_qualifiers": [
+      "A"
+    ],
+    "numerical_only_same_day_spearman": 0.605728341635478,
+    "all16_same_day_censoring_rank_range": [
+      0.24889570439054157,
+      0.5107045839947882
+    ],
+    "numerical_only_antecedent7_spearman": -0.19383306932335295,
+    "all16_antecedent7_censoring_rank_range": [
+      -0.39322575782411007,
+      -0.16901970372697878
+    ],
+    "strict_below20_same_day_rank_range": [
+      0.24889570439054157,
+      0.49631865313380186
+    ],
+    "strict_below20_antecedent7_rank_range": [
+      -0.39322575782411007,
+      -0.18114894461560127
+    ],
+    "strict_rank_assignments_evaluated": 225,
+    "rank_assignments_evaluated": 256,
+    "censoring_candidates": [
+      0,
+      2,
+      4,
+      6,
+      6.333333333333333,
+      6.666666666666667,
+      7,
+      7.333333333333333,
+      7.666666666666667,
+      8,
+      9.333333333333334,
+      10.666666666666666,
+      12,
+      14.666666666666666,
+      17.333333333333332,
+      20
+    ],
+    "rank_method": "Spearman correlation with average ranks for ties. Endpoints and two distinct interior representatives in every measured-value rank interval enumerate all weak orderings of the two non-detects on conservative [0,20] bounds.",
+    "interpretation": "The censoring range is sensitivity to allowed non-detect rankings, not a confidence interval. Same-day discharge is a calendar-date daily mean; antecedent mean is the seven complete prior calendar days.",
+    "source_query": "http://waterservices.usgs.gov/nwis/dv/format=json&amp;sites=02177000&amp;startDT=2022-01-01&amp;endDT=2023-12-31&amp;parameterCd=00060&amp;statCd=00003&amp;siteStatus=all",
+    "original_series_name": "USGS:02177000:00060:00003",
+    "flow_unit": "ft3/s"
+  },
+  "flow_sampling_coverage": {
+    "year": "2022",
+    "daily_records": 365,
+    "mean": 635.0493150684931,
+    "median": 495,
+    "minimum": 192,
+    "maximum": 6990,
+    "percentile95_linear": 1284.0000000000005,
+    "sample_days_above_or_equal_percentile95": 0,
+    "sampled_month_counts": {
+      "3": 4,
+      "5": 2,
+      "6": 2,
+      "7": 2,
+      "8": 2,
+      "11": 4
+    },
+    "unsampled_months": [
+      1,
+      2,
+      4,
+      9,
+      10,
+      12
+    ],
+    "annual_maximum_dates": [
+      "2022-02-04"
+    ]
+  },
+  "output_conventions": {
+    "csv": "RFC 4180-style quoted cells; arrays use JSON within the quoted cell; empty cells represent null/undefined.",
+    "record_intervals": "All 730 original records retained. upper_unbounded=true means the interval upper end is infinity; the empty upper cell alone never encodes infinity.",
+    "comment_flags": "Flags expose literal publisher comment markers; original comment, detection status, numerical value, source file and original row remain available.",
+    "flow_rank_sensitivity": "Closed [0,20] results are conservative; strict [0,20) results exclude the reported limit. Both enumerate possible weak rank orderings for the two non-detects and neither is a sampling confidence interval."
+  }
+}

@@ -22,6 +22,7 @@ const HASH=/^[a-f0-9]{64}$/;
 const FIELDS=new Set(['workspaceOptionsFile','sourceRoot','provider','merchantOrigin','intakeKeyEnvironment',
   'deadlineMs','pollMs','port']);
 export const DOCUMENT_COMPOSITION_SERVICE_SOURCE_FILES=Object.freeze([
+  'agent.mjs','agent-schema.mjs','agent-client.mjs','agent-cli.mjs',
   'assembly.mjs','assembly-archive.mjs','assembly-cli.mjs','examples/ordered-pdfs.json','cli.mjs','composition-cli.mjs','composition-service.mjs','composition-application-provider.mjs',
   'composition-workspace.mjs','composition-server.mjs','composition.mjs','batch.mjs','contracts.mjs',
   'composition-browser-assets.json','composition-public/index.html','composition-public/app.mjs',
@@ -175,6 +176,7 @@ function serviceAnnouncement(selection,launch){
     runtimeDirectory:launch.runtimeDirectory,operatorSelection:launch.operatorSelection,
     pid:launch.pid,instanceId:launch.instanceId,privateLaunch:launch.privateLaunch,
     sourceRoot:selection.sourceRoot,documentUrl:current.origin+'/documents/'+current.hash,
+    agentUrl:current.origin+'/api/document-composition/mcp',
     customerUrl:launch.entryUrl,checkoutUrl:launch.checkoutUrl,jobsUrl:launch.url,
     collectionsUrl:launch.collectionsUrl,libraryUrl:launch.libraryUrl,resolutionUrl:launch.resolutionUrl
   };

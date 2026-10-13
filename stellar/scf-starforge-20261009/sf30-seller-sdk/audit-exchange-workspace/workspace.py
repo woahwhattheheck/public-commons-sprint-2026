@@ -319,7 +319,7 @@ class Workspace:
                        "actor": inputs["actor"], "createdAt": now(), "version": state["version"],
                        "sources": [{"sourceId": s["id"], "revisionId": s["currentRevisionId"],
                                     "sha256": self._get(db, "revision", s["currentRevisionId"])["sha256"]} for s in state["sources"]],
-                       "reviews": state["reviews"], "links": state["links"], "analysisRuns": state["analysisRuns"]}
+                       "reviews": state["reviews"], "links": state["links"], "analysisRuns": self._all(db, "analysis")}
             self._put(db, "edition", edition)
             return {"editionId": edition["id"], "number": edition["number"]}
         if action in {"review.save", "link.save"}:

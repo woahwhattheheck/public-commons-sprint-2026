@@ -1,7 +1,7 @@
 {
   "schema": "upstate.monitoring-application-files/v1",
   "edition": "monitoring-editable-native-fieldwork-20261013",
-  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery.",
+  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery. Selected editable Study transfer retains a saved comparison's original baseline, plans and per-plan contexts, plus its complete scientific report lineage.",
   "files": [
     "docs/MONITORING_EXPORT_STREAMING.md",
     "docs/MONITORING_FIELDWORK_RETURN.md",
@@ -96,6 +96,11 @@
       "pull_request": 3593,
       "source_commit": "c701e61fa8781bb87c5faf47594361e1846e900f",
       "component": "integration/component_fragments/monitoring-comparison-report.json"
+    },
+    "saved_budget_comparison_transfer": {
+      "operation": "ES26-MONITORING-BUDGET-TRANSFER-20261013",
+      "root": "monitoring_frontier_comparisons",
+      "guide": "model/MONITORING_STUDY_TRANSFER.md"
     }
   }
 }
