@@ -286,25 +286,46 @@ export function createGeographicWorkbench(host) {
     if(active(key,own)&&caseGeneration===caseOwn)await host.refresh({force:true});
   }
 
-  async function openCase(id){
+  async function openCase(id,expected=null){
     const key=workspace,own=version,generation=++caseGeneration;
     allocationGeneration++;allocationResult=null;activeAllocationId=null;
     programmeGeneration++;programmePreview=null;programmeLoading=false;programmeSubmitting=false;programmeError="";programmeDelivery="";openedCase=null;
     const pendingDetail=container.querySelector("[data-geo-case-detail]");
     pendingDetail.innerHTML='<p role="status">Opening the saved geographic case…</p>';pendingDetail.hidden=false;
     let result;
-    try {result=await read("case",{case_id:id},key);}
-    catch(error){if(active(key,own)&&generation===caseGeneration){status(error.message,true);pendingDetail.innerHTML='<p class="geo-error" role="alert">'+esc(error.message)+'</p>';}return;}
-    if(!active(key,own)||generation!==caseGeneration)return;
-    if(result.case?.id!==id){pendingDetail.innerHTML='<p class="geo-error" role="alert">The returned case differs from the saved selection.</p>';return;}
+    try {
+      result=await read("case",{case_id:id},key);
+      if(!active(key,own)||generation!==caseGeneration)return false;
+      const selected=result?.case;
+      if(!selected||selected.id!==id||(catalog?.project_id&&selected.project_id!==catalog.project_id)||
+         (expected&&(selected.project_id!==expected.project_id||canonical(selected.selection)!==canonical(expected.selection))))
+        throw new Error("The saved geographic case differs from the original received Study.");
+    } catch(error) {
+      if(!active(key,own)||generation!==caseGeneration)return false;
+      status(error.message,true);pendingDetail.innerHTML='<p class="geo-error" role="alert">'+esc(error.message)+'</p>';
+      if(expected)throw error;
+      return false;
+    }
     openedCase=result;allocationChoice={};
     const target=container.querySelector("[data-geo-case-detail]");
     target.innerHTML='<h3>'+esc(result.case.selection.title)+'</h3><p>The full original selection, input receipts and declared assumptions are available below.</p>'+
+      '<div class="geo-actions"><button type="button" data-geo-edit="'+esc(id)+'">Use these choices for another edition</button></div>'+
       '<div class="geo-actions">'+list(result._downloads).filter(f=>String(f.url).startsWith("/api/file/")).map(f=>'<a href="'+esc(f.url+(f.url.includes("?")?"&":"?")+"download=1")+'" download>'+esc(f.label||f.filename)+'</a>').join("")+'</div>'+
       '<details><summary>Complete prepared case</summary><pre>'+esc(JSON.stringify(result.case,null,2))+'</pre></details>'+programmeSection()+allocationSection(result);
     target.hidden=false;target.scrollIntoView({block:"start"});
     renderProgramme();
     await Promise.all([loadProgramme(),...(list(result.allocation_editions).length?[loadAllocation(result.allocation_editions[0].id)]:[])]);
+    return Boolean(active(key,own)&&generation===caseGeneration);
+  }
+  async function openSavedCase(value){
+    if(!container||!value||value.workspace_key!==workspace||host.getWorkspace()!==workspace||
+       typeof value.case_id!=="string"||!value.case_id||typeof value.project_id!=="string"||
+       !value.selection||typeof value.selection!=="object"||Array.isArray(value.selection)){
+      const message="Open this saved geographic case in its original Workspace and Geographic model case desk.";
+      status(message,true);throw new Error(message);
+    }
+    const expected=JSON.parse(JSON.stringify({project_id:value.project_id,selection:value.selection}));
+    return openCase(value.case_id,expected);
   }
   async function click(event){
     const button=event.target.closest("button");if(!button||!container?.contains(button))return;
@@ -320,7 +341,7 @@ export function createGeographicWorkbench(host) {
       if(button.dataset.geoCase)return await openCase(button.dataset.geoCase);
       if(button.hasAttribute("data-geo-allocation-refresh-case")&&openedCase?.case)return await openCase(openedCase.case.id);
       if(button.hasAttribute("data-geo-allocation-refresh")&&activeAllocationId)return await loadAllocation(activeAllocationId);
-      if(button.dataset.geoEdit){const c=list(catalog?.native_cases).find(c=>c.id===button.dataset.geoEdit);if(!c)throw new Error("Refresh the saved geographic cases.");applyPayload(payloadFromSelection(c.selection));container.querySelector("[data-sp-form]").scrollIntoView({block:"start"});return;}
+      if(button.dataset.geoEdit){const c=openedCase?.case?.id===button.dataset.geoEdit?openedCase.case:list(catalog?.native_cases).find(c=>c.id===button.dataset.geoEdit);if(!c)throw new Error("Refresh the saved geographic cases.");applyPayload(payloadFromSelection(c.selection));container.querySelector("[data-sp-form]").scrollIntoView({block:"start"});return;}
       if(button.dataset.geoItem)return host.openItem(button.dataset.geoItem,button.dataset.geoId);
       if(button.hasAttribute("data-geo-recovery")){
         const retained=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if((key?.startsWith(KEY+":request:"+workspace+":")||key?.startsWith(KEY+":programme-request:"+workspace+":")))retained.push({key,value:JSON.parse(localStorage.getItem(key))});}
@@ -383,5 +404,5 @@ export function createGeographicWorkbench(host) {
   }
   function update(current=host.getState()){if(!container||workspace!==host.getWorkspace())return;original.update(current);renderCases();renderTopology();renderProgramme();}
   function suspend(){clearTimeout(topologyTimer);topologyTimer=null;importGeneration++;caseGeneration++;allocationGeneration++;programmeGeneration++;programmePreview=null;programmeLoading=false;programmeSubmitting=false;programmeError="";programmeDelivery="";allocationResult=null;allocationChoice={};activeAllocationId=null;original.suspend();abort?.abort();abort=null;container=null;workspace=null;catalog=null;openedCase=null;version++;previewBusy=false;}
-  return {mount,update,suspend};
+  return {mount,update,suspend,openSavedCase};
 }
