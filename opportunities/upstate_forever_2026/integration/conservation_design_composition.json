@@ -21,8 +21,8 @@
     },
     {
       "path": "scenario-design/engine.py",
-      "before": "        from conservation import binding_for\n",
-      "after": "        if __package__:\n            from .conservation import binding_for\n        else:\n            from conservation import binding_for\n"
+      "before": "        from conservation import binding_for\n        binding_for(project)",
+      "after": "        if __package__:\n            from .conservation import binding_for\n        else:\n            from conservation import binding_for\n        binding_for(project)"
     }
   ],
   "source_before": {
@@ -50,13 +50,21 @@
     "model/conservation_bindings.py",
     "model/conservation_scenarios.py",
     "model/workspace.py",
-    "operator/extension_registry.py"
+    "operator/extension_registry.py",
+    "model/reuse.py"
   ],
   "shared_host_edits": [],
   "verification": {
     "original_archive_manifest": "all original files independently matched",
     "browser_syntax": "compiled original additive module in JS runtime",
-    "native_execution": "existing receiving operation"
+    "native_execution": "Existing original application receiving operation; no native runtime in authoring seat",
+    "browser_executed": {
+      "binary_bytes": 3145728,
+      "body_bytes": 186,
+      "late_workspace": "no queued action",
+      "rejected_retry": "reused original upload",
+      "native_item_links": true
+    }
   },
   "contract": {
     "actions": [
@@ -71,31 +79,115 @@
       "runs"
     ]
   },
-  "source_engine_before": {
-    "path": "scenario-design/engine.py",
-    "bytes": 23867,
-    "sha256": "99a1ba9f99ba102a1be058c693b4b2d339c812f01c01a6a47da66ef0694aa327"
-  },
-  "source_engine_after": {
+  "executable_paths": [
+    "scenario-design/start.sh"
+  ],
+  "source_after_engine": {
     "path": "scenario-design/engine.py",
     "bytes": 23959,
     "sha256": "916d8242c1df03e42a784a8cc69833c050eb814a840b13f30194eb46fa99fa2a"
   },
-  "receiving_browser_guards": [
-    {
-      "path": "operator/web/conservation_design.mjs",
-      "before": "        const bytes=new Uint8Array(await this.file.arrayBuffer());\n        let binary=\"\";",
-      "after": "        const selectedFile=this.file;\n        const bytes=new Uint8Array(await selectedFile.arrayBuffer());\n        if(this.gone||this.host.getState()?.workspace_key!==this.workspace||this.file!==selectedFile)return;\n        let binary=\"\";"
+  "browser_review": {
+    "base": {
+      "bytes": 13899,
+      "sha256": "828c579f7108609af4b94062d453defe9bcdf6420e66d070eb6edf3940c7ce8a"
     },
-    {
-      "path": "operator/web/conservation_design.mjs",
-      "before": "  async queue(action, payload) {\n    if(this.pending)",
-      "after": "  async queue(action, payload) {\n    if(this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    if(this.pending)"
+    "postimage": {
+      "bytes": 17519,
+      "sha256": "d591e5d2b08b4eebf59c03578d6f4fdac07e92d215c7ea23e9dcf1753a7688c1"
     },
-    {
-      "path": "operator/web/conservation_design.mjs",
-      "before": "    const pending=this.pending;if(!pending)return;\n    this.busy=true;",
-      "after": "    const pending=this.pending;if(!pending||this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    this.busy=true;"
-    }
-  ]
+    "guards": [
+      {
+        "before": "        const bytes=new Uint8Array(await this.file.arrayBuffer());\n        let binary=\"\";",
+        "after": "        const selectedFile=this.file;\n        const bytes=new Uint8Array(await selectedFile.arrayBuffer());\n        if(this.gone||this.host.getState()?.workspace_key!==this.workspace||this.file!==selectedFile)return;\n        let binary=\"\";"
+      },
+      {
+        "before": "  async queue(action, payload) {\n    if(this.pending)",
+        "after": "  async queue(action, payload) {\n    if(this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    if(this.pending)"
+      },
+      {
+        "before": "    const pending=this.pending;if(!pending)return;\n    this.busy=true;",
+        "after": "    const pending=this.pending;if(!pending||this.gone||this.host.getState()?.workspace_key!==this.workspace)return;\n    this.busy=true;"
+      },
+      {
+        "before": "    this.generation = 0; this.gone = false; this.busy = false;",
+        "after": "    this.generation = 0; this.recordVersion = 0; this.gone = false; this.busy = false;"
+      },
+      {
+        "before": "    const response=await this.host.api(\"/api/actions\",{method:\"POST\",body:{\n      workspace:this.workspace,action:pending.action,payload:pending.payload,\n      operation_id:pending.operation_id}});",
+        "after": "    let response;\n    try {\n      response=await this.host.api(\"/api/actions\",{method:\"POST\",body:{\n        workspace:this.workspace,action:pending.action,payload:pending.payload,\n        operation_id:pending.operation_id}});\n    } catch(error) {\n      if(!this.gone&&this.pending===pending) {\n        if([400,401,403,404,405,413,415,422].includes(Number(error?.status))) {\n          this.pending=null;this.cache();\n          this.notice=\"The request was rejected before acceptance. Revise this same design and submit again.\";\n        } else {\n          this.notice=\"The original operation identity is retained. Retry to recover its accepted task or submit the same request.\";\n        }\n        this.busy=false;this.render();\n      }\n      throw error;\n    }"
+      },
+      {
+        "before": "        const record=await this.read(\"/api/conservation-design/\"+kind,{id:result.id});\n        if(this.gone||this.pending?.id!==id)return;\n        this.record=record;this.pending=null;this.cache();",
+        "after": "        const recordVersion=++this.recordVersion;\n        const record=await this.read(\"/api/conservation-design/\"+kind,{id:result.id});\n        if(this.gone||this.pending?.id!==id||this.host.getState()?.workspace_key!==this.workspace)return;\n        if(recordVersion===this.recordVersion)this.record=record;\n        this.pending=null;this.cache();"
+      },
+      {
+        "before": "    if(this.pending?.id) {\n      const task=(state.tasks||[]).find(row=>row.id===this.pending.id);\n      if(task&&task.state!==this.pending.state)await this.finish(task.id);\n    }",
+        "after": "    if(this.pending) {\n      const task=(state.tasks||[]).find(row=>this.pending.id ?\n        row.id===this.pending.id : row.operation_id===this.pending.operation_id);\n      if(task) {\n        const needsRead=!this.pending.id||task.state!==this.pending.state;\n        this.pending.id=task.id;delete this.pending.payload;this.cache();\n        if(needsRead)await this.finish(task.id);\n      }\n    }"
+      },
+      {
+        "before": "      this.record=await this.read(\"/api/conservation-design/\"+kind,{id});this.error=\"\";this.render();return;",
+        "after": "      const recordVersion=++this.recordVersion, workspace=this.workspace;\n      const record=await this.read(\"/api/conservation-design/\"+kind,{id});\n      if(this.gone||recordVersion!==this.recordVersion||this.host.getState()?.workspace_key!==workspace)return;\n      this.record=record;this.error=\"\";this.render();return;"
+      },
+      {
+        "before": "export function attachConservationDesign(host) {\n  let active=null;\n  return {\n    mount(root) {active?.detach();active=new DesignBridge(root,host);const instance=active;void instance.start().catch(e=>instance.fail(e));},\n    update(state) {const instance=active;if(instance)void instance.update(state).catch(e=>instance.fail(e));},\n    detach() {active?.detach();active=null;},\n  };\n}\n",
+        "after": "export function attachConservationDesign(host) {\n  let active=null;\n  const drafts=new Map();\n  const draftFields=[\"planId\",\"title\",\"role\",\"inputMode\",\"descriptor\",\"file\"];\n  function release() {\n    if(!active)return;\n    drafts.set(active.workspace,Object.fromEntries(draftFields.map(name=>[name,active[name]])));\n    active.detach();active=null;\n  }\n  return {\n    mount(root) {\n      release();\n      active=new DesignBridge(root,host);\n      const saved=drafts.get(active.workspace);\n      if(saved)for(const name of draftFields)active[name]=saved[name];\n      const instance=active;void instance.start().catch(e=>instance.fail(e));\n    },\n    update(state) {const instance=active;if(instance)void instance.update(state).catch(e=>instance.fail(e));},\n    detach() {release();},\n  };\n}\n"
+      },
+      {
+        "before": "const uploadLimit = 2 * 1024 * 1024;",
+        "after": "const maximumHandoverBytes = 100 * 1024 * 1024;\nconst uploadCapacity = host => {\n  const configured=Number(host.getState()?.limits?.upload_bytes);\n  return Number.isSafeInteger(configured)&&configured>0 ?\n    Math.min(configured,maximumHandoverBytes) : maximumHandoverBytes;\n};\nconst capacityLabel = count => (count/1024/1024).toLocaleString(undefined,{maximumFractionDigits:2})+\" MiB\";"
+      },
+      {
+        "before": "    this.inputMode = \"upload\"; this.descriptor = \"\"; this.file = null; this.pending = null;",
+        "after": "    this.inputMode = \"upload\"; this.descriptor = \"\"; this.file = null; this.upload = null; this.pending = null;"
+      },
+      {
+        "before": "      this.file=event.target.files[0]||null;\n      this.error=this.file?.size>uploadLimit ?\n        \"For a ZIP over 2 MiB, retain the complete file in this Workspace and use its file descriptor.\" : \"\";",
+        "after": "      this.file=event.target.files[0]||null;this.upload=null;\n      this.error=this.file?.size>uploadCapacity(this.host) ?\n        \"The complete handover must fit this operator's \"+capacityLabel(uploadCapacity(this.host))+\" upload limit.\" : \"\";"
+      },
+      {
+        "before": "      throw Error(\"Browser storage is full. Use a retained Workspace file descriptor for this handover.\");",
+        "after": "      throw Error(\"Browser storage is full. Free space for this operation identity, then submit the same retained design.\");"
+      },
+      {
+        "before": "    if(action===\"receive\"){\n      let payload;\n      if(this.inputMode===\"upload\"){\n        if(!this.file||this.file.size>uploadLimit)throw Error(\"Choose the complete native handover ZIP, up to 2 MiB.\");\n        const selectedFile=this.file;\n        const bytes=new Uint8Array(await selectedFile.arrayBuffer());\n        if(this.gone||this.host.getState()?.workspace_key!==this.workspace||this.file!==selectedFile)return;\n        let binary=\"\";for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));\n        payload={bundle_base64:btoa(binary)};\n      }else{\n        let descriptor;try{descriptor=JSON.parse(this.descriptor);}catch(_){throw Error(\"Paste the complete retained file descriptor JSON.\");}\n        payload={file:descriptor};\n      }\n      await this.queue(\"conservation.design.receive\",payload);return;\n    }",
+        "after": "    if(action===\"receive\"){\n      if(this.busy||this.pending)return;\n      let payload;\n      if(this.inputMode===\"upload\"){\n        if(!this.file||this.file.size===0||this.file.size>uploadCapacity(this.host))\n          throw Error(\"Choose the complete native handover ZIP, up to \"+capacityLabel(uploadCapacity(this.host))+\".\");\n        const selectedFile=this.file;\n        this.busy=true;this.error=\"\";this.notice=\"Retaining the complete original ZIP…\";this.render();\n        try {\n          let upload=this.upload?.file===selectedFile?this.upload.record:null;\n          if(!upload)upload=await this.host.api(\"/api/upload\",{method:\"POST\",\n            raw:selectedFile,filename:selectedFile.name,signal:this.controller.signal});\n          if(this.gone||this.host.getState()?.workspace_key!==this.workspace||this.file!==selectedFile)return;\n          if(!/^[a-f0-9]{64}$/.test(upload?.id||\"\")||\n             !/^[a-f0-9]{64}$/.test(upload?.sha256||\"\")||upload.bytes!==selectedFile.size)\n            throw Error(\"The upload service did not return the complete original file identity.\");\n          this.upload={file:selectedFile,record:upload};\n          payload={upload_id:upload.id};\n          await this.queue(\"conservation.design.receive\",payload);\n        } finally {\n          if(!this.gone){this.busy=false;this.render();}\n        }\n      }else{\n        let descriptor;try{descriptor=JSON.parse(this.descriptor);}catch(_){throw Error(\"Paste the complete retained file descriptor JSON.\");}\n        payload={file:descriptor};\n        await this.queue(\"conservation.design.receive\",payload);\n      }\n      return;\n    }"
+      },
+      {
+        "before": "      \"</dl>\"+(record.model_domain_coverage?",
+        "after": "      \"</dl>\"+((record.scenario_id||record.run_id)?'<div class=\"cd-actions\">'+\n      (record.scenario_id?'<button type=\"button\" data-action=\"item\" data-kind=\"scenarios\" data-id=\"'+esc(record.scenario_id)+'\">Open original scenario</button>':\"\")+\n      (record.run_id?'<button type=\"button\" data-action=\"item\" data-kind=\"runs\" data-id=\"'+esc(record.run_id)+'\">Open prepared run</button>':\"\")+\"</div>\":\"\")+\n      (record.model_domain_coverage?"
+      },
+      {
+        "before": "'<label>Native handover ZIP (up to 2 MiB)<input type=\"file\" accept=\".zip,application/zip\" data-design-field=\"file\"'+disabled+",
+        "after": "'<label>Native handover ZIP (up to '+esc(capacityLabel(uploadCapacity(this.host)))+')<input type=\"file\" accept=\".zip,application/zip\" data-design-field=\"file\"'+disabled+"
+      },
+      {
+        "before": "  const draftFields=[\"planId\",\"title\",\"role\",\"inputMode\",\"descriptor\",\"file\"];",
+        "after": "  const draftFields=[\"planId\",\"title\",\"role\",\"inputMode\",\"descriptor\",\"file\",\"upload\"];"
+      },
+      {
+        "before": "    if (this.gone || turn!==this.generation) return;",
+        "after": "    if (this.gone || turn!==this.generation || this.host.getState()?.workspace_key!==this.workspace) return;"
+      },
+      {
+        "before": "    if(this.gone||this.pending!==pending)return;",
+        "after": "    if(this.gone||this.pending!==pending||this.host.getState()?.workspace_key!==this.workspace)return;"
+      }
+    ]
+  },
+  "upload_contract": {
+    "endpoint": "/api/upload",
+    "method": "POST",
+    "body": "original binary File",
+    "queued_payload": "{upload_id}",
+    "native_resolution": "operator.upload → copy_verified into Workspace → model.receive(file)",
+    "maximum_bytes": 104857600
+  },
+  "public_integration": {
+    "pull_request": 2952,
+    "application_prefix": "opportunities/upstate_forever_2026",
+    "portable_application_directory": "scenario-design",
+    "launcher_mode": "100755",
+    "complete_source_carrier": "F0C9KBK9PR6"
+  }
 }
