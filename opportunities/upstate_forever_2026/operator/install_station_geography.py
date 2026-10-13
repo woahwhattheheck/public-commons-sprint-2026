@@ -15,6 +15,9 @@ FILES = (
     "model/station_geography.py",
     "model/station_inventory.py",
     "model/assessment_context.py",
+    "model/assessment_report_context.py",
+    "model/observed_station_studies.py",
+    "model/observed_station_studies.json",
     "operator/assessment_context.py",
     "operator/extensions/assessment-context.json",
     "operator/web/assessment_context.mjs",
@@ -100,7 +103,7 @@ def source_members(pending, manifest_name):
 
 def install(application, source_root, *, dry_run=False):
     application, source_root = Path(application).resolve(strict=True), Path(source_root).resolve(strict=True)
-    for name in ("model/workspace.py", "model/spatial_esri.py", "operator/server.py",
+    for name in ("model/workspace.py", "model/spatial_esri.py", "model/observed_context.py", "operator/server.py",
                  "operator/web/app.mjs", "operator/extension_registry.py", "operator/web/extension_host.mjs"):
         if not (application / name).is_file():
             raise ValueError("Receive the complete existing application before adding station geography: " + name)

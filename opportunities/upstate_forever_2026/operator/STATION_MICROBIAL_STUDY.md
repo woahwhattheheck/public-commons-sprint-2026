@@ -13,7 +13,7 @@ python SOURCE_ROOT/operator/install_station_geography.py \
   --application CURRENT_APPLICATION --source-root SOURCE_ROOT
 ```
 
-The maintained installer receives all 45 files together: its existing 20 Station geography and Assessment context files, both microbial model/guide files, this operator guide, and all 22 original microbial data/report/compiler/manifest files. It checks all source members before replacing any installed file, preserves predecessor backups and the existing extension-host registration, and writes the complete file inventory to `operator/station-geography-install.json`. Restart the existing operator after installation to load the current registered action.
+The maintained installer receives all 48 files together: its existing 20 Station geography and Assessment context files, the two current observed-station catalogue members and saved assessment-report helper, both microbial model/guide files, this operator guide, and all 22 original microbial data/report/compiler/manifest files. It checks all source members before replacing any installed file, preserves predecessor backups and the existing extension-host registration, and writes the complete file inventory to `operator/station-geography-install.json`. Restart the existing operator after installation to load the current registered action.
 
 SOURCE_ROOT is the full application directory containing `model/`, `operator/` and `source/`. Its original-source edition and native coordinate adapter are retained together. The actual full watershed domain is an independent Workspace source selected by the controls below.
 
