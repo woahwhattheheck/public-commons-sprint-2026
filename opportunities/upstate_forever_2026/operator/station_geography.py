@@ -1,10 +1,11 @@
 """Station geography desk for the existing authenticated operator and task queue."""
 from pathlib import Path
 from model import station_geography as geography
+from model import native_assessment_review
 from model.common import describe_file, identifier, read_json, relative_file, verify_file
 
 ACTIONS = frozenset(("station.geography.build", "station.geography.receive",
-                     "station.geography.utility-microbial"))
+                     "station.geography.utility-microbial", "station.geography.review-selection"))
 
 class StationGeography:
     def __init__(self, operator, fault):
@@ -65,7 +66,8 @@ class StationGeography:
         ws = self.operator.ws(workspace_key)
         if operation == "catalog":
             return {"workspace_key": workspace_key, **geography.catalog(ws),
-                    "utility_microbial": self._microbial_catalog(ws)}
+                    "utility_microbial": self._microbial_catalog(ws),
+                    "native_review_sources": native_assessment_review.catalog(ws)}
         if operation == "edition":
             return self._edition(workspace_key, payload.get("id") or payload.get("edition_id"))
         if operation == "verify":
@@ -82,6 +84,15 @@ class StationGeography:
         if task["action"] == "station.geography.receive":
             upload = self.operator.upload(identifier(payload.get("upload_id")))
             result = geography.receive(ws, upload["path"], max_extracted_bytes=self.operator.extraction_limit)
+        elif task["action"] == "station.geography.review-selection":
+            upload = self.operator.upload(identifier(payload.get("upload_id")))
+            prepared = native_assessment_review.prepare(
+                ws, upload["path"], payload.get("source_collection_id"),
+                payload.get("source_id"), title=payload.get("title"))
+            result = geography.build(ws, prepared["selection"])
+            return {**{key: result[key] for key in (
+                "id", "title", "build_id", "summary", "selection") if key in result},
+                "native_review": prepared["review_binding"]}
         elif task["action"] == "station.geography.utility-microbial":
             from model import utility_microbial_study as microbial
             mode = payload.get("domain_mode", "required")
