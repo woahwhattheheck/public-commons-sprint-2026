@@ -161,7 +161,8 @@
         "source_tools/annual_reference_enrichment.mjs",
         "source_tools/annual_reference_enrichment_core.mjs",
         "source_tools/ANNUAL_STATION_REPORT.md",
-        "source_tools/usgs_annual.py"
+        "source_tools/usgs_annual.py",
+        "source_tools/operate_annual_assessment_context.py"
       ],
       "requires": [
         "assessment-context",
@@ -169,7 +170,8 @@
         "observed-context",
         "station-assessment",
         "station-geography",
-        "watershed-context"
+        "watershed-context",
+        "scientific-report-editions"
       ],
       "source_manifests": [
         "results/assessment-association-review-20261013/observed-sources.json",
