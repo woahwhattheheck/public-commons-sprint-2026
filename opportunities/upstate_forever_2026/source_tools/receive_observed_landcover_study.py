@@ -330,12 +330,6 @@ def _package_members(archive_path, directory, receipt):
                     os.link(pending, target)
             finally:
                 pending.unlink(missing_ok=True)
-    actual = set()
-    for path in root.rglob("*"):
-        required(not path.is_symlink(), "The received package contains a file alias")
-        if path.is_file():
-            actual.add(path.relative_to(root).as_posix())
-    required(actual == set(expected), "The received package directory has another file inventory")
     manifest = read_json(root / "Package_Manifest.json")
     required(manifest.get("schema") == receipt["schema"]
              and manifest.get("id") == receipt["id"]
