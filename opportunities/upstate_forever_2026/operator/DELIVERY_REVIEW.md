@@ -19,13 +19,13 @@ The report's model-scope table names the selected models for each run. NDR suppl
 
 ## 2. Read the report in the same view
 
-Open the delivery and choose **Read report**. The application opens that delivery's retained HTML report in the same view. A transferred delivery appears as **Received copy**, with its report and map downloads ready to open. Use the report's section links to move between current exports, alternatives, map guidance, planning priorities, sources and receiving instructions.
+Open the delivery and choose **Read scientific report**. The application opens that delivery's retained HTML report in the same view. A transferred delivery appears as **Received copy**, with its report and map downloads ready to open. Use the report's section links to move between current exports, alternatives, map guidance, planning priorities, sources and receiving instructions.
 
 Open a map link from the report. It should open the corresponding map PDF from the same delivery. The application resolves these links against the retained delivery files, so each report keeps its own maps when several editions exist.
 
 | Do | See | Meaning | Bryce can say |
 | --- | --- | --- | --- |
-| Choose **Read report**. | The readable report for the selected delivery. | You are reviewing the document attached to this edition. | “You can read the explanation here alongside the maps and downloads.” |
+| Choose **Read scientific report**. | The readable report for the selected delivery. | You are reviewing the document attached to this edition. | “You can read the explanation here alongside the maps and downloads.” |
 | Open a map link in the report. | That edition's retained map PDF, with its own title, legend and units. | The narrative and the map refer to the same selected results. | “This link takes us directly from the explanation to the map it describes.” |
 | Read an alternative row with its signed change and shared-cell count. | Annual quantities, paired change, units and comparison scope. | The table explains both the modeled response and the area used to calculate it. | “This shows how the alternative changes the modeled annual export over the cells the two runs share.” |
 
@@ -37,7 +37,7 @@ Use the report's study-area and model-scope sections before presenting a prepare
 
 ## 3. Choose the right delivery files
 
-The same delivery shows **Read report**, **Open PDF**, **Download complete delivery**, and its **Retained files**. The retained files are grouped by how you use them:
+The same delivery shows **Read scientific report**, **Open PDF**, **Download complete delivery**, and its **Retained files**. The retained files are grouped by how you use them:
 
 | Group | Contents and purpose |
 | --- | --- |
@@ -70,7 +70,7 @@ For a **Received copy**, choose **Prepare complete copy** to create the receivin
 
 When a delivery has an earlier report edition, choose **Create current report edition**. This action uses that delivery's original completed baseline and alternative run identifiers. It builds the current report and delivery presentation around those retained results.
 
-Review the resulting edition in **Maps and delivery**, then choose **Read report**. Confirm the study title, run selection, model scope and map links before choosing the files to share.
+Review the resulting edition in **Maps and delivery**, then choose **Read scientific report**. Confirm the study title, run selection, model scope and map links before choosing the files to share.
 
 Use **Revise delivery choices** when you want to change which baseline, alternatives or delivery settings are selected. Review the restored selection in the form, make the intended changes, and build the revised delivery.
 
@@ -100,7 +100,7 @@ The receiving layout preserves:
 | `received-project/workspace/` | Retained scientific inputs, source records, selections, completed native runs, comparisons and the registered received delivery. |
 | `received-project/delivery/` | The delivery snapshot with the report formats, map folders, summaries and registered working assets. |
 
-The restored delivery is registered with the original delivery identity and retained file records. It appears in the operator as **Received copy**, where **Read report** and the map downloads open the transferred files. The standalone `delivery/report.html` also opens directly, with map links using the preserved relative folder layout. Use the report model and source records to review the baseline and alternatives behind the document.
+The restored delivery is registered with the original delivery identity and retained file records. It appears in the operator as **Received copy**, where **Read scientific report** and the map downloads open the transferred files. The standalone `delivery/report.html` also opens directly, with map links using the preserved relative folder layout. Use the report model and source records to review the baseline and alternatives behind the document.
 
 Launch the restored application with the restored workspace. From `received-project/application/`, run:
 
@@ -112,7 +112,7 @@ Use the same prepared InVEST 3.20.0/GIS Python environment. This is an existing 
 
 The operator's archive restore action registers a new workspace copy with a selector label ending in **· restored copy**. Select that restored project to continue its saved runs and comparisons. When launching a CLI-restored project directly as above, the supplied `--workspace` path selects that restored workspace.
 
-In **Maps and delivery**, open the registered **Received copy** and choose **Read report**. Use its retained-file groups to inspect the maps and tables. Choose **Prepare complete copy** to build local complete-delivery and working-project archives from the original selection. Choose **Create current report edition** when applying the current report presentation to that selection, or **Revise delivery choices** when changing the assessment choices.
+In **Maps and delivery**, open the registered **Received copy** and choose **Read scientific report**. Use its retained-file groups to inspect the maps and tables. Choose **Prepare complete copy** to build local complete-delivery and working-project archives from the original selection. Choose **Create current report edition** when applying the current report presentation to that selection, or **Revise delivery choices** when changing the assessment choices.
 
 **Bryce can say:** “The receiving machine gets the report, the maps and the saved working project, so the next operator can continue from the same assessment.”
 
