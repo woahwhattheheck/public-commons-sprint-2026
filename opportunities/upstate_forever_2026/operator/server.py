@@ -31,6 +31,8 @@ from model.workspace import Workspace
 from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# ES-SUPERVISION-20261012
+from native_jobs import NativeJobs, NativeJobError, NativeJobCancelled, NativeJobDetached
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
@@ -100,6 +102,8 @@ def json_body(data):
     return result
 
 def summary_error(error):
+    if isinstance(error, NativeJobError):
+        return {"code": error.code, "message": str(error)}, error.status
     implementation_detail = implementation_error(error)
     if implementation_detail is not None:
         return implementation_detail
@@ -142,6 +146,7 @@ class Operator:
         self.capability = secrets.token_urlsafe(36)
         self.download_cookie = secrets.token_urlsafe(36)
         self.closing = False
+        self.native_jobs = NativeJobs(self)
         self.origin = None
         self.registry_file = self.root / "workspaces.json"
         self.registry = read_json(self.registry_file) if self.registry_file.exists() else {}
@@ -362,6 +367,8 @@ class Operator:
     def cancel(self, key):
         with self.lock:
             task = self.task(key)
+            if self.native_jobs.supports(task) and task["state"] != "queued":
+                return self.native_jobs.request_stop(task)
             if task["state"] != "queued":
                 raise Fault("TASK_RUNNING", "Only a task that has not started can be cancelled here.", 409)
             task.update(state="cancelled", ended_at=now())
@@ -385,8 +392,10 @@ class Operator:
             attempt.update(state="complete", ended_at=task["ended_at"])
         except BaseException as error:
             detail, status = summary_error(error)
-            task.update(state="failed", error=detail, ended_at=now())
-            attempt.update(state="failed", error=detail, ended_at=task["ended_at"])
+            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else
+                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")
+            task.update(state=final_state, error=detail, ended_at=now())
+            attempt.update(state=final_state, error=detail, ended_at=task["ended_at"])
             error_file = self.root / "tasks" / (key + ".attempt-" + str(attempt["number"]) + ".error.txt")
             with contextlib.suppress(OSError):
                 error_file.write_text(traceback.format_exc(), encoding="utf-8")
@@ -436,8 +445,7 @@ class Operator:
         if action == "run.prepare":
             return ws.prepare_run(value)
         if action == "run.start":
-            from ecsa_runs.upstate import invoke_original_run
-            return invoke_original_run(self, task, ws, required(value, "run_id"))
+            return self.native_jobs.execute_retained(task, ws)
         if action == "run.compare":
             return ws.compare_runs(value["run_ids"])
         if action == "observation.import":
@@ -844,6 +852,12 @@ class Operator:
 
     def task_view(self, key):
         task = self.task(key)
+        if self.native_jobs.supports(task):
+            try:
+                task["_native_job"] = self.native_jobs.snapshot(task)
+            except NativeJobError as error:
+                if error.code != "PROGRAMME_PREPARING":
+                    raise
         result = task.get("result", {})
         core_results = {"source.import": "sources", "profile.save": "profiles", "scenario.save": "scenarios",
                         "grid.prepare": "grids", "run.prepare": "runs", "run.start": "runs",
@@ -1036,6 +1050,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.item(workspace, one("kind"), one("id")))
                 if url.path == "/api/source-info":
                     return self.send_json(200, self.app.source_info(workspace, one("collection"), one("source"), one("layer")))
+                if url.path == "/api/native-job":
+                    return self.send_json(200, self.app.native_jobs.view(one("id"), workspace,
+                        stream=one("stream", "native"), offset=one("offset", "0"),
+                        expected_run=one("run_id", ""), expected_execution=one("execution_id", "")))
                 if url.path == "/api/task":
                     return self.send_json(200, self.app.task_view(one("id")))
                 if url.path == "/api/run-log":
@@ -1066,7 +1084,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'parameter_studies.mjs', 'parameter_studies.css', 'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css', 'observed_series.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
