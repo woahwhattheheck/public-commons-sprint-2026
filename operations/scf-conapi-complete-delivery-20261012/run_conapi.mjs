@@ -142,9 +142,21 @@ export async function runConapiDelivery(input){
     changed:executionInputKeys.filter(key=>previousBinding[key]!==observedBinding.values[key])};
   state.executionBindings.attempts.push(bindingAttempt);
   state.updatedAt=stamp();await save(stateFile,state);
-  const rememberFile=async path=>{const value=await file(path);state.files=state.files.filter(x=>x.path!==path);state.files.push(value);return value;};
+  const internalCaptureNames=['Conapi_Original_Supplier_Desktop.png','Conapi_Received_Final_Transport_Edition.png',
+    'Conapi_Received_Successor_Desktop.png','Conapi_Received_Successor_Mobile.png','Conapi_Installed_Applications.png',
+    'Conapi_Received_Analysis.png','Conapi_Received_Supplier_Review.png','Conapi_Received_Supplier_Edit.png'];
+  const internalCapturePaths=new Set(internalCaptureNames.map(name=>join(output,name)));
+  state.inspectionCustody={policy:'live-host-images-with-retained-text-identities',
+    captures:state.files.filter(item=>internalCapturePaths.has(item.path))};
+  const rememberFile=async path=>{const value=await file(path);state.files=state.files.filter(x=>x.path!==path);state.files.push(value);
+    if(internalCapturePaths.has(path))state.inspectionCustody.captures=state.files.filter(item=>internalCapturePaths.has(item.path));
+    return value;};
   if(state.phase==='COMPLETE'){
-    for(const selected of state.files){const actual=await file(selected.path);need(same(actual,selected),'CONAPI_DELIVERED_FILE_CHANGED');}
+    for(const selected of state.files){
+      if(internalCapturePaths.has(selected.path))continue;
+      const actual=await file(selected.path);need(same(actual,selected),'CONAPI_DELIVERED_FILE_CHANGED');
+    }
+    await save(stateFile,state);
     return {state:'COMPLETE',reused:true,report:stateFile,files:state.files};
   }
   let apps,host,context,supplierProcess,supplierNative,failed=false;
