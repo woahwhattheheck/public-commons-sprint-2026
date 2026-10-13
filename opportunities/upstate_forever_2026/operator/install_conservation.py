@@ -16,6 +16,8 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "operator/CONSERVATION_CATALOG_BROWSER.md",
+    "integration/conservation_catalog_browser_composition.json",
     "model/conservation_catalog.py",
     "operator/conservation_catalog.py",
     "operator/extensions/conservation-catalog.json",
@@ -103,6 +105,7 @@ PREVIOUS_SOURCES = {
         "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277": 22899
     },
     "operator/install_conservation.py": {
+        "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb": 38139,
         "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1": 32051,
         "d8e9824780d84641a9ee47d180158adc18e340dff1912945fc75bce78237893f": 31581,
         "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda": 20002,
@@ -114,6 +117,7 @@ PREVIOUS_SOURCES = {
         "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a": 21551
     },
     "operator/conservation_regional_receiving.py": {
+        "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352": 56502,
         "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276": 43910,
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7": 26367,
         "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c": 20028,
@@ -262,7 +266,17 @@ def patch_registered_server(text):
     return text
 
 
+def catalog_action_labels(text):
+    for action, label in [["conservation.catalog.prepare","Prepare candidate search"],["conservation.catalog.select","Retain candidate selection"],["conservation.catalog.plan.save","Save retained candidate plan"],["conservation.catalog.export","Export complete candidate rows"]]:
+        if repr(action) + ":" not in text:
+            text = once(text, "const actionLabels={",
+                        "const actionLabels={" + repr(action) + ":" + repr(label) + ",",
+                        "Candidate catalog action label")
+    return text
+
+
 def patch_registered_app(text):
+    text = catalog_action_labels(text)
     for pattern, replacement in REGISTERED_REPAIR["app_patterns"]:
         text = re.sub(pattern, lambda match: replacement, text)
     branch = REGISTERED_REPAIR["registered_block"]
@@ -369,6 +383,7 @@ def conservation_lifecycle(text):
 
 
 def patch_app(text, registered=False):
+    text = catalog_action_labels(text)
     if registered:
         return patch_registered_app(text)
     text = text.replace("for(const node of $('[data-view]'))",
