@@ -184,6 +184,8 @@ BUILTINS.update(WATER_BUILTINS)
 METHODS.append(WATER_METHOD)
 from source_tools.nlcd_range_preparation import method_schema as nlcd_range_method_schema
 METHODS.append(nlcd_range_method_schema(_input, _option, DOMAIN_OPTIONS))
+from source_tools.soil_components_preparation import method_schemas as soil_component_methods
+METHODS.extend(soil_component_methods(_input, _option))
 BY_METHOD = {item["id"]: item for item in METHODS}
 
 
@@ -567,7 +569,10 @@ class SourcePreparation:
         else:
             resolved = self._resolve(workspace, selector)
             if reference_kind:
-                from source_tools.high_quality_water_preparation import retain_references
+                if reference_kind in {"soil-regional", "soil-component", "soil-reference"}:
+                    from source_tools.soil_components_preparation import retain_references
+                else:
+                    from source_tools.high_quality_water_preparation import retain_references
                 resolved = retain_references(resolved, reference_kind,
                                              uploaded=bool(selector.get("upload_id")))
             if metadata_manifest:
@@ -618,8 +623,15 @@ class SourcePreparation:
                     numeric = float(value)
                 except (TypeError, ValueError):
                     self._fail("SOURCE_NUMBER", field["label"] + " must be numeric.")
-                if not math.isfinite(numeric) or numeric <= 0:
+                if not math.isfinite(numeric):
+                    self._fail("SOURCE_NUMBER", field["label"] + " must be finite.")
+                if "min" in field:
+                    if numeric < field["min"]:
+                        self._fail("SOURCE_NUMBER", field["label"] + " must be at least " + str(field["min"]) + ".")
+                elif numeric <= 0:
                     self._fail("SOURCE_NUMBER", field["label"] + " must be positive and finite.")
+                if "max" in field and numeric > field["max"]:
+                    self._fail("SOURCE_NUMBER", field["label"] + " must be at most " + str(field["max"]) + ".")
                 if field.get("integer") or field["type"] == "integer":
                     if not numeric.is_integer():
                         self._fail("SOURCE_NUMBER", field["label"] + " must be a whole number.")
@@ -788,6 +800,9 @@ class SourcePreparation:
         options = self._options(method, value.get("options", {}))
         if method_id == "classified-waters":
             from source_tools.high_quality_water_preparation import prepare_workbench
+            return prepare_workbench(self, workspace, task, native, record, method, options)
+        if method_id in {"soil-components", "soil-component-scenario"}:
+            from source_tools.soil_components_preparation import prepare_workbench
             return prepare_workbench(self, workspace, task, native, record, method, options)
         mode = options.get("source_mode", "received")
         if mode == "download" and supplied.get("archive"):
