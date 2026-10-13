@@ -76,7 +76,7 @@ async function rehearsalBrowserMain(argv) {
     settings=await readJSON(argv[0]);
     checkRunning();
     const fields=['schema','operation_id','connection_file','rehearsal_id','sender_workspace','receiver_workspace','output_directory','playwright_module','executable'];
-    const acceptedFields=[...fields,...['customer_review','fieldwork_receiving'].filter(key=>settings?.[key])];
+    const acceptedFields=[...fields,...['customer_review','fieldwork_receiving','qc_comparison_receiving'].filter(key=>settings?.[key])];
     if(!settings||!equal(Object.keys(settings).sort(),acceptedFields.sort())||settings.schema!=='upstate.rehearsal-browser-input/v1'||
        !/^[A-Za-z0-9_-]{16,100}$/.test(settings.operation_id||'')) fail('INPUT_SCHEMA','Select the original browser receiving input.');
     for(const key of ['rehearsal_id','sender_workspace','receiver_workspace']) validId(settings[key]);
@@ -119,7 +119,8 @@ async function rehearsalBrowserMain(argv) {
     const binding={schema:settings.schema,operation_id:settings.operation_id,rehearsal_id:settings.rehearsal_id,
       sender_workspace:settings.sender_workspace,receiver_workspace:settings.receiver_workspace,
       ...(settings.customer_review?{customer_review:{manifest:settings.customer_review.manifest,selected:settings.customer_review.selected}}:{}),
-      ...(settings.fieldwork_receiving?{fieldwork_receiving:Object.fromEntries(['bytes','sha256','operation_id','plan_id','project_id'].map(key=>[key,settings.fieldwork_receiving[key]]))}:{})};
+      ...(settings.fieldwork_receiving?{fieldwork_receiving:Object.fromEntries(['bytes','sha256','operation_id','plan_id','project_id'].map(key=>[key,settings.fieldwork_receiving[key]]))}:{}),
+      ...(settings.qc_comparison_receiving?{qc_comparison_receiving:Object.fromEntries(['bytes','sha256','operation_id','field_operation_id','plan_id','project_id','comparison_report_id','comparison_id'].map(key=>[key,settings.qc_comparison_receiving[key]]))}:{})};
     const progressPath=join(output,'results','browser-progress.json');
     progress=await exists(progressPath)?await readJSON(progressPath):{
       schema:'upstate.rehearsal-browser-progress/v1',binding,started_at:now(),actions:{},captures:{},controls:{},phases:{},uploads:{},recordings:[],status:'RUNNING'
@@ -577,6 +578,45 @@ async function rehearsalBrowserMain(argv) {
         await waitFor(async()=>await page.locator('#workspace-select option[value="'+settings.sender_workspace+'"]').count(),'OPERATOR_FIELD_RETURN');
         await openRehearsal();await tab('evidence');
       }
+      if(settings.qc_comparison_receiving) {
+        const selected=settings.qc_comparison_receiving,identity=await hashFile(selected.path);
+        if(identity.bytes!==selected.bytes||identity.sha256!==selected.sha256)
+          fail('QC_COMPARISON_INPUT_CHANGED','The frozen original comparison inspection changed.');
+        const frozen=await readJSON(selected.path),keys=['project_id','plan_id','comparison_report_id','comparison_id','operation_id','field_operation_id'];
+        const choice=Object.fromEntries(keys.map(key=>[key,selected[key]]));
+        if(frozen.schema!=='upstate.simulated-qc-comparison/v1'||frozen.phase!=='complete'||
+           !equal(frozen.browser_choice,choice)||!settings.fieldwork_receiving||
+           choice.field_operation_id!==settings.fieldwork_receiving.operation_id||
+           choice.plan_id!==settings.fieldwork_receiving.plan_id||choice.project_id!==settings.fieldwork_receiving.project_id)
+          fail('QC_COMPARISON_IDENTITY','The comparison chapter belongs to another original field case.');
+        const {runQCComparisonChapter}=await import('../source_tools/simulated_qc_comparison_browser.mjs');
+        const captureComparison=async(label,metadata)=>{
+          if(progress.captures[label]){await verifyArtifact(progress.captures[label]);return progress.captures[label];}
+          await page.evaluate(()=>document.fonts.ready);checkRunning();
+          const temporary=join(privateDirectory,label+'-'+randomUUID()+'.png');
+          await page.screenshot({path:temporary,fullPage:true,animations:'disabled'});
+          const member=await publicFile(temporary,label,'.png');await fs.unlink(temporary);
+          const metrics=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},document:{width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}}));
+          progress.captures[label]={...member,...metrics,...metadata,captured_at:now(),workspace:settings.sender_workspace,rehearsal_id:settings.rehearsal_id};
+          await checkpoint();return progress.captures[label];
+        };
+        const comparisonStartedAt=now(),result=await runQCComparisonChapter({
+          page,choice:{...choice,workspace_key:settings.sender_workspace},operatorURL:connection.operator_url,
+          output,checkRunning,capture:captureComparison,checkpoint,progress,pause});
+        if(result.status!=='course_complete'||keys.some(key=>result[key]!==choice[key]))
+          fail('QC_COMPARISON_COURSE_CHANGED','The recorded comparison differs from the original retained source.');
+        for(const member of result.files) {
+          await verifyArtifact(member);
+          if(member.kind==='actual-rendered-screenshot')
+            progress.captures['qc-comparison-independent-'+member.sha256]={...member,qc_comparison:choice,captured_at:now(),workspace:settings.sender_workspace,rehearsal_id:settings.rehearsal_id,producer_inspection:'required'};
+        }
+        progress.phases.qc_comparison={...result,state:'complete',completed_at:now()};
+        attempt.frames.push({view:'sample_qc_comparison',scene_id:'qc_comparison',...choice,displayed_at:comparisonStartedAt,ended_at:now()});
+        await checkpoint();
+        await page.goto(connection.operator_url,{waitUntil:'domcontentloaded'});
+        await waitFor(async()=>await page.locator('#workspace-select option[value="'+settings.sender_workspace+'"]').count(),'OPERATOR_COMPARISON_RETURN');
+        await openRehearsal();await tab('evidence');
+      }
       if(settings.customer_review) {
         const {runCustomerReviewChapter}=await import('../source_tools/simulated_customer_review_browser.mjs');
         const captureCustomer=async(label,metadata)=>{
@@ -721,7 +761,7 @@ async function rehearsalBrowserMain(argv) {
       ...Object.values(progress.actions).map(x=>x.receipt),...Object.values(progress.controls).filter(x=>x.original).map(x=>x.original),
       ...['saved_edits','changed_case','restored_case','receiver'].map(x=>progress.phases[x].record),
       ...progress.recordings.filter(x=>x.file).map(x=>({path:x.file.path,bytes:x.file.bytes,sha256:x.file.sha256})),
-      ...(progress.customer_review?.downloads||[]),...(progress.phases.fieldwork?.files||[])];
+      ...(progress.customer_review?.downloads||[]),...(progress.phases.fieldwork?.files||[]),...(progress.phases.qc_comparison?.files||[])];
     const unique=[...new Map(files.map(x=>[x.path,x])).values()];
     for(const member of unique)await verifyArtifact(member);
     await closeBrowser();

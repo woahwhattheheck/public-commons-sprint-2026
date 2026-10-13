@@ -70,6 +70,30 @@ One chapter can operate a page at a time. The parent must serialize the recordin
 
 Keep the native consumer and browser source in the same installed application. The additive component fragment includes the native model, this module and both operating guides. Shared driver and recorder changes remain with their current source owner.
 
+## Original receipt, receiving and recorder composition
+
+The original scientific driver retains the complete consumer result under `receipt.qc_comparison`, alongside its existing `fieldwork_operation_id` and `fieldwork_plan_id`. Create that result and call `attach_to_delivery` and `attach_to_archive` before the existing mapped-delivery and whole-project export. The model consumer remains the source of the actual operation/report IDs.
+
+The additive `source_tools/simulated_qc_comparison_recording.py` supplies:
+
+```python
+bind_comparison(workspace, original_receipt, recording_output)
+validate_choice(choice)
+verify_choice(workspace, recording_output, choice)
+```
+
+`bind_comparison` returns `None` when the original receipt has no comparison. When present, it inspects that exact completed native operation and checks its six browser identities, report source, archive selection, original field operation, plan and project against the driver receipt. It freezes the complete actual native inspection as `uploads/simulated-headwaters/qc-comparison-inspection.json`.
+
+The returned descriptor contains its relative path, byte count, SHA-256 and all six exact choice fields. `verify_choice` rejects aliases, checks the frozen bytes, reopens the same native operation and requires its complete canonical result to agree. It returns the verified absolute local path for the browser caller. This step creates no scientific run, field revision or report.
+
+The maintained receipt builder adds that descriptor as `qc_comparison_receiving`. Its ordinary receiving validator requires the same original field chapter and verifies matching field operation, plan and project. The receiving programme checks the frozen source again before starting the original Operator and passes its exact descriptor into the current browser input.
+
+The parent recorder binds those file bytes and six identities into its saved progress. After its original field/QC chapter and before customer handback, it verifies the frozen inspection, supplies the current sender workspace key and invokes the borrowed chapter. All returned public members enter the original final file closure; independent-browser screenshots enter the same actual capture inventory. Private task snapshots and recovered local drafts remain on the private recovery surface.
+
+Existing field, programme, customer, native transfer, narration and cutoff logic retain their source. The parent records comparison operation/report IDs in its interruption checkpoint. A previously started recording input without this comparison remains its original edition; build a new recording edition from the updated retained driver receipt to add the chapter. Reuse the existing scientific Workspace and completed original results.
+
+The complete source packet provides guarded literal joins and full candidate parent postimages. The current parent owner composes those joins on fresh maintained source, preserving any later native/course fixes, and publishes the shared receipt builder, receiving programme and recorder together with the additive binder, chapter and component closure.
+
 ## What the recorded course does
 
 ### Open the original retained comparison
@@ -118,9 +142,10 @@ The parent progress member uses schema `upstate.simulated-qc-comparison-browser/
 | --- | --- |
 | qc-comparison/native-comparison.json | Complete original saved comparison, source file inventory and current original plan digest. |
 | qc-comparison/attempt-N/ui-preview.json | Complete actual UI preview for that attempt. |
-| qc-comparison/attempt-N/native-task-export.json | Decorated original completed export task as observed in that attempt. |
-| qc-comparison/attempt-N/native-task-source.json | Decorated original completed scientific-source task as observed in that attempt. |
-| qc-comparison/attempt-N/draft-before-recovery.json | Intervening local draft preserved when an earlier stopped attempt left restoration pending. |
+| private/qc-comparison/attempt-N/native-task-export.json | Decorated original completed export task as observed in that attempt. |
+| private/qc-comparison/attempt-N/native-task-source.json | Decorated original completed scientific-source task as observed in that attempt. |
+| private/qc-comparison/attempt-N/original-draft.json | Exact original local draft, retained only on the private recovery surface. |
+| private/qc-comparison/attempt-N/draft-before-recovery.json | Intervening local draft preserved when an earlier stopped attempt left restoration pending. |
 | qc-comparison/attempt-N/fresh-native-comparison.png | Actual independent-browser view of the same retained comparison. |
 | qc-comparison/attempt-N/fresh-offline-report.png | Actual independent-browser view of the downloaded unchanged report. |
 | qc-comparison/report/ | Every original report member with its original filename, including both complete original review ZIPs. |
@@ -129,13 +154,13 @@ The parent progress member uses schema `upstate.simulated-qc-comparison-browser/
 
 Attempt numbers are decimal `1`, `2`, and so on. Each attempt keeps its own preview, decorated task snapshots and independent-browser screenshots. Native report files and the complete package retain their immutable original paths and hashes across retries.
 
-The result contains `status`, the exact choice fields, `files`, `screenshots`, `task_ids`, `report_source` and `visual_review`. The parent should carry all returned files into its ordinary recording delivery and preserve their source meaning.
+The result contains `status`, the exact choice fields, `files`, `screenshots`, `task_ids`, `report_source` and `visual_review`. The parent should carry all returned files into its ordinary recording delivery and preserve their source meaning. Native task snapshots and recovered pre-existing local drafts are retained separately under private/qc-comparison and are excluded from returned public files; their descriptors remain in progress.qc_comparison.private_files. A same-operation retry also separates those private records retained by an earlier interrupted source edition. Public progress contains only the private file descriptors; original draft text is never embedded in the browser-progress JSON. Precisely hash-verified legacy recovery/task members from an earlier interrupted edition are physically moved into private storage before completion, and legacy inline draft text is likewise replaced by its retained private descriptor. The parent must use the explicit returned file inventory, not recursively publish private directories.
 
 Private progress may contain native file tickets and an original local draft. Keep the complete receiving directory on the existing authorized internal surface. The module excludes the Operator token and origin from public error text and stores an origin digest in its choice binding. Do not publish private capability URLs.
 
 ## Interrupted recordings and local draft recovery
 
-Before the chapter changes the comparison editor's local storage, it checkpoints the original value under the exact workspace/plan key and marks restoration required. It temporarily uses its own local selection while preserving any existing user's draft and pending-task reference.
+Before the chapter changes the comparison editor's local storage, it writes the original value into its immutable private file under the exact workspace/plan key, checkpoints only that file's descriptor and marks restoration required. It temporarily uses its own local selection while preserving any existing user's draft and pending-task reference.
 
 Ordinary completion closes the comparison and QC editors before restoring that exact original value. This order prevents a closing editor from overwriting the restoration with the temporary teaching selection.
 
