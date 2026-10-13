@@ -12,6 +12,8 @@ import tempfile
 from datetime import datetime, timezone
 
 CODE_FILES = (
+    "AGENTS.md",
+    "CURRENT_OWNER_DIRECTION.md",
     "measurement_workspace/published_studies.py",
     "measurement_workspace/study_reviews.py",
     "measurement_workspace/geographic_study_selection.py",
@@ -52,6 +54,9 @@ CODE_FILES = (
     "operator/web/published_microbial_selection.mjs",
     "operator/web/published_review_reports.mjs",
     "model/received_published_reviews.py",
+    "model/published_review_admission.py",
+    "operator/published_review_admission.py",
+    "operator/extensions/received-published-review-admission.json",
     "operator/received_published_reviews.py",
     "operator/web/received_published_reviews.mjs",
     "operator/web/received_published_reviews.css",

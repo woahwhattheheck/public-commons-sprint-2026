@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.10",
+  "version": "2.4.11",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application. Received Studies exposes exact saved Published-review source cards, native editor navigation, original selected-record/interpretation/review ZIP downloads and explicit report replace/append. The complete original source binding and filters are checked before direct editor navigation; current local draft/lifecycle takes precedence over delayed replies. The maintained installer composes the original received-study registration and declared assets without removing peer handlers. The outgoing exact product and every delivered attachment must be opened, visually inspected and used under the owner rule in operator/RECEIVED_PUBLISHED_REVIEWS.md; preserve the October13 14:00UTC cutoff.",
+  "source_reference_base": "560c33ccba1158e75d7fcfc99561a5b8490386c9",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application. Received Studies exposes exact saved Published-review source cards, native editor navigation, original selected-record/interpretation/review ZIP downloads and explicit report replace/append. The complete original source binding and filters are checked before direct editor navigation; current local draft/lifecycle takes precedence over delayed replies. The maintained installer composes the original received-study registration and declared assets without removing peer handlers. The outgoing exact product and every delivered attachment must be opened, visually inspected and used under the owner rule in operator/RECEIVED_PUBLISHED_REVIEWS.md; preserve the October13 14:00UTC cutoff. Captured external saved reviews can be explicitly admitted through the original importer and editor; original source bindings and admission provenance remain portable with later selected reviews. Carry CURRENT_OWNER_DIRECTION.md version 2026-10-13.3 and application AGENTS into the existing native course.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 21311,
-      "sha256": "270afad63480aa5d2e5745a1f818b7d741b208cb212237f7e125a385595458cf"
+      "bytes": 21519,
+      "sha256": "b3767a92b38f09ba99c0554f44099c1353151c930b93cd209da738f1f374bd0c"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -78,8 +78,8 @@
     },
     {
       "path": "integration/component_fragments/received-published-reviews.json",
-      "bytes": 915,
-      "sha256": "1dd1b46b8b5d2dfcb077c9dc4397c476187c64734238a6e23732f551c3409565"
+      "bytes": 1442,
+      "sha256": "d082d04a93e209e1305620634670faf2687000539cf817fb2bd74acb1cf10b12"
     },
     {
       "path": "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
@@ -193,13 +193,13 @@
     },
     {
       "path": "model/published_review_study_transfer.py",
-      "bytes": 12279,
-      "sha256": "3d6716b0b8a915dd85830dcb9e57bdf379fa9fd25c3b3ca13b05242a655ab680"
+      "bytes": 12387,
+      "sha256": "85d9556dff6128c6db05406a0582ec604eb631c2f140b939580852af863618f1"
     },
     {
       "path": "model/received_published_reviews.py",
-      "bytes": 4995,
-      "sha256": "59e7359f57d2cbcb12228dc98de20c7629a28a81ce0e4d3fcb1ca656b4aa0a12"
+      "bytes": 5238,
+      "sha256": "58ae8cca41c6c5dca377ab9bfdd76eb547625cc7320c58db436925db10e1ccb4"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -1188,8 +1188,8 @@
     },
     {
       "path": "operator/RECEIVED_PUBLISHED_REVIEWS.md",
-      "bytes": 9704,
-      "sha256": "9315d7d740a0d7a2df4877626b662fc9625359e94162bcf4d34f1773b5e57d61"
+      "bytes": 19930,
+      "sha256": "55d7ea7011c86b3888cff737102a2cfbd028f8c1a3778bb576780da3691a9ad6"
     },
     {
       "path": "operator/received_published_reviews.py",
@@ -1228,8 +1228,8 @@
     },
     {
       "path": "operator/web/received_published_reviews.mjs",
-      "bytes": 6976,
-      "sha256": "8259670f1b181911beccf8dda686d85777d1aa918ac1a0e6e8e061d0f7e1ff9c"
+      "bytes": 16966,
+      "sha256": "9d67a117b2cd362d47e9c270729ed48eeba3945456e9c6f91987e5383ebbe2a9"
     },
     {
       "path": "operator/web/station_geography.mjs",
@@ -2200,6 +2200,31 @@
       "path": "operator/SELECTED_MICROBIAL_STUDY.md",
       "bytes": 13702,
       "sha256": "792b0767a9dd673e5909c44e7310bf3615b02e06854bb142a383e956672bbce8"
+    },
+    {
+      "path": "model/published_review_admission.py",
+      "bytes": 15582,
+      "sha256": "5bb53a2b2a8343a6bb37912bbff138df94139d9350907521c17b71203378f073"
+    },
+    {
+      "path": "operator/published_review_admission.py",
+      "bytes": 1602,
+      "sha256": "9668190705a0916ada6a45646a06fa94c38f409ccc6ca11c50acdae696781de1"
+    },
+    {
+      "path": "operator/extensions/received-published-review-admission.json",
+      "bytes": 1448,
+      "sha256": "6ef5d68e9b940f84e7776b55416711ff51d58ba43591d2821a6c12510c9c3e16"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 8289,
+      "sha256": "c2ff39b9a18aa6db67637ff0c60c54ffeef8ba25e47a42e069ca81609c37cf45"
     }
   ],
   "composed_source_editions": {
@@ -2334,6 +2359,14 @@
       "microbial_source_dependency": {
         "git_blob": "2937bc4c81ac10cbcc4bfb469badfe53f8022436",
         "sha256": "1e2fb1d67ee571d9a86c839afbd8ccef70e5740403b8e7cf021dc2d5ecc15b9e"
+      },
+      "admission": {
+        "issue": 4056,
+        "module": "model/published_review_admission.py",
+        "action": "received.published-review.admit",
+        "schema": "upstate.published-review-admission/v1",
+        "scope": "Explicit captured original ZIP into maintained review importer/editor; current study head preserved; immutable admission/source retained in revised-only Study exports",
+        "owner_direction": "CURRENT_OWNER_DIRECTION.md version 2026-10-13.3"
       }
     },
     "selected_microbial_activities": {
