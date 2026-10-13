@@ -161,7 +161,7 @@ async function main() {
   for (const role of ['report_pdf', 'report_html', 'report_markdown', 'report_data']) {
     const member = detail.files.find(row => row.role === role);
     requireValue(member, 'The saved report omitted ' + role);
-    const row = page.locator('[data-scientific-report-detail] tbody tr')
+    const row = page.locator('[data-scientific-report-files] tbody tr, [data-scientific-report-detail] tbody tr')
       .filter({ has: page.getByRole('cell', { name: member.path, exact: true }) });
     await download(row.getByRole('link', { name: 'Download', exact: true }), member,
       member.path.split('/').pop(), role);
