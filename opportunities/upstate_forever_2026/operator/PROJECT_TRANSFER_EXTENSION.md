@@ -76,6 +76,18 @@ A restore interrupted after writing the destination but before returning its fin
 
 This receiving integration uses the current `model/portable_acquisitions.py` and portable backup/restore source together with the complete installed application. Older archives without an acquisition summary remain readable.
 
+## Saved implementation and fieldwork
+
+The retained transfer and completed capture or restore task include **Implementation and fieldwork**. Expand it to inspect the exact saved plan revisions, task/site/visit/monitoring record counts, attached original files, external source references and report editions.
+
+After **Restore editable copy**, choose **Open saved revision**. The registered Implementation desk opens that exact native plan edition in the restored workspace and retains existing browser drafts. Its Handover view provides the retained report packages. Source paths and report member paths remain part of the original archive; downloads use the operator's normal file service.
+
+Attached originals are carried as their original files. Imported external source references remain identified separately. Reopening a plan uses its recorded revision even if later revisions have since been saved in the receiving workspace.
+
+The native backup locks the saved plan bank with the existing plan locks. Receiving verifies its original revision history, attached originals and retained report editions, then includes the summary in the completed restore. A replay after a lost final reply rebuilds that same summary from the already verified destination files.
+
+Use the complete current application, including `model/portable_implementation.py`, the existing native Implementation provider and its registered `openSavedPlan` browser method.
+
 ## Part sizing and inventories
 
 The **Raw payload per part** value limits block payload. Every part also contains the complete original manifest and ZIP metadata, so the downloaded file can be larger. The desk displays this operator's upload capacity. Choose a payload size that leaves room for that overhead and is at least as large as the selected transfer block size.
