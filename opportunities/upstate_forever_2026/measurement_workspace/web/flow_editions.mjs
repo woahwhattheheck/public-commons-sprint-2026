@@ -18,11 +18,12 @@ function saveFile(name,value,type='application/json'){
  link.href=url;link.download=name;document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
-async function saveBundle(value){
+async function saveBundle(value,stillCurrent=()=>true){
  if(!value||typeof value.base64!=='string'||!Number.isSafeInteger(value.bytes)||value.bytes<0||!/^[a-f0-9]{64}$/.test(value.sha256))throw Error('The retained bundle descriptor is incomplete.');
  const binary=atob(value.base64),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
  if(bytes.length!==value.bytes)throw Error('The retained bundle size differs from its descriptor.');
  if(globalThis.crypto?.subtle){const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');if(digest!==value.sha256)throw Error('The retained bundle checksum differs from its descriptor.');}
+ if(!stillCurrent())return;
  const url=URL.createObjectURL(new Blob([bytes],{type:value.type||'application/zip'})),a=document.createElement('a');a.href=url;a.download=value.name||'flow-bundle.zip';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 function table(headers,rows,label){
@@ -37,6 +38,26 @@ function summaryTable(rows){
   [r.missing_days,r.ambiguous_days,r.unquantified_days].map(number).join(' / '),r.complete_numeric_period?'Yes':'No'
  ]),'Station discharge and coverage');
 }
+
+/** Downloads bind to the displayed comparison, never edited chooser values. */
+export function flowComparisonSelection(comparison){
+ const before_id=comparison?.before_id,after_id=comparison?.after_id;
+ if(!/^[a-f0-9]{64}$/.test(before_id||'')||!/^[a-f0-9]{64}$/.test(after_id||'')||before_id===after_id)throw Error('Compare two different original saved studies before downloading.');
+ return {before_id,after_id};
+}
+export function validateFlowComparisonDownload(value,selection,kind){
+ if(!value||value.before_id!==selection.before_id||value.after_id!==selection.after_id||!/^[a-f0-9]{64}$/.test(value.comparison_id||''))
+  throw Error('The comparison download belongs to a different original study pair.');
+ if(typeof value.name!=='string'||!value.name||/[\\/\u0000-\u001f]/.test(value.name))throw Error('The comparison download has an invalid original filename.');
+ if(kind==='report'){
+  if(value.type!=='text/html; charset=utf-8'||typeof value.content!=='string'||!value.content||!value.name.endsWith('.html'))
+   throw Error('The readable comparison report is incomplete.');
+ }else if(kind==='bundle'){
+  if(value.type!=='application/zip'||!value.name.endsWith('.zip'))throw Error('The complete comparison archive descriptor differs.');
+ }else throw Error('Unknown comparison download.');
+ return value;
+}
+
 export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=null}={}){
  if(!(host instanceof Element)||typeof api!=='function'||typeof request!=='function')throw TypeError('Mount daily flow in the existing Measurements API.');
  const controller=new AbortController(),signal=controller.signal;
@@ -148,13 +169,13 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
   const target=host.querySelector('.mf-comparison-result');if(!target||!comparison)return;
   const all=comparison.comparison.rows,rows=comparisonOnly?all.filter(r=>r.changes.length):all;
   const preview=rows.slice(0,100);
-  target.innerHTML=facts(Object.entries(comparison.comparison.counts))+'<p>'+number(all.filter(r=>!r.changes.length).length)+' unchanged station-days retained; '+number(all.filter(r=>r.changes.length).length)+' changed or differently selected station-days. No automatic adoption.</p>'+
+  target.innerHTML='<p class="mf-mono">Compared original studies:<br>Earlier '+esc(comparison.before_id)+'<br>Later '+esc(comparison.after_id)+'</p><p class="mf-muted">Downloads use this displayed comparison. Changing the selectors above does not change it until Compare studies completes.</p>'+facts(Object.entries(comparison.comparison.counts))+'<p>'+number(all.filter(r=>!r.changes.length).length)+' unchanged station-days retained; '+number(all.filter(r=>r.changes.length).length)+' changed or differently selected station-days. No automatic adoption.</p>'+
    '<label class="mf-check"><input type="checkbox" name="changed-only"'+(comparisonOnly?' checked':'')+'>Show changed rows only</label>'+
    table(['Station / date','Changes','Earlier Q (m³/s)','Later Q (m³/s)','Later − earlier Q (m³/s)','Earlier approval / qualifier','Later approval / qualifier'],preview.map(r=>[
     esc(r.monitoring_location_id)+'<small>'+esc(r.date)+'</small>',esc(r.changes.join(', ')||'Unchanged'),number(r.before?.flow?.discharge_m3_s),number(r.after?.flow?.discharge_m3_s),number(r.delta_discharge_m3_s),
     esc([r.before?.flow?.approval_status||'—',r.before?.flow?.qualifier||'—'].join(' / ')),esc([r.after?.flow?.approval_status||'—',r.after?.flow?.qualifier||'—'].join(' / '))
    ]),'Original edition changes')+'<p class="mf-muted">Showing '+number(preview.length)+' of '+number(rows.length)+' selected rows. Download the complete comparison for every original row, both period summaries, and both sample contexts.</p>'+
-   '<div class="mf-actions"><button type="button" data-act="download-comparison">Complete comparison JSON</button></div><details><summary>Both period summaries and sample context</summary><pre>'+esc(JSON.stringify({periods_before:comparison.periods_before,periods_after:comparison.periods_after,sample_context_before:comparison.sample_context_before.counts,sample_context_after:comparison.sample_context_after.counts},null,2))+'</pre></details>';
+   '<div class="mf-actions"><button type="button" data-act="download-comparison">Complete comparison JSON</button><button type="button" data-act="comparison-report">Readable comparison HTML</button><button type="button" data-act="comparison-bundle">Complete comparison ZIP</button></div><p class="mf-muted">The ZIP retains every comparison row and both complete original study families, including source responses. Extract it before opening report.html so its original-data links work. A standalone HTML download uses those same sibling paths.</p><details><summary>Both period summaries and sample context</summary><pre>'+esc(JSON.stringify({periods_before:comparison.periods_before,periods_after:comparison.periods_after,sample_context_before:comparison.sample_context_before.counts,sample_context_after:comparison.sample_context_after.counts},null,2))+'</pre></details>';
  }
  async function reloadCatalogue(){const value=await api('/flow/catalogue');if(!dead)catalogue=value;}
  async function inspectDraft(){const value=await api('/flow/inspect',{method:'POST',value:draft});if(dead)return;inspection=value;if(!draft.start&&value.series.length)draft.start=value.series.map(r=>r.start).sort()[0];if(!draft.end&&value.series.length)draft.end=value.series.map(r=>r.end).sort().at(-1);}
@@ -220,7 +241,15 @@ export function mountFlowEditions(host,{api,request,onSaved=()=>{},initialState=
    if(action==='download-study')saveFile('flow-study.json',study);
    if(action==='download-result-input')saveFile('flow-input.json',study.input);
    if(action==='download-comparison')saveFile('daily-flow-comparison.json',comparison);
-   if(action==='bundle'){if(!saved)throw Error('Save this preview before downloading the original bundle.');const value=await api('/flow/studies/'+encodeURIComponent(study.id)+'/bundle');if(dead)return;await saveBundle(value);}
+   if(action==='comparison-report'||action==='comparison-bundle'){
+    const selection=flowComparisonSelection(comparison),kind=action==='comparison-report'?'report':'bundle';
+    message('Preparing the displayed original study comparison and complete source family…');
+    const value=await api('/flow/'+action,{method:'POST',value:selection});if(dead)return;
+    validateFlowComparisonDownload(value,selection,kind);
+    if(kind==='report')saveFile(value.name,value.content,value.type);else await saveBundle(value,()=>!dead);
+    if(dead)return;message(kind==='report'?'Readable comparison downloaded for the displayed pair. Use the complete ZIP to keep all original-data links together.':'Complete comparison ZIP downloaded with both original studies and every comparison row. Extract and reopen report.html.');
+   }
+   if(action==='bundle'){if(!saved)throw Error('Save this preview before downloading the original bundle.');const value=await api('/flow/studies/'+encodeURIComponent(study.id)+'/bundle');if(dead)return;await saveBundle(value,()=>!dead);}
    if(action==='report'){if(!saved)throw Error('Save this preview before downloading its report.');const response=await request('/flow/studies/'+encodeURIComponent(study.id)+'/report.html','GET'),text=await response.text();if(!response.ok)throw Error(text);if(dead)return;saveFile('flow-report.html',text,'text/html;charset=utf-8');}
    if(action==='csv'){
     if(!saved)throw Error('Save this preview before downloading the server CSV.');
