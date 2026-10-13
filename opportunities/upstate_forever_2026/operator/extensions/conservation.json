@@ -2,12 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "conservation",
   "title": "Conservation plans",
-  "version": "2",
+  "version": "3",
   "order": 50,
   "assets": [
     "retained_desks.mjs",
     "conservation.mjs",
-    "conservation.css"
+    "conservation.css",
+    "conservation_optimization_bridge.mjs",
+    "conservation_optimization.mjs",
+    "conservation_optimization.css"
   ],
   "backend": {
     "module": "conservation",
@@ -107,7 +110,8 @@
     "task_actions": "taskActions",
     "factory": "attachConservationDesk",
     "styles": [
-      "/web/conservation.css"
+      "/web/conservation.css",
+      "/web/conservation_optimization.css"
     ],
     "view": {
       "id": "conservation",
@@ -115,7 +119,8 @@
       "after": "experiments"
     },
     "action_prefixes": [
-      "conservation-"
+      "conservation-",
+      "portfolio-optimization-"
     ]
   }
 }
