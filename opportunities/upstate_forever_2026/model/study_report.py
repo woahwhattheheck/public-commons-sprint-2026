@@ -319,7 +319,108 @@ def _published_context(interpretation):
     return result
 
 
-def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=None, interpretation=None):
+def _geography_section(value):
+    if not value:
+        return ""
+    rendered = [
+        "<section><h2>Watersheds and reporting geography</h2>"
+        "<p>The selected reporting source determines where management scenarios apply. "
+        "The native model routes through its contributing domain and the retained "
+        + _number(value["upstream_buffer_m"], digits=0)
+        + " m buffer. Published watershed and state-portion areas below retain their "
+        "original source geometry.</p>"
+    ]
+    if value["raster_reporting_area_ha"] is not None:
+        rendered.append(
+            "<p>The completed native summary records <strong>"
+            + _number(value["raster_reporting_area_ha"])
+            + " hectares</strong> in the reporting mask ("
+            + _number(value["recorded_reporting_cells"][0], digits=0)
+            + " cells at " + _number(value["grid"]["pixel_area_ha"], digits=4)
+            + " hectares per cell). Each constituent comparison retains its own paired "
+            "valid-cell coverage in the results tables.</p>")
+    elif value["recorded_reporting_cells"]:
+        rendered.append(
+            "<p>The completed summaries record different reporting-cell counts. "
+            "Their individual coverage stays with each native comparison.</p>")
+    for context in value["contexts"]:
+        rendered.append("<h3>" + _text(context["title"]) + "</h3>")
+        if len(value["contexts"]) > 1:
+            rendered.append("<p>Retained context edition: " + _text(context["context_id"]) + ".</p>")
+        states = sorted({state for group in context["groups"]
+                         for state in group["state_portion_acres"]})
+        rows = []
+        for group in context["groups"]:
+            summary = group["summary"]
+            portions = "; ".join(
+                state + " " + _number(group["state_portion_acres"].get(state, 0))
+                for state in states)
+            rows.append(
+                "<tr><th scope=\"row\">" + _text(group["title"]) + "</th><td>"
+                + _number(summary["huc_count"], digits=0) + "</td><td>"
+                + _number(summary["area_acres"]) + "</td><td>" + _text(portions)
+                + "</td><td>" + _number(summary["priority_huc_count"], digits=0)
+                + "</td><td>" + _number(summary["selected_classification_count"], digits=0)
+                + "</td></tr>")
+        rendered.append(
+            "<div class=\"table-wrap\"><table><thead><tr><th>Source membership</th>"
+            "<th>HUC12s</th><th>Whole-HUC acres</th><th>State-portion acres</th>"
+            "<th>FY26 priority HUCs</th><th>Selected-class source features</th>"
+            "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
+            "<p>Whole-HUC acreage includes every state portion of each selected HUC. "
+            "HUC membership alone does not establish whether the reporting polygons "
+            "were clipped. Reporting-mask area comes from the native raster. "
+            "Source editions retain their original rounding, so state portions may "
+            "differ slightly from the published whole-HUC total.</p>")
+        priority = [row for row in context["hucs"]
+                    if row["role"] == "reporting" and row["priority"]]
+        if priority:
+            entries = []
+            for row in priority:
+                entries.append(
+                    "<tr><td>" + _text(row["huc12"]) + "</td><td>" + _text(row["name"])
+                    + "</td><td>" + _text(", ".join(row["priority_states"]))
+                    + "</td><td>" + _number(row["priority_state_portion_acres"])
+                    + "</td></tr>")
+            rendered.append(
+                "<details><summary>Priority source-water context within selected reporting HUCs ("
+                + str(len(priority)) + ")</summary><div class=\"table-wrap\"><table>"
+                "<thead><tr><th>HUC12</th><th>Watershed</th><th>Priority states</th>"
+                "<th>Designated state-portion acres</th></tr></thead><tbody>"
+                + "".join(entries) + "</tbody></table></div></details>")
+        domain = next(group for group in context["groups"] if group["role"] == "domain")["summary"]
+        classes = ", ".join(name + ": " + _number(count, digits=0)
+                            for name, count in sorted(domain["class_counts"].items()))
+        rendered.append(
+            "<p>Retained selected classifications across the contributing domain: "
+            + _text(classes or "none in the retained query")
+            + ". Classification publisher jurisdiction: "
+            + _text(context.get("classification_source_jurisdiction") or "retained source edition")
+            + ". Counts use each publisher feature's HUC12 assignment. "
+            + _number(domain["complete_query_huc_count"], digits=0)
+            + " HUCs have complete selected-class query coverage; "
+            + _number(domain["queried_zero_target_huc_count"], digits=0)
+            + " of those contain no features in these selected classes. "
+            "The complete per-HUC CSV retains source-jurisdiction scope, classifications, priority states and all state "
+            "portions. These planning attributes accompany the calculated native export results.</p>")
+        links = {}
+        for source in context["sources"]:
+            reference = source.get("reference")
+            if isinstance(reference, dict):
+                for key, title in (("nrcs", "NRCS FY26 source-water priorities"),
+                                   ("classified", "South Carolina water classifications")):
+                    uri = (reference.get(key) or {}).get("uri")
+                    if isinstance(uri, str) and uri.startswith("https://"):
+                        links[title] = uri
+        if links:
+            rendered.append("<p>Original sources: " + "; ".join(
+                "<a href=\"" + _text(uri) + "\">" + _text(title) + "</a>"
+                for title, uri in links.items()) + ".</p>")
+    rendered.append("</section>")
+    return "".join(rendered)
+
+
+def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=None, interpretation=None, geography=None):
     total = summary["counts"]["cases"]
     completed = summary["progress"]["complete"]
     names = _aliases(profiles)
@@ -345,7 +446,8 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
         "Positive reductions represent lower modeled export. Each land-cover alternative "
         "is paired with the baseline using the same coefficient profile. Percent change "
         "uses alternative minus baseline.</p></section>")
-    sections.extend((_execution_section(execution), _interpretation_section(interpretation)))
+    sections.extend((_execution_section(execution), _geography_section(geography),
+                     _interpretation_section(interpretation)))
     spatial = (profiles or {}).get("spatial_programme", {})
     if spatial.get("scenarios"):
         values = []
@@ -563,7 +665,7 @@ def refresh_existing(workspace, experiment_id):
 
 def build(workspace, experiment_id, *, profiles=None):
     """Render values from one locked summary and register the retained outputs."""
-    from model import experiments, study_decisions, study_execution, study_interpretation
+    from model import experiments, study_decisions, study_execution, study_interpretation, study_geography
     from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, verify_file
     experiment_id = identifier(experiment_id)
     scope = workspace.root / "experiments" / experiment_id
@@ -582,6 +684,7 @@ def build(workspace, experiment_id, *, profiles=None):
             raise ValueError("The study report programme context must be an object.")
         rows = _source_rows(summary, profiles)
         execution = study_execution.collect(workspace, summary)
+        geography = study_geography.collect(workspace, summary)
         decisions = study_decisions.analyse(summary)
         interpretation = study_interpretation.collect(workspace, summary, profiles=profiles)
         published_context = _published_context(interpretation)
@@ -608,6 +711,7 @@ def build(workspace, experiment_id, *, profiles=None):
                 "title": summary.get("title") or "Scientific watershed study",
                 "execution": execution, "alternative_comparisons": decisions,
                 "source_interpretation": interpretation,
+                "geography": geography,
                 "experiment_summary": summary_source,
             }
             atomic_json(directory / "study-summary.json", data)
@@ -634,6 +738,9 @@ def build(workspace, experiment_id, *, profiles=None):
                     study_interpretation.transition_csv(interpretation)),
                 **published_context,
             }
+            if geography is not None:
+                retained["study-watershed-context.csv"] = (
+                    "Selected watershed context CSV", "text/csv", study_geography.csv_bytes(geography))
             for name, (_, _, body) in retained.items():
                 if name != "study-summary.json":
                     atomic_bytes(directory / name, body)
@@ -652,7 +759,7 @@ def build(workspace, experiment_id, *, profiles=None):
             atomic_bytes(directory / "index.html",
                          _render(summary, rows, profiles, downloads=downloads,
                                  execution=execution, decisions=decisions,
-                                 interpretation=interpretation).encode("utf-8"))
+                                 interpretation=interpretation, geography=geography).encode("utf-8"))
             labels = {"index.html": "Study report",
                       **{name: item[0] for name, item in retained.items()}}
             files = {name: describe_file(workspace.root, directory / name) for name in labels}

@@ -157,6 +157,66 @@ def find_archive(root, name):
     return choices[0]
 
 
+def restored_original(receiving, model, record):
+    """Resolve an archived original edition from its exact retained inventory."""
+    from model.common import verify_file
+    spec = ARCHIVES[model]
+    if not isinstance(record, dict) or record.get("model") != model:
+        raise ValueError("Supply --inputs for the original " + model.upper() + " intake")
+    if any(record.get("archive", {}).get(key) != value for key, value in spec.items()):
+        raise ValueError("The retained " + model.upper() + " source has another release identity")
+    prefix = PurePosixPath("original") / model
+    root = (receiving / prefix).resolve(strict=True)
+    if not root.is_relative_to(receiving.resolve()):
+        raise ValueError("The original source directory escapes its received Workspace")
+    inventory = {}
+    entries = record.get("source_files")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("The original source inventory is missing")
+    for descriptor in entries:
+        name = descriptor.get("path")
+        member = PurePosixPath(name) if isinstance(name, str) else None
+        if (member is None or member.is_absolute() or member.as_posix() != name
+                or "\\" in name or "\0" in name or ".." in member.parts
+                or member.parts[:2] != prefix.parts or len(member.parts) < 3
+                or name in inventory):
+            raise ValueError("The original source inventory has an invalid or repeated member")
+        retained = verify_file(receiving, descriptor)
+        if not retained.is_relative_to(root):
+            raise ValueError("The original source member escapes its retained model directory")
+        inventory[name] = retained
+    argument_name = (prefix / spec["arguments"]).as_posix()
+    if argument_name not in inventory:
+        raise ValueError("The retained original argument document is missing")
+    argument_path = inventory[argument_name]
+    source = json.loads(argument_path.read_text(encoding="utf-8-sig"))
+    if (source.get("model_name") != "natcap.invest." + model + "." + model
+            or source.get("invest_version") != record.get("embedded_version")
+            or source.get("args") != record.get("original_arguments")):
+        raise ValueError("The retained original argument document changed")
+    arguments = source["args"]
+    if any(arguments.get(key) != value for key, value in EXPECTED[model].items()):
+        raise ValueError("The retained original model settings differ from the release")
+    absolute = dict(arguments)
+    for key, token in arguments.items():
+        if key.endswith("_path") and token:
+            path = (argument_path.parent / token).resolve(strict=True)
+            if not path.is_relative_to(root):
+                raise ValueError("The original model argument escapes its retained source")
+            name = path.relative_to(receiving.resolve()).as_posix()
+            if name not in inventory or inventory[name] != path:
+                raise ValueError("The original model input is absent from its verified inventory: " + key)
+            absolute[key] = str(path)
+    # Keep the producing machine's original locations as source provenance.
+    provenance = record.get("original_locations") or {
+        key: record[key] for key in ("argument_path", "absolute_arguments", "readme_paths")
+        if key in record}
+    return {**record, "argument_path": str(argument_path),
+            "absolute_arguments": absolute, "original_locations": provenance,
+            "readme_paths": [str(path) for name, path in sorted(inventory.items())
+                             if "README" in Path(name).name.upper()]}
+
+
 def unpack_original(inputs, receiving, model):
     spec = ARCHIVES[model]
     archive = find_archive(inputs, spec["name"])
@@ -368,7 +428,20 @@ def joined_table(receiving, originals, active):
         "lucodes": sorted(common), "source_coverage": "Workspace verifies every actual land-cover class",
         "output": artifact(path, receiving),
     }
-    atomic(path.with_suffix(".provenance.json"), derivation)
+    provenance_path = path.with_suffix(".provenance.json")
+    if provenance_path.exists():
+        retained = json.loads(provenance_path.read_text(encoding="utf-8"))
+        # Source paths describe the original producing location. A received
+        # Workspace keeps that provenance and compares the actual source bytes.
+        def scientific_identity(value):
+            return {**value, "input_tables": {
+                model: {key: item for key, item in table.items() if key != "path"}
+                for model, table in value["input_tables"].items()}}
+        if scientific_identity(retained) != scientific_identity(derivation):
+            raise ValueError("Retained biophysical provenance differs from the original source join")
+        derivation = retained
+    else:
+        atomic(provenance_path, derivation)
     return path, derivation
 
 
@@ -517,15 +590,55 @@ def retained_native_export(receiving, record, model, pollutant):
     return verify_file(receiving, descriptor), descriptor
 
 
-def native_reference(receiving, original, module, metadata, progress, checkpoint):
-    model = original["model"]
-    cohort = native_cohort(metadata, model)
-    identity = hashlib.sha256(canonical({
-        "archive_sha256": original["archive"]["sha256"], "runtime": cohort,
+def original_native_identity(original, metadata):
+    return hashlib.sha256(canonical({
+        "archive_sha256": original["archive"]["sha256"],
+        "runtime": native_cohort(metadata, original["model"]),
         "original_arguments": original["original_arguments"],
         "configuration": {"n_workers": -1,
                           "flow_dir_algorithm": str(original["original_arguments"]["flow_dir_algorithm"]).lower()},
     })).hexdigest()
+
+
+def completed_native_reference(receiving, original, progress):
+    """Verify an existing result without importing or executing the native engine."""
+    from model.common import INVEST_SOURCE, verify_file
+    model = original["model"]
+    record = progress.get("native_original", {}).get(model, {})
+    if record.get("state") != "complete":
+        return None
+    metadata = record.get("runtime", {})
+    names = ("ndr", "sdr") if model == "ndr" else ("sdr",)
+    if (metadata.get("version") != RELEASE or any(
+            metadata.get("modules", {}).get(name, {}).get("git_blob") != INVEST_SOURCE[name + "_blob"]
+            for name in names)):
+        raise ValueError("The completed original result has another native source edition")
+    key = original_native_identity(original, metadata)
+    if record.get("selection_id") != key:
+        return None
+    prefix = PurePosixPath("native-original") / model / key
+    seen = set()
+    for descriptor in record.get("outputs", []):
+        name = descriptor.get("path")
+        path = PurePosixPath(name) if isinstance(name, str) else None
+        if (path is None or path.is_absolute() or path.as_posix() != name
+                or "\\" in name or "\0" in name or ".." in path.parts
+                or path.parts[:3] != prefix.parts or len(path.parts) < 4
+                or name in seen):
+            raise ValueError("The completed native output inventory changed")
+        seen.add(name)
+        verify_file(receiving, descriptor)
+    for pollutant, _, _ in OUTPUTS[model]:
+        retained_native_export(receiving, record, model, pollutant)
+    emit("native-original-reused", model=model, path=str(receiving / prefix),
+         runtime=record["runtime"], execution="verified retained completed result")
+    return record
+
+
+def native_reference(receiving, original, module, metadata, progress, checkpoint):
+    model = original["model"]
+    cohort = native_cohort(metadata, model)
+    identity = original_native_identity(original, metadata)
     root = receiving / "native-original" / model / identity
     root.mkdir(parents=True, exist_ok=True)
     args = dict(original["absolute_arguments"])
@@ -804,8 +917,8 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--application", type=Path, required=True)
     p.add_argument("--workspace", type=Path, required=True)
-    p.add_argument("--inputs", type=Path, required=True,
-                   help="Directory containing the official NDR.zip and/or SDR.zip")
+    p.add_argument("--inputs", type=Path,
+                   help="Official NDR.zip/SDR.zip directory for first intake; omit to reopen verified retained originals")
     p.add_argument("--models", nargs="+", choices=("ndr", "sdr"), default=["ndr", "sdr"])
     p.add_argument("--mode", choices=("native", "workspace", "both"), default="both")
     p.add_argument("--archive", type=Path,
@@ -825,7 +938,6 @@ def main(argv=None):
     os.environ.setdefault("MKL_NUM_THREADS", "1")
     os.environ.setdefault("GDAL_CACHEMAX", "64")
     from model.common import held
-    from model.native import runtime
     from model.workspace import Workspace
     root = args.workspace.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -846,30 +958,43 @@ def main(argv=None):
                                                           encoding="utf-8"),
                                       logging.StreamHandler(sys.stderr)])
         try:
-            modules, metadata = runtime(active)
-            if metadata["version"] != RELEASE:
-                raise ValueError("The supplied native runtime must be InVEST 3.20.0")
-            state["runtime"] = metadata
             state["python"] = {"executable": sys.executable, "version": sys.version}
             state["request"] = {"mode": args.mode, "models": list(active),
-                                "application": str(application), "inputs": str(args.inputs.resolve())}
+                                "application": str(application),
+                                "inputs": str(args.inputs.resolve()) if args.inputs else None}
             state.pop("error", None)
             checkpoint()
-            emit("native-runtime-ready", python=sys.executable, runtime=metadata)
-            originals = {m: unpack_original(args.inputs, receiving, m) for m in active}
-            for model, original in originals.items():
-                for _, (key, _) in INPUTS[model].items():
-                    raster_identity(original["absolute_arguments"][key])
+            originals = {
+                model: (unpack_original(args.inputs, receiving, model) if args.inputs is not None
+                        else restored_original(receiving, model,
+                                               state.get("original_sources", {}).get(model)))
+                for model in active}
             state["original_sources"] = {**state.get("original_sources", {}), **originals}
             checkpoint()
             workspace = Workspace(root, create=True, title="Gura, Kenya — original InVEST 3.20.0 study")
             state["workspace_id"] = workspace.project["id"]
             checkpoint()
             if args.mode in ("native", "both"):
-                for model in active:
-                    native_reference(receiving, originals[model], modules[model], metadata, state, checkpoint)
+                pending = [model for model in active
+                           if completed_native_reference(receiving, originals[model], state) is None]
+                if pending:
+                    for model in pending:
+                        for _, (key, _) in INPUTS[model].items():
+                            raster_identity(originals[model]["absolute_arguments"][key])
+                    from model.native import runtime
+                    modules, metadata = runtime(pending)
+                    if metadata["version"] != RELEASE:
+                        raise ValueError("The supplied native runtime must be InVEST 3.20.0")
+                    state["runtime"] = metadata
+                    checkpoint()
+                    emit("native-runtime-ready", python=sys.executable, runtime=metadata)
+                    for model in pending:
+                        native_reference(receiving, originals[model], modules[model], metadata, state, checkpoint)
             run = None
             if args.mode in ("workspace", "both"):
+                for model in active:
+                    for _, (key, _) in INPUTS[model].items():
+                        raster_identity(originals[model]["absolute_arguments"][key])
                 run = workspace_baseline(workspace, receiving, originals, active, state, checkpoint)
                 comparisons = comparison_summary(workspace, receiving, run, state)
                 if comparisons:

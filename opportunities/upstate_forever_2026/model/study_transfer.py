@@ -368,7 +368,9 @@ class _Closure:
         for dependency in decisions.dependencies(record, self.workspace.project["id"]):
             self.need(dependency["kind"], dependency["id"], dependency["reason"],
                       required=dependency["required"])
-        for relative, expected in decisions.operation_members(self.workspace, [key]).items():
+        members = {**decisions.operation_members(self.workspace, [key]),
+                   **decisions.diagnostic_members(self.workspace, record)}
+        for relative, expected in members.items():
             self.add_file(relative, expected)
 
     def _visit(self, kind, key, reason):

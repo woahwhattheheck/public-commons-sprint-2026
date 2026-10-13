@@ -401,3 +401,70 @@ The installer also retains the additive `complete-native-sources.json` edition
 when supplied. The historical `complete-sources.json`, the separate native
 manifest and the canonical parent import manifest keep their original bytes
 and paths.
+
+
+## Save the complete contributing footprint of a utility
+
+The Regional watersheds desk now reads the original retained
+`source/receptor-topology/20261013/utility-focus-profile.json` alongside
+the saved regional report. Each utility choice joins its original focus
+anchors to the complete native HUC12/ToHUC network in that report. It saves
+the distinct upstream model-domain HUC12s and anchors as one original
+selection. The existing four-anchor export remains separately labelled.
+
+For the retained source edition, ARJWS selects four HUC12s and Pioneer
+(PRWD) selects 32. Their actual HUC12 sets are disjoint. The reusable
+selection logic traverses the supplied native links; it does not assume
+those counts or determine drainage from HUC prefixes. Known upstream
+source HUCs outside the selected model domain remain explicitly listed.
+A report built without its native network provides an explanation and the
+existing source/network build controls.
+
+The selection keeps three distinct areas: original whole-HUC planning
+units, published intake-protection polygons, and the retained native
+reporting mask. NRCS `huc12_ac` counts each selected watershed once;
+`st_ac` counts each original state–HUC portion once. USGS published
+`areasqkm` remains in the original topology source and is not substituted
+for NRCS acreage-derived report area.
+
+`Ground`, `Surface` and `Both` retain their original NRCS programme
+labels. The designated state-portion table reports each label separately
+and preserves unknown source acreage. The source labels describe programme
+context, not measured intake quality or InVEST subsurface coefficients.
+SCDES counts retain their publisher-HUC assignment and SC jurisdiction.
+
+Saving uses the existing `watershed.context.export` action with the
+actual `report_id` and the displayed `utility_key`. The server reloads
+the original profile and derives the same membership from the saved
+report before exporting. The utility key includes the complete report,
+profile byte identity, source anchors, membership, original state rows and
+programme summaries. A changed profile creates another selection.
+
+The saved export includes:
+
+- The original utility profile bytes and their declared SHA-256.
+- Complete selected-watershed JSON and per-HUC CSV.
+- `utility-watershed-memberships.csv`, with original HUC12/ToHUC text,
+  utility/receptor identity, anchor flag, whole-HUC acres, state labels and
+  source/report identity for a direct GIS attribute join.
+- `selected-watershed-state-records.csv`, preserving every original
+  source field on its state–HUC row.
+- `selected-programme-designations.csv`, with original labels, designated
+  acreage, known acreage and missing-area counts.
+- HTML and Markdown briefs with the utility footprint, anchor IDs,
+  designated programme areas, source jurisdiction, membership and references.
+- The original contributing-context CSV, when present.
+
+Reopen the saved utility selection from the desk's existing selection
+list. The selection keeps the same parent report and verified original
+file downloads. Brief format v4 produces a new export identity; earlier
+saved v3 exports retain their original files.
+
+The scientific unit interpretation remains unchanged: InVEST 3.20 native
+N/P export rates are kg/ha/year and sediment export rates are metric
+tonnes/ha/year. Native cell mass uses the actual cell hectares once;
+reporting overlaps and paired finite support retain the original model
+calculation. The utility source selection itself computes no pollutant load.
+
+See the [complete original two-utility source study](../source/utility-source-context/20261013/README.md)
+for the independently traversed source records and runnable Node source join.

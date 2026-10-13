@@ -1,6 +1,6 @@
 # Utility-focus microbial study in the scientific Workspace
 
-The received source edition contains **730 original E. coli activities at 36 stations**, covering the 2021–2025 query period. The maintained Station geography service links those observations to their original WQP map points and, when selected, the original 217-HUC watershed domain. This receiver supplies the complete native selection, imports the source companions and saves the resulting study in the existing desk.
+The received source edition contains **730 original E. coli activities at 36 stations**, covering the 2021–2025 query period. The maintained Station geography service links those observations to their original WQP coordinate records and, when selected, the original 217-HUC watershed domain. This receiver supplies the complete native selection, imports the source companions and saves the resulting study in the existing desk.
 
 The complete manifest, raw publisher responses, reproducible Node compiler, offline map and record explorer were delivered together in [PR 2988](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2988), under source/ecoli_utility_context/20261013/.
 
@@ -54,6 +54,16 @@ utility-microbial-studies/<operation-id>/
 ~~~
 
 The receiving.json record appears when the native build completes. The Station geography engine owns the actual saved maps, report and complete portable ZIP.
+
+## Preserve the original station coordinate systems
+
+The native study reads the source's original station CSV coordinate strings. Its 34 WGS84 stations use EPSG:4326. USGS-02177000 and 21GAEPD_WQX-RV_01_266 declare NAD83 and use EPSG:4269. The maintained Station geography reader performs the CRS transformation for each source group before any original watershed membership calculation.
+
+Preparation retains two ordinary vector sources, one per declared datum. The source GeoJSON preserves the original numeric positions at the precision represented by the CSV, every original station attribute, the original coordinate strings and source row. Its `coordinate-derivation.json` records the 36 exact identifiers, original CSV body hash, fields and datum grouping. All 22 original microbial files travel as companions under `original/`, keeping the offline report and its source links intact. The native coordinate collection is recorded in `selection.microbial_context.coordinate_source_collection_id`.
+
+The complete source edition remains unchanged. Its independent offline map retains the original WQP display positions. A native study uses the datum-specific coordinate sources, so a new operation identity distinguishes this selection from an earlier common-display-point selection. Existing saved editions reopen with their own retained original selections.
+
+The native coordinate working material is retained in `utility-microbial-coordinate-sources/<identity>/`. An ordinary full Workspace backup includes this directory and the imported source objects. A repeated preparation reconstructs the same native sources from the already retained original CSV and source collection.
 
 ## Select the original watershed domain
 

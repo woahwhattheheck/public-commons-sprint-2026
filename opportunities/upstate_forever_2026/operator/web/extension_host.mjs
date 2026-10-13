@@ -122,7 +122,8 @@ export function createExtensionHost(host) {
         if (!entry) return null;
         return entry.controller || {create: value => openExtension('programmes', 'create', value)};
       },
-      openExtension: (id, method, ...args) => openExtension(id, method, ...args)
+      openExtension: (id, method, ...args) => openExtension(id, method, ...args),
+      openDesk: (id, method, ...args) => openDesk(id, method, ...args)
     };
     return capabilities;
   }
@@ -236,7 +237,8 @@ export function createExtensionHost(host) {
         selection.workspace !== workspaceKey(lastState)) return;
     entry.mounted = true;
     entry.updatedState = lastState;
-    call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]);
+    selection.ready = Promise.resolve(call(entry, 'mount', entry.client.lifecycle?.mount || 'mount', [selection.node, lastState]));
+    return selection.ready;
   }
 
   function begin(entry, selection) {
@@ -245,10 +247,11 @@ export function createExtensionHost(host) {
       return;
     }
     status(selection.node, entry.client.view.title || entry.title, 'Opening workspace tools…');
-    controller(entry).then(
+    selection.ready = controller(entry).then(
       () => mountEntry(entry, selection),
       error => showFailure(entry, selection, error)
     );
+    selection.ready.catch(() => {});
   }
 
   async function load() {
@@ -407,6 +410,26 @@ export function createExtensionHost(host) {
     return instance[method](...args);
   }
 
+  /** Open a visible desk only after its original asynchronous mount has finished. */
+  async function openDesk(id, method, ...args) {
+    const entry = entries.get(id);
+    if (!entry || !member.test(method || '')) throw new Error('Choose a registered scientific desk and opening method.');
+    const selectedWorkspace = workspaceKey(host.getState());
+    await host.navigate(entry.client.view.id);
+    const selectedView = active;
+    const instance = await controller(entry);
+    if (destroyed || !selectedView || active !== selectedView || selectedView.entry !== entry ||
+        selectedView.workspace !== selectedWorkspace || workspaceKey(host.getState()) !== selectedWorkspace) {
+      throw new Error('The selected workspace or desk changed while opening this scientific record.');
+    }
+    await selectedView.ready;
+    if (destroyed || active !== selectedView || !entry.mounted || workspaceKey(host.getState()) !== selectedWorkspace) {
+      throw new Error('Reopen the selected scientific desk in its original workspace.');
+    }
+    if (typeof instance[method] !== 'function') throw new Error('The selected desk cannot open this retained record.');
+    return instance[method](...args);
+  }
+
   function detach() {
     const previous = deactivate();
     for (const entry of entries.values()) {
@@ -428,7 +451,7 @@ export function createExtensionHost(host) {
   }
 
   return {
-    load, render, update, dispatch, detach, destroy, openExtension, taskActions,
+    load, render, update, dispatch, detach, destroy, openExtension, openDesk, taskActions,
     title: view => {
       const entry = views.get(view);
       return entry ? entry.client.view.title || entry.title : null;
