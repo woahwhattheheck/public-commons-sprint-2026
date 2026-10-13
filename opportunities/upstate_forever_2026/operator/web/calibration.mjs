@@ -96,7 +96,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         closed();
       },
     };
-    const close=()=>session.release();
+    const close=()=>{if(!dialog?.open)session.release();};
     dialog?.addEventListener('close',close);
     activeForm=session;
     return session;
