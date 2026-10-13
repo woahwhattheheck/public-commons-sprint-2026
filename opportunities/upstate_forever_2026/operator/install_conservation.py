@@ -190,7 +190,8 @@ KNOWN_PRIOR = {
         "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d",
         "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b",
         "edae3aa44e2eef6ae09e0388772552aad492ec6daa1a9b28ba5bab1aef06ae41",
-        "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3"
+        "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3",
+        "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
