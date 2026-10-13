@@ -1,6 +1,8 @@
+import {createPortfolioPairingControls} from './portfolio_pairing.mjs';
+import {nativeModelsForOutputs,nativeCommonVersionIssues} from './native_versions.mjs';
 /* Conservation portfolio operator. Host supplies the existing workspace and task services. */
 export function attachPortfolio(host) {
-  const {getState,api,endpoint,openForm,submitAction,sourceForm,toast,openItem,executeAction,openExtension}=host;
+  const {getState,api,endpoint,openForm,submitAction,sourceForm,toast,openItem,executeAction,openExtension,refreshState}=host;
   const metrics=[['nitrogen_export','Nitrogen','kg/yr'],['phosphorus_export','Phosphorus','kg/yr'],['sediment_export','Sediment','t/yr']];
   const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
@@ -320,7 +322,8 @@ export function attachPortfolio(host) {
   function inventoryForm(){
     const owner=workspaceGeneration;
     const runs=records('runs').filter(r=>r.state==='complete'&&metrics.some(([key])=>r.artifacts?.[key]));
-    if(!runs.length)throw new Error('Complete a native model run before building its planning inventory.');
+    const baselines=runs.filter(run=>records('scenarios').some(s=>s.id===run.selection?.scenario_id&&s.kind==='baseline'));
+    if(!baselines.length)throw new Error('Complete an original native baseline before building its planning inventory.');
     const vectors=[];
     for(const collection of records('sources'))for(const entry of values(collection.entries)){
       if(entry.kind==='vector')vectors.push([encodeURIComponent(JSON.stringify([collection.id,entry.id])),label(collection)+' / '+label(entry)]);
@@ -329,7 +332,7 @@ export function attachPortfolio(host) {
     const runLabel=r=>label(records('scenarios').find(s=>s.id===r.selection?.scenario_id)||r)+' · '+r.id.slice(0,10);
     const html='<div class="portfolio-workspace">'+
       field('title','Inventory title','Native planning inventory','required')+
-      select('baseline_run_id','Completed native baseline',runs.map(r=>[r.id,runLabel(r)]),runs[0].id)+
+      select('baseline_run_id','Completed native baseline',baselines.map(r=>[r.id,runLabel(r)]),baselines[0].id)+
       '<label class="pf-field"><span>Completed land-cover alternatives</span><select name="scenario_run_ids" multiple size="5"></select><small>Optional. Alternatives use the same original grid and parameter profile.</small></label>'+
       select('polygon_source','Original polygon source',vectors,vectors[0][0])+
       '<div class="pf-grid-two">'+field('layer','Source layer','','','Leave blank to use the retained source layer.')+
@@ -341,7 +344,7 @@ export function attachPortfolio(host) {
       if(!baseline||!choices)return;
       const update=()=>{
         const selected=runs.find(r=>r.id===baseline.value);
-        const alternatives=runs.filter(r=>r.id!==selected?.id&&r.selection?.grid_id===selected?.selection?.grid_id&&r.selection?.profile_id===selected?.selection?.profile_id&&r.selection?.invest_version===selected?.selection?.invest_version&&metrics.some(([key])=>r.artifacts?.[key]&&selected?.artifacts?.[key]));
+        const alternatives=runs.filter(r=>r.id!==selected?.id&&r.selection?.grid_id===selected?.selection?.grid_id&&r.selection?.profile_id===selected?.selection?.profile_id&&metrics.some(([key])=>r.artifacts?.[key]&&selected?.artifacts?.[key]));
         choices.innerHTML=alternatives.map(r=>'<option value="'+esc(r.id)+'">'+esc(runLabel(r))+'</option>').join('');
       };
       baseline.addEventListener('change',update);update();
@@ -352,26 +355,53 @@ export function attachPortfolio(host) {
       const [source_collection_id,source_id]=JSON.parse(decodeURIComponent(read('polygon_source')));
       const payload={title:read('title'),baseline_run_id:read('baseline_run_id'),scenario_run_ids:f.getAll('scenario_run_ids').map(String),source_collection_id,source_id,unit_kind:read('unit_kind')};
       if(!payload.title)throw new Error('Name the planning inventory.');
+      const selectedRuns=[payload.baseline_run_id,...payload.scenario_run_ids].map(id=>runs.find(run=>run.id===id));
+      const shared=metrics.map(([key])=>key).filter(key=>selectedRuns.every(run=>run?.artifacts?.[key]));
+      if(!shared.length)throw new Error('Choose runs sharing at least one native pollutant output.');
+      const versionIssues=nativeCommonVersionIssues(selectedRuns,nativeModelsForOutputs(shared));
+      if(versionIssues.length)throw new Error(versionIssues.join(' '));
       if(read('layer'))payload.layer=read('layer');
       if(read('feature_id_field'))payload.feature_id_field=read('feature_id_field');
       return submitAction('portfolio.inventory.build',payload);
     },setup);
+  }
+  function pairedControls(id,owner,onChange){
+    return createPortfolioPairingControls({api,endpoint,getState,portfolioId:id,
+      assertCurrent:()=>assertWorkspace(owner),onChange});
   }
   function analysisForm(id){
     const r=record(id);if(!r)throw new Error('Open the saved portfolio to compare its native scenarios.');
     if(typeof openExtension!=='function')throw new Error('The scenario-analysis desk is unavailable in this operator.');
     const owner=workspaceGeneration,runs=linkedRuns(r);
     if(!runs.length)throw new Error('Complete a selected portfolio scenario before comparing its native result.');
+    const pairing=pairedControls(id,owner);
     const html='<div class="portfolio-workspace">'+
       field('title','Analysis title',(r.title||'Portfolio')+' native scenario analysis','required')+
       select('evaluation_run_id','Completed portfolio scenario',runs.map(run=>[run.id,label(run)]),runs[0].id)+
-      note('The scenario-analysis desk opens with the original baseline and selected evaluation. Its form retains the available pollutants and allows explicit source zones and planning weights.')+'</div>';
-    openForm('Compare portfolio native scenarios','Continue from the actual saved runs.',html,'Open analysis',async form=>{
+      pairing.html()+note('The original analysis form receives the actual matched baseline and evaluation. Retained planning areas and explicit weights can be selected there.')+'</div>';
+    const setup=()=>{
+      const form=document.getElementById('operation-form'),run=form.querySelector('[name="evaluation_run_id"]');
+      pairing.mount(form);run.addEventListener('change',()=>pairing.load(run.value));pairing.load(run.value);
+    };
+    openForm('Compare portfolio native scenarios','Continue from an actual matched native baseline and evaluation.',html,'Open analysis',async form=>{
       assertWorkspace(owner);
-      const f=submitted(form),runId=String(f.get('evaluation_run_id')||'');
+      const f=submitted(form),runId=String(f.get('evaluation_run_id')||''),title=String(f.get('title')||'').trim();
+      if(!title)throw Error('Name this native scenario analysis.');
       if(!linkedRuns(r).some(run=>run.id===runId))throw new Error('Select a completed native evaluation of this portfolio.');
-      return openExtension('scenario-analysis','create',{workspace_key:getState()?.workspace_key,selection:{title:String(f.get('title')||'').trim(),baseline_run_id:r.context.baseline_run_id,scenario_run_ids:[runId]}});
-    });
+      const selected=pairing.selection(runId);
+      let baselineId=selected.baseline_run_id;
+      if(!baselineId){
+        if(typeof refreshState!=='function')throw Error('Receive the current original portfolio host refresh capability before completing this continuation.');
+        const task=await submitAction('portfolio.baseline.complete',{portfolio_id:id,evaluation_run_id:runId,title});
+        const result=await completed(task,endpoint('/api/task'),owner);
+        assertWorkspace(owner);
+        if(result?.schema!=='upstate.portfolio-baseline-completion/v1'||result.portfolio_id!==id||
+           result.evaluation_run_id!==runId||!result.baseline_run_id)throw Error('Open the original baseline completion task to inspect its actual result.');
+        await refreshState();assertWorkspace(owner);baselineId=result.baseline_run_id;
+      }
+      return openExtension('scenario-analysis','create',{workspace_key:getState()?.workspace_key,
+        selection:{title,baseline_run_id:baselineId,scenario_run_ids:[runId]}});
+    },setup);
   }
   function chooseNative(id){
     const r=record(id);if(!r)throw new Error('Open the saved portfolio before preparing a native run.');
@@ -428,10 +458,11 @@ export function attachPortfolio(host) {
   function decisionForm(id){
     const r=record(id);if(!r)throw new Error('Open the saved portfolio before building its decision desk.');
     const context=r.context||{},runs=linkedRuns(r),owner=workspaceGeneration;
+    const pairing=pairedControls(id,owner);
     const html='<div class="portfolio-workspace">'+note('Choose the completed native run of the selected combination. The decision desk compares actual whole-scenario nutrient and sediment exports against a compatible baseline.')+
       field('title','Report title',(r.title||'Portfolio')+' decision desk','required')+
       select('evaluation_run_id','Completed portfolio evaluation',[['','Choose a completed native run'],...runs.map(run=>[run.id,label(run)])],'')+
-      '<label class="pf-check"><input type="checkbox" name="run_missing_baseline" checked><span>Run the original matching baseline if needed</span></label>'+note('The completed evaluation and its matching baseline feed the whole-scenario comparison.')+'<details><summary>Project economics</summary>'+note('Enable economics when you can supply its basis, operating assumptions and dated source. You can build the physical comparison now and add economics in a later report.')+
+      pairing.html()+note('The completed evaluation and its matching baseline feed the whole-scenario comparison.')+'<details><summary>Project economics</summary>'+note('Enable economics when you can supply its basis, operating assumptions and dated source. You can build the physical comparison now and add economics in a later report.')+
       select('economics_basis','Cost basis',[['','Physical comparison'],['selected-parcel-capital','Selected planning unit estimates are capital cost'],['selected-parcel-annual-operating','Selected planning unit estimates are annual operating cost'],['whole-scenario','Supply complete whole-scenario costs']],'')+
       '<div class="pf-grid-two">'+field('capital','Whole-scenario capital USD','','type="number" min="0" step="0.01"','Required unless capital comes from the selected planning unit estimates.')+
       field('annual_operating','Annual operating USD','','type="number" min="0" step="0.01"','Required unless operating cost comes from the selected planning unit estimates. Enter 0 explicitly when appropriate.')+
@@ -444,8 +475,9 @@ export function attachPortfolio(host) {
     openForm('Build the decision desk','Use completed native results and the project cost assumptions.',html,'Build decision desk',async form=>{
       assertWorkspace(owner);
       const f=submitted(form),read=k=>String(f.get(k)||'').trim();
-      const payload={portfolio_id:id,title:read('title'),evaluation_run_id:read('evaluation_run_id'),run_missing_baseline:!!f.get('run_missing_baseline')};
+      const payload={portfolio_id:id,title:read('title'),evaluation_run_id:read('evaluation_run_id')};
       if(!payload.evaluation_run_id)throw new Error('Choose a completed native evaluation.');
+      Object.assign(payload,pairing.selection(payload.evaluation_run_id));
       const basis=read('economics_basis');
       if(basis){
         const economics={basis,currency:'USD',source:{title:read('source_title'),uri:read('source_uri'),as_of:read('source_as_of')}};
@@ -470,47 +502,44 @@ export function attachPortfolio(host) {
       }
       if(Object.keys(targets).length)payload.decision={targets};
       return submitAction('portfolio.decision.build',payload);
+    },()=>{
+      const form=document.getElementById('operation-form'),run=form.querySelector('[name="evaluation_run_id"]');
+      pairing.mount(form);run.addEventListener('change',()=>pairing.load(run.value));pairing.load(run.value);
     });
-  }
-  function pairedBaselineIds(portfolio,runId){
-    const run=records('runs').find(item=>item.id===runId);
-    const original=records('runs').find(item=>item.id===portfolio.context?.baseline_run_id);
-    if(!run||!original)return new Set();
-    const scope=item=>JSON.stringify([...(item.selection?.models||['ndr','sdr'])].sort());
-    return new Set(records('runs').filter(base=>base.state==='complete'&&
-      base.selection?.scenario_id===original.selection?.scenario_id&&
-      ['grid_id','profile_id','invest_version'].every(key=>base.selection?.[key]===run.selection?.[key])&&
-      scope(base)===scope(run)).map(base=>base.id));
   }
   function reportForm(id){
     const r=record(id);if(!r)throw new Error('Open the saved portfolio before building its report.');
     const runs=linkedRuns(r),owner=workspaceGeneration;
-    const compatible=runId=>{const baselines=pairedBaselineIds(r,runId);return records('comparisons').filter(c=>baselines.has(c.baseline_run_id)&&arr(c.alternatives).some(a=>a.run_id===runId));};
+    let form=null;
+    const compatible=(runId,baselineId)=>baselineId?records('comparisons').filter(c=>
+      c.baseline_run_id===baselineId&&arr(c.alternatives).some(a=>a.run_id===runId)):[];
+    const pairing=pairedControls(id,owner,(_,baselineId)=>{
+      if(!form)return;
+      const run=form.querySelector('[name="evaluation_run_id"]'),comparison=form.querySelector('[name="comparison_id"]');
+      const options=[['','Build comparison from the selected original runs'],...compatible(run.value,baselineId).map(c=>[c.id,label(c)])];
+      comparison.innerHTML=options.map(([v,t])=>'<option value="'+esc(v)+'">'+esc(t)+'</option>').join('');
+      comparison.disabled=!run.value;
+    });
     const html='<div class="portfolio-workspace">'+
       field('title','Report title',(r.title||'Portfolio')+' report','required')+
       select('evaluation_run_id','Report contents',[['','Planning portfolio and planning unit selection'],...runs.map(run=>[run.id,'Include native evaluation: '+label(run)])],'')+
-      select('comparison_id','Existing compatible comparison',[['','Build the comparison from retained native results']],'')+
-      note('Select a completed portfolio evaluation to include its native quantitative result. A planning report presents the planning unit selection, costs and preference sensitivity.')+'</div>';
+      pairing.html()+select('comparison_id','Existing compatible comparison',[['','Build comparison from the selected original runs']],'')+
+      note('The quantitative report retains the actual comparison baseline, evaluation, observed engine versions and original screening baseline separately.')+'</div>';
     const setup=()=>{
-      const form=document.getElementById('operation-form'),run=form?.querySelector('[name="evaluation_run_id"]'),comparison=form?.querySelector('[name="comparison_id"]');
-      if(!run||!comparison)return;
-      const update=()=>{
-        const options=[['','Build the comparison from retained native results'],...compatible(run.value).map(c=>[c.id,label(c)])];
-        comparison.innerHTML=options.map(([v,t])=>'<option value="'+esc(v)+'">'+esc(t)+'</option>').join('');
-        comparison.disabled=!run.value;
-      };
-      run.addEventListener('change',update);update();
+      form=document.getElementById('operation-form');
+      const run=form.querySelector('[name="evaluation_run_id"]');
+      pairing.mount(form);run.addEventListener('change',()=>pairing.load(run.value));pairing.load(run.value);
     };
-    openForm('Build portfolio report','Choose planning contents or the completed native evaluation.',html,'Build report',async form=>{
+    openForm('Build portfolio report','Choose planning contents or the completed native evaluation.',html,'Build report',async submittedForm=>{
       assertWorkspace(owner);
-      const f=submitted(form),read=k=>String(f.get(k)||'').trim(),evaluation=read('evaluation_run_id');
+      const f=submitted(submittedForm),read=k=>String(f.get(k)||'').trim(),evaluation=read('evaluation_run_id');
       const payload={portfolio_id:id,title:read('title')};
       if(!payload.title)throw new Error('Provide a report title.');
       if(evaluation){
         if(!linkedRuns(r).some(run=>run.id===evaluation))throw new Error('Choose a completed evaluation of this portfolio on its original grid.');
-        payload.evaluation_run_id=evaluation;
+        payload.evaluation_run_id=evaluation;Object.assign(payload,pairing.selection(evaluation));
         if(read('comparison_id')){
-          if(!compatible(evaluation).some(c=>c.id===read('comparison_id')))throw new Error('Choose a comparison containing this evaluation and its matching baseline.');
+          if(!compatible(evaluation,payload.baseline_run_id).some(c=>c.id===read('comparison_id')))throw new Error('Choose the original comparison for this exact baseline and evaluation.');
           payload.comparison_id=read('comparison_id');
         }
       }

@@ -751,6 +751,8 @@ def install(source, output, archive):
                    "retained_stage": str(staging),
                    "retained_application": str(root) if root.is_dir() else None,
                    "completed_steps": steps, "traceback": traceback.format_exc()}
+        if getattr(error, "component_closure", None) is not None:
+            details["component_inventory"] = error.component_closure
         try:
             retained = owned_inventory(root) if root.is_dir() else {}
             details["changed_files"] = [
@@ -795,6 +797,8 @@ def main(argv=None):
         if details is None:
             details = {"state": "error", "error": type(error).__name__,
                        "message": str(error), "traceback": traceback.format_exc()}
+        if getattr(error, "component_closure", None) is not None:
+            details["component_inventory"] = error.component_closure
         print(json.dumps(details, ensure_ascii=False), file=sys.stderr)
         return 1
 

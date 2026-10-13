@@ -1,5 +1,5 @@
 /* Native watershed-report generation and receiving controls for the maintained operator. */
-export const VERSION = '2026-10-13.3';
+export const VERSION = '2026-10-13.4';
 export const FOCUS_HUCS = ['030601010703','030601010704','030601020507','030601020502'];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const text = value => String(value ?? '');
@@ -32,6 +32,34 @@ export function cohortRuns(catalog, baselineId, includeParameterChanges=false) {
   })};
 }
 
+export function reportDeliveryContext(value,{complete=true}={}) {
+  if (value.delivery_mode===undefined) {
+    if (value.native_study!==undefined) throw Error('Choose Original native study for its retained study context.');
+    return {};
+  }
+  if (!['regional_rfp','native_study'].includes(value.delivery_mode)) throw Error('Choose a report delivery mode.');
+  const context={delivery_mode:value.delivery_mode};
+  if (value.delivery_mode==='regional_rfp') {
+    if (value.native_study!==undefined) throw Error('Original study metadata belongs to native-study mode.');
+    return context;
+  }
+  const study=value.native_study;
+  if (!study || typeof study!=='object' || Array.isArray(study) ||
+      Object.keys(study).some(key=>!['title','purpose','reference'].includes(key))) {
+    throw Error('Retain the original study title, purpose and optional reference.');
+  }
+  context.native_study={};
+  for (const key of ['title','purpose']) {
+    if (typeof study[key]!=='string' || (complete&&!study[key].trim())) throw Error('Enter the original study '+key+'.');
+    context.native_study[key]=study[key].trim();
+  }
+  if (study.reference!==undefined&&study.reference!==null) {
+    if (typeof study.reference!=='string') throw Error('The original study reference must be text.');
+    if (study.reference.trim()) context.native_study.reference=study.reference.trim();
+  }
+  return context;
+}
+
 export function selectionFromDraft(catalog,draft) {
   const {baseline,alternatives}=cohortRuns(catalog,draft.baseline_run_id,Boolean(draft.include_parameter_changes));
   if (!baseline) throw Error('Choose a completed reference run.');
@@ -48,7 +76,8 @@ export function selectionFromDraft(catalog,draft) {
   const title=text(draft.title).trim();
   if (!title) throw Error('Give this report a title.');
   const result={schema:'upstate.scenario-decision-selection/v1',title,
-    run_ids:[baseline.id,...chosen.map(run=>run.id)],pollutants,zones:[]};
+    run_ids:[baseline.id,...chosen.map(run=>run.id)],pollutants,zones:[],
+    ...reportDeliveryContext(draft)};
   if (draft.zone) {
     const zone=draft.zone;
     if (!zone.source_collection_id || !zone.source_id || !zone.id_field) throw Error('Choose the original polygon source and identity field.');
@@ -72,8 +101,16 @@ export function selectionFromDraft(catalog,draft) {
   return result;
 }
 
-export function economicReleaseSelection(release, editionId='') {
-  const selection={...release.selection};
+export function economicReleaseSelection(release, editionId='', deliveryMode=null) {
+  let selection={...release.selection};
+  if (deliveryMode!==null) {
+    selection.delivery_mode=deliveryMode;
+    if (deliveryMode==='regional_rfp') delete selection.native_study;
+    else if (deliveryMode==='native_study'&&!selection.native_study) {
+      selection.native_study={title:selection.title||'',purpose:'',reference:''};
+    }
+  }
+  selection={...selection,...reportDeliveryContext(selection,{complete:false})};
   if (!editionId) return selection;
   const edition=(release.economic_editions||[]).find(item=>item.id===editionId);
   if (!edition || !/^[0-9a-f]{64}$/.test(edition.id) ||
@@ -195,6 +232,11 @@ export function attachScenarioReports(context) {
     target.innerHTML='<form data-report-form><fieldset><legend>Build a watershed report</legend>'+
       '<div class="sr-grid"><label>Report title<input name="report_title" required maxlength="240" value="'+esc((catalog.project?.title||'Watershed')+' native export report')+'"></label>'+
       '<label>Reference run<select name="baseline_run_id">'+option('','Choose a completed reference run')+runs.map(run=>option(run.id,run.scenario_title+' · '+run.profile_title+' · '+(run.pollutants||[]).map(p=>labels[p]||p).join('/'),run.id===chosen.id)).join('')+'</select></label></div>'+
+      '<label>Delivery context<select name="report_delivery_mode">'+option('regional_rfp','Regional RFP')+option('native_study','Original native study')+'</select></label>'+
+      '<div data-report-study hidden><div class="sr-grid"><label>Original study title<input name="study_title" maxlength="240" value="'+esc(catalog.project?.title||'')+'"></label>'+
+      '<label>Original study reference<input name="study_reference" maxlength="2000"></label></div>'+
+      '<label>Original study purpose<textarea name="study_purpose" rows="3" maxlength="4000"></textarea></label>'+
+      '<p class="sr-note">These original study fields stay with the saved report, its economic editions and the prepared map release.</p></div>'+
       '<label class="sr-check"><input type="checkbox" name="include_parameter_changes"> Include alternatives with different parameter profiles</label>'+
       '<div data-report-alternatives></div><div data-report-pollutants></div>'+
       '<h4>Watershed scope</h4><p class="sr-note">The retained reporting area and hydrologic model domain are always included. Add the original utility, HUC or other polygon source for individual watershed rows.</p>'+
@@ -204,7 +246,8 @@ export function attachScenarioReports(context) {
       '<div class="sr-actions"><button type="submit">Build and save report</button>'+button('cancel','Close controls')+'</div>'+
       '</fieldset></form>';
     const form=$('[data-report-form]');
-    if(saved)fillControls(saved.values||{},['report_title','baseline_run_id','include_parameter_changes']);
+    if(saved)fillControls(saved.values||{},['report_title','baseline_run_id','include_parameter_changes','report_delivery_mode','study_title','study_purpose','study_reference']);
+    syncStudyControls();
     if(missingReference)$('[name="baseline_run_id"]').value='';
     renderAlternatives();
     if(saved) {
@@ -301,11 +344,24 @@ export function attachScenarioReports(context) {
     if(note)note.textContent=current==='focus'?'Original HUC12: '+FOCUS_HUCS.join(', ')+'. Each polygon is reported separately.':
       current==='selected'?'IDs remain exact strings, including leading zeroes.':'Every selected original polygon becomes its own report zone. Overlapping watershed totals remain separate.';
   }
+  function syncStudyControls() {
+    const container=$('[data-report-study]');
+    if(!container)return;
+    const active=val('report_delivery_mode')==='native_study';
+    container.hidden=!active;
+    for(const field of container.querySelectorAll('input,textarea')) {
+      field.disabled=!active;
+      field.required=active&&field.name!=='study_reference';
+    }
+  }
   function draft() {
     const value={title:val('report_title'),baseline_run_id:val('baseline_run_id'),
       include_parameter_changes:checked('include_parameter_changes'),
       alternative_run_ids:$$('input[name="alternative_run_id"]:checked').map(x=>x.value),
-      pollutants:$$('input[name="pollutant"]:checked').map(x=>x.value)};
+      pollutants:$$('input[name="pollutant"]:checked').map(x=>x.value),
+      delivery_mode:val('report_delivery_mode')||'regional_rfp'};
+    if(value.delivery_mode==='native_study')value.native_study={
+      title:val('study_title'),purpose:val('study_purpose'),reference:val('study_reference')};
     if(val('zone_source')!=='') {
       if(!sourceInfo||!sourceChoice||sourceIdentity(sourceChoice)!==val('zone_source')||!/polygon/i.test(sourceInfo.geometry_type||''))throw Error('Finish choosing the original watershed polygon layer.');
       value.zone={...sourceChoice,layer:val('zone_layer')||sourceInfo.selected_layer,
@@ -339,7 +395,7 @@ export function attachScenarioReports(context) {
     return '<section class="sr-release" aria-label="Map releases from this report"><h4>Map release</h4>'+
       '<p>Use this saved reference and every alternative for the map atlas. The original report, annual totals, comparison tables and watershed geometry travel with the release.</p>'+
       (issues.length?'<ul>'+issues.map(item=>'<li>'+esc(item.message)+'</li>').join(''):'')+
-      (release.ready?'<label>Delivery mode<select name="release_delivery_mode">'+option('regional_rfp','Regional RFP · seven map families')+option('native_study','Original native study · retain original grid and domain')+'</select></label>':'')+
+      (release.ready?'<label>Delivery mode<select name="release_delivery_mode">'+option('regional_rfp','Regional RFP · seven map families',(release.selection?.delivery_mode||'regional_rfp')==='regional_rfp')+option('native_study','Original native study · retain original grid and domain',release.selection?.delivery_mode==='native_study')+'</select></label>':'')+
       (release.ready&&editions.length?'<label>Economic decision edition<select name="release_economic_edition">'+
         option('','Physical report and maps')+editions.map(item=>option(item.id,item.title+' / '+item.zone_title+' / '+item.costed_count+' costed alternatives')).join('')+
         '</select></label><p class="sr-note">Include this completed edition’s selected-zone costs, budgets, physical response and original decision package in the client report.</p>':'')+
@@ -365,8 +421,7 @@ export function attachScenarioReports(context) {
       message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
       return;
     }
-    const selection={...economicReleaseSelection(release,economicEditionId),delivery_mode:deliveryMode};
-    if(deliveryMode==='native_study')selection.native_study={title:selection.title||'Original native watershed study',purpose:'Interpret the retained baseline and land-cover alternatives on their original study grid and reporting domain.',reference:''};
+    const selection=economicReleaseSelection(release,economicEditionId,deliveryMode);
     await openExtension('map-atlas','create',{workspace_key:key,selection});
   }
   async function openLinkedRelease(id) {
@@ -465,7 +520,8 @@ export function attachScenarioReports(context) {
       const readSource=layer=>{const loading=loadSource(layer),generation=sourceGeneration;return loading.then(applied=>{if(applied&&ownsForm()&&generation===sourceGeneration)remember();});};
       Promise.resolve().then(()=>{
         if(!ownsForm())return;
-        if(name==='baseline_run_id'||name==='include_parameter_changes')renderAlternatives();
+        if(name==='report_delivery_mode')syncStudyControls();
+        else if(name==='baseline_run_id'||name==='include_parameter_changes')renderAlternatives();
         else if(name==='alternative_run_id')renderPollutants();
         else if(name==='zone_source')return readSource();
         else if(name==='zone_layer')return readSource(event.target.value);

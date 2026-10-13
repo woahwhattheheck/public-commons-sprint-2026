@@ -76,3 +76,12 @@ When a report producer changes after a partial economic export, its new outcome
 is retained under the original zone's `editions/<outcome-id>` directory. The
 previous completed economic edition remains intact. Reopening verifies the
 original zone, report identity, manifest members and associated package ZIP.
+
+
+## Original study context through reports and client delivery
+
+New automatic watershed reports retain `delivery_mode: native_study` before the report identity is calculated. The early reference report and full comparison use the saved plan’s exact `study`, `purpose` and `source_reference`; the native-study release driver shares its existing explicit original-study declaration with its newly built source report. The baseline, ordered alternatives, original reporting/model grid, native output units and watershed selections remain those of the retained operation.
+
+Open the saved report in **Watershed reports**, then use **Economic desk** for its original reporting zone. **Prepare client report** carries that report’s study mode and original title, purpose and reference into the atlas alongside the exact report and economic-edition identities. The report’s **Map release** selector also displays the saved mode. A reference-only report retains its original annual totals; a map release still requires the completed baseline and explicit land-cover alternatives supported by the selected native engines.
+
+The comparison keeps its original `report-selection.json`. Each current request is also retained under `report-selections/<selection-sha256>.json` and named by `progress.json.report_selection`. A partially completed pre-context operation verifies the same physical cohort and watershed selection before retaining the enriched request, so it can continue its existing native runs. Completed reports and economic editions remain available with their original identities. For an older report without a saved delivery context, choose **Original native study** in its Map release or atlas controls and enter the actual original study purpose before building.

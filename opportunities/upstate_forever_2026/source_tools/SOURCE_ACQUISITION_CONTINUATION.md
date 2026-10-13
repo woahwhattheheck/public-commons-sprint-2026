@@ -84,7 +84,13 @@ response companions.
 
 `inspect` and `overview` return `implementation_changed`, live `continuation`
 counts, and `continued_as` successors, including for completed acquisitions.
-Successor discovery reads child provenance and does not rewrite old records.
+Status polling reads each acquisition's compact state once per overview and shares
+that snapshot for predecessor and successor navigation. New continuations retain a
+small `continuation-metadata.json` index that omits the predecessor selection body;
+older continuations derive the same navigation from retained state. Polling reads
+the small reuse summary without loading query WKT, full selection documents, or
+embedded predecessor bodies. Full immutable provenance remains in exports.
+Successor discovery does not rewrite old records.
 
 The counters `reused_requests`, `reused_bytes`, `reused_stored_bytes`,
 `successful_responses` and `retained_failures` are also grouped by family.

@@ -763,6 +763,8 @@ class TransferStore:
                 "file_count": len(value["members"]) - 1, "logical_bytes": logical,
                 "unique_bytes": request["bytes_total"], "deduplicated_bytes": logical - request["bytes_total"],
                 "request": request,
+                **({"source_acquisitions": value["archive"]["source_acquisitions"]}
+                   if "source_acquisitions" in value["archive"] else {}),
                 "files": [{"path": name, "bytes": item["bytes"], "sha256": item["sha256"],
                            "blocks": len(item["blocks"])} for name, item in sorted(value["members"].items())],
                 "next_operation": "materialize_archive then original portable.restore" if request["complete"] else "receive missing blocks"}

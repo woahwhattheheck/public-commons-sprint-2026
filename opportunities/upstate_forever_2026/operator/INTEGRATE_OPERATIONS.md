@@ -92,7 +92,7 @@ At least one complete file or edit is required. Duplicate JSON keys, non-finite 
 
 An absent complete file can be created. An identical retained file is reused. A different existing complete file is replaced only when its digest equals expected_previous_sha256. Without that guard the receiver reports the differing path and preserves it.
 
-Edits apply to the current complete source, preserving unrelated text. For each edit, a unique complete after anchor is recognized first, including insertions whose after text contains the original before anchor. Otherwise one unique before anchor is replaced, provided the after anchor is absent. Ambiguous anchors are reported with the exact edit ID. Multiple edits on the same file are composed in their listed order.
+Edits apply to the current complete source, preserving unrelated text. For each edit, a unique complete after anchor is recognized first when no before anchor extends outside it, including insertions whose after text contains the original before anchor. Otherwise one unique before anchor is replaced when the after anchor is absent, or when its single complete occurrence is wholly contained inside that before anchor. This permits an exact contraction, such as removing a condition while retaining its body, and recognizes the result on retry. Duplicate anchors, outside matches and matches extending across the original boundary remain conflicts with the exact edit ID. Multiple edits on the same file are composed in their listed order.
 
 A complete file and edits may target the same path. Those edits compose on the supplied complete content; the final postimage or the supplied unedited content may already be retained. Updating any other existing complete content still requires expected_previous_sha256.
 
