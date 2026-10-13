@@ -232,6 +232,63 @@ def _selected_outputs(selection):
     return [key for key, (model, _, _) in POLLUTANTS.items() if model in models]
 
 
+
+def _native_execution(run, *, require_supported=True):
+    """Resolve the maintained per-model provenance for this rate-unit adapter."""
+    from .native_versions import POLICY, model_versions, native_version
+    selected = _selected_models(run["selection"])
+    versions = model_versions(run, selected)
+    supported = all(row["comparison_version"] == INVEST_VERSION for row in versions.values())
+    result = {
+        "policy": POLICY, "unit_contract_version": INVEST_VERSION,
+        "supported": supported, "run_version": native_version(run),
+        "model_versions": versions, "runtime_history": _copy(run.get("runtime_history", [])),
+    }
+    if require_supported and not supported:
+        incompatible = [
+            name.upper() + "=" + str(row["comparison_version"]) + " (" + row["basis"] + ")"
+            for name, row in versions.items() if row["comparison_version"] != INVEST_VERSION
+        ]
+        raise ValueError(
+            "Conservation's native rate-unit adapter requires InVEST " + INVEST_VERSION +
+            " for each selected model; run " + str(run.get("id", "")) + " has " +
+            ", ".join(incompatible) + ". The retained requested version is " +
+            str(run.get("selection", {}).get("invest_version")) + ".")
+    return result
+
+
+def _bound_native_execution(workspace, state, *, require_supported=True):
+    """Reopen original run registries without changing a saved study's identity."""
+    result = {}
+    for key, bound in state["selection"]["bindings"]["runs"].items():
+        run = workspace.inspect_run(key)
+        if run["state"] != "complete" or run["selection"] != bound["selection"]:
+            raise ValueError("The completed native case differs from the original study: " + key)
+        execution = _native_execution(run, require_supported=require_supported)
+        if bound.get("execution") is not None and bound["execution"] != execution:
+            raise ValueError("The completed model execution provenance differs from the bound study: " + key)
+        expected = set(_selected_outputs(run["selection"]))
+        if set(bound["outputs"]) != expected:
+            raise ValueError("The bound output inventory differs from the original model selection: " + key)
+        for pollutant, output in bound["outputs"].items():
+            stage = run.get("stages", {}).get(output["stage"]) or {}
+            if not isinstance(stage.get("files"), dict):
+                raise ValueError("The original completed stage output registry is absent: " + key)
+            pairs = (
+                (stage["files"].get(output["output_id"]), output["rate"]),
+                (stage["files"].get(output["stream_id"]), output["stream"]),
+                (stage.get("arguments"), output["arguments"]),
+            )
+            if any(not isinstance(current, dict) or any(
+                    current.get(field) != retained.get(field)
+                    for field in ("path", "bytes", "sha256")) for current, retained in pairs):
+                raise ValueError("The native output registry differs from the bound original run: " + key)
+            if (output.get("execution") is not None
+                    and output["execution"] != execution["model_versions"][output["stage"]]):
+                raise ValueError("The output execution version differs from its original model stage: " + key)
+        result[key] = execution
+    return result
+
 def _native(workspace, spec):
     result, grid = {}, None
     if spec["mode"] == "source_context":
@@ -242,8 +299,7 @@ def _native(workspace, spec):
         run = workspace.inspect_run(key)
         if run["state"] != "complete":
             raise ValueError("Complete native run " + key + " before selecting its quantitative results")
-        if run["selection"].get("invest_version") != INVEST_VERSION:
-            raise ValueError("Conservation quantities require the retained InVEST " + INVEST_VERSION + " output-unit contract")
+        execution = _native_execution(run)
         selected_grid = workspace.get_grid(run["selection"]["grid_id"])
         if grid is not None and selected_grid["id"] != grid["id"]:
             raise ValueError("Baseline and alternatives must share the same retained reporting/model grid")
@@ -271,10 +327,11 @@ def _native(workspace, spec):
                 "stage": stage_name, "output_id": output_id, "rate": stage["files"][output_id],
                 "stream_id": stream_id, "stream": stage["files"][stream_id],
                 "arguments": stage["arguments"], "unit": unit,
+                "execution": _copy(execution["model_versions"][stage_name]),
             }
         result[key] = {
             "id": key, "selection": run["selection"], "completed_at": run.get("completed_at"),
-            "runtime": run.get("runtime"), "outputs": outputs,
+            "runtime": run.get("runtime"), "execution": execution, "outputs": outputs,
         }
     return result, grid
 
@@ -347,6 +404,7 @@ def _read_state(workspace, key):
 def inspect(workspace, key, *, include_candidates=True):
     state = _read_state(workspace, key)
     state["spec"] = state["selection"]["spec"]
+    state["native_execution"] = _bound_native_execution(workspace, state, require_supported=False)
     if include_candidates and state["state"] == "complete":
         path = verify_file(workspace.root, state["files"]["candidates"])
         state = {**state, "candidates": read_json(path)["candidates"]}
@@ -562,6 +620,7 @@ def _cost_table(workspace, state):
 
 def _open_native(workspace, state, stack):
     import rasterio
+    _bound_native_execution(workspace, state)
     opened, result, reference = {}, {}, None
     for key, run in state["selection"]["bindings"]["runs"].items():
         root = workspace.root / "runs" / key
@@ -1128,6 +1187,7 @@ def build(workspace, selection):
     directory = workspace.root / "conservation" / key
     with held(workspace.root / ".workspace.lock", blocking=False), held(directory / ".build.lock", blocking=False):
         state = _read_state(workspace, key)
+        _bound_native_execution(workspace, state)
         if state["state"] == "complete":
             for item in state["files"].values():
                 verify_file(workspace.root, item)
@@ -1317,6 +1377,7 @@ def save_plan(workspace, value):
     state = inspect(workspace, identifier(value.get("study_id")), include_candidates=True)
     if state["state"] != "complete":
         raise ValueError("Complete the candidate study before saving a portfolio")
+    _bound_native_execution(workspace, state)
     spec = _plan_spec(value, state)
     selection = {"version": VERSION, **spec, "candidates_sha256": state["files"]["candidates"]["sha256"],
                  "geometries_sha256": state["files"]["geometries"]["sha256"]}
@@ -1465,6 +1526,7 @@ def export_packet(workspace, study_id, plan_id=None):
     state = inspect(workspace, study_id, include_candidates=False)
     if state["state"] != "complete":
         raise ValueError("Complete the conservation study before exporting")
+    execution = _bound_native_execution(workspace, state)
     plan = get_plan(workspace, plan_id) if plan_id is not None else None
     if plan is not None and (plan["state"] != "complete" or plan["study_id"] != study_id):
         raise ValueError("Choose a completed portfolio from this exact study")
@@ -1472,8 +1534,11 @@ def export_packet(workspace, study_id, plan_id=None):
     root = workspace.root
     presentation = conservation_reporting.identity()
     # Rebuilt presentation has its own identity; prior study/plan bytes stay retained.
-    key = digest({"version": VERSION, "study_id": study_id, "plan_id": plan_id,
-                  "files": subject["files"], "presentation": presentation})
+    packet_selection = {"version": VERSION, "study_id": study_id, "plan_id": plan_id,
+                        "files": subject["files"], "presentation": presentation}
+    if execution:
+        packet_selection["native_execution"] = execution
+    key = digest(packet_selection)
     directory = root / "conservation-exports" / key
     with held(root / ".workspace.lock", blocking=False), held(directory / ".export.lock", blocking=False):
         record = directory / "export.json"
@@ -1484,6 +1549,11 @@ def export_packet(workspace, study_id, plan_id=None):
             verify_file(root, previous)
             return {**previous, "reused": True}
         members = {}
+        if execution:
+            execution_path = directory / "native-execution.json"
+            atomic_json(execution_path, {"schema": "upstate.conservation-native-execution/v1",
+                                        "study_id": study_id, "runs": execution}, immutable=True)
+            members["native-execution.json"] = (execution_path, describe_file(root, execution_path))
         for role, descriptor in subject["files"].items():
             if role == "footprint":
                 continue
