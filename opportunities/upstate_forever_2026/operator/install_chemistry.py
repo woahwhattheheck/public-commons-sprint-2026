@@ -144,6 +144,14 @@ COMPOSED_INTERVAL_PREVIOUS_SHA256 = {
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "75df65613e75aa3a505a5154ea451f4b88921ce75ffc36561308c42caaca4d4e"
 }
 
+LIFETIME_PREVIOUS_SHA256 = {
+    "operator/web/chemistry.mjs": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3",
+    "operator/web/chemistry-native.mjs": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a",
+    "operator/CHEMISTRY_OPERATOR.md": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c",
+    "operator/install_chemistry.py": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "d4af6b37bf397b1f98088ce0ef909eaeb999242e317e3d8af2d9d8b203e29264"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -314,7 +322,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
                      PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
-                     STUDY_EDITION_PREVIOUS_SHA256.get(name)}):
+                     STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"
