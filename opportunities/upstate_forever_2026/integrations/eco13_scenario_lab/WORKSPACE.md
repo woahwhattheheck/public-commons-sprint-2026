@@ -1,0 +1,168 @@
+# ECO13 scenario workbench on the current native Workspace
+
+This integration brings the preserved ECO13 workbench onto the existing Upper Savannah scientific Workspace and its pinned InVEST 3.20.0 NDR/SDR implementation. It retains the workbench's matched jobs, cost/Pareto comparisons, grayscale report, CSV/JSON outputs, and portable report export.
+
+Use this entrypoint for the current Ecosystem Sciences product. Existing stand-alone ECO13 plans retain their original declared engine version and bindings. The integration reads the current Workspace selection and its original native output registry.
+
+## Install into the assembled source
+
+The complete original ECO13 package is preserved under:
+
+    integrations/eco13_scenario_lab/
+
+Place these additive leaves in that package:
+
+- eco_scenario_lab/workspace_driver.py
+- eco_scenario_lab/workspace_cli.py
+- WORKSPACE.md
+- examples/workspace-selection.template.json
+- examples/workspace-runs.template.json
+
+Keep the original 15-file cohort present. The model package remains the assembled application's current model/ package. The bridge imports the existing Workspace, common, profiles, native and rasters modules directly. It does not require changes to the shared model core, the original workbench engine, or either existing CLI.
+
+Run from the assembled application root, with its existing equipped interpreter:
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.workspace_cli --help
+
+The underlying package requires Python 3.11+, NumPy, Rasterio, Fiona, Shapely 2 and PyProj. New native model runs use the existing Workspace's pinned natcap.invest 3.20.0 installation. Completed Workspace runs pass through the original reuse path.
+
+## Fast receiving path: adopt accepted native runs
+
+Use examples/workspace-runs.template.json for a completed baseline and one or more completed alternatives. Replace the visible SET_ACTUAL_* markers with the retained run IDs. Set cost_cents to a declared estimate or quote in minor currency units when one is available; null means unpriced. Scientific planning, native execution and table reporting work with unpriced alternatives. Cost/Pareto ranking uses declared costs, so an unpriced intervention never enters the budget screen as free.
+
+The completed runs must share their retained grid, profile and selected models. Their original scenario IDs, grid ID, profile ID and model selection are recovered automatically. The baseline scenario must be the retained baseline, and alternatives must be land-cover scenarios.
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.workspace_cli adopt \
+      accepted-runs.json /mnt/data/eco-native-scenarios \
+      --model-workspace /mnt/data/current-scientific-workspace
+
+The planner retains the inputs and selected source metadata, reuses the completed native land-cover stage when available, and creates the workbench plan. Existing full NDR/SDR selections keep their original content-addressed run IDs, including the original omitted/full-model normalization.
+
+Complete the table report and original reporting-mask raster comparison:
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.workspace_cli run \
+      /mnt/data/eco-native-scenarios \
+      --model-workspace /mnt/data/current-scientific-workspace
+
+The existing Workspace run lifecycle handles reuse. The first workbench job for a case/scenario invokes that selection; a selection containing both models completes NDR and SDR together. Its second workbench model job uses the same completed native run.
+
+The useful receiving outcome is the actual native run IDs in the command response, complete job counts, the opened report, and the retained stage tables. The bridge itself creates these artifacts during normal operation.
+
+## Plan new alternatives and sensitivity cases
+
+Use examples/workspace-selection.template.json to select:
+
+- An existing retained grid and default parameter profile.
+- The baseline scenario.
+- One or more retained land-cover scenarios with declared costs or null for unpriced alternatives.
+- The selected models, NDR and/or SDR.
+- One or more matched parameter/forcing cases.
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.workspace_cli plan \
+      workspace-selection.json /mnt/data/eco-new-scenarios \
+      --model-workspace /mnt/data/current-scientific-workspace
+
+Each case may select its own profile_id. A case may instead provide profile containing an explicit new title, source references, and the NDR/SDR parameter changes. The bridge merges those changes into the declared default profile and calls Workspace.save_profile, which applies the original parameter and biophysical-table validation. Source collection and biophysical table selection may also be revised through that profile object.
+
+Each alternative may select scenario_id or provide a complete scenario object for Workspace.save_scenario. That object uses the original source_collection_id, kind, title, reason and patches. Every patch retains its mask_source_id, optional layer/where, from_codes, to_code and reason. Baselines similarly select an existing baseline scenario or provide the original baseline scenario object.
+
+This preserves the original model's centre sampling and declared patch order. Overlapping patches are applied sequentially to the current cell values, exactly as model.rasters.make_scenario specifies. The bridge retains each patch's source dataset and the native edit counts.
+
+A sensitivity case may select a different retained grid_id for changed forcing. The bridge verifies that its baseline integer land cover, raster lattice, valid support, model-domain geometry and domain IDs match the first case. It then freezes the actual case-specific DEM/precipitation/erosivity/erodibility inputs. Baseline and alternatives within that case share the same retained grid ID and parameter profile.
+
+The destination land-cover codes must exist in every selected case's biophysical table. Prepared alternatives are created before the new workbench directory becomes available.
+
+## Native result binding
+
+| Model | Native registry ID | Native table binding | ID field | Metric field | Report unit |
+|---|---|---|---|---|---|
+| NDR | watershed_results_ndr | watershed_results_ndr.gpkg | id | n_total_export | kg/year |
+| NDR | watershed_results_ndr | watershed_results_ndr.gpkg | id | p_surface_export | kg/year |
+| SDR | watershed_results_sdr | watershed_results_sdr.shp | id | sed_export | metric_tonne/year |
+
+The runtime registry selects the source table path. The filenames above are the workbench's retained destination binding. The adapter verifies the retained stage's argument file and primary result artifact and copies the complete result family. A Shapefile includes its .shp, .shx, .dbf and .prj members, plus present companion files.
+
+The current Workspace creates model_domain.gpkg with id and title attributes and passes that vector to InVEST as watersheds_path. Its ID field is id, rather than the stand-alone workbench's ws_id default. The result reader checks the actual output fields and unique domain IDs.
+
+These vector metrics are already watershed totals. They are summed annual mass in the original native model domain. No pixel-area factor is applied to them. The original Workspace's derived rasters and comparison rasters use its reporting mask; those are retained separately in reports/workspace-bindings.json and the existing native Workspace comparison.
+
+A single dissolved model-domain vector does not become the original 217 HUC polygons. The native watershed table and the S1 regional zonal report have separate spatial supports. Use the existing S1 report for the original reporting polygons.
+
+## Execution binding and reuse
+
+Each callback resolves the currently running workbench attempt to its exact case/scenario/model record. This retains distinct alternative identities even when two alternatives have identical prepared raster values.
+
+Before invoking the native selection, the adapter compares the actual workbench scientific arguments to the retained grid/profile inputs. File identity includes dataset companions. The original Workspace prepares and runs the content-addressed selection.
+
+After the native run completes, the bridge verifies the stage's current requested arguments against the workbench parameters and retained input datasets. A directly executed stage uses its original argument file for that check. A reused stage retains both its original executed argument file and the distinct current request. The adapter verifies the self-digest of any retained native stage input signature, verifies every nested reuse record against the preserved original argument body, and recovers the actual execution run from the complete ancestry. It preserves the native completed-stage assembly's per-input matches, source/target identities and exact cell/mask or feature/attribute evidence. This accepts the current native core's completed stages when their file encodings differ but their native data match, including earlier complete stages without a cache signature. The original source run's input paths need not remain available after a complete receiving copy; its authenticated argument bytes, runtime, signature and ancestry remain in the workbench.
+
+The bridge compares the prepared and current native LULC rasters by exact grid, integer cell values and valid support. Compression, tiling, file location and irrelevant NoData payload bytes do not change that comparison. The current request still has to match the workbench's actual frozen scientific inputs; the retained original signature describes the native stage's accepted input identity.
+
+This cell comparison is performed in strips sized for regional rasters. Each retained grid is verified once per planning/driver initialization, and repeated input snapshots reuse their retained dataset family when its file metadata is unchanged. Repeated content checks within one invocation also use file metadata and content caches; both models share the same executor instance.
+
+The native runtime record must match InVEST 3.20.0 and the exact official model blob selected by the existing core. Each workbench receipt retains the requested native run ID, original execution run ID, full stage reuse ancestry, both argument-file identities, retained stage input signature and its digest check, model selection, original stage runtime, current run runtime, result registry ID, copied table family and land-cover comparison. Recorded result companions are verified against their retained hashes before copying. Available native logs are copied once per retained run into workspace-runs/.
+
+The engine identity incorporates the current Workspace core source hashes, including the additive model_selection, reuse, stage_cache, native_arguments and run_assembly modules when they are present. A current source update creates a distinct workbench execution identity while the original Workspace continues to resolve and reuse its own scientific selections. Recorded absolute native argument paths are relocated against the retained model workspace root, allowing the complete model workspace to move.
+
+## Reports, budget comparison and handover
+
+The run command writes the grayscale report and full machine-readable outputs:
+
+- reports/index.html: complete matched native table values and changes.
+- reports/comparisons.csv and comparisons.json: all paired model-domain metric records.
+- reports/workspace-bindings.json: exact native selections, states and original raster-comparison joins.
+- reports/ranking.json: cost/Pareto comparison when explicit objectives are supplied.
+- runs/...: original native tables, sidecars, workspace-native-arguments.json, workspace-requested-arguments.json for reused stages, the native run record and execution receipts.
+- workspace-runs/.../native.log: available original logs, once per selected native run.
+- workspace-context.json: original selected grid/profile/scenario/source-edition metadata.
+
+To rank explicit domain/metric objectives, use the retained id values from the actual table, for example the current model domain's id "1":
+
+    [
+      {"watershed_id": "1", "metric": "nitrogen_export"},
+      {"watershed_id": "1", "metric": "phosphorus_export"},
+      {"watershed_id": "1", "metric": "sediment_export"}
+    ]
+
+Save the selected objectives and run with --objectives objectives.json and, if needed, --budget-cents with the declared budget. The original Pareto comparison evaluates complete alternatives across every selected case and includes their declared costs. Case ranges are sensitivity ranges. If requested ranking encounters unpriced alternatives, the command still completes the native work and scientific report, records their IDs in reports/ranking-status.json, and returns exit code 2 for the remaining cost input. With no ranking requested, an otherwise complete unpriced scientific comparison returns 0.
+
+Use --tables-only when the receiving task needs the full native table report without creating the additional reporting-mask difference rasters.
+
+The original workbench export/receive commands remain available:
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.cli export \
+      /mnt/data/eco-native-scenarios /mnt/data/eco-native-scenarios.zip
+
+    PYTHONPATH=".:integrations/eco13_scenario_lab" /opt/pyvenv/bin/python \
+      -m eco_scenario_lab.cli receive \
+      /mnt/data/eco-native-scenarios.zip /mnt/data/received-scenario-report
+
+The report export contains its frozen inputs, scenario preparation, complete copied native tables and reports. Reconnect a received workbench to the delivered original model workspace with --model-workspace on the current integration command. The retained workspace ID must match; its location may change. The existing complete application delivery carries the editable native workspace and model-run artifacts.
+
+For a revised native scenario or case, create a new plan with this integration command. Historical stand-alone workbench revisions continue through their own original entrypoint.
+
+## Source and receiving status
+
+Operation: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012.
+Integration edition: ED6E-WORKSPACE-BRIDGE-20261013-2.
+
+The preserved original ECO13 cohort is the 15-file eco_scenario_lab 0.1.0 source, original JSON SHA256 4bc4aba0767a8f64cd9c5fbf26b674703661ac7656ba1cf26b3a27604454acd7:
+
+https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8Q0H2XM0
+
+The current selected-model core reference is the complete postimage overlay at commit 8174e0503c6429cec6086eca37bb757e79c6c1e8:
+
+https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8174e0503c6429cec6086eca37bb757e79c6c1e8/opportunities/upstate_forever_2026/integration/selected-model-core-overlay.json
+
+Native result identifiers and units were joined to S1's InVEST 3.20 semantics registry, SHA256 364c0b790b01938b9f77d6fae978a447e9ad8ab0c7258aeeb769a354ba8fc1b6.
+
+The native stage reuse join follows 70CB's stage cache and completed-model revision 3, Canvas F0C8JRS1PM3, decoded bank 381,750 bytes, SHA256 6868ca85e30000399d2efbfd513336add1dd6370f93e5480859df9f3e7f1534c. Both copied original arguments and separately retained requested_arguments are supported. The original stage signature can predate companion-bearing signatures, and selected_completed_stage assembly may accept exact native data in another encoding. Full nested reuse provenance and the current run's per-model assembly input_matches are preserved.
+
+The complete implementation is authored against these retained source contracts. The equipped receiver should execute the adopt/run path against its actual accepted native baseline and alternative and return the resulting native bindings and report. That path supplies the direct runtime confirmation and brings the existing scientific work into the completed product.
+
+Retained current reuse-source leaves: model/run_assembly.py (22,762 bytes, SHA256 4c28a89f390f918bb6e1033279f680158cac6635551c3ed985cb012d911f9017); model/native_arguments.py (943 bytes, SHA256 f91a6202a66ffbffd955485198358fd3526e7bd127ea5e427323370a7e87144d); model/stage_cache.py (8,504 bytes, SHA256 6dac1240440e0d220b772637d1be55a22cb79c8005d9918952567a4525aeb8aa).
