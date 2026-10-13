@@ -1,6 +1,6 @@
 # Connected receiving for the original Datasette operation
 
-Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The unchanged complete receiver is 259,983 bytes, SHA-256 `aa2788ad724d9c78e0429a6b896ca3c580250b0bf7f76abdc41b03b6aefcb267`, from public merge `560c33ccba1158e75d7fcfc99561a5b8490386c9` / canonical merge `0326a7d626dc3c74efcca23e84216cdd5beba96b`.
+Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The complete receiver is 263,551 bytes, SHA-256 `50df338daa104b46db5ed79ecb93368f2ccc504d846acab1d1e31b274cabf8ec`, from public merge `560c33ccba1158e75d7fcfc99561a5b8490386c9` / canonical merge `0326a7d626dc3c74efcca23e84216cdd5beba96b`.
 
 ## Receive with the current host's connected tools
 
@@ -50,6 +50,12 @@ Evaluate the complete connected_receiving.mjs in functions with actual {tools,lo
 Call startConnectedOriginal(context,{key,selection,sourceBootstrap}) once using a stable private store key and the complete connected_bootstrap.py. The shell receives only the small Python reader; the entire source arrives over stdin after its actual READY. Keep initial admission nonblocking and normal functions waits under60seconds. The original process returns its actual invocation ID, PID, transport directory and facility observations. The native operation lock also rejects a simultaneous optional receiver on the same selected parent.
 
 A retained key is never passed to start again. Resume with resumeConnectedOriginal(context,{key}). This resumes the same actual session and never calls exec a second time. If exec returns before admission, retain its exact result. If the admission result is unresolved, reconcile that request before moving the same operation.
+
+## Interrupted checkpoint restoration
+
+The receiver restores the same complete original checkpoint into a private sibling staging directory bound to its whole SHA-256, original operation, capsule and root. Its parent lock and PREPARED journal are retained before extraction. Complete files are reopened and hash-checked on replay; partial known temporary files are rewritten. If interruption occurs after create-only publication but before removing its temporary link, only the exact same-inode pair with the expected complete bytes is reconciled. The complete manifest uses the same durable publication path.
+
+The original root appears through an atomic directory rename only after the complete file, link and directory inventory is restored. A lost final journal write recognizes that publication on replay. A previously running original root retains its existing source and journals. Unexpected paths, member bytes, link identities or a competing root return the concrete conflict without replacing them. The original twelve-part checkpoint, installed journal and following Conapi input remain selected.
 
 ## Retained frames and original provider actions
 
