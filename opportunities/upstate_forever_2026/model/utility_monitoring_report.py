@@ -304,7 +304,8 @@ def _visits(plan, campaign, events):
     return rows
 
 
-def read_bundle(archive, manifest, plan, network, campaign, events):
+def read_bundle(archive, manifest, plan, network, campaign, events, *,
+                context_ids=None, original_prefixes=None):
     """Read contexts from the already byte-verified original native ZIP.
 
     The report producer verifies every manifest member before calling this
@@ -314,13 +315,19 @@ def read_bundle(archive, manifest, plan, network, campaign, events):
     """
     files = {row["path"]: row for row in manifest["files"]}
     contexts_found = []
+    wanted = None if context_ids is None else set(context_ids)
+    if wanted is not None and (len(wanted) != len(context_ids)
+                              or any(not re.fullmatch(r"[0-9a-f]{64}", key) for key in wanted)):
+        raise ValueError("Select distinct original utility context IDs")
     visits = _visits(plan, campaign, events)
     for name in sorted(files):
         if not re.fullmatch(r"utility-context/[0-9a-f]{64}/context\.json", name):
             continue
+        key = name.split("/")[1]
+        if wanted is not None and key not in wanted:
+            continue
         record = json.loads(archive.read(name))
         binding = record.get("binding", {})
-        key = name.split("/")[1]
         if (record.get("schema") != SCHEMA or record.get("id") != key
                 or digest(binding) != key
                 or record.get("record_sha256") != digest({
@@ -344,16 +351,17 @@ def read_bundle(archive, manifest, plan, network, campaign, events):
                    != preparation["record_sha256"]
                 or preparation["method"] != record["method"]):
             raise ValueError("Utility context differs from its retained original preparation")
+        original_prefix = (original_prefixes or {}).get(key, prefix + "original-report/")
         originals = binding["original_files"]
         if binding["original_selection"] != originals["selected-watersheds.json"]:
             raise ValueError("Utility context selected-watershed descriptor differs")
         for original_name, descriptor in originals.items():
             if original_name == "utility-watershed-packet.zip":
                 continue
-            member = files.get(prefix + "original-report/" + original_name)
+            member = files.get(original_prefix + original_name)
             if member is None or any(member[field] != descriptor[field] for field in ("bytes", "sha256")):
                 raise ValueError("Utility context is missing an unchanged original: " + original_name)
-        selected = json.loads(archive.read(prefix + "original-report/selected-watersheds.json"))
+        selected = json.loads(archive.read(original_prefix + "selected-watersheds.json"))
         utility = selected["utility_selection"]
         if (selected.get("export_id") != binding["utility_export_id"]
                 or utility != record["utility"]
@@ -368,6 +376,8 @@ def read_bundle(archive, manifest, plan, network, campaign, events):
         if record["plan"] != expected:
             raise ValueError("Utility report objective differs from its saved Monitoring decision")
         contexts_found.append(record)
+    if wanted is not None and {row["id"] for row in contexts_found} != wanted:
+        raise ValueError("The native packet omits a selected original utility context")
     return contexts_found
 
 
@@ -383,7 +393,7 @@ def source_links(records):
     )]
 
 
-def scientific_sections(records):
+def scientific_sections(records, *, package_prefix="native/", original_prefixes=None):
     """Use the current ordered SourceReports blocks and exact native ZIP members."""
     def table(columns, rows):
         return {"kind": "table", "columns": columns,
@@ -393,7 +403,9 @@ def scientific_sections(records):
     sections = []
     for record in records:
         utility, plan = record["utility"], record["plan"]
-        prefix = "native/utility-context/" + record["id"] + "/"
+        prefix = package_prefix + "utility-context/" + record["id"] + "/"
+        original_prefix = package_prefix + (original_prefixes or {}).get(
+            record["id"], "utility-context/" + record["id"] + "/original-report/")
         sections.append(["Utility planning objective: " + utility["title"], [
             record["method"]["geographic_basis"] + ". " + record["method"]["description"],
             table(["Saved value", "Meaning"], [
@@ -461,7 +473,7 @@ def scientific_sections(records):
                 "Regional nutrient and flow context: " + region["geographic_meaning"],
                 region["quantity_meaning"], region["interpretation"], observed["methods"]["model_endpoint"],
                 links([("Original station/year/method/activity/unit groups and source records",
-                        prefix + "original-report/selected-watersheds.json")]),
+                        original_prefix + "selected-watersheds.json")]),
             ]])
         sections.append(["Original source and graph scope: " + utility["title"], [
             utility["interpretation"],
@@ -478,7 +490,7 @@ def scientific_sections(records):
                 ["Original utility export", record["binding"]["utility_export_id"]],
                 ["Original profile SHA256", utility["profile_source"]["sha256"]],
             ]),
-            links([("Complete original utility source briefing", prefix + "original-report/" + _briefing_member(record)),
+            links([("Complete original utility source briefing", original_prefix + _briefing_member(record)),
                    ("Retained native preparation", prefix + "preparation.json"),
                    ("Portable utility decision report", prefix + "report.html")]),
         ]])
