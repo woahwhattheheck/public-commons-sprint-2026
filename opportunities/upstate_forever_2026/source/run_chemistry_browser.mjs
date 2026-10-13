@@ -229,12 +229,18 @@ async function main(){
  await refreshDesk();await openRun(completedRun.id);await shot('02-native-chemical-results');
  const fields=await page.locator('[data-result-field] option').evaluateAll(nodes=>nodes.map(node=>node.value));
  const wanted=request.mode==='simulate'?'samples':resultField(completedRun.mode);
- if(fields.includes(wanted)&&await page.locator('[data-result-field]').inputValue()!==wanted){
-  await page.locator('[data-result-field]').selectOption(wanted);
+ if(fields.includes(wanted)){
+  if(await page.locator('[data-result-field]').inputValue()!==wanted){
+   const selected=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/chemistry/page'&&new URL(response.url()).searchParams.get('run_id')===completedRun.id&&new URL(response.url()).searchParams.get('field')===wanted);
+   await page.locator('[data-result-field]').selectOption(wanted);await json(await selected,'Opened selected original records');
+  }
   await page.locator('[data-result-table] > p').waitFor();
   if(await page.locator('[data-action="chemistry-next"]').isEnabled()){
-   await page.locator('[data-action="chemistry-next"]').click();await page.locator('[data-result-table] > p').waitFor();
-   await page.locator('[data-action="chemistry-previous"]').click();await page.locator('[data-result-table] > p').waitFor();
+   for(const [action,offset] of [['next',100],['previous',0]]){
+    const read=page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname==='/api/chemistry/page'&&url.searchParams.get('run_id')===completedRun.id&&url.searchParams.get('field')===wanted&&Number(url.searchParams.get('offset'))===offset;});
+    await page.locator('[data-action="chemistry-'+action+'"]').click();const result=await json(await read,'Paged original analysis records');
+    await page.waitForFunction(result=>document.querySelector('[data-result-table] > p')?.textContent?.startsWith(String(result.total?result.offset+1:0)+'–'),result);
+   }
   }
  }
  await shot('03-original-result-records');
