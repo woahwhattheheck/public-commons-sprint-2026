@@ -21,6 +21,8 @@ The assembly function uses the original PDFMint service at [pdf.mintapis.com/doc
 
 See the same official [limits](https://pdf.mintapis.com/docs#limits) and [quota](https://pdf.mintapis.com/docs#quota) sections when selecting the current account plan. The live supplier response and its account counters remain the usage source. Original documents, supplier credits, native purchases, PDF pages and accepted parent tasks are separate quantities.
 
+To commission the complete service from an existing account, use [original-account commissioning](COMMISSIONING.md#commission-rendering-and-ordered-pdf-assembly-together) with its explicit `assemblyPaymentFile` / `--assembly-payment` option. It prepares rendering and assembly together on the same original buyer/account, native facilitator, customer settings and managed service.
+
 Enable assembly explicitly in a PDFMint merchant template:
 
 ~~~sh
@@ -49,6 +51,81 @@ Use the normal review, prepare and launch commands with that complete request. T
 Assembly is opt-in. Existing setup plans without an assembly property keep their original normalized request and generated function list. Existing prepared installations retain their original application bytes. To offer the new function, select an appropriately prepared new merchant setup through the existing review and deployment process; do not mutate a retained setup plan or original paid job.
 
 The provider key stays in the configured environment. The customer accesses the merchant's public catalog and original checkout; it does not receive the supplier key.
+
+## Existing PDF intake in the customer browser
+
+Choose **Bundle existing PDFs** in the same Document production application to assemble invoices or reports that already exist. This intake uses the original customer workspace, complete assembly source, paid batch and Resource library. The dataset/template workflow and its rendered-composition bundles remain available.
+
+### Upload and order the original files
+
+1. Enter the bundle ID, customer-facing name, document title, original business task reference and actual PDFMint assembly merchant HTTPS origin. This is the commissioned merchant's origin; the customer does not use a supplier credential.
+2. Choose the complete PDF files. The browser reads and identifies every byte. The combined browser upload can contain up to 28 MiB and 2,000 PDFs. The file picker can add more PDFs to the current selection.
+3. Use **Move up**, **Move down** and **Remove** to choose the exact business order. Each selected file retains its own identity and original filename. The listed byte size and source SHA256 describe the whole PDF.
+4. Choose **Save complete PDF sources**. This creates or resumes the original immutable assembly plan and materializes its original PDFs and ordered volumes. It does not purchase a merchant service.
+5. Open the saved bundle. Review all source PDFs in their chosen order, the resulting volume allocation and the customer task. The original-PDF table is paged in groups of 100 and each row downloads the complete original PDF.
+
+A bundle can include PDFs received from other systems. Download them from their original authorized source and select the full files here. The assembly keeps the document contents and business ordering; it does not infer invoice amounts or tax rules from their text.
+
+The original assembly planner divides the full source at the supplier's existing file-count and encoded request-size limits. It preserves the chosen order and every source. A one-file volume is retained unchanged. The displayed **paid assemblies** count therefore reflects the actual merge volumes, independently of original PDF count, page count, supplier credits and customer-task acceptance.
+
+### Review and fulfill the original quote
+
+Choose **Prepare assembly price**. The saved native plan displays its network, token asset, recipient, payment flow, maximum atomic amount and number of paid assembly requests. The quote belongs to this exact source and original customer.
+
+Choose **Assemble at this saved price** to submit that exact native plan through the existing customer owner. The operation runs in the original host's background lifetime; a finished browser request does not cancel its accepted jobs. The current stage and original operation result remain visible.
+
+If the current wait ends before all volumes arrive, use **Receive existing assemblies** or continue the same original run. Receiving follows the original requests, tickets, paid jobs and returned file identities. The source plan and native batch remain authoritative when the page or service reopens.
+
+Each received volume has a **Download volume** action. Once every volume is available, choose **Export complete PDF bundle**. The saved export provides:
+
+- **Download complete PDF bundle** — one complete archive containing every final PDF, full original source plan, readable index, volume CSV, delivery JSON and original paid Collection when one exists.
+- **Readable bundle** — the complete human-readable volume/order/identity index.
+- **Complete original PDF sources** — the full portable assembly plan, including all original PDFs.
+- **Complete delivery JSON** and **Volume CSV** — the original receiving and volume records.
+- **Original paid Collection** — the original native batch Collection archive when the bundle contains paid merges.
+
+The complete bundle archive retains the original paid Collection as a whole member. It also includes every unchanged one-file volume. The existing original Collection remains the customer's native result source.
+
+### Receive a larger or previously prepared source
+
+Expand **Receive an existing complete bundle source**. Select the complete \`assembly-plan.json\` produced by the original assembly CLI or downloaded from this browser. The upload reads its actual bundle ID and full SHA256.
+
+For a plan larger than the 28 MiB browser upload allowance, place the complete source file inside the original customer's declared file roots. Enter its local absolute path, original bundle ID and complete SHA256. The same background receiving action can read a source plan up to 192 MiB; the core's original 96 MiB aggregate PDF-source limit still applies. Use the existing \`assembly stage\` or \`assembly receive-source\` CLI described below to create/receive that source from complete local PDF files.
+
+Choose **Receive complete bundle source**. The receiving action checks the exact source identity before preparing the same assembly plan. It retains the plan's original PDF order, whole-file hashes and source lineage. The customer then reviews and runs the native quote for this saved local bundle through the ordinary workflow.
+
+The original batch under a saved bundle remains in that customer's directory. Reopen that same bundle to continue its existing paid work. A portable source received into a different directory provides the complete source for a separately selected local batch; it does not move an active request or ledger.
+
+### Continue an interrupted source or export
+
+If source saving stops after the plan has been retained, the saved bundle exposes **Continue saving original sources**. That action materializes the exact PDFs and volumes already contained in the retained source. It preserves the existing plan, customer task and source identity.
+
+If an export stops before its complete archive is ready, use **Continue this export** on that same saved export. The action retains the selected export directory and original native Collection. It resumes missing output files through the original create-once export machinery.
+
+**Stop current bundle operation** stops the current wait and drains admitted source work. Original paid jobs and received results stay in their existing records. Closing Document production stops further admission, drains its source/batch work and then closes the original customer owner. Reopen the same customer workspace to continue.
+
+### Installed API and file ownership
+
+The existing composition controller exposes \`bundles\`, an instance of \`openDocumentAssemblyWorkspace\`. It receives the already-open original customer and stores assembly plans below \`<sourceRoot>/.pdf-bundles/<bundle-id>\`. This private source directory is distinct from composition IDs; it contains the existing assembly plan, original PDFs, native batch, reports and export editions. It adds no account, purchase journal or separate customer catalogue.
+
+The authenticated original customer host serves these routes beneath \`/api/document-composition/bundles/\`:
+
+| Method | Route | Operation |
+| --- | --- | --- |
+| GET | \`state\` | Saved bundle page, defaults and current admitted work |
+| GET | \`assembly\` | Complete selected source, volumes, original quote and export editions |
+| GET | \`operation\` | Original admitted operation result |
+| POST | \`stage\` | Complete uploaded PDFs in explicit order |
+| POST | \`restore\` | Complete uploaded or declared local assembly plan |
+| POST | \`materialize\` | Continue saving sources from the same retained plan |
+| POST | \`prepare\` | Prepare the existing native assembly batch |
+| POST | \`run\` | Run the exact reviewed native plan |
+| POST | \`receive\` | Receive original paid jobs |
+| POST | \`export\` | Create or continue the complete original export |
+| POST | \`cancel\` | Stop the current admitted operation |
+| POST | \`download\` | Register a whole-file transfer with the original host |
+
+Mutating source and native operations return the admitted operation with HTTP 202. Subsequent actions select the complete source SHA256; purchase also selects the exact native plan SHA256. All source/result transfers use the original host's registered authenticated download route. Public browser assets contain only application code and markup.
 
 ## Browser workflow
 
