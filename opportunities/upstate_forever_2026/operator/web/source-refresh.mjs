@@ -157,11 +157,15 @@ function executionBody(current) {
   if (!current || typeof current !== 'object') return '';
   const runs = Object.values(current.run_results || {});
   const comparisons = Object.values(current.comparison_results || {});
-  let html = '';
+  let html = current.completion_note ? '<p class="notice">' + esc(current.completion_note) + '</p>' : '';
   if (runs.length) html += '<h3>Refreshed native cases</h3>' + table(['Earlier run','Refreshed run','Execution','Outputs'], runs.map(row =>
     '<tr><td class="mono" title="' + esc(row.from_run_id) + '">' + esc(short(row.from_run_id)) +
     '</td><td class="mono" title="' + esc(row.to_run_id) + '">' + esc(short(row.to_run_id)) +
-    '</td><td>' + tag(row.execution || row.state) + '</td><td>' +
+    '</td><td>' + tag(({already_complete:'Previously completed',reused:'Verified native reuse',mixed:'Reuse and native execution'})[row.execution] || row.execution || row.state) +
+    (row.model_results ? '<ul>' + Object.entries(row.model_results).map(([model,value]) =>
+      '<li>' + esc(model.toUpperCase()) + ': ' + esc(value.mode === 'reused' ? 'reused native stage' : 'native stage') +
+      (value.source_run_id ? ' from <span class="mono" title="' + esc(value.source_run_id) + '">' +
+        esc(short(value.source_run_id)) + '</span>' : '') + '</li>').join('') + '</ul>' : '') + '</td><td>' +
     (row.state === 'complete' ? '<button type="button" data-open-files="' + esc(row.to_run_id) +
       '" data-item-kind="runs">Open run outputs</button>' : esc(row.state || 'prepared')) + '</td></tr>'));
   if (comparisons.length) html += '<h3>Source-edition comparisons</h3>' + table(['Earlier run','Refreshed run','Comparison','Outputs'], comparisons.map(row =>
@@ -195,9 +199,10 @@ async function runAction(action, payload) {
   let request = requests[key];
   const existing = request?.task_id && (original.tasks || []).find(row => row.id === request.task_id);
   if (existing) request.state = existing.state;
-  // A new plan captures the current dependency snapshot; a new complete archive
-  // includes later work. An unacknowledged or active click keeps its first intent.
-  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan'].includes(action);
+  // A completed apply may have prepared targets under an earlier source edition;
+  // a new explicit click reopens the same plan with a new queue operation. An
+  // unacknowledged or active click retains its original request identity.
+  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan','source.refresh.apply'].includes(action);
   if (!request || freshCompleted) {
     request = {operation_id:'source-refresh-' + crypto.randomUUID(),workspace,action,payload:value,created_at:new Date().toISOString()};
     requests[key] = request;
