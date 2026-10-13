@@ -28,3 +28,12 @@ export function buildPortableReader(html, inputs){
  const boot=downloadTemplate.replace("__TABLES_BASE64__",base64Ascii(binary));
  return html.replace("</body>",boot+"</body>").replace("The groups overlap by design.","All five complete table files are included in this saved reader. The groups overlap by design.");
 }
+
+export function embedPortableDownloads(html, files){
+ if(typeof html!=="string"||html.split("</body>").length!==2||html.includes('id="embedded-tables"'))throw Error("Expected one original reading edition");
+ const names=Object.keys(files);if(!names.length)throw Error("Missing downloads");
+ for(const name of names){if(!/^[A-Za-z0-9_.-]+$/.test(name)||typeof files[name]!=="string"||!files[name].length)throw Error("Invalid complete download");if(html.split('href="'+name+'" download').length!==2)throw Error("Expected one download link: "+name);}
+ const bytes=gzipAscii(jsonAscii(files));let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);
+ const boot=downloadTemplate.replace("__TABLES_BASE64__",base64Ascii(binary));
+ return html.replace("</body>",boot+"</body>").replace("The groups overlap by design.","All "+names.length+" complete table and project files are included in this saved reader. The groups overlap by design.");
+}
