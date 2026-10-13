@@ -27,7 +27,7 @@ from model.delivery import _source_records
 SOURCE_ROLES = {
     "high_quality_waters": "HIGH_QUALITY_WATERS",
     "drinking_water": "SOURCE_WATER_PROTECTION_AREAS",
-    "protected_lands": "PROTECTED_LANDS",
+    "protected_lands": "PROTECTED_LANDS_OVERLAY",
 }
 
 

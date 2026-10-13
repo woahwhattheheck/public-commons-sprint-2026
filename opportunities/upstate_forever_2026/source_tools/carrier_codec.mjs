@@ -1,4 +1,4 @@
-// TokenJunkieLabs · UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012
+// Portable source carrier encoding and decoding.
 // Pure JavaScript source transport for runtimes without Node, filesystem or browser APIs.
 // encodeApplicationCarrier returns the complete numbered carrier accepted by the existing Python receiver.
 

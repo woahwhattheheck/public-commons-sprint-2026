@@ -140,9 +140,9 @@ async function step(name,click) {
   results[name]={requestId:row.requestId,inputSha256:row.inputSha256,result:row.result};
   // Reopen that exact operation through the visible original History control. This
   // also consumes the retained result when the initial worker was still READY.
-  await page.locator('#navigation').getByRole('button',{name:'History',exact:true}).click();
+  await activate(page.locator('#navigation').getByRole('button',{name:'History',exact:true}));
   await field('Saved request ID').fill(row.requestId);
-  await page.getByRole('button',{name:'Open original request',exact:true}).click();
+  await activate(page.getByRole('button',{name:'Open original request',exact:true}));
   await page.waitForFunction(id=>document.querySelector('#operation')?.textContent.includes(id)&&
     document.querySelector('#operation')?.textContent.includes('COMPLETED'),row.requestId);
   return row;
@@ -151,10 +151,19 @@ function field(name) {
   const escaped=name.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&');
   return page.getByLabel(new RegExp('^'+escaped+'(?:\\s|$)'));
 }
+async function activate(control) {
+  const node=await control.elementHandle();
+  ensure(node,'The original operator control is unavailable.');
+  try {
+    await control.click();
+    await page.waitForFunction(item=>!item.isConnected||!item.disabled,node);
+    await page.waitForFunction(()=>document.querySelector('#content')?.getAttribute('aria-busy')==='false');
+  } finally {await node.dispose();}
+}
 async function parcelTab(name) {
-  await page.locator('#navigation').getByRole('button',{name:'Parcels',exact:true}).click();
+  await activate(page.locator('#navigation').getByRole('button',{name:'Parcels',exact:true}));
   const toolbar=page.locator('section.panel').filter({has:page.getByRole('heading',{name:'Parcel portfolios',exact:true})});
-  await toolbar.getByRole('button',{name,exact:true}).click();
+  await activate(toolbar.getByRole('button',{name,exact:true}));
   const heading={Sources:'Receive an original parcel source edition',Parcels:'Original parcels and source assertions',
     Responsibility:'Named accountable entities',Portfolios:'Build an assessment and area portfolio',
     'Later edition':'Review a later parcel source edition'}[name];
@@ -201,20 +210,45 @@ try {
   ensure(originalDetail.parcel.claims.some(row=>row.id===config.review.ownerClaimId&&row.kind==='owner-assertion'&&row.field==='owner'),
     'The selected owner must be an actual original City assertion.');
   if(config.mode==='review') {
-    const previewFile=path.join(output,'steps','owner-preview.json');
-    const saveFile=path.join(output,'steps','owner-save.json');
+    const intendedOwner = body => {
+      const decisions=body?.payload?.payload?.decisions;
+      return body?.payload?.action==='review.preview'||body?.payload?.action==='review.save'
+        ? Array.isArray(decisions)&&decisions.length===1&&decisions[0].key===config.review.key&&
+          decisions[0].owner?.mode==='source'&&decisions[0].owner.claimId===config.review.ownerClaimId&&
+          decisions[0].accountable?.mode==='unassigned'&&decisions[0].reason===config.review.reason
+        : false;
+    };
+    const priorFiles=['owner-preview','owner-save'].map(name=>path.join(output,'steps',name+'.json'));
+    const prior=[];
+    for(const file of priorFiles)if(await exists(file))prior.push(JSON.parse(await fs.readFile(file,'utf8')));
+    const correctedInput=prior.some(body=>!intendedOwner(body));
+    const suffix=correctedInput?'-correction-'+sha(bytes(canonical(config.review))).slice(0,16):'';
+    const previewName='owner-preview'+suffix, saveName='owner-save'+suffix;
+    const previewFile=path.join(output,'steps',previewName+'.json');
+    const saveFile=path.join(output,'steps',saveName+'.json');
+    if(correctedInput)await write(path.join(output,'corrections','owner-review.json'),bytes({
+      originalRequestIds:prior.map(body=>body.requestId),previewStep:previewName,saveStep:saveName,
+      reason:'Retain the earlier request and review the exact originally selected City assertion after reopening the completed form.',
+      intended:config.review
+    }),true);
     if(!await exists(saveFile)) {
       if(!await exists(previewFile)) {
-        await page.getByRole('button',{name:'Reopen current source and saved decision',exact:true}).click();
+        await activate(page.getByRole('button',{name:'Reopen current source and saved decision',exact:true}));
         await field('Selected owner assertion').selectOption(config.review.ownerClaimId);
         await field('Accountable entity').selectOption('');
         await field('Reason for this staff decision').fill(config.review.reason);
+        ensure(await field('Selected owner assertion').inputValue()===config.review.ownerClaimId,
+          'The reopened current form must retain the selected original owner assertion.');
       }
-      await step('owner-preview',()=>page.getByRole('button',{name:'Preview this parcel decision',exact:true}).click());
+      const preview=await step(previewName,()=>page.getByRole('button',{name:'Preview this parcel decision',exact:true}).click());
+      ensure(intendedOwner(preview.input)&&preview.result.decisions.length===1&&
+        preview.result.decisions[0].owner.claim?.id===config.review.ownerClaimId,
+        'The original preview must contain the exact intended source-owner selection before saving.');
       await parcelTab('Parcels');
       await page.getByRole('heading',{name:'Exact decision preview',exact:true}).waitFor();
     }
-    await step('owner-save',()=>page.getByRole('button',{name:'Save this reviewed decision batch',exact:true}).click());
+    const savedOwner=await step(saveName,()=>page.getByRole('button',{name:'Save this reviewed decision batch',exact:true}).click());
+    ensure(intendedOwner(savedOwner.input),'The retained owner save must contain the originally reviewed source choice.');
     const corrected=await api('/api/parcels/detail?'+new URLSearchParams({editionId:config.editionId,key:config.review.key}));
     ensure(corrected.decision.owner.claim.id===config.review.ownerClaimId&&corrected.decision.accountable.mode==='unassigned',
       'The actual staff review must preserve the selected source assertion and explicit responsibility choice.');
@@ -223,7 +257,7 @@ try {
     data=await api('/api/parcels');
     if(!await exists(path.join(output,'steps','entity-create.json'))) {
       ensure(!data.activeEntities[entityId],'The chosen internal entity ID is already assigned outside this browser operation.');
-      await page.getByRole('button',{name:'Create another entity',exact:true}).click();
+      await activate(page.getByRole('button',{name:'Create another entity',exact:true}));
       await field('Stable entity ID').fill(entityId);
       await field('Name shown in reviews and portfolios').fill('C94 source review desk');
       await field('Entity type').selectOption('other');
@@ -320,8 +354,21 @@ try {
   await write(finalPath,bytes(result));
   process.stdout.write(JSON.stringify({status:'COMPLETED',result:finalPath,workspaceId:result.workspaceId})+'\n');
 } catch(error) {
+  let visible;
+  try {
+    visible=await page.evaluate(()=>({
+      contentBusy:document.querySelector('#content')?.getAttribute('aria-busy'),
+      headings:[...document.querySelectorAll('#content h2')].map(node=>node.textContent),
+      notice:document.querySelector('#notice')?.textContent,
+      navigation:[...document.querySelectorAll('#navigation button')].map(node=>({
+        name:node.textContent,current:node.getAttribute('aria-current'),disabled:node.disabled})),
+      controls:[...document.querySelectorAll('#content input,#content select,#content textarea')].map(node=>({
+        name:(node.getAttribute('aria-labelledby')||'').split(/\\s+/).map(id=>document.getElementById(id)?.textContent||'').join(' '),
+        kind:node.tagName,disabled:node.disabled}))
+    }));
+  } catch {}
   await write(path.join(output,'continuation.json'),bytes({status:'RETAINED_CONTINUATION',at:new Date().toISOString(),
-    workspaceId:original.workspaceId,message:error.message,errors}));
+    workspaceId:original.workspaceId,message:error.message,errors,visible}));
   throw error;
 } finally {
   try {await context.close();}
