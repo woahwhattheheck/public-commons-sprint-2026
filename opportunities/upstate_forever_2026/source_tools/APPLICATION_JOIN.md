@@ -133,3 +133,60 @@ These changes adopt the original completed native application's installer and tr
 Before presenting the assembled app, demo, report or any attachment, the producing peer must open and normally use the exact outgoing version, view its rendered screens or real screenshots, and operate the important controls. Inspect the actual presentation width and relevant narrow width, populated/loading/empty/error states, downloads and reopened files. Open the delivered HTML, report/PDF pages, maps, archives and editable projects as the recipient would; play final audio/video. Fix concrete presentation and interaction defects as part of delivery. Source inspection, tests, HTTP success and captured screenshots that were never viewed do not replace this observation.
 
 Apply the complete current [owner instruction](../AGENTS.md) to local, cloud and delegated workers. Use plain industrial presentation; keep the real scientific workflows and original data. For video narration, use available high-quality generative voice/TTS and listen to the final export. Keep this focused on improving and shipping the product, with the existing sprint cutoff and owner controls.
+
+## Freeze and receive shared source changes
+
+Use composeSourceJoins for a shared host update that needs a complete recoverable source bank. It keeps the same literal join format and returns {layer, bank, receipt}. The original applySourceJoins API remains available for existing callers.
+
+Read the current source again before composition. Each integration edit still names an ordered, unique id, path, before and after. Use file_guards to bind each touched file to its exact full UTF-8 byte count and SHA-256 before and after the edits. These guards cover the whole current file, including peer additions. A changed base needs a freshly composed plan; an exact completed postimage is reused.
+
+A plan may also include checks. Each check has an id, path, literal text, exact count, and optional phase (after by default, or before). Use these for the actual consumer: for example, the original server decorator chain and the task-view call that invokes the new provider, plus the existing browser action concatenation. A declaration in an extension descriptor alone does not prove that a core task calls that extension. Checks match source spans; actual behavior still belongs to the same receiving operation.
+
+~~~js
+const integration = {
+  schema: "upstate.operator-integration/v1",
+  operation_id: originalOperationId,
+  allowed_paths: ["operator/server.py", "operator/web/app.mjs"],
+  edits: originalOrderedHooks,
+  file_guards: {
+    "operator/server.py": {
+      before: {bytes: currentServerBytes, sha256: currentServerSha256},
+      after: {bytes: composedServerBytes, sha256: composedServerSha256}
+    },
+    "operator/web/app.mjs": {
+      before: {bytes: currentAppBytes, sha256: currentAppSha256},
+      after: {bytes: composedAppBytes, sha256: composedAppSha256}
+    }
+  },
+  checks: originalConsumerChecks
+};
+const joined = composeSourceJoins(currentLayer, integration);
+const complete = composeApplication([currentLayer, joined.layer], {
+  edition: "upper-savannah-current", operationId: originalOperationId
+});
+~~~
+
+When first authoring a plan, file_guards may be omitted. The returned bank.composition.integration always contains measured full-file before/after guards. Review and retain that bound plan with its complete original and composed source. A receiving replay can pass it back to composeSourceJoins; it accepts only those original file identities or their exact completed postimages. Consumer checks still run against completed postimages. Before-phase checks apply to original preimages.
+
+The implementation splices literal text, so dollar signs, replacement-string sequences and backticks are copied unchanged. Edit and check identifiers must be unique. Each ordered edit requires a unique match in the source produced by the preceding edit; later edits may intentionally change an earlier result. The composer evaluates independent affected files and reports all encountered conflicts without returning a partial output layer.
+
+### Command and recovery carrier
+
+~~~sh
+node source_tools/application_join_cli.mjs current-complete-source.json \
+  --join current-task-return-joins.json \
+  --edition upper-savannah-current-task-return \
+  --operation-id RUN-REVISION-TASK-RETURN-20261013 \
+  --join-bank current-task-return-recovery.json \
+  --source-map current-complete-with-task-return.json
+~~~
+
+The --join-bank output is an ordinary commons.source-bank/v1 containing every complete composed member with its actual predecessor hash. Its composition metadata retains every ordered plan, full input body, per-edit before/after identity and checked consumer span. Multiple join steps retain their order and must form a consecutive source history. Intermediate edits remain reproducible from the retained original bodies and literal plans. Packaging reopens both full input and output inventories, reruns each bound plan, and checks its complete receipt before emitting the carrier.
+
+Receive that bank through the existing --overlay route against the matching complete application. Unmentioned source files remain present. Identical completed output can be reused. The carrier is also readable by readSourceLayer, and individual composition.steps retain their bound integration plans for a coordinator replay. Recovery does not fetch a stale whole host or replace a newer peer version implicitly.
+
+A failure uses code SOURCE_JOIN_CONFLICT. The CLI prints conflict_report with schema upstate.source-join-conflicts/v1, the original operation ID, affected path/edit, expected and actual full identity or span counts. No output is published when a join or consumer check fails. Output names keep the existing exclusive/identical-reuse rules.
+
+The task-return continuation uses this path on the actual current server and browser, preserving the five existing server decorators and original registered/native task controls. The same isolated persistence receiver invokes the real task_view method to check the provider links and retained task fields.
+
+The shipped task-return example is [the bound plan](../integration/source_joins/run-revision-task-return-20261013.json) and its [complete recoverable source bank](../transfers/run-revision-task-return-20261013/source-composition.json). It is pinned to the original4215 source edition. Refresh the plan against any subsequently changed host; preserve concurrent changes explicitly.
