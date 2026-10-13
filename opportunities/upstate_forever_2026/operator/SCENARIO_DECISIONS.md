@@ -2,6 +2,8 @@
 
 TokenJunkieLabs · Upper Savannah scientific workbench · ECSA-20261012
 
+Needs expert review: interpretation of modeled environmental outcomes and regulatory source applicability. The operator retains the selected inputs, physical units, geography and decision settings for that review.
+
 ## Open and assess the retained runs
 
 Open the normal operator URL printed by the existing server and choose **Scenario decisions**. The panel reads the completed native runs and their retained comparison artifacts from the selected scientific workspace.
@@ -67,3 +69,23 @@ The extension host package is a separate additive integration shared by the sour
 The initial receiving target named in the project thread is /mnt/data/eco12-source with /opt/pyvenv/bin/python. The actual workspace selected on that host determines the displayed results. Choose the completed regional workspace when its input owners publish that run.
 
 For source adoption, inspect one existing saved native comparison and one retained common-mask watershed report. Save an assessment, reopen it, change the objective and one case, and save a revision. Carry those two assessments through the normal portable export/restore and reopen them in the receiving application. This directly exercises the new user path.
+
+
+## Large assessments and live completed results
+
+The normal operator admits JSON requests up to 4 MiB. A large scenario assessment now uses resumable one-MiB transfer parts through the same authenticated operator. The browser compresses the original calculated JSON where supported, and the workspace retains the exact bytes and their SHA-256 identities. Selecting Save again after an interrupted transfer reuses completed parts. The final view save continues through the original task queue.
+
+Transferred calculations live under workspace/decision-transfers/ and travel with the ordinary workspace archive. Saved views keep the complete calculated comparison and its independent digest. Repeated views can reuse the same retained transfer. Saved source snapshots include the selected watershed reports; unrelated reports stay in the workspace catalog.
+
+Completing a native run, native comparison or watershed report in another desk refreshes the current report selectors. An open saved assessment keeps its original source snapshot. Selecting a new report is an explicit change of source and preserves the previous assessment as the revision parent. Current titles, purpose, criteria, pins and display choices remain attached to the draft.
+
+The shared extension host must include the current decisions manifest with POST /api/decisions/assessment/upload and decision_transfer.mjs in its static assets. Use the actual assembled application directory containing model/ and operator/ when running install_extensions.py; the cumulative receiving build may use a newer directory than the initial /mnt/data/eco12-source target.
+
+The transport check used 6,070,945 bytes of explicitly labeled test JSON. It continued after a lost response for an already stored part, reused every retained part, and reproduced the original bytes. Its largest JSON request was 1,398,592 bytes, within the original 4 MiB admission limit. The receiving operator also exercises the Python upload path on its actual selected assessment.
+
+
+## Responsive saved-assessment lists
+
+The operator now reads compact derived view summaries during its repeated state updates. Saving warms the summary immediately; existing assessments are indexed the first time they are listed. Each summary tracks the original view file size and modification time. Restoring, changing or removing an original view updates the listing naturally. Removing a derived summary simply rebuilds it from the content-verified original on the next read.
+
+Opening, revising and receiving an assessment still read and verify the original immutable calculation. The summary index under workspace/decision-view-summaries/ supplies labels and revision links; the full physical rows remain in decision-views/. A read-only workspace continues to list original views when it cannot write a derived summary.

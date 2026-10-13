@@ -21,6 +21,7 @@ SELECTION_FIELDS = (
     "baseline_id", "alternative_ids", "metric_ids", "catchment_ids",
     "directions", "priority", "query", "status_filter", "pinned_ids",
     "only_pinned", "sort_key", "sort_direction", "objective_id",
+    "table_page", "table_page_size", "method_catchment_id",
 )
 
 
@@ -50,13 +51,15 @@ def _run(row):
 
 
 
-def _scoped_reports(workspace, selected):
+def _scoped_reports(workspace, selected, report_ids=None):
     """Load saved S1 common-mask reports; retain their original source artifact."""
     result, issues = [], []
     root = workspace.root / "scenario-decisions"
     if not root.is_dir():
         return result, issues
     for path in sorted(root.glob("*/decision.json")):
+        if report_ids is not None and path.parent.name not in report_ids:
+            continue
         try:
             directory = path.parent.resolve()
             directory.relative_to(workspace.root)
@@ -122,11 +125,12 @@ def _assessment(value, selection, workspace_id):
             raise ValueError("The calculated assessment and selected " + key + " differ. Reopen the current view and save again.")
     if not isinstance(value.get("rows"), list) or not isinstance(value.get("groups"), list):
         raise ValueError("Retain the physical comparison rows and common-cohort groups.")
-    canonical(value)
-    return deepcopy(value)
+    # The isolated task payload or decoded transfer already owns this object.
+    # Saving validates its canonical digest before the immutable workspace write.
+    return value
 
 
-def catalog(workspace, *, run_ids=None):
+def catalog(workspace, *, run_ids=None, scope_ids=None):
     data = workspace.overview()
     wanted = None if run_ids is None else set(run_ids)
     runs = [_run(row) for row in data.get("runs", [])
@@ -153,7 +157,10 @@ def catalog(workspace, *, run_ids=None):
     context = {}
     for kind, keys in refs.items():
         context[kind] = [deepcopy(row) for row in data.get(kind, []) if row.get("id") in keys]
-    scoped_reports, scoped_report_issues = _scoped_reports(workspace, selected)
+    report_ids = None if scope_ids is None else {
+        value.split(":", 2)[1] for value in scope_ids if value.startswith("watershed-report:")
+    }
+    scoped_reports, scoped_report_issues = _scoped_reports(workspace, selected, report_ids)
     return {
         "schema": SCHEMA,
         "workspace_id": workspace.project["id"],
@@ -168,15 +175,8 @@ def catalog(workspace, *, run_ids=None):
 
 
 def list_views(workspace):
-    return [{
-        "id": row["id"],
-        "title": row.get("title", "Scenario assessment"),
-        "purpose": row.get("purpose", ""),
-        "created_at": row.get("created_at"),
-        "baseline_id": row["selection"]["baseline_id"],
-        "alternative_count": len(row["selection"].get("alternative_ids", [])),
-        "previous_view_id": row.get("previous_view_id"),
-    } for row in workspace._list(KIND)]
+    from . import decision_index
+    return decision_index.list_views(workspace, KIND)
 
 
 def _selection(value):
@@ -213,11 +213,18 @@ def save(workspace, value):
         raise ValueError("Give this saved assessment a title.")
     selection = _selection(value.get("selection"))
     run_ids = [selection["baseline_id"], *selection["alternative_ids"]]
-    snapshot = catalog(workspace, run_ids=run_ids)
+    snapshot = catalog(workspace, run_ids=run_ids, scope_ids=selection['catchment_ids'])
     unknown_scopes = set(selection["catchment_ids"]) - _known_scopes(snapshot)
     if unknown_scopes:
         raise ValueError("Reopen the retained reporting source before saving: " + ", ".join(sorted(unknown_scopes)))
-    assessment = _assessment(value.get("assessment"), selection, workspace.project["id"])
+    raw_assessment = value.get("assessment")
+    reference = value.get("assessment_ref")
+    if reference is not None:
+        if raw_assessment is not None:
+            raise ValueError("Choose the original calculated assessment or its retained transfer.")
+        from . import decision_transfer
+        raw_assessment = decision_transfer.load(workspace, reference)
+    assessment = _assessment(raw_assessment, selection, workspace.project["id"])
     previous = value.get("previous_view_id")
     if previous:
         workspace._get(KIND, previous)
@@ -246,7 +253,10 @@ def save(workspace, value):
     if previous:
         payload["previous_view_id"] = previous
     with held(workspace.root / ".workspace.lock"):
-        return workspace._save(KIND, payload)
+        result = workspace._save(KIND, payload)
+    from . import decision_index
+    decision_index.remember(workspace, KIND, result)
+    return result
 
 
 def inspect(workspace, identifier):
