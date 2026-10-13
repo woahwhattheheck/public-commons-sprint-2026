@@ -237,19 +237,31 @@ unique source names. All editable rows remain in the saved handover while the
 browser displays twenty at a time. Additional already-resolved sheet arrays
 remain with the complete native apply selection.
 
-Download the full working JSON before handing the task to another engineer.
-It retains the original workspace, programme, operation, review and entire
-proposal with every unfinished choice. Reopen against that same source, review
-the complete readable HTML, and continue the original explicit native apply.
-A changed source or proposal calls for its own original review. An in-flight
-file read cannot replace newly edited choices or another active native action.
+Download the full working JSON and complete editable HTML before handing the
+task to another engineer. Both retain the original workspace, programme,
+operation, review and entire proposal with every unfinished choice. The HTML
+includes the same complete column model and controls, so the recipient can work
+without connecting to the private Analysis host. Preserve all worksheets and
+extra resolved arrays, make the intended column choices, and save the whole
+HTML with its selected sheet and page. Browser draft recovery is explicit.
+Requesting a download retains the original window's changed-work reminder;
+open the actual saved file before leaving the only edited copy.
+
+Return the full choice JSON to the original browser, reopen it against the same
+proposal, inspect the complete readable review, and explicitly continue the
+original native apply. A changed source or proposal calls for its own original
+review. An in-flight file read cannot replace newly edited choices or another
+active native action. The editable file contains the entire column proposal and
+choices; keep the full acquired events, report, workbook and analytical archive
+in the original sixteen-file customer delivery alongside it.
 
 The existing distribution exposes `starforge event-workbook-columns` and
 `./buyer/event-workbook-columns`. The complete CLI supports template creation,
-inspection, native column-array output and readable HTML, using the same
-source binding as the browser. It retains a different existing destination
+inspection, native column-array output, readable HTML and a complete editable
+HTML through its `editor` command, using the same source binding as the browser. It retains a different existing destination
 rather than replacing that file. The installation includes the full source
-and operating guide so independent file receiving works with the selected
+and operating guide, plus the full `./buyer/event-workbook-editor` module and
+controller, so independent editing and file receiving work with the selected
 product edition.
 
 Local checks match the workbook's UTF-8 heading/null-label allowances and
@@ -259,9 +271,12 @@ workbook writer when the operator explicitly continues. Current-customer
 review remains the route for deliberately changed definitions.
 
 The producing operator opens the exact outgoing browser and every downloaded
-JSON/HTML result, operates source selection, paged and reordered columns,
-save/reopen, conflicting source selection and explicit continuation, and
-inspects the actual normal and narrow rendered views. The receiving engineer
+JSON/HTML result and operates source selection, paged and reordered columns.
+The operator downloads the complete editor, edits and switches its worksheets
+offline, saves and reopens that exact file, explicitly restores a browser draft,
+and returns the full choices to the original browser. The operator inspects
+conflicting source selection, explicit continuation and the actual normal and
+narrow rendered views. The receiving engineer
 reopens the whole original customer workspace and carries a later source
 through the same programme, workbook and complete delivery. These operations
 join the existing native receiving record and its actual screenshots and
@@ -388,17 +403,20 @@ the installed commands used by that receiving engineer.
 
 ## Original source editions and application receiving
 
-The complete public product is selected at commit 131fce461f90a29bf3fd1bd430aa89efc0bef164 in
+The complete public product and its preceding mapping/worksheet course are
+selected at commit 126fbbdb51fe9bf76ea50e74f61b5a430d639c73 in
 woahwhattheheck/public-commons-sprint-2026. The independent registration at
 stellar-forge/developer-site/grant-products/webhook-customer-analysis.json keeps
-all thirty preceding source IDs and every preceding measured edition, plus the
-three complete worksheet-continuation source entries. Each
-historical edition names its original repository explicitly; the current edition
-names its actual public repository, exact commit, full Git blob, UTF-8 byte
-count and SHA-256. The mapping and worksheet continuation selects all thirty-three complete
-source bodies at one current public product commit, including its browser,
-native coordinator, typed agent, installed commands and operating guides. Historical source identities remain distinct from the current public
-source selection.
+all thirty-three preceding source IDs and every preceding measured edition.
+The complete offline worksheet continuation selects its eight changed or new
+bodies at commit 601b35a99304e31dbdd1c272a2256caf0e52b455 in the public
+woahwhattheheck/tjlabs-stellar-merchant-workspace repository: six existing
+registrations advance and the complete editor generator and controller add two
+entries. All thirty-five complete selected bodies have their actual repository,
+immutable commit, full Git blob, UTF-8 byte count and SHA-256. Historical source
+identities stay with their original repositories. The maintained public product
+owner receives these same whole postimages into the existing distribution;
+the registered source already identifies the exact shipped edition.
 
 The same public edition includes the complete commercial Workshare intake into
 Customer installations: native source selection, browser authoring, CLI and agent
