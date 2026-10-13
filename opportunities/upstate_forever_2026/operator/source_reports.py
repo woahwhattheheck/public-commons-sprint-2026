@@ -20,6 +20,7 @@ import zipfile
 
 from model.common import atomic_json, digest, file_digest, read_json
 from source_report_editions import ScientificReportEditions
+from source_archive_ingress import IncludedSourceArchives
 
 
 def member_name(value):
@@ -220,6 +221,8 @@ class SourceReports:
         self.scientific = ScientificReportEditions(operator, fault)
         self._archive_lock = threading.RLock()
         self._source_roots = tuple(source_roots)
+        self.included_archives = IncludedSourceArchives(
+            operator, fault, Path(__file__).resolve().parents[1], self._source_roots)
         self._managed_registered_ids = set()
         self._available_editions = []
         self._discovery_issues = []
@@ -328,6 +331,12 @@ class SourceReports:
             # Replace the dictionary atomically, retaining the original explicit order.
             self.operator.registered = registered
             self._managed_registered_ids = managed
+            archive_editions, archive_issues = self.included_archives.discover()
+            # A loose manifest already offers the same byte-identical import.
+            available_manifest_shas = {row["manifest_sha256"] for row in available if row["ready"]}
+            available.extend(row for row in archive_editions
+                             if row["manifest_sha256"] not in available_manifest_shas)
+            self._discovery_issues.extend(archive_issues)
             self._available_editions = available
 
 
@@ -394,6 +403,9 @@ class SourceReports:
             retained_ids = {row["id"] for row in retained}
             editions.append({
                 **original,
+                "entry_count": (len(retained[0].get("entries", []))
+                                if original.get("entry_count") is None and retained
+                                else original.get("entry_count")),
                 "retained_collections": [{"id": row["id"], "title": row.get("title", row["id"])}
                                          for row in retained],
                 "retained_scientific_sources": [source for row in retained
@@ -583,6 +595,8 @@ class SourceReports:
             return self.scientific.read(workspace, operation, payload)
         if operation == "catalog":
             return self.catalog(workspace, refresh=str(payload.get("refresh", "")).lower() in {"1", "true"})
+        if operation == "included-archive-preview":
+            return self.included_archives.preview(workspace, payload.get("archive_id"))
         if operation == "detail":
             return self.detail(workspace, payload)
         if operation == "archive":
