@@ -69,6 +69,11 @@
       "source": "run_two_receiving.mjs",
       "path": "operations/lead-case-handoff-20261012/working-tools/run_two_receiving.mjs",
       "sha256": "835650ccf4d0e7ec0aa90c4a4b23176738b3f2366a788844a1da9cc3e439bfd7"
+    },
+    {
+      "source": "run_musicminim_receiving.mjs",
+      "path": "operations/lead-case-handoff-20261012/working-tools/run_musicminim_receiving.mjs",
+      "sha256": "46786af26431a8b850b3cb33360ece5a9b30c4cf53d0f56bc1eef497134d6f75"
     }
   ],
   "customers": [
@@ -106,6 +111,13 @@
       "record": "TWO_Lead_Working_Record.json",
       "module": "run_two_receiving.mjs",
       "export_name": "runTwoReceiving"
+    },
+    {
+      "id": "musicminim-teacher-review",
+      "directory": "musicminim",
+      "record": "Musicminim_Lead_Working_Record.json",
+      "module": "run_musicminim_receiving.mjs",
+      "export_name": "runMusicminimReceiving"
     }
   ]
 }
