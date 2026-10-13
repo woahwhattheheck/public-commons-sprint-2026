@@ -9,6 +9,8 @@ import * as workOrders from './work-orders.mjs';
 import {sha256Utf8,sha256Bytes} from './sha256.mjs';
 import {inflateRawSync} from 'node:zlib';
 import {createIssuerAnnex} from './issuer-annex.mjs';
+import {readApplicationSource} from './application-source-node.mjs';
+import {createApplicationSource} from './application-source.mjs';
 const A=createIssuerAnnex(engine,{sha256Utf8,sha256Bytes});
 
 const need=(ok,message)=>{if(!ok)throw Error(message);};
@@ -103,11 +105,15 @@ export function main(argv=process.argv.slice(2)){
  if(command==='inspect')return{id:ws.id,title:ws.title,revision:ws.revision,sources:ws.sources.map(({text,rows,...x})=>({...x,rowCount:rows.length})),mappings:ws.mappings,corrections:ws.corrections,financePolicies:ws.financePolicies,financePolicyHistory:ws.financePolicyHistory,supportingFiles:ws.supportingFiles.map(({base64,...f})=>f),financeBasis:engine.financeBasis(ws),operations:ws.operations};
  if(command==='reconcile'){const report=engine.reconcile(ws);output(o['--out'],report);return{state:'RECONCILED',workspace,revision:ws.revision,ready:report.ready,summary:report.summary,report:absolute(o['--out'],'report output')};}
  if(command==='handover'){
-  const root=absolute(o['--out'],'handover directory'),packet=A.handover(ws,workOrders.buildHandover(ws));
+  const root=absolute(o['--out'],'handover directory');let packet=A.handover(ws,workOrders.buildHandover(ws));
   const codeRoot=path.dirname(fileURLToPath(import.meta.url)),read=name=>regular(path.join(codeRoot,name));
-  const data={schema:'tjlabs.fixed-asset-finance-browser.v1',copyId:'exit-'+ws.id+'-'+ws.revision,portable:engine.exportWorkspace(ws),engineSource:read('engine.mjs'),shaSource:read('sha256.mjs'),appSource:read('app.mjs'),issuerSource:read('issuer-annex.mjs'),issuerUISource:read('issuer-ui.mjs'),workOrderSource:read('work-orders.mjs'),workOrderUISource:read('work-orders-ui.mjs')};
+  const applicationSource=readApplicationSource(codeRoot),applicationSourceModule=read('application-source.mjs');
+  const sourceSupport=createApplicationSource({sha256Utf8});
+  const data={applicationSource,applicationSourceModule,schema:'tjlabs.fixed-asset-finance-browser.v1',copyId:'exit-'+ws.id+'-'+ws.revision,portable:engine.exportWorkspace(ws),engineSource:read('engine.mjs'),shaSource:read('sha256.mjs'),appSource:read('app.mjs'),issuerSource:read('issuer-annex.mjs'),issuerUISource:read('issuer-ui.mjs'),workOrderSource:read('work-orders.mjs'),workOrderUISource:read('work-orders-ui.mjs')};
+  sourceSupport.assertRuntime(applicationSource,data);
   const html=read('template.html').replace('__STYLES__',()=>read('styles.css')).replace('__BOOTSTRAP__',()=>JSON.stringify(data).replace(/</g,'\\u003c'));
   packet.files=packet.files.filter(f=>f.path!=='MANIFEST.json');packet.files.push({path:'Fixed_Asset_Finance_Workspace.html',type:'text/html;charset=utf-8',text:html,...sha256Utf8(html)});packet.manifest.files=packet.files.map(({text,base64,...f})=>f);const manifestText=JSON.stringify(packet.manifest,null,2)+'\n';packet.files.push({path:'MANIFEST.json',type:'application/json',text:manifestText,...sha256Utf8(manifestText)});
+  packet=sourceSupport.append(packet,applicationSource);
   fs.mkdirSync(root,{recursive:true,mode:0o700});const st=fs.lstatSync(root);need(st.isDirectory()&&!st.isSymbolicLink(),'Use an ordinary handover directory.');
   // Every complete member is immutable; interrupted publication reuses exact prior members.
   for(const f of packet.files){const target=path.resolve(root,f.path);need(target.startsWith(root+path.sep),'Retain the original handover directory.');fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o700});const actualRoot=fs.realpathSync(root),actualParent=fs.realpathSync(path.dirname(target));need(actualParent===actualRoot||actualParent.startsWith(actualRoot+path.sep),'Keep complete handover members in their original directory.');if(f.base64!==undefined)publishBytes(target,Buffer.from(f.base64,'base64'));else publish(target,f.text);}
