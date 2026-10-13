@@ -137,6 +137,10 @@ class PublishedStudyProvider:
         return ws, PublishedStudyStore(ws, ws.root / "published_studies")
 
     def _root_path(self, root_id, relative):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        if context:
+            team.require(context["principal"], administrator=True)
         root = self.roots.get(root_id)
         if root is None:
             self._fail("STUDY_SOURCE_ROOT", "Choose an available study source folder.", 404)
