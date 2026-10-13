@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-scenario-interpretation",
+  "components": {
+    "geographic-scenario-interpretation": {
+      "title": "Original geographic scenario source loading and support interpretation",
+      "paths": [
+        "source_tools/geographic_scenario_interpretation.mjs",
+        "source_tools/GEOGRAPHIC_SCENARIO_INTERPRETATION.md",
+        "integration/component_fragments/geographic-scenario-interpretation.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-scenario-interpretation"
+  ]
+}
