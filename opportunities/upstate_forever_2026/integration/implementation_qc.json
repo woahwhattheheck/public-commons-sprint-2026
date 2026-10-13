@@ -1,6 +1,6 @@
 {
   "schema": "upstate.implementation-qc-source/v1",
-  "edition": "implementation-qc-20261013-v2",
+  "edition": "implementation-qc-20261013-v3",
   "requires": [
     "implementation",
     "core"
@@ -13,7 +13,10 @@
     "operator/extensions/implementation-qc.json",
     "model/IMPLEMENTATION_QC.md",
     "integration/implementation_qc.json",
-    "integration/component_fragments/implementation-qc.json"
+    "integration/component_fragments/implementation-qc.json",
+    "model/implementation_qc_comparison.py",
+    "operator/web/implementation_qc_comparison.mjs",
+    "docs/SAMPLE_QC_COMPARISON.md"
   ],
   "controller_join": {
     "module": "operator/web/implementation.mjs",

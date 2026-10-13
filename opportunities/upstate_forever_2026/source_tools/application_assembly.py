@@ -38,7 +38,7 @@ except ImportError:
         validate_catalog, source_manifest_members, read_directory,
         compose_catalog, read_directory_fragments, fragment_paths)
 
-MAX_BYTES = 256 * 1024 * 1024
+MAX_BYTES = 512 * 1024 * 1024
 MAX_FILES = 10000
 INLINE_ASSET_BYTES = 8 * 1024 * 1024
 PART_SCHEMA = "upstate.application-source-part/v1"
