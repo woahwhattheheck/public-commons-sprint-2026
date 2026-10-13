@@ -140,3 +140,79 @@ Completed analyses expose the receiving_waters summary GeoPackage and the actual
 Priority scales use the fixed dimensionless range 0 to 1. Contribution masks retain binary units. Signed change layers retain their original annual mass-per-pixel units and alternative-minus-baseline direction. The compact normalization_id is the digest of the complete normalization in the original analysis record, allowing comparisons to retain the same caps without repeating that large record for each layer.
 
 Only existing completed artifacts enter this catalog. A source plan can be inspected and saved in GIS review before any numerical run. The original workspace archive retains these source and analysis files, and saved spatial reviews bind their exact file identities for export and reopening.
+
+## Execute the native receiving journey
+
+The native command consumes a saved source plan or completed analysis in its
+original Workspace. It opens each selected source/contribution pair or result
+raster through SpatialReview, saves the exact review, renders PDF/SVG/PNG and the
+map pack, and reopens the exported review against its original source bindings.
+
+From the application root, run the four-area source-plan journey for the two
+utilities using the actual Workspace path and the plan ID returned by preparation:
+
+```sh
+python -B model/receiving_water_journey.py \
+  --workspace /absolute/path/to/workspace \
+  --plan-id ORIGINAL_PLAN_ID \
+  --output-dir /absolute/path/to/receiving-journeys \
+  --archive-and-reopen
+```
+
+The output directory must be outside the Workspace. With
+`--archive-and-reopen`, the command also creates the original complete portable
+Workspace archive, restores it into a new receiving directory, and reopens every
+saved map using the restored source files. The command uses the existing
+Workspace/export locks and original portable inventory. Its operation identity
+includes the selected original IDs, command source, and the original renderer's
+application, native library and font identity; changes receive a new operation
+directory. Repeating an unchanged operation reuses immutable reviews and exports.
+
+To render actual retained numerical results, supply `--analysis-id`. The plan is
+resolved from that analysis, or an explicit `--plan-id` must match. For example:
+
+```sh
+python -B model/receiving_water_journey.py \
+  --workspace /absolute/path/to/workspace \
+  --analysis-id ORIGINAL_ANALYSIS_ID \
+  --subject-kind receptor \
+  --subject-id ORIGINAL_RECEPTOR_ID \
+  --statistic current_priority \
+  --output-dir /absolute/path/to/receiving-journeys
+```
+
+Omitting subject selection visits every retained receptor and family union.
+Repeat `--subject-id` to select several actual subjects; `--subject-kind`
+distinguishes a receptor from a family union with the same ID. A result map uses
+the original summary feature filtered by both subject ID and kind, so unrelated
+waters are not included in its geographic extent.
+
+The statistic choices are `contribution_mask`, `current_priority`,
+`increased_export_priority`, `avoided_export_priority`, and `change`. Current
+priority defaults to the baseline; `--run-id` selects another retained run.
+Paired changes require an actual alternative; a single retained alternative is
+selected automatically. For a physical `change`, also pass the actual analyzed
+`--quantity nitrogen_export|phosphorus_export|sediment_export`. Physical changes
+keep the original mass per pixel units and alternative-minus-baseline sign.
+Priorities keep the shared 0–1 display scale. Empty contribution intersections
+are listed explicitly with zero selected cells and area; no raster map is
+created for an empty subject.
+
+Progress stages are emitted as short JSON lines on stderr. The complete result
+is printed on stdout and saved as `OUTPUT_DIR/OPERATION_ID/journey.json`.
+It contains project/plan/analysis/review/export IDs, original layer selections,
+native CRS and view, actual artifact paths and byte identities, reopened source
+bindings and, when requested, the archive and restored Workspace. Failure retains
+the actual stage, exception type and message plus maps already completed. Exit
+status is zero only when at least one selected map completes and the requested
+journey succeeds.
+
+Use `--paper letter|a4` and `--dpi 150|220|300` for native export settings.
+The Python API is
+`run(workspace, request, output_dir, progress=None)`; request keys match the
+CLI names with underscores and `subject_ids` is a list.
+
+Apply the journey to the matching original geography: the four South Carolina
+utility polygons use their regional source-plan Workspace; a retained Gura run
+uses its original Gura source/catchment plan. Numerical receiving-water analysis
+continues to use completed model rasters for the selected Workspace.
