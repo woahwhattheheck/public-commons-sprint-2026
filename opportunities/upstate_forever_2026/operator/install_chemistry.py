@@ -319,6 +319,26 @@ FIELD_ASSIGNMENT_PREVIOUS_SHA256 = {
     "source/monitoring-field-study/INSTALLATION.md": "c3374d5f109820a16e6f1245fbafe8d92a83d5092f086a818c006bb716e71c42"
 }
 
+CURRENT_DIRECTION_PREVIOUS_SHA256 = {
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "753d62209e498f402dc62fd657bbe5caca853c190be47074845b7a4ffe0b5662",
+    "operator/CHEMISTRY_OPERATOR.md": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a",
+    "operator/install_chemistry.py": "378dd5acc709fae2488663bcd8c4f381da0cacc8e8fd0a662620e579ed89cdb5",
+    "source/CHEMISTRY_COMPOUND_RECEIVING.md": "206ddf19ce47cdd83d606bef0e59f7756711c5bcd21649fec3ab1a739d25f119",
+    "source/chemistry-report-receiving/README.md": "dd100a3e8c4b99fb0ab105076654160c53c347c94349b166c1a98e9a38e4601e",
+    "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+    "source/monitoring-chemistry-study/README.md": "5f1dd0d418164d0609398c546a941ace48d21e4df7cfdb56b976385ea90d6c49",
+    "integration/monitoring_observed_sources.json": "4a632a0c27007cfa9fb671739eaf2da9a96ee8191f43b3d97ad78c9df6b258a9",
+    "integration/monitoring_study_transfer_sources.json": "8ee0fd024c541d89541a23fbf83304dc71d8b79088603670ff0cf5dee40b0358",
+    "integrations/monitoring/PREDECESSORS.json": "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640",
+    "integrations/monitoring/source_adoption.json": "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4",
+    "operator/MONITORING_FIELD_SELECTION.md": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9",
+    "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+    "source/monitoring-field-study/INSTALLATION.md": "5c101eea446c487f4ad46efdeb9ffbd38d9bf2c20f825d5422b19b03b484b03c",
+    "source/monitoring-field-study/README.md": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507",
+    "source/monitoring_field_assignment/RECEIVING.md": "65b4d54becc54bf7f6f168190e15c0485067a03260838ad999c0606988449e1b",
+    "source_tools/receive_monitoring_field_assignment_browser.mjs": "baa62ff972c7d07c64a54896c04228ba5046ab536030481043a3c64a2769d6ef"
+}
+
 SHARED_IMPLEMENTATION_FILES = ("model/implementation.py", "model/implementation_schema.py", "model/portable_implementation.py")
 
 BANK_SCHEMA = "commons.source-bank/v1"
@@ -459,7 +479,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name), CURRENT_DIRECTION_PREVIOUS_SHA256.get(name)}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:

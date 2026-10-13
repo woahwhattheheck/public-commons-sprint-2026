@@ -80,7 +80,6 @@ token). Use exact paths from that original native process:
   "workspace_path": "/absolute/original/workspace",
   "playwright_module": "/absolute/installed/playwright/index.mjs",
   "executable": "/absolute/installed/chromium",
-  "cutoff": "2026-10-13T14:00:00Z",
   "field_assignment": {
     "project_id": "THE_ORIGINAL_PROJECT",
     "selection_record_id": "THE_ACTUAL_SAVED_SELECTION",
@@ -187,7 +186,7 @@ screenshots and actual outgoing reports before delivery.
 
 ## Producing-peer handover
 
-Follow the existing RIVER/DD6B receiving operation. Use the complete installed app to load the actual saved field selection, review both station families and raw coordinate columns, save, open the report and editable plan, edit a note and save a new native revision, then reopen the original report and independent received project. Exercise desktop and 390-pixel layouts, keyboard access, locally scrolling tables and every outgoing report/CSV/JSON/archive link. Personally open and inspect the actual artifacts before calling the recipient package ready. Preserve the active regional GIS/native computation and the original owner's 14:00 UTC checkpoint.
+Follow the existing RIVER/DD6B receiving operation. Use the complete installed app to load the actual saved field selection, review both station families and raw coordinate columns, save, open the report and editable plan, edit a note and save a new native revision, then reopen the original report and independent received project. Exercise desktop and 390-pixel layouts, keyboard access, locally scrolling tables and every outgoing report/CSV/JSON/archive link. Personally open and inspect the actual artifacts before calling the recipient package ready. Preserve the active regional GIS/native computation. Bryce's renewed version 2026-10-13.4 direction supersedes the earlier cutoff; continue this same operation from its retained state.
 
 The original field-support publisher owns its eight-source product and its offline selection template; this additive native consumer provides the existing file→editable-plan handover. Source maths and original cost/calendar bytes remain unchanged.
 
@@ -195,9 +194,15 @@ The original field-support publisher owns its eight-source product and its offli
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Direct owner instructions
+
+Latest direct instruction, October 13 at 10:46 a.m. Eastern:
+
+> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
 > do the simulated model
 
@@ -235,6 +240,10 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+
+## Optional receiving deadline
+
+The wrapper has no default calendar cutoff. If the caller explicitly supplies `cutoff` as an ISO timestamp, that deadline remains binding and invalid values are rejected. Omitting it continues under current owner direction without inventing a replacement deadline. A matching earlier `selection.json` whose only difference is the former implicit October 13 deadline is reused byte-for-byte; native selection, task history, completion verification and running-process ownership are unchanged. Other changed selections still require a distinct output directory. Preserve any deliberately supplied caller deadline when continuing its operation.
