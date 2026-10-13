@@ -11,13 +11,13 @@ This packet contains the complete 175-file native source cohort already used by 
 
 The packet is source transport for the same original operation. The maintained operating guide is `stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/ZURICH_PORTAL_USE.md`. Original capture and customer archives remain with their existing owner and saved identities. Continue their existing application jobs and source selections.
 
-The accepting Linux worker needs the original Python environment with openpyxl and a private writable temporary directory. The full publisher is already complete in the saved customer continuation; the remaining action is the explicit original workbook retry followed by the original customer workspace archive and cold receiving. The receiving owner supplies the current saved checkpoint through the existing authorized transfer. Source materialization should reject absolute/traversing paths and verify every retained member before loading the native modules.
+The accepting Linux worker needs the original Python 3.11+ environment with openpyxl and a private writable temporary directory. The full publisher is already complete in the saved customer continuation; the remaining action is the explicit original workbook retry followed by the original customer workspace archive and cold receiving. The receiving owner supplies the current saved checkpoint through the existing authorized transfer. Source materialization should reject absolute/traversing paths and verify every retained member before loading the native modules.
 
 Keep the original C271 technical operation and Liip company thread as the coordination destinations. This source packet does not replace the maintained Merchant source or establish a second customer run.
 
 ## Continue on the accepting Linux worker
 
-`run-customer-continuation.py` is the complete original receiving command. Run it with Python in the accepting worker's private runtime:
+`run-customer-continuation.py` is the complete original receiving command. Run it with Python 3.11 or later in the accepting worker's private runtime:
 
     python -u run-customer-continuation.py < original-private-continuation.frame
 
@@ -26,3 +26,7 @@ The frame is the UTF-8 byte length followed by a newline and one JSON payload. T
 The command receives and hashes this complete pinned source packet, restores the same owned project, reuses the completed native publisher, and runs only the remaining customer continuation. The workbook uses a private TMPDIR. It preserves native status and saves the complete current archive and summary to their existing guarded versions before returning. Successful customer completion also saves the HTML report, XLSX workbook and full native customer archive. The initial private input waits at most 120 seconds; the actual customer operation follows the original application lifecycle.
 
 The accepting worker should coordinate its actual process identity with the original owner before this command begins. Source transport and customer receiving preserve the original operation rather than introducing a second run.
+
+## Recover an interrupted receiving step
+
+The receiver walks every member of both original archives on each continuation. It reuses an existing file only after matching the original member size and SHA-256, receives missing members through a private temporary file, and publishes each complete member without overwriting an existing path. A directory created by an interrupted attempt does not stand in for its contents. Original owned directory permissions are restored component by component; links and changed files are rejected. The same completed publisher and customer job identities remain in the saved workspace.

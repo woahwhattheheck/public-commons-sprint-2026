@@ -74,18 +74,55 @@ def checksum(path):
  with open(path,'rb') as inp:return hashlib.file_digest(inp,'sha256').hexdigest()
 if input_archive.stat().st_size!=434557 or checksum(input_archive)!='b093a0a66b12830f7daf507980b77a9f6f692e22dcf44cd195ef2e599998979c':
  raise ValueError('Original captured source archive changed')
+def private_receiving_directory(path):
+ import stat
+ relative=path.relative_to(root)
+ current=root
+ for component in ('',*relative.parts):
+  if component:current=current/component
+  try:current.mkdir(mode=0o700)
+  except FileExistsError:pass
+  details=current.lstat()
+  if not stat.S_ISDIR(details.st_mode) or details.st_uid!=os.geteuid():
+   raise ValueError('Original receiving directory is not an owned directory: '+str(current))
+  current.chmod(0o700)
+def receive_original_member(archive,member,target):
+ import stat,tempfile
+ if member.isdir():
+  private_receiving_directory(target)
+  return
+ private_receiving_directory(target.parent)
+ try:existing=target.lstat()
+ except FileNotFoundError:existing=None
+ if existing is not None:
+  if not stat.S_ISREG(existing.st_mode) or existing.st_uid!=os.geteuid():
+   raise ValueError('Original receiving member is not an owned file: '+str(target))
+  incoming=hashlib.sha256();received=0
+  with archive.extractfile(member) as inp:
+   for block in iter(lambda:inp.read(1048576),b''):
+    incoming.update(block);received+=len(block)
+  if received!=member.size or existing.st_size!=member.size or checksum(target)!=incoming.hexdigest():
+   raise ValueError('Existing original receiving member differs: '+str(target))
+  target.chmod(0o600)
+  return
+ staging=root/'receiving-staging';private_receiving_directory(staging)
+ descriptor,pending_name=tempfile.mkstemp(prefix='.original-receiving-',dir=staging)
+ pending=pathlib.Path(pending_name)
+ try:
+  with os.fdopen(descriptor,'wb') as out,archive.extractfile(member) as inp:
+   shutil.copyfileobj(inp,out)
+   if out.tell()!=member.size:raise ValueError('Incomplete original receiving member: '+str(target))
+   out.flush();os.fsync(out.fileno())
+  pending.chmod(0o600)
+  os.link(pending,target)
+ finally:
+  pending.unlink(missing_ok=True)
 captures=root/'liip-zurich-source-captures'
-if not captures.exists():
- with tarfile.open(input_archive,'r:gz') as archive:
-  for member in archive:
-   path=pathlib.PurePosixPath(member.name)
-   if path.is_absolute() or '..' in path.parts or not path.parts or path.parts[0]!='liip-zurich-source-captures' or not(member.isdir() or member.isfile()):raise ValueError('Invalid retained source member')
-   target=root/member.name
-   if member.isdir():target.mkdir(mode=0o700,parents=True,exist_ok=True)
-   else:
-    target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-    with archive.extractfile(member) as inp,target.open('xb') as out:shutil.copyfileobj(inp,out)
-    target.chmod(0o600)
+with tarfile.open(input_archive,'r:gz') as archive:
+ for member in archive:
+  path=pathlib.PurePosixPath(member.name)
+  if path.is_absolute() or '..' in path.parts or not path.parts or path.parts[0]!='liip-zurich-source-captures' or not(member.isdir() or member.isfile()):raise ValueError('Invalid retained source member')
+  receive_original_member(archive,member,root/member.name)
 print(json.dumps({'event':'original-source-received','rows':8210,'archiveSha256':checksum(input_archive)}),flush=True)
 data=root/'programme';data.mkdir(mode=0o700,exist_ok=True)
 if PAYLOAD.get('checkpoint'):
@@ -101,17 +138,7 @@ if PAYLOAD.get('checkpoint'):
    relative=pathlib.Path(*path.parts[2:])
    if not relative.parts:continue
    target=data/relative
-   if member.isdir():target.mkdir(mode=0o700,parents=True,exist_ok=True)
-   else:
-    target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-    with archive.extractfile(member) as inp:
-     if target.exists():
-      incoming=hashlib.sha256()
-      for block in iter(lambda:inp.read(1048576),b''):incoming.update(block)
-      if checksum(target)!=incoming.hexdigest():raise ValueError('Existing original programme file differs: '+str(relative))
-     else:
-      with target.open('xb') as out:shutil.copyfileobj(inp,out)
-      target.chmod(0o600)
+   receive_original_member(archive,member,target)
  print(json.dumps({'event':'original-programme-checkpoint-received','sha256':PAYLOAD['checkpoint']['sha256']}),flush=True)
 publisher_out=data/'publisher-delivery';publisher_out.mkdir(mode=0o700,exist_ok=True)
 customer_out=data/'customer-delivery';customer_out.mkdir(mode=0o700,exist_ok=True)
