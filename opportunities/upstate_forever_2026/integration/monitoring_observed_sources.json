@@ -187,8 +187,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 40043,
-      "sha256": "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4",
+      "bytes": 41893,
+      "sha256": "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -203,7 +203,10 @@
         "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a",
         "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
         "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
-        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c"
+        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c",
+        "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
+        "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46",
+        "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4"
       ]
     },
     {
@@ -590,9 +593,11 @@
     },
     {
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
-      "predecessor_sha256": []
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "predecessor_sha256": [
+        "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+      ]
     },
     {
       "path": "model/monitoring_field_return.py",
@@ -602,15 +607,19 @@
     },
     {
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
-      "predecessor_sha256": []
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "predecessor_sha256": [
+        "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+      ]
     },
     {
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
-      "predecessor_sha256": []
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "predecessor_sha256": [
+        "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+      ]
     },
     {
       "path": "operator/web/monitoring-frontiers.css",
@@ -644,11 +653,13 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 23474,
-      "sha256": "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
+      "bytes": 24573,
+      "sha256": "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
-        "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f"
+        "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
+        "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
+        "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4"
       ]
     },
     {
@@ -832,7 +843,9 @@
     "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
     "source_collection": "monitoring_frontier_comparisons",
     "guide": "model/MONITORING_BUDGET_COMPARISON.md",
-    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json"
+    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json",
+    "export_edition": 2,
+    "export_entrypoint": "index.html"
   },
   "scientific_report_comparison": {
     "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3593",

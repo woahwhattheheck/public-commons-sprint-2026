@@ -13,7 +13,7 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
     sources:state?.data?.sources?.map(x=>x.id),grids:state?.data?.grids?.map(x=>[x.id,x.state]),
     runs:state?.data?.runs?.map(x=>[x.id,x.state]),comparisons:state?.data?.comparisons?.map(x=>x.id),
     deliveries:state?.data?.deliveries?.map(x=>[x.id,x.state]),
-    tasks:state?.tasks?.filter(x=>x.action?.startsWith('gis.project.')).map(x=>[x.id,x.state])});}
+    tasks:state?.tasks?.filter(x=>x.action?.startsWith('gis.project.')||x.action==='gis.vector.review').map(x=>[x.id,x.state])});}
   function selected(name){return root?.querySelector('[name="'+name+'"]');}
   function sourceChoices(collection,saved){
     const list=root?.querySelector('[data-gis-sources]');if(!list)return;

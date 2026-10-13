@@ -19,7 +19,7 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-editable-study-9"
+PREFIX = "waterlink-receiving-waters-editable-revisions-10"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_accounting.py",
@@ -32,6 +32,7 @@ REQUIRED = (
     "source_tools/receiving_water_catalog.py",
     "operator/receiving_water_actions.py",
     "operator/web/receiving_waters.mjs",
+    "operator/web/receiving_water_editing.mjs",
     "operator/web/receiving_water_spatial.mjs",
     "operator/web/receiving_water_monitoring.mjs",
     "operator/web/receiving_waters.css",
@@ -118,11 +119,12 @@ MONITORING_ACTIONS = {
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4–7 descriptors before direct editable-study navigation.
+# Exact retained version 4–8 descriptors before editable-plan and analysis revisions.
 DESCRIPTOR_PREDECESSORS = {"461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
                            "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
                            "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813",
-                           "b76e245f56122f0bed0ed6053ed8bbeac7dee1db30caa4b45779a6fc3ccce6ca"}
+                           "b76e245f56122f0bed0ed6053ed8bbeac7dee1db30caa4b45779a6fc3ccce6ca",
+                           "d2c09c2d0597c85a9cac7aefbd7e18d885408241527a5231240af9d875bb6f7e"}
 EXTENSION_TARGET = "operator/extensions/receiving-waters.json"
 TARGETS = (
     "operator/server.py",
@@ -793,6 +795,14 @@ def install(root, *, check=False):
             or "receiving-water-plans" not in study_client
             or "receiving-water-analyses" not in study_client):
         raise ValueError("Receive the current Study transfer browser with direct original study selection")
+    water_browser = (root / "operator/web/receiving_waters.mjs").read_text(encoding="utf-8")
+    water_editing = (root / "operator/web/receiving_water_editing.mjs").read_text(encoding="utf-8")
+    if ("from './receiving_water_editing.mjs'" not in water_browser
+            or "async function editSaved(" not in water_browser
+            or "export function revisePlan(" not in water_editing
+            or "export function reviseAnalysis(" not in water_editing
+            or "async function openReceiving(" not in study_client):
+        raise ValueError("Receive the complete editable Receiving forms and original study return navigation")
     migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
                               run_name="_original_monitoring_migration")
     removers = {"operator/server.py": migration["remove_server"],
@@ -837,7 +847,7 @@ def install(root, *, check=False):
             previous["client"].pop("task_actions", None)
             previous["assets"] = [name for name in previous["assets"]
                                   if name not in {"receiving_water_spatial.mjs", "receiving_water_monitoring.mjs",
-                                                  "receiving_water_report.mjs"}]
+                                                  "receiving_water_report.mjs", "receiving_water_editing.mjs"}]
             previous["client"]["requires"] = [name for name in previous["client"]["requires"]
                                                if name not in {"openScientificReport", "openExtension"}]
             previous["backend"]["actions"] = [name for name in previous["backend"]["actions"]
