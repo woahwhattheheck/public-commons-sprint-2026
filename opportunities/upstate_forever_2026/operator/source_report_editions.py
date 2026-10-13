@@ -12,6 +12,10 @@ from model import scientific_report_editions as retained_editions
 from model import scientific_report_review
 from model import scientific_report_capture
 
+def _pair(row):
+    return row.get("source_collection_id"), row.get("source_id")
+
+
 KIND = "scientific-report-editions"
 SCHEMA = "upstate.scientific-report-edition/v1"
 ACTIONS = frozenset({"source-reports.render", "source-reports.export", "source-reports.briefing", "source-reports.review", "source-reports.adopt"})
@@ -44,6 +48,17 @@ class ScientificReportEditions:
             rows.append(self._summary(record))
         return rows
 
+    def _native_studies(self, workspace):
+        # Source reports also run in installations without the optional GIS desk.
+        from importlib import import_module
+        try:
+            native = import_module("model.gis_native_study")
+        except ModuleNotFoundError as error:
+            if error.name != "model.gis_native_study":
+                raise
+            return []
+        return native.choices(self.operator.ws(workspace))
+
     def catalog(self, workspace):
         rows = []
         for collection in self.operator.ws(workspace).sources():
@@ -57,6 +72,10 @@ class ScientificReportEditions:
                                  "uri": entry["uri"], "body_sha256": entry["body"]["sha256"],
                                  "body_bytes": entry["body"]["bytes"],
                                  "collection_title": collection.get("title", collection["id"])})
+        native = {_pair(row): row for row in self._native_studies(workspace)}
+        for row in rows:
+            if _pair(row) in native:
+                row["native_study"] = native[_pair(row)]
         captures = scientific_report_capture.catalog(self.operator.ws(workspace))
         return {"workspace_key": workspace, "sources": rows, "editions": self.saved(workspace),
                 "captured_reports": captures["reports"], "capture_issues": captures["issues"]}
@@ -101,7 +120,10 @@ class ScientificReportEditions:
             item = read_json(receipt)["file"]
             verify_file(directory, item)
             archive = self.operator._ticket(workspace, directory / item["path"], item, "Complete report ZIP")
+        original_pairs = {_pair(row) for row in record["sources"]}
+        native_studies = [row for row in self._native_studies(workspace) if _pair(row) in original_pairs]
         return {"workspace_key": workspace, "edition": record, "files": members, "archive": archive,
+                "native_studies": native_studies,
                 "briefings": self.briefing_catalog(workspace, key),
                 "viewer_url": next((row["url"] for row in members
                                     if row["role"] == "report_html"), None),
