@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "11",
+  "version": "12",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -17,7 +17,9 @@
     "implementation_evidence.mjs",
     "implementation_evidence_ui.mjs",
     "implementation_source_reports.mjs",
-    "implementation_reconciliation.mjs"
+    "implementation_reconciliation.mjs",
+    "implementation_site_visit_csv.mjs",
+    "implementation_site_visit.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -44,7 +46,8 @@
       "implementation.lab.dispatch-report",
       "implementation.evidence.import",
       "implementation.evidence.export",
-      "implementation.reconciliation.apply"
+      "implementation.reconciliation.apply",
+      "implementation.site-visit.import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -514,6 +517,45 @@
         ],
         "path": "/api/implementation/reconciliation-apply",
         "operation": "reconciliation-apply",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/site-visit-inspect",
+        "operation": "site-visit-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/site-visit-preview",
+        "operation": "site-visit-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/site-visit-import",
+        "operation": "site-visit-import",
         "handler": "queue",
         "args": [
           "workspace_key",
