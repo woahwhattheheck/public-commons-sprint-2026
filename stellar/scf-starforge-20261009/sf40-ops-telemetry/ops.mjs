@@ -129,7 +129,9 @@ export function createOpsHandler({catalog, discoveryHandler, nowMs=()=>performan
       }
     } catch {
       if(!res.headersSent){send(res,500,{error:'INTERNAL_ERROR'});return;}
-      if(!res.writableEnded)res.end();
+      // A failed body is incomplete even after a successful status header.
+      // Destroy it so close records an abort instead of finish recording 2xx.
+      if(!res.writableEnded)res.destroy();
     }
   }
   return {handler,snapshot};
