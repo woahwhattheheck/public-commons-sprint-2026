@@ -173,7 +173,7 @@ def prepare(directory, plan, *, progress=None):
             "Areas may overlap and are not added. The scale and north arrow use the original projected grid."))
     for index, row in enumerate(rows, 1):
         receptor = row["record"]
-        caption = (receptor["title"] + "; retained relation: " + str(receptor["relation"])
+        caption = (receptor["title"] + "; retained relation: " + receptor["relationship_precision"]
                    + ". Contribution area: " + format(receptor["contribution_area_ha"], ",.3f")
                    + " ha from the original plan in its analysis CRS. Original boundaries and holes remain intact. "
                    "This frame describes the saved geographic scope; it does not encode a measured concentration, "
