@@ -120,7 +120,7 @@
       "guide": "model/MONITORING_STUDY_TRANSFER.md"
     },
     "scoped_upgrade": {
-      "source_base": "2637a88e05ed9433393e865f4cbe55f4d308f4e2",
+      "source_base": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
       "report_figures_merge": "4c5fbd132086b864de44f8cc7ac987c9373d42c4",
       "scientific_composer_merge": "4c3c470cd078b473d7720e7f13c4060728f014ea",
       "scientific_browser_merge": "3f132ec823503d8b105278fcc6e22b674dbc0250",

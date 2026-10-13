@@ -1,53 +1,53 @@
 {
   "schema": "upstate.monitoring-source-upgrade/v1",
-  "source_commit": "2637a88e05ed9433393e865f4cbe55f4d308f4e2",
+  "source_commit": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MONITORING-SCOPED-UPGRADE-DD6B-20261013",
   "native_project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
   "installer": "integrations/monitoring/install_monitoring.py",
   "inventory": "integrations/monitoring/current_application_files.json",
   "source_files": 94,
-  "source_bytes": 1735017,
+  "source_bytes": 1754013,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 437676,
-      "sha256": "307fd464dd28fcc7985a213bb849cdae88d1f2467abb6b95d885285261ae0eda",
+      "bytes": 449164,
+      "sha256": "c35d5704e42856f13816cb30033eddd3745ee956c7e0eb3c81deba93e015b5fe",
       "members": 22,
-      "source_bytes": 324626
+      "source_bytes": 333242
     },
     {
       "path": "source-02.json",
-      "bytes": 451347,
-      "sha256": "71761f88620aaf6ec76062a0de82a894750ecbe43a14cc155abf793a0b1f40c6",
+      "bytes": 459143,
+      "sha256": "7242db9bf2d54e4e21545063140e618b8bdf3a780de72a805dcb0b410c06b0e1",
       "members": 18,
-      "source_bytes": 335673
+      "source_bytes": 341519
     },
     {
       "path": "source-03.json",
       "bytes": 429642,
-      "sha256": "51fb736e84f0e756f32e590b091e935ca70f4c27969856d8c997dca9966ff397",
+      "sha256": "e9a4e1e37c29869c2ad313f80069e15b107dddd02d8d2bb74b4813fb08cb8b7a",
       "members": 13,
       "source_bytes": 320124
     },
     {
       "path": "source-04.json",
-      "bytes": 439287,
-      "sha256": "72a704dffe4a0b39f113ad7f7e8d66fae77928f327f0fbc1f3e3d483595644a8",
+      "bytes": 443131,
+      "sha256": "86a8bc78869748750c0c19faf29bc05df1180315cce632fa112ee8e19a3e00f6",
       "members": 21,
-      "source_bytes": 326153
+      "source_bytes": 329036
     },
     {
       "path": "source-05.json",
-      "bytes": 436598,
-      "sha256": "f176f089038c74bf2c852e67fde2eac192341cf2a38806a152db7c6297d25010",
+      "bytes": 438798,
+      "sha256": "0e310971ccc626085f1f11888332c21e7fbf41a223f60dfa88423312cc9f19ab",
       "members": 16,
-      "source_bytes": 324846
+      "source_bytes": 326497
     },
     {
       "path": "source-06.json",
       "bytes": 139237,
-      "sha256": "161927f5a3e607fa3a3d0c4c5b2ca985e58e01f8fee02f9dbc3df193d153878c",
+      "sha256": "63c76168974a0e7811fad13a9f185382c7646c870b111dee29ba36ad099bf67a",
       "members": 4,
       "source_bytes": 103595
     }
@@ -91,26 +91,26 @@
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 41097,
-      "sha256": "7be85064d27b77eac0ce982a32229ceeff646b3d07b0d0cf9368c797d40a7ffd",
+      "bytes": 42243,
+      "sha256": "ad0d9d525a2305c729a11adb22623319d69490841a83890a3ea41eb424706a6f",
       "role": "installed_component"
     },
     {
       "path": "integration/monitoring_study_transfer_sources.json",
-      "bytes": 21392,
-      "sha256": "2d7d7c6819b6a45ccc773aab354b416ff817c04fce2ea7a740cd7490067e5fe1",
+      "bytes": 22842,
+      "sha256": "5b63658973fba77de088c6a389fe816acf55de037d727b9db6d16d87cfc0c1aa",
       "role": "installed_component"
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 55052,
-      "sha256": "e300cdba7e1b6be4f6898b0112d875c4ea553a4c4d2d40f6fe906f48e3f81ea5",
+      "bytes": 58210,
+      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
       "role": "installed_component"
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
       "bytes": 6889,
-      "sha256": "aac41776d89a852037320bcdbe33b830e0bd2351ec763009cb8c0813d4c53203",
+      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
       "role": "installed_component"
     },
     {
@@ -133,8 +133,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 45633,
-      "sha256": "8501d45a5f40bc7938d5e1975b0a584a4f4b839a8476fb4e94e1e16711cd20a5",
+      "bytes": 47827,
+      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
       "role": "installed_component"
     },
     {
@@ -145,8 +145,8 @@
     },
     {
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
       "role": "installed_component"
     },
     {
@@ -187,8 +187,8 @@
     },
     {
       "path": "model/implementation.py",
-      "bytes": 35460,
-      "sha256": "93bc77162df76981f84f02dda0c050a844a736db3e4d458d1e7da9642d6da8b5",
+      "bytes": 35546,
+      "sha256": "30cda1f91ffb417ec36bcd31747e586c6007101a5af5595fe6e3cd82fdb531ba",
       "role": "existing_base_dependency"
     },
     {
@@ -247,8 +247,8 @@
     },
     {
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
       "role": "installed_component"
     },
     {
@@ -403,8 +403,8 @@
     },
     {
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
       "role": "installed_component"
     },
     {
@@ -421,14 +421,14 @@
     },
     {
       "path": "operator/extension_registry.py",
-      "bytes": 30541,
-      "sha256": "2f0454d47db34aa03fc12b6ff49b3d2d027174ec2dc476e6e227a5721c3065d3",
+      "bytes": 30994,
+      "sha256": "e2e5802791e8cf74b29bfa5e8e0ebeaf5021a0e9b05e6299aacc8f3c57967f82",
       "role": "existing_base_dependency"
     },
     {
       "path": "operator/extensions/implementation.json",
-      "bytes": 12731,
-      "sha256": "84368f6f25e11b655040463ade4fd72c1752ac32c09ca14a103190b1c0046973",
+      "bytes": 13726,
+      "sha256": "901f51d744b11eee438291756344fc173f9761837afb31c31c1e07dc286bb4ee",
       "role": "existing_base_dependency"
     },
     {
@@ -451,8 +451,8 @@
     },
     {
       "path": "operator/install_receiving_waters.py",
-      "bytes": 49036,
-      "sha256": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458",
+      "bytes": 49860,
+      "sha256": "6221255d84b339fd54bb67f4256e26a865e088e3430524b8eadbc65da473e606",
       "role": "installed_component"
     },
     {
@@ -499,14 +499,14 @@
     },
     {
       "path": "operator/web/extensions/study_transfer.mjs",
-      "bytes": 32156,
-      "sha256": "c38a4123a5612733a2bfe1e790253bcea16ef07692cc9fe7d865c1439db55f5d",
+      "bytes": 33793,
+      "sha256": "a4bb23c47a8556b0a5b64923e037d5b858430c33ee6573772195e9f524f6135f",
       "role": "existing_base_dependency"
     },
     {
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 24175,
-      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "role": "installed_component"
     },
     {

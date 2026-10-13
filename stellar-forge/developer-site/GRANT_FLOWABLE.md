@@ -85,6 +85,26 @@ The maintained `native-programme-receiving.mjs` joins an already selected produc
 
 The source is merged and the complete reference is authored. The original engine/browser commissioning operation still owns the runtime result. Public grant reporting must attach its actual returned output before claiming the full 73-step course or customer acceptance. Customer-specific source and commercial material remain with the authorized original customer record.
 
+## Compile a complete BPMN operator course
+
+The maintained process compiler selects the original six BPMN resources, process catalogue and three full typed start inputs. The complete public reference contains 29 steps over ten source members. Its default course starts all three first-edition processes, performs human intake, deploys all second editions, validates and migrates the running grant and vendor review work, then completes the selected native tasks. Onboarding stays on its selected first edition unless the operator explicitly selects its migration. A selected onboarding-only course has thirteen steps.
+
+Use the installed command, retaining the complete configuration and its relative source paths:
+
+```sh
+starforge flowable-process-programme \
+  /absolute/source/process-commissioning.compile.json \
+  /absolute/private/selected-process.programme.json
+```
+
+The original configuration is `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/process-commissioning.compile.json`. Copy its source edition intact, select the actual operator and reviewer identities, and choose its original family and migration keys. Read the complete process section of `products/flowable-merchant/PROGRAMMES.md`; inputs remain authored source rather than generated per-step editor JSON.
+
+The compiler preserves exact original byte identities and numeric request text. It substitutes only declared quoted definition and business-key tokens. Select an actual tenant on deployment; typed starts using the returned definition ID must omit `tenantId`. The compiler rejects that incompatible input instead of silently changing the original source.
+
+Save the complete output through the existing programme interface on the actual BPMN connection. Definitions bind to their retained deployment IDs and process keys, task selections include the original process ID and task-definition key, and migration uses the actual selected target definition rather than assumed engine version numbers. Review each native plan and its original migration validation before dispatch.
+
+The existing installed programme receiving continuation operates the 29-step reference in the same retained source/native programme and transfers the complete resulting history. Treat a source compilation result as source evidence. The original engine and receiving operation must provide its actual completed runtime and customer acceptance record.
+
 ## Deliver all source and the complete workspace
 
 The original source receiver creates the full source ZIP/manifest, selected installed release and builder receipt. Its native continuation returns the final installed workspace export after subsequent SDK/CLI/MCP/browser work. Select those actual final identities when delivering the complete operating product.

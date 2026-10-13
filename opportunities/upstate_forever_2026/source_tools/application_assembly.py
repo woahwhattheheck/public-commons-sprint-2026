@@ -30,11 +30,13 @@ import zipfile
 try:
     from .application_components import (CATALOG_PATH, MODULE_PATH,
         inspect as inspect_components, require_complete as require_components,
-        validate_catalog, source_manifest_members)
+        validate_catalog, source_manifest_members, read_directory,
+        compose_catalog, read_directory_fragments, fragment_paths)
 except ImportError:
     from application_components import (CATALOG_PATH, MODULE_PATH,
         inspect as inspect_components, require_complete as require_components,
-        validate_catalog, source_manifest_members)
+        validate_catalog, source_manifest_members, read_directory,
+        compose_catalog, read_directory_fragments, fragment_paths)
 
 MAX_BYTES = 256 * 1024 * 1024
 MAX_FILES = 10000
@@ -648,7 +650,9 @@ def _declared_source_members(root):
             break
         if path.is_symlink():
             raise ValueError("Selected catalogue contains a source alias")
-    catalog = validate_catalog(transport_json(catalog_path.read_text("utf-8")))
+    catalog, fragment_records = compose_catalog(
+        transport_json(catalog_path.read_text("utf-8")), read_directory_fragments(root))
+    catalog = validate_catalog(catalog)
     selected = set()
 
     def select(name):
@@ -664,6 +668,7 @@ def _declared_source_members(root):
     manifests = {path for name in selected
                  for path in catalog["components"][name].get("source_manifests", [])}
     members.update(manifests)
+    members.update(fragment["path"] for fragment in fragment_records)
     for name in sorted(manifests):
         path = root.joinpath(*member_name(name).parts)
         for ancestor in (path, *path.parents):
@@ -814,6 +819,168 @@ def snapshot_application(root):
                      "files": len(files), "external_inputs": len(external)},
     }
     return layer_from_document(document, {"captured_root": str(root)})
+
+
+def _family_member(root, name, expected=None):
+    """Capture one retained member without following aliases or changing source."""
+    path = root.joinpath(*member_name(name).parts)
+    for ancestor in (path, *path.parents):
+        if ancestor == root:
+            break
+        if ancestor.is_symlink():
+            raise ValueError("Selected family member contains an alias: " + name)
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_BYTES:
+            raise ValueError("Selected family member is not a bounded regular file: " + name)
+        body = stream.read(MAX_BYTES + 1)
+        if len(body) > MAX_BYTES or _source_fingerprint(os.fstat(stream.fileno())) != _source_fingerprint(before):
+            raise ValueError("Selected family member changed during capture: " + name)
+    identity = {"bytes": len(body), "sha256": sha256(body)}
+    if expected is not None and any(expected[key] != identity[key] for key in identity):
+        raise ValueError("Selected family member changed after closure inspection: " + name)
+    try:
+        content = body.decode("utf-8")
+        encoding = "utf-8"
+    except UnicodeError:
+        content, encoding = base64.b64encode(body).decode("ascii"), "base64"
+    if encoding == "utf-8" and "\0" in content:
+        content, encoding = base64.b64encode(body).decode("ascii"), "base64"
+    return {"path": name, "content": content, "encoding": encoding, **identity,
+            "mode": "100755" if before.st_mode & 0o111 else "100644"}
+
+
+def export_family(root, components, *, edition, operation_id=None, against=None, inspect_only=False):
+    """Export an explicit family as an ordinary source overlay, preserving its host.
+
+    The complete catalogue and fragments remain the maintained authority. Their
+    original bodies travel as selection provenance, rather than overwriting the
+    receiving application's catalogue with a second partial catalogue.
+    """
+    root = Path(root).absolute()
+    for ancestor in (root, *root.parents):
+        if ancestor.is_symlink():
+            raise ValueError("Selected family root contains a directory alias")
+    if not root.is_dir() or not isinstance(edition, str) or not edition.strip():
+        raise ValueError("Choose an original application directory and family edition")
+    components = list(components)
+    document = read_directory(root, selected_components=components, allow_embedded=False)
+    options = {"selected_components": components, "allow_embedded": False}
+    report = (inspect_components(document, **options) if inspect_only
+              else require_components(document, **options))
+    controls = {CATALOG_PATH, *fragment_paths(document["files"])}
+    declarations = [_family_member(root, name, document["file_metadata"][name])
+                    for name in sorted(controls)]
+    catalog, records = compose_catalog(
+        transport_json(next(row["content"] for row in declarations if row["path"] == CATALOG_PATH)),
+        [(row["path"], row["content"]) for row in declarations if row["path"] != CATALOG_PATH])
+    catalog = validate_catalog(catalog)
+    selection = {
+        "schema": "upstate.application-family-selection/v1",
+        "requested_components": components,
+        "selected_components": report["selected_components"],
+        "catalog": catalog,
+        "declaration_sources": declarations,
+        "component_inventory": report,
+    }
+    destination = Path(against).absolute() if against is not None else None
+    if destination is not None:
+        for ancestor in (destination, *destination.parents):
+            if ancestor.is_symlink():
+                raise ValueError("Receiving family root contains a directory alias")
+        if not destination.is_dir():
+            raise ValueError("--family-against needs the retained receiving application directory")
+    members = []
+    for name, expected in sorted(report["members"].items()):
+        if name in controls:
+            continue
+        member = _family_member(root, name, expected)
+        if destination is not None:
+            target = destination.joinpath(*member_name(name).parts)
+            if target.exists() or target.is_symlink():
+                member["base_sha256"] = _family_member(destination, name)["sha256"]
+        members.append(member)
+    # A fragment added during inspection changes effective membership even if
+    # none of the already selected original bodies changed.
+    if read_directory_fragments(root) != [
+            (row["path"], row["content"]) for row in declarations if row["path"] != CATALOG_PATH]:
+        raise ValueError("Application component fragments changed during family capture")
+    _family_member(root, CATALOG_PATH, document["file_metadata"][CATALOG_PATH])
+    if len(members) > MAX_FILES or sum(row["bytes"] for row in members) > MAX_BYTES:
+        raise ValueError("Selected family exceeds the source receiving limit")
+    return {
+        "schema": "commons.source-bank/v1",
+        "kind": "upstate.selected-application-family/v1",
+        "edition": edition, "operation_id": operation_id,
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "source_root": "opportunities/upstate_forever_2026",
+        "source_ref": "family:" + sha256(canonical({
+            "selection": selection,
+            "members": {row["path"]: {key: row[key] for key in ("bytes", "sha256", "mode")}
+                        for row in members}})),
+        "state": "selected_family_complete" if report["ready"] else "selected_family_incomplete",
+        "family_selection": selection, "files": members,
+    }
+
+
+def inspect_family_layers(document, layers):
+    """Validate selected overlays against the original receiving declarations."""
+    selected = []
+    files, metadata = document["files"], document.get("file_metadata", {})
+    for index, layer in enumerate(layers):
+        selection = layer.document.get("family_selection")
+        if selection is None:
+            continue
+        if not isinstance(selection, dict) or selection.get("schema") != "upstate.application-family-selection/v1":
+            raise ValueError("Unsupported selected family declaration")
+        declarations = selection.get("declaration_sources")
+        if not isinstance(declarations, list):
+            raise ValueError("Selected family needs its original catalogue and fragment bodies")
+        declaration_files = {}
+        for row in declarations:
+            if not isinstance(row, dict):
+                raise ValueError("Invalid selected family declaration body")
+            name = row.get("path")
+            member_name(name)
+            if name in declaration_files or (name != CATALOG_PATH and name not in fragment_paths([name])):
+                raise ValueError("Selected family declaration identity is invalid: " + name)
+            body = represented_body(row.get("content"), row)
+            check_identity(body, row.get("bytes"), row.get("sha256"), name)
+            declaration_files[name] = body.decode("utf-8")
+        if CATALOG_PATH not in declaration_files:
+            raise ValueError("Selected family needs the original complete catalogue")
+        catalog, _ = compose_catalog(
+            transport_json(declaration_files[CATALOG_PATH]),
+            [(name, declaration_files[name]) for name in fragment_paths(declaration_files)])
+        catalog = validate_catalog(catalog)
+        if canonical(catalog) != canonical(selection.get("catalog")):
+            raise ValueError("Selected family catalogue differs from its original declarations")
+        requested = selection.get("requested_components")
+        if not isinstance(requested, list) or not requested:
+            raise ValueError("Selected family needs its explicit component entry points")
+        if CATALOG_PATH not in files:
+            raise ValueError("Receive the family's maintained application catalogue before its source overlay")
+        current, _ = compose_catalog(
+            transport_json(represented_body(files[CATALOG_PATH], metadata.get(CATALOG_PATH, {})).decode("utf-8")),
+            [(name, represented_body(files[name], metadata.get(name, {})).decode("utf-8"))
+             for name in fragment_paths(files)])
+        current = validate_catalog(current)
+        expected = inspect_components(document, catalog=catalog, selected_components=requested,
+                                      allow_embedded=True)
+        # This source overlay carries its complete selected runtime/data closure.
+        # Declaration publication stays with the existing catalogue/fragment
+        # author, so a stale host must receive those original declarations first.
+        fields = ("paths", "requires", "source_manifests", "import_roots",
+                  "python_contexts", "retained_only", "html_templates")
+        for name in expected["selected_components"]:
+            original, received = catalog["components"][name], current["components"].get(name)
+            if received is None or any(original.get(key, []) != received.get(key, []) for key in fields):
+                raise ValueError("Receive the original selected component declaration before its family: " + name)
+        selected.append({"layer": index, "edition": layer.document.get("edition"),
+                         "source_ref": layer.document.get("source_ref"),
+                         "component_inventory": expected})
+    return selected
 
 
 def read_layer(path, *, payload_sha256=None):
@@ -1108,12 +1275,20 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             if any(metadata[name][key] != original[key] for key in ("bytes", "sha256")):
                 raise ValueError("Embedded source conflicts with declared original: " + name)
             del externals[name]
-    component_inventory = inspect_components({"files": files, "file_metadata": metadata})
+    combined = {"files": files, "file_metadata": metadata}
+    component_inventory = inspect_components(combined)
+    family_inventories = inspect_family_layers(combined, layers)
     if not inspect_only:
-        require_components({"files": files, "file_metadata": metadata})
+        require_components(combined)
+        for family in family_inventories:
+            if not family["component_inventory"]["ready"]:
+                error = ValueError("Selected family has unresolved original source dependencies")
+                error.component_closure = family["component_inventory"]
+                raise error
     composition = {
         "schema": "upstate.application-assembly/v1",
         "component_inventory": component_inventory,
+        "family_inventories": family_inventories,
         "edition": edition, "operation_id": operation_id,
         "layers": [layer.receipt for layer in layers],
         "changes": changes,
@@ -1353,6 +1528,10 @@ def main(argv=None):
                         help="Complete component carrier to apply; repeat in selected source order")
     parser.add_argument("--edition", required=True, help="Stable name of this cumulative application")
     parser.add_argument("--operation-id")
+    parser.add_argument("--family-component", action="append", default=[],
+                        help="Export this exact component family and transitive closure; repeat to combine entry points")
+    parser.add_argument("--family-against", type=Path,
+                        help="Retained receiving application for exact overlay predecessor hashes")
     parser.add_argument("--expect", action="append", default=[], metavar="INDEX:SHA256",
                         help="Pin a decoded carrier; base is index 0, overlays start at 1")
     parser.add_argument("--output", type=Path, help="Fresh application directory or identical retained receive")
@@ -1361,6 +1540,28 @@ def main(argv=None):
     parser.add_argument("--inspect", action="store_true", help="Read and compose without publishing files")
     args = parser.parse_args(argv)
     try:
+        if args.family_component:
+            if args.overlay or args.output or args.archive_path or args.expect:
+                raise ValueError("Family export uses one retained application directory and --source-map or --inspect")
+            if not args.base.is_dir() or (not args.inspect and not args.source_map):
+                raise ValueError("Choose the original application directory and --source-map, or --inspect")
+            document = export_family(args.base, args.family_component, edition=args.edition,
+                                     operation_id=args.operation_id, against=args.family_against,
+                                     inspect_only=args.inspect)
+            payload = canonical(document)
+            result = {"state": document["state"], "edition": args.edition,
+                      "source_ref": document["source_ref"],
+                      "payload_bytes": len(payload), "payload_sha256": sha256(payload),
+                      "files": len(document["files"]),
+                      "source_bytes": sum(row["bytes"] for row in document["files"]),
+                      "component_inventory": document["family_selection"]["component_inventory"]}
+            if not args.inspect:
+                data = gzip.compress(payload, mtime=0) if args.source_map.suffix == ".gz" else payload
+                result["source_map"] = publish_file(args.source_map, data)
+            print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
+            return 0
+        if args.family_against:
+            raise ValueError("--family-against requires an explicit --family-component")
         paths = [args.base, *args.overlay]
         pins = {}
         for value in args.expect:

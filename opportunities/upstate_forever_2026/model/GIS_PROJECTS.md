@@ -27,7 +27,7 @@ Each retained delivery dataset becomes one logical GIS layer. A priority raster 
 
 Physical exports and signed differences retain the engine's original metric/units/purpose style grouping. Signed differences retain alternative-minus-baseline direction and common valid support. Dimensionless priorities carry their own normalization and geographic-support identity, so unrelated priority methods do not acquire a shared scientific metric merely because they have the same units.
 
-The existing GIS engine derives its grayscale legends from complete finite native-cell ranges. Those GIS display ranges are distinct from the original atlas percentile limits; the original map display_scale remains in each layer's retained source metadata.
+Completed atlas layers retain their original saved display limits, units, percentile method and map relationships. The original map renderer’s Greys palette applies to physical exports and priorities; its RdBu_r palette applies to signed alternative-minus-baseline changes. Other source/run exports keep the existing shared full-native-cell grayscale policy. The original map display_scale remains in each layer’s retained source metadata.
 
 Every layer.source retains the complete original dataset record: grid and profile IDs, baseline and alternative run/scenario records, producing-model provenance, source editions, original comparison identity, physical header, support method, derivation and atlas map relationships.
 
@@ -355,3 +355,59 @@ attribute edit, and exported all five layers to a second independent receiver.
 The 305 county features, two 3,252 by 3,273 rasters, original file identities and
 attribution all survived the complete cycle. The native programme also removed
 its final adoption response and recovered the same immutable source collection.
+
+
+## Original atlas legends in desktop and offline views
+
+A completed delivery can use the same numerical dataset in several map panels.
+The GIS export retains each distinct saved scale as a named QGIS layer style.
+It keeps one working GeoTIFF and one logical layer; the styles do not copy or
+recalculate the dataset. Each style records its original map key and panel,
+complete saved scale, units, color lookup, and the native band scale/offset.
+
+In **OPEN_GIS.html**, open a layer's **Details** and choose **Atlas view**.
+The map overview and legend change together. **Save view** retains that choice
+with the existing layer visibility, extent and source-table selection; its view
+address reopens the same choice for this exact edition. The matching native
+**QGIS layer style** download is a relative QML file inside the complete project.
+
+In QGIS, use the layer's **Styles** menu to choose the same named map view.
+The project also retains the style files under **styles/**. Every named style
+uses the original saved limits, the same resolved 256-color palette used by the
+maintained atlas renderer, and endpoint colors outside the display limits.
+Signed changes retain the original negative/zero/positive interpretation.
+The full physical cell values, validity masks, declared CRS and companions are
+unchanged. Band scale/offset are applied once in both the provider legend and
+the offline display; original raw scale values remain in the style metadata.
+
+The exporter stores the resolved palette and its Matplotlib version.
+Only building a new atlas legend needs Matplotlib, already used by the original
+atlas producer. Receiving a complete package and switching its styles use the
+retained lookup. The QGIS shader encodes adjacent representable class boundaries
+so its interpolated renderer follows the atlas's discrete color lookup instead
+of inventing a new continuous stretch. Display reprojection and overview sampling
+still use their declared native QGIS or nearest-cell display methods. Floating-point
+normalization immediately beside a color-bin boundary can choose an adjacent
+lookup color; the saved legend limits, units and resolved palette are retained.
+
+Desktop edits remain authoritative in the selected QGS/QGZ. When sealing an
+edition, a recognized original atlas style also selects its matching offline
+overview. If the desktop renderer cannot be recognized, the package retains that native
+renderer and explicitly labels the offline view as an original atlas view.
+Recognition is conservative: native QGIS may add neutral pipe stages when saving,
+which remain retained even when they are outside this original-style matcher.
+It does not overwrite the recipient's native styling or describe an original
+overview as a reproduction of an unrecognized desktop renderer.
+
+The existing native receiving helper now selects every retained named style
+in QGIS, compares its actual range and color stops, restores the selected style,
+then renders, saves and independently reopens the project. On an edited edition,
+it records which original styles still match while preserving the recipient's
+additional changes. This uses the same complete-package native receiving command
+documented above.
+
+Serialization follows the original QGIS implementation:
+- https://api.qgis.org/api/3.44/qgsmaplayerstylemanager_8cpp_source.html
+- https://api.qgis.org/api/3.44/qgsmaplayerstyle_8cpp_source.html
+- https://api.qgis.org/api/3.44/qgscolorrampshader_8cpp_source.html
+- https://github.com/qgis/QGIS/blob/final-3_44_0/src/core/raster/qgssinglebandpseudocolorrenderer.cpp

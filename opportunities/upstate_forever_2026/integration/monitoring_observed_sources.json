@@ -170,13 +170,14 @@
     },
     {
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 24175,
-      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "predecessor_sha256": [
         "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
         "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
         "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
-        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
+        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+        "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0"
       ]
     },
     {
@@ -187,8 +188,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 45633,
-      "sha256": "8501d45a5f40bc7938d5e1975b0a584a4f4b839a8476fb4e94e1e16711cd20a5",
+      "bytes": 47827,
+      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -204,7 +205,12 @@
         "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
         "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
         "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c",
-        "1baf0d24f4e3d2535ae176050b1d8c8f56775ec6e3039a82c5fa16c9d0dc018e"
+        "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
+        "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46",
+        "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4",
+        "1baf0d24f4e3d2535ae176050b1d8c8f56775ec6e3039a82c5fa16c9d0dc018e",
+        "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
+        "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd"
       ]
     },
     {
@@ -593,9 +599,11 @@
     },
     {
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
-      "predecessor_sha256": []
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "predecessor_sha256": [
+        "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+      ]
     },
     {
       "path": "model/monitoring_field_return.py",
@@ -605,15 +613,19 @@
     },
     {
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
-      "predecessor_sha256": []
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "predecessor_sha256": [
+        "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+      ]
     },
     {
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
-      "predecessor_sha256": []
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "predecessor_sha256": [
+        "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+      ]
     },
     {
       "path": "operator/web/monitoring-frontiers.css",
@@ -649,23 +661,27 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 55052,
-      "sha256": "e300cdba7e1b6be4f6898b0112d875c4ea553a4c4d2d40f6fe906f48e3f81ea5",
+      "bytes": 58210,
+      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
         "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
         "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
-        "98a60aaf35fb7bc52858eafad3951b0ffee6b72e6ca31e1a7f9cc2c08bf95382"
+        "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4",
+        "98a60aaf35fb7bc52858eafad3951b0ffee6b72e6ca31e1a7f9cc2c08bf95382",
+        "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
+        "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1"
       ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
       "bytes": 6889,
-      "sha256": "aac41776d89a852037320bcdbe33b830e0bd2351ec763009cb8c0813d4c53203",
+      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
       "predecessor_sha256": [
         "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439",
         "c5d45e0f5ad3ac532b7ed086ca749b59669749eecab25253926fe8bb8b1513a7",
-        "0bc6877b7cc5b490b30aed9b32b9a7792b34bfbaa88f58733db515d8134894eb"
+        "0bc6877b7cc5b490b30aed9b32b9a7792b34bfbaa88f58733db515d8134894eb",
+        "5a8e911526d10e80942c32756a22a7555d316925a062177940c45df4ce5d1900"
       ]
     },
     {
@@ -737,10 +753,11 @@
       "path": "operator/install_receiving_waters.py",
       "predecessor_sha256": [
         "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71",
-        "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
+        "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32",
+        "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
       ],
-      "bytes": 49036,
-      "sha256": "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
+      "bytes": 49860,
+      "sha256": "6221255d84b339fd54bb67f4256e26a865e088e3430524b8eadbc65da473e606"
     },
     {
       "path": "operator/extensions/monitoring-report.json",
@@ -890,7 +907,9 @@
     "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
     "source_collection": "monitoring_frontier_comparisons",
     "guide": "model/MONITORING_BUDGET_COMPARISON.md",
-    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json"
+    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json",
+    "export_edition": 2,
+    "export_entrypoint": "index.html"
   },
   "scientific_report_comparison": {
     "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3593",
@@ -963,7 +982,7 @@
       "source_tools/receive_implementation.py"
     ],
     "source_reference": {
-      "source_base": "2637a88e05ed9433393e865f4cbe55f4d308f4e2",
+      "source_base": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
       "report_figures_merge": "4c5fbd132086b864de44f8cc7ac987c9373d42c4",
       "scientific_composer_merge": "4c3c470cd078b473d7720e7f13c4060728f014ea",
       "scientific_browser_merge": "3f132ec823503d8b105278fcc6e22b674dbc0250",

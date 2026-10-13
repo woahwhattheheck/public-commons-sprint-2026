@@ -140,6 +140,25 @@ This native bank uses `commons.source-map/1` with `files` as an array of descrip
 
 After extraction, use the included maintained `operator/install_station_geography.py` against the existing complete application. Its original 45-member install plan and backups remain authoritative. The complete original assessment inputs are available through [the native 164-station receiving workflow](NATIVE_STATION164_RECEIVING.md); its ready-import source ZIP retains all eight typed entries and the original publisher records.
 
+## Receive the current annual and microbial context source
+
+The [complete 17-file scientific-context carrier](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8URGSUFK) preserves the original eight annual/native assessment files, eight measured microbial files and the maintained annual-context receiving driver. Save its complete original Canvas response or exported Markdown and use the existing commands:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect scientific-context-source.json
+node source_tools/source_bank_cli.mjs extract scientific-context-source.json received-scientific-context
+```
+
+The outer `upstate.scientific-context-source-carrier/v1` has `encoding: "gzip+base64"` and an ordered `parts` array of base64 strings. It requires both `gzip_bytes`/`gzip_sha256` and `decoded_bytes`/`decoded_sha256`. The receiver checks compressed identity before expanding, caps expansion at the declared decoded length, and verifies decoded identity before accepting the original inner `upstate.scientific-context-receiving-source/v1`.
+
+That inner bank carries `files` as descriptors with original UTF-8 `content`, mandatory `bytes` and `sha256`, and optional regular-file mode. Every descriptor is verified. The inventory keeps each original descriptor without duplicating its content, plus the bank's title, project ID, source commits and descriptive path base under `sourceContext`. Those declarations remain provenance; a descriptive `path_base` never changes the extraction destination. The original envelope remains in the recovery metadata.
+
+For the retained edition, the gzip is 218,719 bytes with SHA-256 `dbab8c73d1931ddf1ee410ccb87846eff81c7916167b70918764f98719006b68`. Its decoded source JSON is 1,890,171 bytes with SHA-256 `1fbd583a8835e28114faa163622e0ac6cd4185a0bc2702faaee91f47eb402843`. All 17 files expand to 1,766,496 original source bytes. The driver is `source_tools/operate_annual_assessment_context.py`, 27,430 bytes, SHA-256 `6970b516bf3dffe25f1e7f8f791b66a9519a2aa1b906c057a180d4c2b235912a`.
+
+The extracted files belong in the receiver's existing complete application. Continue its current `operate_annual_assessment_context.py` operation with the existing Workspace, project, output directory and progress file. The driver resumes recorded tasks from that progress file. Its `--manifest` and `--microbial-manifest` options select the two unchanged source manifests. Preserve the original 217-watershed domain collection and source when supplying `--domain-collection` and `--domain-source-id`.
+
+The same decoder accepts the original inner source JSON directly when the native byte bridge has already reconstructed it. Passing the complete Canvas response preserves its transport identity as well. Missing parts, a changed gzip identity, or an absent per-file hash fail before any extracted file is written.
+
 ## Pure JavaScript use
 
 In a normal ES-module environment:
@@ -202,6 +221,7 @@ The retained `integration/source_binary_inputs.json` includes the original `sour
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
 | Carriers | One supported JSON bank/envelope fence, or a complete `upstate.application-source-part/v1` gzip+base64 cohort as a JSON object, JSON array or Markdown JSON fences |
 | Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities; `commons.gzip-source-bank/v1` with ordered base64 chunks and both original byte/hash pairs |
+| Scientific-context carriers | Original ordered `upstate.scientific-context-source-carrier/v1` base64 parts with mandatory gzip/decoded identities; original receiving-source descriptor array with mandatory per-file bytes/SHA and retained project/source metadata |
 | Native Canvas results | Original `canvas_id`/`markdown_content` JSON, optionally in one text MCP result; Canvas transport escaping and original carrier identity retained |
 
 Unsupported ZIP variants fail explicitly: encryption, ZIP64, multiple disks, alternate compression methods, symlinks/special files, executable archive preambles and unaccounted local data. Empty directory records are checked and counted; extraction creates the directories needed by files. The complete original archive retains every directory record.
@@ -234,6 +254,7 @@ The pure decoder was exercised on the actual retained originals:
 
 | Original input | Result |
 |---|---|
+| Current scientific-context carrier, original 17-file Canvas/MCP response | All 17 files and 1,766,496 original source bytes matched; exact project/source metadata retained; unchanged CLI inspect and extract paths exercised with an in-memory filesystem adapter, preserving the original input and full inventory |
 | Native ZIP, 121,182 bytes, SHA-256 `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5` | All 17 members decoded; 1,084,587 output bytes; every ZIP CRC and size matched |
 | Same ZIP in its original Markdown artifact envelope | Same 17 complete member identities |
 | Six-part ECO-SOURCE12 carrier | All 19 files; 573,918 source bytes; decoded JSON SHA-256 `0e79fb406d92a517f294e8be89f8ea143c23ac91096b952779bb06e63662622f` |
