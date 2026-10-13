@@ -21,7 +21,7 @@ from model.common import (atomic_bytes, atomic_json, describe_file, digest,
 from source_tools.simulated_headwaters_handover import STYLE, _name, _number, _text
 
 SCHEMA = "upstate.geographic-headwaters-handover/v1"
-VERSION = 1
+VERSION = 2
 
 
 def _url(namespace, relative):
@@ -31,9 +31,10 @@ def _url(namespace, relative):
     return ("" if namespace == "delivery" else "../" + namespace + "/") + quote(relative, safe="/")
 
 
-def _link(namespace, path, label, *, button=False, primary=False):
+def _link(namespace, path, label, *, button=False, primary=False, download=False):
     css = ' class="button' + (" primary" if primary else "") + '"' if button else ""
-    return '<a href="' + _url(namespace, path) + '"' + css + '>' + _text(label) + '</a>'
+    action = " download" if download else ""
+    return '<a href="' + _url(namespace, path) + '"' + css + action + '>' + _text(label) + '</a>'
 
 
 def _regular(root, relative):
@@ -80,6 +81,67 @@ def _first_elapsed(state):
                              "independent_reopen", "independent_cold_reopen", "handover")}
 
 
+def _operator_choices(prepared):
+    """Reopen the retained native selection in the existing Geographic desk.
+
+    This is the inverse transport of geographic_preparation.selection, matching
+    geographic_workbench.payloadFromSelection. Original source identifiers and
+    typed filters stay unchanged; native preview still owns validation/geometry.
+    """
+    selected = prepared["selection"]
+    if selected.get("schema") != "upstate.geographic-headwaters-selection/v1":
+        raise ValueError("Use the original geographic selection for editable choices")
+
+    def selector(value):
+        result = {"collection_id": value["source_collection_id"],
+                  "source_id": value["source_id"]}
+        if value.get("part"):
+            result["companion_path"] = value["part"]
+        return result
+
+    def json_text(value):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+    hucs, reporting, utility = (selected["huc_polygons"],
+                                selected["reporting_boundary"],
+                                selected["utility_focus"][0])
+    options = {
+        "question": selected["question"],
+        "reporting_huc12s": "\n".join(selected["reporting_huc12s"]),
+        "huc_field": selected["huc_field"],
+        "huc_layer": hucs.get("layer", ""),
+        "huc_where": json_text(hucs.get("where", {})),
+        "reporting_layer": reporting.get("layer", ""),
+        "reporting_where": json_text(reporting.get("where", {})),
+        "reporting_boundary_description": selected["reporting_boundary_description"],
+        "utility_layer": utility.get("layer", ""),
+        "utility_where": json_text(utility.get("where", {})),
+        "additional_utility_focus": json_text(selected["utility_focus"][1:]),
+        "intakes": json_text(selected.get("intakes", [])),
+        "utility_label": selected["utility_label"],
+        "seed": selected["seed"],
+        "corridor_width_m": selected["corridor_width_m"],
+    }
+    # Absence identifies the original legacy edition; do not insert defaults.
+    for name in ("matching_method", "max_working_bytes"):
+        if name in selected:
+            options[name] = deepcopy(selected[name])
+    return {
+        "schema": "upstate.geographic-operator-selection/v1",
+        "project_id": prepared["project_id"],
+        "geographic_edition_id": prepared["id"],
+        "payload": {
+            "method": "geographic-headwaters", "title": selected["title"],
+            "inputs": {"huc_polygons": selector(hucs),
+                       "reporting_boundary": selector(reporting),
+                       "utility_focus": selector(utility)},
+            "options": options, "import_sources": True,
+        },
+        # A received application must preview its own installed producer.
+        "preview": None,
+    }
+
+
 def _render(data):
     prepared, scientific = data["prepared"], data["scientific"]
     selection, geo = prepared["selection"], prepared["geography"]
@@ -93,6 +155,8 @@ def _render(data):
         _link("workspace", report_pdf, "Open report PDF", button=True),
         _link("delivery", "customer-review/index.html", "Open review desk", button=True),
         '<a class="button" href="#working">Open editable project</a>',
+        _link("delivery", "geographic-operator-choices.json", "Download editable choices",
+              button=True, download=True),
     ]
     map_links = [_link("workspace", row["path"], role.replace("_", " "))
                  for role, row in links["delivery"].items()
@@ -159,7 +223,8 @@ def _render(data):
         indent=2, sort_keys=True, allow_nan=False)) + "</pre></details>"
     original_links = [
         _link("workspace", links["assumptions"]["path"], "Complete assumptions and control record"),
-        _link("workspace", links["selection"]["path"], "Editable original geographic selection"),
+        _link("workspace", links["selection"]["path"], "Original native geographic selection"),
+        _link("delivery", "geographic-operator-choices.json", "Geographic desk choices for this project", download=True),
         _link("workspace", links["binding"]["path"], "Full geography, topology and source identities"),
         _link("workspace", links["native_report"]["path"], "Complete native report JSON, at original precision"),
         _link("delivery", "handover-record.json", "This handover's complete selected source inventory"),
@@ -235,6 +300,21 @@ filter();
         'contain the editable source and original scientific project.</p>'
         '<pre>python application/model/cli.py restore GEOGRAPHIC_STUDY.zip NEW_DIRECTORY</pre>'
         + guides
+        + '<h3>Continue this exact geographic case</h3><ol>'
+        '<li>Start the contained operator against the received sibling Workspace using its current start guide; '
+        'reopen the existing project without creating a new one.</li>'
+        '<li>Open <strong>Geographic model case</strong>. Choose <strong>Reopen choices</strong> and select '
+        '<code>delivery/geographic-operator-choices.json</code>, or use the download above. '
+        'This file carries the original project identity, complete source selectors and editable assumptions.</li>'
+        '<li>Choose <strong>Preview selected coverage</strong>. Review the actual upstream domain, '
+        'South Carolina reporting mask, utility focus, matching method and working-memory budget. '
+        'The received application previews its own installed producer.</li>'
+        '<li>For a revision, edit the question, source selections or stated assumptions, preview again, '
+        'then use <strong>Prepare selected source</strong>. Preparation retains a new edition when choices change. '
+        'Open its original baseline/restoration/control runs or programme to execute the selected calculation.</li>'
+        '<li>Keep the delivered edition available beside the revised maps and report, then export the updated working project.</li>'
+        '</ol><p>Optional intake-point selectors and additional utility polygons keep their separate original identities. '
+        'Reopening a choices file fills the form; it does not start preparation or a model.</p>'
         + '<p>In the received application, use the retained source selection and parameter profiles to edit assumptions, '
         'prepare a new scenario, run it and inspect the changed maps and report alongside these originals. '
         'Keep each completed scientific edition available for comparison.</p>'
@@ -324,7 +404,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported):
             "delivery_id": delivery["id"],
             "review": {key: exported[key] for key in ("project_id", "review_id", "package_sha256", "latest_response_id")},
             "links": links, "assumptions": selected_inputs["assumptions"][0],
-            "native_report": report_data, "first_elapsed": _first_elapsed(state)}
+            "native_report": report_data, "first_elapsed": _first_elapsed(state),
+            "operator_choices": _operator_choices(prepared)}
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "content_sha256": digest(data), "helper_sha256": file_digest(Path(__file__)),
                 "style_sha256": hashlib.sha256(STYLE.encode("utf-8")).hexdigest()}
@@ -342,6 +423,7 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported):
             with tempfile.TemporaryDirectory(prefix=".geographic-handover-", dir=directory.parent) as temporary:
                 pending = Path(temporary)
                 atomic_json(pending / "handover-record.json", data, immutable=True)
+                atomic_json(pending / "geographic-operator-choices.json", data["operator_choices"], immutable=True)
                 atomic_bytes(pending / "START_HERE.html", _render(data).encode("utf-8"), immutable=True)
                 review_files = dict(review_manifest["members"])
                 review_files["review-manifest.json"] = describe_file(review_root, review_root / "review-manifest.json")
@@ -362,7 +444,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported):
                     verify_file(pending, {"path": target.relative_to(pending).as_posix(),
                                           "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]})
                 files = {"opening_page": describe_file(pending, pending / "START_HERE.html"),
-                         "handover_record": describe_file(pending, pending / "handover-record.json")}
+                         "handover_record": describe_file(pending, pending / "handover-record.json"),
+                         "operator_choices": describe_file(pending, pending / "geographic-operator-choices.json")}
                 for index, name in enumerate(sorted(review_files)):
                     files["customer_review_%05d" % index] = {
                         "path": "customer-review/" + name,
