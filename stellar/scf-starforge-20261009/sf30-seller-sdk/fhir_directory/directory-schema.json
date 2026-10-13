@@ -3039,6 +3039,193 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "correction_prepare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "editionId",
+        "actor",
+        "edits"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "editionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        },
+        "predecessorId": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          ]
+        },
+        "edits": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceId",
+              "recordId",
+              "rowSha256",
+              "resourceSha256",
+              "memberSha256",
+              "action",
+              "reason"
+            ],
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "recordId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "rowSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "resourceSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "memberSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "json-set",
+                  "json-remove",
+                  "csv-cell",
+                  "csv-row"
+                ]
+              },
+              "pointer": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "valueJson": {
+                "type": "string",
+                "maxLength": 16777216
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 16777216
+              },
+              "cells": {
+                "type": "array",
+                "maxItems": 65536,
+                "items": {
+                  "type": "string",
+                  "maxLength": 16777216
+                }
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 65536,
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "correction_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "correction_apply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previewId",
+        "expectedEditionId",
+        "actor"
+      ],
+      "properties": {
+        "previewId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "expectedEditionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        }
+      }
+    },
+    "correction_export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correctionId",
+        "actor"
+      ],
+      "properties": {
+        "correctionId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actor": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 65536
+        }
+      }
     }
   },
   "actions": [
@@ -3233,6 +3420,34 @@
       "python": "export_directory_operating_return",
       "path": "/api/directory/operating-returns/export",
       "method": "POST"
+    },
+    {
+      "id": "correction-prepare",
+      "input": "correction_prepare",
+      "python": "prepare_directory_correction",
+      "path": "/api/directory/corrections/prepare",
+      "method": "POST"
+    },
+    {
+      "id": "correction-preview",
+      "input": "correction_preview",
+      "python": "preview_directory_correction",
+      "path": "/api/directory/corrections/preview",
+      "method": "POST"
+    },
+    {
+      "id": "correction-apply",
+      "input": "correction_apply",
+      "python": "apply_directory_correction",
+      "path": "/api/directory/corrections/apply",
+      "method": "POST"
+    },
+    {
+      "id": "correction-export",
+      "input": "correction_export",
+      "python": "export_directory_correction",
+      "path": "/api/directory/corrections/export",
+      "method": "POST"
     }
   ],
   "limits": {
@@ -3270,7 +3485,10 @@
     "conformanceReviews",
     "conformanceComparisons",
     "operatingPlans",
-    "operatingPlanReturns"
+    "operatingPlanReturns",
+    "correctionPlans",
+    "correctionPreviews",
+    "corrections"
   ],
   "mutableKinds": [
     "acquisitions",
@@ -3298,9 +3516,13 @@
     "The unchanged OperatingPlan model owns complete history validation, historical drafts, saved revisions, explicit copies and exact prefix-history receiving.",
     "Prepared and saved procedure records are immutable. Only saved records participate in the per-plan head chain; a reviewed preparation retains its exact accepted input and original source basis.",
     "Procedure editing and export do not execute commands, acquire provider data, reserve services or send messages.",
-    "Complete editable receiving includes every procedure history, native basis, original catalogue and accepted input; receiver-local import receipts retain their original Directory semantics."
+    "Complete editable receiving includes every procedure history, native basis, original catalogue and accepted input; receiver-local import receipts retain their original Directory semantics.",
+    "Corrections bind ordered edits to exact original HSDS row, resource and member hashes; JSON numeric tokens and CSV physical cell positions remain source-native.",
+    "A preview creates complete derived sources, a separate candidate edition and its comparison. Explicit acceptance retains that exact candidate without replacing a mutable head or changing original provider data.",
+    "Complete correction plan inputs, before/after changes, source lineage and native review graph travel with complete editable workspace receiving."
   ],
   "conformanceCatalogueFile": "directory-conformance-schema.json",
   "operatingPlansCatalogueFile": "directory-operating-plans-schema.json",
-  "operatingReturnsCatalogueFile": "directory-operating-returns-schema.json"
+  "operatingReturnsCatalogueFile": "directory-operating-returns-schema.json",
+  "correctionsCatalogueFile": "directory-corrections-schema.json"
 }
