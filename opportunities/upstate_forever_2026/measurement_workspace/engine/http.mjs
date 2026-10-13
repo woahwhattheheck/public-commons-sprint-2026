@@ -22,6 +22,7 @@ import {MeasurementWorkspace} from './workspace.mjs';
 import {InputError,safeJSON} from './parse.mjs';
 import {providerQuery,fetchProvider} from './providers.mjs';
 import {calibrationExport,calibrationCSV,pairedLoads} from './calibration.mjs';
+import {resultSourceSelection} from './result_handback.mjs';
 const DEFAULT_BASE='/api/measurement-workspace';
 const MAX_BODY=Number(process.env.MEASUREMENTS_UPLOAD_BYTES)||128*1024*1024;
 async function readBody(request) {
@@ -157,6 +158,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
           rows:s.db.prepare('SELECT id,kind,created_at AS createdAt,revision AS workspaceRevision FROM exports ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?').all(limit,offset)}));
         send(response,200,value);return;
       }
+      if(method==='GET'&&parts[0]==='exports'&&parts[1]&&parts[2]==='source-selection'&&parts.length===3){send(response,200,resultSourceSelection(s,parts[1]));return;}
       if(method==='GET'&&parts[0]==='exports'&&parts[1]){const row=s.db.prepare('SELECT content FROM exports WHERE id=?').get(parts[1]);if(!row)throw new InputError('Export not found',404);send(response,200,JSON.parse(row.content),'application/json; charset=utf-8','measurement-export.json');return;}
       if(method==='GET'&&parts[0]==='portable'){send(response,200,s.portable(),'application/json; charset=utf-8','upper-savannah-measurements.json');return;}
       if(method==='POST'&&parts[0]==='receive'){send(response,201,s.receive(await readBody(request)));return;}
