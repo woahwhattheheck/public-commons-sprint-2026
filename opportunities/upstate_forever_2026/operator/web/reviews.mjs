@@ -223,16 +223,174 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       (packet._exports.length?table(['Exported','Response generation','Files',''],packet._exports.map(row=>
         '<tr><td>'+esc(date(row.completed_at||row.created_at))+'<small class="mono">'+esc(short(row.package_sha256))+'</small></td><td>'+esc(row.latest_response_id?short(row.latest_response_id):'Initial review')+'</td><td>'+row.members+' files</td><td class="actions-cell"><a class="button" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open desk</a><button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Download package</button></td></tr>')):'<div class="empty"><h3>Export this review</h3><p>The complete desk includes all selected original files and the current response history.</p>'+button('export','Export current review',packet.review.id,'',true)+'</div>');
   }
+
+  // Engineering responses keep their own editions and never modify customer decisions.
+  const handbackDrafts=new Map();
+  function ensureHandbackWorkspace(workspace){
+    if(workspace!==current())throw Error('The workspace changed. Reopen the engineering response in its original workspace.');
+  }
+  function handbacksTab(packet){
+    const records=packet._handbacks??[];
+    return '<p class="note">Assign the customer’s requested changes, identify the replacement work, and return a complete revised review with an engineering response. Customer decisions remain in their original response history.</p>'+
+      '<div class="page-actions">'+(packet.responses.length?button('handback-new','Prepare engineering response',packet.review.id,'',true):'')+button('handback-import','Receive handback package',packet.review.id)+'</div>'+
+      (records.length?table(['Engineering response','Customer response','Revised selection',''],records.map(row=>
+        '<tr><td class="name-cell"><strong>'+esc(row.summary||'Engineering response')+'</strong>'+badge(row.state)+'<small>'+esc(row.prepared_by?.name||row.prepared_by||'')+' · '+esc(date(row.created_at))+'</small></td><td class="mono">'+esc(short(row.response_id))+'</td><td>'+esc(row.revised_title||row.revised?.title||short(row.revised_review_id))+'</td><td>'+button('handback-open','Open response',row.id)+'</td></tr>')):
+        '<div class="empty"><h3>Respond to the requested changes</h3><p>'+(packet.responses.length?'Prepare a saved engineering response from one retained customer response. Assign work while planning, then select the actual revised files for handback.':'Receive a customer response before preparing its engineering response.')+'</p></div>');
+  }
+  function handbackOptions(rows,selectedId,emptyLabel){
+    return '<option value="">'+esc(emptyLabel)+'</option>'+rows.map(row=>'<option value="'+esc(row.id||row.review_id)+'"'+((row.id||row.review_id)===selectedId?' selected':'')+'>'+esc(row.title||row.summary||short(row.id||row.review_id))+'</option>').join('');
+  }
+  function replacementChoices(kind,list,chosen){
+    const known=new Set(list.map(row=>row.id)),all=[...list,...chosen.filter(id=>!known.has(id)).map(id=>({id,label:'Previous selection reference '+short(id),missing:true}))];
+    if(!all.length)return '<p class="note">Choose a revised review to identify its '+(kind==='artifact'?'replacement files.':'requirements.')+'</p>';
+    return '<div class="handback-replacements">'+all.map(row=>'<label class="check"><input type="checkbox" data-replacement="'+kind+'" value="'+esc(row.id)+'"'+(chosen.includes(row.id)?' checked':'')+'><span>'+esc(row.label||row.title||short(row.id))+(row.original_path?'<small>'+esc(row.original_path)+'</small>':'')+(row.missing?'<small>Outside the selected revised review. Clear this reference or restore its review before saving.</small>':'')+'</span></label>').join('')+'</div>';
+  }
+  function handbackItemEditor(request,item,revision){
+    return '<article class="handback-item" data-handback-request="'+esc(request.id)+'"><header><h3>'+esc(request.title)+'</h3>'+badge(request.kind)+(request.priority?'<span class="note">'+esc(request.priority)+' priority</span>':'')+'</header>'+
+      '<p class="review-source-detail">'+esc(request.description)+'</p><details><summary>Original request reference</summary><p>'+esc(request.source_id)+'</p></details>'+
+      '<div class="form-grid"><label><span>Engineering disposition</span><select data-handback-disposition>'+[['planned','Planned'],['addressed','Addressed in revised work'],['deferred','Deferred with explanation']].map(([v,t])=>'<option value="'+v+'"'+(item.disposition===v?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'+
+      '<label><span>Assigned engineer</span><input data-handback-owner maxlength="500" value="'+esc(item.owner)+'" placeholder="Person or team responsible"></label>'+
+      '<label class="full"><span>Resolution or next work</span><textarea data-handback-note rows="3" maxlength="20000">'+esc(item.note)+'</textarea></label></div>'+
+      '<details'+(item.disposition==='addressed'?' open':'')+'><summary>Replacement work in the revised review</summary><div class="review-choice-grid"><section><h4>Files</h4>'+replacementChoices('artifact',revision?.artifacts??[],item.replacement_artifact_ids??[])+'</section><section><h4>Requirements</h4>'+replacementChoices('requirement',revision?.requirements??[],item.replacement_requirement_ids??[])+'</section></div></details></article>';
+  }
+  function handbackValues(original){
+    const form=$('#operation-form');
+    if(!form)throw Error('Reopen the engineering response form.');
+    return {...original,revised_review_id:val('handback_revision')||null,state:val('handback_state'),
+      prepared_by:{name:val('handback_name').trim(),role:val('handback_role').trim(),organization:val('handback_organization').trim()},
+      summary:val('handback_summary'),
+      items:$$('[data-handback-request]',form).map(row=>({
+        request_id:row.dataset.handbackRequest,disposition:$('[data-handback-disposition]',row).value,
+        owner:$('[data-handback-owner]',row).value,note:$('[data-handback-note]',row).value,
+        replacement_artifact_ids:$$('[data-replacement="artifact"]:checked',row).map(x=>x.value),
+        replacement_requirement_ids:$$('[data-replacement="requirement"]:checked',row).map(x=>x.value),
+      }))};
+  }
+  async function newHandback(reviewId,handbackId=null,responseId=null){
+    const workspace=current(),formSerial=++generation,params={review_id:reviewId,...(handbackId?{handback_id:handbackId}:{}),...(responseId?{response_id:responseId}:{})};
+    const [source,packet]=await Promise.all([read('handback-template',params),read('review',{review_id:reviewId})]);
+    ensureHandbackWorkspace(workspace);if(formSerial!==generation)return;
+    if(!source.draft||source.draft.review_id!==reviewId)throw Error('Reopen the engineering response for this retained review.');
+    const key=[workspace,reviewId,source.draft.response_id,source.draft.previous_handback_id??'initial'].join(':');
+    let draft=handbackDrafts.get(key)??source.draft,revision=source.revision,revisionSerial=0,loadingRevision=false,revisionFailed=false;
+    if(draft.revised_review_id!==source.draft.revised_review_id&&draft.revised_review_id){
+      const selected=await read('handback-template',{...params,response_id:draft.response_id,revised_review_id:draft.revised_review_id});
+      ensureHandbackWorkspace(workspace);if(formSerial!==generation)return;revision=selected.revision;
+    }else if(!draft.revised_review_id)revision=null;
+    const sourceResponse=packet.responses.find(row=>row.id===draft.response_id);
+    if(!sourceResponse)throw Error('The selected original customer response is not in this review.');
+    const requests=source.requests;
+    const byId=new Map(draft.items.map(row=>[row.request_id,row]));
+    if(requests.some(row=>!byId.has(row.id))||requests.length!==draft.items.length)throw Error('The saved draft differs from its original requested changes. Reopen the saved engineering response.');
+    const itemsMarkup=()=>requests.map(request=>handbackItemEditor(request,byId.get(request.id),revision)).join('');
+    openForm(handbackId?'Revise engineering response':'Prepare engineering response',
+      'Keep the customer’s original decisions and record the engineering work that answers them. Save a planning edition while work is underway; mark it ready when each request has an explanation and revised work is selected.',
+      '<div class="review-intro"><h3>'+esc(packet.review.title)+'</h3><p>'+esc(packet.review.purpose)+'</p><p><strong>Original customer response:</strong> '+esc(sourceResponse.response.reviewer.name)+' · '+esc(date(sourceResponse.response.created_at))+'</p><p>'+esc(sourceResponse.response.summary)+'</p>'+
+      '<details><summary>Choose another customer response</summary><p>Each engineering response stays attached to its chosen original. Save current work before starting from another customer response.</p>'+
+      packet.responses.filter(row=>row.id!==draft.response_id).map(row=>button('handback-new',row.response.reviewer.name+' · '+date(row.response.created_at),reviewId,'data-response-id="'+esc(row.id)+'"')).join('')+'</details></div>'+
+      '<div class="form-grid">'+field('handback_name','Prepared by',draft.prepared_by.name,{required:true,maximum:300})+field('handback_role','Role',draft.prepared_by.role,{maximum:300})+
+      field('handback_organization','Organization',draft.prepared_by.organization,{maximum:500})+
+      '<label><span>Engineering response state</span><select name="handback_state"><option value="planning"'+(draft.state==='planning'?' selected':'')+'>Planning</option><option value="ready"'+(draft.state==='ready'?' selected':'')+'>Ready for customer review</option></select></label>'+
+      '<label class="full"><span>Revised review selection</span><select name="handback_revision">'+handbackOptions(source.revised_choices,draft.revised_review_id,'Planning — select revised work later')+'</select><small>Select the actual retained review containing the replacement work.</small></label>'+button('handback-reload','Reload revised review')+
+      field('handback_summary','Engineering response summary',draft.summary,{type:'textarea',wide:true,required:true,rows:3,maximum:20000})+'</div>'+
+      '<p id="handback-edit-state" role="status">Draft stays available in this workspace until saved.</p><div id="handback-request-editors">'+itemsMarkup()+'</div>',
+      'Save engineering response',async()=>{
+        ensureHandbackWorkspace(workspace);
+        if(loadingRevision)throw Error('Wait for the selected revised review to load.');
+        if(revisionFailed)throw Error('Reload the selected revised review before saving this response.');
+        draft=handbackValues(draft);handbackDrafts.set(key,draft);
+        if(!draft.prepared_by.name)throw Error('Enter the person preparing this engineering response.');
+        if(draft.state==='ready'&&!draft.revised_review_id)throw Error('Choose the actual revised review before marking this response ready.');
+        const artifactIds=new Set((revision?.artifacts??[]).map(row=>row.id)),requirementIds=new Set((revision?.requirements??[]).map(row=>row.id));
+        for(const item of draft.items){
+          if(item.replacement_artifact_ids.some(id=>!artifactIds.has(id))||item.replacement_requirement_ids.some(id=>!requirementIds.has(id)))throw Error('Choose replacement references from the current revised review; clear references from earlier selections.');
+          if(item.disposition==='addressed'&&(!draft.revised_review_id||!item.replacement_artifact_ids.length&&!item.replacement_requirement_ids.length))throw Error('Identify the actual revised file or requirement for each addressed request.');
+          if(['addressed','deferred'].includes(item.disposition)&&!item.note.trim())throw Error('Explain each addressed or deferred request.');
+          if(draft.state==='ready'&&!item.owner.trim())throw Error('Assign an engineer or team to every request before marking the response ready.');
+          if(draft.state==='ready'&&item.disposition==='planned')throw Error('Finish or explicitly defer every planned request before marking the response ready.');
+        }
+        await submitAction('customer.review.handback.save',{handback:draft});handbackDrafts.delete(key);
+      },()=>{
+        const form=$('#operation-form'),revisionSelect=$('[name="handback_revision"]',form),state=$('#handback-edit-state',form);
+        const remember=()=>{draft=handbackValues(draft);handbackDrafts.set(key,draft);state.textContent='Draft retained in this workspace. Save an edition to include it in the project.';};
+        form.addEventListener('input',remember);form.addEventListener('change',remember);
+        const reloadRevision=async()=>{
+          draft=handbackValues(draft);handbackDrafts.set(key,draft);const serial=++revisionSerial,selectedId=draft.revised_review_id;
+          loadingRevision=true;revisionFailed=false;state.textContent='Loading the selected revised review…';
+          try{
+            let value=null;
+            if(selectedId){const result=await read('handback-template',{...params,response_id:draft.response_id,revised_review_id:selectedId});value=result.revision;}
+            if(serial!==revisionSerial||!form.isConnected||workspace!==current())return;
+            // Capture edits made while the file inventory was loading.
+            draft=handbackValues(draft);handbackDrafts.set(key,draft);revision=value;
+            byId.clear();for(const row of draft.items)byId.set(row.request_id,row);
+            $('#handback-request-editors',form).innerHTML=itemsMarkup();
+            state.textContent='Revised review loaded. Review the replacement references for each requested change.';
+          }catch(error){if(serial===revisionSerial&&form.isConnected){revisionFailed=true;state.textContent=error.message||String(error);}}
+          finally{if(serial===revisionSerial)loadingRevision=false;}
+        };
+        form._reloadHandbackRevision=reloadRevision;
+        revisionSelect.addEventListener('change',reloadRevision);
+      });
+  }
+  function handbackRequestRows(result){
+    const record=result.handback,requests=new Map(result.requests.map(row=>[row.id,row]));
+    const artifacts=new Map((result.revised?.artifacts??[]).map(row=>[row.id,row.label||row.original_path]));
+    const requirements=new Map((result.revised?.requirements??[]).map(row=>[row.id,row.title]));
+    return record.items.map(item=>{
+      const request=requests.get(item.request_id);
+      return '<tr><td class="name-cell"><strong>'+esc(request?.title||item.request_id)+'</strong><p>'+esc(request?.description)+'</p>'+badge(request?.kind||'request')+'</td>'+
+        '<td>'+badge(item.disposition)+'<small>'+esc(item.owner||'Unassigned')+'</small></td><td class="review-source-detail">'+esc(item.note||'—')+'</td><td>'+
+        [...item.replacement_artifact_ids.map(id=>artifacts.get(id)||short(id)),...item.replacement_requirement_ids.map(id=>requirements.get(id)||short(id))].map(esc).join('<br>')+'</td></tr>';
+    });
+  }
+  async function openHandback(id){
+    const serial=++generation,result=await read('handback',{handback_id:id});if(serial!==generation)return;
+    const row=result.handback,history=result.history??[],exports=result._exports??[],latest=history.at(-1);
+    detail('Engineering response — '+(result.original?.title||short(row.review_id)),
+      '<div class="customer-review-detail"><div class="page-actions">'+button('open','Back to review',row.review_id,'data-tab="handbacks"')+
+      (latest?.id===row.id?button('handback-edit','Revise response',row.id,'data-review-id="'+esc(row.review_id)+'"'):latest?button('handback-open','Open latest edition',latest.id):'')+
+      (row.state==='ready'?button('handback-export','Export complete handback',row.id,'',true):'')+'</div>'+
+      '<div class="review-intro"><p>'+badge(row.state)+' · '+esc(row.prepared_by.name)+' · '+esc(date(row.created_at))+'</p><p class="review-source-detail">'+esc(row.summary)+'</p>'+
+      '<p>Original customer response <span class="mono">'+esc(short(row.response_id))+'</span></p>'+
+      (row.revised_review_id?'<p>Revised selection: '+esc(result.revised?.title||short(row.revised_review_id))+'</p>'+button('open','Open revised review',row.revised_review_id):'<p>Planning edition: choose the actual revised review when the replacement work is ready.</p>')+'</div>'+
+      '<h3>Requested changes and engineering response</h3>'+table(['Original request','Disposition and owner','Explanation','Replacement work'],handbackRequestRows(result))+
+      '<h3>Engineering response editions</h3>'+table(['Saved','Prepared by','State',''],history.map(item=>'<tr><td>'+esc(date(item.created_at))+'</td><td>'+esc(item.prepared_by?.name||'')+'</td><td>'+badge(item.state)+'</td><td>'+(item.id===row.id?'Current view':button('handback-open','Open edition',item.id))+'</td></tr>'))+
+      '<h3>Exported handbacks</h3>'+(exports.length?table(['Exported','Complete package',''],exports.map(item=>'<tr><td>'+esc(date(item.completed_at||item.created_at))+'</td><td>'+esc(item.members??'')+' files</td><td>'+(item.desk_url?'<a class="button" target="_blank" rel="noopener" href="'+esc(item.desk_url)+'">Open handback desk</a>':'')+'<button type="button" data-action="task-open" data-id="'+esc(item.task_id)+'">Download package</button></td></tr>')):'<p>No exported package for this edition.</p>')+
+      (result._downloads?.length?fileList(result._downloads):'')+
+      '<details><summary>Complete engineering response</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details></div>',
+      {kind:'customer-review-handback',id:row.id});
+  }
+  async function exportHandback(id){
+    const workspace=current(),result=await read('handback',{handback_id:id}),row=result.handback;
+    if(row.state!=='ready')throw Error('Save a ready engineering response before exporting its customer handback.');
+    openForm('Export complete customer handback','Export the original customer review, the selected revised review and the complete engineering response history together.',
+      '<div class="review-intro"><h3>'+esc(result.original?.title||short(row.review_id))+'</h3><p class="review-source-detail">'+esc(row.summary)+'</p><p>Revised selection: '+esc(result.revised?.title||short(row.revised_review_id))+'</p><p>'+row.items.length+' requested changes with retained engineering dispositions.</p></div>',
+      'Export handback',()=>{ensureHandbackWorkspace(workspace);return submitAction('customer.review.handback.export',{handback_id:id});});
+  }
+  function receiveHandback(reviewId){
+    const workspace=current();
+    openForm('Receive complete handback package','Choose the complete handback ZIP in its restored source project. The task retains its full files and joins the original review and response records to that project.',
+      '<label class="review-file-picker"><span>Complete handback ZIP</span><input name="handback_package" type="file" accept=".zip,application/zip" required></label><p id="handback-receive-selection" role="status"></p>',
+      'Receive handback',async()=>{
+        ensureHandbackWorkspace(workspace);const file=$('#operation-form [name="handback_package"]').files[0];
+        if(!file)throw Error('Choose the complete exported handback ZIP.');
+        const uploaded=await uploadFile(file);ensureHandbackWorkspace(workspace);
+        await submitAction('customer.review.handback.import',{upload_id:uploaded.id});
+      },()=>{$('#operation-form [name="handback_package"]').addEventListener('change',event=>{const file=event.target.files[0];$('#handback-receive-selection').textContent=file?file.name+' · '+file.size.toLocaleString()+' bytes':'';});});
+  }
+
   function drawPacket(packet,tab='files'){
     activePacket=packet;activeTab=tab;
-    const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['exports','Exported desks']];
-    const body=tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
+    const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks']];
+    const body=tab==='handbacks'?handbacksTab(packet):tab==='requirements'?requirementsTab(packet):tab==='corrections'?correctionsTab(packet):tab==='history'?historyTab(packet):tab==='exports'?exportsTab(packet):fileTab(packet);
     detail(packet.review.title,'<div class="customer-review-detail">'+summary(packet)+reviewToolbar(packet)+
       '<nav class="review-tabs" aria-label="Review sections">'+tabs.map(([key,title])=>button('tab',title,packet.review.id,'data-tab="'+key+'" aria-pressed="'+(tab===key)+'"')).join('')+'</nav><section>'+body+'</section>'+
       '<details class="technical"><summary>Complete review document</summary>'+fileList([packet._packet_download])+'<dl class="definition"><dt>Review</dt><dd class="mono">'+esc(packet.review.id)+'</dd><dt>Project</dt><dd class="mono">'+esc(packet.review.project.id)+'</dd></dl></details></div>',{kind:'customer-review',id:packet.review.id});
   }
   async function openReview(id,tab='files'){
     const serial=++generation,packet=await read('review',{review_id:id});
+    if(tab==='handbacks'&&!Array.isArray(packet._handbacks)){const result=await read('handbacks',{review_id:id});packet._handbacks=result.handbacks;}
     if(serial!==generation)return;
     drawPacket(packet,tab);
   }
@@ -332,14 +490,22 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(task.action==='spatial.review.export'&&task.state==='complete')return mapActions(task.result);
     if(!task._review)return '';
     const row=task._review;
+    if(row.kind==='engineering-handback'&&row.handback_id)return '<div class="page-actions">'+button('handback-open','Open engineering response',row.handback_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open handback desk</a>':'')+'</div>';
     return '<div class="page-actions">'+button('open','Open retained review',row.review_id)+(row.desk_url?'<a class="button primary" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">Open review desk</a>':'')+'</div>';
   }
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
+    if(action==='handback-reload'){const form=$('#operation-form');if(!form?._reloadHandbackRevision)throw Error('Reopen the engineering response form.');return form._reloadHandbackRevision();}
+    if(action==='handback-new')return newHandback(id,null,node.dataset.responseId||null);
+    if(action==='handback-edit')return newHandback(node.dataset.reviewId,id);
+    if(action==='handback-open')return openHandback(id);
+    if(action==='handback-export')return exportHandback(id);
+    if(action==='handback-import')return receiveHandback(id);
     if(action==='new')return newReview(id,node.dataset.exportId||null);
     if(action==='map-preview')return previewMap(node);
     if(action==='open')return openReview(id,node.dataset.tab||'files');
     if(action==='tab'){
+      if(node.dataset.tab==='handbacks')return openReview(id,'handbacks');
       if(!activePacket||activePacket.review.id!==id)return openReview(id,node.dataset.tab);
       return drawPacket(activePacket,node.dataset.tab);
     }
