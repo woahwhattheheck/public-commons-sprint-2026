@@ -7,11 +7,13 @@
         "model/monitoring_native_evidence.py",
         "model/monitoring_evidence_report.py",
         "source/SAMPLING_NATIVE_EVIDENCE.md",
-        "integration/component_fragments/monitoring-native-evidence.json"
+        "integration/component_fragments/monitoring-native-evidence.json",
+        "model/conservation_sampling_evidence.py"
       ],
       "requires": [
         "multivariate-control-outcomes",
-        "terrain-conditioning-report-source"
+        "terrain-conditioning-report-source",
+        "conservation-scientific-report-source"
       ],
       "retained_only": []
     }
