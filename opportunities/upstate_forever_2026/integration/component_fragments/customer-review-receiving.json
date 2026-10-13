@@ -24,9 +24,6 @@
         "model/scientific_report_capture.py",
         "model/scientific_report_editions.py",
         "model/observed_report_render.py"
-      ],
-      "requires": [
-        "scientific-report-editions"
       ]
     }
   },
