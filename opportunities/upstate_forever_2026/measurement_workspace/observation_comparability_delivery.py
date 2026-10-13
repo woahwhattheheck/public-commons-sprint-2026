@@ -63,7 +63,11 @@ def _completed_export(ws: Workspace, entry: dict, export_root: Path, archive_pat
     if manifest["project"]["id"] != ws.project["id"]:
         raise ValueError("The existing archive belongs to a different original project")
     relative_root = "observation-comparability/" + entry["sha256"]
-    selection_member = "workspace/" + relative_root + "/report-selection.json"
+    # New exports capture their exact report selection through the maintained
+    # portable delivery index. Legacy snapshots retain the original root marker.
+    selected = (manifest.get("delivery") or {}).get("files", {}).get("report_selection")
+    selection_member = (selected["path"] if selected is not None else
+                        "workspace/" + relative_root + "/report-selection.json")
     selection_record = manifest["members"].get(selection_member)
     if selection_record is None:
         raise ValueError("The archive does not contain this exact selected comparison source")
@@ -86,13 +90,13 @@ def _completed_export(ws: Workspace, entry: dict, export_root: Path, archive_pat
             retained = expected.get(record["path"])
             if retained is None or any(retained[key] != record[key] for key in ("bytes", "sha256")):
                 raise ValueError("Saved report descriptor differs from its original archived member")
+        selection_path = export_root / "native-selection.json"
+        if selection_path.exists() and read_json(selection_path) != state:
+            raise ValueError("Exported selection differs from the completed original archive")
+        atomic_json(selection_path, state, immutable=True)
         exported_report = export_root / "native-report"
         for relative, record in expected.items():
             _retain_member(archive, prefix + relative, exported_report / relative, record)
-    selection_path = export_root / "native-selection.json"
-    if selection_path.exists() and read_json(selection_path) != state:
-        raise ValueError("Exported selection differs from the completed original archive")
-    atomic_json(selection_path, state)
     if file_digest(archive_path) != archive_sha256:
         raise ValueError("Original archive changed during report receiving")
     record = {
@@ -229,7 +233,15 @@ def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path, *, new_ren
     if prior is not None and any(prior.get(key) != value for key, value in state.items()):
         raise ValueError("The saved report belongs to a different original source selection")
     preview_path = export_root / "render-preview.json"
-    if prior is not None and not new_rendering and not preview_path.exists():
+    if prior_selection_path.exists():
+        # An interrupted export owns its exact saved edition. Another explicit
+        # export may have advanced the shared Workspace marker in the meantime.
+        captured = read_json(prior_selection_path)
+        if any(captured.get(key) != value for key, value in state.items()):
+            raise ValueError("The partial export changed its original report selection or source binding")
+        report_root = _verify_report(ws, captured)
+        state = captured
+    elif prior is not None and not new_rendering and not preview_path.exists():
         # A completed legacy/current report is an immutable result, even when
         # its outer archive had not yet been published.
         report_root = _verify_report(ws, prior)
@@ -259,14 +271,29 @@ def _deliver_locked(ws: Workspace, manifest: Path, export_root: Path, *, new_ren
             atomic_json(history, prior, immutable=True)
         atomic_json(state_path, state)
         _verify_report(ws, state)
+    # Freeze the receiving selection before the first member copy, including
+    # the report-complete / copy-incomplete interruption boundary.
+    atomic_json(prior_selection_path, state, immutable=True)
     files = state["files"]
     exported_report = export_root / "native-report"
     for record in _report_files(state).values():
         original = relative_file(report_root, record["path"])
         observed_report_render._retain_original(original, exported_report / record["path"], record)
-    atomic_json(export_root / "native-selection.json", state)
+    retained_selection = exported_report / "native-selection.json"
+    atomic_json(retained_selection, state, immutable=True)
+    # The archive selects this export's original report, independently of any
+    # later current report in the same Workspace. Use the ordinary portable
+    # delivery file index so fresh receiving retains the same exact choice.
+    capture = export_root / "report-snapshots" / digest(state)
+    capture.mkdir(parents=True, exist_ok=True)
+    captured_files = {str(index): item for index, item in enumerate(_report_files(state).values())}
+    for item in captured_files.values():
+        original = relative_file(exported_report, item["path"])
+        observed_report_render._retain_original(original, capture / item["path"], item)
+    atomic_json(capture / "native-selection.json", state, immutable=True)
+    captured_files["report_selection"] = describe_file(capture, capture / "native-selection.json")
     archive_state = export_root / "workspace-export.json"
-    record = portable.backup(ws, archive)
+    record = portable.backup(ws, archive, delivery_root=capture, delivery_files=captured_files)
     atomic_json(archive_state, record)
     result = {"schema": SCHEMA, "project_id": ws.project["id"],
         "source_id": source_id, "source_collection_id": collection["id"],

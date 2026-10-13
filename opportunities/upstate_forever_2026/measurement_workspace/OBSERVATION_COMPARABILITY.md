@@ -127,7 +127,7 @@ exports contain every filtered row across all pages.
 
 The additive `integration/component_fragments/observation-comparability.json`
 selects the complete four-file component and its maintained observed-context
-dependency through the ordinary installer. It does not change the shared
+and generic scientific-report-rendering dependencies through the ordinary installer. It does not change the shared
 component catalogue. The existing Sources import and ordered Scientific study
 reports controls consume its original native manifest/recipe; this component
 does not introduce a parallel report engine.
@@ -190,3 +190,11 @@ Ordinary repeats omit this flag. A completed output directory always denotes
 its captured original edition. Report member publication uses the maintained
 bounded, atomic original-file retention, so a lost receiver does not leave a
 new partially written PDF under its final filename.
+
+An interrupted export freezes its own `native-selection.json` before any report
+member is copied. If another output later selects a new rendering, the earlier
+output resumes its saved report directory and exact bytes. Its portable archive
+uses the maintained delivery-file index to retain that exact selection and
+complete report inventory, so archive-only receiving chooses the same report
+even if the Workspace's current report marker has advanced. Original older
+archives remain readable through their original saved marker.
