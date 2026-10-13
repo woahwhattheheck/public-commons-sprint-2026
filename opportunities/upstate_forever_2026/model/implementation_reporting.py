@@ -173,7 +173,10 @@ def _table(headers, rows) -> str:
         body = "".join("<tr>" + "".join(
             "<td>" + html.escape(_text(value)) + "</td>" for value in row
         ) + "</tr>" for row in rows)
-    return "<div class=\"table-scroll\"><table><thead>" + header + "</thead><tbody>" + body + "</tbody></table></div>"
+    width_class = " wide" if len(headers) > 3 else ""
+    return ("<div class=\"table-scroll" + width_class + "\" tabindex=\"0\" role=\"region\" aria-label=\"" +
+            html.escape(str(headers[0]) + " table", quote=True) +
+            "\"><table><thead>" + header + "</thead><tbody>" + body + "</tbody></table></div>")
 
 
 def _details(label, value) -> str:
@@ -643,7 +646,8 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;"
         "max-width:1500px;margin:0 auto;padding:32px}"
         "h1{font-size:28px;margin:0 0 8px}h2{font-size:20px;margin-top:28px}"
-        ".scientific-context table{min-width:720px}.scientific-context h3{font-size:16px;margin-bottom:6px}"
+        ".table-scroll.wide table{min-width:900px}.scientific-context table{min-width:720px}"
+        ".scientific-context h3{font-size:16px;margin-bottom:6px}"
         "header{border-bottom:2px solid #333;padding-bottom:20px}"
         ".meta,footer{color:#555}.table-scroll{overflow-x:auto;margin:12px 0}"
         "table{width:100%;border-collapse:collapse;font-size:12px}"
@@ -653,7 +657,7 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "summary{font-weight:600;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
         "section{break-inside:auto}footer{border-top:1px solid #aaa;margin-top:28px;padding-top:12px}"
         "@media print{body{padding:0;font-size:10px}table{font-size:10px;table-layout:fixed}"
-        ".table-scroll{overflow:visible}.scientific-context table{min-width:0}"
+        ".table-scroll{overflow:visible}.table-scroll.wide table,.scientific-context table{min-width:0}"
         "details{break-inside:avoid}summary{display:block}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}@page{margin:12mm}}"
         "</style></head><body><header><h1>" + title + "</h1><p class=\"meta\">" +
