@@ -29,6 +29,7 @@ async function readUTF8File(file,limit){
 function fieldRows(values){return Array.isArray(values)?values:Object.values(values||{});}
 
 const COMPARISON_REVIEW_STATES=core.DISPOSITION_STATUSES;
+const COMPARISON_FILTER_STATUSES=['all','added','missing','changed','ambiguous'];
 function comparisonWorkspace(raw){
  const value=JSON.parse(raw.replace(/^\uFEFF/,''));
  const workspace=value?.schema==='manufacturing-data-desk.v1'?value.current?.workspace:value?.workspace||value;
@@ -38,7 +39,9 @@ function emptyComparison(){return {schema:'manufacturing-data-desk-comparison.v1
 function validateComparison(input){
  if(input===undefined)return emptyComparison();
  const value=clone(input),map=x=>x&&typeof x==='object'&&!Array.isArray(x);
- if(!map(value)||value.schema!=='manufacturing-data-desk-comparison.v1'||!Array.isArray(value.records)||typeof value.baselineId!=='string'||typeof value.targetId!=='string'||typeof value.query!=='string'||!['all',...KINDS].includes(value.kind)||!['all','added','missing','changed','ambiguous'].includes(value.status)||!map(value.reviewDrafts)||!map(value.reviews)||!Array.isArray(value.reviewHistory))throw Error('The saved comparison selection or editor is incomplete.');
+ // Earlier editions offered this filter although unchanged identities are summary counts.
+ if(map(value)&&value.status==='unchanged')value.status='all';
+ if(!map(value)||value.schema!=='manufacturing-data-desk-comparison.v1'||!Array.isArray(value.records)||typeof value.baselineId!=='string'||typeof value.targetId!=='string'||typeof value.query!=='string'||!['all',...KINDS].includes(value.kind)||!COMPARISON_FILTER_STATUSES.includes(value.status)||!map(value.reviewDrafts)||!map(value.reviews)||!Array.isArray(value.reviewHistory))throw Error('The saved comparison selection or editor is incomplete.');
  const ids=new Set();
  for(const record of value.records){
   if(!record||typeof record.id!=='string'||!record.id||record.id==='CURRENT'||ids.has(record.id)||typeof record.name!=='string'||typeof record.at!=='string'||!Number.isFinite(Date.parse(record.at))||typeof record.raw!=='string'||bytes(record.raw)>MAX_SESSION||record.sha256!==core.sha256(record.raw))throw Error('A retained comparison edition is incomplete or its original bytes changed.');
@@ -179,7 +182,7 @@ export function mountDataReadinessDesk(root,config={}){
   if(!value)return html+'<p class="muted">Retain the current source or open an existing complete working/data file, then choose a baseline. Importing an edition leaves the working desk selected.</p>';
   const rows=comparisonRows(value);comparisonPage=Math.min(comparisonPage,Math.max(0,Math.ceil(rows.length/30)-1));
   html+='<p><strong>'+esc(String(value.readiness?.status||value.readiness||'').replace(/_/g,' '))+'</strong> · '+value.differences.length.toLocaleString()+' total differences · '+(value.issues?.length||0).toLocaleString()+' source/comparison issues</p>';
-  html+='<div class="grid"><label>Find identity or changed field<input id="desk-comparison-query" value="'+esc(state.query)+'"></label><label>Source family<select id="desk-comparison-kind">'+['all',...KINDS].map(k=>'<option value="'+k+'" '+(state.kind===k?'selected':'')+'>'+esc(k==='all'?'All families':LABELS[k])+'</option>').join('')+'</select></label><label>Difference<select id="desk-comparison-status">'+['all','added','missing','changed','ambiguous','unchanged'].map(k=>'<option value="'+k+'" '+(state.status===k?'selected':'')+'>'+esc(k==='all'?'All differences':k)+'</option>').join('')+'</select></label></div>';
+  html+='<div class="grid"><label>Find identity or changed field<input id="desk-comparison-query" value="'+esc(state.query)+'"></label><label>Source family<select id="desk-comparison-kind">'+['all',...KINDS].map(k=>'<option value="'+k+'" '+(state.kind===k?'selected':'')+'>'+esc(k==='all'?'All families':LABELS[k])+'</option>').join('')+'</select></label><label>Difference<select id="desk-comparison-status">'+COMPARISON_FILTER_STATUSES.map(k=>'<option value="'+k+'" '+(state.status===k?'selected':'')+'>'+esc(k==='all'?'All differences':k)+'</option>').join('')+'</select></label></div>';
   if(value.issues?.length)html+='<details><summary>Source and comparison issues ('+value.issues.length.toLocaleString()+')</summary>'+table(['Family','Issue','Action'],value.issues.slice(0,50).map(row=>[LABELS[row.kind]||row.kind||'',row.message||row.code,row.action||'']))+'<p class="muted">Showing the first 50 issues. Complete JSON and HTML reports contain the full result.</p></details>';
   html+='<p>'+rows.length.toLocaleString()+' matching differences · showing '+(rows.length?comparisonPage*30+1:0)+'–'+Math.min((comparisonPage+1)*30,rows.length)+'</p>';
   for(const row of rows.slice(comparisonPage*30,(comparisonPage+1)*30)){
