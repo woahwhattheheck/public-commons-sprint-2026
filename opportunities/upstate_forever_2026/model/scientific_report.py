@@ -18,7 +18,7 @@ from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v22-source-origin"
+REPORT_VERSION = "upstate.scientific-report/v23-editable-office"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -1464,6 +1464,13 @@ def write_companions(directory, title, sections, *, contact, source_records, bin
         "presentation": {"subtitle": str(subtitle), "footer": prepared},
         "display_precision": "Six significant digits; complete original numeric data remains in the working project",
     })
+    # Every editable companion consumes the exact original structured document.
+    # Its source edition, displayed values and figures remain the same selection.
+    from .scientific_report_odt import write_odt
+    from .scientific_report_workbook import write_workbook
+    report_data_bytes = data_path.read_bytes()
     return {"report_html": describe_file(directory, html_path),
             "report_markdown": describe_file(directory, markdown_path),
-            "report_data": describe_file(directory, data_path)}
+            "report_data": describe_file(directory, data_path),
+            "report_odt": write_odt(directory, report_data_bytes),
+            "report_workbook": write_workbook(directory, report_data_bytes)}
