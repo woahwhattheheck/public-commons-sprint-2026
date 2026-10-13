@@ -37,7 +37,7 @@ A run selection may include:
 
 Use the maintained `ComputeProgrammes.preview`, `create` and `execute` methods. The optional candidates are retained in the Programme selection; their original input selections are retained in the saved bindings. At execution the same IDs are passed to `Workspace.run(..., reuse_source_run_ids=...)`. The attempt record also retains the explicit requested candidates.
 
-Existing Programme rows that omit the optional field keep their previous binding structure and identity. The helper coordinates candidate admission and is retained in the complete application source inventory. It does not replace a scientific engine module or add a new unconditional engine dependency that would invalidate older Programme identities. The actual native matcher, stage cache and scientific execution source remain governed by the existing Programme engine checks.
+Existing saved Programmes whose rows omit the optional field keep their previous binding structure and remain readable and executable. Creating a Programme again after an application source change can produce a new Programme engine-source identity, even when its selected native run IDs are unchanged. The helper coordinates candidate admission and is retained in the complete application source inventory. It does not replace a scientific engine module or add a new unconditional engine dependency that would invalidate older Programme identities. The actual native matcher, stage cache and scientific execution source remain governed by the existing Programme engine checks.
 
 Source-update links retain the chosen candidate list and verify it against the successor Programme and the original candidate selections when reopened or restored. Older links with no candidate field keep their original preview identity and remain readable.
 
@@ -58,3 +58,33 @@ The `programme-native-reuse` component requires `programme-source-updates` and `
 The shared-source base was read at commit `ab5968499e25d74b8953f39478c03d3cddeb8721`: ComputeProgramme Git blob `188ef3177830bd71a4ca061f36f2dba34cc4b0c9`, successor Git blob `f1855e817559786be3d4bcc0f47fde04b9f23114`, and current successor browser Git blob `dd0f3ca689642137fe6980d17c4835e595da64ed`. The source-refresh facade and native comparison writers retain their existing ownership and implementation.
 
 Receiving should open an existing saved Programme and its source-update preview, inspect candidate identities, save a successor, continue its original selected stages and reopen its report. A useful case changes a source container or an unused table field while retaining a model's actual inputs, alongside a real model-input change. The first may reuse its matching stage; the second follows the native matcher decision. Rendered operator readiness is established by exercising the exact installed application, including a narrow viewport and restored project.
+
+## Current Upper Savannah demonstration direction
+
+The following complete owner update is retained from [Bryce's Sales direction, October 13, 2026](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359?thread_ts=1791724121.853269). The source-update and native-reuse continuation supports this same working product. Native reuse source was merged in PR3955 at `696617a59e9d1b539266483295a83282bb2a1af7`; the exact reviewed component head is `11e300aa4405cddb330fc41e0ab13df510cbd351`.
+
+> BRYCE CURRENT DIRECTION — ECOSYSTEM MODEL / DEMO / PRESENTATION. Pass this complete update into current worker assignments and onward handoffs; the feed is moving quickly.
+> 
+> Exact new owner instructions:
+> “do the simulated model”
+> “just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it”
+> “and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast”
+> “just checking dont pause anythi g”
+> 
+> Implementation direction:
+> • Tim/Ecosystem already publishes GIS, watershed/environmental modeling, data analysis, map/report publishing and natural-capital decision-support work. Do not assume a tools/capacity gap or pitch generic GIS as novel. Build a concrete production workshare he can compare with his existing workflow; prime retains scientific direction/method choices/review/client relationship.
+> • Center the demonstration on THIS UpperSavannahRFP: actual geographic/source shapes,30mgrid, upstreammodeldomain vsSCreportingmask andutilityfocus, clearlysimulatedrealisticinputs, nativeInVESTNDR/SDR baseline+restoration+matchedcontrol, annualN/Pkg/year andsedimenttonnes/year reachingstream, meaningfulcomparison/maps/report, editableparameters/sourceeditions andexport/coldreopen. Keep load/concentration and stream/intake distinctions correct.
+> • Actual simulatedmodel execution and the connected usable product are the hard priority. Runtime/source existence or another plan is not the run. Preserve already-running jobs andonewriterperWorkspace; use existingequippedruntime or provision an isolated actualexecution environment when needed. Root has explicitlytakenactualexecution; otherbuildscontinue.
+> • Make relevance and speed visible through what Tim can USE: chooseinputs/assumptions→run→inspect differences→revise→hand over work his team can continue. Show actualproducedartifacts and real elapsedhistory; no inventedtimings/guaranteedreaction. Avoid stockscreen/decorativepitch/demo-onlytheatre.
+> • Open/look/use finalproduct and ALLattachments asrecipient, fixobviousdefects, naturalgenerativeTTS/mediaifused, actualapprecordingratherthan generatedscreenspretendingexecution. No review/testtheatre or substitutionforhardbuild.
+> • Cascade thisdirection to otherEcosystem/product/model/report/presentationpeers atnextsafemessageboundary; persistindurablecurrentworkorders/startupguide andincludeversion/pathwithnextsubstantiveresult. Don'tstopactivecalculations, restartheld/deletedtasks, spawnanothercontroller oraskBryce torelay.
+> 
+> No bid/prime-yesgate or arbitraryproduct/featurecap. TODAY10a.m.Eastern/14UTCcutoffremains. Existingfocusedvalidation,noPrivateGitHub/Actions,labattribution,contact/meeting/spendcontrols remain. SharedGitHubcurrentownerbrief landingunderopportunities/upstate_forever_2026; Rootwillreturntheactualpath/head.
+
+### Receiving the existing native product
+
+Preserve the active Workspace writer and the original baseline, restoration, matched-control, parameter-course and regional-case identities. The current continuation is: install the maintained Programme/source-update components, open **Update sources**, inspect the actual old-to-new source and native run mapping, save the reviewed successor, continue it, inspect per-model reuse and completed work in its original history, then export and reopen the same resulting product.
+
+A transferred result must retain actual stage donors, including `reused_from.original_arguments` and any previous-reuse chain, through the maintained study-transfer closure. Compose the current transfer owner's repair before receiving a partial study that contains reused stages. Preserve the original paths and hashes; a donor's arguments belong to its original run directory. The complete Workspace archive already uses its maintained recursive inventory and semantic verification hooks.
+
+Use recorded stage and operation timestamps for elapsed history. The actual source-update preview and resulting report must distinguish candidate selection from native reuse that occurred. Retain nitrogen and phosphorus as annual kg, sediment as annual metric tonnes, and the existing stream-delivery and common-support interpretation. The recipient should be able to reopen the installed application, inspect assumptions and actual artifacts, revise the retained sources or parameters and continue the Programme.
