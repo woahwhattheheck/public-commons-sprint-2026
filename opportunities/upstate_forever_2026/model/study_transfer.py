@@ -693,7 +693,13 @@ def _capture_locks(stack, closure, already):
     for kind, key in sorted(closure.nodes):
         if kind not in LOCKS or (kind, key) in already:
             continue
-        stack.enter_context(held(closure.root / kind / key / LOCKS[kind], blocking=False))
+        relative = (Path(kind) / key / LOCKS[kind]).as_posix()
+        token = ("original-study-owner-lock", relative)
+        # Family helpers can already hold this exact record's owner lock.
+        # A second open file description would conflict with our own flock.
+        if token not in already:
+            stack.enter_context(held(closure.root / relative, blocking=False))
+            already.add(token)
         already.add((kind, key))
 
 

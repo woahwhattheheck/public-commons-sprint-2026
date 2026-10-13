@@ -187,5 +187,17 @@ export function attachRunRevisions(host){
     if(value?.workspace_key&&value.workspace_key!==workspace)throw Error('Open the original Workspace first.');
     intent++;const result=await request('review',undefined,{id});if(result){receive(result);render();}
   }
-  return {mount,update,detach,openForRun,openSaved};
+  function taskActions(task){
+    if(task.workspace!==current()||!Array.isArray(task._run_revisions))return '';
+    return '<div class="page-actions">'+task._run_revisions.map(row=>
+      '<button type="button" data-action="runrevision-open-saved" data-id="'+esc(row.id)+'" data-workspace="'+esc(task.workspace)+'">Return to revision: '+esc(row.title)+'</button>').join('')+'</div>';
+  }
+  async function dispatch(node){
+    if(node.dataset.action!=='runrevision-open-saved')return false;
+    if(node.dataset.workspace!==current())throw Error('Open this task in its original Workspace before its revision.');
+    host.closeDetail?.();
+    await openDesk('run-revisions','openSaved',{workspace_key:current(),id:node.dataset.id});
+    return true;
+  }
+  return {mount,update,detach,openForRun,openSaved,taskActions,dispatch};
 }

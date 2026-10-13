@@ -1,0 +1,46 @@
+{
+  "schema": "commons.authored-source-inputs/v1",
+  "title": "Four-station original hydrologic analysis and interactive report source",
+  "files": [
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/README.md",
+      "bytes": 11304,
+      "sha256": "f34b2a38a4d9d8afaa2410389ebbad7efaad9b2fdb4211fbeed305b7a67c3891"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/analysis.mjs",
+      "bytes": 19314,
+      "sha256": "7d42273454d27c0e125e1dbbe602a75230ea7ea91353eebdb71ee5e6d0fe5b4b"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
+      "bytes": 3386,
+      "sha256": "60511d88abdb4ac204bfdb4e45f84e03fd084e15bed73817ebc0e6a16306e0ae"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/csv.mjs",
+      "bytes": 1178,
+      "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/inputadapter.mjs",
+      "bytes": 2124,
+      "sha256": "1382a1019cb9cae57c1bd5a35d159e74b90390391f37014963a3f38b7fa0ab88"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/outputs.mjs",
+      "bytes": 958,
+      "sha256": "a76749ef3bdef6cb6927392c171488f11c9d0331d5f9ca6afe8cf59a4a080243"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/package_study.mjs",
+      "bytes": 5265,
+      "sha256": "260de714ccb262b4e2463a771b280986ac01218a4e484c6064b1045e28ec26f9"
+    },
+    {
+      "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
+      "bytes": 26467,
+      "sha256": "8a0d053dc5f1efbc36b87e386170b03735b4c68311cd10a81a9618fb6572d0bb"
+    }
+  ]
+}

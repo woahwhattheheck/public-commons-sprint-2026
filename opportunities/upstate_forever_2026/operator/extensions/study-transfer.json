@@ -16,7 +16,8 @@
     "economic_received_comparisons.mjs",
     "received_published_reviews.mjs",
     "received_published_reviews.css",
-    "assessment_received_studies.mjs"
+    "assessment_received_studies.mjs",
+    "parameter_received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -145,7 +146,8 @@
       "openExtension",
       "openItem",
       "openScientificReport",
-      "openDesk"
+      "openDesk",
+      "openParameterStudy"
     ],
     "styles": [
       "/web/extensions/study_transfer.css",

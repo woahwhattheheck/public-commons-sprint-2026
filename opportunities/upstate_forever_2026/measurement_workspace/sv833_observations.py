@@ -74,7 +74,9 @@ def catalog_entry(application=None):
         return None
     return {"id": BUILTIN_ID, "title": TITLE,
             "publication": "Original 2021–2026 observations; source edition 2026-10-13",
-            "counts": {"stations": 1, "original_result_rows": 610, "original_activity_count": 56}}
+            "counts": {"stations": 1, "original_result_rows": 610, "original_activity_count": 56,
+                       "canonical_measurements": 576, "eligible_statistical_rows": 575,
+                       "excluded_statistical_rows": 1}}
 
 
 def build_files(application=None):
@@ -145,8 +147,8 @@ def build_files(application=None):
     selection_notes = [
         "The desk retains every one of the 610 original NarrowResult identifiers. The three characteristic profiles are disjoint; their date intervals and station overlap intentionally.",
         "ActivityIdentifier joins the original activity profile for source project, routine-sample type, clock, depth and comments. ResultIdentifier joins the original reporting-limit profile. Each joined field retains its original file, hash and CSV row.",
-        "All 34 agreeing repeated values retain distinct ResultIdentifiers here. The scientific report separately groups them into 576 activity-characteristic measurements and explains weighting differences.",
-        "The desk's quantified-only summaries count original result rows within separate project, method, fraction, specification, activity type and unit series. Blank and censored values remain distinct from quantified values.",
+        "All 34 agreeing repeated values retain distinct ResultIdentifiers. The native summaries and scientific report give each of the 576 agreeing activity-characteristic measurements one weight; all raw fields except ResultIdentifier and its limit URL must agree.",
+        "The source-owned pH 724 result on 2023-11-29 remains visible verbatim with its exact identity and exclusion reason. Statistical summaries use 575 eligible canonical measurements; method, fraction, specification, project, activity type, units and censoring remain separate.",
         "The original NPS-2013 and SWS-2024 project names come from the activity export. Sampling ends on 2026-06-24 although the original query extends through 2026-10-13.",
         "The three default Result profiles and period-of-record summary remain source companions for independent reconciliation. Only the three NarrowResult profiles form this observation cohort.",
     ]
@@ -156,12 +158,15 @@ def build_files(application=None):
         "publication": "Original 2021–2026 observations; source edition 2026-10-13",
         "original_url": entries[0]["source_url"], "observation_calendar_filters": True,
         "observation_sources": "observation-sources.json",
+        "observation_statistic_basis": "agreeing_original_activity_characteristic/v1",
         "observation_selection_notes": selection_notes,
         "observation_scope": "Original physical, nutrient and microbiological results at Three and Twenty Creek station SV-833.",
         "grab_sampling": {"start": dates[0], "end": dates[-1],
                           "frequency": "Original irregular sampling dates", "total_visits": 56},
         "content_counts": {"stations": 1, "original_result_rows": 610, "original_activity_count": 56,
-                           "quantified": 557, "below_limit": 49, "above_limit": 4},
+                           "quantified": 557, "below_limit": 49, "above_limit": 4,
+                           "canonical_measurements": 576, "eligible_statistical_rows": 575,
+                           "excluded_statistical_rows": 1},
         "source_interpretation": {"source_manifest_sha256": _sha(originals[MANIFEST]),
             "coordinates": "Original station CSV WGS84 numeric coordinates; EPSG:4326.",
             "result_identity": "610 distinct original ResultIdentifiers; repeated activity-values remain present.",
@@ -177,6 +182,36 @@ def build_files(application=None):
             "record_count": 610, "activity_count": 56, "sources": entries,
             "sample_support": "Original SV-833 result records, retaining repeated values and exact source identifiers"}),
     })
+    study["observation_statistical_exclusions"] = {
+        "schema": "upstate.original-statistical-exclusions/v1",
+        "observation_index_sha256": _sha(files["observation-sources.json"]),
+        "original_record_count": 610,
+        "records": [{
+            "original_source_path": ROOT + "/" + captures["physical_result_identifiers"]["path"],
+            "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+            "source_csv_row": 158, "monitoring_location_id": STATION,
+            "activity_id": "21SC60WQ_WQX-AF12080",
+            "original_result_identifier": "STORET-1104042240",
+            "reason": ("The original pH value 724 on 2023-11-29 is retained verbatim. "
+                       "The source-owned scientific quality screening excludes this exact result "
+                       "from statistical summaries; no corrected value is inferred."),
+        }],
+    }
+    files["study.json"] = _json(study)
+    if __package__:
+        from .published_studies import _observation_rows
+        from .source_observations import load_observations, statistical_rows
+    else:
+        from published_studies import _observation_rows
+        from source_observations import load_observations, statistical_rows
+    observed = load_observations(files, _observation_rows)
+    canonical = statistical_rows(observed, study, include_excluded=True)
+    eligible = statistical_rows(observed, study)
+    excluded = [row for row in canonical if row.get("statistical_exclusion") or row.get("statistical_exclusions")]
+    if (len(observed) != 610 or len(canonical) != 576 or len(eligible) != 575
+            or len(excluded) != 1
+            or excluded[0]["measurement_original_result_ids"] != ["STORET-1104042240"]):
+        raise ValueError("The native SV-833 edition must retain 610 original IDs, 576 canonical and 575 eligible measurements.")
     vector_name = "native/sv833-station-wgs84.geojson"
     files[vector_name] = _json({
         "type": "FeatureCollection", "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},

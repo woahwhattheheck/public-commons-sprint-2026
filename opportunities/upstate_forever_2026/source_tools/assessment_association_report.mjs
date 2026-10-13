@@ -1,6 +1,7 @@
 // Source-bound programme reporting for the original assessment/station editions.
 import { createArchiveCodec } from "./archive_codec.mjs";
 import { addAnnualReferenceMapHtml } from "./annual_reference_maps.mjs";
+import { addAnnualStationContextHtml } from "./annual_station_report.mjs";
 import { joinAssessmentIdentities } from "./station_assessment_identity.mjs";
 import { renderAssociationReviewer } from "./assessment_association_reviewer.mjs";
 import { renderNativeAssessmentReviewer, annualReferenceInterpretation, annualReferenceCsv } from "./native_assessment_reviewer.mjs";
@@ -14,8 +15,9 @@ const json = value => JSON.stringify(value, null, 2) + "\n";
 const unique = values => [...new Set(values)].sort();
 const key = row => JSON.stringify([row.source_id, row.id]);
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-const sha = text => codec.sha256(codec.utf8Encode(text));
-const identity = (path, text) => ({ path, bytes: codec.utf8Encode(text).length, sha256: sha(text) });
+const sourceBytes = value => typeof value === "string" ? codec.utf8Encode(value) : value;
+const sha = value => codec.sha256(sourceBytes(value));
+const identity = (path, value) => ({ path, bytes: sourceBytes(value).length, sha256: sha(value) });
 const link = (uri, label) => /^https?:\/\//i.test(String(uri || "")) ?
   '<a href="' + esc(uri) + '" rel="noopener noreferrer">' + esc(label || uri) + '</a>' : esc(label || uri);
 function csv(rows, columns) {
@@ -79,7 +81,7 @@ function nativeGeography(text, records) {
       sha256: sha(text), bytes: codec.utf8Encode(text).length }, stations: result };
 }
 
-export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations, nativeAnnualMaps }) {
+export function buildAssociationReport({ assessments, identityCrosswalk, priorities, geography, nativeAnnualContext, nativeMicrobialContext, nativeMicrobialObservations, nativeAnnualMaps, nationalStationReport }) {
   const joined = joinAssessmentIdentities(assessments, identityCrosswalk);
   const programme = parse(priorities, "original programme crosswalk");
   if (programme.schema !== "upstate.source-priority-assessment-crosswalk/v2" ||
@@ -199,6 +201,12 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     ], programme_source_reference: programme.source_reference, assessment_sources: programme.assessment_sources,
     records, differences, coarser_station_memberships: coarser, watershed_comparison: watershedRows };
   if (microbial) result.microbial_source_context = microbial.source;
+  if(nationalStationReport){
+    if(!nativeAnnual||nationalStationReport.binding?.schema!=="upstate.annual-reference-station-report/v1"||
+       nationalStationReport.binding.regional.sha256!==sha(json(annualReferenceInterpretation(nativeAnnual))))
+      fail("The original national station context belongs to another regional annual selection.");
+    result.national_annual_station_context=nationalStationReport.binding;
+  }
   const files = { ...joined.files,
     "inputs/assessment-records-domain217.csv": assessments,
     "inputs/assessment159-native-identity-crosswalk.csv": identityCrosswalk,
@@ -209,6 +217,14 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
   if (microbial) {
     files["inputs/microbial-assessment-overlap.json"] = nativeMicrobialContext;
     files["inputs/microbial-assessment-observations.csv"] = nativeMicrobialObservations;
+  }
+  if(nationalStationReport)for(const [path,body] of Object.entries(nationalStationReport.files)){
+    if(files[path]!==undefined||typeof body!=="string")fail("National report source collides or is not complete UTF-8.");
+    files[path]=body;
+  }
+  if(nationalStationReport)for(const [path,body] of Object.entries(nationalStationReport.originalFiles)){
+    if(files[path]!==undefined)fail("National original archive collides with a retained source.");
+    files[path]=body;
   }
   result.inputs = Object.entries(files).filter(([path]) => path.startsWith("inputs/")).map(([path,text]) => identity(path,text));
   if(nativeAnnualMaps){
@@ -260,6 +276,8 @@ export function buildAssociationReport({ assessments, identityCrosswalk, priorit
     }
     files["OPEN_ASSESSMENT_ASSOCIATIONS.html"]=addAnnualReferenceMapHtml(files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],nativeAnnualMaps);
   }
+  if(nationalStationReport)files["OPEN_ASSESSMENT_ASSOCIATIONS.html"]=addAnnualStationContextHtml(
+    files["OPEN_ASSESSMENT_ASSOCIATIONS.html"],nationalStationReport);
   const reportIdentity = identity("assessment-associations.json", files["assessment-associations.json"]);
   const sourceId = "assessment-association-report-" + reportIdentity.sha256.slice(0,20);
   files["artifacts.json"] = json({schema:"commons.artifacts/v1",source_id:sourceId,files:Object.entries(files).map(([path,text])=>identity(path,text))});

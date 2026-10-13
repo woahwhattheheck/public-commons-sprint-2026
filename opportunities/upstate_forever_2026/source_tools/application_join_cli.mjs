@@ -4,7 +4,7 @@ import {readFileSync, mkdirSync, mkdtempSync, openSync, writeFileSync, fsyncSync
         closeSync, linkSync, unlinkSync, rmdirSync, lstatSync} from "node:fs";
 import {resolve, dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
-import {readSourceLayer, layerFromDocument, composeApplication, applySourceJoins,
+import {readSourceLayer, layerFromDocument, composeApplication, composeSourceJoins, sourceCompositionBank,
         transportJSON} from "./application_join.mjs";
 import {encodeApplicationCarrier, sha256Bytes, utf8Encode} from "./carrier_codec.mjs";
 import {encodeApplicationArchive} from "./application_archive.mjs";
@@ -14,12 +14,15 @@ const usage = `Usage:
     [--overlay COMPLETE_COMPONENT] [--join ORIGINAL_INTEGRATION_JSON] ...
     --edition NAME [--operation-id ID]
     [--source-map FILE.json] [--carrier FILE.md] [--zip FILE.zip]
+    [--join-bank RECOVERABLE_SOURCE.json]
 
 Overlays and joins apply in their command-line order. BASE must be an original
 complete application source map or its complete Canvas carrier. A join changes
 only its named literal source spans. Readable original JSON and gzip/base64
 Canvas carriers are accepted. Output names are immutable; an identical existing
-file is reused. The command prints the resulting file locations and identities.
+file is reused. --join-bank retains full edited preimages, literal hooks, guards,
+consumer checks and complete postimages; receive it through the same --overlay path.
+The command prints the resulting file locations and identities.
 `;
 
 function read(path) { return readFileSync(resolve(path), "utf8"); }
@@ -57,12 +60,12 @@ function publish(path, data) {
 
 export function main(argv = process.argv.slice(2)) {
   if (argv.includes("--help") || argv.includes("-h")) { process.stdout.write(usage); return 0; }
-  const steps = [], options = {};
+  const steps = [], options = {}, joins = [];
   let base;
   for (let index = 0; index < argv.length; index++) {
     const key = argv[index];
     if (!key.startsWith("--") && !base) { base = key; continue; }
-    if (!["--overlay", "--join", "--edition", "--operation-id", "--source-map", "--carrier", "--zip"].includes(key))
+    if (!["--overlay", "--join", "--edition", "--operation-id", "--source-map", "--carrier", "--zip", "--join-bank"].includes(key))
       throw Error("Unknown argument: " + key);
     const value = argv[++index];
     if (!value || value.startsWith("--")) throw Error("Choose a value for " + key);
@@ -73,7 +76,7 @@ export function main(argv = process.argv.slice(2)) {
     }
   }
   if (!base || !options["--edition"]) throw Error(usage);
-  if (!["--source-map", "--carrier", "--zip"].some(key => options[key])) throw Error("Choose an output path.\n" + usage);
+  if (!["--source-map", "--carrier", "--zip", "--join-bank"].some(key => options[key])) throw Error("Choose an output path.\n" + usage);
   const edition = options["--edition"], operationId = options["--operation-id"] || null;
   const layers = [readSourceLayer(read(base), {label: resolve(base)})];
   for (const step of steps) {
@@ -82,12 +85,18 @@ export function main(argv = process.argv.slice(2)) {
     else {
       const current = composeApplication(layers, {edition, operationId});
       const integration = transportJSON(text);
-      layers.push(applySourceJoins(layerFromDocument(current), integration,
-                                  {label: resolve(step.path)}));
+      const joined = composeSourceJoins(layerFromDocument(current), integration,
+                                       {label: resolve(step.path)});
+      layers.push(joined.layer);
+      joins.push(joined);
     }
   }
   const document = composeApplication(layers, {edition, operationId});
+  if (options["--join-bank"] && !joins.length)
+    throw Error("--join-bank needs at least one --join plan");
   const outputs = {};
+  if (options["--join-bank"])
+    outputs.join_bank = publish(options["--join-bank"], JSON.stringify(sourceCompositionBank(joins), null, 2) + "\n");
   if (options["--source-map"])
     outputs.source_map = publish(options["--source-map"], JSON.stringify(document, null, 2) + "\n");
   if (options["--carrier"])
@@ -104,7 +113,7 @@ export function main(argv = process.argv.slice(2)) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { process.exitCode = main(); }
   catch (error) {
-    process.stderr.write(JSON.stringify({error: error.message}) + "\n");
+    process.stderr.write(JSON.stringify({error: error.message, ...(error.report ? {conflict_report: error.report} : {})}) + "\n");
     process.exitCode = 1;
   }
 }

@@ -156,7 +156,12 @@
         "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip",
         "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.json",
         "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.part01.txt",
-        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.part02.txt"
+        "results/native-assessment-annual-basin-maps-20261013/native-assessment-microbial-delivery.zip.base64.part02.txt",
+        "source_tools/annual_station_report.mjs",
+        "source_tools/annual_reference_enrichment.mjs",
+        "source_tools/annual_reference_enrichment_core.mjs",
+        "source_tools/ANNUAL_STATION_REPORT.md",
+        "source_tools/usgs_annual.py"
       ],
       "requires": [
         "assessment-context",

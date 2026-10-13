@@ -87,7 +87,11 @@ def augment(closure, retained, result):
                            if source in row.get("source_choices", [])],
         })
     from . import published_review_admission
+    choices = [row["source"] for row in result["published_reviews"]]
+    admissions = (published_review_admission.list_admissions(
+        closure.workspace, study_id=result["id"], sources=choices, metadata_only=True)
+        if choices else [])
     for row in result["published_reviews"]:
-        row["local_admissions"] = published_review_admission.list_admissions(
-            closure.workspace, study_id=result["id"], source=row["source"])
+        row["local_admissions"] = [
+            deepcopy(item) for item in admissions if item["original_source"] == row["source"]]
     return result

@@ -50,10 +50,14 @@ REGISTER_APPLICATION_FILES = PROPERTY_APPLICATION_FILES + (
     "REGISTER_OPERATOR.md", "register_receiving.py", "REGISTER_RECEIVING.md",
     "register_reference_example.py", "register_browser_receiving.py", "register_browser_receiving.mjs",
 )
-APPLICATION_PROFILE = "commons.migration-workbench-application/v5"
-APPLICATION_FILES = REGISTER_APPLICATION_FILES + (
+CRF_APPLICATION_PROFILE = "commons.migration-workbench-application/v5"
+CRF_APPLICATION_FILES = REGISTER_APPLICATION_FILES + (
     "crf_domain.py", "crf_workspace.py", "crf_workbook.py", "crf_receiving.py", "CRF_REPORTING.md",
     "public/crf.html", "public/crf.js", "public/crf.css",
+)
+APPLICATION_PROFILE = "commons.migration-workbench-application/v6"
+APPLICATION_FILES = CRF_APPLICATION_FILES + (
+    "housing_receiving.py", "housing_reference_example.py", "HOUSING_COMMISSIONING.md",
 )
 APPLICATION_EDITIONS = (
     (None, LEGACY_APPLICATION_FILES),
@@ -62,6 +66,7 @@ APPLICATION_EDITIONS = (
     (FINANCIAL_APPLICATION_PROFILE, FINANCIAL_APPLICATION_FILES),
     (PROPERTY_APPLICATION_PROFILE, PROPERTY_APPLICATION_FILES),
     (REGISTER_APPLICATION_PROFILE, REGISTER_APPLICATION_FILES),
+    (CRF_APPLICATION_PROFILE, CRF_APPLICATION_FILES),
     (APPLICATION_PROFILE, APPLICATION_FILES),
 )
 BLOCK = 1024 * 1024

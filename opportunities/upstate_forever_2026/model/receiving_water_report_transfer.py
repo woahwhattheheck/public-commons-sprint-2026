@@ -15,7 +15,7 @@ CONTEXT = "receiving-water-scientific-study"
 REPORT_SCHEMA = "upstate.observed-report/v1"
 CAPTURE_SCHEMA = "upstate.receiving-water-report-source/v1"
 EDITIONS = ("receiving-water-report-source/1", "receiving-water-report-source/2",
-            "receiving-water-report-source/3")
+            "receiving-water-report-source/3", "receiving-water-report-source/4")
 FOLDER = "receiving-water-report-sources"
 ROLE = "receiving-water-report-source"
 SOURCE_ID = "receiving-water-scientific-report"
@@ -238,9 +238,10 @@ def _capture(closure, key, collection_id, entry, recipe, members, plan, analysis
             or any(selection.get(name) != value for name, value in selected.items())):
         raise ValueError("Receiving report capture selects another original study")
     required_modules = {"producer", "plan_reader"} | ({"exporter", "scientific_formatter"} if analysis else set())
-    if recipe["edition"] in ("receiving-water-report-source/2", "receiving-water-report-source/3"):
+    if recipe["edition"] in ("receiving-water-report-source/2", "receiving-water-report-source/3",
+                             "receiving-water-report-source/4"):
         required_modules |= {"map_capture", "map_renderer", "scientific_figures"}
-    if analysis and recipe["edition"] == "receiving-water-report-source/3":
+    if analysis and recipe["edition"] in ("receiving-water-report-source/3", "receiving-water-report-source/4"):
         required_modules.add("accounting_formatter")
     supported_modules = [required_modules]
     if analysis and recipe["edition"] == "receiving-water-report-source/2":
@@ -319,7 +320,8 @@ def _binding(closure, collection_id, entry):
         if name in metadata and metadata[name] != expected:
             raise ValueError("Receiving report metadata differs from its original source identity")
     members = _members(closure, entry, recipe)
-    if (recipe["edition"] in ("receiving-water-report-source/2", "receiving-water-report-source/3")
+    if (recipe["edition"] in ("receiving-water-report-source/2", "receiving-water-report-source/3",
+                             "receiving-water-report-source/4")
             and "figures/source-map-spec.json" not in members):
         raise ValueError("Receiving map report lost its original geographic figure specification")
     plan = _native_record(closure, members, "plan", "upstate.receiving-water-plan/v1", project)

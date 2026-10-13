@@ -98,6 +98,8 @@ REQUIRED = (
     "model/ensemble_scientific_figures.py",
     "model/ensemble_study_source.py",
     "model/ensemble_study_scope.py",
+    "model/ensemble_scenario_contrasts.py",
+    "model/ENSEMBLE_SCENARIO_CONTRASTS.md",
     "model/ensemble_study_transfer.py",
     "model/ensemble_study_receiving.py",
     "model/study_receiving.py",

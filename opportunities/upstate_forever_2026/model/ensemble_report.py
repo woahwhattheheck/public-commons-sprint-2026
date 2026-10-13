@@ -397,7 +397,9 @@ def _build(workspace, report, *, publish_pointer=True):
                            + methods)
             contents = {
                 "report.html": render_html(report, rows, ranges, sensitivity, release_id),
-                "pairs.csv": _csv(rows, PAIR_FIELDS),
+                "pairs.csv": _csv(rows, PAIR_FIELDS + (
+                    ("reference_scenario_id", "reference_scenario_label")
+                    if report.get("scenario_reference") else ())),
                 "sensitivity.csv": _csv(sensitivity, SENSITIVITY_FIELDS),
                 "robustness.csv": _csv(ranges, RANGE_FIELDS),
                 "report.json": canonical(content) + b"\n",

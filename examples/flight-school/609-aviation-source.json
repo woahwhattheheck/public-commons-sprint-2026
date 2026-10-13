@@ -1,0 +1,1161 @@
+{
+  "schema": "commons.flight-school-source.v1",
+  "id": "apex-609-aviation-20261013",
+  "observed_on": "2026-10-13",
+  "business": {
+    "name": "609 Aviation Flight Training",
+    "url": "https://609aviation.com/",
+    "contact_url": "https://609aviation.com/contact-us",
+    "phone": "609-992-4521",
+    "email": null,
+    "address": "175 Forrestal Road, Rio Grande, NJ 08242",
+    "airport": "Cape May County Airport",
+    "published_people": [
+      {
+        "name": "Katie Washart",
+        "role": "CEO",
+        "source_id": "609-about"
+      },
+      {
+        "name": "Richard Washart",
+        "role": "COO",
+        "source_id": "609-about"
+      }
+    ]
+  },
+  "target": {
+    "name": "Apex Ops Desk",
+    "url": "https://apexopsdesk.com/",
+    "contact_url": "mailto:cpeters@apexopsdesk.com",
+    "source_id": "apex-official"
+  },
+  "currency": {
+    "code": "USD",
+    "basis": "Working currency inferred from New Jersey location and published $; all original displays retain dollars.",
+    "review_required": true
+  },
+  "sources": [
+    {
+      "id": "609-pricing",
+      "url": "https://609aviation.com/pricing",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "pricing"
+    },
+    {
+      "id": "609-professional",
+      "url": "https://609aviation.com/professional-pilot-program",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "professional"
+    },
+    {
+      "id": "609-private",
+      "url": "https://609aviation.com/private-pilot-certificate-program",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "private"
+    },
+    {
+      "id": "609-accelerated",
+      "url": "https://609aviation.com/accelerated-private-pilot-program",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "accelerated"
+    },
+    {
+      "id": "609-finishup",
+      "url": "https://609aviation.com/private-pilot-finish-up-program",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "finishup"
+    },
+    {
+      "id": "609-instrument",
+      "url": "https://609aviation.com/instrument-rating",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "instrument"
+    },
+    {
+      "id": "609-commercial",
+      "url": "https://609aviation.com/commercial-pilot-training",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "commercial"
+    },
+    {
+      "id": "609-cfi",
+      "url": "https://609aviation.com/cfi-training",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "cfi"
+    },
+    {
+      "id": "609-working",
+      "url": "https://609aviation.com/the-9-to-5er-plan",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "working"
+    },
+    {
+      "id": "609-ground",
+      "url": "https://609aviation.com/ground-school-training",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "ground"
+    },
+    {
+      "id": "609-discovery",
+      "url": "https://609aviation.com/discovery-flights",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "discovery"
+    },
+    {
+      "id": "609-checkrides",
+      "url": "https://609aviation.com/professional-checkride-scheduling",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "checkrides"
+    },
+    {
+      "id": "609-inquiry",
+      "url": "https://609aviation.com/get-started",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "inquiry"
+    },
+    {
+      "id": "609-contact",
+      "url": "https://609aviation.com/contact-us",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "contact"
+    },
+    {
+      "id": "609-about",
+      "url": "https://609aviation.com/about-us",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "about"
+    },
+    {
+      "id": "apex-official",
+      "url": "https://apexopsdesk.com/",
+      "observed_at": "2026-10-13T11:04:38.339Z",
+      "effective_date": null,
+      "title": "Apex Ops Desk official product"
+    }
+  ],
+  "aircraft_types": [
+    {
+      "id": "sling-2",
+      "label": "Sling 2",
+      "source_id": "609-private",
+      "registration": null,
+      "quantity": null
+    },
+    {
+      "id": "piper-cherokee-140",
+      "label": "Piper Cherokee 140",
+      "source_id": "609-private",
+      "registration": null,
+      "quantity": null
+    }
+  ],
+  "rates": [
+    {
+      "id": "sling-wet",
+      "label": "Sling wet rental",
+      "amount_minor": 19000,
+      "currency": "USD",
+      "unit": "hour",
+      "source_id": "609-pricing",
+      "kind": "published-rate",
+      "billing_clock": null,
+      "tax_basis": "not-stated",
+      "notes": "Fuel-inclusive label is published. Hobbs/Tach billing clock is not stated."
+    },
+    {
+      "id": "cherokee-wet",
+      "label": "Piper Cherokee wet rental",
+      "amount_minor": 20500,
+      "currency": "USD",
+      "unit": "hour",
+      "source_id": "609-pricing",
+      "kind": "published-rate",
+      "billing_clock": null,
+      "tax_basis": "not-stated",
+      "notes": "Fuel-inclusive label is published. Clock not stated."
+    },
+    {
+      "id": "cfi",
+      "label": "CFI instruction",
+      "amount_minor": 6500,
+      "currency": "USD",
+      "unit": "hour",
+      "source_id": "609-pricing",
+      "kind": "published-rate",
+      "billing_clock": null,
+      "tax_basis": "not-stated",
+      "notes": "Student billing rate; instructor pay is not published."
+    },
+    {
+      "id": "owner-aircraft-cfi",
+      "label": "Instruction in non-school aircraft",
+      "amount_minor": 7500,
+      "currency": "USD",
+      "unit": "hour",
+      "source_id": "609-pricing",
+      "kind": "published-rate",
+      "billing_clock": null,
+      "tax_basis": "not-stated",
+      "notes": "Separate owner-aircraft instruction rate."
+    },
+    {
+      "id": "discovery",
+      "label": "Discovery flight",
+      "amount_minor": 18000,
+      "currency": "USD",
+      "unit": "flight",
+      "source_id": "609-pricing",
+      "kind": "published-rate",
+      "billing_clock": null,
+      "tax_basis": "not-stated",
+      "notes": "PPL page mentions first hour; discovery page prices the experience without a stated duration."
+    }
+  ],
+  "deposit_match_tiers": [
+    {
+      "id": "match-3",
+      "lower_minor": 1000000,
+      "upper_minor": 1249900,
+      "percent": 3,
+      "currency": "USD",
+      "source_id": "609-pricing",
+      "credit_kind": "promotional-training-account-credit",
+      "eligible_transaction": "upfront training deposit",
+      "rounding": null,
+      "expiry": null,
+      "refundability": null,
+      "combination_rule": null
+    },
+    {
+      "id": "match-4",
+      "lower_minor": 1250000,
+      "upper_minor": 1499900,
+      "percent": 4,
+      "currency": "USD",
+      "source_id": "609-pricing",
+      "credit_kind": "promotional-training-account-credit",
+      "eligible_transaction": "upfront training deposit",
+      "rounding": null,
+      "expiry": null,
+      "refundability": null,
+      "combination_rule": null
+    },
+    {
+      "id": "match-5",
+      "lower_minor": 1500000,
+      "upper_minor": 2000000,
+      "percent": 5,
+      "currency": "USD",
+      "source_id": "609-pricing",
+      "credit_kind": "promotional-training-account-credit",
+      "eligible_transaction": "upfront training deposit",
+      "rounding": null,
+      "expiry": null,
+      "refundability": null,
+      "combination_rule": null
+    }
+  ],
+  "budgets": [
+    {
+      "id": "ppl-published-budget",
+      "label": "Private pilot estimate",
+      "source_id": "609-pricing",
+      "estimate": true,
+      "published_total_minor": 1512500,
+      "lines": [
+        {
+          "id": "ppl-cfi",
+          "label": "Instruction",
+          "quantity": 70,
+          "rate_minor": 6500,
+          "published_total_minor": 455000,
+          "unit": "hour",
+          "currency": "USD"
+        },
+        {
+          "id": "ppl-aircraft",
+          "label": "Aircraft",
+          "quantity": 50,
+          "rate_minor": 18000,
+          "published_total_minor": 900000,
+          "unit": "hour",
+          "currency": "USD"
+        },
+        {
+          "id": "ppl-written",
+          "label": "Knowledge exam",
+          "quantity": 1,
+          "rate_minor": 17500,
+          "published_total_minor": 17500,
+          "unit": "exam",
+          "currency": "USD"
+        },
+        {
+          "id": "ppl-medical",
+          "label": "Medical",
+          "quantity": 1,
+          "rate_minor": null,
+          "published_total_minor": 20000,
+          "unit": "exam",
+          "currency": "USD",
+          "published_range_minor": [
+            10000,
+            20000
+          ]
+        },
+        {
+          "id": "ppl-ground",
+          "label": "Ground school",
+          "quantity": 1,
+          "rate_minor": 20000,
+          "published_total_minor": 20000,
+          "unit": "course",
+          "currency": "USD"
+        },
+        {
+          "id": "ppl-examiner",
+          "label": "Examiner",
+          "quantity": 1,
+          "rate_minor": null,
+          "published_total_minor": 100000,
+          "unit": "exam",
+          "currency": "USD",
+          "published_range_minor": [
+            90000,
+            150000
+          ]
+        }
+      ],
+      "computed_line_sum_minor": 1512500
+    },
+    {
+      "id": "ir-safety-pilot",
+      "label": "Instrument safety-pilot scenario",
+      "source_id": "609-pricing",
+      "estimate": true,
+      "flight_hours": 45,
+      "dual_hours": 20,
+      "other_hours": 25,
+      "published_total_minor": 1115000,
+      "basis": "Flight and ground subtotal; not a fixed package price."
+    },
+    {
+      "id": "ir-all-dual",
+      "label": "Instrument all-dual scenario",
+      "source_id": "609-pricing",
+      "estimate": true,
+      "flight_hours": 45,
+      "dual_hours": 45,
+      "published_total_minor": 1310000,
+      "basis": "Flight and ground subtotal; not a fixed package price."
+    }
+  ],
+  "professional_programme": {
+    "id": "professional-four-phase",
+    "source_id": "609-professional",
+    "estimate": true,
+    "phases": [
+      {
+        "id": "ppl",
+        "label": "Private pilot",
+        "flight_hours": 70,
+        "dual_hours": 58,
+        "solo_hours": 12,
+        "ground_hours": 30,
+        "weeks": 10,
+        "months": 2.5,
+        "published_total_minor": 2092000,
+        "lines": [
+          {
+            "id": "ppl-dual",
+            "label": "Sling and instructor",
+            "quantity": 58,
+            "rate_minor": 25500,
+            "published_total_minor": 1479000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-solo",
+            "label": "Sling solo",
+            "quantity": 12,
+            "rate_minor": 19000,
+            "published_total_minor": 228000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-ground",
+            "label": "Ground and oral",
+            "quantity": 30,
+            "rate_minor": 6500,
+            "published_total_minor": 195000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-written",
+            "label": "Knowledge exam",
+            "quantity": 1,
+            "rate_minor": 17500,
+            "published_total_minor": 17500,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-medical",
+            "label": "Third-class medical",
+            "quantity": 1,
+            "rate_minor": 15000,
+            "published_total_minor": 15000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-dpe",
+            "label": "Examiner",
+            "quantity": 1,
+            "rate_minor": 120000,
+            "published_total_minor": 120000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ppl-aircraft-exam",
+            "label": "Checkride aircraft",
+            "quantity": 2,
+            "rate_minor": 19000,
+            "published_total_minor": 38000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          }
+        ],
+        "source_id": "609-professional",
+        "estimate": true,
+        "computed_line_sum_minor": 2092500
+      },
+      {
+        "id": "ir",
+        "label": "Instrument",
+        "flight_hours": 50,
+        "dual_hours": 35,
+        "solo_hours": 15,
+        "ground_hours": 20,
+        "weeks": 6,
+        "months": 1.5,
+        "published_total_minor": 1462500,
+        "lines": [
+          {
+            "id": "ir-dual",
+            "label": "Sling and instructor",
+            "quantity": 35,
+            "rate_minor": 25500,
+            "published_total_minor": 892500,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ir-solo",
+            "label": "Sling solo",
+            "quantity": 15,
+            "rate_minor": 19000,
+            "published_total_minor": 285000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ir-ground",
+            "label": "Ground and oral",
+            "quantity": 20,
+            "rate_minor": 6500,
+            "published_total_minor": 130000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ir-written",
+            "label": "Knowledge exam",
+            "quantity": 1,
+            "rate_minor": 17500,
+            "published_total_minor": 17500,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ir-dpe",
+            "label": "Examiner",
+            "quantity": 1,
+            "rate_minor": 100000,
+            "published_total_minor": 100000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "ir-aircraft-exam",
+            "label": "Checkride aircraft",
+            "quantity": 2,
+            "rate_minor": 19000,
+            "published_total_minor": 38000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          }
+        ],
+        "source_id": "609-professional",
+        "estimate": true,
+        "computed_line_sum_minor": 1463000
+      },
+      {
+        "id": "cpl",
+        "label": "Commercial",
+        "flight_hours": 130,
+        "dual_hours": 20,
+        "solo_hours": 110,
+        "ground_hours": 15,
+        "weeks": 12,
+        "months": 2.5,
+        "published_total_minor": 2868000,
+        "lines": [
+          {
+            "id": "cpl-dual",
+            "label": "Sling and instructor",
+            "quantity": 20,
+            "rate_minor": 25500,
+            "published_total_minor": 510000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-solo",
+            "label": "Solo building",
+            "quantity": 110,
+            "rate_minor": 19000,
+            "published_total_minor": 2090000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-ground",
+            "label": "Ground and oral",
+            "quantity": 15,
+            "rate_minor": 6500,
+            "published_total_minor": 97500,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-written",
+            "label": "Knowledge exam",
+            "quantity": 1,
+            "rate_minor": 17500,
+            "published_total_minor": 17500,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-medical",
+            "label": "Second-class medical",
+            "quantity": 1,
+            "rate_minor": 15000,
+            "published_total_minor": 15000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-dpe",
+            "label": "Examiner",
+            "quantity": 1,
+            "rate_minor": 100000,
+            "published_total_minor": 100000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cpl-aircraft-exam",
+            "label": "Checkride aircraft",
+            "quantity": 2,
+            "rate_minor": 19000,
+            "published_total_minor": 38000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          }
+        ],
+        "source_id": "609-professional",
+        "estimate": true,
+        "computed_line_sum_minor": 2868000
+      },
+      {
+        "id": "cfi",
+        "label": "Instructor",
+        "flight_hours": 20,
+        "dual_hours": 20,
+        "solo_hours": 0,
+        "ground_hours": 40,
+        "weeks": 4,
+        "months": 1,
+        "published_total_minor": 993000,
+        "lines": [
+          {
+            "id": "cfi-dual",
+            "label": "Right-seat dual",
+            "quantity": 20,
+            "rate_minor": 25500,
+            "published_total_minor": 510000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cfi-ground",
+            "label": "Technical ground",
+            "quantity": 40,
+            "rate_minor": 6500,
+            "published_total_minor": 260000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cfi-written",
+            "label": "FOI and FIA",
+            "quantity": 2,
+            "rate_minor": 17500,
+            "published_total_minor": 35000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cfi-dpe",
+            "label": "Examiner",
+            "quantity": 1,
+            "rate_minor": 150000,
+            "published_total_minor": 150000,
+            "unit": "exam",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          },
+          {
+            "id": "cfi-aircraft-exam",
+            "label": "Checkride aircraft",
+            "quantity": 2,
+            "rate_minor": 19000,
+            "published_total_minor": 38000,
+            "unit": "hour",
+            "currency": "USD",
+            "source_id": "609-professional",
+            "estimate": true
+          }
+        ],
+        "source_id": "609-professional",
+        "estimate": true,
+        "computed_line_sum_minor": 993000
+      }
+    ],
+    "published_total_minor": 7415500,
+    "published_target_flight_hours": 270,
+    "published_ground_hours": 105,
+    "published_duration_observations": [
+      {
+        "source_id": "609-professional",
+        "value": "9 months",
+        "context": "headline"
+      },
+      {
+        "source_id": "609-professional",
+        "value": "7–9 months",
+        "context": "narrative"
+      },
+      {
+        "source_id": "609-pricing",
+        "value": "7.5 months",
+        "context": "pricing summary"
+      }
+    ],
+    "published_summary": [
+      {
+        "id": "aircraft-instruction",
+        "label": "Aircraft and instruction",
+        "amount_minor": 6552000
+      },
+      {
+        "id": "written",
+        "label": "Knowledge exams",
+        "amount_minor": 87500
+      },
+      {
+        "id": "medical",
+        "label": "Medical exams",
+        "amount_minor": 30000
+      },
+      {
+        "id": "examiners",
+        "label": "Examiner fees",
+        "amount_minor": 470000
+      },
+      {
+        "id": "exam-aircraft",
+        "label": "Checkride aircraft",
+        "amount_minor": 152000
+      }
+    ],
+    "pricing_page_phase_hours": [
+      70,
+      50,
+      110,
+      20
+    ],
+    "phase_page_hours": [
+      70,
+      50,
+      130,
+      20
+    ],
+    "computed_phase_totals_minor": 7415500,
+    "computed_all_lines_minor": 7416500
+  },
+  "programmes": [
+    {
+      "id": "private-standard",
+      "label": "Private pilot standard",
+      "source_id": "609-private",
+      "schedule": {
+        "days_per_week": 3,
+        "duration_weeks": [
+          12,
+          16
+        ],
+        "flight_hours": [
+          50,
+          60
+        ],
+        "instruction_hours": 80
+      },
+      "budget_id": "ppl-published-budget"
+    },
+    {
+      "id": "private-accelerated",
+      "label": "Accelerated private pilot",
+      "source_id": "609-accelerated",
+      "schedule": {
+        "days_per_week": [
+          4,
+          5
+        ],
+        "duration_observations": [
+          "as little as 30 days",
+          "6–8 weeks"
+        ],
+        "flight_sessions_daily": [
+          1,
+          2
+        ],
+        "flight_hours_daily": [
+          2,
+          4
+        ],
+        "ground_hours_daily": [
+          1,
+          2
+        ]
+      },
+      "budget_id": "ppl-published-budget",
+      "conditions": [
+        {
+          "kind": "school-recommendation",
+          "item": "Written exam before start"
+        },
+        {
+          "kind": "school-recommendation",
+          "item": "Medical before start"
+        }
+      ]
+    },
+    {
+      "id": "private-finishup",
+      "label": "Private pilot completion",
+      "source_id": "609-finishup",
+      "schedule": {
+        "duration_weeks": [
+          1,
+          3
+        ],
+        "basis": "Individual logbook review and initial evaluation"
+      },
+      "budget_id": null
+    },
+    {
+      "id": "instrument",
+      "label": "Instrument options",
+      "source_id": "609-instrument",
+      "schedule": {
+        "standard_days_per_week": 3,
+        "accelerated_days_per_week": [
+          5,
+          6
+        ]
+      },
+      "budget_ids": [
+        "ir-safety-pilot",
+        "ir-all-dual"
+      ]
+    },
+    {
+      "id": "commercial",
+      "label": "Commercial training",
+      "source_id": "609-commercial",
+      "schedule": {
+        "standard_days_per_week": 3,
+        "accelerated_days_per_week": [
+          5,
+          6
+        ]
+      },
+      "budget_id": null
+    },
+    {
+      "id": "cfi-short",
+      "label": "CFI short course",
+      "source_id": "609-cfi",
+      "schedule": {
+        "duration_days": 7
+      },
+      "conditions": [
+        {
+          "kind": "published-school-entry",
+          "item": "Written exams completed"
+        },
+        {
+          "kind": "published-school-entry",
+          "item": "Spin endorsement completed"
+        }
+      ],
+      "budget_id": null
+    },
+    {
+      "id": "cfii-short",
+      "label": "CFII short course",
+      "source_id": "609-cfi",
+      "schedule": {
+        "duration_days": 5
+      },
+      "budget_id": null
+    },
+    {
+      "id": "working-track",
+      "label": "Working professional track",
+      "source_id": "609-working",
+      "schedule": {
+        "time_windows": [
+          "evenings",
+          "weekends"
+        ],
+        "individual_syllabus": true
+      },
+      "alternative_schedule": {
+        "source_id": "609-private",
+        "duration_months": [
+          3,
+          6
+        ],
+        "days_per_week": [
+          2,
+          3
+        ]
+      },
+      "budget_id": null
+    },
+    {
+      "id": "self-paced",
+      "label": "Self-paced private track",
+      "source_id": "609-private",
+      "schedule": {
+        "duration_months": [
+          6,
+          12
+        ]
+      },
+      "budget_id": null
+    },
+    {
+      "id": "online-ground",
+      "label": "Online ground school",
+      "source_id": "609-ground",
+      "provider": "Gold Seal",
+      "purchase": "Student purchases own access; school offers registration pricing",
+      "amount_minor": null
+    },
+    {
+      "id": "checkride-coordination",
+      "label": "Checkride coordination",
+      "source_id": "609-checkrides",
+      "published_steps": [
+        "School reviews logbooks and endorsements",
+        "School coordinates examiner availability",
+        "Schedule to actual readiness"
+      ],
+      "amount_minor": null
+    }
+  ],
+  "policies": [
+    {
+      "id": "estimates-not-ledger",
+      "source_id": "609-pricing",
+      "text": "Published training budgets are estimates; actual instruction and flying can differ."
+    },
+    {
+      "id": "deposit-credit",
+      "source_id": "609-pricing",
+      "text": "Upfront training payment and matching promotional credit are distinct ledger entries."
+    },
+    {
+      "id": "instructor-pay",
+      "source_id": "apex-official",
+      "text": "Instructor compensation uses separate entered rates from student billing."
+    },
+    {
+      "id": "frozen-dispatch",
+      "source_id": "apex-official",
+      "text": "Freeze selected rates at dispatch and retain later corrections."
+    },
+    {
+      "id": "school-verification",
+      "source_id": "apex-official",
+      "text": "Instructor verifies actual meter/hours observations before billing; school-specific meter basis must be entered."
+    },
+    {
+      "id": "source-only-fleet",
+      "source_id": "609-private",
+      "text": "Published aircraft types do not establish tail numbers, count, current serviceability or availability."
+    },
+    {
+      "id": "operational-authority",
+      "source_id": "609-checkrides",
+      "text": "Records support school decisions. Pilot authorization, endorsements, airworthiness and examiner readiness require actual responsible review."
+    }
+  ],
+  "intake": {
+    "source_id": "609-inquiry",
+    "route": "https://609aviation.com/get-started",
+    "provider": "Marketing 360",
+    "embed_url": "https://app.marketing360.com/forms/loader/load.js?id=69e3b9e25284c7f5eb01e262",
+    "fields": [],
+    "fields_status": "The actual page includes an external form loader; individual current field definitions have not yet been acquired. No required-field list inferred."
+  },
+  "source_issues": [
+    {
+      "id": "ppl-rate-alternative",
+      "source_ids": [
+        "609-pricing",
+        "609-private"
+      ],
+      "kind": "rate-difference",
+      "facts": {
+        "budget_aircraft_rate_minor": 18000,
+        "current_sling_minor": 19000,
+        "current_cherokee_minor": 20500
+      },
+      "resolution": "Keep budget observation separate from school-selected operational tariff."
+    },
+    {
+      "id": "ppl-instruction-hours",
+      "source_ids": [
+        "609-pricing",
+        "609-private"
+      ],
+      "kind": "hours-difference",
+      "facts": {
+        "budget_instruction_hours": 70,
+        "programme_instruction_hours": 80
+      },
+      "resolution": "Preserve both planning views; actual ledger uses entered hours."
+    },
+    {
+      "id": "professional-cpl-hours",
+      "source_ids": [
+        "609-pricing",
+        "609-professional"
+      ],
+      "kind": "hours-difference",
+      "facts": {
+        "pricing_phase3": 110,
+        "full_phase3": 130,
+        "prior_phases": 120,
+        "published_cumulative": 250
+      },
+      "resolution": "Full phase table mathematically reaches250; preserve conflicting pricing-page110."
+    },
+    {
+      "id": "phase1-sum",
+      "source_ids": [
+        "609-professional"
+      ],
+      "kind": "arithmetic",
+      "facts": {
+        "published_minor": 2092000,
+        "computed_minor": 2092500
+      },
+      "resolution": "Require selected budget basis; retain authored total."
+    },
+    {
+      "id": "phase2-sum",
+      "source_ids": [
+        "609-professional"
+      ],
+      "kind": "arithmetic",
+      "facts": {
+        "published_minor": 1462500,
+        "computed_minor": 1463000
+      },
+      "resolution": "Require selected budget basis; retain authored total."
+    },
+    {
+      "id": "summary-sum",
+      "source_ids": [
+        "609-professional"
+      ],
+      "kind": "arithmetic",
+      "facts": {
+        "published_minor": 7415500,
+        "computed_minor": 7291500
+      },
+      "resolution": "Preserve original summary and line-derived results independently."
+    },
+    {
+      "id": "programme-clock",
+      "source_ids": [
+        "609-pricing",
+        "609-professional"
+      ],
+      "kind": "duration-alternatives",
+      "resolution": "Actual start/end and availability are operator entered;7.5,7–9 and9 months remain planning statements."
+    },
+    {
+      "id": "deposit-bounds",
+      "source_ids": [
+        "609-pricing"
+      ],
+      "kind": "unspecified-rule",
+      "resolution": "Do not fill cent gaps between published whole-dollar tier bounds or infer rules outside10000–20000, expiry, refund or rounding."
+    },
+    {
+      "id": "contact-alternatives",
+      "source_ids": [
+        "609-contact",
+        "609-cfi",
+        "609-instrument"
+      ],
+      "kind": "contact-variation",
+      "resolution": "Use primary current contact page609-992-4521; programme FAQs carry other telephone numbers."
+    },
+    {
+      "id": "external-fees",
+      "source_ids": [
+        "609-professional",
+        "609-pricing"
+      ],
+      "kind": "billing-boundary",
+      "resolution": "Medical, knowledge and examiner budget costs are not proof the school collects those amounts. Preserve outside-provider estimates."
+    }
+  ],
+  "vendor_contract": {
+    "source_id": "apex-official",
+    "founder": "Chris Peters",
+    "company": "Apex Operational Partners",
+    "core_monthly_minor": 15000,
+    "included_aircraft": 3,
+    "extra_aircraft_monthly_minor": 3500,
+    "onboarding_minor": 50000,
+    "annual_months_charged": 10,
+    "founding": {
+      "maximum_schools": 3,
+      "monthly_minor": 9900,
+      "max_aircraft": 5,
+      "setup_minor": 10000,
+      "availability": "not verified"
+    },
+    "published_import": "Staff-assisted data migration and fleet/rate/SOP/checklist setup; no public CSV headers found.",
+    "capabilities": [
+      "approved scheduling",
+      "Hobbs and Tach dispatch/check-in",
+      "instructor verification",
+      "frozen billing rates",
+      "student ledger",
+      "separate instructor pay",
+      "retained corrections",
+      "document and maintenance observations"
+    ]
+  },
+  "starter": {
+    "aircraft": [],
+    "students": [],
+    "instructors": [],
+    "bookings": [],
+    "dispatches": [],
+    "meter_observations": [],
+    "ledger": [],
+    "payments": [],
+    "promotional_credits": [],
+    "maintenance_records": [],
+    "qualifications": [],
+    "checkrides": []
+  }
+}

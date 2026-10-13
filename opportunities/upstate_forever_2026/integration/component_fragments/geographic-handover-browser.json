@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-handover-browser",
+  "components": {
+    "geographic-handover-browser": {
+      "title": "Receive the original geographic handover in the existing browser",
+      "paths": [
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_review_browser.mjs",
+        "docs/GEOGRAPHIC_HANDOVER_BROWSER.md"
+      ],
+      "requires": [
+        "geographic-native-receiving"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-handover-browser"
+  ]
+}

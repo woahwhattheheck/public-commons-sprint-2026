@@ -2,11 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-source-impact",
   "title": "Receiving source impact",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 54,
   "assets": [
     "receiving_source_impact.mjs",
-    "receiving_source_impact.css"
+    "receiving_source_impact.css",
+    "receiving_source_revision.mjs",
+    "receiving_waters.css"
   ],
   "backend": {
     "module": "receiving_source_impact",
@@ -14,7 +16,8 @@
     "routes": [
       {
         "methods": [
-          "GET"
+          "GET",
+          "POST"
         ],
         "path": "/api/receiving-source-impact",
         "handler": "read",
@@ -34,9 +37,11 @@
       "api",
       "endpoint",
       "openExtension",
-      "navigate"
+      "navigate",
+      "toast"
     ],
     "styles": [
+      "/web/receiving_waters.css",
       "/web/receiving_source_impact.css"
     ],
     "view": {

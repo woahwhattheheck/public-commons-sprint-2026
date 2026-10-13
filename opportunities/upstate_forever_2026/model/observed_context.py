@@ -9,7 +9,7 @@ from .common import atomic_json, describe_file, file_digest, read_json
 
 SCHEMA = "upstate.observed-report/v1"
 ROLE = "OBSERVED_CONTEXT"
-EDITION = "observed-context-20261013-v4"
+EDITION = "observed-context-20261013-v5"
 
 def _relative(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -18,6 +18,57 @@ def _relative(value):
     if path.is_absolute() or not path.parts or ".." in path.parts or path.as_posix() != value:
         raise ValueError("Observed report members must stay in their retained source")
     return path
+
+
+def _source_links(recipe, members):
+    """Resolve ordered local deliverables and agency references in the saved recipe.
+
+    Existing filename strings remain retained-member links. Labeled links use
+    exactly one of path (a retained member) or url (an HTTP/S reference).
+    """
+    from urllib.parse import urlsplit
+    from .scientific_report import link
+
+    choices = recipe.get("source_links", [])
+    if not isinstance(choices, list):
+        raise ValueError("Observed source links must be an ordered list")
+    result, seen = [], set()
+    for choice in choices:
+        if isinstance(choice, str):
+            name, title, address = choice, choice, None
+        elif isinstance(choice, dict):
+            if set(choice) - {"title", "path", "url"} or ("path" in choice) == ("url" in choice):
+                raise ValueError("An observed source link needs one retained path or agency URL")
+            title = choice.get("title")
+            if not isinstance(title, str) or not title.strip():
+                raise ValueError("Labeled observed source links need a readable title")
+            name, address = choice.get("path"), choice.get("url")
+        else:
+            raise ValueError("Observed source links use retained paths or labeled link objects")
+        if address is not None:
+            if not isinstance(address, str):
+                raise ValueError("Observed agency references need an HTTP or HTTPS URL")
+            try:
+                parsed = urlsplit(address)
+            except ValueError as error:
+                raise ValueError("Observed agency reference URL is invalid") from error
+            item = link(title, address)
+            if parsed.scheme.lower() not in ("http", "https") or not isinstance(item, dict):
+                raise ValueError("Observed agency references need a safe HTTP or HTTPS URL")
+            key = ("url", address)
+            selected = {"kind": "reference", "title": title, "url": address}
+        else:
+            name = _relative(name).as_posix()
+            if name not in members:
+                raise ValueError("Selected observed source link is not a retained member: " + name)
+            key = ("path", name)
+            selected = {"kind": "member", "title": title, "path": name}
+        if key in seen:
+            raise ValueError("Select each observed source link once")
+        seen.add(key)
+        result.append(selected)
+    return result
+
 
 def _source(workspace, selection):
     choice = selection.get("source_roles", {}).get(ROLE)
@@ -66,7 +117,8 @@ def _source(workspace, selection):
                "source_collection_id": choice["source_collection_id"], "source_id": choice["source_id"],
                "body_sha256": entry["body"]["sha256"],
                "member_sha256": {name: members[name]["sha256"] for name in sorted(members)}}
-    return {"binding": binding, "recipe": recipe, "entry": entry, "members": members}
+    return {"binding": binding, "recipe": recipe, "entry": entry, "members": members,
+            "source_links": _source_links(recipe, members)}
 
 def source_choices(selection):
     """Return the ordered original reports selected for this delivery."""
@@ -325,10 +377,13 @@ def _collect_source(source, directory, state, *, namespace=None):
                            "bytes": item["bytes"], "sha256": item["sha256"], "spec": figure})
             blocks.extend(_figure_detail_tables(figure))
         sections.append(["Scientific source figures", blocks])
-    sections.append(["Selected scientific sources", [{"kind": "links", "items": [
-        {"title": item.get("title", name), "path": item["path"]}
-        for name, item in sorted(delivered.items())
-        if name in recipe.get("source_links", [])]}]])
+    if source["source_links"]:
+        from .scientific_report import link
+        links = []
+        for item in source["source_links"]:
+            target = delivered[item["path"]]["path"] if item["kind"] == "member" else item["url"]
+            links.append(link(item["title"], target))
+        sections.append(["Selected scientific sources and workbench", links])
     return {"sections": sections, "binding": binding, "files": files}
 
 

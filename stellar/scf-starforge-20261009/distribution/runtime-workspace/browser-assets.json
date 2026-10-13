@@ -38,6 +38,13 @@
       ]
     ],
     [
+      "/application-output.mjs",
+      [
+        "application-output.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/workbook-results.mjs",
       [
         "workbook-results.mjs",

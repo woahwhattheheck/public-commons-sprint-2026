@@ -1,12 +1,12 @@
 """Operator actions and fast reads for source-bound scenario ensembles."""
 from __future__ import annotations
-from model.common import identifier, read_json, relative_file, describe_file
+from model.common import identifier, read_json, relative_file, describe_file, verify_file
 from model.ensembles import Ensembles, parameter_catalog
-from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source
+from model import ensemble_report, ensemble_consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source, ensemble_scenario_contrasts
 
 ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report",
-                     "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume", "ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source"})
-READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source", "study-source"})
+                     "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume", "ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source", "ensemble.contrast-source"})
+READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references", "scientific-source", "study-source", "contrast-catalog", "contrast-source"})
 WRITES = frozenset({"preview"})
 
 class EnsembleService:
@@ -48,15 +48,27 @@ class EnsembleService:
                 "sources": [{"source_collection_id": collection["id"], "source_id": entry["id"]}],
                 "title": entry.get("title") or "Saved annual-load calibration"}
 
-    def _study_source(self, workspace, ensemble_id):
+    def _study_source(self, workspace, ensemble_id, *, scenario_contrast=False, source_operation_id=None):
         ws = self.operator.ws(workspace)
-        prepared = ensemble_study_source.latest(ws, identifier(ensemble_id))
+        prepared = ensemble_study_source.latest(ws, identifier(ensemble_id),
+            scenario_contrast=scenario_contrast, source_operation_id=source_operation_id)
         if not prepared:
             return None
         downloads = [self.operator._ticket(workspace, relative_file(ws.root, item["path"]), item,
                                           name.replace("_", " "))
                      for name, item in prepared.get("files", {}).items()]
-        return {"workspace_key": workspace, "source": prepared,
+        contrast_data = {}
+        if scenario_contrast:
+            if not prepared["selection"].get("scenario_reference"):
+                raise self.Fault("ENSEMBLE_CONTRAST_SOURCE", "Choose a saved explicit scenario contrast.", 409)
+            report_root = ws.root / "ensemble_reports" / prepared["selection"]["report_id"]
+            release = read_json(report_root / "release.json")
+            content = read_json(verify_file(report_root, release["files"]["report.json"]))
+            downloads += self._downloads(workspace, release)
+            contrast_data = {"paired_rows": content["paired_rows"],
+                             "comparisons": content["report"]["comparisons"],
+                             "errors": content["report"]["errors"]}
+        return {"workspace_key": workspace, "source": prepared, **contrast_data,
                 "scientific_report_selection": self._scientific_report_selection(workspace, prepared),
                 "downloads": downloads}
 
@@ -157,6 +169,36 @@ class EnsembleService:
         if operation == "annual-references":
             return {"workspace_key": workspace, **ensemble_references.catalog(ws),
                     "ensembles": self.overview(workspace)}
+        if operation == "contrast-catalog":
+            key = self._ensemble_id(payload)
+            history_path = ws.root / "ensemble_results" / key / "scenario-contrast-sources.json"
+            history = read_json(history_path) if history_path.exists() else {
+                "ensemble_id": key, "source_operation_ids": []}
+            if history.get("ensemble_id") != key:
+                raise self.Fault("ENSEMBLE_CONTRAST_SOURCE", "The saved contrast history has another design.", 409)
+            rows = []
+            for source_id in reversed(history["source_operation_ids"]):
+                source_id = identifier(source_id)
+                operation_path = ws.root / ensemble_study_source.DIRECTORY / source_id / "operation.json"
+                if not operation_path.exists():
+                    rows.append({"id": source_id, "state": "not_in_this_transfer",
+                                 "available": False,
+                                 "title": "Historical edition " + source_id[:12]})
+                    continue
+                saved = ensemble_study_source.latest(ws, key, source_operation_id=source_id)
+                rows.append({"id": saved["id"], "available": True,
+                             "title": saved.get("title"), "state": saved["state"],
+                             "source_state": saved["source_state"],
+                             "reference": saved["selection"]["scenario_reference"],
+                             "created_at": saved["created_at"]})
+            return {"workspace_key": workspace, **ensemble_scenario_contrasts.catalog(ws, key),
+                    "sources": rows}
+        if operation == "contrast-source":
+            result = self._study_source(workspace, self._ensemble_id(payload),
+                scenario_contrast=True, source_operation_id=payload.get("source_id"))
+            if not result or not result["source"].get("source"):
+                raise self.Fault("ENSEMBLE_CONTRAST_SOURCE", "Prepare this scenario contrast first.", 409)
+            return result
         if operation == "study-source":
             result = self._study_source(workspace, self._ensemble_id(payload))
             if not result or not result["source"].get("source"):
@@ -211,7 +253,7 @@ class EnsembleService:
 
     def decorate_task(self, task):
         """Refresh report tickets when an original queued task is reopened."""
-        if task.get("action") in {"ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source"}:
+        if task.get("action") in {"ensemble.flow-support", "ensemble.scientific-source", "ensemble.study-source", "ensemble.contrast-source"}:
             result = task.get("result") or {}
             ws = self.operator.ws(task["workspace"])
             task["_downloads"] = [
@@ -241,6 +283,16 @@ class EnsembleService:
         ws = self.operator.ws(workspace)
         manager = Ensembles(ws)
         action, payload = task["action"], task["payload"]
+        if action == "ensemble.contrast-source":
+            reference = payload.get("scenario_reference")
+            if not isinstance(reference, dict):
+                raise self.Fault("ENSEMBLE_CONTRAST_SELECTION", "Choose an explicit scenario reference.")
+            result = ensemble_study_source.prepare(ws, self._ensemble_id(payload),
+                render=payload.get("render", True), scenario_reference=reference)
+            return {**result, "workspace_key": workspace,
+                    "scientific_report_selection": self._scientific_report_selection(workspace, result),
+                    "downloads": [self.operator._ticket(workspace, relative_file(ws.root, item["path"]),
+                        item, name.replace("_", " ")) for name, item in result.get("files", {}).items()]}
         if action == "ensemble.study-source":
             result = ensemble_study_source.prepare(ws, self._ensemble_id(payload),
                                                    render=payload.get("render", True))

@@ -3,20 +3,63 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),http=require("node:http"),assert=require("node:assert/strict"),cp=require("node:child_process");
 const C=require("./workspace.cjs"),Example=require("./example.cjs"),{build}=require("./build.cjs");
+function installedPlaywright(cdp){
+ const selected=process.env.ALCOR_PLAYWRIGHT_MODULE;
+ let entry,metadata;
+ const candidates=selected?[path.resolve(selected)]:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES&&path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,"playwright"),"playwright","playwright-core"].filter(Boolean);
+ for(const candidate of candidates){try{entry=require.resolve(candidate);break;}catch{}}
+ if(!entry)throw Error("Select an existing Playwright installation with ALCOR_PLAYWRIGHT_MODULE; this course installs no runtime.");
+ if(cdp){
+  let directory=path.dirname(entry);
+  while(true){
+   const file=path.join(directory,"package.json");
+   if(fs.existsSync(file)){const p=JSON.parse(fs.readFileSync(file,"utf8"));if(["playwright","playwright-core"].includes(p.name)){metadata=p;break;}}
+   const parent=path.dirname(directory);if(parent===directory)break;directory=parent;
+  }
+  const version=metadata&&/^(\d+)\.(\d+)\./.exec(metadata.version);
+  if(!version||Number(version[1])<1||(Number(version[1])===1&&Number(version[2])<60))throw Error("Existing-CDP receiving needs installed Playwright 1.60 or later for noDefaults.");
+ }
+ return require(entry);
+}
 async function receive(out){
- fs.mkdirSync(out,{recursive:true});build(path.join(out,"release"));
- const root=path.resolve(out),{chromium}=require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES||"","playwright"));
- const views=[],events=[],errors=[];let browser,server;
+ const cdp=process.env.ALCOR_CDP_ENDPOINT||"";
+ if(cdp){const u=new URL(cdp);if(!["http:","https:","ws:","wss:"].includes(u.protocol)||u.username||u.password)throw Error("Use the existing authorized CDP endpoint without embedded credentials.");}
+ const {chromium}=installedPlaywright(cdp);
+ fs.mkdirSync(out,{mode:0o700}); // Preserve previous output; select a new directory for the complete course.
+ build(path.join(out,"release"));
+ const root=path.resolve(out);
+ const views=[],events=[],errors=[],ownedContexts=new Set();let browser,server;
  const record=(stage,details={})=>{const e={stage,...details};events.push(e);console.log(JSON.stringify(e));};
  const result={operation:"ALCOR-ORIGINAL-CMDB-BROWSER-379A",status:"RUNNING",views,events};
  const save=()=>fs.writeFileSync(path.join(root,"BROWSER_RECEIVING.json"),JSON.stringify(result,null,2)+"\n");
  try{
-  server=http.createServer((req,res)=>{let name;try{name=decodeURIComponent(new URL(req.url,"http://localhost").pathname);}catch{return res.writeHead(400).end();}
-   const p=path.resolve(root,"."+name);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();
-   try{const data=fs.readFileSync(p);res.setHeader("Content-Type",p.endsWith(".html")?"text/html; charset=utf-8":"application/octet-stream");res.end(data);}catch{res.writeHead(404).end();}});
-  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const origin="http://127.0.0.1:"+server.address().port;
-  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/workspace/scratch/5403360e55a4/counterpress-capture-runtime/bin/chromium",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
-  record("original_browser_started");const context=await browser.newContext({viewport:{width:1440,height:1080},acceptDownloads:true});
+  let origin;
+  if(cdp){
+   origin="https://alcor-original-receiving.invalid";
+   browser=await chromium.connectOverCDP(cdp,{timeout:20000,noDefaults:true});
+   result.connection="existing_authorized_cdp_private_context";
+  }else{
+   server=http.createServer((req,res)=>{let name;try{name=decodeURIComponent(new URL(req.url,"http://localhost").pathname);}catch{return res.writeHead(400).end();}
+    const p=path.resolve(root,"."+name);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();
+    try{const data=fs.readFileSync(p);res.setHeader("Content-Type",p.endsWith(".html")?"text/html; charset=utf-8":"application/octet-stream");res.end(data);}catch{res.writeHead(404).end();}});
+   await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve);});origin="http://127.0.0.1:"+server.address().port;
+   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/workspace/scratch/5403360e55a4/counterpress-capture-runtime/bin/chromium",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+   result.connection="owned_chromium";
+  }
+  const createContext=async(viewport)=>{
+   const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);
+   if(cdp){
+    const allowed=new Map([["/release/Open_CMDB_Workspace.html",path.join(root,"release","Open_CMDB_Workspace.html")],["/received-handover/Open_CMDB_Workspace.html",path.join(root,"received-handover","Open_CMDB_Workspace.html")]]);
+    await context.route("**/*",async route=>{
+     const request=route.request(),url=new URL(request.url()),filename=url.origin===origin&&allowed.get(url.pathname);
+     if(filename&&request.isNavigationRequest()&&request.method()==="GET"&&!url.search){
+      await route.fulfill({status:200,contentType:"text/html; charset=utf-8",body:fs.readFileSync(filename),headers:{"cache-control":"no-store"}});
+     }else{if(!url.pathname.endsWith("/favicon.ico"))errors.push("Unexpected document resource: "+url.origin+url.pathname);await route.abort();}
+    });
+   }
+   return context;
+  };
+  record("original_browser_started",{connection:result.connection});const context=await createContext({width:1440,height:1080});
   let page=await context.newPage();page.on("pageerror",error=>errors.push(error.message));
   const idle=()=>page.waitForFunction(()=>!document.body.dataset.busy);
   const click=async(selector)=>{await page.locator(selector).click();await idle();};
@@ -92,8 +135,8 @@ with zipfile.ZipFile(archive) as z:
   result.archive=zipResult;result.originalBomPreserved=true;record("complete_original_handover_reopened",zipResult);
   await tab("history");await screenshot("desktop-07-history",1440);await tab("overview");await screenshot("desktop-08-overview",1440);
   await click('[data-action="guide"]');await screenshot("desktop-09-operating-guide",1440);
-  await context.close();
-  const phone=await browser.newContext({viewport:{width:390,height:844},acceptDownloads:true});page=await phone.newPage();page.on("pageerror",error=>errors.push(error.message));
+  await context.close();ownedContexts.delete(context);
+  const phone=await createContext({width:390,height:844});page=await phone.newPage();page.on("pageerror",error=>errors.push(error.message));
   await page.goto(origin+"/received-handover/Open_CMDB_Workspace.html");await page.getByText("Original hardware receiving",{exact:true}).waitFor();
   for(const [name,key]of [["overview","overview"],["intake","intake"],["mapping","mapping"],["comparison","comparison"],["acceptance","receiving"],["history","history"]]){
    await tab(key);await screenshot("phone-"+name,390);
@@ -110,8 +153,19 @@ with zipfile.ZipFile(archive) as z:
   assert.equal(await page.locator("#content table").first().locator("tbody tr").count(),14);await screenshot("phone-reopened-history",390);
   assert.deepEqual(errors,[]);result.status="PASS";result.originalRevision=11;result.receivedRevision=14;result.browserErrors=errors;record("original_browser_complete",{views:views.length});save();
  }catch(error){result.status="FAILED";result.error={message:error.message,stack:error.stack};save();throw error;}
- finally{if(browser)await browser.close();if(server)await new Promise(resolve=>server.close(resolve));record("original_browser_closed");save();}
+ finally{
+  const cleanup=[];
+  for(const context of ownedContexts){try{await context.close();}catch(error){cleanup.push("Owned context: "+error.message);}}
+  // Never close the attached browser or touch its existing default context.
+  if(browser&&!cdp){try{await browser.close();}catch(error){cleanup.push("Owned browser: "+error.message);}}
+  if(server){try{await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}catch(error){cleanup.push("Owned server: "+error.message);}}
+  if(cleanup.length){result.cleanupErrors=cleanup;result.status="FAILED";}
+  record("original_browser_closed",{connection:result.connection,ownedContextsOnly:!!cdp});save();
+ }
  return result;
 }
-if(require.main===module){receive(path.resolve(process.argv[2]||"browser-output")).then(r=>console.log(JSON.stringify({status:r.status,views:r.views.length}))).catch(e=>{console.error(e.stack);process.exitCode=1;});}
+if(require.main===module){
+ receive(path.resolve(process.argv[2]||"browser-output")).then(r=>{console.log(JSON.stringify({status:r.status,views:r.views.length}));process.exit(r.status==="PASS"?0:1);}).catch(e=>{console.error(e.stack);process.exit(1);});
+}
+// CLI exit detaches a CDP connection after closing only this course's private contexts.
 module.exports={receive};

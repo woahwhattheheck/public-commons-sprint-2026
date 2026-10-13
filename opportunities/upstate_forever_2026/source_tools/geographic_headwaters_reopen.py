@@ -71,7 +71,7 @@ def _scientific_identity(scientific):
 
 def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id,
                 output, *, receiving_lock_fd, receiving_lock_path,
-                review_response_id=None, receiving_context=None):
+                review_response_id=None, receiving_context=None, scenario_context=None):
     """Retain and run one complete read-only cold-reopen invocation."""
     support = _support()
     root = Path(restored["directory"]).resolve(strict=True)
@@ -109,6 +109,7 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
             "delivery_id": delivery_id, "review_id": review_id,
             "review_response_id": review_response_id,
             "receiving_context": receiving_context,
+            "scenario_context": scenario_context,
             "receiving_lock": lock_identity,
         }
         support._write(request_path, request)
@@ -246,6 +247,21 @@ def _inspect(request, lock_fd):
         for key in utility_context.source_collection_ids(context):
             support._sources(ws, files, key)
             expected_source_ids.add(key)
+    interpretation = request.get("scenario_context")
+    if interpretation is not None:
+        from source_tools import geographic_scenario_context as source_context
+        original_context = files.json(source_context.FOLDER + "/" + interpretation["id"] + "/context.json")
+        if original_context != interpretation or source_context.inspect(ws, interpretation["id"]) != interpretation:
+            raise ValueError("The delivered original source-loading context changed")
+        if (interpretation["prepared_id"] != prepared["id"]
+                or interpretation["ensemble_id"] != prepared["ensemble_id"]):
+            raise ValueError("The interpreted source belongs to another geographic case")
+        from model import observed_context
+        if observed_context.source_choices(delivery["selection"]).count(interpretation["source"]) != 1:
+            raise ValueError("The delivered mapped report omits its original source-loading interpretation")
+        key = interpretation["source"]["source_collection_id"]
+        support._sources(ws, files, key)
+        expected_source_ids.add(key)
     from model import reviews
     review_id = request["review_id"]
     files.json("reviews/" + review_id + ".json")
@@ -266,6 +282,7 @@ def _inspect(request, lock_fd):
         "run_ids": runs, "delivery_id": delivery_id, "customer_review_id": review_id,
         "parameter_course": parameter, "scientific_source": scientific,
         "receiving_context": context,
+        "scenario_context": interpretation,
         "review_response_id": request.get("review_response_id"),
         "review_response_ids": [row["id"] for row in response_prefix],
         "archive_sha256": request["archive_sha256"], "receiving_lock": lock,
