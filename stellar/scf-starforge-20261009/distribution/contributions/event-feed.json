@@ -1,8 +1,17 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "event-feed",
-  "description": "event feed original Applications",
+  "description": "Event feed original Applications and complete acquired-source Analysis receiving",
   "applicationProviders": {
     "event-feed": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/event-feed.mjs"
+  },
+  "commands": {
+    "buyer-event-analysis-source": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/analysis-source-cli.mjs"
+  },
+  "commandDescriptions": {
+    "buyer-event-analysis-source": "Inspect and project complete acquired event exports for the existing customer Analysis programme."
+  },
+  "exports": {
+    "./buyer/event-feed/analysis-source": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/analysis-source.mjs"
   }
 }
