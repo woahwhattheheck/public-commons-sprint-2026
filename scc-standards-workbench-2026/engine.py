@@ -26,7 +26,9 @@ IMMUTABLE = {"editions", "ballots", "ballot_closures", "technical_decisions", "p
              "report_responses", "invoices", "invoice_responses", "payments", "language_reviews", "delivery_registers"}
 REVIEW_COLLECTIONS = {"review_packets", "review_responses", "review_amendments", "review_resolutions"}
 IMMUTABLE.update(REVIEW_COLLECTIONS)
-OPTIONAL_COLLECTIONS = {"communications", "delivery_registers"} | REVIEW_COLLECTIONS
+BALLOT_EXCHANGE_COLLECTIONS = {"ballot_packets", "ballot_returns", "ballot_adoptions"}
+IMMUTABLE.update(BALLOT_EXCHANGE_COLLECTIONS)
+OPTIONAL_COLLECTIONS = {"communications", "delivery_registers"} | REVIEW_COLLECTIONS | BALLOT_EXCHANGE_COLLECTIONS
 SOURCE_FIELDS = ("source_ids", "evidence_ids", "substantiation_ids", "acceptance_source_ids")
 F = lambda kind="text", default=None, **kw: {"kind": kind, "default": default, **kw}
 T = lambda required=False, **kw: F("text", "", required=required, **kw)
@@ -223,6 +225,17 @@ FIELDS = {
   "person_id": R("people"), "kind": E(["interest", "patent", "technical_complaint", "procedural_complaint"]),
   "title": T(True), "description": T(True), "response": T(), "withdrawal_recorded": F("boolean", False), "source_ids": L()}
 }
+FIELDS.update({
+ "ballot_packets": {"title":T(True),"ballot_id":R("ballots",True),"edition_id":R("editions",True),
+  "person_id":R("people",True),"prepared_at":T(True),"packet_sha256":T(True),"snapshot":J()},
+ "ballot_returns": {"packet_id":R("ballot_packets",True),"ballot_id":R("ballots",True),
+  "person_id":R("people",True),"source_id":R("sources",True),"source_sha256":T(True),
+  "response_sha256":T(True),"received_at":T(True),"supersedes_id":R("ballot_returns"),
+  "receipt_note":T(),"response":J()},
+ "ballot_adoptions": {"return_id":R("ballot_returns",True),"ballot_id":R("ballots",True),
+  "person_id":R("people",True),"vote_id":T(True),"recorded_at":T(True),"verification_note":T(True),
+  "input_sha256":T(True),"input_snapshot":J()}
+})
 COLLECTIONS = tuple(FIELDS)
 
 def canonical(value):
@@ -998,6 +1011,10 @@ def validate_state(state):
         if __package__:from . import consultation
         else:import consultation
         consultation.validate_state(state)
+    if any(state.get(name) for name in BALLOT_EXCHANGE_COLLECTIONS):
+        if __package__:from . import ballot_exchange
+        else:import ballot_exchange
+        ballot_exchange.validate_state(state)
     return state
 
 def analyze(state):
