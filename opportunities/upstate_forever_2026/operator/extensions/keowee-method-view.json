@@ -1,0 +1,9 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "keowee-method-view",
+  "title": "Keowee method evidence",
+  "version": "1",
+  "assets": [
+    "keowee-method-view.mjs"
+  ]
+}

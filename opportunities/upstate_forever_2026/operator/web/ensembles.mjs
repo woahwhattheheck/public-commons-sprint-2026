@@ -187,14 +187,18 @@ export function attachEnsembles(context) {
     const grid=(catalog?.grids||[]).find(item=>item.id===selected?.elements.namedItem('ensemble_grid')?.value);
     const profileIds=[...(selected?.querySelectorAll('input[name="ensemble_profile"]:checked')||[])].map(item=>item.value);
     const profiles=(catalog?.profiles||[]).filter(item=>profileIds.includes(item.id));
-    return {grid,profiles};
+    const scope=selected?.elements.namedItem('ensemble_models')?.value||'grid';
+    const models=scope==='grid'?(grid?recordModels(grid):['ndr','sdr']):
+      scope==='both'?['ndr','sdr']:[scope];
+    return {grid,profiles,models};
   }
 
   function compatibleStudies() {
-    const {grid,profiles}=selectedInputs();
+    const {grid,profiles,models}=selectedInputs();
     return (catalog?.parameters?.studies||[]).filter(study=>{
       const requested=study.models||['ndr','sdr'];
-      return (!grid || requested.every(name=>recordModels(grid).includes(name))) &&
+      return requested.every(name=>models.includes(name)) &&
+        (!grid || requested.every(name=>recordModels(grid).includes(name))) &&
         profiles.every(profile=>requested.every(name=>recordModels(profile).includes(name)));
     });
   }
@@ -239,14 +243,56 @@ export function attachEnsembles(context) {
     document.querySelector('#ensemble-preview').innerHTML='';
   }
 
-  async function newDesign() {
+  async function newDesign(selection={}) {
+    if(!selection || typeof selection!=='object' || Array.isArray(selection))
+      throw Error('Choose a retained study selection.');
     const workspace=currentWorkspace();
+    const requestVersion=++designVersion;
+    if(selection.workspace_key && selection.workspace_key!==workspace)
+      throw Error('Open the workspace containing this retained profile comparison.');
     const data=await api(endpoint('/api/ensembles/catalog'));
-    if(workspace!==currentWorkspace())return;
-    catalog=data;axisCounter=0;designVersion++;
+    if(workspace!==currentWorkspace() || requestVersion!==designVersion)return;
+    catalog=data;axisCounter=0;
     const grids=(data.grids||[]).filter(x=>x.state==='complete');
-    const scenarios=data.scenarios||[], profiles=data.profiles||[];
+    const scenarios=data.scenarios||[];
+    let profiles=data.profiles||[];
     const baselines=scenarios.filter(x=>x.kind==='baseline'), alternatives=scenarios.filter(x=>x.kind==='landcover');
+    const retained=(name, rows, multiple=false)=>{
+      const value=selection[name];
+      if(value===undefined || value===null)return multiple?[]:null;
+      const ids=multiple?value:[value];
+      if(!Array.isArray(ids) || !ids.length || ids.some(id=>typeof id!=='string') ||
+          new Set(ids).size!==ids.length || ids.some(id=>!rows.some(row=>row.id===id)))
+        throw Error('Reopen the retained comparison: its '+name.replaceAll('_',' ')+' must belong to this workspace.');
+      return multiple?ids:ids[0];
+    };
+    const selectedGrid=retained('grid_id',grids);
+    const selectedBaseline=retained('baseline_scenario_id',baselines);
+    const selectedProfiles=retained('base_profile_ids',profiles,true);
+    const selectedAlternatives=Array.isArray(selection.alternative_scenario_ids) && selection.alternative_scenario_ids.length===0?[]:
+      retained('alternative_scenario_ids',alternatives,true);
+    const selectedModels=selection.models;
+    if(selectedModels!==undefined) {
+      if(!Array.isArray(selectedModels) || !selectedModels.length ||
+          new Set(selectedModels).size!==selectedModels.length ||
+          selectedModels.some(name=>!['ndr','sdr'].includes(name)))
+        throw Error('Choose the retained nutrient and/or sediment model scope.');
+      const requestedRecords=[
+        ...(selectedGrid?[grids.find(row=>row.id===selectedGrid)]:[]),
+        ...selectedProfiles.map(id=>profiles.find(row=>row.id===id))
+      ];
+      if(requestedRecords.some(row=>selectedModels.some(name=>!recordModels(row).includes(name))))
+        throw Error('The retained source profiles and grid must support the selected models.');
+    }
+    for(const name of ['title','reason'])
+      if(selection[name]!==undefined && typeof selection[name]!=='string')
+        throw Error('Retain a text '+name+' for the comparison.');
+    // The first selected source profile is the existing engine's reference.
+    // Keep that ordering when the form collects its checked controls.
+    if(selectedProfiles.length)profiles=[
+      ...selectedProfiles.map(id=>profiles.find(row=>row.id===id)),
+      ...profiles.filter(row=>!selectedProfiles.includes(row.id))
+    ];
     if(!grids.length || !baselines.length || !profiles.length) {
       detail('Prepare the comparison inputs','<p>A paired design needs the following retained inputs:</p>'+
         table(['Input','Available'],[
@@ -286,7 +332,18 @@ export function attachEnsembles(context) {
         toast('The comparison design is saved. Open it to run the selected native calculations.');
         return result;
       },()=>{
-        for(const node of form().querySelectorAll('[name="ensemble_grid"],[name="ensemble_profile"],[name="ensemble_models"]'))
+        const selected=form();
+        if(selection.title!==undefined)selected.elements.namedItem('ensemble_title').value=selection.title;
+        if(selection.reason!==undefined)selected.elements.namedItem('ensemble_reason').value=selection.reason;
+        if(selectedGrid)selected.elements.namedItem('ensemble_grid').value=selectedGrid;
+        if(selectedBaseline)selected.elements.namedItem('ensemble_baseline').value=selectedBaseline;
+        if(selectedModels)selected.elements.namedItem('ensemble_models').value=
+          selectedModels.length===2?'both':selectedModels[0];
+        for(const node of selected.querySelectorAll('[name="ensemble_profile"]'))
+          node.checked=selectedProfiles.includes(node.value);
+        for(const node of selected.querySelectorAll('[name="ensemble_alternative"]'))
+          node.checked=selectedAlternatives.includes(node.value);
+        for(const node of selected.querySelectorAll('[name="ensemble_grid"],[name="ensemble_profile"],[name="ensemble_models"]'))
           node.addEventListener('change',refreshStudyChoices);
         refreshStudyChoices();
       });
@@ -420,5 +477,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch};
+  return {mount,update,detach,dispatch,prepare:newDesign};
 }

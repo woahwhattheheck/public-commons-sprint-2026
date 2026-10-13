@@ -21,6 +21,20 @@ const sourceLink = value => typeof value === 'string' && /^https:\/\//i.test(val
   '<a href="' + escape(value) + '" target="_blank" rel="noopener noreferrer">' + escape(value) + '</a>' : escape(value);
 const TABLE_NAMES = {parcels:'Parcel candidates',context:'Cadastral context',excluded:'Excluded original records',counties:'County coverage',sources:'Original source editions'};
 const CANCELLED = Symbol('parcel-desk-view-changed');
+const POLLUTANTS = ['nitrogen_export','phosphorus_export','sediment_export'];
+const STUDY_DRAFT_FIELDS = ['studyTitle','mode','baseline','alternatives','scoreBasis','scoreScale','scoreAlternative',...POLLUTANTS.map(key=>'weight_'+key)];
+function fullNativeRun(row) {
+  const models=row?.selection?.models ?? ['ndr','sdr'];
+  return row?.state==='complete' && row.selection?.invest_version==='3.20.0' &&
+    ['ndr','sdr'].every(name=>Array.isArray(models) && models.includes(name) &&
+      Object.hasOwn(row.stages || row.stage_summary || {},name)) &&
+    POLLUTANTS.every(name=>row.artifacts?.[name]);
+}
+function studyDefaults() {
+  return {studyTitle:'',mode:'source_context',baseline:'',alternatives:[],
+    scoreBasis:'current_export',scoreScale:'total',scoreAlternative:'',
+    weight_nitrogen_export:1,weight_phosphorus_export:1,weight_sediment_export:1};
+}
 
 export function createParcelSourceDesk(host) {
   const memories = new Map();
@@ -39,9 +53,11 @@ export function createParcelSourceDesk(host) {
         rootId:retained.rootId || '', path:retained.path || '', title:retained.title || '',
         editionId:retained.editionId || '', table:retained.table || 'parcels',
         county:retained.county || '', query:retained.query || '', offset:0,
-        retryFailed:false, busy:false, notice:'', detail:null, requests:{},
-        lastTask:null, studyTitle:'', mode:'source_context', baseline:'', alternatives:[],
-        lastStamp:'', rowGeneration:0, editionGeneration:0, preparationTask:null, lastStudyTask:null,
+        retryFailed:false, busy:false, notice:'', detail:null, requests:retained.requests || {},
+        ...studyDefaults(),studyDrafts:retained.studyDrafts || {},
+        lastTask:retained.lastTask || null, preparationTask:retained.preparationTask || null,
+        lastStudyTask:retained.lastStudyTask || null,
+        lastStamp:'', rowGeneration:0, editionGeneration:0,
       });
     }
     return memories.get(key);
@@ -49,9 +65,11 @@ export function createParcelSourceDesk(host) {
   function retain(m=memory()) {
     try {
       const project = host.getState()?.data?.project?.id || workspace();
+      if(m.editionId)m.studyDrafts[m.editionId]=Object.fromEntries(STUDY_DRAFT_FIELDS.map(key=>[key,clone(m[key])]));
       sessionStorage.setItem('upstate-parcel-sources:' + project, JSON.stringify({
         rootId:m.rootId,path:m.path,title:m.title,editionId:m.editionId,
-        table:m.table,county:m.county,query:m.query,
+        table:m.table,county:m.county,query:m.query,studyDrafts:m.studyDrafts,
+        requests:m.requests,lastTask:m.lastTask,preparationTask:m.preparationTask,lastStudyTask:m.lastStudyTask,
       }));
     } catch (_) {}
   }
@@ -185,10 +203,22 @@ export function createParcelSourceDesk(host) {
   }
   function studyView(m) {
     if(!m.edition)return '';
-    const state=host.getState(), runs=(state?.data?.runs || []).filter(row=>row.state==='complete');
+    const state=host.getState(), runs=(state?.data?.runs || []).filter(fullNativeRun);
     const baseline=runs.find(row=>row.id===m.baseline);
     const runTitle=row=>row.title || row.selection?.title || 'Run '+short(row.id);
-    const alternatives=runs.filter(row=>row.id!==m.baseline && (!baseline || row.selection?.grid_id===baseline.selection?.grid_id));
+    const alternatives=baseline ? runs.filter(row=>row.id!==m.baseline && row.selection?.grid_id===baseline.selection?.grid_id) : [];
+    const scoredAlternatives=alternatives.filter(row=>m.alternatives.includes(row.id));
+    const scores=select('Priority quantity','scoreBasis',[
+      ['current_export','Current export from the baseline'],
+      ['scenario_reduction','Reduction from baseline to an alternative'],
+      ['disturbance_increase','Increase from baseline to an alternative']
+    ],m.scoreBasis)+
+      select('Quantity basis','scoreScale',[['total','Whole parcel reporting total'],['per_hectare','Per reporting hectare']],m.scoreScale)+
+      (m.scoreBasis==='current_export'?'':select('Alternative used for priority','scoreAlternative',
+        [['','Choose a selected alternative'],...scoredAlternatives.map(row=>[row.id,runTitle(row)])],m.scoreAlternative,'required'))+
+      POLLUTANTS.map(key=>field(human(key)+' weight','weight_'+key,m['weight_'+key],
+        'type="number" min="0" step="any" required')).join('')+
+      '<p>The original engine retains each pollutant in its own units and normalizes the weighted priority using the recorded 95th-percentile method. Choose these weights for the study purpose.</p>';
     const countyOptions=m.edition.tables?.parcels?.counties || [];
     const selectedCounty=m.county && countyOptions.some(row=>row.fips===m.county) ? m.county : '';
     return '<section class="parcel-section"><h2>Use this edition in Conservation plans</h2>'+
@@ -200,7 +230,8 @@ export function createParcelSourceDesk(host) {
       (m.mode==='native_model'?select('Completed original baseline','baseline',[['','Choose a completed native run'],...runs.map(row=>[row.id,runTitle(row)])],m.baseline,'required')+
         '<fieldset><legend>Completed alternatives on the same original grid</legend>'+alternatives.map(row=>
         '<label class="parcel-check"><input name="alternative" type="checkbox" value="'+escape(row.id)+'" '+
-        (m.alternatives.includes(row.id)?'checked':'')+'>'+escape(runTitle(row))+'</label>').join('')+'</fieldset>':'')+
+        (m.alternatives.includes(row.id)?'checked':'')+'>'+escape(runTitle(row))+'</label>').join('')+'</fieldset>'+
+        '<p>Available runs retain complete InVEST 3.20.0 NDR and SDR quantities. Both selected models must be complete on the same original grid.</p>'+scores:'')+
       '<button type="submit" '+(m.busy?'disabled':'')+'>Build the original conservation inventory</button>'+
       button('study-selection','Download the selected study settings')+'</form>'+
       '<p>Source-context mode retains actual geometry and coverage. Native-model mode also binds the chosen completed run quantities. Conservation plans exposes the resulting score, coverage and scenario settings for further decisions.</p>'+
@@ -217,7 +248,7 @@ export function createParcelSourceDesk(host) {
       countyTable(native.county_coverage,true)+
       '<p>Coverage is the unique union of available cadastral geometry. Parcel-only area, overlap and remaining gaps have separate original measures. Each county keeps its own source edition.</p>'+
       '<div class="parcel-toolbar">'+[['parcels','Open parcel map'],['coverage','Open county coverage map'],['gaps','Open source gap map']].map(([key,label])=>
-        nativeButton('spatial-item',label,'data-kind="sources" data-id="'+escape(binding[key].source_id)+'" data-collection="'+escape(binding[key].source_collection_id)+'"')).join('')+'</div>'+
+        nativeButton('spatial-item',label,'data-kind="source-info" data-id="'+escape(binding[key].source_id)+'" data-collection="'+escape(binding[key].source_collection_id)+'"')).join('')+'</div>'+
       '<details><summary>Saved source bindings and original inventory identity</summary><pre>'+escape(JSON.stringify({
         source_collection_id:edition.source_collection_id,plan_sha256:native.plan_sha256,
         native_inventory:native.source_fingerprint,bindings:binding
@@ -311,7 +342,9 @@ export function createParcelSourceDesk(host) {
     const m=memory(),requestId=++m.editionGeneration;
     const value=await request('edition',{edition_id:id});
     if(requestId!==m.editionGeneration)return;
+    const draft=m.edition?.id===value.id ? Object.fromEntries(STUDY_DRAFT_FIELDS.map(key=>[key,clone(m[key])])) : m.studyDrafts[value.id];
     m.edition=value;m.editionId=value.id;m.tab='editions';m.page=null;m.offset=0;m.detail=null;
+    Object.assign(m,studyDefaults(),draft || m.studyDrafts[value.id] || {});
     if(!m.studyTitle)m.studyTitle=value.title+' · parcel inventory';
     if(!value.tables?.[m.table])m.table='parcels';
     if(m.county && !value.tables[m.table].counties.some(row=>row.fips===m.county))m.county='';
@@ -322,6 +355,7 @@ export function createParcelSourceDesk(host) {
     if(!m.requests[signature]){
       const random=globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
       m.requests[signature]='parcel-desk-'+random;
+      retain(m);
     }
     return m.requests[signature];
   }
@@ -334,6 +368,7 @@ export function createParcelSourceDesk(host) {
     m.lastTask=task.id;
     if(action==='parcel.source.prepare')m.preparationTask=task.id;
     if(action==='conservation.build')m.lastStudyTask=task.id;
+    retain(m);
     if(['failed','interrupted'].includes(task.state)) {
       await host.api('/api/task/resume',{method:'POST',body:{id:task.id}});
       if(!alive(key,stamp))throw CANCELLED;
@@ -347,9 +382,24 @@ export function createParcelSourceDesk(host) {
     const spec={title:m.studyTitle || m.edition.title+' · parcel inventory',mode:m.mode,
       county_fips:selectedCounty,purpose:'screening',contexts:{},rules:{}};
     if(m.mode==='native_model') {
-      if(!m.baseline)throw new Error('Choose a completed original baseline run.');
+      const runs=(host.getState()?.data?.runs || []).filter(fullNativeRun);
+      const baseline=runs.find(row=>row.id===m.baseline);
+      if(!baseline)throw new Error('Choose a completed original NDR and SDR baseline run.');
+      const allowed=new Set(runs.filter(row=>row.id!==baseline.id &&
+        row.selection.grid_id===baseline.selection.grid_id).map(row=>row.id));
+      if(m.alternatives.some(id=>!allowed.has(id)))throw new Error('Reopen the alternatives and select completed NDR and SDR runs on the baseline grid.');
+      const weights=Object.fromEntries(POLLUTANTS.map(key=>{
+        const value=Number(m['weight_'+key]);
+        if(m['weight_'+key]==='' || !Number.isFinite(value) || value<0)throw new Error('Enter a nonnegative '+human(key)+' weight.');
+        return [key,value];
+      }));
+      if(!Object.values(weights).some(value=>value>0))throw new Error('Choose at least one positive pollutant weight.');
       spec.baseline_run_id=m.baseline;spec.alternative_run_ids=[...m.alternatives];
-      spec.score={basis:'context',context_weights:{}};
+      spec.score={basis:m.scoreBasis,scale:m.scoreScale,weights};
+      if(m.scoreBasis!=='current_export'){
+        if(!m.alternatives.includes(m.scoreAlternative))throw new Error('Choose a selected alternative for this priority quantity.');
+        spec.score.alternative_run_id=m.scoreAlternative;
+      }
     }
     return request('study-selection',{edition_id:m.editionId,spec});
   }
@@ -428,9 +478,11 @@ export function createParcelSourceDesk(host) {
     if(!name)return;
     if(name==='alternative'){
       const selected=new Set(m.alternatives);target.checked?selected.add(target.value):selected.delete(target.value);
-      m.alternatives=[...selected];return;
+      m.alternatives=[...selected];
+      if(!selected.has(m.scoreAlternative))m.scoreAlternative='';
+      retain(m);paint();return;
     }
-    if(!['rootId','title','query','county','table','studyTitle','mode','baseline','retryFailed'].includes(name))return;
+    if(!['rootId','title','query','county','table','retryFailed',...STUDY_DRAFT_FIELDS].includes(name))return;
     m[name]=target.type==='checkbox'?target.checked:target.value;retain(m);
     if(event.type==='change' && name==='rootId'){
       m.path='';m.browse=null;m.capture=null;retain(m);
@@ -439,12 +491,14 @@ export function createParcelSourceDesk(host) {
     if(event.type==='change' && name==='table'){
       m.county='';m.offset=0;retain(m);void work(()=>loadRows());
     }
-    if(event.type==='change' && name==='mode')paint();
+    if(event.type==='change' && ['mode','scoreBasis'].includes(name))paint();
     if(event.type==='change' && name==='baseline'){
       const run=(host.getState()?.data?.runs || []).find(row=>row.id===m.baseline);
       const allowed=new Set((host.getState()?.data?.runs || []).filter(row=>
-        row.state==='complete' && row.id!==m.baseline && row.selection?.grid_id===run?.selection?.grid_id).map(row=>row.id));
-      m.alternatives=m.alternatives.filter(id=>allowed.has(id));paint();
+        fullNativeRun(row) && row.id!==m.baseline && row.selection?.grid_id===run?.selection?.grid_id).map(row=>row.id));
+      m.alternatives=m.alternatives.filter(id=>allowed.has(id));
+      if(!m.alternatives.includes(m.scoreAlternative))m.scoreAlternative='';
+      retain(m);paint();
     }
   }
   async function tick() {
