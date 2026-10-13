@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.9",
+  "version": "2.4.10",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -52,9 +52,19 @@
       "sha256": "d169eaa09e680fa6a9efd530e9b77decb60bdaf79c17e40d8cc807c03d25c538"
     },
     {
+      "path": "examples/selected-microbial-activities-20261013/qualified-and-replicate-selection.json",
+      "bytes": 61974,
+      "sha256": "93c0cffe276ae443409733b8d0ef77306051c862e5fec5557e81ecc34aaf6980"
+    },
+    {
+      "path": "examples/selected-microbial-activities-20261013/receive.py",
+      "bytes": 12540,
+      "sha256": "395211fd171bcde5e838df3b4c481da11f8692e9dca77f7b588fa69b7c883815"
+    },
+    {
       "path": "install_published_studies.py",
-      "bytes": 21036,
-      "sha256": "aa45e728bb259c32c3d8b12153d8d4d3a44b8730d157ec05760c9f5f9887dd53"
+      "bytes": 21311,
+      "sha256": "1a0f2c983ef9f65e8b1ff10f9f4ac2265436da72d1b96307b5aea1d17250136e"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -80,6 +90,11 @@
       "path": "integration/component_fragments/received-published-reviews.json",
       "bytes": 915,
       "sha256": "1dd1b46b8b5d2dfcb077c9dc4397c476187c64734238a6e23732f551c3409565"
+    },
+    {
+      "path": "integration/component_fragments/selected-microbial-studies.json",
+      "bytes": 1038,
+      "sha256": "1ff7d49a54b8eaa15747fbb9c0f96ee28c5b05e34b3fe6af1b165e59c6de8ac8"
     },
     {
       "path": "measurement_workspace/GEOGRAPHIC_STUDY_SELECTION.md",
@@ -123,8 +138,8 @@
     },
     {
       "path": "measurement_workspace/source_observations.py",
-      "bytes": 10566,
-      "sha256": "6a49535945d72266e856c4dd790d45d7ab5b9f24bdc196369642940d71216968"
+      "bytes": 19881,
+      "sha256": "719faa00f1d737e8a7e500e5ea3b56c0f1d497ea5831699e527a7733cb3c5ef4"
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
@@ -168,8 +183,8 @@
     },
     {
       "path": "measurement_workspace/utility_microbiology.py",
-      "bytes": 24338,
-      "sha256": "042aed4b83e098ff08f16ba11a9ee8f940d0af6bff4e047abd7af902206adf53"
+      "bytes": 26480,
+      "sha256": "df46c984a7dce49a3760588a2fb172ed148384d66f42f1c1123e9d3fe36a6686"
     },
     {
       "path": "measurement_workspace/wqp_profiles.py",
@@ -1197,6 +1212,11 @@
       "sha256": "cfa59736840d706eced4b01df7045204db008929e1569c566e8f35b0388fa477"
     },
     {
+      "path": "operator/SELECTED_MICROBIAL_STUDY.md",
+      "bytes": 7045,
+      "sha256": "38ca165724bdc6a676ee76b787fb04573a2775c50074b7f216d1fba3e2d47765"
+    },
+    {
       "path": "operator/team_route_policy.json",
       "bytes": 6634,
       "sha256": "23aca138fb70aa7ee9c84f5915c6c941e72b89b2567cde04f22883d04545662d"
@@ -1233,8 +1253,8 @@
     },
     {
       "path": "operator/web/station_geography.mjs",
-      "bytes": 75236,
-      "sha256": "46f355426b380ed3ba03a788489a9ef86307e878f3a18a1fe42ece7685570e8f"
+      "bytes": 76132,
+      "sha256": "6995ba876bc317aef8322180ad8525f167db31ebf012ddd408e0efb03ca63790"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -2315,6 +2335,25 @@
         "git_blob": "2937bc4c81ac10cbcc4bfb469badfe53f8022436",
         "sha256": "1e2fb1d67ee571d9a86c839afbd8ccef70e5740403b8e7cf021dc2d5ecc15b9e"
       }
+    },
+    "selected_microbial_studies": {
+      "source_bank": "82b4eaba907467c205de6e06aa964c6653e56aa9",
+      "source_bank_sha256": "d8027d2b91f294f06ea60c62832f3da8890b24e96da3aca80b9fe14b3899409d",
+      "original_merge_commit": "87a601d083fe6ff0ffb5f1e53133059f04760bbf",
+      "current_module_source": "f43727a3d6136da00b67ceb14627768b833b7907",
+      "current_module_git_blob": "2937bc4c81ac10cbcc4bfb469badfe53f8022436",
+      "compiler": "measurement_workspace/microbial_selection.py",
+      "browser": "operator/web/published_microbial_selection.mjs",
+      "guide": "operator/SELECTED_MICROBIAL_STUDY.md",
+      "component": "integration/component_fragments/selected-microbial-studies.json",
+      "receiving": "examples/selected-microbial-activities-20261013/receive.py",
+      "selection": "Original report-bound activity identifiers and complete original response rows; normal saved study, review, source and receiving workflows"
+    },
+    "complete_original_source_receiving": {
+      "source": "Same original application receiving union",
+      "complete_family_files": 438,
+      "original_scientific_editions": "All declared source files retained with their original family hashes; current Station geography browser preserved.",
+      "shared_base": "ES26 252 / b0a75414ba93e45eb96a48bce5be555d5fc5612c"
     }
   }
 }
