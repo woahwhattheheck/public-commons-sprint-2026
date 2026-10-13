@@ -137,6 +137,12 @@ PUBLISHED_INTERVAL_PREVIOUS_SHA256 = {
     "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
 }
 
+COMPOSED_INTERVAL_PREVIOUS_SHA256 = {
+    "model/chemistry_report_source.py": "5b5940571a3667e4a09fcd1c4459d82316295a8286f6f30a4050409531989bba",
+    "operator/install_chemistry.py": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "75df65613e75aa3a505a5154ea451f4b88921ce75ffc36561308c42caaca4d4e"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -183,7 +189,8 @@ def install(application, source_root=None, dry_run=False):
                     {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
                      REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name),
                      STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
-                     PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name)}):
+                     PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name),
+                     COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
             pending[name], preimages[name] = body, current
         composer = "source_tools/chemistry_study_composition.py"
