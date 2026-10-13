@@ -1,8 +1,0 @@
-# Original Eco already supplies FastAPI, Pydantic, numpy, rasterio and geopandas.
-# These are minimum compatible versions, not a replacement for the original lock file.
-fastapi>=0.115
-pydantic>=2.8
-httpx>=0.27
-numpy>=1.26
-rasterio>=1.3
-fiona>=1.9
