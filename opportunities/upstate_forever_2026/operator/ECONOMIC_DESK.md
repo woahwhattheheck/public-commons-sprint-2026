@@ -8,8 +8,10 @@ The Economic desk is an additive operator entry for completed native scenario re
 - operator/economic_workbench.py
 - operator/extensions/economic-desk.json
 - operator/web/economic_desk.mjs
+- operator/web/economic_cost_worksheet.mjs
 - operator/web/economic_desk.css
 - operator/ECONOMIC_DESK.md
+- operator/COST_WORKSHEETS.md
 
 The existing model/decision_analysis.py, model/decision_cli.py and model/decision_desk.html are the delivered BC0B decision companion. The companion also includes its receiver and scientific/cost guides. This integration reads those installed source files directly.
 
@@ -23,10 +25,10 @@ Receive the core decision companion and the current ECSA extension host into the
 
 The optional --dry-run returns the exact intended changes. The installer compiles the actual Python source in memory, prepares all source changes, uses the original shared extension-install lock, and checks every current replacement boundary. It installs only its own provider, browser assets, registration, guide and installer. The current shared host owns the authenticated file route. It can be rerun against the same edition.
 
-The complete ECSA prerequisite is the author's current 25-file source bank, operation ECSA-20261013-CURRENT-DECISIONS-HOST-DESIGNATIONS:
+For the complete cumulative application, use the current shared [application source](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026). It includes the integrated extension host and later composition. The original separate ECSA receiving bank remains available under operation ECSA-20261013-CURRENT-DECISIONS-HOST-DESIGNATIONS:
 https://drive.google.com/file/d/15Hbqz3vXjiJAzp7ue7bhoka4BVgrByD6/view?usp=drivesdk
 
-Receive that complete source and run its actual install_extensions.py against the same cumulative application before this extension. The source edition updated on 13 October 2026 at 00:46:21 UTC contains installer SHA256 6489167c5c2251dbdb9ad28fbcba6c38b3d5682286420e241840cce6ee9fd935 (19,222 bytes), registry SHA256 5cef14d2318e593ab9480f8bb9a784ab251e7506864882d91d04901c4070054b (24,854 bytes), and browser host SHA256 f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf (16,710 bytes). It includes the typed retained-file routes used here, nested GIS member routes, task-label fallback, and the existing-app programme callback migration. That migration runs before adding the current host registration, so an older installed host upgrades with one host instance. Its workspace switch also preserves the original open-form guard before detaching the current desk. The shared host originated in public merged PR2641; use this complete successor for cumulative receiving.
+For separate-overlay receiving, run the selected complete source's actual install_extensions.py against the same cumulative application before this extension. The historical source edition recorded on 13 October 2026 at 00:46:21 UTC contained installer SHA256 6489167c5c2251dbdb9ad28fbcba6c38b3d5682286420e241840cce6ee9fd935 (19,222 bytes), registry SHA256 5cef14d2318e593ab9480f8bb9a784ab251e7506864882d91d04901c4070054b (24,854 bytes), and browser host SHA256 f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf (16,710 bytes). It includes the typed retained-file routes used here, nested GIS member routes, task-label fallback, and the existing-app programme callback migration. That migration runs before adding the current host registration, so an older installed host upgrades with one host instance. Its workspace switch also preserves the original open-form guard before detaching the current desk. The shared host originated in public merged PR2641. Retain subsequent application changes by using current cumulative source for new receiving.
 
 Use the operator's existing startup command and registered workspace/source arguments after the install. The current process loads registrations at startup. Its authenticated /api/extensions response then includes economic-desk and its navigation includes Economic desk. The source-native report remains in the original workspace/scenario-decisions/<report-id>/ directory.
 
@@ -125,7 +127,7 @@ This reuses the already installed browser and completed model outcomes. The rece
 
 ## One-command operator receiving
 
-Run operator/economic_receive.py directly from the complete application checkout after the original operator is running. The six-file feature installer keeps its existing scope. This additional receiving command uses the installed Playwright Python package, an existing Chromium/Chrome executable, and the delivered model/decision_receive.py.
+Run operator/economic_receive.py directly from the complete application checkout after the original operator is running. The feature installer retains its own provider, browser modules, registration and operating guides. This additional receiving command uses the installed Playwright Python package, an existing Chromium/Chrome executable, and the delivered model/decision_receive.py.
 
 If the original operator is not already running, start its existing server from that same checkout against the retained native workspace. Keep this process running in its terminal; its first output is the original ready JSON used by the receiving command in a second session:
 
@@ -147,3 +149,8 @@ Use --workspace-key, --report-id and --zone-id to choose particular retained res
 The command drives the original browser controls for report and zone selection, quantitative preview, saved inputs, reopening those inputs, and queued edition construction. It opens the authenticated embedded desk, chooses an actual modeled scenario, saves working HTML from that embedded desk, reopens it and produces its PDF. It then downloads the original complete package through the operator, checks its retained descriptors and members, and invokes the existing offline choose/filter/export/notes/save/reopen/print receiver.
 
 Each invocation creates a timestamped directory under --output. operator-journey.json retains the real task, source report, zone and edition identifiers, actual timings, browser messages and failures. The directory also contains screenshots, PDFs, saved HTML, the verified complete decision package, its full offline receiving run and the source of this command. economic-operator-receiving-package.zip carries that complete receiving result. Existing original queue tasks and native model outputs are reused; this command does not dispatch model runs or install browser dependencies. --task-timeout-seconds controls how long to watch the original queue; its task remains available in the operator if that watch expires.
+
+
+## Bulk reviewed cost worksheets
+
+Use **Download cost worksheet CSV** or **Download cost worksheet JSON** to prepare sourced implementation estimates for the original report's alternatives. **Review completed worksheet** previews all changes before **Apply reviewed worksheet** updates the current inputs. The original worksheet and estimate provenance travel through saved inputs, complete editions and the client-report economic package. The [complete worksheet workflow](COST_WORKSHEETS.md) documents fields, exact report/zone binding, spreadsheet editing, subset imports and receiving.

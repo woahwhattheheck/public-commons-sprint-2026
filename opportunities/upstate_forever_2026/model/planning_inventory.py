@@ -130,6 +130,11 @@ def _inputs(workspace, selection):
     roots = {run["id"]: workspace.root / "runs" / run["id"] for run in runs}
     artifact_paths = {}
     for run in runs:
+        for name in outputs:
+            artifact = run["artifacts"][name]
+            if (artifact.get("units") != MASS_UNITS[name]
+                    or artifact.get("sum_units") != MASS_UNITS[name].replace("/pixel", "")):
+                raise ValueError("Planning intake requires original annual mass units for " + name)
         artifact_paths[run["id"]] = {
             name: verify_file(roots[run["id"]], run["artifacts"][name])
             for name in outputs

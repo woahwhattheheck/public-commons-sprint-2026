@@ -1,0 +1,134 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "document-merchant",
+  "heading": "## Document processing and complete customer receiving",
+  "sources": [
+    {
+      "id": "document-merchant-applications",
+      "label": "Document merchant Applications and customer operation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/document-merchant/APPLICATIONS.md",
+      "editions": [
+        {
+          "commit": "039e8f2a82fa1e63bc72894a748cf7c0a24ef9f4",
+          "bytes": 13664,
+          "sha256": "fd05791f26cfc7edcd5276ec327cc52c1df4bf09ae3569fd5882d10907ba3ee7",
+          "git_blob": "91cf506dc1e080229c4903bbde3dd7d0e0e4caf0"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-composition-guide",
+      "label": "Complete customer dataset and template composition, browser operation and document receiving",
+      "path": "products/document-merchant/COMPOSITION.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "a887ac9d56b1a0933bf1060bf70bd74ee25c6d16",
+          "bytes": 36226,
+          "sha256": "05eb0d7d6caab0a66fe78be66bb53c1113e27672dbbadc29dcbdf4cba326b90b",
+          "git_blob": "1dce80aa2de5eb8c41521eab769fbbe284bb56a2"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-original-batch",
+      "label": "Original paid document batch and complete customer Collection receiving",
+      "path": "products/document-merchant/batch.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "a887ac9d56b1a0933bf1060bf70bd74ee25c6d16",
+          "bytes": 35263,
+          "sha256": "9d7d5188e44102d337366c754442cca3bdd9f891efd2d874190d334f0ee7ba2f",
+          "git_blob": "066b0e56483372a66944a767de07615a3d24a56a"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-composition-service",
+      "label": "Document production service in the original customer and Applications lifetime",
+      "path": "products/document-merchant/composition-service.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "a887ac9d56b1a0933bf1060bf70bd74ee25c6d16",
+          "bytes": 16672,
+          "sha256": "9c40603617ff5485b32ef7ff619dfe3b8729efc4aa1533a433a91aa28c3e1513",
+          "git_blob": "8fcc137f96e6360f6bcd331db9c28a12c8a2e3fd"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-composition-workspace",
+      "label": "Complete browser source preparation, native quote execution and PDF/source receiving",
+      "path": "products/document-merchant/composition-workspace.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "a887ac9d56b1a0933bf1060bf70bd74ee25c6d16",
+          "bytes": 24076,
+          "sha256": "391467448c726dc580d44adee6218aeae58ae3e8b676be7f69464606d166d864",
+          "git_blob": "00f852267aee02b51c8bf433b06974c8959dd0fa"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-provider-contracts",
+      "label": "Original MintPDF, snaplab and PDFMint request mappings and supplier usage units",
+      "path": "products/document-merchant/contracts.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "a887ac9d56b1a0933bf1060bf70bd74ee25c6d16",
+          "bytes": 16632,
+          "sha256": "121a692f391ec1fd7de8f12f5e91144cb92104d6d151b2eaf7dcf2b779ffd0a5",
+          "git_blob": "68ffa59affb474acf725034d1bd1e6f2180c3401"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-assembly-guide",
+      "label": "Complete ordered PDF customer bundle setup, operation and receiving",
+      "path": "products/document-merchant/ASSEMBLY.md",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "adae6d07971165fc04da3391440b786cf59ef6c4",
+          "bytes": 17748,
+          "sha256": "718a99bf1ed02edbc8721d0fcfb1df01f1d220e7fe18bc656134e2dcfaacf2db",
+          "git_blob": "41f1acc238e50a8436e9807c4663f3be082be311"
+        }
+      ]
+    },
+    {
+      "id": "document-merchant-assembly-core",
+      "label": "Ordered complete PDF sources and original native batch fulfillment",
+      "path": "products/document-merchant/assembly.mjs",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "required": false,
+      "editions": [
+        {
+          "commit": "adae6d07971165fc04da3391440b786cf59ef6c4",
+          "bytes": 28867,
+          "sha256": "5c4485b286dc4e9349cff939e9860259c58d693b1d08cb0ecb8dbee459f776a3",
+          "git_blob": "70a3d17c3ca12e9c89853a0675e45b0c09794f26"
+        }
+      ]
+    }
+  ]
+}

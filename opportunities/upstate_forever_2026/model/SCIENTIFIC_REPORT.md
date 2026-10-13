@@ -215,3 +215,83 @@ Receiving uses the existing native report operation: compile the composed module
 open the current source-bound delivery, follow an economic link from its PDF or
 HTML, compare its coefficient tables with the exact saved profile CSV, and reopen
 the complete archive. The same ordered report blocks drive each output format.
+
+
+## Linked sources and economic coverage (v7)
+
+The report now preserves typed links for original publisher references, estimate sources, native-model guides and retained working materials. PDF, HTML, Markdown and structured report data use the same link labels and targets. Relative file links remain inside the extracted delivery; preserve its directory structure. Unknown or unsupported URI schemes remain readable text.
+
+The selected economic edition supplies its original reporting-zone identity, modeled and unmodeled responses, available and unavailable alternatives, estimate dates and original common-support coverage. Each coverage percentage uses its own recorded valid-cell denominator, not the whole watershed area. Operating and annualized costs are reported per year in the recorded currency. The formatter reads the completed edition and does not recalculate costs or physical quantities.
+
+The existing scientific workspace archive is prepared before report composition, making its retained link available in every report format. The current-export reference must be an original baseline scenario; future alternatives must be distinct and exclude that baseline. Scenario-analysis release readiness applies the same baseline requirement before opening the delivery form.
+
+## Observed source context and original figures
+
+Edition v8 composes the project's observed source context with the current maintained report, including its economic coverage and native-grid delivery sections.
+The original parameter tables, native model quantities, receiving-water sections,
+completed analysis, economic links and atlas assets remain in this formatter.
+
+Select `source_roles.OBSERVED_CONTEXT` as an ordinary imported source choice:
+
+```json
+{"source_collection_id":"ACTUAL_COLLECTION_ID","source_id":"ACTUAL_CONTEXT_SOURCE_ID"}
+```
+
+The maintained `model.observed_context.bind(workspace, selection)` resolves the
+original source and returns its stable binding before delivery identity is computed.
+The delivery retains it as `selection.observed_context_binding`.
+`observed_context.collect(workspace, selection, directory, state)` returns either
+None when unselected or a dictionary with `sections`, `binding`, and `files`.
+Its binding must equal the prior bound identity. Its files map contains ordinary
+relative-path/bytes/SHA256 descriptors. The delivery verifies and retains all of
+them under its observed_context file keys, includes their paths in project_assets,
+and places the exact binding in report-data.json. This carries original source
+tables and figure assets through the existing package and archive operation.
+
+Observed concentrations, hydrology and discharge-source tables enter descriptive
+context sections. The separate annual-load comparison hook continues to consume
+only completed Workspace observation-comparison records bound to selected model
+runs. The context producer uses the original units, periods, qualifiers and
+contributing-area relationships for each data product.
+
+### Figure block
+
+A figure is an ordered report block with this shape:
+
+```json
+{
+  "kind": "figure",
+  "path": "observed-context/figures/original-figure.svg",
+  "title": "Original source figure",
+  "caption": "The source interpretation, units and period.",
+  "alt": "A concise description of the plotted observations.",
+  "bytes": 123,
+  "sha256": "ACTUAL_64_CHARACTER_LOWERCASE_SHA256",
+  "spec": {"original": "complete numeric figure specification"}
+}
+```
+
+The values above illustrate field names; the observed-context producer supplies
+actual retained bytes, hash and complete original numeric specification. Caption,
+alt text, positive byte length and SHA256 are required. Paths stay relative to the
+delivery and select the retained SVG. Both PDF and companion rendering verify the
+SVG against its descriptor before producing outputs.
+
+PDF calls the maintained `scientific_figures.panel_drawings(spec, width)` and
+places its ReportLab vector drawings with the original title and caption. The
+numeric specification retains original axes, tick labels, series and panel data.
+It supports the maintained line, scatter and boxplot figures, including open
+markers and the source's minimum/q1/median/q3/maximum/mean fields.
+HTML and Markdown embed the original SVG. Structured report data retains the
+entire figure block and numeric specification. No extra SVG-conversion dependency
+is introduced.
+
+The producer and numeric drawing module are part of this same source contribution:
+`model/observed_context.py` and `model/scientific_figures.py`. Install them with
+the current formatter/delivery successor before invoking the original delivery.
+The existing native receiving operation should render the actual four supplied
+figures, open PDF and offline HTML, and retain their complete source context and
+package with the selected original Workspace.
+
+
+The combined v8 formatter preserves the current v7 source, coefficient, economic and delivery coverage tables. It verifies each retained SVG against its byte length and SHA256 before PDF or companion generation. PDF panels retain the supplied numeric coordinates and units; the offline HTML and Markdown resolve the same original SVG through package-relative paths. The observed context is bound before delivery identity is computed and every retained companion is included in the original package asset inventory.

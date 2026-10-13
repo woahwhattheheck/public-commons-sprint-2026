@@ -94,3 +94,51 @@ Source: [profile validation](https://github.com/woahwhattheheck/public-commons-s
 ## Integration with retained source workflows
 
 Import observed_hydrology_20261013/model-sources.json through the existing workspace source importer. The vector IDs are usgs-savannah-observed-gauges-2020-2025 and usgs-eighteenmile-whole-catchments-20261013. Add the actual gauge basin as a named comparison zone using the existing scenario/report APIs. The complete annual matrix, real lake-station geometry and underlying original agency records now provide the source material for that join.
+
+## Reported point sources in the observed Eighteenmile flow context
+
+The retained [DMR source and calculation](../eighteenmile_2023/npdes/DMR_LOADS.md) supplies 230 reporting-period quantities from 980 original EPA value records. The [monthly flow companion](../eighteenmile_2023/npdes/flow_context/README.md) joins those periods to the original 365 approved USGS daily means at gauge 02186702. Use the source quantities, reporting intervals and same-period gauge volumes together.
+
+### Select the actual upstream cohort
+
+The [original outfall/gauge relations](../eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv) put Milliken Pendleton (SC0000477), Pickens Upper (SC0042994) and Pickens Middle (SC0047856) upstream of the gauge. Pendleton-Clemson (SC0035700) remains in the facility and map context downstream.
+
+All four points fall within the retained whole-catchment polygon. The same-reach ordering supplies the important distinction: Milliken has reach measure 92.5177, the gauge 53.4049 and Pendleton-Clemson 24.0152 on reach 03060101000042. The two Pickens outfalls are members of the gauge's upstream network on other reaches. Use these original network relationships when selecting a gauge cohort. Display the agency point and indexed network point as separate locations; their supplied-to-indexed distances range from 14.21 m to 289.85 m in this edition.
+
+The state map labels all four outfalls 001, while Milliken's EPA records use T1M for phosphorus, nitrate, TSS and flow and T1Q for ammonia. Preserve that permit-level join and both feature identities. The map's current source capture and the 2023 discharge reporting period remain separate dates. [Native source mapping](../eighteenmile_2023/npdes/NATIVE_IMPORT.md)
+
+### Read quantity, coverage and species together
+
+| Parameter | Upstream source cohort | Retained amount | Quantified facility-days | Reporting interpretation |
+| --- | --- | ---: | ---: | --- |
+| Total P, 00665 | All three upstream permits | 949.3158 kg | 1,095 / 1,095 | Complete 2023 cohort |
+| TSS, 00530 | All three upstream permits | 52,868.1134 kg | 1,095 / 1,095 | Complete 2023 cohort |
+| Flow, 50050 | All three upstream permits | 683.717745 million US gallons | 1,095 / 1,095 | Complete 2023 cohort |
+| Total N as N, 00600 | Pickens Upper and Middle | 5,148.9320 kg | 668 / 730 | February–December; retain January as missing |
+| Nitrate as N, 00620 | Milliken | 4,887.5824 kg | 365 / 365 | Complete Milliken nitrate series |
+| Ammonia as N, 00610 | All three upstream permits | 513.4236 kg quantified across available periods | 821 / 1,095 | Preserve each facility's available intervals |
+
+Source: [original annual cohort table](../eighteenmile_2023/npdes/flow_context/derived/upstream_annual.csv). “Complete” describes the stated parameter-specific facility cohort. EPA's nutrient aggregation selects nonoverlapping nitrogen components and gives reported total N priority. Apply an explicit species and interval selection before deriving any combined nitrogen quantity. [EPA nutrient aggregation](https://echo.epa.gov/trends/loading-tool/resources/technical-background-methodology/nutrient-aggregation)
+
+Milliken ammonia has three original periods with an unquantified detection-threshold status and a numeric-zero September–November period. Preserve the zero and the unknown intervals separately. Quarterly average rates allocated to months retain their original quarterly reporting interval. EPA's calculation guidance likewise distinguishes statistical bases, mass quantities, flow-dependent concentration calculations and represented discharge duration. [Original period records](../eighteenmile_2023/npdes/derived/period_loads.csv); [EPA loading hierarchy](https://echo.epa.gov/trends/loading-tool/resources/loading-calculations)
+
+### Separate seasonal source changes from flow-volume changes
+
+The three-facility reported effluent volume is 2,588,153.21 m³ over 2023; measured gauge volume is 61,099,554.39 m³. Their annual ratio is **4.236%**, calculated from the two annual volume sums. The monthly ratio rises from **2.304% in January to 11.945% in October**. Over those two months reported effluent volume decreases 16.763%, while gauge volume decreases 83.946%; the ratio rises 5.185 times. Show both component volumes beside the percentage. [Monthly source and gauge table](../eighteenmile_2023/npdes/flow_context/derived/upstream_monthly.csv)
+
+Total-P mass is greatest in June, at 140.5993 kg. Its gross source-mass/gauge-volume index is greatest in November, at 0.0497494 mg/L, when the source quantity is 100.4884 kg and gauge volume is lower. The annual index is 0.0155372 mg/L. Milliken contributes 80.163% of this selected upstream reported phosphorus total; Pickens Upper and Middle contribute 9.033% and 10.804%.
+
+Use the label **gross reported source mass / observed same-period gauge volume**. This is a dated source term in the selected gauge domain. A receiving-water prediction additionally represents stream and reservoir transport, retention, travel time and other sources.
+
+Complete shared subperiods are also available for the partial annual cohorts:
+
+- **Two-Pickens total N, February–December:** 5,148.93199689 kg over 334 calendar days divided by 49,889,345.23705836 m³ of gauge volume gives a same-period index of **0.10320705 mg/L**.
+- **Three-facility ammonia, September–November:** 83.0384157 kg over 91 calendar days divided by 6,225,556.133203477 m³ gives **0.01333831 mg/L**. This uses the complete common months; the broader partial annual quantified amount includes additional Pickens months.
+
+These subperiod calculations sum only the rows with a complete cohort in [upstream_monthly.csv](../eighteenmile_2023/npdes/flow_context/derived/upstream_monthly.csv), then compute `1000 × summed kg / summed gauge m3`. The original annual completeness fields stay unchanged.
+
+### Use the data in the native report and model comparison
+
+Import both existing manifests through the assessment runner's `--context-manifest` option: `observations/eighteenmile_2023/npdes/model-sources.json` registers the outfall vector and three DMR tables; `observations/eighteenmile_2023/npdes/flow_context/model-sources.json` registers the four flow-context tables.
+
+Keep the dated point-source quantities beside the actual land-cover NDR/SDR export for the corresponding domain and source period. Review coefficient derivation before combining source terms, and represent the selected stream or reservoir transport explicitly. Use the monthly context to interpret the lake-study sampling dates and the separate annual source terms when evaluating a native scenario.

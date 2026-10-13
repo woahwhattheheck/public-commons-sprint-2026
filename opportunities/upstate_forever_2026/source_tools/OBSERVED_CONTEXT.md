@@ -29,6 +29,10 @@ The installed application contains these complete original inputs:
 
 When the maintained eighteenmile_lake_observation_report.sources.json is installed at the application root, the same receiver also imports its complete original study report and the existing offline interactive lake-observation report. HTML documents open with their native companion paths preserved. Additional editions remain selectable through repeated --context-manifest arguments.
 
+The same receiving operation recognizes the complete reported-discharge, monthly flow, and original routing companions when installed, using observations/eighteenmile_2023/npdes/model-sources.json, npdes/flow_context/model-sources.json and npdes/routing-model-sources.json. Agency outfall points and the distinct indexed routing points retain their original identities. The ordinary application-root eighteenmile_scientific_figures.sources.json and observed_hydrology_context.sources.json bring the retained study figures and the full gauge-flow explorer into the same source inventory. These root manifests keep every native relative path within its retained source edition.
+
+The maintained source.import_observed_context importer runs during the same command. Its observation intake and operator chart are installed with the application. The default study, hydrology and monthly DMR source editions populate fourteen existing observation views; the actual receipt reports whichever complete original editions were selected. Custom --study-manifest and --hydrology-manifest arguments are passed through as their exact selected original files. The saved observations.json lists actual source collection IDs, original table hashes and observation IDs. Repeated views can share the same original rows while selecting different measured or derived columns; counts across views are labeled accordingly.
+
 Each manifest remains unchanged. Workspace.import_sources retains every original body and companion by content identity. The assessment manifest includes its original operate_assessment_maps.py as a hash-bound companion, so that file remains byte-for-byte original. The maintained continuation of its mapping code lives separately at source_tools/operate_assessment_context.py.
 
 The receiver accepts --hydrology-manifest, --study-manifest, --assessment-dir and --public-water-dir to use the same complete sources from another retained location. Repeat --context-manifest for additional ordinary source editions such as reported point-source discharge. Repeat --context-layer-id to include an existing native context vector by its actual catalog ID.
@@ -87,3 +91,11 @@ The source manifests and source inventory preserve numerical and geographic supp
 - Modeled annual mass rasters retain the maintained model's existing units and cell-area conversion. Receiving this context does not transform observed concentrations into annual loads.
 
 All source URLs, original tables, reproduction programs and retained agency bodies travel with their ordinary source editions.
+
+## Scientific report and daily flow explorer
+
+The receiver imports the application-root observed_hydrology_context.sources.json. Its retained report recipe appears in the existing Delivery form's Observed science context selector. The selection binds the complete original study, regional hydrology, reported discharge and routing members, four measured scientific figures, and the offline observed-flow report to one native report edition. Native source views and exported reports preserve their relative file relationships.
+
+The flow explorer opens through the receiver's original-source index and the scientific report's observed source links. It contains every retained 2020–2025 daily row at all 16 gauges, the annual completeness matrix, original qualifiers, 2023 sampling and antecedent conditions, and monthly reported-source quantities with their actual parameter cohorts. Its gauge/year, unit and scale controls work offline; selected daily records download with original response identifiers and record positions.
+
+Rebuild the explorer from the application root with `node source_tools/build_observed_flow_report.mjs`. The existing original hydrology and monthly-flow reproduction commands retain their own complete agency inputs. Use eighteenmile_scientific_figures.sources.json for direct native figure import: it preserves all original seven entries while routing the original sibling inputs through canonical application paths.

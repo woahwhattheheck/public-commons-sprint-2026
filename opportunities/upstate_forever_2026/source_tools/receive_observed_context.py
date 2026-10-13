@@ -27,6 +27,15 @@ def _selection(args, application):
         ("lake_study", Path(args.study_manifest or application / STUDY)),
         ("public_water", Path(args.public_water_dir or application / PUBLIC_WATER) / "sources.public-native.json"),
     ]
+    for role, relative in (
+            ("reported_discharge", "observations/eighteenmile_2023/npdes/model-sources.json"),
+            ("monthly_discharge_flow", "observations/eighteenmile_2023/npdes/flow_context/model-sources.json"),
+            ("discharge_routing", "observations/eighteenmile_2023/npdes/routing-model-sources.json"),
+            ("study_figures", "eighteenmile_scientific_figures.sources.json"),
+            ("flow_report", "observed_hydrology_context.sources.json")):
+        context_manifest = application / relative
+        if context_manifest.is_file():
+            paths.append((role, context_manifest))
     report_manifest = application / "eighteenmile_lake_observation_report.sources.json"
     if report_manifest.is_file():
         paths.append(("lake_report", report_manifest))
@@ -176,6 +185,8 @@ th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}s
 <p>The original observed hydrology, dated lake-study measurements, draft assessment and published source-water areas are retained together in this scientific Workspace. Native vector datums, table units, sampling dates, censor conditions and companion files remain attached to their original source IDs.</p>
 """
     document += "<p>Workspace: " + e(workspace.project["title"]) + "<br>Receiving operation: <code>" + e(state["id"]) + "</code></p>"
+    observation_import = state.get("observation_import", {})
+    document += "<h2>Dated observation views</h2><p>The existing Observed water quality desk now contains " + e(observation_import.get("views", 0)) + " retained views of original measurements, discharge, stage and available effluent source context. Choose a view, station and parameter to inspect original dated values, censor bounds and coverage. <a href=\"observations.json\">Open the observation import record</a>.</p>"
     document += "<h2>Maps and geographic joins</h2><ul>" + "".join(packs) + "</ul>"
     document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
     document += "<h2>Source tables and geographic layers</h2><p>Table counts describe actual retained rows. Source scope and complete collection identities are in <a href=\"source-inventory.json\">the source inventory</a>. The existing operator Sources desk provides table previews and every original companion download; Spatial review and Exports display these same saved views.</p>"
@@ -242,6 +253,30 @@ def receive(args):
             state["source_imports"] = collections
             state["updated_at"] = now()
             atomic_json(state_path, state)
+            from source.import_observed_context import import_context
+            context_roles = {
+                "lake_study": STUDY,
+                "observed_hydrology": HYDROLOGY,
+                "monthly_discharge_flow": "observations/eighteenmile_2023/npdes/flow_context/model-sources.json",
+            }
+            observation_manifests = {
+                context_roles[item["role"]]: item["path"]
+                for item in manifests if item["role"] in context_roles
+            }
+            state.update(state="importing_observations", updated_at=now())
+            atomic_json(state_path, state)
+            observations = import_context(
+                workspace.root, application, list(observation_manifests),
+                output / "observations.json", manifest_paths=observation_manifests)
+            state["observation_import"] = {
+                "receipt": "observations.json",
+                "observation_ids": [item["id"] for item in observations["observations"]],
+                "views": len(observations["observations"]),
+                "rows_across_views": sum(item["rows"] for item in observations["observations"]),
+                "context_rows_across_views": sum(item["context_count"] for item in observations["observations"]),
+            }
+            state["updated_at"] = now()
+            atomic_json(state_path, state)
             water = next(item for item in collections if item["role"] == "public_water")
             state["public_water"] = _public_water(
                 workspace, workspace._get("sources", water["source_collection_id"]), spec_path, output)
@@ -266,6 +301,7 @@ def receive(args):
             _index(output, state, inventory, assessment, workspace)
             state.update(state="complete", updated_at=now(),
                          observed_context={
+                             "observation_views": state["observation_import"]["views"],
                              "sources": len(inventory),
                              "tables": sum(item["kind"] == "table" for item in inventory),
                              "vectors": sum(item["kind"] == "vector" for item in inventory),
@@ -276,7 +312,7 @@ def receive(args):
                          map_pack_ids=[item["id"] for item in assessment["map_packs"]],
                          empty_scopes=assessment.get("empty_scopes", []),
                          files=[describe_file(workspace.root, output / name) for name in (
-                             "source-inventory.json", "index.html", "receiving-waters-spec.json",
+                             "source-inventory.json", "observations.json", "index.html", "receiving-waters-spec.json",
                              "scenario-source-areas.json", "assessment/operation.json",
                              "assessment/point-inspections.json", "assessment/station-domain-joins.csv")])
             state["attempts"][-1].update(state="complete", completed_at=now())
@@ -284,7 +320,7 @@ def receive(args):
         except BaseException as error:
             state.update(state="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
                          updated_at=now(), error={"type": type(error).__name__, "message": str(error)})
-            state["attempts"][-1].update(state=state["state"], ended_at=now())
+            state["attempts"][-1].update(state=state["state"], ended_at=now(), error=state["error"])
             atomic_json(state_path, state)
             raise
     return {**state, "directory": str(output), "index": str(output / "index.html")}
