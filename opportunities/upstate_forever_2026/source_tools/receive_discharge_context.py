@@ -324,7 +324,8 @@ def _write_sources(root, manifest, selection, stations):
                 "title": name, "kind": kind, "uri": source_uri,
                 "vintage": manifest["period"]["start"] + "/" + manifest["period"]["end"],
                 "units": units, "role": "OBSERVED_DISCHARGE_CONTEXT",
-                **_descriptor(root, root / path), "companions": companions}
+                **_descriptor(root, root / path),
+                "companions": [item for item in companions if item["path"] != path]}
         if kind == "vector":
             item["crs"] = "EPSG:4326"
         entries.append(item)
@@ -333,7 +334,22 @@ def _write_sources(root, manifest, selection, stations):
              "entries": entries, "selection": selection,
              "interpretation": "Original daily volumetric discharge and its supported calendar summaries. "
                                "Point membership and original contributing-basin identity are separate."}
-    atomic_json(root / "model-sources.json", value, immutable=True)
+    destination = root / "model-sources.json"
+    if destination.exists():
+        saved = read_json(destination)
+        if saved != value:
+            # The original authored coverage entry repeated its body as a companion.
+            # Preserve exactly that prepared manifest and migrate only this known shape.
+            legacy = json.loads(json.dumps(value))
+            for entry in legacy["entries"]:
+                entry["companions"] = companions
+            if saved != legacy:
+                raise ValueError("The prepared source manifest differs from this original selection")
+            _retain(destination, root / "preparation-history" /
+                    ("model-sources-" + file_digest(destination) + ".json"))
+        atomic_json(destination, value)
+    else:
+        atomic_json(destination, value, immutable=True)
     return value
 
 def prepare(source_root, domain_path, output, *, scope="selected49"):
@@ -410,6 +426,10 @@ def prepare(source_root, domain_path, output, *, scope="selected49"):
             "original/model-domain.esri.json.gz", "selection.json", "station-domain.json",
             "selected-daily.csv", "selected-annual.csv", "station-membership.csv",
             "station-points.geojson", "model-sources.json"]
+        history = output / "preparation-history"
+        if history.exists():
+            owned += [path.relative_to(output).as_posix()
+                      for path in sorted(history.glob("model-sources-*.json")) if path.is_file()]
         files = [_descriptor(output, output / name) for name in sorted(owned)]
         result = {"schema": EDITION, "identity": identity, "state": "prepared",
                   "selection": selection, "source_manifest": "model-sources.json",
@@ -616,6 +636,7 @@ def _report_source(ws, root, prepared, receipt, editions, *, report_selection=No
         selected["observed_context_binding"] = original_binding
     identity = {
         "schema": "upstate.discharge-report-source/v1",
+        "receiver_edition": "20261013-source-report-v3",
         "project_id": ws.project["id"], "selection": prepared["selection"],
         "discharge_source_collection_id": receipt["source_collection_id"],
         "observation_ids": receipt["observation_ids"],
@@ -674,6 +695,7 @@ def _report_source(ws, root, prepared, receipt, editions, *, report_selection=No
         entry = {
             "id": "usgs-discharge-scientific-report-" + digest(identity)[:24],
             "title": recipe["title"], "kind": "document", "role": observed_context.ROLE,
+            "metadata": {"report_schema": observed_context.SCHEMA},
             "uri": "https://waterservices.usgs.gov/nwis/dv/", "vintage": "2020-01-01/2025-12-31",
             "units": "original discharge ft3/s; observed water volume m3; calendar support",
             **_descriptor(directory, directory / "observed-report.json"),
