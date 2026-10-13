@@ -17,6 +17,7 @@ CODE_FILES = (
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
     "measurement_workspace/utility_microbiology.py",
+    "measurement_workspace/utility_microbiology_context.py",
     "measurement_workspace/UTILITY_MICROBIAL_OBSERVATIONS.md",
     "measurement_workspace/STREAM_OBSERVATIONS.md",
     "source_tools/build_eighteenmile_stream_study.mjs",
@@ -64,6 +65,7 @@ def portable_source(source):
             "eighteenmile_lake_paired_analysis.sources.json",
             "eighteenmile_lake_microcystin_reconciliation.sources.json",
             "eighteenmile_stream_nutrient_analysis.sources.json",
+            "microbial_temporal_observed_report.sources.json",
         ),
     }
     from measurement_workspace.study_context import manifest_names
@@ -169,6 +171,9 @@ def main():
     if microbial_root.is_dir():
         originals = microbial.source_files(source)
         data_files.extend(str(Path(microbial.SOURCE_DIRECTORY) / name) for name in originals)
+        from measurement_workspace import utility_microbiology_context as temporal_context
+        if (source / temporal_context.SOURCE_MANIFEST).is_file():
+            data_files.extend(temporal_context.source_paths(source))
     data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
     for relative in expected:
