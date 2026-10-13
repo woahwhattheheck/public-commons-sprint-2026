@@ -106,6 +106,20 @@ for _path, _digest in {
 KNOWN_PREDECESSORS.setdefault("operator/INTELLIGENCE_DIAGNOSTICS.md", []).append(
     "f58ac423e35b977cfc66d3b9d5bbaabf855fe5b8508b86a4e3eef62c22289363")
 
+# ES26 original programme designer and continued Investigation source
+KNOWN_PREDECESSORS.setdefault("operator/web/investigations.mjs", []).append("552f04414f38897cd18de20edfef52db273b26c4b9f146c04c3a7e01c276bf01")
+KNOWN_PREDECESSORS.setdefault("operator/extensions/investigations.json", []).append("13e05713869e3bf075a943fb337bbc4c789dc33dc113a7be09c9255b3f3c4485")
+KNOWN_PREDECESSORS.setdefault("operator/INTELLIGENCE_DIAGNOSTICS.md", []).append("7ceb0dc18e19849da9cdaaffe848a1f8ec272b2f458484e87797c8af3b96259f")
+KNOWN_PREDECESSORS.setdefault("operator/install_diagnostic_investigations.py", []).append("8a195af996241eebf3ae2130c505676874efb4a5e044cb7936bb6b6532b85e15")
+KNOWN_PREDECESSORS.setdefault("operator/diagnostic_investigations_patch.json", []).append("813d099e384821fec074088ece49c3a6d7f26c91fbd9fd590fd50429cc92a82e")
+KNOWN_PREDECESSORS.setdefault("install_intelligence_operator.py", []).append("dc4027036e3143979acc4713cdce3a37e38bbf3c5840adbc5b0d0e2a3b818dff")
+
+# ES26 independent Investigation reads retain every completed task and saved view
+KNOWN_PREDECESSORS.setdefault("operator/web/investigations.mjs", []).append("61f42d7fa3ad630d694c5eaa76ae5a565646ac467c2132c9dbcd5c4d3f595de6")
+KNOWN_PREDECESSORS.setdefault("operator/INTELLIGENCE_DIAGNOSTICS.md", []).append("c2927af494d5c215845ea9306aa197f69f115499fde3889b677585098898f4fc")
+KNOWN_PREDECESSORS.setdefault("operator/diagnostic_investigations_patch.json", []).append("fc96878501ee065e6c8b287c21a50c0f2414ad405cf6dee08ce39ce84ae18a6d")
+KNOWN_PREDECESSORS.setdefault("install_intelligence_operator.py", []).append("81d65dfe2e8b77492b0453be2baf9cd6a0dc1aa70ad687c372cc1346b13162dc")
+
 PORTABLE_MARKER = "# A66A complete Investigations and scientific catalog source"
 
 def sha(body):

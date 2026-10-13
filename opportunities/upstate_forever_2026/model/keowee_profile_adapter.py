@@ -220,6 +220,9 @@ def observation_bundle(candidate, table, *, score, identity, profile_state=None)
     evidence = raw_row.get("evidence", {})
     table_metadata = table.metadata if isinstance(table, CriterionTable) else {}
     observations = {}
+    point = candidate.get("point_score", {})
+    resolved_metrics = point.get("metric_values", {})
+    resolved_sources = point.get("metric_sources", {})
     field_definitions = {row["id"]: row for row in profile["fields"]}
     def put(name, value, detail):
         if value is None or value == "":
@@ -274,11 +277,23 @@ def observation_bundle(candidate, table, *, score, identity, profile_state=None)
                 "cwa_mean", "stream_classes", "wetland_classes", "agricultural_fraction",
                 "nitrogen_export_class", "phosphorus_export_class", "sediment_export_class"):
             continue
-        value = _path(metrics, source)
-        if value is None and "." not in source:
-            value = candidate.get("point_score", {}).get("metric_values", {}).get(source)
-        detail = {"original_fields": [source], "method": "Retained parcel criterion table",
-                  "source_evidence": _copy(evidence.get(item["evidence_role"], {}))}
+        if source in resolved_metrics:
+            # The selected binding owns this measurement, including an explicit
+            # null backed by a closed interval. A canonical table column must
+            # not replace a different field chosen for the retained score.
+            value = resolved_metrics[source]
+            selected = resolved_sources.get(source, {})
+            detail = {
+                "original_fields": [selected.get("field", source)],
+                "method": "Actual selected native criterion binding",
+                "source_binding": _copy(selected),
+                "source_evidence": _copy(evidence.get(item["evidence_role"], {}))
+                    if selected.get("kind") == "table" and selected.get("field") == source else {},
+            }
+        else:
+            value = _path(metrics, source)
+            detail = {"original_fields": [source], "method": "Retained parcel criterion table",
+                      "source_evidence": _copy(evidence.get(item["evidence_role"], {}))}
         if name == "stream_length_miles" and value is not None:
             if isinstance(value, bool):
                 continue
@@ -289,14 +304,53 @@ def observation_bundle(candidate, table, *, score, identity, profile_state=None)
                 continue
             detail["conversion"] = {"from": "metre", "to": "mile", "divisor": 1609.344}
         put(name, value, detail)
-    if "parcel_area_acres" not in observations and candidate.get("area_ha") is not None:
+    # Preserve numeric source bounds as bounds, including an unresolved exact
+    # value. The original published scalar profile remains unchanged; the
+    # evaluator accepts this optional, source-described observation extension.
+    numeric_intervals = point.get("metric_bounds", {})
+    for item in mapping["fields"]:
+        name, source = item["profile_field"], item["native_metric"]
+        if source is None or source not in numeric_intervals:
+            continue
+        field = field_definitions[name]
+        if field["type"] != "number":
+            continue
+        original_interval = _copy(numeric_intervals[source])
+        interval = _copy(original_interval)
+        if interval.get("unit") == "acres" and field["unit"] == "acre":
+            interval["original_unit"] = interval["unit"]
+            interval["unit"] = "acre"
+            interval["unit_interpretation"] = "Canonical acre spelling; numeric endpoints unchanged"
+        if interval.get("unit") != field["unit"]:
+            raise ValueError("The source interval unit differs from its profile observation: " + name)
+        selected = resolved_sources.get(source, {})
+        observation = observations.setdefault(name, {
+            "value": None, "unit": field["unit"],
+            "original_fields": [selected.get("field", source)],
+            "method": "Actual retained closed source interval",
+            "source_binding": _copy(selected),
+        })
+        observation["interval"] = interval
+        observation["original_numeric_interval"] = original_interval
+        observation["numeric_interval_source"] = "point_score.metric_bounds." + source
+        if source in ("hydric_soil_acres", "sensitive_riparian_acres"):
+            observation["spatial_scope"] = {
+                "area_basis": interval.get("area_basis"),
+                "meaning": "Area of the selected criterion footprint intersected with the retained parcel analysis geometry",
+                "bound_applies_to": "In-parcel intersections only",
+            }
+    if ("parcel_area_acres" not in observations and "parcel_acres" not in resolved_metrics
+            and candidate.get("area_ha") is not None):
         put("parcel_area_acres", candidate["area_ha"] * 10000 / 4046.8564224, {
             "original_fields": ["area_ha"], "source_identity": _copy(candidate.get("source_identity", {})),
             "method": "Whole original parcel area in the retained analysis CRS",
             "conversion": {"from": "hectare", "to": "acre", "factor": 10000 / 4046.8564224}})
-    if "stream_orders" not in observations:
-        detail = candidate.get("point_score", {}).get("metric_sources", {}).get("headwater_stream", {})
-        if detail.get("kind") == "stream_order" and detail.get("raw") is not None:
+    detail = resolved_sources.get("headwater_stream", {})
+    if detail.get("kind") == "stream_order":
+        # Recompute the observation from the actual selected order field. An
+        # unrelated canonical stream_orders column cannot override that choice.
+        observations.pop("stream_orders", None)
+        if detail.get("raw") is not None:
             orders = detail["raw"]
             if isinstance(orders, str):
                 orders = json.loads(orders)

@@ -393,3 +393,31 @@ A host that completes this stage without a selected QGIS runtime writes `result.
 Continue with the same operation ID, output directory, original inputs and saved browser requests. The programme reopens completed requests and preserves the original frozen domain export and recipient history. With the QGIS runtime selected, it inspects and saves the real native map, renders and reads its features, exports the complete native project, then reopens and renders it in the independent recipient. The final native result uses `status: "COMPLETED"` and retains both domain and native receiving results.
 
 Keep the complete exported project as the receiving artifact. The operation directory also contains browser request/step files and continuation lineage needed to resume that particular walkthrough. Preserve those internal operation files with their existing custody; private connection files remain in the selected execution environment.
+
+## 13. Continue with the complete later source cohort
+
+`parcel-successor-receiving.py` takes a complete later source directory into the same reviewed workspace and operation used by the original walkthrough. It reads that operation's retained identity and actor, takes its existing application lock, and places this edition's continuation under `successors/<manifest-sha256>/`. The first edition's operation, source files, requests, reviews and portfolios stay attached to the project.
+
+Supply the actual complete manifest digest, the original operation directory and the same responsible analyst:
+
+```sh
+python3 -B parcel-successor-receiving.py \
+  --operation-root /absolute/path/to/original-operation \
+  --operation-id ORIGINAL_OPERATION_ID \
+  --source-directory /absolute/path/to/later-source-edition \
+  --expected-manifest-sha256 EXACT_LATER_MANIFEST_SHA256 \
+  --actor "Original responsible analyst" \
+  --browser-config /absolute/path/to/existing-browser.json
+```
+
+The existing browser configuration contains `node`, `playwrightModule` and `chromium` paths. Add `--native-runtime-file` to select the original installed QGIS runtime and its retained authentication/profile environment. The request wait defaults to 1,800 seconds and can be set between 30 and 3,600 seconds with `--operation-timeout`; each original request remains in the journal if its process or carrier is interrupted.
+
+The source is received through the same complete file manifest and resumable upload routes. Both full City CSV families and their selected JSON capture families use the original field names and exact parcel keys. Every active City, County and geometry descriptor retains its original public `sourceUrl`. A `source-metadata` descriptor can omit that field when the source URL was not retained; its exact file, digest, byte count, source ID and capture time remain required. Keep private transfer references with their existing local custody. They are unnecessary in a parcel receiving manifest.
+
+The continuation compares the actual later facts with the active edition frozen at the start of this phase. Use `--previous-edition-id` to select another original retained predecessor explicitly. Only unchanged facts qualify for carrying an existing review. Changed and added records are prepared and reviewed in batches of at most 1,000 keys. The programme uses the existing explicit preparation rules: unique eligible assertions and assessment/geometry records, the City source preference for status and ward, the County reported area basis, and unassigned operational responsibility. Conflicting assertions remain unresolved. The named parcel selected in the original buyer walkthrough is reopened against its actual later City owner assertion and receives a new explicit source decision.
+
+Three separate frozen portfolios preserve County assessed value, municipal/school assessed value, and the published 2012 base-year appraisal. Each retains its own tax year, as-of date, source amount and reported area. The complete later map source is added alongside the earlier retained layers. The desktop and 390-pixel browser reads the new source register, original records, reviewed parcel, frozen portfolio files and successor history.
+
+The original complete export then receives into a separate workspace under that edition's continuation directory. The programme compares its archived state, events, domain requests and analyst requests; verifies every retained project file; and repeats the read-only buyer walkthrough. The result is `successors/<manifest-sha256>/result.json`, with `status: "PARCEL_RECEIVING_COMPLETED"` after domain receiving or `status: "COMPLETED"` after the selected native QGIS inspection, saved map, render, feature readback and independent native receiving. Each stage retains its exact archive and original request IDs.
+
+Resume with the same operation directory and later manifest digest. A further publisher edition uses its own new manifest digest and a new reviewed successor phase. Resource declarations must cover the actual whole later source, indexed projections, review and portfolio files, native outputs, exported archives and independently received copies.

@@ -16,7 +16,7 @@ const actionNames = {
 export function createInvestigationClient(options) {
  const {api,getWorkspace,onChange=()=>{},onNotice=()=>{}}=options;
  const storage=options.storage || globalThis.sessionStorage;
- const contexts=new Map();
+ const contexts=new Map(),refreshes=new Map();
  const key=w=>'upstate-intelligence:'+w;
  const makeId=()=> 'intelligence_'+(options.randomUUID?.() || globalThis.crypto?.randomUUID?.() ||
    Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2)).replaceAll('-','');
@@ -28,11 +28,11 @@ export function createInvestigationClient(options) {
     evidence:null,exported:null,sourceCatalog:null,collection:null,collectionId:saved.collectionId||null,
     sourceSelection:Array.isArray(saved.sourceSelection)?saved.sourceSelection:[],
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
-    nativeTask:null,nativeTaskRead:0,
-    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null});
+    nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
+    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{}});
   }return contexts.get(w);
  };
- const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset}));}
+ const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
   catch{onNotice('Browser recovery storage is unavailable. Keep the original operation ID shown here.');}};
  const changed=c=>{persist(c);if(c.workspace===getWorkspace())onChange(snapshot());};
  const path=(name,w,values={})=>'/api/intelligence/'+name+'?'+new URLSearchParams({workspace:w,...values});
@@ -83,6 +83,64 @@ export function createInvestigationClient(options) {
   if(request===c.nativeTaskRead){c.nativeTask=value;changed(c);}
   return value;
  }
+ async function acceptExperimentSubmission(task,c,submission,hydrate=true){
+  if(task.workspace!==c.workspace || task.action!==submission.body.action ||
+     task.operation_id!==submission.body.operation_id || !originalId(task.id) ||
+     task.id!==submission.taskId || stable(task.payload)!==stable(submission.body.payload))
+   throw Error('The native programme task does not match its original design submission.');
+  submission.taskState=task.state;submission.error=null;
+  if(task.state==='complete'){
+   const id=task.result?.id;
+   if(!originalId(id))throw Error('The completed original task did not return its saved programme ID.');
+   submission.experimentId=id;
+   changed(c);
+   if(hydrate)await reconcileReads(c,[['catalog','Saved investigation catalog',()=>catalog(c.workspace)],
+    ['programme-return','Original programme return',()=>c.sessionId===submission.sessionId&&!submission.selected?selectSubmittedExperiment(c.workspace):null]]);
+  }else if(['failed','interrupted','canceled','cancelled'].includes(task.state)){
+   submission.error=task.error?.message||'The original native task '+task.state+'. Open its retained task to continue.';
+  }
+  changed(c);return task;
+ }
+ async function trackExperimentSubmission(task,sid,w=getWorkspace()){
+  const c=context(w);
+  if(!sid||!originalId(task?.id)||task.workspace!==w||
+     !['experiment.save','experiment.run'].includes(task.action)||
+     typeof task.operation_id!=='string'||!task.payload?.selection)
+   throw Error('The original designer did not return this workspace’s exact native task.');
+  const current=c.experimentSubmission;
+  if(current&&!['complete','failed','interrupted','canceled','cancelled'].includes(current.taskState)&&current.taskId!==task.id)
+   throw Error('The earlier original programme submission is still retained.');
+  const submission={body:{workspace:w,action:task.action,operation_id:task.operation_id,payload:clone(task.payload)},
+   taskId:task.id,taskState:task.state,sessionId:sid,experimentId:null,error:null,selected:false};
+  c.experimentSubmission=submission;changed(c);
+  return acceptExperimentSubmission(task,c,submission);
+ }
+ async function pollExperimentSubmission(w=getWorkspace(),hydrate=true){
+  const c=context(w),submission=c.experimentSubmission;if(!submission)return null;
+  const task=await api('/api/task?'+new URLSearchParams({id:submission.taskId,workspace:w}));
+  if(c.experimentSubmission===submission)return acceptExperimentSubmission(task,c,submission,hydrate);
+  return task;
+ }
+ async function selectSubmittedExperiment(w=getWorkspace(),readProgramme=true){
+  const c=context(w),submission=c.experimentSubmission;
+  if(!submission?.experimentId)throw Error('The original programme is still being prepared.');
+  if(c.sessionId!==submission.sessionId)await session(submission.sessionId,w);
+  if(c.experimentSubmission!==submission||c.sessionId!==submission.sessionId)return null;
+  c.draft.fields||={};Object.assign(c.draft.fields,{
+   actionKind:'ensemble',ensembleMode:'saved',nativeProgramme:submission.experimentId});
+  c.draft.panel='actions';c.draft.selected={kind:'ensemble',id:submission.experimentId};submission.selected=true;
+  if(c.experimentId!==submission.experimentId)c.experiment=null;
+  c.experimentId=submission.experimentId;c.experimentOffset=0;
+  changed(c);
+  if(readProgramme)await experiment(submission.experimentId,0,w);
+  return submission.experimentId;
+ }
+ function clearExperimentSubmission(){
+  const c=context(getWorkspace()),submission=c.experimentSubmission;
+  if(submission&&!['complete','failed','interrupted','canceled','cancelled'].includes(submission.taskState))
+   throw Error('Keep the original programme operation until its status is known.');
+  c.experimentSubmission=null;changed(c);
+ }
  function selectSources(refs,selected=true){
   if(!Array.isArray(refs))throw Error('Choose original source references.');
   const c=context(getWorkspace()),items=new Map(c.sourceSelection.map(ref=>[stable(ref),ref]));
@@ -99,13 +157,46 @@ export function createInvestigationClient(options) {
   if(!c.sourceSelection.length)throw Error('Select original files for this collection.');
   return queue('intelligence.collection.export',{session_id:sid,title:title.trim(),refs:clone(c.sourceSelection)});
  }
- async function refresh(w=getWorkspace()){
-  const c=context(w);c.loading=true;c.error=null;changed(c);
-  try {await catalog(w);await collectionSources(w);if(c.sessionId)await session(c.sessionId,w);if(c.pending?.taskId)await poll(w);if(c.lastResult?.export_id && c.sessionId===c.lastResult.session_id)await exported(c.lastResult.export_id,w,c.sessionId);if(c.collectionId && c.sessionId)await collection(c.collectionId,w,c.sessionId);if(c.experimentId)await experiment(c.experimentId,c.experimentOffset,w);}
-  catch(e){c.error=e.message;changed(c);throw e;}
-  finally{c.loading=false;changed(c);}
+ async function reconcileReads(c,readers){
+  return Promise.all(readers.map(async([key,label,read])=>{
+   try{
+    const value=await read();delete c.readErrors[key];return {key,status:'fulfilled',value};
+   }catch(error){
+    c.readErrors[key]={label,message:error?.message||String(error)};
+    return {key,status:'rejected',reason:error};
+   }finally{
+    c.error=Object.values(c.readErrors).map(row=>row.label+': '+row.message).join('\n')||null;changed(c);
+   }
+  }));
  }
- async function accept(task,c,p){
+ function refresh(w=getWorkspace()){
+  if(refreshes.has(w))return refreshes.get(w);
+  const c=context(w);c.loading=true;c.error=null;c.readErrors={};changed(c);
+  const operation=(async()=>{
+   try{
+    // Catalog, source inventory and retained operation status are independent.
+    await reconcileReads(c,[
+     ['catalog','Saved investigation catalog',()=>catalog(w)],
+     ['sources','Registered source collections',()=>collectionSources(w)],
+     ['operation','Original investigation task',()=>c.pending?.taskId?poll(w,false):null],
+     ['programme-task','Original programme task',()=>c.experimentSubmission&&c.experimentSubmission.taskState!=='complete'?pollExperimentSubmission(w,false):null]
+    ]);
+    const submitted=c.experimentSubmission;
+    if(submitted?.experimentId&&!submitted.selected&&c.sessionId===submitted.sessionId)
+     await reconcileReads(c,[['programme-return','Original programme return',()=>selectSubmittedExperiment(w,false)]]);
+    await reconcileReads(c,[
+     ['session','Retained investigation',()=>c.sessionId?session(c.sessionId,w):null],
+     ['evidence','Retained analysis evidence',()=>c.lastResult?.evidence_id&&c.sessionId===c.lastResult.session_id?evidence(c.lastResult.evidence_id,w,c.sessionId):null],
+     ['export','Retained investigation export',()=>c.lastResult?.export_id&&c.sessionId===c.lastResult.session_id?exported(c.lastResult.export_id,w,c.sessionId):null],
+     ['collection','Retained file collection',()=>c.collectionId&&c.sessionId?collection(c.collectionId,w,c.sessionId):null],
+     ['programme','Original programme results',()=>c.experimentId?experiment(c.experimentId,c.experimentOffset,w):null]
+    ]);
+   }finally{c.loading=false;refreshes.delete(w);changed(c);}
+   return clone(c);
+  })();
+  refreshes.set(w,operation);return operation;
+ }
+ async function accept(task,c,p,hydrate=true){
   if(task.workspace!==c.workspace || task.action!==p.body.action || task.operation_id!==p.body.operation_id ||
       stable(task.payload)!==stable(p.body.payload) || !originalId(task.id))
    throw Error('The returned operation does not match this original workspace request.');
@@ -117,11 +208,13 @@ export function createInvestigationClient(options) {
    }
    if(r.collection_id && c.sessionId===r.session_id)c.collectionId=r.collection_id;
    changed(c);
-   await catalog(c.workspace);
-   if(c.sessionId)await session(c.sessionId,c.workspace);
-   if(r.evidence_id && c.sessionId===r.session_id)await evidence(r.evidence_id,c.workspace,r.session_id);
-   if(r.export_id && c.sessionId===r.session_id)await exported(r.export_id,c.workspace,r.session_id);
-   if(r.collection_id && c.sessionId===r.session_id)await collection(r.collection_id,c.workspace,r.session_id);
+   if(hydrate)await reconcileReads(c,[
+    ['catalog','Saved investigation catalog',()=>catalog(c.workspace)],
+    ['session','Retained investigation',()=>c.sessionId?session(c.sessionId,c.workspace):null],
+    ['evidence','Retained analysis evidence',()=>r.evidence_id&&c.sessionId===r.session_id?evidence(r.evidence_id,c.workspace,r.session_id):null],
+    ['export','Retained investigation export',()=>r.export_id&&c.sessionId===r.session_id?exported(r.export_id,c.workspace,r.session_id):null],
+    ['collection','Retained file collection',()=>r.collection_id&&c.sessionId===r.session_id?collection(r.collection_id,c.workspace,r.session_id):null]
+   ]);
    return task;
   }
   if(['failed','interrupted','canceled','cancelled'].includes(task.state)){
@@ -152,10 +245,10 @@ export function createInvestigationClient(options) {
   if(p.taskId)return poll(c.workspace);
   return send(c,p);
  }
- async function poll(w=getWorkspace()){
+ async function poll(w=getWorkspace(),hydrate=true){
   const c=context(w),p=c.pending;if(!p?.taskId)return null;
   const task=await api('/api/task?'+new URLSearchParams({id:p.taskId,workspace:w}));
-  if(c.pending===p)return accept(task,c,p);
+  if(c.pending===p)return accept(task,c,p,hydrate);
   return task;
  }
  function clearFinished(){
@@ -164,12 +257,15 @@ export function createInvestigationClient(options) {
    throw Error('Keep the current original operation until its status is known.');
   c.pending=null;changed(c);
  }
- return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,clearFinished,
+ return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,clearFinished,
   saveDraft(draft,w=getWorkspace()){const c=context(w);c.draft=clone(draft);persist(c);},
   async acceptState(state){
    const c=context(workspaceId(state));
    if(c.pending?.taskId){const t=state.tasks?.find(x=>x.id===c.pending.taskId);
-    if(t && t.state!==c.pending.taskState)return poll(c.workspace);}
+    if(t && t.state!==c.pending.taskState)await poll(c.workspace);}
+   const submission=c.experimentSubmission;
+   if(submission){const task=state.tasks?.find(x=>x.id===submission.taskId);
+    if(task&&task.state!==submission.taskState)await pollExperimentSubmission(c.workspace);}
   },
   requireSession(){const id=context(getWorkspace()).sessionId;if(!id)throw Error('Create or reopen an investigation first.');return id;}
  };
@@ -180,7 +276,7 @@ const displayNumber=value=>value==null?'—':typeof value==='number'?new Intl.Nu
 const displayTime=value=>{if(!value)return '—';const d=new Date(value);return Number.isNaN(d.valueOf())?String(value):d.toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});};
 export function attachInvestigations(host) {
  const doc=host.document||globalThis.document;
- let root=null,epoch=0,workspace=null,panel='analyze',selected=null,files=[],latest=null,draft={fields:{}},lastSession='',lastCatalog='',lastPending='',lastEvidence='',lastFiles='',lastSources='',lastProgramme='',lastNativeTask='',refreshInFlight=null;
+ let root=null,epoch=0,workspace=null,panel='analyze',selected=null,files=[],latest=null,draft={fields:{}},lastSession='',lastCatalog='',lastPending='',lastEvidence='',lastFiles='',lastSources='',lastProgramme='',lastNativeTask='',lastSubmission='',refreshInFlight=null;
  const nodes={};
  const el=(tag,text,cls)=>{const n=doc.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;return n;};
  const clear=n=>n.replaceChildren();
@@ -358,12 +454,13 @@ export function attachInvestigations(host) {
   const methods=state.catalog?.native_methods||{},actions=state.catalog?.actions||['analyze_collection'];
   selectOptions(nodes.actionKind,actions.map(value=>({value,label:{
    analyze_collection:'Profile a selected original collection',run_job:'Run an existing prepared native job',
-   ensemble:'Run a saved programme or parameter ensemble',calibration:methods.calibration||'Paired calibration'}[value]||value})));
+   ensemble:state.catalog?.native_experiments?'Run a saved native programme':'Run a parameter ensemble',calibration:methods.calibration||'Paired calibration'}[value]||value})));
   const kind=nodes.actionKind.value;
   nodes.collectionFields.hidden=kind!=='analyze_collection';
   const native=!!state.catalog?.native_experiments;
   nodes.ensembleSource.hidden=kind!=='ensemble'||!native;
-  const saved=kind==='ensemble'&&native&&nodes.ensembleMode.value==='saved';
+  const saved=kind==='ensemble'&&native;
+  if(native)selectOptions(nodes.ensembleMode,[{value:'saved',label:'Saved native programme'}],'saved');
   nodes.nativeProgrammeFields.hidden=!saved;
   nodes.jobFields.hidden=!['run_job','ensemble'].includes(kind)||saved;
   nodes.calibrationFields.hidden=kind!=='calibration';
@@ -373,6 +470,25 @@ export function attachInvestigations(host) {
    ...programmes.map(row=>({value:row.id,label:(row.title||row.label||row.id)+' · '+(row.status||'retained')+' · '+displayNumber(row.counts?.cases??row.metadata?.resolved_native_plan?.counts?.cases)+' cases'}))]);
   nodes.method.textContent=kind==='analyze_collection'?'Each selected registered file is analyzed in full.':methods[kind]||'Uses the connected original service.';
   selectOptions(nodes.job,[{value:'',label:'Choose a retained native job'},...(state.catalog?.inventory?.jobs||[]).map(j=>({value:j.id,label:(j.label||j.id)+' · '+(j.status||j.state)}))]);
+ }
+ async function designNativeProgramme(){
+  const owner=workspaceId(host.getState()),sid=client.requireSession(),state=client.snapshot();
+  if(!state.catalog?.native_experiments)throw Error('The original native programme designer is unavailable in this workspace.');
+  if(typeof host.openExtension!=='function')throw Error('Install the maintained extension host for the original programme designer.');
+  const prior=state.experimentSubmission;
+  if(prior&&!['complete','failed','interrupted','canceled','cancelled'].includes(prior.taskState))
+   throw Error('The retained programme task is still active. Open its original task before starting another from this panel.');
+  remember();
+  await host.openExtension('experiments','openForInvestigation',{workspace_key:owner,onSubmitted:async task=>{
+   const generation=epoch;
+   const current=()=>epoch===generation&&workspaceId(host.getState())===owner&&client.snapshot().sessionId===sid;
+   await client.trackExperimentSubmission(task,sid,owner);
+   if(!['complete','failed','interrupted','canceled','cancelled'].includes(task.state))await client.pollExperimentSubmission(owner);
+   if(current()){
+    await host.navigate('investigations');
+    if(root&&workspace===owner&&client.snapshot().sessionId===sid){draft=clone(client.snapshot().draft||{fields:{}});show('actions');}
+   }
+  }});
  }
  async function prepare(){
   const sid=client.requireSession(),kind=nodes.actionKind.value,action={kind};
@@ -384,7 +500,7 @@ export function attachInvestigations(host) {
    Object.assign(action,{observed:fileRef(nodes.observed.value),predicted:fileRef(nodes.predicted.value),time_column:nodes.time.value.trim(),
     observed_column:nodes.observedColumn.value.trim(),predicted_column:nodes.predictedColumn.value.trim(),
     observed_unit:nodes.unit.value.trim(),predicted_unit:nodes.unit.value.trim(),holdout_fraction:Number(nodes.holdout.value)});
-  }else if(kind==='ensemble'&&latest?.catalog?.native_experiments&&nodes.ensembleMode.value==='saved'){
+  }else if(kind==='ensemble'&&latest?.catalog?.native_experiments){
    if(!originalId(nodes.nativeProgramme.value))throw Error('Choose a saved original native programme.');
    action.native_experiment_id=nodes.nativeProgramme.value;
    action.retain_member_rasters=true;
@@ -410,6 +526,28 @@ export function attachInvestigations(host) {
    else if(p._can_continue_submission)article.append(button('Continue original submission',()=>client.queue('intelligence.continue',{plan_id:p.id})));
    if(p.result)article.append(details('Retained action result',p.result));nodes.plans.append(article);
   }
+ }
+ function renderDesignerSubmission(state){
+  const target=nodes.designerSubmission,submission=state.experimentSubmission;clear(target);target.hidden=!submission;
+  if(!submission)return;
+  target.append(el('h3',submission.body.payload.selection.title||'Original programme submission'),
+   el('p',submission.taskState||'Retained','intelligence-status'));
+  target.append(el('p',submission.experimentId?'The original task retained this saved programme.':'The original operator is preparing the selected native programme.','intelligence-muted'));
+  const controls=el('div',null,'intelligence-inline');
+  controls.append(button('Open original task',()=>host.showTask(submission.taskId)),
+   button('Refresh task status',()=>client.pollExperimentSubmission()));
+  if(submission.experimentId)controls.append(button(state.sessionId===submission.sessionId?'Select this programme':'Use in its original investigation',async()=>{
+   await client.selectSubmittedExperiment();draft=clone(client.snapshot().draft||{fields:{}});
+   selected=clone(draft.selected||null);if(latest){renderActionFields(latest);renderResources(latest);}show('actions');
+  }));
+  if(['complete','failed','interrupted','canceled','cancelled'].includes(submission.taskState))
+   controls.append(button('Clear task display',()=>client.clearExperimentSubmission()));
+  target.append(controls);
+  if(submission.error)target.append(el('p',submission.error,'intelligence-notice'));
+  target.append(details('Original design submission and task identity',{
+   task_id:submission.taskId,session_id:submission.sessionId,experiment_id:submission.experimentId,
+   operation_id:submission.body.operation_id,action:submission.body.action,selection:submission.body.payload.selection
+  }));
  }
  function renderProgramme(state){
   const target=nodes.programmeResults;clear(target);target.hidden=!state.experimentId;
@@ -566,6 +704,15 @@ export function attachInvestigations(host) {
   nodes.provider.textContent=state.catalog?.provider_configured?'Configured model: '+state.catalog.provider_model:'Local analysis ready; configure an assistant model on the server to ask questions.';
   if(sstamp!==lastSession){lastSession=sstamp;renderSession(state);renderCollections(state);rebuildFiles(state);}
   const sourceStamp=stable({catalog:state.sourceCatalog,selection:state.sourceSelection});if(sourceStamp!==lastSources){lastSources=sourceStamp;renderSourceChoices(state);}
+  const submissionStamp=stable(state.experimentSubmission);
+  if(submissionStamp!==lastSubmission){
+   lastSubmission=submissionStamp;
+   const submission=state.experimentSubmission;
+   if(submission?.experimentId&&state.sessionId===submission.sessionId&&state.draft?.fields?.nativeProgramme===submission.experimentId){
+    draft=clone(state.draft);selected=clone(draft.selected||null);renderActionFields(state);renderResources(state);
+   }
+   renderDesignerSubmission(state);
+  }
   const programmeStamp=stable({id:state.experimentId,offset:state.experimentOffset,value:state.experiment});
   if(programmeStamp!==lastProgramme){lastProgramme=programmeStamp;renderProgramme(state);}
   const nativeTaskStamp=stable(state.nativeTask);
@@ -631,13 +778,15 @@ export function attachInvestigations(host) {
   nodes.nativeProgrammeFields=el('div',null,'intelligence-form-group');
   nodes.nativeProgrammeFields.append(field('Saved native programme','nativeProgramme','select'),
    el('p','Uses the original retained baseline, scenarios, profile choices and complete case design.','intelligence-muted'),
+   button('Design native programme',designNativeProgramme),
    button('Read programme results',()=>client.experiment(nodes.nativeProgramme.value)),
-   button('Analyze programme in this investigation',()=>inspect({operation:'ensemble',object_id:nodes.nativeProgramme.value})));
+   button('Analyze programme in this investigation',()=>{if(!originalId(nodes.nativeProgramme.value))throw Error('Choose a saved original native programme.');return inspect({operation:'ensemble',object_id:nodes.nativeProgramme.value});}));
   actions.append(nodes.collectionFields,nodes.ensembleSource,nodes.nativeProgrammeFields,nodes.jobFields,nodes.calibrationFields,nodes.ensembleFields);
   const prepareButton=button('Prepare selected action',prepare);prepareButton.dataset.submit='true';actions.append(prepareButton);
+  nodes.designerSubmission=el('section',null,'intelligence-plan');nodes.designerSubmission.hidden=true;
   nodes.plans=el('div');nodes.programmeResults=el('section',null,'intelligence-plan');nodes.programmeResults.hidden=true;
   nodes.nativeTask=el('section',null,'intelligence-plan');nodes.nativeTask.hidden=true;
-  actions.append(nodes.plans,nodes.programmeResults,nodes.nativeTask);
+  actions.append(nodes.designerSubmission,nodes.plans,nodes.programmeResults,nodes.nativeTask);
   const sources=section('sources','Export original scientific files');
   sources.append(el('p','Select source data and native outputs. The collection includes the original file bytes, required companions, scientific inventory and portable catalog.','intelligence-muted'));
   sources.append(field('Collection title','collectionTitle','input',''),field('Find an original file','sourceFilter'));
@@ -658,7 +807,7 @@ export function attachInvestigations(host) {
   main.append(analyze,assistant,actions,sources,history);layout.append(aside,main);desk.append(layout);root.replaceChildren(desk);show(panel);
  }
  async function mount(node,state=host.getState()){
-  detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask='';
+  detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask=lastSubmission='';
   latest=client.snapshot();draft=clone(latest.draft||{fields:{}});panel=draft.panel||'analyze';selected=clone(draft.selected||null);
   build();renderData(latest);await client.refresh(workspace);
  }
@@ -666,6 +815,6 @@ export function attachInvestigations(host) {
   if(!root || workspace!==workspaceId(state))return;
   if(!refreshInFlight){refreshInFlight=client.acceptState(state).catch(failure).finally(()=>refreshInFlight=null);}
  }
- function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask='';for(const key of Object.keys(nodes))delete nodes[key];}
+ function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
  return {mount,update,detach,client,openForDiagnostic};
 }

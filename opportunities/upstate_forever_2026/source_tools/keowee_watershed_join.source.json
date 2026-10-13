@@ -1,8 +1,8 @@
 {
   "schema": "upstate.keowee-watershed-source/v1",
   "operation_id": "ECO13-6A4E-KEOWEE-WATERSHED-JOIN",
-  "revision": "1.0.0",
-  "source_commit": "517353fc3533715dde19a445f15faa88408cd79e",
+  "revision": "1.1.0",
+  "source_commit": "334c35b62d2555cc61a90863a0cf238b800f22a9",
   "files": [
     {
       "path": "model/keowee_profile_adapter.py",
@@ -92,15 +92,21 @@
     },
     {
       "path": "source_tools/install_keowee_watershed_join.py",
-      "bytes": 20188,
-      "sha256": "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf",
-      "previous_sha256": []
+      "bytes": 23158,
+      "sha256": "10797da9d0236c46c9865b6757c7f24da7410e1e257a053b833057a63cb1a512",
+      "previous_sha256": [
+        "b34ef7ac82b9006b6346bfce568d8806bf76cc39a47957112b817fda62a379df",
+        "e5c1794f3b68f019ab933c5727cf86dc4c5dce6563c22d8417f10885b8fd1ebf"
+      ]
     },
     {
       "path": "source_tools/INSTALL_KEOWEE_WATERSHED_JOIN.md",
-      "bytes": 7407,
-      "sha256": "0e8d1e97892fd82f22c3dc67b4cd1045ff8a2baf13c96d8459b60f8470a95595",
-      "previous_sha256": []
+      "bytes": 10731,
+      "sha256": "336491782319b285be89f48636c6890fc18dd5150ce28eb30bd460962c63ed11",
+      "previous_sha256": [
+        "0e8d1e97892fd82f22c3dc67b4cd1045ff8a2baf13c96d8459b60f8470a95595",
+        "be0aa7fcdde36e267dbaee64442bad3579f1824a1afcfa1555c16c5a5eea11e7"
+      ]
     },
     {
       "path": "operator/web/keowee-method-view.mjs",
@@ -132,6 +138,83 @@
       "path": "operator/extensions/keowee-method-view.json",
       "bytes": 181,
       "sha256": "2e5adabaaeeb8dacc71f8b47407af7136fd912d9d23232948ae67aeb25d83234",
+      "previous_sha256": []
+    },
+    {
+      "path": "model/setup_review.py",
+      "bytes": 42817,
+      "sha256": "6b2929e8a2df5d91a34ab1aa85b901e92da5dcec5f52a49eb0c90ae160cfdf60",
+      "previous_sha256": [
+        "0adae0c0b8537269a3abda6477ded9a143156a8cad5b3c1f868c3144f17c6aae",
+        "db27e948b37d44131dfdf7000ed0b8a6f06cf25e8682f90c19258fe8e2c37af0"
+      ]
+    },
+    {
+      "path": "operator/scientific_setup.py",
+      "bytes": 4246,
+      "sha256": "2a781aafec72916a2581dd70859edf4906e94b7d84fee95307885c72c65b85ed",
+      "previous_sha256": [
+        "5d1e977d851930b4b5e1771ab1295625d451743d2461c8f6d93d28faf891de0f"
+      ]
+    },
+    {
+      "path": "source_tools/receive_scientific_setup.py",
+      "bytes": 12284,
+      "sha256": "af1e1d5389b254d7f15154fff06b9228064ce72a87ac329592340f1ebb0376ba",
+      "previous_sha256": [
+        "c31897a47a2737593d529f88d3f16b70fa16b6c8655bdc12eebfcc47bdbef3e3"
+      ]
+    },
+    {
+      "path": "model/SCIENTIFIC_SETUP.md",
+      "bytes": 11551,
+      "sha256": "0a881c0764c60c96cab7e78f324872431ab3206a4633c987024391d3380662bd",
+      "previous_sha256": [
+        "388c02782729db31b3e18f368818500f306f8b09c639f58afb3ffdd7fcb40e00",
+        "4c2727fb54409f83e4a6a7c921f4582a4b99886f3c1d1213292bccddd637a083"
+      ]
+    },
+    {
+      "path": "source/scientific-setup-selection.schema.json",
+      "bytes": 3371,
+      "sha256": "772a82eb0f6c97a394893903f32c19b939124658baa3d3cc4e6d6f8b4d077ba2",
+      "previous_sha256": [
+        "3293d229b10882778dc7e5174a31c08c68dd57e7ba067122f86871368320277a"
+      ]
+    },
+    {
+      "path": "source/scientific-setup-integration-20261013.json",
+      "bytes": 7451,
+      "sha256": "7755119f992a45d1fc0e6a093b83f59a989ced563e06e96aae2f3649249a536a",
+      "previous_sha256": [
+        "5a57213fea09bf31d95db64e19c0657bc49d50902532419a642c64670987f39d",
+        "d09832ed2caf83fde1b9f94a3ceb0bd54b15bad81fb8e13e48341aeb2631500e"
+      ]
+    },
+    {
+      "path": "operator/web/scientific-setup.mjs",
+      "bytes": 29636,
+      "sha256": "230885983022b58ad59a49e3dc111ca2aa45d3d6762774bf323d4e82628d4797",
+      "previous_sha256": [
+        "5b00df41d2144ca3100067624b8b5e99dbd2046f0ae5fc910da49c188502782b"
+      ]
+    },
+    {
+      "path": "operator/web/scientific-setup.css",
+      "bytes": 1510,
+      "sha256": "babe24be4bd18c17401b355c2b4a2eda78220bd14d20c547afc2a524101d096e",
+      "previous_sha256": []
+    },
+    {
+      "path": "operator/extensions/scientific-setup.json",
+      "bytes": 2306,
+      "sha256": "a06d12d5dd66e8e910711a2d369d68f6deb8d0adf90bb157f357ab6eed4f4ace",
+      "previous_sha256": []
+    },
+    {
+      "path": "operator/SCIENTIFIC_SETUP_DESK.md",
+      "bytes": 2654,
+      "sha256": "fa5818dc7cce66b44a2e508de31d115a3699d0c29f03d25b6fbcbd2f1f951330",
       "previous_sha256": []
     }
   ],

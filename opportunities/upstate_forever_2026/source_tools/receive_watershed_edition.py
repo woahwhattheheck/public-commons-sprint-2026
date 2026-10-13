@@ -128,13 +128,33 @@ def _provider(application, workspace):
     return module.WatershedContextActions(host, ReceivingFault), host
 
 
-def _model_input_fingerprint(edition):
-    names = ["full-domain-water-context.json", "scdes-domain217-source-coverage.json"]
-    if (edition / "native-network.json").exists():
-        names.append("native-network.json")
-    rows = [{"id": name, "sha256": _sha(_member(edition, name))} for name in sorted(names)]
+def _model_input_fingerprint(edition, inputs=None):
+    # A completed report retains the two or three files from its own invocation.
+    # Later scientific companions in the same edition do not change that run.
+    if inputs is None:
+        names = ["full-domain-water-context.json", "scdes-domain217-source-coverage.json"]
+        networks = [name for name in ("native-network.json", "native-network.json.gz")
+                    if (edition / name).is_file()]
+        if len(networks) > 1:
+            raise ValueError("Choose one original native network encoding for this receiving edition")
+        names += networks
+        rows = [{"id": name, "sha256": _sha(_member(edition, name))} for name in sorted(names)]
+    else:
+        allowed = {"full-domain-water-context.json", "scdes-domain217-source-coverage.json",
+                   "native-network.json", "native-network.json.gz"}
+        names = [row.get("id") for row in inputs]
+        if (len(names) != len(set(names)) or not set(names) <= allowed
+                or not {"full-domain-water-context.json", "scdes-domain217-source-coverage.json"} <= set(names)
+                or len(names) not in (2, 3)):
+            raise ValueError("The completed report must retain its exact two or three model inputs")
+        rows = []
+        for row in sorted(inputs, key=lambda value: value["id"]):
+            name = row["id"]
+            actual = _sha(_member(edition, name))
+            if actual != row["sha256"]:
+                raise ValueError("The completed report input differs from the imported original: " + name)
+            rows.append({"id": name, "sha256": actual})
     return hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
-
 
 def _source_inventory(workspace, collection_id):
     collection = workspace._get("sources", collection_id)
@@ -166,6 +186,9 @@ def _application_sources(application):
     names = [
         "model/workspace.py", "model/portable.py", "model/watershed_context.py",
         "operator/watershed_context.py", "operator/receive_watershed_context.py",
+        "model/watershed_brief.py", "source_tools/prepare_watershed_context.py",
+        "source_tools/watershed_source_validation.py", "source_tools/watershed_source_entry.py",
+        "source_tools/receive_watershed_context.py",
         "source_tools/receive_watershed_edition.py",
     ]
     return [_file(application / name, name=name) for name in names if (application / name).is_file()]
@@ -280,18 +303,23 @@ def main(argv=None):
         original_archive = args.archive.resolve(strict=True) if args.archive else _member(edition, args.archive_member)
         if original_archive.is_symlink() or not original_archive.is_file() or _sha(original_archive) != args.archive_sha256:
             raise ValueError("The original completed-run ZIP differs from its retained archive identity")
-        receiver = _installed_module(application, "operator/receive_watershed_context.py")
-        result = receiver.adopt(
-            application, workspace.root, original_archive, args.archive_sha256,
-            operation_id=native_operation_id, carrier_file_id=args.carrier_file_id,
-            expected_report_id=expected_id,
-        )
+        receiver = _installed_module(application, "source_tools/receive_watershed_context.py")
+        received_record = receiver.receive_completed(
+            workspace, original_archive, expected_sha256=args.archive_sha256)
+        result = {
+            "schema": "upstate.received-watershed-result/v1",
+            "id": received_record["id"], "state": received_record["state"],
+            "workspace": str(workspace.root),
+            "directory": str(workspace.root / "watershed-context" / received_record["id"]),
+            "archive_sha256": args.archive_sha256, "carrier_file_id": args.carrier_file_id,
+            "native_operation_id": native_operation_id,
+        }
         if result["id"] != expected_id:
             raise ValueError("Receiving changed the completed original result identity")
         report = provider.read(host.key, "report", {"report_id": result["id"]})
         if report["report"]["id"] != expected_id:
             raise ValueError("The retained original model report and operator identity differ")
-        if report["source_fingerprint"] != _model_input_fingerprint(edition):
+        if report["source_fingerprint"] != _model_input_fingerprint(edition, report["source_inputs"]):
             raise ValueError("The received report must retain the maintained loader model-input fingerprint")
         report_files = _download_inventory(report)
         for name, expected in original_receipt["result"]["files"].items():
@@ -316,8 +344,42 @@ def main(argv=None):
         checkpoint("selection_export", export_id=exported["id"], report_id=result["id"],
                    selected_huc12s=selected, files=export_files, downloads=export["_downloads"])
 
-        archive = output / "watershed-workspace.zip"
-        backup_phase = receipt["phases"].get("backup")
+        # Keep the received native result and the current source analysis as
+        # separate saved reports; both belong to this same imported Workspace.
+        current_result = provider.invoke({
+            "id": digest({"operation_id": operation_id, "analyze": collection_id, "selected": selected}),
+            "action": "watershed.context.analyze", "workspace": host.key,
+            "created_at": receipt["started_at"], "payload": {
+                "title": "Upper Savannah current regional source and native network",
+                "selection": {"source_collection_id": collection_id, "source_id": args.source_id},
+                "huc12s": selected,
+            },
+        })
+        current_report = provider.read(host.key, "report", {"report_id": current_result["id"]})
+        if current_report["source_fingerprint"] != _model_input_fingerprint(edition):
+            raise ValueError("The current analysis does not use the imported edition's exact model inputs")
+        current_files = _download_inventory(current_report)
+        current_detail = [provider.read(host.key, "huc", {
+            "report_id": current_result["id"], "huc12": value}) for value in selected]
+        current_exported = provider.invoke({
+            "id": digest({"operation_id": operation_id, "current_export": selected,
+                          "report_id": current_result["id"]}),
+            "action": "watershed.context.export", "workspace": host.key,
+            "created_at": receipt["started_at"], "payload": {
+                "report_id": current_result["id"], "huc12s": selected},
+        })
+        current_export = provider.read(host.key, "export", {"export_id": current_exported["id"]})
+        current_export_files = _download_inventory(current_export)
+        checkpoint("current_source_analysis", report_id=current_result["id"],
+                   source_fingerprint=current_report["source_fingerprint"],
+                   completed_report_id=result["id"], files=current_files,
+                   selected_huc12s=selected, selected_records=current_detail,
+                   source_validation=current_report.get("source_validation"),
+                   export_id=current_exported["id"], export_files=current_export_files,
+                   downloads=current_export["_downloads"])
+
+        archive = output / "watershed-workspace-current-sources.zip"
+        backup_phase = receipt["phases"].get("backup_current_sources")
         if backup_phase:
             actual = _file(archive)
             if actual["bytes"] != backup_phase["archive"]["bytes"] or actual["sha256"] != backup_phase["archive"]["sha256"]:
@@ -325,17 +387,17 @@ def main(argv=None):
         elif archive.exists():
             # An interrupted backup may have finished before the checkpoint.
             # Preserve that file and reopen it through the original restore engine.
-            checkpoint("backup", archive=_file(archive), resumed_existing_archive=True,
+            checkpoint("backup_current_sources", archive=_file(archive), resumed_existing_archive=True,
                        application_sources=_application_sources(application))
         else:
             backup_result = portable.backup(workspace, archive)
-            checkpoint("backup", archive=_file(archive), result=backup_result,
+            checkpoint("backup_current_sources", archive=_file(archive), result=backup_result,
                        application_sources=_application_sources(application))
 
-        destination = output / "reopened"
+        destination = output / "reopened-current-sources"
         if not destination.exists():
             restored = portable.restore(archive, destination)
-            checkpoint("restore", destination=str(destination), result=restored)
+            checkpoint("restore_current_sources", destination=str(destination), result=restored)
         elif not (destination / "workspace/workspace.json").is_file():
             raise ValueError("A previous restore left an incomplete destination; preserve it and select a new output directory")
         reopened = Workspace(destination / "workspace")
@@ -356,7 +418,21 @@ def main(argv=None):
             "report_id": result["id"], "huc12": value}) for value in selected]
         if reopened_detail != detail:
             raise ValueError("The original selected watershed records changed after reopen")
-        source_before = receipt["phases"]["backup"]["application_sources"]
+        reopened_current = reopened_provider.read(reopened_host.key, "report", {
+            "report_id": current_result["id"]})
+        reopened_current_export = reopened_provider.read(reopened_host.key, "export", {
+            "export_id": current_exported["id"]})
+        if _download_inventory(reopened_current) != current_files:
+            raise ValueError("The reopened current source analysis files differ")
+        if _download_inventory(reopened_current_export) != current_export_files:
+            raise ValueError("The reopened current source selection and planning briefs differ")
+        if reopened_current["source_fingerprint"] != current_report["source_fingerprint"]:
+            raise ValueError("The reopened current source analysis identity differs")
+        reopened_current_detail = [reopened_provider.read(reopened_host.key, "huc", {
+            "report_id": current_result["id"], "huc12": value}) for value in selected]
+        if reopened_current_detail != current_detail:
+            raise ValueError("The current selected watershed records changed after reopen")
+        source_before = receipt["phases"]["backup_current_sources"]["application_sources"]
         source_after = _application_sources(restored_application)
         if source_after != source_before:
             raise ValueError("The restored receiving application source differs")
@@ -364,6 +440,8 @@ def main(argv=None):
                    report_id=result["id"], export_id=exported["id"], selected_huc12s=selected,
                    source_count=len(reopened_inventory), original_companions_preserved=True,
                    completed_outputs_preserved=True, selection_preserved=True,
+                   current_analysis_id=current_result["id"],
+                   current_export_id=current_exported["id"], current_analysis_preserved=True,
                    application_sources_preserved=True)
         checkpoint("complete", completed_at=now(), result_path=str(receipt_path),
                    archive=str(archive), received_workspace=str(reopened.root))

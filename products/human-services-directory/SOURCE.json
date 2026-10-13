@@ -109,7 +109,12 @@
     "operatingReturnsNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_returns.py",
     "operatingReturnsOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-returns.mjs",
     "operatingReturnsNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_returns.py",
-    "operatingReturnsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_returns_clients.mjs"
+    "operatingReturnsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_returns_clients.mjs",
+    "correctionsCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-corrections-schema.json",
+    "correctionsNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_corrections.py",
+    "correctionsOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-corrections.mjs",
+    "correctionsNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_corrections.py",
+    "correctionsClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_correction_clients.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
@@ -121,7 +126,9 @@
     "operatingPlanBasisBytes": 4194304,
     "operatingReturnReviewBytes": 134217728,
     "operatingReturnRequestBytes": 201326592,
-    "operatingReturnComparisonBytes": 268435456
+    "operatingReturnComparisonBytes": 268435456,
+    "correctionInputBytes": 33554432,
+    "correctionEdits": 10000
   },
   "guides": {
     "operating": "products/human-services-directory/OPERATING.md",
@@ -132,7 +139,10 @@
     "operatingPlans": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md",
     "conformanceForeignKeys": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEYS.md",
     "conformanceForeignKeyClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_FOREIGN_KEY_CLIENTS.md",
-    "operatingReturns": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_RETURNS.md"
+    "operatingReturns": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_RETURNS.md",
+    "corrections": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_CORRECTIONS.md",
+    "correctionsNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTIONS_OPERATING.md",
+    "correctionsClients": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_CLIENTS.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
@@ -297,5 +307,30 @@
     "clientOperation": "SCF-DIRECTORY-CUSTOMER-RETURN-CLIENTS-450E-20261013",
     "recovery": "Retain completed original review intent, reconcile exact native plan receive or full completed history, then preserve its separate applied receipt. All accepted inputs, original histories and source bindings are replayed during complete receiving.",
     "meaning": "Authored local review and file receiving do not establish external response, acceptance or command execution. Completed native/client results carry actual operation evidence."
+  },
+  "corrections": {
+    "schema": "stellar-forge.directory-corrections-source.v1",
+    "baseline": "d3b28abb64bfcda996cc2ce55f319fdd005ed4c3",
+    "publicBaseline": "de796acc2a80dc4fedaeb31ca518010efe0bf4e2",
+    "productBaseline": "dcf11d76fc48c29bc69af797d032683416b827cf",
+    "collections": [
+      "correctionPlans",
+      "correctionPreviews",
+      "corrections"
+    ],
+    "actions": [
+      "prepare",
+      "preview",
+      "apply",
+      "export"
+    ],
+    "nativeOperation": "SCF-DIRECTORY-CORRECTIONS-450E-20261013",
+    "clientOperation": "SCF-DIRECTORY-CORRECTION-CLIENTS-450E-20261013",
+    "guides": [
+      "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_CORRECTIONS.md",
+      "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTIONS_OPERATING.md",
+      "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CORRECTION_CLIENTS.md"
+    ],
+    "semantics": "Exact original row/resource/member hashes bind ordered lexical JSON or physical CSV edits. Complete original and derived files, candidate edition, comparison and accepted review travel with full editable receiving. Original sources stay immutable; no provider write or availability inference."
   }
 }

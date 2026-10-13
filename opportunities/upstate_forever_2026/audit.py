@@ -34,11 +34,13 @@ def _reject_constant(value):
     raise ValueError('Nonfinite JSON number: ' + value)
 
 
-def _read_json(path: Path) -> dict:
+def _read_json(path: Path, *, maximum=MAX_JSON_BYTES) -> dict:
+    if type(maximum) is not int or maximum <= 0:
+        raise ValueError('The audit JSON byte limit must be a positive integer')
     with path.open('rb') as incoming:
-        body = incoming.read(MAX_JSON_BYTES + 1)
-    if len(body) > MAX_JSON_BYTES:
-        raise ValueError('JSON document exceeds the 1 MiB audit limit')
+        body = incoming.read(maximum + 1)
+    if len(body) > maximum:
+        raise ValueError('JSON document exceeds the selected audit byte limit: ' + str(maximum))
     value = json.loads(body.decode('utf-8'), parse_constant=_reject_constant)
     if not isinstance(value, dict):
         raise ValueError('JSON root must be an object')
@@ -114,7 +116,7 @@ def _retained_grid(data, model, child, add, summary):
         return None
 
 
-def inspect(manifest_path: Path) -> dict:
+def inspect(manifest_path: Path, *, max_manifest_bytes=MAX_JSON_BYTES) -> dict:
     manifest_path = Path(manifest_path)
     findings = []
     summary = {'raster_layers': 0, 'map_files': 0, 'valid_cells': {}, 'resolution_m': None,
@@ -145,7 +147,7 @@ def inspect(manifest_path: Path) -> dict:
 
     try:
         base = manifest_path.resolve().parent
-        data = _read_json(manifest_path)
+        data = _read_json(manifest_path, maximum=max_manifest_bytes)
     except (OSError, ValueError, UnicodeError, RecursionError, RuntimeError) as e:
         return {'status': 'FAIL', 'findings': [{'level': 'FAIL', 'check': 'manifest', 'detail': str(e)}],
                 'summary': summary}

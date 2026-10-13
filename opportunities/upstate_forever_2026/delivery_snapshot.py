@@ -4,18 +4,20 @@ No GIS parsers, directory discovery, source modification or network access.
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
 import stat
+import sys
 
 # Explicit source budgets, independent of scenario count. Callers can select
 # larger actual jobs through the same API/CLI; package metadata never relaxes
 # the verifier's caller-selected policy.
-MAX_REFERENCES = 25_000
-MAX_FILE_BYTES = 16 * 1024 ** 3
-MAX_TOTAL_BYTES = 256 * 1024 ** 3
+MAX_REFERENCES = None
+MAX_FILE_BYTES = None
+MAX_TOTAL_BYTES = None
 MAX_MANIFEST_BYTES = 16 * 1024 ** 2
 MAX_INDEX_BYTES = 64 * 1024 ** 2
 CHUNK_BYTES = 1024 ** 2
@@ -38,8 +40,9 @@ def capture_limits(overrides=None):
             'Unknown package limit: ' + ', '.join(sorted(str(k) for k in set(overrides) - set(DEFAULT_LIMITS))))
     result = {**DEFAULT_LIMITS, **overrides}
     for key, value in result.items():
-        require(type(value) is int and value > 0,
-                key + ' must be a positive integer')
+        require((value is None and key in {'max_references', 'max_file_bytes', 'max_total_bytes'})
+                or (type(value) is int and value > 0),
+                key + ' must be a positive integer, or None for source count/byte budgets')
     return result
 
 
@@ -135,6 +138,28 @@ def _private_file(path: Path):
     return os.fdopen(descriptor, 'wb')
 
 
+def _clone(source, sink):
+    """Try an independent copy-on-write snapshot; stream on unsupported filesystems."""
+    if not sys.platform.startswith('linux'):
+        return False
+    try:
+        import fcntl
+    except ImportError:
+        return False
+    try:
+        fcntl.ioctl(sink.fileno(), 0x40049409, source.fileno())  # Linux FICLONE
+        return True
+    except OSError as error:
+        unsupported = {errno.EXDEV, errno.EINVAL, errno.ENOTTY, errno.ENOSYS,
+                       getattr(errno, 'EOPNOTSUPP', errno.ENOSYS),
+                       getattr(errno, 'ENOTSUP', errno.ENOSYS)}
+        if error.errno not in unsupported:
+            raise
+        sink.seek(0)
+        sink.truncate(0)
+        return False
+
+
 def capture_delivery(manifest_path: Path, out_dir: Path,
                      references: list[dict], expected_manifest_bytes: bytes, *, limits=None) -> dict:
     """Create a private, new-only delivery snapshot; do not finalize a failed capture.
@@ -153,7 +178,8 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
     require(isinstance(expected_manifest_bytes, bytes), 'Expected manifest must be captured bytes')
     raw_manifest = _read_manifest(root, manifest_name, state, limits)
     require(raw_manifest == expected_manifest_bytes, 'Manifest changed since it was parsed')
-    require(isinstance(references, list) and len(references) <= limits['max_references'],
+    require(isinstance(references, list) and (limits['max_references'] is None
+            or len(references) <= limits['max_references']),
             'Declared references exceed max_references=' + str(limits['max_references']))
 
     roles_by_path = {manifest_name: {'delivery-manifest'}}
@@ -190,20 +216,27 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
             missing.append({'roles': sorted(roles), 'path': 'delivery/' + relative,
                             'reason': 'Declared source file is missing'})
             continue
-        require(info.st_size <= limits['max_file_bytes'],
+        require(limits['max_file_bytes'] is None or info.st_size <= limits['max_file_bytes'],
                 f"Declared file exceeds max_file_bytes={limits['max_file_bytes']}: {relative}")
         total += info.st_size
-        require(total <= limits['max_total_bytes'],
+        require(limits['max_total_bytes'] is None or total <= limits['max_total_bytes'],
                 'Declared delivery exceeds max_total_bytes=' + str(limits['max_total_bytes']))
 
     output_path = Path(out_dir).absolute()
     require(not output_path.is_symlink(), 'Output directory cannot be a symlink')
     destination = output_path.resolve()
-    require(not destination.is_relative_to(root), 'Output directory must be outside the source tree')
+    # Only declared inputs are read; an owned child output is safe when it
+    # contains none of those inputs. This supports the native delivery/package
+    # layout without discovering or recursively copying the output itself.
+    require(destination != root and all(not (root / relative).is_relative_to(destination)
+                                       for relative in roles_by_path),
+            'Output directory overlaps a declared delivery input')
     destination.mkdir(mode=0o700, parents=False, exist_ok=False)
     delivery = destination / 'delivery'
     delivery.mkdir(mode=0o700)
     artifacts = []
+    storage = {'declared_bytes': total, 'reflink_bytes': 0, 'streamed_bytes': 0,
+               'reflink_files': 0, 'streamed_files': 0}
     for relative in sorted(roles_by_path):
         info = source_states[relative]
         if info is None:
@@ -214,18 +247,22 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
         copied = 0
         descriptor = _open_regular(root, relative, info)
         with os.fdopen(descriptor, 'rb') as source, _private_file(target) as sink:
+            cloned = _clone(source, sink)
             while True:
                 chunk = source.read(CHUNK_BYTES)
                 if not chunk:
                     break
                 copied += len(chunk)
-                require(copied <= info.st_size and copied <= limits['max_file_bytes'],
-                        f'Source grew during capture: {relative}')
-                sink.write(chunk)
+                require(copied <= info.st_size, f'Source grew during capture: {relative}')
+                if not cloned:
+                    sink.write(chunk)
                 digest.update(chunk)
             require(copied == info.st_size and _signature(os.fstat(source.fileno())) == _signature(info),
                     f'Source changed during capture: {relative}')
         _unchanged(root, relative, info)
+        method = 'reflink' if cloned else 'streamed'
+        storage[method + '_bytes'] += copied
+        storage[method + '_files'] += 1
         artifacts.append({'roles': sorted(roles_by_path[relative]), 'path': 'delivery/' + relative,
                           'bytes': copied, 'sha256': digest.hexdigest()})
 
@@ -237,10 +274,16 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
             _unchanged(root, relative, info)
     require(_read_manifest(root, manifest_name, state, limits) == raw_manifest,
             'Manifest changed during capture')
-    index = {'schema': 'upstate-ec-sdc-2026/package-v1', 'manifestPath': 'delivery/' + manifest_name,
+    manifest_schema = json.loads(raw_manifest.decode('utf-8-sig')).get('schema')
+    study = manifest_schema == 'commons.native-study-delivery/v1'
+    index = {'schema': ('commons.native-study-package/v1' if study
+                        else 'upstate-ec-sdc-2026/package-v1'),
+             'manifestSchema': manifest_schema,
+             'auditProfile': 'original-native-study-grid' if study else 'regional-rfp',
+             'manifestPath': 'delivery/' + manifest_name,
              'artifacts': artifacts, 'missing': missing,
              'captureLimits': limits, 'declaredReferenceCount': len(references),
-             'capturedSourceBytes': total}
+             'capturedSourceBytes': total, 'storage': storage}
     index['packageSha256'] = fingerprint(index)
     return index
 
@@ -248,16 +291,18 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
 def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
     """Check catalogued bytes with caller budgets, never limits trusted from JSON."""
     limits = capture_limits(limits)
-    require(isinstance(index, dict) and index.get('schema') == 'upstate-ec-sdc-2026/package-v1',
+    require(isinstance(index, dict) and index.get('schema') in (
+            'upstate-ec-sdc-2026/package-v1', 'commons.native-study-package/v1'),
             'Unsupported package index')
     require(index.get('packageSha256') == fingerprint(index), 'Package index fingerprint differs')
     artifacts = index.get('artifacts')
     require(isinstance(artifacts, list) and artifacts, 'Package index has no captured artifacts')
-    require(len(artifacts) <= limits['max_references'] + 2,
+    require(limits['max_references'] is None or len(artifacts) <= limits['max_references'] + 2,
             'Captured artifact count exceeds the selected reference budget')
     if 'declaredReferenceCount' in index:
         count = index['declaredReferenceCount']
-        require(type(count) is int and 0 <= count <= limits['max_references'],
+        require(type(count) is int and count >= 0 and
+                (limits['max_references'] is None or count <= limits['max_references']),
                 'Declared reference count exceeds the selected reference budget')
     manifest = relative_path(index.get('manifestPath'))
     root = Path(out_dir).resolve(strict=True)
@@ -270,7 +315,8 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
         seen.add(relative.casefold())
         size = artifact.get('bytes')
         digest = artifact.get('sha256')
-        require(type(size) is int and 0 <= size <= limits['max_file_bytes'] and
+        require(type(size) is int and size >= 0 and
+                (limits['max_file_bytes'] is None or size <= limits['max_file_bytes']) and
                 isinstance(digest, str) and len(digest) == 64 and all(c in '0123456789abcdef' for c in digest),
                 f'Invalid artifact size or digest: {relative}')
         if relative == manifest:
@@ -278,7 +324,7 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
                     'Captured manifest exceeds max_manifest_bytes=' +
                     str(limits['max_manifest_bytes']))
         total += size
-        require(total <= limits['max_total_bytes'],
+        require(limits['max_total_bytes'] is None or total <= limits['max_total_bytes'],
                 'Captured delivery exceeds max_total_bytes=' + str(limits['max_total_bytes']))
         info = _file_state(root, relative)
         require(info is not None and info.st_size == size, f'Captured file missing or size changed: {relative}')

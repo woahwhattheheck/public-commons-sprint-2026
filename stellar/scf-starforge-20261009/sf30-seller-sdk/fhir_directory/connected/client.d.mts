@@ -183,6 +183,75 @@ export type DirectoryOperatingPlanCopyInput=Operating.DirectoryOperatingPlanCopy
 export type DirectoryOperatingPlanCompareInput=Operating.DirectoryOperatingPlanCompareInput;
 export type DirectoryOperatingPlanExportInput=Operating.DirectoryOperatingPlanExportInput;
 export type DirectoryOperatingPlanStepInput=Operating.DirectoryOperatingPlanStepInput;
+
+/** Complete source-native correction input. JSON values remain lexical strings; CSV positions are physical. */
+export type DirectoryCorrectionCollection='correctionPlans'|'correctionPreviews'|'corrections';
+export interface DirectoryCorrectionEditBasis extends DirectoryRecordRef{
+ rowSha256:SHA256;resourceSha256:SHA256;memberSha256:SHA256;reason:string;
+}
+export type DirectoryCorrectionEdit=DirectoryCorrectionEditBasis&(
+ {action:'json-set';pointer:string;valueJson:string}|
+ {action:'json-remove';pointer:string}|
+ {action:'csv-cell';column:number;value:string}|
+ {action:'csv-row';cells:string[]}
+);
+export interface DirectoryCorrectionPrepareInput{
+ label:string;editionId:SHA256;actor:string;note?:string;predecessorId?:SHA256|null;edits:DirectoryCorrectionEdit[];
+}
+export interface DirectoryCorrectionPreviewInput{planId:SHA256}
+export interface DirectoryCorrectionApplyInput{previewId:SHA256;expectedEditionId:SHA256;actor:string;note?:string}
+export interface DirectoryCorrectionExportInput{correctionId:SHA256;actor:string;label?:string;note?:string}
+export interface DirectoryCorrectionFile{sha256:SHA256;bytes:number;role:string}
+export interface DirectoryCorrectedSource{
+ sourceId:SHA256;derivedSourceId:SHA256;originalFile:DirectoryCorrectionFile;
+ derivedFile:DirectoryCorrectionFile;indexFile:DirectoryCorrectionFile;
+ changedMembers:Array<{name:string;originalFile:DirectoryCorrectionFile;derivedFile:DirectoryCorrectionFile;
+ ranges:Array<{start:number;end:number;originalSha256:SHA256}>}>;
+}
+export interface DirectoryCorrectionPlan extends DirectoryCorrectionPrepareInput{
+ schema:'stellar-forge.directory-correction-plan.v1';id:SHA256;createdAt:string;
+ predecessorId:SHA256|null;note:string;targets:Json;
+ files:{input:DirectoryCorrectionFile};summary:{edits:number;rows:number;sources:number};
+}
+export interface DirectoryCorrectionPreview{
+ schema:'stellar-forge.directory-correction-preview.v1';id:SHA256;createdAt:string;
+ planId:SHA256;editionId:SHA256;candidateEditionId:SHA256;comparisonId:SHA256;
+ sources:DirectoryCorrectedSource[];files:{changes:DirectoryCorrectionFile;review:DirectoryCorrectionFile};summary:JsonObject;
+}
+export interface DirectoryCorrectionAccepted{
+ schema:'stellar-forge.directory-correction.v1';id:SHA256;createdAt:string;stage:'accepted';
+ planId:SHA256;previewId:SHA256;editionId:SHA256;beforeEditionId:SHA256;
+ expectedEditionId:SHA256;comparisonId:SHA256;sources:DirectoryCorrectedSource[];
+ actor:string;note:string;files:{changes:DirectoryCorrectionFile;review:DirectoryCorrectionFile};summary:JsonObject;
+}
+export type DirectoryCorrectionRecord=DirectoryCorrectionPlan|DirectoryCorrectionPreview|DirectoryCorrectionAccepted;
+export interface DirectoryCorrectionChange{
+ ordinal:number;edit:DirectoryCorrectionEdit;originalRow:JsonObject;memberName:string;rootRecordId:SHA256;
+ before:{present:boolean;valueJson?:string};after:{present:boolean;valueJson?:string};
+ [key:string]:unknown;
+}
+export interface DirectoryCorrectionPage{
+ kind:DirectoryCorrectionCollection;recordId:SHA256;rows:Array<DirectoryCorrectionChange|{ordinal:number;edit:DirectoryCorrectionEdit}>;
+ total:number;offset:number;limit:number;nextOffset:number|null;bytes:number;byteBudget:4194304;
+}
+export interface DirectoryCorrectionExport{
+ id:SHA256;kind:'correction';recordId:SHA256;name:string;contentType:string;
+ file:DirectoryCorrectionFile;actor:string;label:string;createdAt:string;[key:string]:unknown;
+}
+export interface DirectoryCorrectionArguments{
+ directory_correction_prepare:{workspace:WorkspaceAlias;correction_prepare:DirectoryCorrectionPrepareInput};
+ directory_correction_preview:{workspace:WorkspaceAlias;correction_preview:DirectoryCorrectionPreviewInput};
+ directory_correction_apply:{workspace:WorkspaceAlias;correction_apply:DirectoryCorrectionApplyInput};
+ directory_correction_export:{workspace:WorkspaceAlias;correction_export:DirectoryCorrectionExportInput};
+ directory_correction_rows:{workspace:WorkspaceAlias;collection:DirectoryCorrectionCollection;recordId:SHA256;offset?:number;limit?:number};
+ directory_correction_file:{workspace:WorkspaceAlias;collection:DirectoryCorrectionCollection;recordId:SHA256;fileKind:'input'|'changes'|'review'};
+}
+export interface DirectoryCorrectionResultValues{
+ directory_correction_prepare:DirectoryCorrectionPlan;directory_correction_preview:DirectoryCorrectionPreview;
+ directory_correction_apply:DirectoryCorrectionAccepted;directory_correction_export:DirectoryCorrectionExport;
+ directory_correction_rows:DirectoryCorrectionPage;
+}
+
 export interface DirectoryOperatingReturnArguments {
  directory_operating_return_prepare:{workspace:WorkspaceAlias;operating_return_prepare:Returned.DirectoryOperatingReturnPrepareInput};
  directory_operating_return_revise:{workspace:WorkspaceAlias;operating_return_revise:Returned.DirectoryOperatingReturnReviseInput};
@@ -239,11 +308,11 @@ export interface DirectoryOperatingResultValues {
  directory_operating_basis:Operating.DirectoryOperatingBasis;
 }
 
-export type DirectoryCollection='operatingPlanReturns'|'operatingPlans'|DirectoryConformanceCollection|"connections"|"discoveries"|"requests"|"importProfiles"|"sources"|"editions"|"comparisons"|"operations"|"mappings"|"mappingPreviews"|"sourceConversions"|"selections"|"referralJoins"|"handoffs"|"exports"|"receivingReviews"|"receives";
+export type DirectoryCollection=DirectoryCorrectionCollection|'operatingPlanReturns'|'operatingPlans'|DirectoryConformanceCollection|"connections"|"discoveries"|"requests"|"importProfiles"|"sources"|"editions"|"comparisons"|"operations"|"mappings"|"mappingPreviews"|"sourceConversions"|"selections"|"referralJoins"|"handoffs"|"exports"|"receivingReviews"|"receives";
 export type DirectoryState={schema:'stellar-forge.human-services-directory.v1';workspaceId:UUID}&
  Partial<Record<DirectoryCollection,Json[]>>;
 export type NativeState=Gravity.NativeState&{directory:DirectoryState};
-export interface DirectoryAddedArguments extends DirectoryConformanceArguments,DirectoryOperatingArguments,DirectoryOperatingReturnArguments{
+export interface DirectoryAddedArguments extends DirectoryConformanceArguments,DirectoryOperatingArguments,DirectoryOperatingReturnArguments,DirectoryCorrectionArguments{
  directory_link_targets:{workspace:WorkspaceAlias;editionId:SHA256;sourceId:SHA256;linkId:SHA256}&Pick<DirectorySourcePageInput,'offset'|'limit'>;
  directory_index_file:{workspace:WorkspaceAlias;collection:'sources'|'editions'|'comparisons';recordId:SHA256};
  directory_source_record_file:{workspace:WorkspaceAlias}&DirectoryRecordRef;
@@ -290,7 +359,7 @@ export interface DirectoryAddedArguments extends DirectoryConformanceArguments,D
  directory_workspace_import:{workspace:WorkspaceAlias;input:string;expectedSha256?:SHA256};
  directory_handoff_import:{workspace:WorkspaceAlias;input:string;expectedSha256?:SHA256};
 }
-export type DirectoryNativeBodyAction="directory_operating_return_prepare"|"directory_operating_return_revise"|"directory_operating_return_complete"|"directory_operating_return_apply"|"directory_operating_return_receive"|"directory_operating_return_export"|"directory_operating_plan_step"|"directory_operating_plan_preview"|"directory_operating_plan_create"|"directory_operating_plan_save"|"directory_operating_plan_receive"|"directory_operating_plan_copy"|"directory_operating_plan_compare"|"directory_operating_plan_export"|"directory_conformance_plan"|"directory_conformance_assess"|"directory_conformance_review"|"directory_conformance_compare"|"directory_connection_save"|"directory_discover"|"directory_import_profile_save"|"directory_request_save"|"directory_acquire"|"directory_edition_save"|"directory_compare"|"directory_mapping_save"|"directory_mapping_preview"|"directory_mapping_apply"|"directory_selection_save"|"directory_referral_join"|"directory_handoff_prepare"|"directory_receiving_save"|"directory_export_prepare";
+export type DirectoryNativeBodyAction="directory_operating_return_prepare"|"directory_operating_return_revise"|"directory_operating_return_complete"|"directory_operating_return_apply"|"directory_operating_return_receive"|"directory_operating_return_export"|"directory_operating_plan_step"|"directory_operating_plan_preview"|"directory_operating_plan_create"|"directory_operating_plan_save"|"directory_operating_plan_receive"|"directory_operating_plan_copy"|"directory_operating_plan_compare"|"directory_operating_plan_export"|"directory_conformance_plan"|"directory_conformance_assess"|"directory_conformance_review"|"directory_conformance_compare"|"directory_connection_save"|"directory_discover"|"directory_import_profile_save"|"directory_request_save"|"directory_acquire"|"directory_edition_save"|"directory_compare"|"directory_mapping_save"|"directory_mapping_preview"|"directory_mapping_apply"|"directory_selection_save"|"directory_referral_join"|"directory_handoff_prepare"|"directory_receiving_save"|"directory_export_prepare"|"directory_correction_prepare"|"directory_correction_preview"|"directory_correction_apply"|"directory_correction_export";
 type OriginalReceive=Gravity.GravityReferralActionArguments['receive_export'];
 export type HumanServicesDirectoryActionArguments=
  Omit<Gravity.GravityReferralActionArguments,'input_apply'|'receive_export'>&DirectoryAddedArguments&{
@@ -304,7 +373,7 @@ type InheritedResult<T>=T extends Gravity.RetainedResult<infer V>?RetainedResult
 export type HumanServicesDirectoryActionResults=Omit<{
  [A in keyof Gravity.GravityReferralActionResults]:InheritedResult<Gravity.GravityReferralActionResults[A]>
 },'state'>&{state:RetainedResult<NativeState>}&{
- [A in keyof DirectoryAddedArguments]:RetainedResult<A extends keyof DirectoryOperatingReturnResultValues?DirectoryOperatingReturnResultValues[A]:A extends keyof DirectoryOperatingResultValues?DirectoryOperatingResultValues[A]:A extends keyof DirectoryConformanceResultValues?DirectoryConformanceResultValues[A]:A extends 'directory_state'?NativeState:Json>
+ [A in keyof DirectoryAddedArguments]:RetainedResult<A extends keyof DirectoryCorrectionResultValues?DirectoryCorrectionResultValues[A]:A extends keyof DirectoryOperatingReturnResultValues?DirectoryOperatingReturnResultValues[A]:A extends keyof DirectoryOperatingResultValues?DirectoryOperatingResultValues[A]:A extends keyof DirectoryConformanceResultValues?DirectoryConformanceResultValues[A]:A extends 'directory_state'?NativeState:Json>
 };
 export type HumanServicesDirectoryAction=keyof HumanServicesDirectoryActionArguments;
 type Camel<S extends string>=S extends `${infer A}_${infer B}`?`${A}${Capitalize<Camel<B>>}`:S;
@@ -436,3 +505,28 @@ export function downloadHumanServicesDirectoryOperatingReturn(options:
  }):Promise<{prepared:Returned.DirectoryOperatingReturnExport;prepareResult:RetainedResult;result:RetainedResult;receipt:DownloadReceipt;payload:string}>;
 
 export type * from '../directory_operating_return.mjs';
+
+export function changeHumanServicesDirectoryCorrection(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;requestOptions?:RequestOptions;
+}&(
+ {action:'prepare';input:DirectoryCorrectionPrepareInput}|
+ {action:'preview';input:DirectoryCorrectionPreviewInput}|
+ {action:'apply';input:DirectoryCorrectionApplyInput}
+)):Promise<{result:RetainedResult<DirectoryCorrectionRecord>;record:DirectoryCorrectionRecord}>;
+export function readHumanServicesDirectoryCorrection(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;collection:DirectoryCorrectionCollection;
+ recordId:SHA256;requestOptions?:RequestOptions
+}):Promise<{result:RetainedResult<DirectoryCorrectionRecord>;record:DirectoryCorrectionRecord}>;
+export function iterateHumanServicesDirectoryCorrection(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;collection:DirectoryCorrectionCollection;
+ recordId:SHA256;limit?:number;requestOptions?:RequestOptions
+}):AsyncGenerator<{result:RetainedResult<DirectoryCorrectionPage>;page:DirectoryCorrectionPage}>;
+export function downloadHumanServicesDirectoryCorrectionFile(options:Omit<DownloadOptions,'exportId'>&{
+ client:HumanServicesDirectoryClient;collection:DirectoryCorrectionCollection;recordId:SHA256;
+ fileKind:'input'|'changes'|'review';requestOptions?:RequestOptions
+}):Promise<{record:DirectoryCorrectionRecord;recordResult:RetainedResult<DirectoryCorrectionRecord>;
+ result:RetainedResult;receipt:DownloadReceipt;payload:string}>;
+export function downloadHumanServicesDirectoryCorrection(options:Omit<DownloadOptions,'exportId'>&{
+ client:HumanServicesDirectoryClient;input:DirectoryCorrectionExportInput;requestOptions?:RequestOptions
+}):Promise<{prepared:DirectoryCorrectionExport;prepareResult:RetainedResult<DirectoryCorrectionExport>;
+ result:RetainedResult;receipt:DownloadReceipt;payload:string}>;

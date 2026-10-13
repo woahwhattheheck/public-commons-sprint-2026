@@ -1,0 +1,1177 @@
+{
+  "schema": "upstate.observed-calibration-context/v1",
+  "reference_year": 2023,
+  "reference_rule": "Median annual mean of other fully observed years at the same original gauge; target year excluded",
+  "units": {
+    "flow": "ft3/s",
+    "runoff": "mm",
+    "volume_fraction": "dimensionless"
+  },
+  "station_context": [
+    {
+      "site": "02176930",
+      "site_name": "CHATTOOGA RIVER AT BURRELLS FORD, NR PINE MTN, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 110.87808219178082,
+      "complete_year_runoff_mm": 818.6203744668802,
+      "reference_median_annual_mean_cfs": 187.14234972677596,
+      "mean_ratio_to_other_complete_years": 0.592479908228472,
+      "ascending_mean_rank": 1,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 3,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02177000",
+      "site_name": "CHATTOOGA RIVER NEAR CLAYTON, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 437.027397260274,
+      "complete_year_runoff_mm": 727.9340639597556,
+      "reference_median_annual_mean_cfs": 635.0493150684931,
+      "mean_ratio_to_other_complete_years": 0.6881786766640926,
+      "ascending_mean_rank": 1,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 2,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 9,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02178400",
+      "site_name": "TALLULAH RIVER NEAR CLAYTON, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 142.90465753424658,
+      "complete_year_runoff_mm": 843.6984688101437,
+      "reference_median_annual_mean_cfs": 195.36821917808217,
+      "mean_ratio_to_other_complete_years": 0.7314631731580971,
+      "ascending_mean_rank": 1,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 13,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 5,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 4,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02180400",
+      "site_name": "TIGER CREEK NEAR LAKEMONT, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 5,
+      "observed_mean_cfs": 45.595068493150684,
+      "complete_year_runoff_mm": 655.0287396694214,
+      "reference_median_annual_mean_cfs": 59.15131072685081,
+      "mean_ratio_to_other_complete_years": 0.7708209325013912,
+      "ascending_mean_rank": 1,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 6,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02181350",
+      "site_name": "TALLULAH R AT TERRORA PWRHSE, NR TALLULAH FALLS,GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 81.55945205479452,
+      "complete_year_runoff_mm": 155.36366193324508,
+      "reference_median_annual_mean_cfs": 142.2830601092896,
+      "mean_ratio_to_other_complete_years": 0.5732196931394894,
+      "ascending_mean_rank": 2,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 4,
+          "revised_days": 32
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 1
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02181580",
+      "site_name": "TALLULAH RIVER AB POWERHOUSE, NR TALLULAH FALLS,GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 5,
+      "observed_mean_cfs": 61.6305205479452,
+      "complete_year_runoff_mm": 115.23612439719616,
+      "reference_median_annual_mean_cfs": 152.2686454824463,
+      "mean_ratio_to_other_complete_years": 0.4047485964866617,
+      "ascending_mean_rank": 2,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 6,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 3,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 9,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 344,
+          "provisional_days": 21,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02185010",
+      "site_name": "EASTATOEE CRK ON CLEO CHAPMAN HWY NEAR SUNSET, SC",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 5,
+      "observed_mean_cfs": 49.88767123287671,
+      "complete_year_runoff_mm": 792.6605095783981,
+      "reference_median_annual_mean_cfs": 62.04328767123288,
+      "mean_ratio_to_other_complete_years": 0.8040784604650751,
+      "ascending_mean_rank": 1,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 50,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 337,
+          "provisional_days": 28,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02186000",
+      "site_name": "TWELVEMILE CREEK NEAR LIBERTY, SC",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 148.5221917808219,
+      "complete_year_runoff_mm": 483.10241540620615,
+      "reference_median_annual_mean_cfs": 196.3254098360656,
+      "mean_ratio_to_other_complete_years": 0.7565102851680787,
+      "ascending_mean_rank": 3,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 3,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 336,
+          "provisional_days": 29,
+          "estimated_days": 6,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02186645",
+      "site_name": "CONEROSS CK NR SENECA, SC",
+      "year": 2023,
+      "valid_days": 238,
+      "expected_days": 365,
+      "complete_year": false,
+      "complete_reference_years": [
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 2,
+      "observed_mean_cfs": 74.3344537815126,
+      "complete_year_runoff_mm": null,
+      "reference_median_annual_mean_cfs": 101.33628340444643,
+      "mean_ratio_to_other_complete_years": null,
+      "ascending_mean_rank": null,
+      "approved_days": 238,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 336,
+          "provisional_days": 29,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02186702",
+      "site_name": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 68.42054794520548,
+      "complete_year_runoff_mm": 485.40472910927457,
+      "reference_median_annual_mean_cfs": 67.39780821917809,
+      "mean_ratio_to_other_complete_years": 1.0151746733766391,
+      "ascending_mean_rank": 4,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 336,
+          "provisional_days": 29,
+          "estimated_days": 2,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02187910",
+      "site_name": "ROCKY RIVER NR STARR, SC",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024"
+      ],
+      "complete_year_count": 5,
+      "observed_mean_cfs": 130.04082191780822,
+      "complete_year_runoff_mm": 403.9340384185839,
+      "reference_median_annual_mean_cfs": 142.0157184295232,
+      "mean_ratio_to_other_complete_years": 0.9156790766251861,
+      "ascending_mean_rank": 3,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 11,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 14,
+          "revised_days": 48
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 5,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 4,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 99,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02188600",
+      "site_name": "BEAVERDAM CREEK ABOVE ELBERTON, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 88.81506849315069,
+      "complete_year_runoff_mm": 425.3122417355372,
+      "reference_median_annual_mean_cfs": 95.0396174863388,
+      "mean_ratio_to_other_complete_years": 0.9345057444693227,
+      "ascending_mean_rank": 3,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 18,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 9,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 43,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 30,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 19,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02191227",
+      "site_name": "GROVE CREEK AT US 441 AND GA 15 NEAR COMMERCE, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 73.4041095890411,
+      "complete_year_runoff_mm": 419.0223236276066,
+      "reference_median_annual_mean_cfs": 81.3413698630137,
+      "mean_ratio_to_other_complete_years": 0.9024203761586549,
+      "ascending_mean_rank": 2,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 1,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 5,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 3,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 1,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02191300",
+      "site_name": "BROAD RIVER ABOVE CARLTON, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 854.3561643835617,
+      "complete_year_runoff_mm": 387.5958242714224,
+      "reference_median_annual_mean_cfs": 1003.9289617486339,
+      "mean_ratio_to_other_complete_years": 0.8510125685541059,
+      "ascending_mean_rank": 3,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 2,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02192000",
+      "site_name": "BROAD RIVER NEAR BELL, GA",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 1619.613698630137,
+      "complete_year_runoff_mm": 393.25732568967527,
+      "reference_median_annual_mean_cfs": 1721.931693989071,
+      "mean_ratio_to_other_complete_years": 0.9405795272157971,
+      "ascending_mean_rank": 3,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 26,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    },
+    {
+      "site": "02192500",
+      "site_name": "LITTLE RIVER NEAR MT. CARMEL, SC",
+      "year": 2023,
+      "valid_days": 365,
+      "expected_days": 365,
+      "complete_year": true,
+      "complete_reference_years": [
+        "2020",
+        "2021",
+        "2022",
+        "2024",
+        "2025"
+      ],
+      "complete_year_count": 6,
+      "observed_mean_cfs": 178.36520547945207,
+      "complete_year_runoff_mm": 283.40279506417335,
+      "reference_median_annual_mean_cfs": 199.44707650273224,
+      "mean_ratio_to_other_complete_years": 0.8942984204484372,
+      "ascending_mean_rank": 2,
+      "approved_days": 365,
+      "provisional_days": 0,
+      "estimated_days": 0,
+      "revised_days": 0,
+      "reference_quality": [
+        {
+          "year": "2020",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2021",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2022",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2024",
+          "approved_days": 366,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        },
+        {
+          "year": "2025",
+          "approved_days": 365,
+          "provisional_days": 0,
+          "estimated_days": 0,
+          "revised_days": 0
+        }
+      ]
+    }
+  ],
+  "sampling_context": {
+    "gauge_id": "USGS-02186702",
+    "year": 2023,
+    "annual_p95_daily_mean_cfs": 134.80000000000007,
+    "annual_mean_cfs": 68.42054794520548,
+    "annual": {
+      "valid_days": 365,
+      "days_at_or_above_annual_p95": 19,
+      "fraction_of_observed_volume_at_or_above_annual_p95": 0.25350871924239693,
+      "dates_at_or_above_annual_p95": [
+        "2023-01-04",
+        "2023-01-05",
+        "2023-01-06",
+        "2023-01-13",
+        "2023-01-25",
+        "2023-01-26",
+        "2023-02-12",
+        "2023-03-27",
+        "2023-04-08",
+        "2023-04-09",
+        "2023-04-27",
+        "2023-04-28",
+        "2023-04-29",
+        "2023-04-30",
+        "2023-06-12",
+        "2023-06-21",
+        "2023-08-03",
+        "2023-12-26",
+        "2023-12-27"
+      ]
+    },
+    "study_window": {
+      "start": "2023-04-05",
+      "end": "2023-10-17",
+      "valid_days": 196,
+      "days_at_or_above_annual_p95": 9,
+      "fraction_of_observed_volume_at_or_above_annual_p95": 0.24062904093745732,
+      "dates_at_or_above_annual_p95": [
+        "2023-04-08",
+        "2023-04-09",
+        "2023-04-27",
+        "2023-04-28",
+        "2023-04-29",
+        "2023-04-30",
+        "2023-06-12",
+        "2023-06-21",
+        "2023-08-03"
+      ]
+    },
+    "sampled_unique_dates": 16,
+    "sampled_dates_at_or_above_annual_p95": 0,
+    "sampled_mean_daily_flow_cfs": 47.825,
+    "sampled_median_daily_flow_cfs": 43.45,
+    "sampled_min_daily_flow_cfs": 21.1,
+    "sampled_max_daily_flow_cfs": 96.2,
+    "prior_three_day_mean_at_or_above_annual_p95": [
+      "2023-05-02",
+      "2023-06-14"
+    ],
+    "prior_seven_day_mean_at_or_above_annual_p95": [
+      "2023-05-02"
+    ],
+    "source_dates": [
+      {
+        "date": "2023-04-05",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 94,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-04-18",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 107,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-05-02",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 121,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-05-16",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 135,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-05-31",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 150,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-06-14",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 164,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-06-27",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 177,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-07-11",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 191,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-07-25",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 205,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-08-08",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 219,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-08-22",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 233,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-08-24",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 235,
+        "activity_count": 2,
+        "chlorophyll_sites": "",
+        "microcystin_sites": "SV-839;SV-840"
+      },
+      {
+        "date": "2023-09-05",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 247,
+        "activity_count": 3,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": ""
+      },
+      {
+        "date": "2023-09-19",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 261,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-10-03",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 275,
+        "activity_count": 6,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839;SV-840"
+      },
+      {
+        "date": "2023-10-17",
+        "flow_source_id": "usgs_flow_02186702_2023_2023",
+        "values_index": 0,
+        "record_index": 289,
+        "activity_count": 5,
+        "chlorophyll_sites": "SV-838;SV-839;SV-840",
+        "microcystin_sites": "SV-838;SV-839"
+      }
+    ]
+  },
+  "input_sources": [
+    {
+      "role": "annual",
+      "path": "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv",
+      "bytes": 29200,
+      "sha256": "79dd0fbc02203ec2994b971613376147fd02fd6905e3cf8f77a0559923d5b9bf"
+    },
+    {
+      "role": "daily",
+      "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+      "bytes": 2273280,
+      "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+    },
+    {
+      "role": "dates",
+      "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+      "bytes": 27050,
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+    }
+  ]
+}

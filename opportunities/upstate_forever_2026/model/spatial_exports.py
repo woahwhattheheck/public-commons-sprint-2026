@@ -445,7 +445,10 @@ class SpatialExports:
                 "<h2>Map pack files</h2><ul>" + links + "</ul>"
                 "<h2>Original sources</h2><table><tr><th>Source</th><th>SHA256</th><th>Native CRS</th></tr>" +
                 sources + "</table><h2>Saved notes</h2><pre>" + esc(review.get("notes", "")) +
-                "</pre><h2>Rendered selection</h2><details><summary>View, scales, overlays and print dimensions</summary><pre>" +
+                "</pre>" + ("<h2>Atlas review finding</h2><pre>" +
+                esc(json.dumps(review["atlas_review"], ensure_ascii=False, sort_keys=True, indent=2)) + "</pre>"
+                if review.get("atlas_review") else "") +
+                "<h2>Rendered selection</h2><details><summary>View, scales, overlays and print dimensions</summary><pre>" +
                 esc(json.dumps(summary, ensure_ascii=False, sort_keys=True, indent=2)) +
                 "</pre></details><p class=\"meta\">Project <code>" + esc(record["project_id"]) +
                 "</code><br>Review <code>" + esc(review["id"]) + "</code><br>Export <code>" +

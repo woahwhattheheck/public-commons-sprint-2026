@@ -147,6 +147,8 @@ When the original task is retried, the provider checks its retained operation id
 
 Portable exports use the original operator's outputs directory and verified download tickets. This keeps generated ZIPs outside the scientific Workspace while the underlying saved comparison records remain available for subsequent export or native project backup.
 
+After receiving a complete project on another computer, its historical comparison export task opens the retained report and its original report files. The task explains how to create a fresh ZIP using Open comparison → Export editable comparison when the sending computer's temporary export is absent. Receiving preserves the original task result and report identity. If an interrupted imported task already produced its complete retained comparison before transfer, Resume original selection reopens that original edition instead of receiving the native snapshot again. This reuse requires the complete original request and transfer history to match.
+
 ## Cross-desk source contract
 
 The maintained operator/web/extension_host.mjs exposes openExtension and verifies the selected original Workspace while loading the registered controller. The reviewed host source is 16,710 bytes, SHA256 f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf. The Economic desk exports openReport({report_id,zone_id}); model.decision_analysis.inspect_scenario_report reads and verifies its original upstate.scenario-decisions/v1 source report. This desk uses those existing public module interfaces.

@@ -1,0 +1,656 @@
+{
+ "displayFieldName": "SiteName",
+ "fieldAliases": {
+  "OBJECTID": "OBJECTID",
+  "SiteName": "SiteName",
+  "PrmtPrmturl": "PrmtPrmturl",
+  "PrmtRefProgramAreaDescr": "PrmtRefProgramAreaDescr",
+  "PrmtPrmtNum": "PrmtPrmtNum",
+  "PrmtPrmtVersn": "PrmtPrmtVersn",
+  "PrmtPrmtRvsn": "PrmtPrmtRvsn",
+  "PrmtPrmtTypeDescr": "PrmtPrmtTypeDescr",
+  "PrmtRefPrmtCatgDescr": "PrmtRefPrmtCatgDescr",
+  "PrmtRefPrmtStatCatgDescr": "PrmtRefPrmtStatCatgDescr",
+  "PrmtRefPrmtStatDescr": "PrmtRefPrmtStatDescr",
+  "PrmtRefGnrlPrmtCatgCode": "PrmtRefGnrlPrmtCatgCode",
+  "PrmtIssueDate": "PrmtIssueDate",
+  "PrmtEfctvDate": "PrmtEfctvDate",
+  "PrmtExprDate": "PrmtExprDate",
+  "PrmtTermDate": "PrmtTermDate",
+  "PrmtAppDueDate": "PrmtAppDueDate",
+  "PrmtCmplMgrName": "PrmtCmplMgrName",
+  "PrmtCmplMgrWrkgrp": "PrmtCmplMgrWrkgrp",
+  "PrmtAgncyContctName": "PrmtAgncyContctName",
+  "PrmtAgncyContctWrkgrp": "PrmtAgncyContctWrkgrp",
+  "PrmtGnrlPrmtNum": "PrmtGnrlPrmtNum",
+  "PrmtAddr": "PrmtAddr",
+  "PrmtPrmtCmnts": "PrmtPrmtCmnts",
+  "PrmtAddrStreet": "PrmtAddrStreet",
+  "PrmtAddrLine2": "PrmtAddrLine2",
+  "PrmtAddrCity": "PrmtAddrCity",
+  "PrmtAddrState": "PrmtAddrState",
+  "PrmtAddrPostalCode": "PrmtAddrPostalCode",
+  "PrmtAddrCountry": "PrmtAddrCountry",
+  "PrmtPrmt": "PrmtPrmt",
+  "PrmtCompanyName": "PrmtCompanyName",
+  "PrmtEmail": "PrmtEmail",
+  "PrmtPhone": "PrmtPhone",
+  "PrmtPhoneExt": "PrmtPhoneExt",
+  "PrmtStatChngDate": "PrmtStatChngDate",
+  "PrmtLgcyId": "PrmtLgcyId",
+  "PrmtFeeTypes": "PrmtFeeTypes",
+  "PrmtFeatrFeatrIdTxt": "PrmtFeatrFeatrIdTxt",
+  "PrmtFeatrRcvgWaterName": "PrmtFeatrRcvgWaterName",
+  "PrmtFeatrConveyanceDescr": "PrmtFeatrConveyanceDescr",
+  "PrmtFeatrDsgnFlowNum": "PrmtFeatrDsgnFlowNum",
+  "PrmtFeatrRefDsgnFlowUnitCode": "PrmtFeatrRefDsgnFlowUnitCode",
+  "FeatrFeatrId": "FeatrFeatrId",
+  "FeatrFeatrType": "FeatrFeatrType",
+  "FeatrFeatrDescr": "FeatrFeatrDescr",
+  "FeatrColctnMethdDescr": "FeatrColctnMethdDescr",
+  "FeatrLocVrfd": "FeatrLocVrfd",
+  "FeatrFeatr": "FeatrFeatr",
+  "FeatrLatitude": "FeatrLatitude",
+  "FeatrLongitude": "FeatrLongitude",
+  "FeatrGeographyWkt": "FeatrGeographyWkt",
+  "FeatrLgcyId": "FeatrLgcyId",
+  "FeatrRefFeatrStat": "FeatrRefFeatrStat",
+  "FeatrCreatedDate": "FeatrCreatedDate",
+  "FeatrCounty": "FeatrCounty"
+ },
+ "geometryType": "esriGeometryPoint",
+ "spatialReference": {
+  "wkid": 26917,
+  "latestWkid": 26917
+ },
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID"
+  },
+  {
+   "name": "SiteName",
+   "type": "esriFieldTypeString",
+   "alias": "SiteName",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPrmturl",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmturl",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtRefProgramAreaDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefProgramAreaDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPrmtNum",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtNum",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPrmtVersn",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtPrmtVersn"
+  },
+  {
+   "name": "PrmtPrmtRvsn",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtPrmtRvsn"
+  },
+  {
+   "name": "PrmtPrmtTypeDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtTypeDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtRefPrmtCatgDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtCatgDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtRefPrmtStatCatgDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtStatCatgDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtRefPrmtStatDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtStatDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtRefGnrlPrmtCatgCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefGnrlPrmtCatgCode",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtIssueDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtIssueDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtEfctvDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtEfctvDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtExprDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtExprDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtTermDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtTermDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtAppDueDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtAppDueDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtCmplMgrName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCmplMgrName",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtCmplMgrWrkgrp",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCmplMgrWrkgrp",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAgncyContctName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAgncyContctName",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAgncyContctWrkgrp",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAgncyContctWrkgrp",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtGnrlPrmtNum",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtGnrlPrmtNum",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPrmtCmnts",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtCmnts",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrStreet",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrStreet",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrLine2",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrLine2",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrCity",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrCity",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrState",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrState",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrPostalCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrPostalCode",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtAddrCountry",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrCountry",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPrmt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmt",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtCompanyName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCompanyName",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtEmail",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtEmail",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPhone",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPhone",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtPhoneExt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPhoneExt",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtStatChngDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtStatChngDate",
+   "length": 8
+  },
+  {
+   "name": "PrmtLgcyId",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtLgcyId",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtFeeTypes",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeeTypes",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtFeatrFeatrIdTxt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrFeatrIdTxt",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtFeatrRcvgWaterName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrRcvgWaterName",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtFeatrConveyanceDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrConveyanceDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "PrmtFeatrDsgnFlowNum",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtFeatrDsgnFlowNum"
+  },
+  {
+   "name": "PrmtFeatrRefDsgnFlowUnitCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrRefDsgnFlowUnitCode",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrFeatrId",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrId",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrFeatrType",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrType",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrFeatrDescr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrColctnMethdDescr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrColctnMethdDescr",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrLocVrfd",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrLocVrfd",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrFeatr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatr",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrLatitude",
+   "type": "esriFieldTypeDouble",
+   "alias": "FeatrLatitude"
+  },
+  {
+   "name": "FeatrLongitude",
+   "type": "esriFieldTypeDouble",
+   "alias": "FeatrLongitude"
+  },
+  {
+   "name": "FeatrGeographyWkt",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrGeographyWkt",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrLgcyId",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrLgcyId",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrRefFeatrStat",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrRefFeatrStat",
+   "length": 1073741822
+  },
+  {
+   "name": "FeatrCreatedDate",
+   "type": "esriFieldTypeDate",
+   "alias": "FeatrCreatedDate",
+   "length": 8
+  },
+  {
+   "name": "FeatrCounty",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrCounty",
+   "length": 1073741822
+  }
+ ],
+ "features": [
+  {
+   "attributes": {
+    "OBJECTID": 1812,
+    "SiteName": "MILLIKEN PENDLETON PLANT",
+    "PrmtPrmturl": "\u003ca href=\"https://epermitting.des.sc.gov/int/ncore/site/permits/edit/6246298650951367673/detail?siteId=-2923576066562163601\"\u003eDownload\u003c/a\u003e",
+    "PrmtRefProgramAreaDescr": "Water - Wastewater",
+    "PrmtPrmtNum": "SC0000477",
+    "PrmtPrmtVersn": 4.0,
+    "PrmtPrmtRvsn": 5.0,
+    "PrmtPrmtTypeDescr": "Industrial WWTP Permits",
+    "PrmtRefPrmtCatgDescr": "WTR-NPDES-Wastewater Individual Permit",
+    "PrmtRefPrmtStatCatgDescr": "Active",
+    "PrmtRefPrmtStatDescr": "Extended",
+    "PrmtRefGnrlPrmtCatgCode": "INDUSTRIAL_NPDS",
+    "PrmtIssueDate": 1516665600000,
+    "PrmtEfctvDate": 1516665600000,
+    "PrmtExprDate": 1575072000000,
+    "PrmtTermDate": null,
+    "PrmtAppDueDate": 960249600000,
+    "PrmtCmplMgrName": "Jacob L. Oblander",
+    "PrmtCmplMgrWrkgrp": "Water - Wastewater Permit Compliance",
+    "PrmtAgncyContctName": "Melanie K. Townley",
+    "PrmtAgncyContctWrkgrp": "Water - Industrial Wastewater Workgroup",
+    "PrmtGnrlPrmtNum": null,
+    "PrmtAddr": "",
+    "PrmtPrmtCmnts": "; Permit App Descr: Add additional sludge disposal options.",
+    "PrmtAddrStreet": null,
+    "PrmtAddrLine2": null,
+    "PrmtAddrCity": null,
+    "PrmtAddrState": null,
+    "PrmtAddrPostalCode": null,
+    "PrmtAddrCountry": null,
+    "PrmtPrmt": null,
+    "PrmtCompanyName": null,
+    "PrmtEmail": null,
+    "PrmtPhone": null,
+    "PrmtPhoneExt": null,
+    "PrmtStatChngDate": null,
+    "PrmtLgcyId": "EFIS_PERMIT_APPS:158494142",
+    "PrmtFeeTypes": "Water - Wastewater Industrial Permits",
+    "PrmtFeatrFeatrIdTxt": "001",
+    "PrmtFeatrRcvgWaterName": "Not Specified",
+    "PrmtFeatrConveyanceDescr": "EIGHTEEN MILE CR/ AKE HARTWELL",
+    "PrmtFeatrDsgnFlowNum": null,
+    "PrmtFeatrRefDsgnFlowUnitCode": null,
+    "FeatrFeatrId": "001",
+    "FeatrFeatrType": "Outfall",
+    "FeatrFeatrDescr": "Outfall Location",
+    "FeatrColctnMethdDescr": "Unknown",
+    "FeatrLocVrfd": "N",
+    "FeatrFeatr": "34.65669936,-82.8006106",
+    "FeatrLatitude": 34.65669936,
+    "FeatrLongitude": -82.8006106,
+    "FeatrGeographyWkt": "POINT (-82.800610603149408 34.656699363533463)",
+    "FeatrLgcyId": "EFIS_OUTFALLS:9747931",
+    "FeatrRefFeatrStat": "Active",
+    "FeatrCreatedDate": 1108857600000,
+    "FeatrCounty": "Anderson"
+   },
+   "geometry": {
+    "x": 334999.31465221377,
+    "y": 3836448.1180306873
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2027,
+    "SiteName": "PENDLETON-CLEMSON REG WWTF",
+    "PrmtPrmturl": "\u003ca href=\"https://epermitting.des.sc.gov/int/ncore/site/permits/edit/-7833585098787352030/detail?siteId=4864796223950629945\"\u003eDownload\u003c/a\u003e",
+    "PrmtRefProgramAreaDescr": "Water - Wastewater",
+    "PrmtPrmtNum": "SC0035700",
+    "PrmtPrmtVersn": 5.0,
+    "PrmtPrmtRvsn": 1.0,
+    "PrmtPrmtTypeDescr": "Municipal WWTP Permits",
+    "PrmtRefPrmtCatgDescr": "WTR-NPDES-Wastewater Individual Permit",
+    "PrmtRefPrmtStatCatgDescr": "Active",
+    "PrmtRefPrmtStatDescr": "Extended",
+    "PrmtRefGnrlPrmtCatgCode": "MUNICIPAL_NPDES",
+    "PrmtIssueDate": 1614297600000,
+    "PrmtEfctvDate": 1751328000000,
+    "PrmtExprDate": 1774915200000,
+    "PrmtTermDate": null,
+    "PrmtAppDueDate": 1759363200000,
+    "PrmtCmplMgrName": "Jacob L. Oblander",
+    "PrmtCmplMgrWrkgrp": "Water - Wastewater Permit Compliance",
+    "PrmtAgncyContctName": "Adrienne F. Wright",
+    "PrmtAgncyContctWrkgrp": "Water - Domestic Wastewater Workgroup",
+    "PrmtGnrlPrmtNum": null,
+    "PrmtAddr": "310 Greenville StPendletonSC29670",
+    "PrmtPrmtCmnts": "Sent 2nd review letter on 10/28/2025. Deadline to respond is 11/5/2025\n11/10/2025 - setting up meeting to discuss renewal application",
+    "PrmtAddrStreet": "310 Greenville St",
+    "PrmtAddrLine2": null,
+    "PrmtAddrCity": "Pendleton",
+    "PrmtAddrState": "SC",
+    "PrmtAddrPostalCode": "29670",
+    "PrmtAddrCountry": "US",
+    "PrmtPrmt": "Steve Miller",
+    "PrmtCompanyName": "Town of Pendleton",
+    "PrmtEmail": "stevem@townofpendleton.org",
+    "PrmtPhone": "8649345284",
+    "PrmtPhoneExt": null,
+    "PrmtStatChngDate": 1775001600000,
+    "PrmtLgcyId": null,
+    "PrmtFeeTypes": "Water - Wastewater Municipal Permits",
+    "PrmtFeatrFeatrIdTxt": "001",
+    "PrmtFeatrRcvgWaterName": "Not Specified",
+    "PrmtFeatrConveyanceDescr": "18 MI CK-LAKE HARTWELL",
+    "PrmtFeatrDsgnFlowNum": 2.0,
+    "PrmtFeatrRefDsgnFlowUnitCode": "MGD",
+    "FeatrFeatrId": "001",
+    "FeatrFeatrType": "Outfall",
+    "FeatrFeatrDescr": "Outfall Location",
+    "FeatrColctnMethdDescr": "Unknown",
+    "FeatrLocVrfd": "N",
+    "FeatrFeatr": "34.6354424,-82.8015049",
+    "FeatrLatitude": 34.6354424,
+    "FeatrLongitude": -82.8015049,
+    "FeatrGeographyWkt": "POINT (-82.8015049 34.6354424)",
+    "FeatrLgcyId": "EFIS_OUTFALLS:9770792",
+    "FeatrRefFeatrStat": "Active",
+    "FeatrCreatedDate": 1108857600000,
+    "FeatrCounty": "Anderson"
+   },
+   "geometry": {
+    "x": 334874.59075384645,
+    "y": 3834087.2252822164
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2036,
+    "SiteName": "PICKENS CO 18 MILE CREEK UPPER WWTP",
+    "PrmtPrmturl": "\u003ca href=\"https://epermitting.des.sc.gov/int/ncore/site/permits/edit/1491969151808972454/detail?siteId=-7423237989183868735\"\u003eDownload\u003c/a\u003e",
+    "PrmtRefProgramAreaDescr": "Water - Wastewater",
+    "PrmtPrmtNum": "SC0042994",
+    "PrmtPrmtVersn": 4.0,
+    "PrmtPrmtRvsn": 5.0,
+    "PrmtPrmtTypeDescr": "Municipal WWTP Permits",
+    "PrmtRefPrmtCatgDescr": "WTR-NPDES-Wastewater Individual Permit",
+    "PrmtRefPrmtStatCatgDescr": "Active",
+    "PrmtRefPrmtStatDescr": "Extended",
+    "PrmtRefGnrlPrmtCatgCode": "MUNICIPAL_NPDES",
+    "PrmtIssueDate": 1672790400000,
+    "PrmtEfctvDate": 1675209600000,
+    "PrmtExprDate": 1725062400000,
+    "PrmtTermDate": null,
+    "PrmtAppDueDate": 1709510400000,
+    "PrmtCmplMgrName": "Jacob L. Oblander",
+    "PrmtCmplMgrWrkgrp": "Water - Wastewater Permit Compliance",
+    "PrmtAgncyContctName": "Adrienne F. Wright",
+    "PrmtAgncyContctWrkgrp": "Water - Wastewater Workgroup",
+    "PrmtGnrlPrmtNum": null,
+    "PrmtAddr": "151 CLEARWATER DRLIBERTYSC29657",
+    "PrmtPrmtCmnts": null,
+    "PrmtAddrStreet": "151 CLEARWATER DR",
+    "PrmtAddrLine2": null,
+    "PrmtAddrCity": "LIBERTY",
+    "PrmtAddrState": "SC",
+    "PrmtAddrPostalCode": "29657",
+    "PrmtAddrCountry": "US",
+    "PrmtPrmt": "PICKENS COUNTY PUBLIC SERVICE COMMISSION",
+    "PrmtCompanyName": "PICKENS COUNTY PUBLIC SERVICE COMMISSION",
+    "PrmtEmail": "mwallace@co.pickens.sc.us",
+    "PrmtPhone": "8438435808",
+    "PrmtPhoneExt": null,
+    "PrmtStatChngDate": 1725148800000,
+    "PrmtLgcyId": null,
+    "PrmtFeeTypes": "Water - Wastewater Municipal Permits",
+    "PrmtFeatrFeatrIdTxt": "001",
+    "PrmtFeatrRcvgWaterName": "Not Specified",
+    "PrmtFeatrConveyanceDescr": "18 MILE CK-LAKE HARTWELL",
+    "PrmtFeatrDsgnFlowNum": 1.0,
+    "PrmtFeatrRefDsgnFlowUnitCode": "MGD",
+    "FeatrFeatrId": "001",
+    "FeatrFeatrType": "Outfall",
+    "FeatrFeatrDescr": "Outfall Location",
+    "FeatrColctnMethdDescr": "Unknown",
+    "FeatrLocVrfd": "N",
+    "FeatrFeatr": "34.76222222,-82.68277711",
+    "FeatrLatitude": 34.76222222,
+    "FeatrLongitude": -82.68277711,
+    "FeatrGeographyWkt": "POINT (-82.682777111111108 34.762222222222221)",
+    "FeatrLgcyId": "EFIS_OUTFALLS:9777681",
+    "FeatrRefFeatrStat": "Active",
+    "FeatrCreatedDate": 1108857600000,
+    "FeatrCounty": "Pickens"
+   },
+   "geometry": {
+    "x": 345990.9788185606,
+    "y": 3847962.2160624
+   }
+  },
+  {
+   "attributes": {
+    "OBJECTID": 2038,
+    "SiteName": "PICKENS CO 18-MILE CREEK MIDDLE  WWTF",
+    "PrmtPrmturl": "\u003ca href=\"https://epermitting.des.sc.gov/int/ncore/site/permits/edit/-2888679815407394851/detail?siteId=-6402424508039067024\"\u003eDownload\u003c/a\u003e",
+    "PrmtRefProgramAreaDescr": "Water - Wastewater",
+    "PrmtPrmtNum": "SC0047856",
+    "PrmtPrmtVersn": 4.0,
+    "PrmtPrmtRvsn": 6.0,
+    "PrmtPrmtTypeDescr": "Municipal WWTP Permits",
+    "PrmtRefPrmtCatgDescr": "WTR-NPDES-Wastewater Individual Permit",
+    "PrmtRefPrmtStatCatgDescr": "Active",
+    "PrmtRefPrmtStatDescr": "Extended",
+    "PrmtRefGnrlPrmtCatgCode": "MUNICIPAL_NPDES",
+    "PrmtIssueDate": 1672790400000,
+    "PrmtEfctvDate": 1675209600000,
+    "PrmtExprDate": 1725062400000,
+    "PrmtTermDate": null,
+    "PrmtAppDueDate": 1709510400000,
+    "PrmtCmplMgrName": "Jacob L. Oblander",
+    "PrmtCmplMgrWrkgrp": "Water - Wastewater Permit Compliance",
+    "PrmtAgncyContctName": "Adrienne F. Wright",
+    "PrmtAgncyContctWrkgrp": "Water - Domestic Wastewater Workgroup",
+    "PrmtGnrlPrmtNum": null,
+    "PrmtAddr": "151 CLEARWATER DRLIBERTYSC29657",
+    "PrmtPrmtCmnts": "Assigned to Brenda G until a replacement for Weijia Hu. Assigned to Adrienne W.",
+    "PrmtAddrStreet": "151 CLEARWATER DR",
+    "PrmtAddrLine2": null,
+    "PrmtAddrCity": "LIBERTY",
+    "PrmtAddrState": "SC",
+    "PrmtAddrPostalCode": "29657",
+    "PrmtAddrCountry": "US",
+    "PrmtPrmt": "PICKENS CO PSC, 18 MILE CREEK UPPER WWTP",
+    "PrmtCompanyName": "18 MILE CREEK UPPER WWTP",
+    "PrmtEmail": null,
+    "PrmtPhone": "8648435813",
+    "PrmtPhoneExt": null,
+    "PrmtStatChngDate": 1725148800000,
+    "PrmtLgcyId": null,
+    "PrmtFeeTypes": "Water - Wastewater Municipal Permits",
+    "PrmtFeatrFeatrIdTxt": "001",
+    "PrmtFeatrRcvgWaterName": "Not Specified",
+    "PrmtFeatrConveyanceDescr": "18 MILE CREEK",
+    "PrmtFeatrDsgnFlowNum": 1.0,
+    "PrmtFeatrRefDsgnFlowUnitCode": "MGD",
+    "FeatrFeatrId": "001",
+    "FeatrFeatrType": "Outfall",
+    "FeatrFeatrDescr": "Outfall Location",
+    "FeatrColctnMethdDescr": "Unknown",
+    "FeatrLocVrfd": "N",
+    "FeatrFeatr": "34.68916633,-82.77138822",
+    "FeatrLatitude": 34.68916633,
+    "FeatrLongitude": -82.77138822,
+    "FeatrGeographyWkt": "POINT (-82.771388222222228 34.689166333333333)",
+    "FeatrLgcyId": "EFIS_OUTFALLS:9873101",
+    "FeatrRefFeatrStat": "Active",
+    "FeatrCreatedDate": 1108857600000,
+    "FeatrCounty": "Pickens"
+   },
+   "geometry": {
+    "x": 337738.82479137636,
+    "y": 3840005.2111276933
+   }
+  }
+ ]
+}
