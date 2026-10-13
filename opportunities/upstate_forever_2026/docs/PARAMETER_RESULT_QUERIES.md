@@ -18,7 +18,7 @@ Later pages seek directly into the same original result file. Every returned row
 
 The first build takes the original study lock and a derivative index lock. If the study is currently publishing results, reopen the table after that operation. A completed index can be read while a later calculation runs; a concurrent summary replacement requires a fresh page read.
 
-A build checkpoints completed JSON values in batches. After interruption, the next request resumes from its saved parser position. It rereads the already-consumed byte prefix to finish the original whole-file hash, then continues parsing and indexing the remaining values. It never reruns a model or changes a scientific result.
+A build checkpoints completed JSON values in batches. After interruption, the next request resumes from its saved parser position. It rereads the already-consumed byte prefix and requires its exact saved prefix hash before reusing any indexed spans. A repaired or replaced prefix rebuilds only the derivative checkpoint. It then continues parsing and indexing the remaining values, finishing the original whole-file hash. It never reruns a model or changes a scientific result.
 
 The derivative is published only after the entire original JSON matches its retained source descriptor. A temporary partial index is not a completed result. The full scientific file and all original downloads remain authoritative.
 
