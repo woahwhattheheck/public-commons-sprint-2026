@@ -121,3 +121,84 @@ Run the single dependency-free lifecycle check with Node:
 It exercises delayed module completion across a workspace switch, per-desk registration failure, task-only refresh without remount, explicit action dispatch and cancellation of an action whose workspace changed. This check passed in the available JavaScript runtime with 16 assertions. Python source is parsed by the installer on the receiving host; the complete application there supplies the real model/provider imports.
 
 Scientific calculations remain in their authored modules. Their domain review belongs with the associated scientific implementation and the actual retained source/output data.
+
+
+## Retained interactive file previews
+
+backend.file_routes registers typed responses for a named /api/file/ family.
+The original file-cookie authorization, verified ticket lookup, byte-range
+handling, content type and send_file response remain in use. The provider
+returns the original (ticket, content_security_policy) pair. No source text or
+filesystem path is sent as a JSON response in place of the file.
+
+The existing watershed report adapter supplies this exact registration:
+
+    "file_routes": [{
+      "path": "/api/file/scenario-report/{workspace_key}/{report_id}",
+      "handler": "preview",
+      "args": ["route.workspace_key", "route.report_id"],
+      "response": "ticket_policy_pair"
+    }]
+
+Its backend provider is scenario_decision_reports.ScenarioDecisionReports,
+constructed with operator and fault. The published preview(workspace,
+report_id) validates both retained identifiers, inspects the original report,
+registers its HTML with operator._ticket, and returns that ticket with its
+existing PREVIEW_POLICY. The host forwards that policy unchanged to send_file.
+
+The handler joins the file route before the ordinary /api/file/TICKET branch:
+
+    if app.extensions.has_file_route(url.path):
+        authorized(file=True)
+        reply = app.extensions.file_reply(url.path)
+        return send_file(reply["ticket_id"],
+                         download=one("download") == "1",
+                         content_security_policy=reply["content_security_policy"])
+
+File paths declare a literal family and individual opaque ID parameters.
+Parameter values are passed explicitly through route.NAME binding arguments.
+Templates cannot capture the original generic ticket route or the original
+review-desk family. Overlapping registered file templates are rejected.
+Returned tickets retain their original workspace. A returned content policy
+cannot contain header line breaks.
+
+The current S1 report policy enables its retained inline scripts inside the
+existing sandbox while denying network connections and object embedding. The
+host uses the policy returned by the actual adapter; it does not construct a
+replacement policy. Source adapter inspected: operator/scenario_decision_reports.py
+SHA256 78f1c3b7568d2a4c32dfc004247232f713347dbdd1d06906c3b191066bcd1370.
+
+A previously installed authored report-preview hook can remain while receiving
+the first integrated desk. It runs through its original handler. When that
+desk migrates fully to its manifest, remove its redundant explicit route/action
+joins together so the registration has one active owner.
+
+The installer accepts the exact first published registry/guide hashes as
+predecessors for this upgrade and retains unknown current edits for composition.
+It also migrates the first workspace-detach join after the original open-draft
+guard, preserving the active desk when a workspace switch is rejected.
+
+## Nested retained GIS members and current host composition
+
+A file provider can declare one final relative member parameter with three dots:
+
+    "file_routes": [{
+      "path": "/api/file/gis-project/{workspace_key}/{kind}/{project_id}/{member_path...}",
+      "handler": "member",
+      "args": ["route.workspace_key", "route.kind", "route.project_id", "route.member_path"],
+      "response": "ticket_policy_pair"
+    }]
+
+This matches the actual GISProjects.member(workspace, kind, key, name) provider. The host decodes the member path once as UTF-8, accepts nested relative inventory members and keeps the original provider responsible for exact inventory membership. Empty, absolute, parent-relative and backslash paths are rejected before calling the provider. Named workspace and project identifiers remain separate opaque URL segments. All route families are checked for overlap, including a final member tail. The response retains the existing authorized file cookie, same-workspace ticket, content security policy, byte-range and download behavior.
+
+The complete host edition composes the original seven-file source/run-owner bank F0C8PRVG4EN with the typed-file successor F0C8TKYRX52. Its browser host retains the current lazy getProgramme capability. The installer migrates the original openProgramme callback before checking for an existing host instance, so updating an already installed app creates one host. It also preserves the corrected new-versus-revised delivery title and supplies the registered action name when the original action label table has no entry.
+
+Apply this complete bank to the same assembled application as the source/run components, then run that bank's install_extensions.py against the actual application root. Existing sources that match the known previous editions can be upgraded directly. Current unrelated authored edits are composed before replacement. The complete decisions bank supplies its own saved-assessment and upload manifest.
+
+## Route payload and import contract for adapter authors
+
+The original HTTP handler runs normal authorization before every registered JSON route. A GET route passes its parsed query dictionary; a POST route passes the decoded request object. The workspace is selected from the same request's workspace value (or the original operator's primary workspace), and the registry supplies both workspace_key and the real operator.ws(workspace_key) object as explicit binding contexts.
+
+A backend factory receives only its declared arguments. For example, a flat operator module can declare factory handler create and args [operator, fault], or use an existing class name. Fault is the original operator exception constructor: Fault(code, message, status). Flat operator imports use the original server's module search path; scientific code imports from model. Invoke bindings can receive the complete original task, or operator/workspace_key/action/payload as requested. The original task queue owns action submission and result retention.
+
+A route's operation is its explicitly declared string, distinct from its URL. A provider can therefore bind read(workspace_key, operation, payload) to several routes without reparsing the HTTP request. backend.state accepts one explicit key and handler; a failed extension registers an issue in the original /api/extensions catalogue while the other desks remain available. The full decisions.json in the saved-assessment bank is an executable example using the same route and invoke contexts.
