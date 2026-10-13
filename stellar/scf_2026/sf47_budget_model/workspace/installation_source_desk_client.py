@@ -300,3 +300,71 @@ class InstallationSourceDeskClient:
              hashlib.sha256(raw).hexdigest() == expected_sha256,
              "The complete native download differs from its expected original bytes.")
         return metadata, raw
+
+
+class FlowableSourceDeskClient:
+    """The original case plus complete Node-owned source sidecars.
+
+    No workspace, HTTP listener or connection is created here. Explicit request
+    UUIDs are retained by the same service and original Python case binding.
+    """
+    def __init__(self, desk: SourceDesk, case_id: str):
+        need(isinstance(case_id, str) and CASE.fullmatch(case_id) is not None,
+             "Select the original Operations case.")
+        self.desk, self.case_id = desk, case_id
+
+    def perform(self, action: str, body: dict) -> dict:
+        from operations_flowable_sources import perform
+        return perform(self.desk.ops, self.case_id, action, deepcopy(body))
+
+    def request(self, request_id: str) -> dict:
+        from operations_flowable_sources import lookup
+        return lookup(self.desk.ops, self.case_id, request_id)
+
+    def list(self, offset: int = 0, limit: int = 100) -> dict:
+        from operations_flowable_sources import _engine
+        return _engine(self.desk.ops, self.case_id, "list", {"offset": offset, "limit": limit})
+
+    def import_file(self, path: str, *, request_id: str, kind: str,
+                    expected_sha256: str, name: str | None = None) -> dict:
+        import os
+        import stat
+        from operations_flowable_sources import import_stream, MAX_ARCHIVE
+        path = Path(path).expanduser().absolute()
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            before = os.fstat(fd)
+            need(stat.S_ISREG(before.st_mode) and before.st_size <= MAX_ARCHIVE,
+                 "Select one complete bounded original file.")
+            with os.fdopen(fd, "rb", closefd=False) as source:
+                result = import_stream(self.desk.ops, self.case_id, source, request_id=request_id,
+                    kind=kind, name=name or path.name, size=before.st_size, sha256=expected_sha256)
+            after = os.fstat(fd)
+            need((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
+                 (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns),
+                 "The complete original input changed during upload.")
+            return result
+        finally:
+            os.close(fd)
+
+    def file(self, file_id: str) -> dict:
+        from operations_flowable_sources import file_descriptor
+        value = file_descriptor(self.desk.ops, self.case_id, file_id=file_id)
+        return deepcopy(value["file"])
+
+    def export_file(self, destination: str, expected_sha256: str, *,
+                    file_id: str | None = None, inspection_id: str | None = None,
+                    path: str | None = None) -> dict:
+        from operations_flowable_sources import export_file
+        return export_file(self.desk.ops, self.case_id, destination, expected_sha256,
+                           file_id=file_id, inspection_id=inspection_id, path=path)
+
+
+    def archive(self, request_id: str) -> dict:
+        from operations_flowable_sources import preparation_archive
+        return deepcopy(preparation_archive(self.desk.ops, self.case_id, request_id)["file"])
+
+    def export_archive(self, request_id: str, destination: str, expected_sha256: str) -> dict:
+        from operations_flowable_sources import preparation_archive, export_descriptor
+        descriptor = preparation_archive(self.desk.ops, self.case_id, request_id)
+        return export_descriptor(self.desk.ops, self.case_id, descriptor, destination, expected_sha256)

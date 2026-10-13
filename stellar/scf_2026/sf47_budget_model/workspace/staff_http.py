@@ -228,6 +228,18 @@ def authorize(handler):
             if source and access.contributor_source(principal, operations(handler), case_id, source[1]):
                 return
             fail("The contributor desk shows this person's work, invoices and attachments.")
+        if action == "flowable-sources/import":
+            # Authorize the same case/CSRF context before streaming its original
+            # binary; generic json_body would consume/reject a full archive.
+            if role != "lead":
+                fail("A delivery lead retains complete Flowable commissioning sources.")
+            return
+        if action in ("flowable-sources/catalogue", "flowable-sources/inspect",
+                      "flowable-sources/template", "flowable-sources/prepare"):
+            if role not in ("lead", "reviewer"):
+                fail("A delivery lead or reviewer prepares the original Flowable source.")
+            handler.json_body()
+            return
         body = handler.json_body()
         if action == "command":
             if role == "contributor":
