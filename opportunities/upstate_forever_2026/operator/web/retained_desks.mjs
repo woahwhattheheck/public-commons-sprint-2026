@@ -85,8 +85,8 @@ export async function attachExperimentsDesk(host) {
 }
 
 export async function attachConservationDesk(host) {
-  const {attachConservation} = await import('./conservation.mjs');
-  return adapt(host, attachConservation(host), {
+  const {attachConservationWithOptimization} = await import('./conservation_optimization_bridge.mjs');
+  return adapt(host, attachConservationWithOptimization(host), {
     view:'conservation', render:true,
     collections:['sources','profiles','scenarios','grids','runs'],
     prefixes:['conservation.','experiment.'],
