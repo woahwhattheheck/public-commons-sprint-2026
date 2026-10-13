@@ -132,8 +132,7 @@ ECO_PYTHON=/actual/equipped/python
 
 "$ECO_PYTHON" -B "$ECO_APP/source/fgdc-metadata/receive_metadata.py" \
   --application "$ECO_APP" \
-  --schema-directory "$ECO_RECEIVING/official-schema" \
-  --download-schema \
+  --schema-directory "$ECO_APP/source/fgdc-metadata/schema" \
   --exercise-output "$ECO_RECEIVING/writer-exercise" \
   --delivery-directory /actual/retained-workspace/deliveries/NEW_DELIVERY_ID \
   --receipt "$ECO_RECEIVING/metadata-receiving.json"
@@ -141,9 +140,19 @@ ECO_PYTHON=/actual/equipped/python
 
 The exact 16,377-byte original DTD is retained at `source/fgdc/fgdc-std-001-1998.dtd`, SHA256 `778584c89cf0f61a382900cfab7fb7171ae99894b9b54702540ca28cb4267598`. XML parsing disables network and external entity resolution. Albers and UTM use their original explicit parameter productions; other projected CRSs retain complete WKT and affine information in the common other-grid production. This avoids the published DTD/XSD disagreement on the nesting of `otherprj`.
 
-The schema download uses only https://www.fgdc.gov/schemas/metadata/.
-For an offline receiving host, supply all eleven original schemas in that
-directory and omit `--download-schema`. The receipt records their hashes.
+The complete original eleven-file XSD family and its capture manifest are
+included at `source/fgdc-metadata/schema/`, together with the reviewer's original
+DTD and source guide. Their publisher filenames and all original bytes are
+unchanged. The command above uses these local files without network access.
+The receiver verifies all eleven original byte counts and SHA256 values before
+validation and records them in its receipt. The capture notes describe the
+initial XSD-only candidate; this release uses the common CRS productions above
+and validates against both retained grammars.
+
+If a separate schema directory is needed, `--download-schema` downloads only
+from https://www.fgdc.gov/schemas/metadata/ and applies the same exact original
+identity checks. A changed publisher edition requires a separately reviewed
+source update; it does not silently redefine this validation receipt.
 The exercise directory and receipt are create-only; select a new receiving
 directory for another attempt.
 
