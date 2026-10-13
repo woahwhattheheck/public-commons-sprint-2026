@@ -183,6 +183,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
         if(typeof openScientificReport!=='function')throw Error('Receive the maintained scientific-report composer in this application.');
         const report=copy(product),choice=copy(report.source_choice);
         if(!valid(m)||!(await waitForSource(choice,m)))return;
+        if(!valid(m))return;
         closeDetail();
         await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title});
       }
@@ -190,6 +191,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
         const report=copy(product),delivery=draft.deliveryId;
         const value=await api(url('delivery'),{method:'POST',body:{id:report.id,delivery_id:delivery}});
         if(!valid(m)||!(await waitForSource(value.source_choice,m)))return;
+        if(!valid(m))return;
         closeDetail();await openDelivery(value.selection);
       }
     });
