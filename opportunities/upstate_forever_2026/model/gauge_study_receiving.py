@@ -30,15 +30,18 @@ def _descriptor(closure, path, expected=None, *, label=None):
     if item.get("sha256") is None:
         closure.read(path)
         item = closure.files[path]
+    original_name = (expected or {}).get("filename")
     return {"path": path, "bytes": item["bytes"], "sha256": item["sha256"],
-            "label": label or PurePosixPath(path).name}
+            "filename": original_name or PurePosixPath(label or path).name,
+            "label": label or original_name or PurePosixPath(path).name}
 
 
 def _files(closure, items):
     rows = {}
     for item in items:
         row = _descriptor(closure, item["path"], item, label=item.get("label"))
-        rows[row["path"]] = row
+        # Equal bytes can be separate authored files with different logical names.
+        rows[(row["path"], row["filename"], row["label"])] = row
     return [rows[key] for key in sorted(rows)]
 
 
@@ -103,9 +106,11 @@ def augment(closure, retained, result):
         }
         row["source_members"] = _files(closure, [
             {**entry["body"], "path": entry["body"]["object"],
-             "label": entry["body"].get("source_path") or "Original Gauge report source"},
+             "label": entry["body"].get("view_path") or entry["body"].get("filename")
+                      or entry["body"].get("source_path") or "Original Gauge report source"},
             *[{**item, "path": item["object"],
-               "label": item.get("source_path") or PurePosixPath(item["object"]).name}
+               "label": item.get("view_path") or item.get("filename")
+                        or item.get("source_path") or PurePosixPath(item["object"]).name}
               for item in entry.get("companions", [])],
         ])
         if captured["relationship"] == "same_project":
