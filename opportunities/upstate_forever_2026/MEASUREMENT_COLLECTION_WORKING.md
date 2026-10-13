@@ -83,6 +83,58 @@ This also preserves work after a browser quota failure or a competing-tab save. 
 
 During receiving, operate the actual selection change: retain a full unfinished mapping and pending original request, select another workspace, return, and check the original body before resuming. Existing scientific inputs, native import identities and completed editions stay selected.
 
+
+## Receive a complete saved edition into a chosen folder
+
+The saved-edition panel now offers **Receive complete edition to folder**. Use it when a recipient needs every original member together or when a transfer needs to continue after the browser closes. The existing **Download complete file** action retains its OPFS-backed streaming and ordinary file download behavior.
+
+Open the original saved collection and its exact current study edition. Choose **Receive complete edition to folder**, then grant the browser access to a parent folder. The product creates `measurement-edition-EDITION_ID` inside that parent, retains the complete immutable native edition in `EDITION.json`, and receives all members under `files/` using their exact original relative paths. A selected folder cannot alter the source workspace, scientific calculations, publication filters or saved edition.
+
+The folder contains:
+
+| Member | Purpose |
+| --- | --- |
+| `EDITION.json` | Full original native edition, source collection binding, workspace revision, member lengths and original whole-file/chunk hashes. |
+| `files/` | Every complete original report, data file and native archive, with its original relative name. |
+| `chunks/` | Checked partial receiving data that survives browser restart. Successfully assembled member chunks are removed. |
+| `START_HERE.md` | Recipient opening and exact continuation instructions. |
+| `RECEIVED.json` | Completion result written only after all recipient files are saved and independently read back against every original chunk and exact length. |
+
+A file is assembled from bounded checked chunks into the original destination only after all of its source chunks are retained. Browser writable streams commit on close; an interrupted assembly leaves the retained chunks available for the same continuation. Existing nonempty originals are read and checked first. A changed file, changed metadata, conflicting source range or path collision is reported and retained; the receiver does not replace it with a guessed interpretation.
+
+The receiver independently checks each actual 256 KiB native chunk and the precise complete byte count. The whole-file SHA-256 values in the folder remain the original native edition's declared values. This path does not claim an independently accumulated whole-file digest. Immutable exact chunk boundaries cover every original byte; full file contents are never collected into one browser buffer.
+
+### Resume after a stopped browser or unavailable destination
+
+Keep the complete receiving folder, including its metadata and `chunks/`. Reopen the same original saved edition in Measurements and choose **Receive complete edition to folder** again. Select the **same parent folder**. The original edition ID selects its prior child folder, and the complete source binding must match. The receiver checks each retained original chunk before using it, downloads missing chunks, and verifies any already complete recipient file without downloading it again.
+
+The receiving state is the actual destination files and bound original metadata. There is no independent progress ledger whose advance can skip unwritten bytes. Failed chunk or final-file closes cannot create a completion result. An interrupted final completion write can be retried against the already checked original files.
+
+Select **Pause** to stop browser work at the next guarded boundary. Closing the panel, changing the selected workspace/account or reopening the app also stops that view's later effects. Chunks already saved under the original edition remain available. No native request is repeated to regenerate a scientific result; the only remote operations here are original edition metadata and chunk reads.
+
+A same-origin browser writer lease prevents two tabs from receiving the same edition simultaneously. File writers additionally request exclusive access. If another tab already owns the receiving operation, retain its existing folder and continue when that writer has finished. A source or destination changed by another application is reported; retain it for examination or choose a different parent folder.
+
+### Independently reopen a complete recipient folder
+
+Use **Verify received edition folder** in the saved collections section. Select the **edition folder itself**, rather than its parent. This is a read-only local operation: it loads the complete source selection and completion result, then reads every original member against the declared chunk hashes and exact length. It neither contacts the native server nor modifies local files. An absent, unfinished or mismatched completion result directs the recipient to continue the original receiving operation.
+
+Open `START_HERE.md` and each actual report/data attachment in `files/`. Relative links between original report and supporting files remain intact. Keep `project.zip` unchanged and receive it through the existing installed native archive receiver when continuing the editable study. Receiving the folder alone does not perform native archive import or a new scientific run.
+
+### Browser and destination support
+
+The folder controls use the browser's explicit File System Access picker and Web Locks. These interfaces require a supported secure context and an actual user gesture. The picker opens directly from the button before network work; cancellation preserves the source and current work. The UI reports an unavailable or denied picker and keeps the existing ordinary downloads and installed export available. Do not use a privileged browser flag or weaken a source policy to force this control.
+
+Keep enough disk capacity for the complete edition plus checked temporary chunks and the active file assembly. Only bounded source chunks are held in JavaScript memory. A quota or filesystem error retains completed original files and available chunks for the same continuation.
+
+Paths are received exactly; the receiver rejects traversal, file/directory collisions, case/normalization collisions, reserved device filenames and other names that cannot be safely preserved across ordinary recipient filesystems. It reports the actual original path instead of silently renaming an artifact or changing links.
+
+Primary platform references: [Chrome File System Access guide](https://developer.chrome.com/docs/capabilities/web-apis/file-system-access), [writable file streams](https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createWritable), and [Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API). Native collection and archive contracts remain the installed source described above.
+
+### Same original rendered receiving course
+
+Use the existing equipped collection course and actual original edition. Receive the whole edition to an owned folder, pause once after some chunks have closed, reopen the browser and continue against that same folder. Open and personally inspect the complete original reports and all attachments. Run the read-only folder verification after browser restart, and receive the unchanged `project.zip` with the original native receiver. Retain desktop and 390-pixel product views and actual returned output identities in the same existing operation. Source execution against scoped file-handle envelopes is recorded separately from that actual browser/native use.
+
+
 ## Current owner direction and delivery operation
 
 Continue the existing Eco/Upper Savannah application, original operators and current scientific/native owners. The original whole-application installer composes this source into the current cumulative application; the existing authenticated browser and native process remain selected. Existing inline collection routes, old study editions and the original large-file panel remain available.
