@@ -53,7 +53,7 @@ export async function receivePropertyBrowser({url,createdAt,propertyId,outputDir
   }
   await page.locator('.property-tabs button[data-tab="sources"]').click();
   await page.screenshot({path:join(outputDirectory,'Property_Desktop.png'),fullPage:true});
-  await page.setViewportSize({width:412,height:915});await page.screenshot({path:join(outputDirectory,'Property_Mobile.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(outputDirectory,'Property_Mobile.png'),fullPage:true});
   const dimensions=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
   need(errors.length===0&&rejected.length===0,'PROPERTY_BROWSER_READ_FAILED');
   const report={schema:'stellar-forge.property-browser-receiving.v1',status:'COMPLETE',createdAt,propertyId,source,executable,
