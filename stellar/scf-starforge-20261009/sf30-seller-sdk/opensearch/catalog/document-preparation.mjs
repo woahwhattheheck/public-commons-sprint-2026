@@ -5,6 +5,8 @@ export const DOCUMENT_PREPARATION_SCHEMA = 'stellar-forge.document-preparation.v
 export const PREPARED_CATALOG_SCHEMA = 'stellar-forge.prepared-document-catalog.v1';
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const clone = x => JSON.parse(JSON.stringify(x));
+const canonical = x => Array.isArray(x) ? '[' + x.map(canonical).join(',') + ']' : object(x)
+  ? '{' + Object.keys(x).sort().map(k => JSON.stringify(k) + ':' + canonical(x[k])).join(',') + '}' : JSON.stringify(x);
 const has = (x, k) => Object.hasOwn(x, k);
 const DECISION_KEYS = ['include', 'title', 'description', 'unit', 'salesUnit', 'numerator',
   'denominator', 'priceAmount', 'currency', 'priceBasis', 'note', 'sourceUrl'];
@@ -97,8 +99,9 @@ function effective(product, decision = {}) {
   const selected = {
     include: choose('include', true),
     title: choose('title', [product.family, product.supplier_sku].filter(Boolean).join(' — ')),
-    description: choose('description', Object.entries(product.raw).filter(([key]) =>
-      !['Part Number', 'Drawing Link'].includes(key)).map(([key, value]) => key + ': ' + value).join('; ')),
+    description: choose('description', [...Object.entries(product.raw).filter(([key]) => !['Part Number', 'Drawing Link'].includes(key))
+      .map(([key, value]) => key + ': ' + value), ...(product.specification_observations || [])
+      .map(row => [row.context, row.label].filter(Boolean).join(' / ') + ': ' + row.value)].join('; ')),
     unit: choose('unit', b.unit || ''), salesUnit: choose('salesUnit', b.salesUnit || ''),
     numerator: choose('numerator', b.numerator || ''), denominator: choose('denominator', b.denominator || ''),
     priceAmount: choose('priceAmount', product.observed_price?.amount_decimal || ''),
@@ -136,7 +139,7 @@ export function openDocumentWorkingRecord(value) {
         !['decision', 'restore-source'].includes(h.action))
       fail('DOCUMENT_HISTORY_INVALID', 'A preparation revision is incomplete.');
     const before = has(previous, h.supplier_sku) ? previous[h.supplier_sku] : null;
-    if (JSON.stringify(before) !== JSON.stringify(h.before))
+    if (canonical(before) !== canonical(h.before))
       fail('DOCUMENT_HISTORY_INVALID', 'The preparation history no longer matches its earlier decision.');
     if (h.action === 'restore-source') {
       if (h.after !== null) fail('DOCUMENT_HISTORY_INVALID', 'A restored source must clear its decision.');
@@ -148,7 +151,7 @@ export function openDocumentWorkingRecord(value) {
         [h.supplier_sku, h.after]]);
     }
   }
-  if (JSON.stringify(Object.entries(previous).sort()) !== JSON.stringify(Object.entries(input.decisions).sort()))
+  if (canonical(previous) !== canonical(input.decisions))
     fail('DOCUMENT_HISTORY_INVALID', 'Current decisions differ from the retained revision history.');
   return clone(input);
 }
@@ -159,7 +162,7 @@ export function applyDocumentDecision(record, sku, patch) {
   const before = has(next.decisions, sku) ? next.decisions[sku] : null;
   const after = { ...(before || {}), ...clone(patch) };
   str(after.note, 'Operator decision reason'); effective(product, after);
-  if (JSON.stringify(before) === JSON.stringify(after)) return next;
+  if (canonical(before) === canonical(after)) return next;
   next.decisions = Object.fromEntries([...Object.entries(next.decisions).filter(([k]) => k !== sku), [sku, after]]);
   next.revision++;
   next.history.push({ revision: next.revision, supplier_sku: sku, action: 'decision', before, after: clone(after) });
