@@ -1,0 +1,54 @@
+{
+  "schema": "tjl.interoperability-run-record.v1",
+  "record_id": null,
+  "scenario": {
+    "id": null,
+    "edition": null
+  },
+  "subject_reference": null,
+  "requested_action": null,
+  "resource_reference": null,
+  "policy_edition": null,
+  "configuration_edition": null,
+  "implementation_versions": [],
+  "interface_reference": null,
+  "selected_assertion": null,
+  "selected_contract_clause": null,
+  "started_at": null,
+  "finished_at": null,
+  "clock_source": null,
+  "clock_uncertainty": null,
+  "client_state": {
+    "retained": [],
+    "cleared": [],
+    "method": null
+  },
+  "policy_change": {
+    "original_edition": null,
+    "changed_edition": null,
+    "changed_at": null,
+    "observed_at": null,
+    "observation_evidence": null,
+    "selected_propagation_interval": null
+  },
+  "condition": "not-executed",
+  "expected_behavior": null,
+  "observed": {
+    "authentication": null,
+    "authorization": null,
+    "enforcement": null,
+    "transport_status": null,
+    "native_response_evidence": null,
+    "obligations": [],
+    "client_output_evidence": null
+  },
+  "assessment": {
+    "status": "not-assessed",
+    "reviewer": null,
+    "reason": null,
+    "assessed_at": null
+  },
+  "evidence": [],
+  "supersedes_run_id": null,
+  "change_reason": null
+}
