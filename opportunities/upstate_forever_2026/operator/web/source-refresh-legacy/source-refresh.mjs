@@ -75,6 +75,10 @@ function displayState(state){
   if(state.status==='running')schedulePoll();
 }
 function displayPlan(value){
+  if(!Array.isArray(value.plan.nodes) && value.plan.selection && value.plan.preview){
+    location.assign('/web/source-refresh.html?'+new URLSearchParams({...(workspace?{workspace}:{}),plan_id:value.plan.id}));
+    return;
+  }
   if(shown!==value.plan.id){
     shown=value.plan.id;$('previous').value=value.plan.from_collection_id;$('replacement').value=value.plan.to_collection_id;$('title').value=value.plan.title;
     $('mapping').value=JSON.stringify(value.plan.mapping,null,2);$('downloads').replaceChildren();

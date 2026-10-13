@@ -1233,5 +1233,9 @@ def main():
         server.operator.close()
 
 
+# Native source-refresh registration. Preserve the original server and queue.
+from source_refresh_native import install as _install_source_refresh
+_install_source_refresh(globals())
+
 if __name__ == "__main__":
     main()

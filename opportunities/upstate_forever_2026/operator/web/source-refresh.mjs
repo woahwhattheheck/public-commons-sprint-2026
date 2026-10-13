@@ -11,26 +11,35 @@ const pretty = value => JSON.stringify(value, null, 2);
 const short = value => String(value ?? '').slice(0, 12);
 const fmt = value => typeof value === 'number' ? value.toLocaleString(undefined, {maximumFractionDigits: 3}) : String(value ?? '—');
 const capKey = 'upstate-operator-capability', workspaceKey = 'upstate-selected-workspace';
+const opening = new URLSearchParams(standalone ? location.search : '');
 const fragment = new URLSearchParams(standalone ? location.hash.slice(1) : '');
 let capability = standalone ? fragment.get('token') || sessionStorage.getItem(capKey) : null;
 if (standalone && fragment.get('token')) {
-  sessionStorage.setItem(capKey, capability); history.replaceState(null, '', location.pathname);
+  sessionStorage.setItem(capKey, capability); history.replaceState(null, '', location.pathname + location.search);
 }
-let workspace = host?.getWorkspace() || (standalone ? sessionStorage.getItem(workspaceKey) || '' : '');
+let workspace = host?.getWorkspace() || (standalone ? opening.get('workspace') || sessionStorage.getItem(workspaceKey) || '' : '');
 let uiKey = 'upstate-source-refresh-selection:' + workspace;
 let retained = {}, original = {}, previewResult = null, previewSelection = null, selectedPlan = null;
 let busy = false, loading = false, timer = null, fingerprints = {}, oldStates = new Map();
 let previewEpoch = 0, planRequest = 0, selectedPlanStamp = null;
-let preferences = {};
+let preferences = {}, requests = {};
+const requestKey = () => 'upstate-source-refresh-requests:' + workspace;
+const requestLabels = {'source.refresh.plan':'Save update plan','source.refresh.apply':'Continue saved update','source.refresh.landcover':'Create change layers','workspace.backup':'Export complete study'};
+const canonical = value => JSON.stringify(value, function(key, item) { return item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(name => [name,item[name]])) : item; });
 const classes = ['from-year','to-year','from-classes','to-classes','zone-field'];
 function readPreferences() {
   preferences = {};
   uiKey = 'upstate-source-refresh-selection:' + workspace;
   try { preferences = JSON.parse(sessionStorage.getItem(uiKey) || '{}'); } catch {}
+  requests = {};
+  try { requests = JSON.parse(sessionStorage.getItem(requestKey()) || '{}'); } catch {}
+  if (!requests || Array.isArray(requests) || typeof requests !== 'object') requests = {};
+  $('#plan-title').value = preferences['plan-title'] || '';
   for (const id of classes) $('#' + id).value = preferences[id] ?? (id === 'zone-field' ? 'huc12' : '');
   for (const id of ['align','polygonize']) $('#' + id).checked = preferences[id] ?? (id === 'polygonize');
 }
 readPreferences();
+if (standalone && opening.get('plan_id')) preferences.plans = opening.get('plan_id');
 
 function error(value) { if (disposed || value?.name === 'AbortError') return; $('#error').hidden = !value; $('#error').textContent = value ? (value.message || String(value)) : ''; }
 function notice(text) { if (disposed) return; $('#notice').textContent = text; $('#notice').hidden = !text; }
@@ -57,7 +66,7 @@ function options(element, items, chosen, blank = 'Choose an item') {
 }
 function savePreferences() {
   if (disposed) return;
-  for (const id of ['from-edition','to-edition','plans','from-raster','to-raster','zones', ...classes]) preferences[id] = $('#' + id).value;
+  for (const id of ['from-edition','to-edition','plans','plan-title','from-raster','to-raster','zones', ...classes]) preferences[id] = $('#' + id).value;
   for (const id of ['align','polygonize']) preferences[id] = $('#' + id).checked;
   const mappingKey = $('#from-edition').value + '/' + $('#to-edition').value;
   if ($('#mapping').querySelector('[data-source-id]')) {
@@ -164,13 +173,38 @@ function executionBody(current) {
   return html;
 }
 
-async function runAction(action, payload) {
-  const operationId = 'source-refresh-' + crypto.randomUUID();
-  const task = await api('/api/actions', 'POST', {workspace, action, payload, operation_id: operationId});
-  notice('Operation ' + short(task.id) + ' is ' + task.state + '. Its original request is retained in Operations.');
+function persistRequests(values=requests, key=requestKey()) {
+  sessionStorage.setItem(key, JSON.stringify(values));
+}
+function unresolvedRequests() {
+  return Object.values(requests).filter(row => row?.workspace === workspace && row.operation_id && !row.task_id);
+}
+async function submitRequest(request, ledger=requests, storageKey=requestKey()) {
+  const selectedWorkspace = request.workspace;
+  const task = await api('/api/actions', 'POST', {workspace:selectedWorkspace,action:request.action,payload:request.payload,operation_id:request.operation_id});
+  request.task_id = task.id; request.state = task.state; request.acknowledged_at = new Date().toISOString();
+  persistRequests(ledger,storageKey);
+  if (disposed || workspace !== selectedWorkspace || (host && host.getWorkspace() !== selectedWorkspace)) return task;
+  notice((requestLabels[request.action] || request.action) + ' is ' + task.state + '. The original operation is retained with this study.');
   if (host) await host.refresh({force:true});
   await load({force:true});
   return task;
+}
+async function runAction(action, payload) {
+  const value = JSON.parse(JSON.stringify(payload)), key = canonical({action,payload:value});
+  let request = requests[key];
+  const existing = request?.task_id && (original.tasks || []).find(row => row.id === request.task_id);
+  if (existing) request.state = existing.state;
+  // A new plan captures the current dependency snapshot; a new complete archive
+  // includes later work. An unacknowledged or active click keeps its first intent.
+  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan'].includes(action);
+  if (!request || freshCompleted) {
+    request = {operation_id:'source-refresh-' + crypto.randomUUID(),workspace,action,payload:value,created_at:new Date().toISOString()};
+    requests[key] = request;
+  }
+  persistRequests();
+  renderTasks();
+  return submitRequest(request);
 }
 async function guarded(fn) {
   if (busy || disposed) return;
@@ -241,7 +275,9 @@ function isRefreshTask(task) {
 function renderTasks() {
   const tasks = (original.tasks || []).filter(isRefreshTask);
   const labels = {'source.refresh.plan':'Save source-update plan','source.refresh.apply':'Continue source update','source.refresh.landcover':'Measure land-cover change','source-refresh.apply':'Continue source update','workspace.backup':'Export complete study'};
-  $('#tasks').innerHTML = tasks.length ? tasks.map(task => '<article class="task"><div class="task-head"><strong>' +
+  const pendingRequests = unresolvedRequests();
+  const recovery = pendingRequests.length ? '<div class="request-recovery"><h3>Continue a submitted selection</h3><p>These submitted selections retain their original request identities. Continue a selection to obtain its original task.</p>' + pendingRequests.map(row => '<button type="button" data-retry-request="' + esc(row.operation_id) + '">' + esc(requestLabels[row.action] || row.action) + '</button>').join(' ') + '</div>' : '';
+  $('#tasks').innerHTML = recovery + (tasks.length ? tasks.map(task => '<article class="task"><div class="task-head"><strong>' +
     esc(labels[task.action] || task.action) + '</strong>' + tag(task.state) + '</div><p class="muted">' +
     esc(task.created_at || '') + ' · <span class="mono">' + esc(short(task.id)) + '</span></p>' +
     (task.error ? '<p>' + esc(task.error.message || pretty(task.error)) + '</p>' : '') +
@@ -249,12 +285,20 @@ function renderTasks() {
     (task.state === 'queued' ? '<button type="button" data-cancel="' + esc(task.id) + '">Cancel queued operation</button>' : '') +
     '<button type="button" data-open-task="' + esc(task.id) + '">' + (task.action === 'workspace.backup' && task.state === 'complete' ? 'Download complete study' : 'Open operation') + '</button>' +
     details(task.result || {operation_id:task.operation_id,payload:task.payload,attempts:task.attempts}, 'Operation details') + '</article>').join('') :
-    '<p class="empty">Source-update operations appear here when started.</p>';
+    '<p class="empty">Source-update operations appear here when started.</p>');
   for (const task of tasks) {
     const before = oldStates.get(task.id);
     if (before && before !== task.state && task.state === 'complete') notice((labels[task.action] || task.action) + ' completed.');
     oldStates.set(task.id, task.state);
   }
+  let changed = false;
+  for (const request of Object.values(requests)) {
+    const task = tasks.find(row => row.id === request.task_id || row.operation_id === request.operation_id);
+    if (task && (request.task_id !== task.id || request.state !== task.state)) {
+      request.task_id = task.id; request.state = task.state; changed = true;
+    }
+  }
+  if (changed) persistRequests();
 }
 async function load({force=false, suppliedState=null} = {}) {
   if (disposed) return;
@@ -318,7 +362,10 @@ function parseClasses(id) {
 function rasterSelection(side) {
   const selected = findEntry($('#' + side + '-raster').value);
   if (!selected) throw new Error('Choose both original classified land-cover rasters.');
-  const year = $('#' + side + '-year').value.trim();
+  const input = $('#' + side + '-year'), year = input.value.trim();
+  if (input.validity.badInput || (year && (!Number.isInteger(Number(year)) || Number(year) < 1985 || Number(year) > 2100))) {
+    throw new Error('Choose the original raster year as an integer from 1985 to 2100.');
+  }
   return {[side + '_collection_id']:selected.collection.id,[side + '_source_id']:selected.entry.id,...(year ? {[side + '_year']:Number(year)} : {})};
 }
 function suggestYear(side) {
@@ -384,7 +431,8 @@ $('#calculate-change').addEventListener('click', () => guarded(async () => {
   savePreferences(); await runAction('source.refresh.landcover', payload);
 }));
 for (const side of ['from','to']) $('#' + side + '-raster').addEventListener('change', () => suggestYear(side));
-for (const id of [...classes,'zones','align','polygonize']) $('#' + id).addEventListener('change', savePreferences);
+for (const id of [...classes,'zones','align','polygonize','plan-title']) $('#' + id).addEventListener('change', savePreferences);
+$('#plan-title').addEventListener('input', savePreferences);
 $('#reload').addEventListener('click', () => guarded(async () => { if (host) await host.refresh({force:true}); await load({force:true}); }));
 $('#workspace').addEventListener('change', () => guarded(async () => {
   if (!standalone) return;
@@ -399,6 +447,12 @@ $('#workspace').addEventListener('change', () => guarded(async () => {
   await load({force:true});
 }));
 root.addEventListener('click', event => {
+  const retry = event.target.closest('[data-retry-request]');
+  if (retry) guarded(async () => {
+    const request = Object.values(requests).find(row => row.operation_id === retry.dataset.retryRequest);
+    if (!request || request.workspace !== workspace) throw new Error('Reopen the study that owns this saved request.');
+    await submitRequest(request);
+  });
   const openTask = event.target.closest('[data-open-task]');
   if (openTask) guarded(async () => {
     if (host?.showTask) { await host.showTask(openTask.dataset.openTask); return; }
