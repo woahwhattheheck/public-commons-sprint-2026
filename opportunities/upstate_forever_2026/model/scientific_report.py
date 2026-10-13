@@ -13,12 +13,12 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from .common import atomic_bytes, atomic_json, describe_file
-from . import rasters, observation_diagnostics
+from . import rasters, observation_diagnostics, observation_support
 from .model_selection import run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v15-original-context-footprints-readable-tables-v1"
+REPORT_VERSION = "upstate.scientific-report/v16-original-context-footprints-readable-tables-reference-basis-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -602,6 +602,8 @@ def _observations(results):
             ))
         if result.get("metrics_basis"):
             blocks.append(str(result["metrics_basis"]))
+        blocks.extend(observation_support.reference_basis_blocks(
+            result.get("comparisons", []), result.get("observation_method")))
         blocks.extend(observation_diagnostics.build(result)["blocks"])
         methods = result.get("observation_method", {})
         if methods:
@@ -620,7 +622,9 @@ def _observations(results):
                 period = str(row.get("period_start", "")) + " to " + str(row.get("period_end", ""))
                 included = row.get("included_in_metrics") is True
                 detail.append([
-                    place, period, _number(row.get("observed_annual_mass")),
+                    place + "\n" + observation_support.reference_basis(
+                        row, result.get("observation_method"))["label"],
+                    period, _number(row.get("observed_annual_mass")),
                     _number(row.get("modeled_annual_mass")),
                     _number(row.get("residual"), signed=True) if included else "Unavailable",
                     "Complete" if included else "Partial support",
@@ -947,7 +951,14 @@ def receiving_sections(product):
         blocks.extend(_receiving_metric_blocks(
             metrics.get("baseline_physical", {}), metrics.get("alternatives", {}),
         ))
-    return [("Receiving-water quantities and priorities", blocks)]
+    sections = [("Receiving-water quantities and priorities", blocks)]
+    from .client_receiving_waters import accounting_sections
+    for part in accounting_sections(inventory, number=_number, text=_plain):
+        account_blocks = list(part["paragraphs"])
+        for item in part["tables"]:
+            account_blocks.append(_table(item["columns"], item["rows"], caption=item.get("caption")))
+        sections.append((part["title"], account_blocks))
+    return sections
 
 
 def _source_block(source_records):

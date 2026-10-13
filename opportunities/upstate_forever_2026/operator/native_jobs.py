@@ -326,6 +326,53 @@ class NativeJobs:
             time.sleep(0.4)
         return process.poll() if process else None
 
+    def _completed_exit(self, execution, process, complete):
+        """Keep a completed result while stopping one signaled native attempt."""
+        returncode = self._wait_for_exit(execution, process)
+        if type(returncode) is not int or returncode >= 0:
+            # A reconnected completed worker has no locally observed exit code.
+            # A later explicit retry verifies and reuses its original result.
+            self._record_exit(execution, "complete", returncode=returncode)
+            return complete
+        directory, request = execution["directory"], execution["request"]
+        worker = _read(directory / "worker.json") or {}
+        launch = _read(directory / "launch.json") or {}
+        failure = process_failure(
+            returncode, run_id=request["run_id"],
+            process={"pid": (execution.get("identity") or {}).get("pid", launch.get("pid")),
+                     "execution_id": request["execution_id"],
+                     "request_sha256": request["request_sha256"],
+                     "task_id": request["task_id"], "process_directory": str(directory)},
+            before=worker.get("resources") or launch.get("resources"),
+            after=resource_status(), native_state=complete)
+        failure["completed_result_retained"] = True
+        stop = _read(directory / "stop.json")
+        cancelled = bool(stop and stop.get("execution_id") == request["execution_id"]
+                         and stop.get("request_sha256") == request["request_sha256"])
+        error = (NativeJobCancelled(
+            "NATIVE_STOPPED", "Calculation stopped after its completed result was retained.")
+            if cancelled else NativeJobError("NATIVE_PROCESS_EXIT", failure["message"], 500))
+        error.native_failure = failure
+        recording_error = None
+        try:
+            # This receipt survives later successful reuse of the same result.
+            atomic_json(directory / "completed-interruption.json", {
+                "schema": "upstate.completed-native-interruption/v1",
+                "execution_id": request["execution_id"],
+                "request_sha256": request["request_sha256"],
+                "run_id": request["run_id"], "error": failure}, immutable=True)
+        except OSError as exc:
+            recording_error = exc
+        try:
+            self._record_exit(execution, "cancelled" if cancelled else "failed",
+                              returncode=returncode, error=failure)
+        except OSError as exc:
+            if recording_error is None or storage_exhausted(exc):
+                recording_error = exc
+        if recording_error is not None:
+            raise error from recording_error
+        raise error
+
     def execute(self, task, ws):
         _, run = self._selection(task)
         gate = ws.root / "runs" / run["id"] / ".native-supervision.lock"
@@ -375,9 +422,7 @@ class NativeJobs:
         while True:
             complete = self._complete(execution)
             if complete:
-                returncode = self._wait_for_exit(execution, process)
-                self._record_exit(execution, "complete", returncode=returncode)
-                return complete
+                return self._completed_exit(execution, process, complete)
             worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
             if worker.get("identity"):
                 execution["identity"] = worker["identity"]
@@ -407,8 +452,7 @@ class NativeJobs:
                 # The worker publishes its result before ending. Read again after exit.
                 complete = self._complete(execution)
                 if complete:
-                    self._record_exit(execution, "complete", returncode=returncode)
-                    return complete
+                    return self._completed_exit(execution, process, complete)
                 cancelled = bool((failure or {}).get("stopped") or selected_stop)
                 message = ((failure or {}).get("message") or
                            "The native worker ended before producing a completed result"

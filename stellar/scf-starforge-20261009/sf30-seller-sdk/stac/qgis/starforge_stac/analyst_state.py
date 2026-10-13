@@ -35,7 +35,7 @@ ANALYST_MODULES = (
 ANALYST_ROOT_FILES = (
     "analyst.mjs", "application.mjs", "application-provider.mjs",
     "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
-    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py",
+    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py", "parcel-operation-restore.py",
 )
 
 

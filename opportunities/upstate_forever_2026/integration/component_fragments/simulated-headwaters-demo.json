@@ -31,6 +31,7 @@
         "source_tools/prepare_simulated_fieldwork.py",
         "model/simulated_fieldwork.py",
         "docs/SIMULATED_FIELDWORK.md",
+        "source_tools/simulated_headwaters_receiving.py",
         "source_tools/adopt_simulated_headwaters_programme.py",
         "source_tools/SIMULATED_PROGRAMME_ADOPTION.md"
       ],

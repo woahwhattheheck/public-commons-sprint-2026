@@ -27,12 +27,15 @@ def inside(root, name):
 
 
 def patch_once(source, change, name):
-    old, new = change["old"], change["replacement"]
-    if new in source:
+    new = change["replacement"]
+    completed = [new, *change.get("compatible_postimages", [])]
+    if any(body in source for body in completed):
         return source
-    if source.count(old) != 1:
+    originals = list(dict.fromkeys([change["old"], *change.get("compatible_preimages", [])]))
+    matches = [old for old in originals if source.count(old) == 1]
+    if len(matches) != 1:
         raise ValueError("Resolve the current unique source anchor in " + name)
-    return source.replace(old, new, 1)
+    return source.replace(matches[0], new, 1)
 
 
 def atomic(path, body, mode=0o644):

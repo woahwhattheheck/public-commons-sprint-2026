@@ -1,0 +1,34 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "eighteenmile-nutrient-composition",
+  "source_reference": "PR3597: complete original-source nutrient composition and maintained Source Reports receiving",
+  "components": {
+    "eighteenmile-nutrient-composition": {
+      "title": "Eighteenmile nutrient composition and original-source explorer",
+      "paths": [
+        "observations/eighteenmile_stoichiometry_20261013/README.md",
+        "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py",
+        "observations/eighteenmile_stoichiometry_20261013/build.py",
+        "observations/eighteenmile_stoichiometry_20261013/receive.py",
+        "observations/eighteenmile_stoichiometry_20261013/explorer.html",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+        "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+        "source/observed-report-20261013/render.py",
+        "operator/source_reports.py",
+        "operator/extensions/source-reports.json",
+        "operator/web/source_reports.mjs",
+        "operator/web/source_reports.css",
+        "operator/EIGHTEENMILE_NUTRIENT_COMPOSITION.md",
+        "integration/component_fragments/eighteenmile-nutrient-composition.json"
+      ],
+      "requires": ["observed-context"],
+      "python_contexts": [
+        {
+          "prefix": "observations/eighteenmile_stoichiometry_20261013",
+          "import_roots": ["observations/eighteenmile_stoichiometry_20261013"]
+        }
+      ]
+    }
+  },
+  "required_components": ["eighteenmile-nutrient-composition"]
+}

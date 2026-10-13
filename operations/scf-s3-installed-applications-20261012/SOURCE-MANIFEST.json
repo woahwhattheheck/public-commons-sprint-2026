@@ -85,9 +85,10 @@
     },
     {
       "path": "installed-receiving/launch-installed-receiving.py",
-      "origin": "Portable first-use wrapper of original native foreground",
-      "bytes": 3903,
-      "sha256": "6494cc35f8ef867cbe87b5d38e1f19ae7226aabaca141e8f04e00a7fc1bdc343"
+      "origin": "Original operation wrapper using maintained start_foreground for acquisition-safe handoff",
+      "bytes": 3672,
+      "sha256": "b11e9f7a99af8f28fa43c38534e2e24ad72f1dabe1aba6056cff7e1db5925f5c",
+      "previousSha256": "6494cc35f8ef867cbe87b5d38e1f19ae7226aabaca141e8f04e00a7fc1bdc343"
     },
     {
       "path": "installed-receiving/resume-installed-receiving.py",
@@ -104,8 +105,9 @@
     {
       "path": "README.md",
       "origin": "Complete original installation, managed merchant, customer and recovery guide",
-      "bytes": 10081,
-      "sha256": "702b7babb6269cb0007f59aa409d6a2f6739e916646dc02262b859c867e658b4"
+      "bytes": 12587,
+      "sha256": "1202f6214c8ae7524b6b0b0b563b5b6cde60bd47dea501c401ef184ad78380b3",
+      "previousSha256": "702b7babb6269cb0007f59aa409d6a2f6739e916646dc02262b859c867e658b4"
     },
     {
       "path": "LICENSE.commons",
@@ -119,5 +121,11 @@
       "sha256": "16536a92aae6095d778518a6cc6c3bc25f40fc0e5fe7be443c9a39d765b5d82b",
       "origin": "Source provenance and licensing notices"
     }
-  ]
+  ],
+  "maintainedForegroundSource": {
+    "repository": "woahwhattheheck/commons",
+    "commit": "d793fc353514d265d6dbec3cdc129e2d4145f38c",
+    "entrypoint": "host/native_foreground.py:start_foreground",
+    "report": "host/native_result_view.py:select"
+  }
 }

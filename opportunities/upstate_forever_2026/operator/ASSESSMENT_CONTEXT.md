@@ -416,3 +416,14 @@ The additive assessment scientific-report component declaration names the existi
 ### NLDI station source extension
 
 The station installer composes the original WBD catalogue with its maintained `observed-station-wbd-nldi-197` extension before selecting files. The extension contributes the original NLDI point file and all 13 original WBD responses, retaining 197 coordinate-specific context rows and both gauge-coordinate variants. The existing component fragment reader validates the declaration; all selected source members and declared hashes are checked before any application file changes. Geographic source context remains separate from the assessment cause and use inventory.
+
+
+### Geographic context and assessment inventories
+
+Saved observed-station studies retain their original WBD point and watershed tables. Assessment context displays these under **Geographic source context**, with the source title, vintage, row count, original link and retained identity. These tables remain part of the saved station study and portable source package. They do not supply assessment cause, use, support or publication records.
+
+The assessment selector uses the producer’s explicit geographic source type to keep those tables out of automatic inventory selection. The backend applies the same distinction before normalizing selected fields and extracting original records, including manually supplied selections. Untyped custom assessment tables remain available with their original field mappings. Existing 87-, 159- and 164-station assessment inventories preserve all original 293 edition-specific records.
+
+When a saved observed-station study contains geographic context only, choose a saved assessment study or use **Open Station geography** to prepare the assessment study from its original sources. Saved assessment results and their report, parcel and portable receiving controls remain available below the form.
+
+The complete standalone installation also retains the current native assessment review provider, client and guide, so the maintained station desk can accept its original source-bound station selection without a missing module or browser asset.

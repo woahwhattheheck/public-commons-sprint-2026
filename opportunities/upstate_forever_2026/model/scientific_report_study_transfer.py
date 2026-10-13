@@ -71,10 +71,15 @@ def _source(closure, choice, expected_source):
     # sources. Older archive selections keep their original dependency semantics.
     from . import monitoring_study_transfer, study_report_transfer, receiving_water_report_transfer
     from . import native_process_study_transfer
+    from . import ensemble_study_transfer, gauge_study_transfer
     monitoring_study_transfer.include_source(closure, collection_id, entry)
     study_report_transfer.include_calibration(closure, collection_id, entry)
     receiving_water_report_transfer.include_source(closure, collection_id, entry)
     native_process_study_transfer.include_source(closure, collection_id, entry)
+    from . import published_review_study_transfer
+    published_review_study_transfer.include_source(closure, collection_id, entry)
+    ensemble_study_transfer.include_source(closure, collection_id, entry)
+    gauge_study_transfer.include_source(closure, collection_id, entry)
     from . import community_study_transfer, conservation_study_transfer
     community_study_transfer.include_source(closure, collection_id, entry)
     conservation_study_transfer.include_source(closure, collection_id, entry)

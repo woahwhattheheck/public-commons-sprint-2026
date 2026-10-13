@@ -243,7 +243,11 @@ def _collect_source(source, directory, state, *, namespace=None):
                     if relative not in delivered:
                         raise ValueError("Report link names an unretained source member")
                     item["path"] = delivered[relative]["path"]
-    concentration = _concentration_support(source)
+    # A saved budget report already retains independently selected per-plan
+    # contexts. Standalone-study inference would merge their distinct source
+    # roots and lose that selection; their complete typed sections stay intact.
+    concentration = (None if recipe.get("report_context_kind") == "monitoring-budget-comparison"
+                     else _concentration_support(source))
     if concentration is not None:
         from measurement_workspace.observation_support import report_sections
         support_path = directory / "observed-support" / scope / binding["body_sha256"] / "concentration-context.json"

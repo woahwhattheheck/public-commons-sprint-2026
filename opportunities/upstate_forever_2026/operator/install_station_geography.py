@@ -14,6 +14,9 @@ import sys
 import tempfile
 
 FILES = (
+    "model/native_assessment_review.py",
+    "operator/web/native_assessment_review.mjs",
+    "operator/NATIVE_ASSESSMENT_REVIEW.md",
     "source_tools/component_fragments.py",
     "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/component_fragments/assessment-scientific-report-consumer.json",

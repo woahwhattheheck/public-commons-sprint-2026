@@ -286,6 +286,49 @@ class DiagnosticsDatasets:
             {"diagnostic_id": diagnostic_id},
         )
 
+    def report_revision(self, workspace_key, diagnostic_id, source_sha256):
+        """Read the already captured report without consulting a newer live report."""
+        from eco_intelligence.common import IntelligenceError
+        from model.common import describe_file
+
+        if (not isinstance(diagnostic_id, str) or not _ID.fullmatch(diagnostic_id)
+                or not isinstance(source_sha256, str) or not _ID.fullmatch(source_sha256)):
+            raise IntelligenceError("Choose an original saved report revision.", 422)
+        ws = self.operator.ws(workspace_key)
+        root = Path(ws.root).resolve()
+        folder = root / "intelligence" / "diagnostic-revisions" / diagnostic_id / source_sha256
+        if not folder.resolve().is_relative_to(root):
+            raise IntelligenceError("The report revision leaves this workspace.", 409)
+        manifest_path, report_path = folder / "manifest.json", folder / "report.json"
+        if not manifest_path.is_file() or not report_path.is_file():
+            raise IntelligenceError("The selected report revision is not retained in this workspace.", 404)
+        row = self._revision_record(
+            ws, diagnostic_id, source_sha256, manifest_path, report_path, workspace_key,
+        )
+        value = read_json(Path(row["path"]))
+        if not isinstance(value, dict) or value.get("id") != diagnostic_id:
+            raise IntelligenceError("The retained report contains another diagnostic.", 409)
+        manifest = read_json(manifest_path)
+        descriptor = manifest["report"]
+        value = copy.deepcopy(value)
+        value["artifacts"] = {**value.get("artifacts", {}), "report_json": descriptor}
+        downloads = []
+        for key, path, item, title in (
+            ("report_json", report_path, descriptor, "Captured scientific report JSON"),
+            ("revision_manifest", manifest_path, describe_file(root, manifest_path),
+             "Captured report source manifest"),
+        ):
+            ticket = self.operator._ticket(
+                workspace_key, path, {**item, "filename": path.name}, title,
+            )
+            downloads.append({**ticket, "artifact_key": key})
+        value["_downloads"] = downloads
+        value["_retained_revision"] = {
+            "dataset_id": row["id"], "source_sha256": source_sha256,
+            "project_id": ws.project["id"], "created_at": manifest.get("created_at"),
+        }
+        return value
+
     def repository(self):
         from eco_intelligence.adapters import StoreBackedRepository
 
