@@ -6,11 +6,9 @@ The existing scientific delivery builder now freezes the producing NDR and SDR i
 
 A completed stage's original `runtime.version` takes precedence. If that stage has no recorded version, the report labels the original run runtime as a fallback. Historical records with neither use their retained requested version and say that it is a legacy declaration. A later SDR execution can update the run runtime without changing the earlier NDR output. Versions remain separate for each model, with requested and last-run values shown for context.
 
-`native-execution.json` retains ordered run IDs, original selections, per-model provenance, original module/source identities and selected models from the run and stages. Original environment and complete stage files stay in the original working project. The manifest keeps its established `model.version` adapter/auditor field and explicitly labels its basis; `model.execution_provenance` points to the hashed execution companion.
+`native-execution.json` retains ordered run IDs, original selections, per-model provenance, original module/source identities and selected models from the run and stages. Original environment and complete stage files stay in the original working project. The current manifest keeps its structured `model.versions` and `model.native_version_provenance`, and `model.version` remains the actual common version across all selected runs/models or null when there is none. Its separate `model.application_version` records the delivery adapter version; `model.execution_provenance` points to the hashed execution companion.
 
 The direct native delivery cohort uses the same shared per-model comparison rule as scenario analysis. Each compared NDR stage must agree with baseline NDR, and each compared SDR stage must agree with baseline SDR. NDR and SDR can have different effective versions within a run. All prior grid, profile, original land-cover scenario, common support, units and native output rules remain in effect.
-
-The native-study context retains the same per-model execution binding alongside its complete original stage runtimes. Its original supported-engine and official-module source checks remain in place, and a stage runtime takes precedence only when that model stage is completed.
 
 The frozen execution digest joins the saved delivery selection. A resumed incomplete delivery verifies the retained companion bytes and exact frozen contents before continuing. Existing complete delivery records and their source files remain readable through the original inspector.
 
@@ -38,5 +36,7 @@ After composing these source files with the current complete application, use th
 Gura engine acceptance retains its original geography. Published South Carolina source-water areas require an actual intersecting Upper Savannah reporting grid and geographically matched native runs; the existing prepared-plan/source-area flow preserves those original identities.
 
 ## Validation scope
+
+The current native-study consumer retains its separate original supported-engine and official-module source checks; its maintained source owner composes that context independently.
 
 The change formats original native records and checks component source closure. It does not recompute ecological quantities. Full source and exact hashes are retained for receiving and independent review; native application execution is performed by the existing receiving operation.
