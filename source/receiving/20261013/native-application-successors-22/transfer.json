@@ -1,0 +1,30 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ES-20261012-ASTRA-S1-WQP-11CC-CURRENT-SUCCESSORS",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source_commit": "3e582e337359ab6811d7aa0507fa2a7d2910e119",
+  "file_count": 22,
+  "source_bytes": 751109,
+  "preserve": "Decode into a separate owned output directory, then compose these22 successor files onto the complete660 application. Includes merged3560 evidence/server,3583 review receiving,3596 Workspace constructor,3613 native table formatting,3639 transfer receiver,3640 observed-source-to-review flow, and jobs.css. Preserve any newer actual native peer edits. Keep the original dc92 Workspace and original88 source import.",
+  "banks": [
+    {
+      "name": "successors",
+      "original_git_blob": "d85b250872047d04c7d75851cf0aef96eabeff81",
+      "original_bytes": 1007420,
+      "original_sha256": "256334ac97180bdab130282bc92d1af0e2c756f1ea313497738f9d51bf986098",
+      "gzip_bytes": 300680,
+      "gzip_sha256": "b3788278a929e829c0719b595cdd4da9a628a43e206e33b18f01a866c3671974",
+      "parts": [
+        {
+          "git_blob": "e8a5908c88336f21cbcc2198499a9a5b420142af",
+          "json_bytes": 401116,
+          "json_sha256": "3e4d8a06a2eee613a023ff64971461bd75d051d388258bc8f8f2f15c4cdad2ee",
+          "index": 0,
+          "offset": 0,
+          "bytes": 300680,
+          "sha256": "b3788278a929e829c0719b595cdd4da9a628a43e206e33b18f01a866c3671974"
+        }
+      ]
+    }
+  ]
+}
