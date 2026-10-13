@@ -236,6 +236,18 @@ FIELDS.update({
   "person_id":R("people",True),"vote_id":T(True),"recorded_at":T(True),"verification_note":T(True),
   "input_sha256":T(True),"input_snapshot":J()}
 })
+APPLICATION_COLLECTIONS = {"application_drafts", "application_editions"}
+IMMUTABLE.update(APPLICATION_COLLECTIONS)
+OPTIONAL_COLLECTIONS.update(APPLICATION_COLLECTIONS)
+FIELDS.update({
+ "application_drafts": {"title":T(True), "edition_id":R("editions",True),
+  "predecessor_id":R("application_drafts"), "recorded_at":T(True),
+  "input_snapshot":J(), "input_sha256":T(True), "source_ids":L()},
+ "application_editions": {"title":T(True), "edition_id":R("editions",True),
+  "draft_id":R("application_drafts",True), "frozen_at":T(True), "review_note":T(),
+  "input_snapshot":J(), "input_sha256":T(True), "source_ids":L()}
+})
+
 COLLECTIONS = tuple(FIELDS)
 
 def canonical(value):
@@ -1011,6 +1023,10 @@ def validate_state(state):
         if __package__:from . import consultation
         else:import consultation
         consultation.validate_state(state)
+    if any(state.get(name) for name in APPLICATION_COLLECTIONS):
+        if __package__:from . import applications
+        else:import applications
+        applications.validate_state(state)
     if any(state.get(name) for name in BALLOT_EXCHANGE_COLLECTIONS):
         if __package__:from . import ballot_exchange
         else:import ballot_exchange

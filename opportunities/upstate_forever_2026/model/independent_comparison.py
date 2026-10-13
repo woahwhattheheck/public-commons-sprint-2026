@@ -18,12 +18,12 @@ import zipfile
 
 from .common import (atomic_json, canonical, describe_file, digest, file_digest,
                      held, identifier, read_json, relative_file, verify_file)
-from . import observation_support, observed_context
+from . import observation_support, observed_context, independent_comparison_figures
 
 SCHEMA = "upstate.independent-comparison-selection/v1"
 RESULT_SCHEMA = "upstate.independent-comparison/v1"
 KIND = "independent-comparisons"
-EDITION = "saved-native-independent-source-1"
+EDITION = "saved-native-independent-source-2"
 SOURCE_ID = "independent-comparison"
 APPLICATION = Path(__file__).resolve().parent.parent
 FIELDS = ("record_id", "catchment_id", "parameter", "value", "unit", "period_start",
@@ -149,7 +149,9 @@ def _selection(value):
 def producers():
     names = ["model/independent_comparison.py", "model/common.py", "model/verified_files.py",
              "model/observations.py", "model/observation_support.py",
-             "model/observed_context.py", METHODS, GUIDE, CATALOG]
+             "model/observed_context.py", "model/independent_comparison_figures.py",
+             "model/scientific_figures.py", "model/scientific_map_figures.py",
+             "model/rasters.py", METHODS, GUIDE, CATALOG]
     return {name: {"bytes": (APPLICATION / name).stat().st_size,
                    "sha256": file_digest(APPLICATION / name)} for name in names}
 
@@ -510,7 +512,7 @@ def _sections(data):
     ]
 
 
-def _html(data):
+def _html(data, figures=None, directory=None):
     e = lambda x: html.escape(str(x), quote=True)
     parts = ["<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
              "<title>" + e(data["selection"]["title"]) + "</title>",
@@ -527,6 +529,16 @@ def _html(data):
                 for row in block["rows"]:
                     parts.append("<tr>" + "".join("<td>" + e(x) + "</td>" for x in row) + "</tr>")
                 parts.append("</tbody></table></div>")
+    if figures is not None:
+        parts.append("<h2>Saved comparison maps and figures</h2><p><a href='figures/index.html'>Complete figure reader and original source tables</a> · <a href='figures/figure-data.json'>Full pair and geometry data</a></p>")
+        for item in figures["figures"]:
+            svg = (Path(directory) / item["path"]).read_text(encoding="utf-8")
+            start = svg.find("<svg")
+            if start < 0 or not svg.rstrip().endswith("</svg>"):
+                raise ValueError("Retain a complete generated native SVG")
+            parts.append("<section><h3>" + e(item["title"]) +
+                         "</h3><div class='scroll' style='max-width:100%;overflow:auto'>" +
+                         svg[start:] + "</div><p>" + e(item["caption"]) + "</p></section>")
     parts.append("<h2>Arithmetic and coverage</h2><p>" + e(data["arithmetic"]) + "</p><pre>" +
                  e(json.dumps(data["statistics"], ensure_ascii=False, indent=2)) + "</pre></main></html>")
     return "".join(parts)
@@ -632,7 +644,8 @@ def build(workspace, selection):
             atomic_json(temporary / "selection.json", value, immutable=True)
             atomic_json(temporary / "inputs.json", selected_inputs, immutable=True)
             atomic_json(temporary / "comparison.json", data, immutable=True)
-            (temporary / "report.html").write_text(_html(data), encoding="utf-8")
+            figures = independent_comparison_figures.prepare(temporary, selected_inputs, data, originals)
+            (temporary / "report.html").write_text(_html(data, figures, temporary), encoding="utf-8")
             with (temporary / "pairs.csv").open("w", encoding="utf-8", newline="") as stream:
                 writer = csv.writer(stream)
                 table = _sections(data)[1][1][0]
@@ -653,6 +666,14 @@ def build(workspace, selection):
                                        {"title": "Complete original input records", "path": "inputs.json"},
                                        {"title": "Editable original selection", "path": "selection.json"},
                                        {"title": "Original files and source identities", "path": "original-files.json"}]}
+            recipe["figure_spec"] = figures["spec"]
+            recipe["figures"] = [{"id": row["id"], "path": row["path"]} for row in figures["figures"]]
+            recipe["source_links"].extend([
+                {"title": "Saved comparison map and figure reader", "path": figures["reader"]},
+                {"title": "Complete pair and source geometry data", "path": figures["data_path"]},
+                {"title": "All pair values and original definitions", "path": figures["csv"]},
+                {"title": "Complete original and projected geometry", "path": figures["geometry_path"]},
+                {"title": "Scientific figure specifications", "path": figures["spec"]}])
             # Keep every body under one recipe-root so original view_path preserves
             # all report links and original member relationships.
             source = temporary
@@ -716,7 +737,13 @@ def inspect(workspace, key):
     old = receipt["observed_binding"]
     if {k: v for k, v in binding.items() if k != "edition"} != {k: v for k, v in old.items() if k != "edition"}:
         raise ValueError("Original comparison Study members changed")
-    return {"edition": receipt, "data": data, "inputs": selected_inputs}
+    figures = independent_comparison_figures.inspect(directory, plan["files"], data)
+    if identity.get("edition") == EDITION and figures is None:
+        raise ValueError("Current comparison edition requires its complete original figures")
+    result = {"edition": receipt, "data": data, "inputs": selected_inputs}
+    if figures is not None:
+        result["figures"] = figures
+    return result
 
 
 def overview(workspace):

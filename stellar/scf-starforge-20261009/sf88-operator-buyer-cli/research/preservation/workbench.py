@@ -28,6 +28,7 @@ import preservation as p
 import roda
 import roda_client
 import collection_accession as collection
+import transfer_inspection as transfers
 
 SCHEMA = "stellar-forge.preservation-workbench.v1"
 SNAPSHOT_SCHEMA = SCHEMA + ".snapshot"
@@ -36,7 +37,7 @@ MAX_SNAPSHOT = 8 * 1024 * 1024 * 1024
 MAX_SNAPSHOT_MEMBER = 2 * 1024 * 1024 * 1024
 ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,95}")
 HASH = re.compile(r"[0-9a-f]{64}")
-STATIC = {"workbench.html", "workbench.js", "collection_accession.js"}
+STATIC = {"workbench.html", "workbench.js", "collection_accession.js", "transfer_inspection.js"}
 APPLICATION = (
     "research/preservation/preservation.py",
     "research/preservation/roda.py",
@@ -78,6 +79,14 @@ COLLECTION_APPLICATION = (
     "research/preservation/COLLECTION_ACCESSION.md",
     "research/preservation/receiving/collection_accession_receive.py",
     "research/preservation/receiving/collection_accession_browser.mjs",
+)
+
+TRANSFER_APPLICATION = (
+    "research/preservation/transfer_inspection.py",
+    "research/preservation/transfer_inspection.js",
+    "research/preservation/TRANSFER_INSPECTION.md",
+    "research/preservation/receiving/transfer_inspection_receive.py",
+    "research/preservation/receiving/transfer_inspection_browser.mjs",
 )
 
 
@@ -734,6 +743,73 @@ class Workbench:
         value = collection.initialize(source, root, selected, inventory_sha256)
         return {key: value[key] for key in ("id", "revision", "reviewSha256", "settings", "summary", "reused")}
 
+    def retain_transfer(self, selected):
+        if not isinstance(selected, dict) or selected.get("kind") not in {"artifact", "path"}:
+            raise Problem("TRANSFER_SELECTION", "Choose a complete saved or incoming package.")
+        if selected["kind"] == "artifact":
+            if set(selected) != {"kind", "id"}:
+                raise Problem("TRANSFER_SELECTION", "Select the original saved package ID.")
+            source, artifact = self.artifact_path(selected["id"])
+            if not source.name.lower().endswith(".zip") or artifact["kind"] == "complete-workspace":
+                raise Problem("TRANSFER_SELECTION", "Select an original BagIt ZIP, not a complete workspace.")
+            # Existing original delivery bytes are already in complete workspace custody.
+            # Retain their exact binding without making another full package copy.
+            return source, {"name": source.name, "bytes": artifact["bytes"], "sha256": artifact["sha256"],
+                            "retainedPath": artifact["path"], "artifactId": artifact["id"]}
+        else:
+            if set(selected) != {"kind", "path"} or not isinstance(selected["path"], str) or not selected["path"].strip():
+                raise Problem("TRANSFER_SELECTION", "Enter the complete original ZIP path on this host.")
+            source = Path(selected["path"]).expanduser().absolute()
+        expected = file_digest(source, p.MAX_TOTAL)
+        home = self.packages / "transfer-desk" / "originals"
+        directory(home)
+        retained = home / (expected["sha256"] + ".zip")
+        copy_file(source, retained, expected)
+        if file_digest(source, p.MAX_TOTAL) != expected:
+            raise Problem("FILE_CHANGED", "The selected original package changed during retention.")
+        original = self.artifact(retained, "transfer-original")
+        return retained, {"name": source.name, **expected, "retainedPath": original["path"],
+                          "artifactId": original["id"]}
+
+    def transfer_report(self, mode, selections):
+        if mode not in {"inspect", "compare"} or not isinstance(selections, list) or len(selections) != (1 if mode == "inspect" else 2):
+            raise Problem("TRANSFER_SELECTION", "Select one package or an ordered pair of original editions.")
+        retained = [self.retain_transfer(value) for value in selections]
+        if mode == "inspect":
+            report = transfers.inspect(retained[0][0], retained[0][1])
+        else:
+            report = transfers.compare(retained[0][0], retained[1][0], retained[0][1], retained[1][1])
+        for path, identity in retained:
+            if file_digest(path, p.MAX_TOTAL) != {key: identity[key] for key in ("bytes", "sha256")}:
+                raise Problem("FILE_CHANGED", "A retained original package changed during inspection.")
+        bodies = {"json": transfers.encoded(report), "html": transfers.report_html(report),
+                  "csv": transfers.report_csv(report)}
+        if any(len(body) > transfers.MAX_REPORT for body in bodies.values()):
+            raise Problem("TRANSFER_REPORT_SIZE", "The complete report exceeds the 64 MiB report limit.")
+        report_id = p.digest(bodies["json"])
+        folder = self.packages / "transfer-desk" / "reports"
+        directory(folder)
+        result = {"mode": mode, "profile": report["kind"], "reportId": report_id,
+                  "summary": report["summary"], "packages": [value for _, value in retained],
+                  "artifacts": {}}
+        for extension, body in bodies.items():
+            target = folder / ("Transfer_" + mode + "_" + report_id + "." + extension)
+            if target.exists():
+                if p.read_regular(target.parent, target.name, transfers.MAX_REPORT) != body:
+                    raise Problem("TRANSFER_REPORT_CHANGED", "A retained report differs from its original package selection.")
+            else:
+                p.write_new(target, body)
+            result["artifacts"][extension] = self.artifact(target, "transfer-" + mode + "-" + extension)
+        return result
+
+    def transfer_view(self, report_id, offset=0, query="", changed_only=False):
+        path, artifact = self.artifact_path(report_id)
+        if artifact["kind"] not in {"transfer-inspect-json", "transfer-compare-json"}:
+            raise Problem("TRANSFER_REPORT", "Select a complete saved transfer inspection or comparison.")
+        report = p.parse_json(p.read_regular(path.parent, path.name, transfers.MAX_REPORT))
+        return {**transfers.page(report, offset=int(offset), query=query, changed_only=changed_only),
+                "artifact": artifact}
+
     def build_accession(self, accession_id, revision):
         root = self.accession(accession_id)
         current = collection.show(root)
@@ -981,8 +1057,8 @@ def snapshot_manifest(archive):
     if type(collection_only) is not bool:
         raise Problem("SNAPSHOT_MANIFEST", "Invalid collection-only snapshot selection.")
     if collection_only:
-        if manifest.get("selection") is not None or not manifest.get("collectionBindings"):
-            raise Problem("SNAPSHOT_MANIFEST", "Collection-only snapshots retain their original accessions.")
+        if manifest.get("selection") is not None or not (manifest.get("collectionBindings") or manifest.get("transferReports")):
+            raise Problem("SNAPSHOT_MANIFEST", "Non-research snapshots retain their original accessions or complete transfer reports.")
         if any(name.startswith("workspace/") for name in descriptors):
             raise Problem("SNAPSHOT_MANIFEST", "A collection-only snapshot cannot substitute a research workspace.")
     else:
@@ -992,7 +1068,8 @@ def snapshot_manifest(archive):
         required.update({"workspace/project.json", "workspace/prepared.json", "workspace/current.json"})
     required.update("application/" + name for name in APPLICATION)
     provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION,
-                       "archivematica": ARCHIVEMATICA_APPLICATION, "collections": COLLECTION_APPLICATION}
+                       "archivematica": ARCHIVEMATICA_APPLICATION, "collections": COLLECTION_APPLICATION,
+                       "transfers": TRANSFER_APPLICATION}
     selected_collections = manifest.get("collectionBindings", [])
     if not isinstance(selected_collections, list):
         raise Problem("SNAPSHOT_MANIFEST", "Invalid accession bindings.")
@@ -1016,6 +1093,46 @@ def snapshot_manifest(archive):
         raise Problem("SNAPSHOT_MANIFEST", "The complete accession inventory differs from its selection.")
     if collection_ids:
         required.update("application/" + name for name in COLLECTION_APPLICATION)
+    selected_reports = manifest.get("transferReports", [])
+    if not isinstance(selected_reports, list) or len(set(selected_reports)) != len(selected_reports):
+        raise Problem("SNAPSHOT_MANIFEST", "Invalid retained transfer report selection.")
+    artifact_member = "operator/artifacts.json"
+    if artifact_member not in descriptors or descriptors[artifact_member]["bytes"] > BODY_LIMIT:
+        raise Problem("SNAPSHOT_MANIFEST", "Missing original artifact registry.")
+    registry = p.parse_json(archive.read(artifact_member))
+    artifacts = registry.get("artifacts") if isinstance(registry, dict) else None
+    if not isinstance(artifacts, list) or not all(isinstance(item, dict) for item in artifacts):
+        raise Problem("SNAPSHOT_MANIFEST", "Invalid original artifact registry.")
+    actual_reports = [item for item in artifacts if item.get("kind") in {"transfer-inspect-json", "transfer-compare-json"}]
+    if set(selected_reports) != {item.get("path") for item in actual_reports}:
+        raise Problem("SNAPSHOT_MANIFEST", "Complete transfer report selection differs from its original registry.")
+    for item in actual_reports:
+        if descriptors.get("operator/" + p.safe_name(item["path"])) != {key: item.get(key) for key in ("bytes", "sha256")}:
+            raise Problem("SNAPSHOT_MANIFEST", "A complete transfer report differs from its saved artifact.")
+    for name in selected_reports:
+        p.safe_name(name)
+        if not re.fullmatch(r"packages/transfer-desk/reports/Transfer_(inspect|compare)_[0-9a-f]{64}\.json", name):
+            raise Problem("SNAPSHOT_MANIFEST", "Invalid complete transfer report member.")
+        required.add("operator/" + name)
+    # Bind complete reports to the exact original packages they identify.
+    for name in selected_reports:
+        member = "operator/" + name
+        if member not in descriptors or descriptors[member]["bytes"] > transfers.MAX_REPORT:
+            raise Problem("SNAPSHOT_MANIFEST", "A retained complete transfer report is missing or oversized.")
+        report = p.parse_json(archive.read(member))
+        if report.get("schema") not in {transfers.SCHEMA + ".inspection", transfers.SCHEMA + ".comparison"}:
+            raise Problem("SNAPSHOT_MANIFEST", "Invalid original transfer report.")
+        for key in ("package", "previousPackage", "currentPackage"):
+            if key not in report:
+                continue
+            value = report[key]
+            path = p.safe_name(value["retainedPath"])
+            original_member = "operator/" + path
+            if not path.startswith("packages/") or descriptors.get(original_member) != {key: value[key] for key in ("bytes", "sha256")}:
+                raise Problem("SNAPSHOT_MANIFEST", "A selected original transfer package differs from its complete report.")
+            required.add(original_member)
+    if any(name.startswith("operator/packages/transfer-desk/") for name in descriptors):
+        required.update("application/" + name for name in TRANSFER_APPLICATION)
     for source_group in provider_groups.values():
         provider_names = {"application/" + name for name in source_group}
         if provider_names & set(descriptors):
@@ -1076,8 +1193,13 @@ def export_workspace(app, output):
                 collection.ident(child.name)
                 locks.enter_context(p.project_lock(child))
         accession_bindings = collection.bindings(app.accessions, True, locked=True)
-        if collection_only and not accession_bindings:
-            raise Problem("EMPTY_WORKSPACE", "Receive a research source or an original collection before exporting.")
+        with app.guard:
+            transfer_reports = [item["path"] for item in app.artifacts
+                                if item["kind"] in {"transfer-inspect-json", "transfer-compare-json"}]
+        for name in transfer_reports:
+            regular(app.control / p.safe_name(name))
+        if collection_only and not accession_bindings and not transfer_reports:
+            raise Problem("EMPTY_WORKSPACE", "Receive a research source, retain an original collection, or inspect a complete package before exporting.")
         libnova_operations = set()
         archivematica_operations = set()
         for operation_root in sorted(app.operations.iterdir()):
@@ -1112,7 +1234,8 @@ def export_workspace(app, output):
             members["operator/" + name] = path
         source_names = list(APPLICATION)
         for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
-                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION)):
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION),
+                                    ("Transfer inspection", TRANSFER_APPLICATION)):
             present = [(application_root / name).is_file() for name in source_group]
             if any(present):
                 if not all(present):
@@ -1134,6 +1257,7 @@ def export_workspace(app, output):
                     "sourceRecords": len(prepared["records"]),
                     "includedRecords": sum(x["include"] for x in p.mapped_records(prepared, saved["review"])) if saved else 0,
                     "collectionOnly": collection_only, "collectionBindings": accession_bindings,
+                    "transferReports": transfer_reports,
                     "files": descriptors,
                     "previousCompleteExports": previous_exports,
                     "exportHistory": "Prior complete ZIP files are listed by identity. This snapshot contains the current source, retained review revisions and current operation/workspace files."}
@@ -1209,8 +1333,15 @@ def receive_workspace(source, output):
                         current_accessions[key]["inventorySha256"] != item["inventorySha256"]
                         for key, item in original_accessions.items()):
                     raise Problem("RECEIVED_SOURCE", "The received original accession changed.")
+                original_transfer_paths = set()
+                for name in manifest.get("transferReports", []):
+                    report = p.parse_json(archive.read("operator/" + name))
+                    for key in ("package", "previousPackage", "currentPackage"):
+                        if key in report:
+                            original_transfer_paths.add("operator/" + p.safe_name(report[key]["retainedPath"]))
                 for name, expected in manifest["files"].items():
-                    if name.startswith("application/") and file_digest(output / name) != expected:
+                    retained_path = output / name if name.startswith("application/") else output / "workspace.operator" / name.removeprefix("operator/")
+                    if (name.startswith("application/") or name.startswith("operator/packages/transfer-desk/") or name in original_transfer_paths) and file_digest(retained_path) != expected:
                         raise Problem("RECEIVED_APPLICATION", "The received application differs from its original handoff.", member=name)
                 unchanged()
                 return {"received": True, "reused": True, "directory": str(output),
@@ -1412,7 +1543,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks()
             request = urlsplit(self.path)
             args = parse_qs(request.query)
-            if request.path in {"/", "/workbench.html", "/workbench.js", "/collection_accession.js"}:
+            if request.path in {"/", "/workbench.html", "/workbench.js", "/collection_accession.js", "/transfer_inspection.js"}:
                 name = "workbench.html" if request.path == "/" else request.path.lstrip("/")
                 if name not in STATIC:
                     raise Problem("PATH", "Unknown application asset.")
@@ -1425,6 +1556,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_json(200, self.app.launch)
             elif request.path == "/api/state":
                 self.send_json(200, self.app.state())
+            elif request.path == "/api/transfer-report":
+                self.send_json(200, self.app.transfer_view(args.get("id", [""])[0],
+                    args.get("offset", [0])[0], args.get("q", [""])[0], args.get("changed", ["false"])[0] == "true"))
             elif request.path == "/api/accessions":
                 self.send_json(200, {"accessions": collection.bindings(self.app.accessions)})
             elif request.path == "/api/accession":
@@ -1473,7 +1607,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.base_checks(mutation=True)
             body = self.body()
             path = urlsplit(self.path).path
-            if path == "/api/accession-inspect":
+            if path == "/api/transfer-report":
+                if set(body) != {"mode", "selections"} or body["mode"] not in {"inspect", "compare"}:
+                    raise Problem("TRANSFER_SELECTION", "Select the complete inspection or ordered comparison.")
+                result = self.app.queue("transfer-" + body["mode"], body,
+                    lambda job: self.app.transfer_report(body["mode"], body["selections"]))
+            elif path == "/api/accession-inspect":
                 if set(body) != {"source"}:
                     raise Problem("SOURCE", "Select the complete original source directory.")
                 result = self.app.queue("collection-inspect", body,
@@ -1628,7 +1767,8 @@ def managed_binding(workspace):
     source_root = Path(__file__).resolve().parents[2]
     names = list(APPLICATION)
     for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
-                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION)):
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION), ("Collection accession", COLLECTION_APPLICATION),
+                                    ("Transfer inspection", TRANSFER_APPLICATION)):
         optional = [(source_root / name).exists() for name in source_group]
         if any(optional):
             if not all(optional):

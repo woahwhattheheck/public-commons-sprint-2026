@@ -1,0 +1,253 @@
+{
+  "schema": "commons.discovery.cohort-manifest.v1",
+  "edition": "demo-a",
+  "label": "Demonstration discovery cohort A",
+  "data_class": "DEMONSTRATION",
+  "source_authorization": {
+    "owner": "Workbench receiving operator",
+    "reference": "Bundled invented fixture for an offline operating demonstration"
+  },
+  "tables": [
+    {
+      "id": "enrolments",
+      "path": "enrolments.csv",
+      "encoding": "utf-8",
+      "header_mode": "exact",
+      "columns": [
+        {
+          "name": "enrolment_id",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "learner_id",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "programme_id",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "academic_year",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "level",
+          "type": "text",
+          "required": true,
+          "enum": [
+            "FE",
+            "HE"
+          ]
+        },
+        {
+          "name": "mode",
+          "type": "text",
+          "required": true,
+          "enum": [
+            "full_time",
+            "part_time"
+          ]
+        },
+        {
+          "name": "outcome",
+          "type": "text",
+          "required": true,
+          "enum": [
+            "successful",
+            "partial",
+            "non_completion"
+          ]
+        },
+        {
+          "name": "funding",
+          "type": "decimal",
+          "required": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "primary_key": [
+        "enrolment_id"
+      ],
+      "foreign_keys": [
+        {
+          "id": "programme",
+          "columns": [
+            "programme_id"
+          ],
+          "references": {
+            "table": "programmes",
+            "columns": [
+              "programme_id"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "programmes",
+      "path": "programmes.csv",
+      "encoding": "utf-8",
+      "columns": [
+        {
+          "name": "programme_id",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "programme_name",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "primary_key": [
+        "programme_id"
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "id": "fe_full_time_outcomes",
+      "label": "Demonstration FE full-time outcomes",
+      "table": "enrolments",
+      "cohort": {
+        "all": [
+          {
+            "column": "academic_year",
+            "op": "eq",
+            "value": 2024
+          },
+          {
+            "column": "level",
+            "op": "eq",
+            "value": "FE"
+          },
+          {
+            "column": "mode",
+            "op": "eq",
+            "value": "full_time"
+          }
+        ]
+      },
+      "unit": {
+        "kind": "distinct",
+        "columns": [
+          "enrolment_id"
+        ]
+      },
+      "invalid_rows": "reject",
+      "require_partition": true,
+      "rounding": {
+        "mode": "HALF_UP",
+        "places": 1
+      },
+      "outcomes": [
+        {
+          "id": "successful",
+          "where": {
+            "column": "outcome",
+            "op": "eq",
+            "value": "successful"
+          }
+        },
+        {
+          "id": "partial",
+          "where": {
+            "column": "outcome",
+            "op": "eq",
+            "value": "partial"
+          }
+        },
+        {
+          "id": "non_completion",
+          "where": {
+            "column": "outcome",
+            "op": "eq",
+            "value": "non_completion"
+          }
+        }
+      ]
+    }
+  ],
+  "source_register": [
+    {
+      "id": "registration_export",
+      "name": "Demonstration registration CSV",
+      "owner": "Demo registration owner",
+      "source_reference": "fixtures/demo-a/enrolments.csv",
+      "extract_method": "Bundled original CSV",
+      "identifiers": [
+        "enrolment_id",
+        "learner_id",
+        "programme_id"
+      ],
+      "refresh_window": "One frozen edition",
+      "retention": "Operator-selected local case lifetime",
+      "authorised_access": "Demonstration fixture",
+      "volume": "Full file measured on receiving",
+      "consumers": [
+        "outcome report"
+      ],
+      "depends_on": [
+        "programme_catalogue"
+      ]
+    },
+    {
+      "id": "programme_catalogue",
+      "name": "Demonstration programme catalogue",
+      "owner": "Demo curriculum owner",
+      "source_reference": "fixtures/demo-a/programmes.csv",
+      "extract_method": "Bundled original CSV",
+      "identifiers": [
+        "programme_id"
+      ],
+      "refresh_window": "One frozen edition",
+      "retention": "Operator-selected local case lifetime",
+      "authorised_access": "Demonstration fixture",
+      "volume": "Full file measured on receiving",
+      "consumers": [
+        "registration_export"
+      ],
+      "depends_on": []
+    }
+  ],
+  "mappings": [
+    {
+      "id": "outcome_mapping",
+      "status": "PROPOSED",
+      "source_fields": [
+        {
+          "table": "enrolments",
+          "column": "outcome"
+        }
+      ],
+      "target": "reporting.outcome_category",
+      "transformation": "Identity mapping of the three declared canonical outcome categories; requires source-owner agreement for a customer cohort.",
+      "owner": "Demonstration metric owner",
+      "decision_reference": "Demonstration only"
+    }
+  ],
+  "published_references": [
+    {
+      "id": "ayrshire_fe_full_time_2024_25",
+      "title": "Ayrshire College published Performance Indicators 2024–25",
+      "url": "https://www1.ayrshire.ac.uk/media/1j2jp5yy/ayrshire-college-24-25-performance-indicators.pdf",
+      "page": 1,
+      "source_kind": "PUBLISHED_AGGREGATE",
+      "counts": {
+        "total": 2316,
+        "successful": 1698,
+        "partial": 198,
+        "non_completion": 420
+      },
+      "use": "Independent published count-conservation reference; the supplied CSV fixture is invented demonstration data and is not this college's data."
+    }
+  ]
+}

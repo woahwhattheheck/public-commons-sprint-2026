@@ -1,0 +1,4 @@
+"allocation_id","payment_id","bill_id","currency","signed_credit_minor"
+"L001","Y001","B001","GBP","-10025"
+"L002","Y002","B002","GBP","-4000"
+"L003","Y003","B003","GBP","-1050"

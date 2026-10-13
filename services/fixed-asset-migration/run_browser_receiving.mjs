@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import {runSourcePreparationReceiving} from './integrations/business-central/source-preparation-receiving.mjs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
@@ -186,7 +187,8 @@ await page.setViewportSize({width:1440,height:1000});
  await page.locator('#receive-file').setInputFiles(portable.path);const prior=page.waitForEvent('download');await page.locator('#receive').click();await(await prior).saveAs(path.join(outputDirectory,'before-receive-finance-working.html'));await page.getByText('Received complete workspace as a new independent working copy. Save the working HTML to retain it.',{exact:true}).waitFor();
  await nav('sources');await page.locator('#domain').selectOption('assets');await page.locator('#role').selectOption('source');const original=await download(page,'#original',outputDirectory,'received-original-assets.csv');outputs.push(original);need(original.content.toString('utf8')===originalCsv['source/assets'],'Reopened original CSV differs.');await shot('10-received-original-columns');});
  if(issuerSourcePath&&frozenIssuer.currentOriginalPresent)need(digest(await fs.readFile(issuerSourcePath))===frozenIssuer.selection.sha256,'The selected original issuer source changed during receiving.');
- const receipt={schema:'tjlabs.fixed-asset-native-receiving.v1',issuerInput:frozenIssuer.selection,application:{path:applicationPath,bytes:appBytes.length,sha256:digest(appBytes)},sourceMeaning:'Explicit receiving-example finance data with one deliberately changed cent, exact amounts and target-thousands scale; all original inputs and binary supporting files are retained.',originalRevision:revision,independentRevision:revision+1,sourceRows:18,targetRows:18,handovers:members.size,outputs:outputs.map(({content,...x})=>x),screenshots:screens,producerView:'The responsible producer opens and LOOKS at these actual screenshots, the working application, all outgoing attachments and complete reopened files, repairs concrete defects, and records the actual viewed edition.'};
+ const sourcePreparation=await phase('guided-original-source-preparation',()=>runSourcePreparationReceiving({context,outputDirectory,applicationPath}));
+ const receipt={sourcePreparation,schema:'tjlabs.fixed-asset-native-receiving.v1',issuerInput:frozenIssuer.selection,application:{path:applicationPath,bytes:appBytes.length,sha256:digest(appBytes)},sourceMeaning:'Explicit receiving-example finance data with one deliberately changed cent, exact amounts and target-thousands scale; all original inputs and binary supporting files are retained.',originalRevision:revision,independentRevision:revision+1,sourceRows:18,targetRows:18,handovers:members.size,outputs:outputs.map(({content,...x})=>x),screenshots:screens,producerView:'The responsible producer opens and LOOKS at these actual screenshots, the working application, all outgoing attachments and complete reopened files, repairs concrete defects, and records the actual viewed edition.'};
  return await session.finish(receipt);
  }finally{await session.close();}
 }

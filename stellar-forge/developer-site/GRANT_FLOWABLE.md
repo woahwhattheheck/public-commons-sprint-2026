@@ -115,6 +115,23 @@ Follow `products/flowable-merchant/AUTHORING.md`, `PROGRAMMES.md` and `DECISION_
 
 For DMN, preserve the selected key, actual tenant and complete evaluation body. A standalone deployment's ID is not a parent deployment ID. The original native preparation must match the selected complete model source before dispatch. Keep the original deployment owner during that course: the source check and native evaluation are separate operations. A lost evaluation response remains unresolved under its original request until original readback provides adequate evidence.
 
+## Review and receive a colleague's complete source
+
+Use **Colleague source review** in the existing authoring desk. The complete operator course is `products/flowable-merchant/SOURCE_REVIEW.md`; the installed file command is documented in `SOURCE_REVIEW_CLI.md`.
+
+1. In **Issue the current source to a colleague**, enter the review title, issuer, recipient and purpose. **Issue and download complete source** retains the baseline with every model, catalogue, typed input and configuration field. Issuing a later round preserves the earlier round in a separate saved local draft.
+2. The colleague uses **Open an issued review as a separate draft**, edits the original source controls, reviews changed catalogue references and selects **Save and download complete proposal**. A renamed path is reviewed as a deletion and an addition. For decision models, explicitly update model identities in the catalogue before compilation.
+3. The author stages that file with **Open returned source proposal**, chooses the exact **Returned edition** when several are present, then selects **Compare against my current draft**. **View all three editions** shows complete issued, current and returned values. Choose Keep current, Take returned or Use issued baseline for every changed source and configuration row, including identical and author-only changes.
+4. **Adopt explicitly selected changes** saves the complete resulting draft and review together through the existing revision-checked store. A changed source or adoption history requires a new comparison. Then use **Build complete programme preview** and **Save programme for native review** to continue the original workflow. Source adoption does not dispatch native steps.
+
+Keep **Download complete review working file** when moving between computers or retaining unsaved work after a conflict. It includes the exact pending incoming text, selected return, unfinished choices and notes. **Reopen complete review working file** creates an independent local draft while retaining the issue's original source identity. The ordinary source-draft download does not include this review history.
+
+In **Retained review history**, select a **Retained source edition** and **Download complete selected source branch** to inspect the issued baseline, any return, or an adoption's baseline/current/returned/result. These are complete logical source editions; keep the original return or complete working file for the exact received outer JSON bytes. Named reviewers are recorded attribution, not authenticated signatures.
+
+The `flowable-source-review` command offers the same issue, return, draft, branch, inspect, compare, apply and compile operations. Keep stable explicit metadata and separate original input files. Its atomic adopted output retains the complete draft, exchange, adoption and original incoming text together. Existing outputs are reused only when complete bytes match; a different edition requires a different filename.
+
+Receive the full installed source and original native course. The fourteen-step decision and ten-member process source exercises validate the described source behavior; they do not establish browser, engine or customer acceptance. The producing operator must open and use the exact delivered review desk and every relevant attachment at presentation and narrow widths, view the rendered results, repair defects and continue the existing compiler/native/receiving course under the full instruction below. Do not start another receiving controller or overwrite an already issued source edition.
+
 ## Receive an event or historical document without replacing the original source
 
 The original event intake keeps the complete structured event, mapping and captured CMMN definition/XML. Its source/ID identity selects the saved programme; changed mapping or source for the same event is a conflict. Read `products/flowable-merchant/EVENT_INTAKE.md` and use its actual input schema with the original case dispatcher.
@@ -199,9 +216,9 @@ Keep the canonical USD 38,000 request, 400 prospective hours, 150 days, six pack
 
 ## Receive the independent source declaration
 
-The complete declaration now contains 54 selected source IDs: all 25 preceding IDs and measured histories remain unchanged, with 29 current additions. Each new addition is optional for an earlier chapter that does not mention it. The updated full chapter contains every one of the 54 immutable source links. This lets the original composer receive the current whole product while an earlier authored edition continues to select only its accepted source.
+The complete declaration contains 67 selected source IDs. All 54 preceding spec objects, fixed commits and measured histories remain byte-for-byte unchanged. Thirteen optional source IDs describe the complete colleague-review delivery at immutable product commit `166841a05b4585f3d7923f6f72af1443be1321ed`. The current chapter includes all 67 selected links. The preceding chapter still selects its original 54, and the older 25-source edition still selects its original 25; no historical fallback is inferred.
 
-The current additions are:
+The 29 additions from the preceding 54-source edition remain:
 
 | Stable source ID | Complete original file |
 | --- | --- |
@@ -234,6 +251,26 @@ The current additions are:
 | `flowable-source-desk-native` | `stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_sources.py` |
 | `flowable-current-installed-receiving` | `products/flowable-merchant/native-installed-journey.mjs` |
 | `flowable-current-distribution` | `stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json` |
+
+The complete colleague-review additions are:
+
+| Stable source ID | Complete original file |
+| --- | --- |
+| `flowable-source-review-core` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.mjs` |
+| `flowable-source-review-store` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-store.mjs` |
+| `flowable-source-review-browser` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-browser.mjs` |
+| `flowable-source-review-layout` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.css` |
+| `flowable-source-review-operating` | `products/flowable-merchant/SOURCE_REVIEW.md` |
+| `flowable-source-review-server` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs` |
+| `flowable-source-review-assets` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser-assets.json` |
+| `flowable-source-review-cli` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.mjs` |
+| `flowable-source-review-types` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.d.mts` |
+| `flowable-source-review-cli-types` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.d.mts` |
+| `flowable-source-review-cli-operating` | `products/flowable-merchant/SOURCE_REVIEW_CLI.md` |
+| `flowable-colleague-review-authoring-browser` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-authoring-browser.mjs` |
+| `flowable-colleague-review-distribution` | `stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json` |
+
+The colleague-review authoring-browser and distribution entries are distinct edition IDs. Their preceding accepted source records keep their original commits; existing source files are not rewritten in a historical selection. All thirteen new sources are selected together by their immutable links in the added operating section.
 
 Every current addition carries the full commit, Git blob, byte length and SHA-256, measured from the merged source. The earlier client, guide, programme and distribution pins remain their original historical selections. Distinct current installed-receiving and distribution IDs bind the present whole implementation without rewriting those prior selections.
 

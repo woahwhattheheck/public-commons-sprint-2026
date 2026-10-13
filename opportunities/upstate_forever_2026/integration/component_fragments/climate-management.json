@@ -12,13 +12,16 @@
         "operator/extensions/climate-management.json",
         "operator/web/climate_management.mjs",
         "operator/web/climate_management.css",
-        "operator/CLIMATE_MANAGEMENT.md"
+        "operator/CLIMATE_MANAGEMENT.md",
+        "model/climate_management_figures.py",
+        "operator/web/climate_management_explorer.mjs"
       ],
       "requires": [
         "core",
         "climate-forcing",
         "study-transfer",
-        "extension-startup"
+        "extension-startup",
+        "gis-projects"
       ],
       "import_roots": [
         "operator"
@@ -29,7 +32,7 @@
     "climate-management"
   ],
   "source_reference": {
-    "edition": "climate-management-20261013",
+    "edition": "climate-management-exploration-20261013",
     "basis": "Original completed forcing cases, shared finite support and original scientific study delivery"
   }
 }

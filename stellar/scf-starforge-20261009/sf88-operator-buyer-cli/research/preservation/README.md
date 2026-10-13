@@ -451,3 +451,9 @@ complete workbench or standalone provider snapshot.
 ## Institutional original-file collections
 
 The same Workbench now has a **Collections** tab for exact original files, reasoned metadata/rights/selection review, verified BagIt and complete editable workspace receiving. It can start without a research edition. See [Original file collection accession](COLLECTION_ACCESSION.md) for the full browser/CLI operating path, explicit profile limits, draft reconciliation and independent receiving. Existing research metadata and repository-client semantics remain unchanged.
+
+## Complete transfer inspection and edition comparison
+
+The Delivery tab now opens exact supported research or original-file collection BagIt packages, displays every full recorded row, and compares ordered package editions through their original verification/comparison engines. Saved packages are reused by original artifact identity; incoming regular ZIPs are retained once by full byte hash. Full JSON, HTML and CSV findings and their original packages travel in the complete editable workspace.
+
+[TRANSFER_INSPECTION.md](TRANSFER_INSPECTION.md) documents package selection, all-row reading, complete downloads, CLI observation, original-case native continuation and the separately retained desktop/narrow browser receiving programme. Inspection is a local source observation; provider acceptance and repository operations retain their existing controls and actual receipts.

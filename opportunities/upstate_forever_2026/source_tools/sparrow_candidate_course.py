@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import subprocess
 
 from model import calibration, calibration_execution
 from model.common import atomic_json, digest, held, read_json, verify_file
@@ -424,28 +425,319 @@ def operate(workspace_path, prepared, preset_path, output, *, ensemble_id=None,
             raise
 
 
+
+SHARING_SCHEMA = "upstate.sparrow-calibration-study-sharing/v1"
+SHARING_CODE_PATHS = (
+    "source_tools/sparrow_candidate_course.py", "model/study_transfer.py",
+    "model/calibration_native_study_transfer.py", "model/calibration_study_transfer.py",
+    "model/calibration_study_receiving.py", "model/study_receiving.py",
+    "model/calibration_history.py", "model/calibration_followup.py",
+    "model/portable.py", "model/workspace.py", "model/common.py",
+)
+SHARING_SUPPLEMENTS = frozenset({
+    "calibration-uncertainties", "calibration-maps",
+    "calibration-reviews", "calibration-report-sources",
+})
+
+COLD_SHARING_READER = r"""
+import json
+from pathlib import Path
+import sys
+application, workspace_path, study_id, expected_path, output_path = sys.argv[1:]
+sys.path.insert(0, str(Path(application).resolve()))
+from model.common import atomic_json, digest, read_json
+from model.workspace import Workspace
+from model import calibration, study_receiving, study_transfer
+workspace = Workspace(workspace_path)
+verified = study_transfer.verify_received_studies(workspace)
+if not any(row["id"] == study_id and row["identity"] == "MATCH" for row in verified):
+    raise ValueError("Cold receiving did not verify the original Calibration Study")
+expected = read_json(expected_path)
+detail = study_receiving.detail(workspace, study_id)
+fields = ("kind", "id", "plan_id", "report_id", "title", "state", "captured_state",
+          "source_project_id", "observation", "catchments", "candidate_count",
+          "distinct_profile_count", "selected_run_id", "selected_profile_id",
+          "selected_profile_title", "evaluation_design", "partitions",
+          "selected_metrics", "history", "source_selection", "source_vintages",
+          "source_members", "result_members", "supplements", "reading_packages")
+projection = [{key: row.get(key) for key in fields} for row in detail["calibration_studies"]]
+if projection != expected["calibration_studies"] or workspace.project != expected["project"]:
+    raise ValueError("Cold receiving changed original Calibration quantities, source or download identities")
+reopened = []
+for row in detail["calibration_studies"]:
+    plan = workspace._get("calibration-plans", row["plan_id"])
+    progress = calibration.inspect(workspace, plan["id"])
+    report = workspace._get("calibrations", row["report_id"]) if row["report_id"] else None
+    if report and report["plan_id"] != plan["id"]:
+        raise ValueError("Cold reopened Calibration result belongs to another original design")
+    reopened.append({"kind": row["kind"], "id": row["id"], "plan_id": plan["id"],
+                     "report_id": report["id"] if report else None, "state": row["state"],
+                     "current_state": progress["state"],
+                     "selected_run_id": report.get("selected_run_id") if report else None,
+                     "selected_profile_id": report.get("selected_profile_id") if report else None})
+value = {"schema": "upstate.sparrow-calibration-cold-reopen/v1", "study_id": study_id,
+         "project": workspace.project, "identity": "MATCH",
+         "calibration_studies": projection, "reopened": reopened,
+         "source_members": sum(len(row["source_members"]) for row in projection),
+         "result_members": sum(len(row["result_members"]) for row in projection),
+         "native_model_runs_started": 0, "application": str(Path(application).resolve()),
+         "workspace": str(Path(workspace_path).resolve())}
+atomic_json(output_path, value, immutable=True)
+print(json.dumps({"study_id": study_id, "identity": "MATCH", "results": len(reopened),
+                  "native_model_runs_started": 0}))
+"""
+
+
+def _sharing_projection(workspace, receipt):
+    from model import study_transfer, calibration_study_receiving
+    identity = receipt["identity"]
+    closure = study_transfer._Closure(
+        workspace, identity["selection"],
+        calibration_studies=identity.get("calibration_studies", []),
+        joint_parameter_lineage="joint_parameter_studies" in identity,
+        geographic_native_studies=identity.get("geographic_native_studies", []),
+        climate_forcing_studies=identity.get("climate_forcing_studies", []),
+        climate_management_records=identity.get("climate_management_records", []),
+        management_case_studies=identity.get("management_case_studies", []),
+        report_lineage="scientific_report_sources" in identity,
+        implementation_lineage="implementation_report_sources" in identity,
+        customer_review_lineage="customer_reviews" in identity,
+        report_source_keys={(row["source_collection_id"], row["source_id"])
+                            for row in identity.get("scientific_report_sources", [])},
+        implementation_source_keys={(row["source_collection_id"], row["source_id"])
+                                    for row in identity.get("implementation_report_sources", [])},
+    ).resolve(identity.get("investigation_dependencies", ()))
+    detail = {}
+    calibration_study_receiving.augment(closure, receipt, detail)
+    fields = ("kind", "id", "plan_id", "report_id", "title", "state", "captured_state",
+              "source_project_id", "observation", "catchments", "candidate_count",
+              "distinct_profile_count", "selected_run_id", "selected_profile_id",
+              "selected_profile_title", "evaluation_design", "partitions",
+              "selected_metrics", "history", "source_selection", "source_vintages",
+              "source_members", "result_members", "supplements", "reading_packages")
+    closure.assert_unchanged()
+    return {"project": workspace.project, "calibration_studies": [
+        {key: row.get(key) for key in fields} for row in detail["calibration_studies"]]}
+
+
+def share_completed(workspace_path, course_output, receiving, *, sharing_output=None,
+                    followup_ids=None, supplements=None):
+    """Continue an admitted completed course through original Study receiving.
+
+    The original analysis input, progress and immutable outputs stay untouched.
+    This separate continuation reads completed records only; it does not rerun
+    comparisons, fit a new profile or start native model cases.
+    """
+    from model import calibration_history, portable, study_transfer
+    from model.common import atomic_bytes, describe_file, identifier
+
+    workspace = Workspace(workspace_path)
+    course_output = Path(course_output).resolve()
+    output = Path(sharing_output or course_output / "study-sharing").resolve()
+    receiving = Path(receiving).resolve()
+    source_root = Path(workspace.root).resolve()
+    for label, path in (("Study output", output), ("Receiving destination", receiving)):
+        if path == source_root or path.is_relative_to(source_root) or source_root.is_relative_to(path):
+            raise ValueError(label + " must be separate from the original scientific Workspace")
+    if (receiving == output or receiving.is_relative_to(output) or output.is_relative_to(receiving)
+            or receiving == course_output or receiving.is_relative_to(course_output)
+            or course_output.is_relative_to(receiving)):
+        raise ValueError("Use an independent receiving destination outside the retained course/output directories")
+
+    original = read_json(course_output / "course-input.json")
+    course = read_json(course_output / "course.json")
+    checkpoint = read_json(course_output / "progress.json")
+    if (original.get("schema") != SCHEMA or original.get("id") != digest(
+            {key: value for key, value in original.items() if key != "id"})
+            or course.get("schema") != SCHEMA or course.get("id") != original["id"]
+            or original.get("workspace_id") != workspace.project["id"]
+            or course.get("workspace_id") != workspace.project["id"]
+            or checkpoint.get("course_id") != original["id"] or checkpoint.get("state") != "complete"
+            or course.get("state") != "complete"):
+        raise ValueError("Select the completed original course and its unchanged scientific Workspace")
+    if not course.get("result_id") or not course.get("plan_id"):
+        raise ValueError("This course retained comparisons without a complete common reference subset; it has no saved Calibration result to share")
+    plan = workspace._get("calibration-plans", identifier(course["plan_id"]))
+    report = workspace._get("calibrations", identifier(course["result_id"]))
+    if (read_json(course_output / "plan.json") != plan
+            or read_json(course_output / "result.json") != report
+            or read_json(course_output / "selection.json") != plan["selection"]
+            or report["plan_id"] != plan["id"]
+            or report["state"] not in ("complete", "no_eligible_candidates")
+            or plan["selection"]["observation_id"] != course["observation_id"]
+            or plan["selection"]["catchments"] != course["catchments"]
+            or plan["selection"]["candidate_run_ids"] != course["candidate_run_ids"]
+            or plan["selection"]["observation_record_ids"] != course["selected_observation_ids"]):
+        raise ValueError("The completed course no longer matches its original Calibration/source records")
+    support = read_json(course_output / "original-support.json")
+    if support["selected_observation_ids"] != course["selected_observation_ids"]:
+        raise ValueError("The retained course changed its original common reference support")
+    roots = [{"kind": "calibrations", "id": report["id"]}]
+    lineage_ids = {report["id"]}
+    for key in sorted(set(followup_ids or [])):
+        key = identifier(key)
+        history = calibration_history.lineage(workspace, key)
+        if not any(previous["id"] == report["id"] for previous, unused_plan, unused_spec in history):
+            raise ValueError("Each selected follow-up must retain this exact original course result in its native history")
+        if history[-1][0]["state"] not in ("complete", "no_eligible_candidates"):
+            raise ValueError("Select an already completed follow-up Calibration result")
+        roots.append({"kind": "calibrations", "id": key})
+        lineage_ids.update(previous["id"] for previous, unused_plan, unused_spec in history)
+    for value in supplements or []:
+        kind, separator, key = value.partition(":")
+        if not separator or kind not in SHARING_SUPPLEMENTS:
+            raise ValueError("Select an existing Calibration supplement as KIND:ID")
+        item = workspace._get(kind, identifier(key))
+        if item.get("calibration_id") not in lineage_ids:
+            raise ValueError("The selected supplement belongs to another original Calibration history")
+        roots.append({"kind": kind, "id": key})
+    selection = study_transfer.normalise({
+        "title": report["title"] + " · original Calibration and selected follow-ups",
+        "roots": roots, "include_related_results": False})
+    names = ("course-input.json", "course.json", "progress.json", "original-support.json",
+             "selection.json", "plan.json", "result.json")
+    source_files = {name: describe_file(course_output, course_output / name) for name in names}
+    identity = {"schema": SHARING_SCHEMA, "version": 1, "project": workspace.project,
+                "original_course_id": original["id"], "original_course": str(course_output),
+                "original_course_files": source_files, "selection": selection,
+                "receiving": str(receiving),
+                "code_sha256": {name: _sha(ROOT / name) for name in SHARING_CODE_PATHS}}
+    identity["id"] = digest(identity)
+    output.mkdir(parents=True, exist_ok=True)
+    with held(output / ".sharing.lock", blocking=False):
+        progress_path = output / "sharing-progress.json"
+        progress = read_json(progress_path) if progress_path.exists() else {"schema": SHARING_SCHEMA}
+        admitted = False
+        try:
+            if progress.get("id") not in (None, identity["id"]):
+                raise ValueError("This directory retains another original sharing continuation; preserve it and choose a new output")
+            atomic_json(output / "sharing-input.json", identity, immutable=True)
+            admitted = True
+            for name, descriptor in source_files.items():
+                body = (course_output / name).read_bytes()
+                if len(body) != descriptor["bytes"] or hashlib.sha256(body).hexdigest() != descriptor["sha256"]:
+                    raise ValueError("An original course member changed before retained sharing")
+                atomic_bytes(output / "original-course" / name, body, immutable=True)
+            progress.pop("error", None)
+            progress.update(id=identity["id"], state="running", phase="study_export")
+            atomic_json(progress_path, progress)
+
+            def update_export(value):
+                progress.update(phase="study_export", export=value)
+                atomic_json(progress_path, progress)
+
+            archive_path = output / "calibration-study.zip"
+            exported = study_transfer.export_study(workspace, archive_path, selection, progress=update_export)
+            archive = {"id": exported["id"], "path": str(archive_path),
+                       "bytes": exported["bytes"], "sha256": exported["sha256"],
+                       "study": exported["study"]}
+            atomic_json(output / "study-export.json", archive, immutable=True)
+            # Compare the received reading against original source quantities and members.
+            expected = _sharing_projection(workspace, archive["study"])
+            wanted = {(row["kind"], row["id"]) for row in selection["roots"]}
+            actual = {(row["kind"], row["id"]) for row in expected["calibration_studies"]}
+            if actual != wanted:
+                raise ValueError("The source Study changed its selected original Calibration roots")
+            atomic_json(output / "expected-receiving.json", expected, immutable=True)
+            progress.update(phase="study_receive", study_id=archive["id"])
+            atomic_json(progress_path, progress)
+            received = (portable.resume_restore(archive_path, receiving,
+                        expected_archive_sha256=archive["sha256"]) if receiving.exists()
+                        else portable.restore(archive_path, receiving))
+            received = {key: value for key, value in received.items() if key != "reused_completed_output"}
+            if received.get("identity") != "MATCH" or received.get("project") != workspace.project:
+                raise ValueError("The received native Study changed its original project identity")
+            atomic_json(output / "study-received.json", received, immutable=True)
+            progress.update(phase="cold_reopen")
+            atomic_json(progress_path, progress)
+            command = [sys.executable, "-I", "-c", COLD_SHARING_READER,
+                       received["application"], received["workspace"], archive["id"],
+                       str(output / "expected-receiving.json"), str(output / "cold-reopened.json")]
+            with (output / "cold-reopen.stdout.log").open("a", encoding="utf-8") as stdout, (
+                    output / "cold-reopen.stderr.log").open("a", encoding="utf-8") as stderr:
+                subprocess.run(command, cwd=received["application"], stdout=stdout, stderr=stderr, check=True)
+            cold = read_json(output / "cold-reopened.json")
+            if cold.get("identity") != "MATCH" or cold.get("study_id") != archive["id"]:
+                raise ValueError("The archived application's cold Calibration reopening did not match")
+            # Recheck the original course files after receiving; no analysis is updated.
+            for descriptor in source_files.values():
+                verify_file(course_output, descriptor)
+            result = {"schema": SHARING_SCHEMA, "id": identity["id"], "state": "complete",
+                      "original_course_id": original["id"], "source_workspace": str(workspace.root),
+                      "source_course": str(course_output), "study_id": archive["id"],
+                      "archive": {key: archive[key] for key in ("path", "bytes", "sha256")},
+                      "received_workspace": received["workspace"], "received_application": received["application"],
+                      "project": workspace.project, "identity": "MATCH", "selection": selection,
+                      "calibration_studies": cold["calibration_studies"],
+                      "reopened": cold["reopened"], "source_members": cold["source_members"],
+                      "result_members": cold["result_members"], "native_model_runs_started": 0,
+                      "operating_instruction": "Open the received application and Workspace, then Study transfer → "
+                                               "Received studies and original sources → Open original evaluation "
+                                               "or Open editable design. Open selected native run reopens the original "
+                                               "selected candidate. Original metrics, source downloads and saved "
+                                               "reading packages retain their captured identities."}
+            atomic_json(output / "sharing-result.json", result, immutable=True)
+            progress.update(state="complete", phase="complete", identity="MATCH")
+            atomic_json(progress_path, progress)
+            return result
+        except BaseException as error:
+            if admitted:
+                progress.update(state="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
+                                error={"type": type(error).__name__, "message": str(error)})
+                try:
+                    atomic_json(progress_path, progress)
+                except OSError:
+                    pass
+            raise
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--prepared", type=Path, default=PREPARED)
     parser.add_argument("--preset", type=Path, default=PRESET)
     parser.add_argument("--output", type=Path, required=True)
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument("--ensemble-id")
     group.add_argument("--candidate-run-id", action="append")
     parser.add_argument("--reference-run-id")
     parser.add_argument("--input-contract", type=Path)
     parser.add_argument("--catchments", type=Path, help="Optional retained same-DEM catchment source selector")
     parser.add_argument("--interpretation", help="Original model/source periods and physical input meaning")
+    parser.add_argument("--share-completed", action="store_true",
+                        help="Share and cold-reopen this already completed --output course without rerunning its analysis")
+    parser.add_argument("--receive-study", type=Path,
+                        help="Independent destination for the original editable Study receiving")
+    parser.add_argument("--sharing-output", type=Path,
+                        help="Separate resumable sharing output; default: --output/study-sharing")
+    parser.add_argument("--followup-calibration-id", action="append",
+                        help="Existing completed follow-up retaining this exact original result; repeat as needed")
+    parser.add_argument("--study-supplement", action="append", metavar="KIND:ID",
+                        help="Explicit existing uncertainty/map/review/report-source record in the selected history")
     args = parser.parse_args(argv)
+    if args.share_completed:
+        if args.receive_study is None:
+            parser.error("--share-completed requires --receive-study")
+        if args.ensemble_id or args.candidate_run_id or args.input_contract or args.catchments or args.reference_run_id or args.interpretation:
+            parser.error("--share-completed reads the original saved course; do not supply replacement analysis inputs")
+    elif (not args.ensemble_id and not args.candidate_run_id):
+        parser.error("Select --ensemble-id or --candidate-run-id for the original analysis")
+    elif args.receive_study or args.sharing_output or args.followup_calibration_id or args.study_supplement:
+        parser.error("Study receiving options belong to --share-completed")
     try:
+        if args.share_completed:
+            result = share_completed(
+                args.workspace, args.output, args.receive_study, sharing_output=args.sharing_output,
+                followup_ids=args.followup_calibration_id, supplements=args.study_supplement)
+            print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
+            return 0
         result = operate(args.workspace, args.prepared, args.preset, args.output,
                          ensemble_id=args.ensemble_id, run_ids=args.candidate_run_id,
                          reference_run_id=args.reference_run_id, input_contract=args.input_contract,
                          interpretation=args.interpretation, catchment_selector=args.catchments)
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
         return 0 if result["evaluation_state"] != "no_eligible_candidates" else 2
-    except (OSError, ValueError, KeyError, TypeError, RuntimeError, ArithmeticError) as error:
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError, ArithmeticError, subprocess.SubprocessError) as error:
         print("Original annual-reference course: " + str(error), file=sys.stderr)
         return 2
 

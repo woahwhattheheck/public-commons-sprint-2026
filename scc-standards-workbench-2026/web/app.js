@@ -1,5 +1,6 @@
 import {mountConsultation} from "./consultation.js";
 import {mountBallotExchange} from "./ballot-exchange.js";
+import {mountApplication} from "./application.js";
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clone=v=>structuredClone(v),pretty=v=>JSON.stringify(v,null,2),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -63,7 +64,7 @@ function dateCell(value){return value?'<time datetime="'+esc(value)+'">'+esc(rea
 
 let catalog=null,project=null,projects=[],section="overview",subsection={},clauseId=null,editor=null,noticeTimer=null,renderEpoch=0,listOffset=0,listCache=null;
 const GROUPS=[
- ["Project",[["overview","Overview"],["scope","Scope & references"],["sources","Original sources"]]],
+ ["Project",[["overview","Overview"],["scope","Scope & references"],["sources","Original sources"],["application","Prime application"]]],
  ["Standard",[["draft","Draft & languages"],["review","Review comments"],["consultation","Consultation receiving"],["ballot-exchange","Member ballot receiving"],["ballots","Ballots & decisions"],["publication","Publication & maintenance"]]],
  ["Delivery",[["delivery","Phases & reports"],["finance","Costs & invoices"],["procedure","People & procedures"],["history","Development history"]]]
 ];
@@ -133,6 +134,12 @@ async function render(){
  const epoch=++renderEpoch;
  if(section==="overview")return renderOverview();
  if(section==="history")return renderHistory(epoch);
+ if(section==="application"){
+  const selected=project.id;
+  return mountApplication({project,catalog,api,notify,
+   refresh:()=>loadAll(selected),isCurrent:()=>section==="application"&&project?.id===selected,
+   openSection:target=>{section=target;listOffset=0;listCache=null;return render();}});
+ }
  if(section==="ballot-exchange"){
   const selected=project.id;
   return mountBallotExchange({project,catalog,api,notify,workflow,

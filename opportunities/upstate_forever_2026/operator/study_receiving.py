@@ -21,6 +21,13 @@ def read(operator, workspace_key, operation, value):
             rows.append(record)
         return rows
 
+    for study in result.get("calibration_studies", []):
+        for field, output in (("source_members", "_downloads"), ("result_members", "_result_downloads")):
+            study[output] = [
+                operator._ticket(workspace_key, str(Path(workspace.root) / item["path"]),
+                                 item, item.get("label") or item["filename"])
+                for item in study[field]
+            ]
     for report in result["reports"]:
         report["_downloads"] = tickets(report["members"])
     from report_changes import ReportChanges

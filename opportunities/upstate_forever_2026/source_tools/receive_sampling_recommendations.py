@@ -29,7 +29,266 @@ def original(path):
             "text": body.decode("utf-8")}
 
 
+
+def _report_members(workspace, recommendation_id):
+    return recommendations.export_members(workspace, recommendation_id)
+
+
+def _member_inventory(files):
+    return [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
+            for name, member in sorted(files.items())]
+
+
+def _evidence_roster(history):
+    rows = []
+    for proposal in history:
+        for target in proposal["targets"]:
+            evidence = target.get("model_evidence")
+            if evidence is None:
+                continue
+            native, source = evidence["native"], evidence["source"]
+            rows.append({"recommendation_id": proposal["id"], "target_id": target["target_id"],
+                "selection": evidence["selection"], "source": source,
+                "native_family": native["family"], "native_id": native["id"],
+                "native_project_id": native["project_id"],
+                "run_ids": native["run_ids"], "selected_quantity": native["selected_quantity"],
+                "support": native["support"], "target_binding": evidence["target_binding"],
+                "relation": evidence["relation"]})
+    return rows
+
+
+def _required_nodes(project_id, roster):
+    nodes = set()
+    for row in roster:
+        source = row["source"]
+        nodes.add(("sources", source["collection_id"]))
+        if row["native_project_id"] == project_id:
+            kind = ("multivariate-control-outcomes" if row["native_family"] == "control_outcomes"
+                    else "terrain-conditioning-report-sources")
+            nodes.add((kind, row["native_id"]))
+            for run_id in row["run_ids"]:
+                nodes.add(("runs", run_id))
+    return [{"kind": kind, "id": key} for kind, key in sorted(nodes)]
+
+
+def _extract_report(archive_path, destination, files):
+    """Open every exact packet member and retain ordinary reviewable files."""
+    import os
+    import shutil
+    import tempfile
+    import zipfile
+    from model.monitoring_packet import _member_name, _verify_existing
+    from model.common import file_digest
+    archive_path, destination = Path(archive_path), Path(destination)
+    _verify_existing(archive_path, files)
+    destination.mkdir(parents=True, exist_ok=True)
+    root = destination.resolve()
+    with zipfile.ZipFile(archive_path) as archive:
+        for name, member in sorted(files.items()):
+            _member_name(name)
+            target = destination / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.parent.resolve().is_relative_to(root) or target.is_symlink():
+                raise ValueError("The report member left its retained receiving directory")
+            if target.exists():
+                if target.stat().st_size != member["bytes"] or file_digest(target) != member["sha256"]:
+                    raise ValueError("Preserve the existing reviewed report file: " + name)
+                continue
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".receiving-", delete=False) as outgoing:
+                    temporary = Path(outgoing.name)
+                    with archive.open(name) as incoming:
+                        shutil.copyfileobj(incoming, outgoing, length=1024 * 1024)
+                    outgoing.flush()
+                    os.fsync(outgoing.fileno())
+                if temporary.stat().st_size != member["bytes"] or file_digest(temporary) != member["sha256"]:
+                    raise ValueError("The extracted original report member differs: " + name)
+                os.replace(temporary, target)
+                temporary = None
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
+    return str(destination / "sampling-review.html")
+
+
+def _verify_evidence_received(workspace, expected):
+    """Execute from the received application, following original saved records."""
+    if workspace.project != expected["project"]:
+        raise ValueError("The received evidence belongs to another original project")
+    proposal = recommendations.inspect(workspace, expected["proposal"]["id"])
+    design = recommendations.inspect_design(workspace, expected["design"]["id"])
+    history = recommendations.history(workspace, proposal["id"])
+    if (proposal != expected["proposal"] or design != expected["design"]
+            or history != expected["history"]):
+        raise ValueError("The received proposal, native plan or complete original history differs")
+    roster = _evidence_roster(history)
+    if roster != expected["native_evidence"]:
+        raise ValueError("The received source, quantity, support or target binding changed")
+    # This also validates raw CAS and every selected local native dependency
+    # through the unchanged original proposal and producer inspection methods.
+    inventory = _member_inventory(_report_members(workspace, proposal["id"]))
+    if inventory != expected["report_members"]:
+        raise ValueError("Cold receiving changed the original report, CSV, source or companion bytes")
+    from model import study_transfer as original_studies
+    original_studies.verify_received_studies(workspace)
+    return {"schema": "upstate.sampling-native-evidence-cold-receiving/v1",
+        "project_id": workspace.project["id"], "proposal_id": proposal["id"],
+        "design_id": design["id"], "plan_id": design["plan_id"],
+        "history_ids": [r["id"] for r in history], "native_evidence": roster,
+        "report_member_count": len(inventory),
+        "proposal_history_equal": True, "native_records_equal": True,
+        "report_member_bytes_equal": True, "rendered_inspection": False}
+
+
+def _evidence_cold_main():
+    parser = argparse.ArgumentParser(description="Reopen original Sampling evidence from the received application")
+    parser.add_argument("--verify-evidence-received", action="store_true")
+    parser.add_argument("--workspace", required=True)
+    parser.add_argument("--expected", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = _verify_evidence_received(Workspace(args.workspace), read_json(args.expected))
+    result["application"] = str(Path(__file__).resolve().parents[1])
+    retain(args.output, result)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _receive_evidence(workspace, parent, configuration, args):
+    """Continue the same original course with an explicitly authored child.
+
+    The first course's sealed proposal, report and Study archive remain intact.
+    A later explicit child may remove evidence while retaining its full ancestry.
+    """
+    import subprocess
+    from model.common import file_digest, held
+    from model.monitoring_packet import _verify_existing
+    output = args.output.resolve() / "native-evidence"
+    output.mkdir(parents=True, exist_ok=True)
+    with held(output / ".course.lock", blocking=False):
+        inputs = {"schema": "upstate.sampling-native-evidence-course-input/v1",
+            "operation_id": args.operation_id, "project": workspace.project,
+            "parent_id": parent["id"], "selection": original(args.evidence_selection),
+            "successor_selection": original(args.evidence_successor_selection) if args.evidence_successor_selection else None,
+            "design_configuration": original(args.evidence_design_configuration) if args.evidence_design_configuration else None,
+            "original_design_configuration": configuration}
+        retain(output / "original-evidence-inputs.json", inputs)
+        selection = json.loads(inputs["selection"]["text"])
+        if not any("model_evidence" in row for row in selection.get("targets", [])):
+            raise ValueError("The authored evidence phase needs at least one explicit native source/quantity")
+        preview = recommendations.preview(workspace, selection=selection)
+        retain(output / "proposal-preview.json", preview)
+        child = recommendations.prepare(workspace, selection=selection,
+            operation_id=args.operation_id + "-native-evidence-proposal",
+            parent_id=parent["id"], expected_parent_digest=parent["id"])
+        repeated = recommendations.prepare(workspace, selection=selection,
+            operation_id=args.operation_id + "-native-evidence-proposal",
+            parent_id=parent["id"], expected_parent_digest=parent["id"])
+        if child != repeated:
+            raise ValueError("The evidence child retry changed the original immutable request")
+        retain(output / "evidence-proposal.json", child)
+        selected = child
+        if inputs["successor_selection"]:
+            successor = json.loads(inputs["successor_selection"]["text"])
+            selected = recommendations.prepare(workspace, selection=successor,
+                operation_id=args.operation_id + "-native-evidence-successor",
+                parent_id=child["id"], expected_parent_digest=child["id"])
+            if recommendations.prepare(workspace, selection=successor,
+                    operation_id=args.operation_id + "-native-evidence-successor",
+                    parent_id=child["id"], expected_parent_digest=child["id"]) != selected:
+                raise ValueError("The evidence successor retry changed its original request")
+            retain(output / "evidence-successor.json", selected)
+        config = (json.loads(inputs["design_configuration"]["text"])
+                  if inputs["design_configuration"] else configuration)
+        design = recommendations.design(workspace, recommendation_id=selected["id"],
+            configuration=config, operation_id=args.operation_id + "-native-evidence-design")
+        if recommendations.inspect_design(workspace, design["id"]) != design:
+            raise ValueError("The evidence proposal's original Monitoring design changed")
+        retain(output / "native-design.json", design)
+        history = recommendations.history(workspace, selected["id"])
+        roster = _evidence_roster(history)
+        if not roster:
+            raise ValueError("The retained full proposal history lost its native evidence")
+        files = _report_members(workspace, selected["id"])
+        export_path = output / "report-export.json"
+        if export_path.exists():
+            exported = read_json(export_path)
+            if exported.get("recommendation_id") != selected["id"]:
+                raise ValueError("This saved report belongs to another selected proposal")
+        else:
+            exported = recommendations.export_recommendations(workspace,
+                recommendation_id=selected["id"], export_root=output / "reports")
+            retain(export_path, exported)
+        actual = _verify_existing(Path(exported["path"]), files)
+        if actual["bytes"] != exported["bytes"] or actual["sha256"] != exported["sha256"]:
+            raise ValueError("The complete native-evidence report packet changed")
+        report_html = _extract_report(exported["path"], output / "report-files", files)
+        expected = {"schema": "upstate.sampling-native-evidence-receiving-expectation/v1",
+            "project": workspace.project, "proposal": selected, "design": design,
+            "history": history, "native_evidence": roster,
+            "report_members": _member_inventory(files)}
+        expected_path = output / "receiving-expectation.json"
+        retain(expected_path, expected)
+        selection_transfer = {"title": selected["title"],
+            "roots": [{"kind": "monitoring_recommendations", "id": selected["id"]},
+                      {"kind": "monitoring_recommendation_designs", "id": design["id"]}],
+            "include_related_results": True}
+        retain(output / "study-selection.json", selection_transfer)
+        archive = output / "sampling-native-evidence-editable-study.zip"
+        transfer = study_transfer.export_study(workspace, archive, selection_transfer)
+        transfer = {k: v for k, v in transfer.items() if k != "reused_completed_output"}
+        retain(output / "study-export.json", transfer)
+        included = {(r["kind"], r["id"]) for r in transfer["study"]["identity"]["nodes"]}
+        required = _required_nodes(workspace.project["id"], roster)
+        if any((r["kind"], r["id"]) not in included for r in required):
+            raise ValueError("The selected Study lost an exact native evidence source or local case")
+        received_root = output / "received-study"
+        archive_sha256 = file_digest(archive)
+        restored = (portable.resume_restore(archive, received_root,
+            expected_archive_sha256=archive_sha256) if received_root.exists()
+            else portable.restore(archive, received_root))
+        received = Workspace(restored["workspace"])
+        reopened = _verify_evidence_received(received, expected)
+        # The original operation-index recovery follows immutable records, and
+        # does not create another proposal or native solver result.
+        raw = selected["request_payload"]
+        if recommendations.prepare(received, selection=raw["selection"],
+                operation_id=selected["operation_id"], parent_id=raw["parent_id"],
+                expected_parent_digest=raw["expected_parent_digest"]) != selected:
+            raise ValueError("Cold evidence receiving changed its retained operation identity")
+        application = Path(restored["application"])
+        receiver = application / "source_tools" / Path(__file__).name
+        if not receiver.is_file():
+            raise ValueError("The complete received application needs its original Sampling receiver")
+        cold_path = output / "contained-application-reopen.json"
+        process = subprocess.run([sys.executable, str(receiver), "--verify-evidence-received",
+            "--workspace", str(received.root), "--expected", str(expected_path),
+            "--output", str(cold_path)], cwd=application, text=True, capture_output=True)
+        (output / "contained-application-stdout.txt").write_text(process.stdout, encoding="utf-8")
+        (output / "contained-application-stderr.txt").write_text(process.stderr, encoding="utf-8")
+        if process.returncode:
+            raise RuntimeError("The original contained Sampling receiver failed: " + process.stderr[-12000:])
+        cold = read_json(cold_path)
+        if {k: v for k, v in cold.items() if k != "application"} != reopened:
+            raise ValueError("The contained application reopened different original evidence")
+        result = {"schema": "upstate.sampling-native-evidence-course/v1",
+            "operation_id": args.operation_id, "project_id": workspace.project["id"],
+            "parent_id": parent["id"], "first_evidence_proposal_id": child["id"],
+            "proposal_id": selected["id"], "design_id": design["id"], "plan_id": design["plan_id"],
+            "history_ids": [r["id"] for r in history], "native_evidence": roster,
+            "required_native_nodes": required, "report": exported, "report_html": report_html,
+            "report_member_count": len(files), "study": transfer,
+            "received_application": str(application), "received_workspace": str(received.root),
+            "contained_reopen": str(cold_path), "operation_recovery_equal": True,
+            "rendered_inspection": False,
+            "browser_course": "Open the exact populated Sampling desk at desktop and390px, operate evidence choice, quantity and applicability, preview/save/reopen/revision/export/native calendar/Study. Open and LOOK at every original outgoing report, map, CSV/JSON and extracted archive member; record actual visual results separately."}
+        retain(output / "sampling-native-evidence-result.json", result)
+        return result
+
+
 def main():
+    if "--verify-evidence-received" in sys.argv[1:]:
+        return _evidence_cold_main()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--selection", required=True, type=Path)
@@ -37,7 +296,13 @@ def main():
     parser.add_argument("--design-configuration", required=True, type=Path)
     parser.add_argument("--operation-id", required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--evidence-selection", type=Path,
+        help="Explicit authored native-evidence child selection for the same original course")
+    parser.add_argument("--evidence-successor-selection", type=Path)
+    parser.add_argument("--evidence-design-configuration", type=Path)
     args = parser.parse_args()
+    if not args.evidence_selection and (args.evidence_successor_selection or args.evidence_design_configuration):
+        parser.error("Evidence successor/configuration requires --evidence-selection")
     workspace = Workspace(args.workspace)
     output = args.output.resolve()
     if output == workspace.root.resolve() or output.is_relative_to(workspace.root.resolve()):
@@ -141,7 +406,11 @@ def main():
         "received_operation_recovery_equal": True,
         "browser_course": "Operate this populated original application and all outgoing files at desktop and390px; record actual images separately."}
     retain(output / "sampling-course-result.json", result)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.evidence_selection:
+        evidence = _receive_evidence(workspace, selected, configuration, args)
+        print(json.dumps({"original_course": result, "native_evidence": evidence}, ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,10 @@ const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 const ID=/^[a-f0-9]{64}$/;
 const memory=new Map();
 function stored(key){try{return JSON.parse(sessionStorage.getItem(key)||'null')||memory.get(key)||null;}catch{return memory.get(key)||null;}}
-function keep(key,value){if(value===null){memory.delete(key);try{sessionStorage.removeItem(key);}catch{}}else{memory.set(key,copy(value));try{sessionStorage.setItem(key,JSON.stringify(value));}catch{}}}
+function keep(key,value){
+  if(value===null){sessionStorage.removeItem(key);if(sessionStorage.getItem(key)!==null)throw Error('The original completed request could not be retired. Reopen its retained operation before submitting another request.');memory.delete(key);return;}
+  const body=JSON.stringify(value);sessionStorage.setItem(key,body);if(sessionStorage.getItem(key)!==body)throw Error('Retain the complete original sampling request before dispatch. Browser storage is unavailable.');memory.set(key,copy(value));
+}
 function options(rows,value,label,selected,placeholder){return '<option value="">'+esc(placeholder)+'</option>'+rows.map(row=>'<option value="'+esc(value(row))+'"'+(value(row)===selected?' selected':'')+'>'+esc(label(row))+'</option>').join('');}
 function table(headings,rows){return '<div class="sampling-table"><table><thead><tr>'+headings.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(cell=>'<td>'+esc(text(cell))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
 function detail(title,value){return '<details><summary>'+esc(title)+'</summary><pre>'+esc(json(value))+'</pre></details>';}
@@ -26,10 +29,17 @@ export function samplingSelection(draft){
   selection.targets=selection.targets.map((row,index)=>{
     const label='Target '+(index+1);if(!row.station_id||!row.cohort_id)throw Error(label+': choose an original station and an exact analyte cohort.');
     if(!Array.isArray(row.months)||!row.months.length)throw Error(label+': select the months to review.');
+    if(row.model_evidence!==undefined){
+      const selected=row.model_evidence;
+      if(!selected||typeof selected!=='object'||Array.isArray(selected)||!ID.test(selected.source_collection_id||'')||typeof selected.source_id!=='string'||!selected.source_id||typeof selected.pollutant!=='string'||!selected.pollutant||typeof selected.applicability!=='string'||!selected.applicability.trim())throw Error(label+': choose a retained native source and quantity, then explain its applicability; or remove that evidence selection.');
+      row.model_evidence={source_collection_id:selected.source_collection_id,source_id:selected.source_id,pollutant:selected.pollutant,applicability:selected.applicability.trim()};
+    }
     return {...row,months:[...row.months].sort((a,b)=>a-b),minimum_dates_per_month:integer(row.minimum_dates_per_month,label+' historical date goal'),proposed_visits:integer(row.proposed_visits,label+' proposed visits'),priority:integer(row.priority,label+' priority',1,5),reporting_limit:decimal(row.reporting_limit,label+' reporting limit'),setup_cost:decimal(row.setup_cost,label+' setup cost'),per_visit_cost:decimal(row.per_visit_cost,label+' visit cost'),included:Boolean(row.included)};
   });
   return selection;
 }
+function evidenceKey(value){return JSON.stringify([value.source_collection_id,value.source_id]);}
+function evidenceQuantity(row){return String(row.pollutant||'').replaceAll('_',' ')+' · '+text(row.units);}
 function newDraft(context){return {context_id:context.context_id,title:'Sampling priorities',operator:'',recorded_at:new Date().toISOString(),evidence_start:'',evidence_end:'',notes:'',planning_basis:'',targets:[]};}
 function designDraft(configuration=null){const c=configuration||{},calendar=c.calendar||{},cost=c.default_cost||{};return {title:'',budget:c.budget??'',max_sites:c.max_sites??'',program_overhead:c.program_overhead??'',coverage_mode:c.coverage_mode||'local',setup:cost.setup??'',per_visit:cost.per_visit??'',cost_basis:cost.basis||'',start_date:calendar.start_date||'',end_date:calendar.end_date||'',interval_days:calendar.interval_days??'',round_window_days:calendar.round_window_days??'',crews:calendar.crews??'',visit_minutes:calendar.visit_minutes??'',travel_buffer_minutes:calendar.travel_buffer_minutes??'',advanced:json(c)};}
 function blankTarget(){return {id:'target-'+crypto.randomUUID(),station_id:'',cohort_id:'',months:[],minimum_dates_per_month:'',proposed_visits:'',reporting_limit:null,reporting_limit_basis:'',flow_goal:'any',reason:'',priority:3,included:true,setup_cost:null,per_visit_cost:null,cost_basis:'',sensitivity_basis:''};}
@@ -46,6 +56,78 @@ export function attachMonitoringRecommendations(host){
   function changed(state){state.dirty=true;state.preview=null;state.downloads=[];status(state,'Unsaved changes. Preview the current targets, then save a new edition.');const result=root?.querySelector('[data-result]');if(current(state)&&result)result.innerHTML=results(state);updateActions(state);}
   function read(state,action,payload={}){return api('/api/monitoring-recommendations?'+new URLSearchParams({workspace:state.key,action,payload:JSON.stringify(payload)})).then(value=>{if(value.workspace_key&&value.workspace_key!==state.key)throw Error('The response belongs to another Workspace.');return value;});}
   function selectCohort(context,id){return (context?.cohorts||[]).find(row=>row.id===id);}
+
+  function evidenceChoices(state){return state.catalog.model_evidence?.choices||[];}
+  function evidenceChoice(state,selection){return selection?evidenceChoices(state).find(row=>row.source_collection_id===selection.source_collection_id&&row.source_id===selection.source_id):null;}
+  function evidenceEditor(state,row){
+    const selected=row.model_evidence,choice=evidenceChoice(state,selected),rows=evidenceChoices(state),key=selected?evidenceKey(selected):'';
+    const target='data-target="'+esc(row.id)+'"';
+    let choices=options(rows,evidenceKey,item=>item.title+' · '+item.family,key,'No native evidence selected');
+    if(selected&&!choice)choices+='<option value="'+esc(key)+'" selected>Retained source unavailable in this catalogue · '+esc(selected.source_id)+'</option>';
+    let quantities=options(choice?.quantities||[],item=>item.pollutant,evidenceQuantity,selected?.pollutant||'','Choose the exact modeled quantity');
+    if(selected?.pollutant&&!(choice?.quantities||[]).some(item=>item.pollutant===selected.pollutant))quantities+='<option value="'+esc(selected.pollutant)+'" selected>Retained quantity · '+esc(selected.pollutant)+'</option>';
+    const station=(state.context?.stations||[]).find(item=>item.source_station_id===row.station_id);
+    return '<section class="sampling-evidence sampling-wide" aria-label="Retained model evidence"><h4>Retained model evidence for this target</h4><p class="sampling-note">Choose a completed source only when it supports your scientific rationale. This does not change the target priority, proposed visits or Monitoring solver.</p>'+
+      '<label>Original completed scientific source<select '+target+' data-evidence-source>'+choices+'</select></label>'+
+      (selected?'<div class="sampling-grid"><label>Original modeled quantity<select '+target+' data-evidence-pollutant>'+quantities+'</select></label>'+
+        '<label>Why this evidence is relevant to this station and exact analytical cohort<textarea '+target+' data-evidence-applicability rows="3">'+esc(selected.applicability||'')+'</textarea></label></div>'+
+        table(['Scientific context','Retained source'],[
+          ['Native study',choice?choice.title+' · '+choice.family:'Unavailable in this catalogue; retain the choice or remove it explicitly'],
+          ['Model geographic support',choice?.support_scope],['Source classification',choice?.classification],
+          ['Source station / assigned catchment',(row.station_id||'Not chosen')+' / '+(station?.catchment_id||'Not bound')],
+          ['Station location review',station?.coordinate_review],
+          ['Observation cohort',selectCohort(state.context,row.cohort_id)?.label||'Not chosen']
+        ])+detail('Source identity and original station binding',{selection:selected,native_source:choice||null,station:station||null})+
+        '<p class="sampling-note">Matching station/catchment support and constituent, fraction or time-scale equivalence are not established. Annual modeled mass is not a measured concentration. Explain applicability above.</p>':'<p class="sampling-note">The authored sensitivity rationale remains available without attaching model evidence.</p>')+'</section>';
+  }
+  function nativeQuantityTables(native){
+    const rows=Array.isArray(native.rows)?native.rows:[],pollutant=native.selected_quantity?.pollutant;
+    if(native.family==='terrain_response'){
+      return '<h5>Terrain variants · original shared cells</h5><p>The signed change is alternative minus baseline. Conditioning depth is the terrain input edit, not final elevation. Original full-support totals are retained in the source details.</p>'+
+        table(['Variant / depth (m)','Baseline annual mass','Alternative annual mass','Signed change','Annual mass unit','Common cells / ha','Lost / gained valid cells'],rows.map(row=>[
+          text(row.variant)+' / '+text(row.burn_depth_m),row.baseline_joint_total,row.alternative_joint_total,row.change_joint_total,row.units,
+          text(row.joint_valid_cells)+' / '+text(row.joint_area_ha),text(row.lost_valid_cells)+' / '+text(row.gained_valid_cells)]));
+    }
+    if(native.family==='control_outcomes'){
+      const modes=[...new Set(rows.map(row=>row.support_mode||'unspecified'))];
+      return modes.map(mode=>{
+        const selected=rows.filter(row=>(row.support_mode||'unspecified')===mode);
+        const title=mode==='group_common'?'All selected designs · shared native cells':mode==='per_design'?'Each design · its own three-run shared cells':'Original native support: '+mode;
+        return '<h5>'+esc(title)+'</h5><p>Annual masses and direct differences are the retained native result. Baseline minus alternative is avoided export; control minus restoration is the restoration advantage. Geographic rows may overlap and are not additive.</p>'+
+          table(['Design / geographic region','Annual mass unit','Baseline','Restoration','Control','Baseline − restoration','Baseline − control','Control − restoration','Common cells / ha'],selected.map(row=>{
+            const v=row.siting_contrasts?.[pollutant]||{};
+            return [text(row.design_id)+' / '+text(row.title||row.id),v.units,v.mass?.baseline,v.mass?.restoration,v.mass?.control,
+              v.alternatives?.restoration?.avoided_export_mass,v.alternatives?.control?.avoided_export_mass,v.restoration_advantage_mass,
+              text(v.native_common_cells)+' / '+text(v.native_common_hectares)];
+          }))+detail('Original area denominators, source-cell partitions and complete rows · '+title,selected);
+      }).join('');
+    }
+    return detail('Complete original native quantity rows',native.rows);
+  }
+  function nativeEvidenceDownloads(value){
+    const links=(value.downloads||[]).filter(item=>item&&typeof item.path==='string'&&typeof item.download_url==='string'&&/^\/api\/file\/[A-Za-z0-9_-]+\?download=1$/.test(item.download_url));
+    if(!links.length)return '';
+    return '<details class="sampling-evidence-files"><summary>Original report and source files · '+links.length+'</summary><div class="sampling-downloads">'+links.map(item=>
+      '<a href="'+esc(item.download_url)+'" download>'+esc(item.path)+' · '+esc(item.bytes)+' bytes</a>').join('')+'</div></details>';
+  }
+  function nativeEvidenceView(value){
+    if(!value)return '';
+    const native=value.native||{},station=value.target_binding?.station||{},cohort=value.target_binding?.cohort||{};
+    const quantity=native.selected_quantity||{},window=value.target_binding||{};
+    return '<section class="sampling-evidence"><h4>Native evidence for this sampling target</h4><p>'+esc(value.applicability||value.selection?.applicability||'')+'</p>'+
+      table(['Model and observation context','Retained value'],[
+        ['Native scientific source',value.source?.title||native.family],['Modeled quantity',evidenceQuantity(quantity)],
+        ['Modeled geographic support',native.quantity_scope],['Source classification',native.classification],
+        ['Original source / network station',text(station.source_station_id)+' / '+text(station.network_station_id)],
+        ['Assigned target catchment',station.catchment_id],['Catchment assignment',station.catchment_assignment],
+        ['Original observation cohort',cohort.label],['Historical observation window',text(window.evidence_start)+' through '+text(window.evidence_end)],
+        ['Spatial relationship','The modeled support is not established as this station’s contributing catchment.'],
+        ['Constituent and time relationship','Annual modeled export provides analyst context; the selected observed constituent, method, fraction, units and dates remain distinct.']
+      ])+'<p class="sampling-note">The values below retain their original direction, support and annual mass units. They do not establish station concentration, sampling benefit or target priority.</p>'+
+      nativeQuantityTables(native)+nativeEvidenceDownloads(value)+detail('Complete original native support and coverage',native.support)+
+      '<details><summary>Scientific interpretation limits</summary><ul>'+(value.limitations||[]).map(line=>'<li>'+esc(line)+'</li>').join('')+'</ul></details>'+
+      detail('Complete native evidence, original source identities and exact target binding',value)+'</section>';
+  }
   function targetCard(state,row,index){
     const stationRows=state.context?.stations||[],cohorts=state.context?.cohorts||[];
     const attr='data-target="'+esc(row.id)+'"';
@@ -63,6 +145,7 @@ export function attachMonitoringRecommendations(host){
       field('Cost per proposed visit (USD)','per_visit_cost',row.per_visit_cost,{target:row.id,placeholder:'Unknown if blank; 0 is explicit'})+
       textarea('Cost basis','cost_basis',row.cost_basis,{target:row.id,wide:false})+
       textarea('Sensitivity basis, if supplied by the operator','sensitivity_basis',row.sensitivity_basis,{target:row.id,wide:false})+
+      evidenceEditor(state,row)+
       textarea('Why this station, season and analyte need attention','reason',row.reason,{target:row.id})+
       '<label class="sampling-check"><input type="checkbox" '+attr+' data-target-field="included"'+(row.included?' checked':'')+'>Include in the proposed programme</label><button type="button" data-action="remove-target" data-id="'+esc(row.id)+'">Remove this draft target</button></div></details>';
   }
@@ -71,6 +154,8 @@ export function attachMonitoringRecommendations(host){
     return '<p><strong>'+esc(c.stations?.length||0)+' original stations · '+esc(c.cohorts?.length||0)+' distinct analyte cohorts</strong></p><p>Declared original source period: '+esc(c.source_period?.start_inclusive||'Unknown')+' through '+esc(c.source_period?.end_inclusive||'Unknown')+'.</p><button type="button" data-action="use-period">Use the complete declared evidence window</button>'+
       '<p class="sampling-note">Cohorts retain the original method, unit, fraction, result-value type and speciation. A chosen cohort may have no observations at the chosen station.</p>'+
       '<details><summary>Original station bindings and support</summary>'+table(['Source station','Network station','Catchment','Match','Observations','Sampling dates'],(c.stations||[]).map(r=>[r.source_station_id,r.network_station_id,r.catchment_id,r.match,r.observations,r.sampling_dates]))+'</details>'+
+      '<p>'+evidenceChoices(state).length+' retained scientific sources available as optional target evidence. Choices do not establish spatial or analytical equivalence.</p>'+
+      ((state.catalog.model_evidence?.issues||[]).length?detail('Scientific sources needing attention',state.catalog.model_evidence.issues):'')+
       detail('Complete context identity, original period and cohort definitions',c);
   }
   function results(state){
@@ -97,6 +182,7 @@ export function attachMonitoringRecommendations(host){
           table(['Original observation','Retained limit','Original limit unit','Above proposed limit'],(evidence.reporting_limits||[]).map(r=>[r.observation_id,r.value,r.unit,r.above_target===null?'No limit proposed':r.above_target?'Yes':'No']))+
           '<p>'+esc((evidence.unknown_limit_observation_ids||[]).length)+' observations with unknown limits; '+esc((evidence.incompatible_limit_unit_observation_ids||[]).length)+' with incompatible or unspecified limit units. No conversion is inferred.</p>'+
           '<ul>'+(r.warnings||[]).map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul>'+
+          nativeEvidenceView(r.model_evidence)+
           detail('All original observation fields, qualifiers and source IDs ('+originals.length+')',originals)+detail('Complete target and exact supporting IDs',r)+'</details>';
       }).join('')+
       '<h4>Handoff to the original Monitoring design</h4><p>'+required.length+' required catchments · '+unbound.length+' unbound targets · '+conflicts.length+' catchments with conflicting station bindings.</p>'+
@@ -160,12 +246,26 @@ export function attachMonitoringRecommendations(host){
     if(node.dataset.field&&state.draft){state.draft[node.dataset.field]=node.value;changed(state);}
     if(node.dataset.targetField&&state.draft){const row=state.draft.targets.find(r=>r.id===node.dataset.target);if(row){row[node.dataset.targetField]=node.type==='checkbox'?node.checked:node.value;changed(state);}}
     if(node.dataset.month&&state.draft){const row=state.draft.targets.find(r=>r.id===node.dataset.target),month=Number(node.dataset.month);if(row){row.months=node.checked?[...new Set([...row.months,month])]:row.months.filter(n=>n!==month);changed(state);}}
+    if(node.hasAttribute('data-evidence-applicability')&&state.draft){const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(row?.model_evidence){row.model_evidence.applicability=node.value;changed(state);}}
     if(node.dataset.design){state.designDraft[node.dataset.design]=node.value;state.designDirty=true;status(state,'Unsaved Monitoring design configuration. Prepare a design to retain these exact choices.');}
   }
   function change(state,event){
+    if(!current(state))return;
+    const node=event.target;
+    if(node.hasAttribute('data-evidence-source')&&state.draft){
+      const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(!row)return;
+      if(!node.value)delete row.model_evidence;
+      else{const choice=evidenceChoices(state).find(item=>evidenceKey(item)===node.value);if(!choice){status(state,'The selected native source is unavailable in this catalogue. Keep the retained choice or remove it explicitly.',true);render(state);return;}
+        if(!row.model_evidence||evidenceKey(row.model_evidence)!==node.value)row.model_evidence={source_collection_id:choice.source_collection_id,source_id:choice.source_id,pollutant:'',applicability:row.model_evidence?.applicability||''};}
+      changed(state);render(state);return;
+    }
+    if(node.hasAttribute('data-evidence-pollutant')&&state.draft){
+      const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(!row?.model_evidence)return;
+      row.model_evidence.pollutant=node.value;changed(state);return;
+    }
     if(event.target.matches('[data-gap-station],[data-gap-only]')){if(event.target.matches('[data-gap-station]'))state.filters.station=event.target.value;else state.filters.gapsOnly=event.target.checked;root.querySelector('[data-result]').innerHTML=results(state);return;}
     if(event.target.matches('[data-context]')){const id=event.target.value;if(id)return loadContext(state,id).catch(error=>{if(current(state))fail(state,error);});}
-    else if(event.target.dataset.targetField||event.target.dataset.month||event.target.dataset.design)input(state,event);
+    else if(event.target.dataset.targetField||event.target.dataset.month||event.target.dataset.design){input(state,event);if(['station_id','cohort_id'].includes(event.target.dataset.targetField))render(state);}
   }
   async function guarded(state,fn){const version=generation,ticket=++request,owner={};state.busyOwner=owner;state.busy=true;updateActions(state);try{await fn(()=>current(state,version)&&ticket===request);}catch(error){if(current(state,version)&&ticket===request)fail(state,error);}finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}}
   function discard(state){return !(state.dirty||state.designDirty)||confirm('Replace the unsaved sampling targets or design configuration with the selected saved evidence?');}
@@ -206,10 +306,11 @@ export function attachMonitoringRecommendations(host){
     const intent=JSON.stringify({kind,payload});
     if(state.pending&&JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent&&!terminal.has(state.pending.state))throw Error('Resume the existing sampling request before submitting a different one.');
     if(!state.pending||JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent||state.pending.state==='complete')state.pending={kind,payload:copy(payload),operation_id:'sampling-'+crypto.randomUUID(),state:'unsent',task_id:null};
-    keep(storageKey(state),state.pending);await resume(state);
+    try{keep(storageKey(state),state.pending);}catch(error){render(state);throw error;}await resume(state);
   }
   async function resume(state){
     if(!state.pending||state.busy)return;
+    keep(storageKey(state),state.pending);
     const pending=state.pending,version=generation,owner={};state.busyOwner=owner;state.busy=true;status(state,'Continuing the original sampling request.');render(state);
     try{
       let task=pending.task_id?await api('/api/task?'+new URLSearchParams({workspace:state.key,id:pending.task_id})):await api('/api/actions',{method:'POST',body:{workspace:state.key,action:'monitoring.recommendations.'+pending.kind,payload:pending.payload,operation_id:pending.operation_id}});
@@ -236,7 +337,7 @@ export function attachMonitoringRecommendations(host){
         const url=result.download_url;if(!url)throw Error('The completed export has no original file ticket.');
         const item={url,label:'Download complete sampling edition and original sources'+(result.bytes?' · '+Number(result.bytes).toLocaleString()+' bytes':'')};appendDownload(state,item);state.downloads=[item];status(state,'Complete export ready with the retained edition and original source attachments.');
       }
-      state.pending=null;keep(storageKey(state),null);
+      keep(storageKey(state),null);state.pending=null;
     }catch(error){if(current(state,version))fail(state,error);}
     finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}
   }

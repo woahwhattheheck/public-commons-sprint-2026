@@ -155,3 +155,10 @@ The source archive is independently installable through its `pyproject.toml`. It
 ## Individual member ballots and returned votes
 
 The **Member ballot receiving** desk composes offline bilingual member packets, original and corrected return intake, explicit sender verification and adoption into existing vote identities. Continue authority decisions, independent procedural review and publication through the original workbench. [BALLOT-EXCHANGE.md](BALLOT-EXCHANGE.md) gives the complete operator and transport contract; [BALLOT-RECEIVING.md](BALLOT-RECEIVING.md) carries the whole native/browser operation. Full private workspace exports retain every original return and editable decision record.
+
+
+## Prime application preparation — 0.4.0
+
+**Project → Prime application** prepares the original issuer form and complete application from the same retained sources, standard edition, applicant, team, budget, calendar and authored text. The desk saves immutable drafts and frozen application editions, preserves separate browser working branches and unfinished text, resolves original save requests, and exports the selected application with its exact supporting originals.
+
+The full workflow and private continuation are described in [APPLICATION-WORKBENCH.md](APPLICATION-WORKBENCH.md). [APPLICATION_INTAKE.md](APPLICATION_INTAKE.md) documents the original twenty inputs and reviewed mapper; [APPLICATION-RENDERING.md](APPLICATION-RENDERING.md) documents the original form geometry, generated files and page review. Application generation uses one complete frozen input and fresh staging for each export. Earlier consultation and member-ballot source, downloads and actual completed results are preserved.

@@ -1,0 +1,4 @@
+"bill_id","account_id","canonical_account","tariff_id","bill_date","currency","water_charge_minor"
+"B001","NA100","A001","T001","2025-06-30","GBP","12025"
+"B002","NA200","A002","T001","2025-06-30","GBP","4000"
+"B003","NA300","A003","T002","2025-12-31","GBP","1050"

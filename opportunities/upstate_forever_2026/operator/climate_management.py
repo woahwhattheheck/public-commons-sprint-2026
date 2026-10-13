@@ -37,6 +37,7 @@ def downloads(operator, workspace_key, report):
     labels = {
         "report.html": "Management comparison — open report",
         "results.json": "Complete numerical result",
+        "figure-data.json": "Saved figure specification and original values",
         "benefits.csv": "Management benefit and forcing interaction",
         "independent-totals.csv": "Independent annual export totals",
         "support.csv": "Exact finite support",
@@ -62,6 +63,24 @@ def decorate_report(operator, workspace_key, report):
     value = deepcopy(report)
     value["_downloads"] = downloads(operator, workspace_key, report)
     value["_item"] = {"kind": ITEM_KIND, "id": report["id"]}
+    # Resolve the actual registered original collection. The GIS desk validates
+    # it again and retains its complete companions through ordinary preparation.
+    workspace = operator.ws(workspace_key)
+    collection_id = identifier(report["source"]["source_collection_id"])
+    collection = workspace._get("sources", collection_id)
+    value["_gis_selection"] = {
+        "title": (report["title"] + " — management GIS")[:240],
+        "project_crs": report["lattice"]["crs_wkt"],
+        "source_collection_id": collection_id,
+        "sources": [{"source_collection_id": collection_id, "source_id": entry["id"]}
+                    for entry in collection["entries"]],
+        "notes": [
+            "Original climate-management comparison " + report["id"] + ".",
+            "Annual modeled export reaching streams; reference minus treatment.",
+            "Signed benefit and interaction maps use the retained common finite support.",
+            "The reporting-area selector filters the comparison tables; native raster files retain their complete original footprint.",
+        ],
+    }
     return value
 
 

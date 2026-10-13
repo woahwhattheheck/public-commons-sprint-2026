@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextlib import ExitStack
 from copy import deepcopy
+import base64
 import csv
 import hashlib
 import html
@@ -23,10 +24,11 @@ from .model_selection import run_models, required_outputs, validate_completed_ru
 from .native_versions import comparison_versions
 from .reuse import copy_verified
 from . import climate_forcing, forcing_sources, rasters
+from . import climate_management_figures as management_figures
 
 ROOT = "climate-management-reports"
 SCHEMA = "upstate.climate-management-report/v1"
-VERSION = 1
+VERSION = 2
 SOURCE_ID = "climate-management-report"
 LIMITATIONS = [
     "Annual steady-state model comparisons; not an event hydrograph, seasonal flow, intake concentration or causal field estimate.",
@@ -242,7 +244,9 @@ def _selection(ws, raw, *, verify=False):
                 "studies": {key: _copy(value[1]) for key, value in sorted(studies.items())},
                 "reporting_sources": reporting_sources, "native_versions": versions,
                 "support_mode": "all-selected-period-role-common-finite-per-metric",
-                "implementation": {"model_sha256": file_digest(__file__)}}
+                "implementation": {"model_sha256": file_digest(__file__),
+                                   "figures_sha256": file_digest(management_figures.__file__),
+                                   "figures_edition": management_figures.EDITION}}
     return identity
 
 
@@ -565,16 +569,30 @@ def _sections(result):
             {"kind": "links", "items": [{"title": name, "path": name} for name in
                 ("results.json", "benefits.csv", "independent-totals.csv", "support.csv", "snapshot.json")]}]],
     ]
+    figure_sections = []
+    for figure in result.get("figures", []):
+        spec = figure["spec"]
+        label_rows = [["P" + str(index + 1), period["label"], period["id"]]
+                      for index, period in enumerate(spec["periods"])]
+        figure_sections.append([figure["title"], [
+            {"kind": "figure", **{name: figure[name] for name in (
+                "path", "title", "alt", "caption", "spec", "bytes", "sha256")}},
+            _table(["Figure position", "Original selected period", "Original period ID"], label_rows),
+            {"kind": "links", "items": [
+                {"title": "Retained SVG", "path": figure["path"]},
+                {"title": "Complete original figure quantities and support", "path": "figure-data.json"}]}]])
+    sections[1:1] = figure_sections
     return sections
 
 
-def _html(result):
+def _html(result, figure_svgs=None):
     out = ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">',
            "<title>" + html.escape(result["title"]) + "</title>",
-           "<style>body{font:16px/1.55 system-ui,sans-serif;max-width:1200px;margin:auto;padding:28px;color:#192927;background:#fbfcfa}"
+           "<style>body{font:16px/1.55 system-ui,sans-serif;max-width:1200px;margin:auto;padding:28px;color:#222;background:#fff}"
            "h1{line-height:1.2}h2{margin-top:2.2em}table{border-collapse:collapse;width:100%;font-size:14px}"
-           "th,td{padding:9px;text-align:left;border-bottom:1px solid #cbd6d1;vertical-align:top}th{background:#e9f0ec}"
-           ".scroll{overflow:auto}p{max-width:85ch}a{color:#135f49}code{overflow-wrap:anywhere}"
+           "th,td{padding:9px;text-align:left;border-bottom:1px solid #d5d5d5;vertical-align:top}th{background:#f5f5f5}"
+           ".scroll,.figure-scroll{overflow:auto}figure{margin:0}figure img{display:block;width:100%;min-width:680px}"
+           "figcaption{margin:12px 0}p{max-width:85ch}a{color:#222}code{overflow-wrap:anywhere}"
            "@media(max-width:600px){body{padding:16px}th,td{padding:7px}}</style>",
            "<h1>" + html.escape(result["title"]) + "</h1>",
            '<p><a href="climate-management-results.zip">Complete original results ZIP</a> · '
@@ -584,6 +602,18 @@ def _html(result):
         for block in blocks:
             if isinstance(block, str):
                 out.append("<p>" + html.escape(block) + "</p>")
+            elif block["kind"] == "figure":
+                svg = (figure_svgs or {}).get(block["path"])
+                if not isinstance(svg, str):
+                    raise ValueError("Embed the exact saved SVG in the standalone management report")
+                body = svg.encode("utf-8")
+                if len(body) != block["bytes"] or hashlib.sha256(body).hexdigest() != block["sha256"]:
+                    raise ValueError("The standalone figure differs from its original SVG descriptor")
+                image = "data:image/svg+xml;base64," + base64.b64encode(body).decode("ascii")
+                out.append('<figure><div class="figure-scroll"><img src="' +
+                           image + '" alt="' +
+                           html.escape(block["alt"], quote=True) + '"></div><figcaption>' +
+                           html.escape(block["caption"]) + "</figcaption></figure>")
             elif block["kind"] == "table":
                 out.append('<div class="scroll"><table><thead><tr>' +
                            "".join("<th>" + html.escape(str(x)) + "</th>" for x in block["columns"]) +
@@ -595,7 +625,7 @@ def _html(result):
                 out.append("<p>" + " · ".join('<a href="' + html.escape(item["path"], quote=True) + '">' +
                            html.escape(item["title"]) + "</a>" for item in block["items"]) + "</p>")
         out.append("</section>")
-    out.append("<p>Original project <code>" + html.escape(result["workspace_id"]) +
+    out.append("<p>TokenJunkieLabs · Original project <code>" + html.escape(result["workspace_id"]) +
                "</code>; retained report <code>" + html.escape(result["id"]) + "</code>.</p></html>")
     return "".join(out)
 
@@ -674,11 +704,26 @@ def build(ws, selection, expected_id):
         # record is published. A partial directory remains resumable at the same ID.
         if digest(_selection(ws, selection, verify=True)) != key:
             raise ValueError("The selected original cohort changed during report calculation")
+        figure_data, figure_svgs = management_figures.build_figures(result)
+        atomic_json(directory / "figure-data.json", figure_data, immutable=True)
+        result["figures"] = []
+        copied["figure-data.json"] = describe_file(directory, directory / "figure-data.json")
+        for spec in figure_data["figures"]:
+            name = spec["path"]
+            (directory / name).parent.mkdir(parents=True, exist_ok=True)
+            atomic_bytes(directory / name, figure_svgs[name].encode("utf-8"), immutable=True)
+            descriptor = describe_file(directory, directory / name)
+            copied[name] = descriptor
+            result["figures"].append({
+                **{field: _copy(spec[field]) for field in (
+                    "id", "path", "title", "caption", "area_id", "pollutant", "period_ids")},
+                "alt": spec["title"] + ". " + spec["caption"],
+                "spec": _copy(spec), "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]})
         atomic_json(directory / "results.json", result, immutable=True)
         atomic_bytes(directory / "benefits.csv", _csv(rows), immutable=True)
         atomic_bytes(directory / "independent-totals.csv", _csv(independent), immutable=True)
         atomic_bytes(directory / "support.csv", _csv(support), immutable=True)
-        atomic_bytes(directory / "report.html", _html(result).encode("utf-8"), immutable=True)
+        atomic_bytes(directory / "report.html", _html(result, figure_svgs).encode("utf-8"), immutable=True)
         copied["reporting-area.gpkg"] = copy_verified(
             ws.root / "grids" / identity["base_grid"]["id"],
             identity["base_grid"]["files"]["reporting_area"], directory, path="reporting-area.gpkg")
@@ -808,6 +853,34 @@ def get_report(ws, report_id, verify=True):
     if (manifest.get("report_id") != key or manifest.get("workspace_id") != ws.project["id"]
             or manifest.get("files") != expected_manifest):
         raise ValueError("The original management report manifest changed")
+    if identity.get("version", 1) >= 2:
+        if "figure-data.json" not in files:
+            raise ValueError("The saved management edition lost its original figure data")
+        verify_file(directory, files["figure-data.json"])
+        figure_data = read_json(directory / "figure-data.json")
+        figures = record.get("figures")
+        if (not isinstance(figures, list) or not figures
+                or figure_data.get("schema") != management_figures.SCHEMA
+                or figure_data.get("edition") != identity["implementation"]["figures_edition"]
+                or figure_data.get("report_id") != key
+                or figure_data.get("workspace_id") != ws.project["id"]
+                or figure_data.get("period_ids") != [period["id"] for period in identity["selection"]["periods"]]
+                or figure_data.get("reference_period_id") != identity["selection"]["reference_period_id"]
+                or figure_data.get("figures") != [figure.get("spec") for figure in figures]):
+            raise ValueError("The management figures changed their retained result binding")
+        seen = set()
+        for figure in figures:
+            spec = figure["spec"]
+            path = _member_name(figure["path"])
+            if (path in seen or path not in files or not path.startswith("figures/")
+                    or not path.endswith(".svg")
+                    or any(figure.get(name) != spec.get(name) for name in (
+                        "id", "path", "title", "caption", "area_id", "pollutant", "period_ids"))
+                    or _body(figure) != _body(files[path])):
+                raise ValueError("A saved management figure changed its exact SVG identity")
+            seen.add(path)
+        if seen != {name for name in files if name.startswith("figures/")}:
+            raise ValueError("The management report lost a complete original figure member")
     source = record["source"]
     collection = ws._get("sources", identifier(source["source_collection_id"]))
     scope = collection.get("scope", {})
