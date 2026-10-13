@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "milestone-handoff",
+  "title": "Milestone handoff",
+  "version": "1.0.0",
+  "order": 76,
+  "requires_actions": [
+    "customer.review.create",
+    "customer.review.export"
+  ],
+  "assets": [
+    "milestone_handoff.mjs",
+    "milestone_handoff.css"
+  ],
+  "backend": {
+    "module": "milestone_handoff",
+    "factory": {
+      "handler": "MilestoneHandoff",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "milestone-handoff.create"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/milestone-handoff/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/milestone-handoff/evidence",
+        "operation": "evidence",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/milestone-handoff/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/milestone-handoff/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/milestone_handoff.mjs",
+    "factory": "attachMilestoneHandoff",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh",
+      "openSavedCustomerReview"
+    ],
+    "styles": [
+      "/web/milestone_handoff.css"
+    ],
+    "view": {
+      "id": "milestone-handoff",
+      "title": "Milestone handoff",
+      "after": "customer-reviews"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
