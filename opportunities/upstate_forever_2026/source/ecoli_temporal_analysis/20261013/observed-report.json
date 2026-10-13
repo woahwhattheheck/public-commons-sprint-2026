@@ -150,8 +150,8 @@
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/render-publication-svg.mjs",
-      "bytes": 10984,
-      "sha256": "0b7ddda353a26000a299bfc3ed3bce43a3ba8099f8ff4c0446ccf38a696fbf9e"
+      "bytes": 10977,
+      "sha256": "c26e81ab16d84e65ff9d8e644ade0c75b34b16e3862b4c432f0254c8b7585419"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/figures/sampling-coverage.svg",
@@ -165,13 +165,13 @@
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/figures/same-station-flow.svg",
-      "bytes": 82388,
-      "sha256": "0d699ed26f4a46dca2fdf8f92c732751e257d5bf9c3f06dc4e99b2673ca64419"
+      "bytes": 80864,
+      "sha256": "64a9f97ca15715a95cb6498cb891e90bf4f44e75a3eb89796683c588e59d7acd"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/publication-figures.html",
-      "bytes": 258372,
-      "sha256": "f11981a5024cbcfe1506e424694be43c3e29ebe05071ed50807e7097123d446c"
+      "bytes": 254562,
+      "sha256": "07e6748a9fc51b00eb2f9d5ab5b62f454466828395b2f019cae69cb2460ed738"
     },
     {
       "path": "observations/eighteenmile_2023/figures/vendor/d3-path.cjs",
