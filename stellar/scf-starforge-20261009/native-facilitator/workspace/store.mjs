@@ -47,11 +47,12 @@ export async function openProfileStore({directory, ownershipDirectory, create = 
     const path = join(profiles, name + '.json');
     const source = await readPrivateFile(path);
     const config = parseJson(source), reviewed = review(config);
-    // Profiles written before optional catalog support remain the original
-    // immutable files. Accept that one known encoding, retaining its byte hash.
-    // All other fields and formatting must still match the native normalizer.
-    const encodedConfig = {...reviewed.config};
+    // Earlier immutable profiles can omit optional catalog and payment timing.
+    // Preserve that original encoding and byte hash; the current review supplies
+    // the same disabled catalog and authorization-only runtime defaults.
+    const encodedConfig = {...reviewed.config, payments:{...reviewed.config.payments}};
     if (!Object.hasOwn(config, 'catalog')) delete encodedConfig.catalog;
+    if (!Object.hasOwn(config.payments, 'paymentFlows')) delete encodedConfig.payments.paymentFlows;
     const sourceSha256 = digest(source);
     requireValue(isDeepStrictEqual(encodedConfig, config) &&
       sourceSha256 === digest(bytes(encodedConfig)), 'FACILITATOR_PROFILE_CHANGED');
