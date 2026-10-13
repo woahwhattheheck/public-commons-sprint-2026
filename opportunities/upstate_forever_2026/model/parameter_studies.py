@@ -24,7 +24,8 @@ from .model_selection import (grid_models, models as normalize_models,
 from .native_versions import comparison_versions, guide_url, model_versions, version_label
 from . import rasters
 from .native_execution import process_interrupted, storage_exhausted
-from .parameter_exports import EDITION as EXPORT_EDITION, retain_differences, write_archive
+from .parameter_exports import (EDITION as EXPORT_EDITION, retain_differences,
+                                retain_member_manifest, write_archive)
 from .reuse import copy_verified
 
 SCHEMA = "upstate.parameter-experiment/v1"
@@ -896,10 +897,13 @@ def _exports(workspace, state):
                 descriptors.append(copy_verified(
                     workspace.root / "runs" / case["run_id"], stage["requested_arguments"], directory,
                     path="native-arguments/" + case["id"] + "/" + model + "-requested.json"))
+    member_manifest = retain_member_manifest(workspace, directory, state, descriptors)
+    descriptors.append(member_manifest)
     write_archive(directory, directory / "experiment-results.zip", descriptors)
     artifacts = {name: describe_file(directory, directory / filename) for name, filename in (
         ("selection", "selection.json"), ("results", "results.json"), ("csv", "results.csv"),
         ("report", "report.html"), ("profiles", "profiles.json"), ("archive", "experiment-results.zip"))}
+    artifacts["export_manifest"] = member_manifest
     artifacts.update(map_files)
     for name, filename in (("native_versions", "native-versions.json"),
                            ("native_versions_csv", "native-versions.csv")):
