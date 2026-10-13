@@ -1,0 +1,83 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "received-landcover-copy",
+  "title": "Editable copies of received watershed comparisons",
+  "version": "1.0.0",
+  "order": 89,
+  "requires_actions": [
+    "observed.landcover.save"
+  ],
+  "backend": {
+    "module": "observed_landcover_local_copy",
+    "actions": [
+      "received.landcover.copy"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/received-landcover-copy/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/received-landcover-copy/copies",
+        "operation": "copies",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/received-landcover-copy/copy",
+        "operation": "copy",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.observed_landcover_local_copy",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}
