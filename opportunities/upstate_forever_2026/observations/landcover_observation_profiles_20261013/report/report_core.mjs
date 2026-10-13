@@ -1,3 +1,4 @@
+import {buildUtilityContext} from "./utility_context.mjs";
 /** Existing Observed Context consumer for the retained 217 watershed source. */
 export const ROOT="observations/landcover_observation_profiles_20261013/report/";
 const GROUPS=["water","snow_ice","developed","barren","forest","shrub_grass","agriculture","wetlands"];
@@ -32,7 +33,7 @@ function drawFigure(figure,d3){
  lines.push(text(24,898,"Source classifications: 2023 and 2025. Point evidence: retained observations and South Carolina 2026 draft assessment."),text(24,916,"All 217 HUC12 rows and original coordinate variants remain linked from the report."),'</svg>');
  return lines.join("\n")+"\n";
 }
-export function buildProfileReport({profiles,groups,locations,summary,inputs},d3){
+export function buildProfileReport({profiles,groups,locations,summary,inputs,utilityProfile,connectivity,connectivitySummary},d3){
  if(profiles.length!==217||groups.length!==1736||locations.length!==197||summary.watershed_count!==217)throw Error("Select the complete merged 217-profile / 197-location edition");
  const ids=new Set(profiles.map(r=>r.huc12));if(ids.size!==217||profiles.some(r=>!/^\d{12}$/.test(r.huc12)))throw Error("Original HUC12 identity changed");
  const balances=GROUPS.map(group=>{const rows=groups.filter(r=>r.group===group);if(rows.length!==217)throw Error("Incomplete group "+group);const sum=k=>rows.reduce((a,r)=>a+num(r[k]),0);const r={group,label:LABELS[group],class_codes:summary.class_groups[group],area_2023_ha:sum("area_2023_ha"),area_2025_ha:sum("area_2025_ha"),gross_gain_ha:sum("gross_gain_ha"),gross_loss_ha:sum("gross_loss_ha"),net_change_ha:sum("net_change_ha")};if(Math.abs(r.gross_gain_ha-r.gross_loss_ha-r.net_change_ha)>1e-6)throw Error("Group mass balance differs");return r});
@@ -53,7 +54,7 @@ export function buildProfileReport({profiles,groups,locations,summary,inputs},d3
  const both=profiles.filter(r=>+r.draft2026_assessment_station_count&&+r.local_observed_flow_gauge_count);
  const selected=profiles.filter(r=>+r.draft2026_assessment_station_count).sort((a,b)=>num(b.developed_net_change_ha)-num(a.developed_net_change_ha)||(a.huc12<b.huc12?-1:1)).slice(0,10);
  const arr=x=>list(x).join(", ")||"None retained";
- const recipe={schema:"upstate.observed-report/v1",edition:"regional-profile-report-20261013-v1",title:"217 watershed land-cover and dated observation context",inputs,sections:[
+ const recipe={schema:"upstate.observed-report/v1",edition:"regional-profile-report-20261013-v2",title:"217 watershed land-cover, utility geography and dated observation context",inputs,sections:[
  ["Scope and source dates",[
  "The retained hydrologic domain contains 217 HUC12 watersheds. The original 2023 and 2025 classification rasters select "+summary.selected_cells.toLocaleString("en-US")+" common cell centres over "+fmt(summary.area_ha)+" ha. A total of "+summary.changed_cells.toLocaleString("en-US")+" cells ("+fmt(summary.changed_percent,4)+"%; "+fmt(summary.changed_area_ha)+" ha) changed class. Original-cell classifications and this footprint are retained in the source edition.",
  "The observation overlay preserves 197 original coordinate variants and their current official WBD point queries: 183 lie in the land-cover domain and 14 lie outside. Physical gauge identities are deduplicated within a HUC12 while original agency and indexed network coordinate alternatives remain available. The 87 assessment sites belong to the South Carolina 2026 draft list, independently dated from the 2023/2025 classifications.",
@@ -82,9 +83,23 @@ export function buildProfileReport({profiles,groups,locations,summary,inputs},d3
  {kind:"links",items:[{title:"All 217 watershed profiles",path:"observations/landcover_observation_profiles_20261013/watershed-profiles.csv"},{title:"All 1,736 group balances",path:"observations/landcover_observation_profiles_20261013/landcover-groups.csv"},{title:"All 197 original-coordinate identities and source URLs",path:"observations/landcover_observation_profiles_20261013/original-location-context.csv"},{title:"Original source methodology and factual scope",path:"observations/landcover_observation_profiles_20261013/README.md"},{title:"All 55,552 class transitions",path:"observations/landcover_2023_2025/huc12-transitions.csv"},{title:"Figure points and exact local-evidence category",path:ROOT+"forest-point-evidence.csv"},{title:"Whole-domain group balances",path:ROOT+"domain-group-balances.csv"}]}
  ]]
  ],figure_spec:ROOT+"figure-spec.json",figures:[{id:figure.id,path:ROOT+"regional-classification-and-point-evidence.svg"}],source_links:inputs.map(r=>r.path)};
+ const utility=buildUtilityContext({profiles,groups,locations,utilityProfile,connectivity,connectivitySummary},d3);
+ recipe.sections.splice(4,0,utility.section);
+ recipe.sections.at(-1)[1].at(-1).items.push(
+  {title:"Utility anchors, reconstructed upstream unions and original memberships",path:ROOT+"utility-context.json"},
+  {title:"Four utility footprint summaries",path:ROOT+"utility-scope-summary.csv"},
+  {title:"All 32 utility footprint / class-group balances",path:ROOT+"utility-group-balances.csv"},
+  {title:"Original issuer utility anchor definition",path:"source/receptor-topology/20261013/utility-focus-profile.json"},
+  {title:"Original 217-watershed network and ancestor lists",path:"outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv"}
+ );
+ recipe.figures.push({id:utility.figure.id,path:ROOT+"utility-focus-upstream-context.svg"});
  return{
+  [ROOT+"utility-context.json"]:json(utility.summary),
+  [ROOT+"utility-scope-summary.csv"]:csv(utility.scopes),
+  [ROOT+"utility-group-balances.csv"]:csv(utility.groupRows),
+  [ROOT+"utility-focus-upstream-context.svg"]:drawFigure(utility.figure,d3),
   [ROOT+"scientific-context.json"]:json(recipe),
-  [ROOT+"figure-spec.json"]:json({schema:"upstate.scientific-figure-spec/v1",title:figure.title,figures:[figure]}),
+  [ROOT+"figure-spec.json"]:json({schema:"upstate.scientific-figure-spec/v1",title:figure.title,figures:[figure,utility.figure]}),
   [ROOT+"regional-classification-and-point-evidence.svg"]:drawFigure(figure,d3),
   [ROOT+"forest-point-evidence.csv"]:csv(points),
   [ROOT+"domain-group-balances.csv"]:csv(balances)
