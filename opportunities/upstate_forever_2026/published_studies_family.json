@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "2d8fe39c96ca83436896e439ca763f5d66097f54",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe.",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 11993,
-      "sha256": "6b446c3b1df72a08f5e073eff84f1302e608b473550e9d08affc4ef0d130be5e"
+      "bytes": 12124,
+      "sha256": "6bab6ac094b8940f143fd718c10e5fb384df60884f6a29b0b1b2d1d77c08d931"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -68,8 +68,8 @@
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 102550,
-      "sha256": "c2133f1954b214ea36222a7da525f805de3b21dd6291fa52ab5548580ca32208"
+      "bytes": 103247,
+      "sha256": "3dc26da3cbbe039e500c35de35017f54056657ebb00eaadbfa447e8cafdf760e"
     },
     {
       "path": "measurement_workspace/source_observations.py",
@@ -85,6 +85,16 @@
       "path": "measurement_workspace/study_context.py",
       "bytes": 5856,
       "sha256": "a58616563bab55818d79579cb706747b6be36bd35e6ec5f90944ac86ee2164db"
+    },
+    {
+      "path": "measurement_workspace/STUDY_REVIEWS.md",
+      "bytes": 8653,
+      "sha256": "6e121f425936b907dea3abe1dc47e4fdc8ead038b8f5268b9a429d3681b4049f"
+    },
+    {
+      "path": "measurement_workspace/study_reviews.py",
+      "bytes": 19638,
+      "sha256": "8817e1384471a501c22c1c46fb7507ac0c110aa3a686e4a84c686ba04544c3dd"
     },
     {
       "path": "measurement_workspace/SV833_OBSERVATIONS.md",
@@ -1068,23 +1078,28 @@
     },
     {
       "path": "operator/extensions/published-studies.json",
-      "bytes": 2477,
-      "sha256": "1d9091ac64717cd40763dda859032c579ff8c958920c9822621b2e9108d7f4ac"
+      "bytes": 2862,
+      "sha256": "eaa40e5262931d40ac0bceae9e0454f6fd519cc24fe02928493262e2e0adbfee"
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 21286,
-      "sha256": "c6154b6d0af2bc52ec6d7fa4434742c29d3fa0b66fe73834283debcfc117950e"
+      "bytes": 23757,
+      "sha256": "884d4fbb37f8d0542fafdb4577452b1a959e396432226d36607fb971b79fdb09"
+    },
+    {
+      "path": "operator/team_route_policy.json",
+      "bytes": 5973,
+      "sha256": "211e0dd1c91dbcc5ad09c27c17c042ad66278dfee767f405b997919e6b7db39a"
     },
     {
       "path": "operator/web/published_studies.css",
-      "bytes": 6429,
-      "sha256": "7f961d02db80b73cb3adb50ec668d1019b262dfde52ed3063a7a44754b9542ec"
+      "bytes": 7857,
+      "sha256": "3f0d405594a919bb868aea1801af4283ff73257bb2b5cced09e60a07c558777f"
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 45514,
-      "sha256": "b73a4e3892f7d26f10e1015d282ebfd823c2bb90fb031e0962215e70c3394405"
+      "bytes": 62523,
+      "sha256": "9abe5edb2282165dbf91a0691ab23ae7b44d3823b5e29b24e90daaf76c3a5298"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -1735,6 +1750,13 @@
       "manifest_sha256": "07b6237b0a81ed1776639d5d12e2d8c59cf021e7d34a711df0291c9fe74b0b9e",
       "source_files": 26,
       "original_result_rows": 610
+    },
+    "saved_reviews": {
+      "schema": "upstate.published-study-review/v1",
+      "source_binding": "study/version/native collection/original manifest and file inventory",
+      "portable_root": "published_studies/reviews",
+      "browser": "exact multivalue filters and per-workspace guarded drafts",
+      "team_read_route": "/api/published-studies/review"
     }
   }
 }
