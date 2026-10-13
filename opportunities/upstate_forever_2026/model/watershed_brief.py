@@ -15,7 +15,7 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v3"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v4"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
 
@@ -291,6 +291,40 @@ def _source_links(sources):
     return links
 
 
+
+def _utility_lines(selection):
+    utility = selection.get("utility_selection")
+    if utility is None:
+        return []
+    if (utility.get("schema") != "upstate.utility-watershed-selection/v1"
+            or not utility.get("available")
+            or set(utility.get("huc12s", [])) != set(selection["selected_huc12s"])):
+        raise ValueError("The utility profile and selected watershed membership differ")
+    lines = ["## Original utility contributing footprint", "",
+             _text(utility["title"]), "", _text(utility["interpretation"]), ""]
+    lines.extend(_table(["Field", "Retained source selection"], [
+        ["Utility", utility["utility_id"]],
+        ["Original focus anchors", utility["anchor_huc12s"]],
+        ["Whole-HUC model-domain members", utility["huc12s"]],
+        ["Known upstream source HUCs outside model domain",
+         utility.get("known_external_upstream_huc12s", [])],
+        ["Area basis", utility["area_basis"]],
+        ["Original profile SHA-256", utility["profile_source"]["sha256"]],
+    ]))
+    lines.extend(["", "### Original NRCS programme designations", ""])
+    lines.extend(_table(
+        ["Original system type", "Priority state-HUC rows", "Designated state portions (acres)",
+         "Known state portions (acres)", "Missing source areas"],
+        ([row["system_type"], row["state_row_count"], _number(row["state_portion_acres"]),
+          _number(row["known_state_portion_acres"]), row["missing_area_count"]]
+         for row in utility["programme_designations"]),
+    ))
+    lines.extend(["",
+        "Ground, Surface and Both remain separate original programme labels. These are "
+        "designated state-HUC portions, not measured water quality, a surface-water-only "
+        "priority ranking or parameters for InVEST subsurface transport.", ""])
+    return lines
+
 def render_selection_brief(selection):
     """Render the exact selected-watersheds/v1 rows and retained summaries."""
     if not isinstance(selection, Mapping) or selection.get("schema") != "upstate.selected-watersheds/v1":
@@ -328,6 +362,7 @@ def render_selection_brief(selection):
         ["Watersheds covered by the complete selected-class query", summary["complete_query_huc_count"]],
         ["Cross-state watersheds", summary["cross_state_huc_count"]],
     ]))
+    lines.extend(["", *_utility_lines(selection)])
     lines.extend(["", "## Selected watersheds", ""])
     lines.extend(_table(
         ["HUC12", "Watershed", "Area (acres)", "States", "NRCS priority states", "Selected-class records"],
@@ -506,8 +541,34 @@ def write_selection_brief(directory, selection):
         BRIEF_FILENAME: (render_selection_brief(selection).encode("utf-8"), "text/markdown"),
         HTML_FILENAME: (render_selection_html(selection).encode("utf-8"), "text/html"),
     }
+    from .watershed_context import _csv_bytes
+    from .utility_watershed_context import state_records, programme_summary
+    original_states = state_records(selection["hucs"])
+    state_columns = ("selected_huc12",) + tuple(sorted({
+        key for row in original_states for key in row if key != "selected_huc12"}))
+    bodies["selected-watershed-state-records.csv"] = (
+        _csv_bytes(original_states, state_columns), "text/csv")
+    bodies["selected-programme-designations.csv"] = (
+        _csv_bytes(programme_summary(selection["hucs"]), (
+            "system_type", "state_row_count", "state_portion_acres",
+            "known_state_portion_acres", "missing_area_count", "state_huc_keys")), "text/csv")
+    utility = selection.get("utility_selection")
+    if utility is not None:
+        selected = {row["huc12"]: row for row in selection["hucs"]}
+        memberships = [{
+            "utility_id": utility["utility_id"], "receptor_id": utility["receptor_id"],
+            **item, "whole_huc_area_acres": selected[item["huc12"]]["area_acres"],
+            "states": selected[item["huc12"]]["states"],
+            "geography": utility["geography"],
+            "profile_sha256": utility["profile_source"]["sha256"],
+            "report_id": utility["report_id"],
+        } for item in utility["membership"]]
+        bodies["utility-watershed-memberships.csv"] = (
+            _csv_bytes(memberships, (
+                "utility_id", "receptor_id", "huc12", "downstream_huc12",
+                "is_profile_anchor", "whole_huc_area_acres", "states",
+                "geography", "profile_sha256", "report_id")), "text/csv")
     if selection.get("contributing_context") is not None:
-        from .watershed_context import _csv_bytes
         bodies[CONTRIBUTING_FILENAME] = (
             _csv_bytes(selection["contributing_context"]["hucs"], CONTRIBUTING_COLUMNS), "text/csv")
     files = {}

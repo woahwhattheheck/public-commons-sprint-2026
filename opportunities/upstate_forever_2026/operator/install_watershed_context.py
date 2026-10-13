@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 FILES = (
     "model/watershed_context.py",
     "model/watershed_brief.py",
+    "model/utility_watershed_context.py",
+    "source/receptor-topology/20261013/utility-focus-profile.json",
     "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
     "source_tools/receive_watershed_context.py",
