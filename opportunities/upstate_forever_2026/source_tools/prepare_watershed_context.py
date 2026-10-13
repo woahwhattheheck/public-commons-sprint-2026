@@ -13,7 +13,7 @@ import gzip
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import sys
 import tempfile
 
@@ -25,8 +25,10 @@ COVERAGE_NAME = "scdes-domain217-source-coverage.json"
 NETWORK_NAME = "native-network.json"
 NETWORK_GZIP_NAME = "native-network.json.gz"
 NETWORK_NAMES = (NETWORK_NAME, NETWORK_GZIP_NAME)
+NETWORK_SOURCE_NAME = "native-network-source.json"
 GEOMETRY_NAME = "scdes-classified-streams.esri.json"
 MANIFEST_NAME = "complete-sources.json"
+NATIVE_MANIFEST_NAME = "complete-native-sources.json"
 
 
 def _digest(body):
@@ -54,11 +56,20 @@ def _name(value):
     return value
 
 
+def _relative_name(value):
+    if (not isinstance(value, str) or not value or "\\" in value or "\0" in value):
+        raise ValueError("Source companion needs a safe relative filename")
+    path = PurePosixPath(value)
+    if (path.is_absolute() or any(part in ("", ".", "..") for part in value.split("/"))
+            or path.as_posix() != value):
+        raise ValueError("Source companion must stay inside its edition: " + value)
+    return value
+
+
 def _member(root, name):
-    name = _name(name)
-    selected = root / name
-    path = selected.resolve(strict=True)
-    if path.parent != root or not path.is_file():
+    name = _relative_name(name)
+    path = (root / name).resolve(strict=True)
+    if not path.is_relative_to(root) or not path.is_file():
         raise ValueError("Source companion must remain inside its edition: " + name)
     body = path.read_bytes()
     return ({"name": name, "path": str(path), "bytes": len(body),
@@ -66,7 +77,7 @@ def _member(root, name):
 
 
 def _present(root, name):
-    path = root / _name(name)
+    path = root / _relative_name(name)
     return path.exists() or path.is_symlink()
 
 
@@ -162,6 +173,114 @@ def _original_companions(root, coverage, source_context):
     return sorted(files, key=lambda row: row["name"]), checks
 
 
+
+def load_native_network_sources(directory, network_name, *, network_path=None):
+    """Load the chosen network's original companions without another source edition.
+
+    The original network descriptor remains a model input. This function returns
+    only byte-bound origin and nested original companions for supporting_files.
+    network_path can identify an original publisher filename within directory;
+    network_name identifies its canonical retained .json or .json.gz member.
+    """
+    root = Path(directory).resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError("Choose the retained native network source directory")
+    if network_name not in NETWORK_NAMES:
+        raise ValueError("Choose native-network.json or native-network.json.gz")
+    if network_path is None:
+        native_member = network_name
+    else:
+        chosen = Path(network_path)
+        if not chosen.is_absolute():
+            chosen = root / chosen
+        chosen = chosen.resolve(strict=True)
+        if not chosen.is_relative_to(root) or not chosen.is_file():
+            raise ValueError("Chosen native network must remain inside its source directory")
+        native_member = chosen.relative_to(root).as_posix()
+    network_info, network_body = _member(root, native_member)
+    decoded = gzip.decompress(network_body) if network_name == NETWORK_GZIP_NAME else network_body
+    network = _read_json(decoded, network_name)
+    if not isinstance(network, (dict, list)):
+        raise ValueError("Original native network must be a JSON object or list")
+    files, checks = [], {}
+    references = network.get("source_reference", {}) if isinstance(network, dict) else {}
+    if _present(root, NETWORK_SOURCE_NAME):
+        provenance_info, provenance_body = _member(root, NETWORK_SOURCE_NAME)
+        provenance = _read_json(provenance_body, NETWORK_SOURCE_NAME)
+        if not isinstance(provenance, dict) or provenance.get("schema") != "upstate.native-network-source/v1":
+            raise ValueError("Expected upstate.native-network-source/v1 original provenance")
+        if provenance.get("source_member") != network_name:
+            raise ValueError("Native provenance must identify the retained original network filename")
+        if not isinstance(provenance.get("source_uri"), str) or not provenance["source_uri"].strip():
+            raise ValueError("Native provenance must retain the original source URI")
+        if (not isinstance(provenance.get("body_bytes"), int)
+                or isinstance(provenance["body_bytes"], bool)
+                or provenance["body_bytes"] != network_info["bytes"]
+                or provenance.get("body_sha256") != network_info["sha256"]):
+            raise ValueError("Native provenance does not bind the original source bytes")
+        files.append(provenance_info)
+        references = references or provenance
+        checks["native_network_source"] = {
+            "status": "original_bytes_bound", "source_uri": provenance["source_uri"],
+            "source_member": network_name, "bytes": network_info["bytes"],
+            "sha256": network_info["sha256"], "provenance_sha256": provenance_info["sha256"],
+        }
+    originals = references.get("originals", {}) if isinstance(references, dict) else {}
+    if not isinstance(originals, dict):
+        raise ValueError("Native network original references must be keyed records")
+    native_names = []
+    for label, reference in originals.items():
+        if not isinstance(reference, dict):
+            raise ValueError("Native network original reference must be an object: " + str(label))
+        name = _relative_name(reference.get("path"))
+        info, body = _member(root, name)
+        if (not isinstance(reference.get("sha256"), str)
+                or len(reference["sha256"]) != 64
+                or not isinstance(reference.get("bytes"), int)
+                or isinstance(reference["bytes"], bool)):
+            raise ValueError("Native network original requires exact bytes and SHA-256: " + name)
+        _expected_body(reference, body, name)
+        files.append(info)
+        native_names.append(name)
+    if native_names:
+        checks["native_originals"] = {"files": sorted(native_names), "count": len(native_names)}
+    return {"supporting_files": files, "validation": checks}
+
+
+def _complete_originals(root, network, network_name=None):
+    """Bind the complete original edition without changing model-input identity."""
+    from source_tools.watershed_source_validation import load_source_edition as validate_originals
+    from source_tools.watershed_source_validation import (
+        DOMAIN_NAME, NRCS_NAME, CLASSIFIED_NAME, IDS_NAME, ZERO_NAME, OPTIONAL_NAMES,
+    )
+
+    files, checks = [], {}
+    required = (DOMAIN_NAME, NRCS_NAME, CLASSIFIED_NAME, IDS_NAME, ZERO_NAME)
+    missing = [name for name in required if not _present(root, name)]
+    if not missing:
+        validated = validate_originals(root, native_network_name=network_name)
+        files.extend(validated["source_files"])
+        checks["complete_source_edition"] = {
+            "status": "original_bytes_bound", **validated["validation"],
+        }
+    else:
+        checks["complete_source_edition"] = {
+            "status": "context_inputs_retained",
+            "missing_original_companions": missing,
+        }
+        for name in OPTIONAL_NAMES:
+            if _present(root, name):
+                files.append(_member(root, name)[0])
+
+    if network_name is not None:
+        native = load_native_network_sources(root, network_name)
+        files.extend(native["supporting_files"])
+        checks.update(native["validation"])
+    elif _present(root, NETWORK_SOURCE_NAME):
+        raise ValueError("Native provenance requires its retained original network")
+    return files, checks
+
+
 def load_source_edition(directory):
     """Return the exact interface consumed by WatershedContextActions.
 
@@ -199,6 +318,18 @@ def load_source_edition(directory):
 
     report = build_watershed_context(context, classification_coverage=coverage, network=network)
     supporting, checks = _original_companions(root, coverage, context)
+    complete_files, complete_checks = _complete_originals(root, network, network_names[0] if network_names else None)
+    checks.update(complete_checks)
+    model_names = {row["name"] for row in inputs}
+    supporting_by_name = {}
+    for row in supporting + complete_files:
+        if row["name"] in model_names:
+            continue
+        previous = supporting_by_name.get(row["name"])
+        if previous is not None and previous["sha256"] != row["sha256"]:
+            raise ValueError("Original source name has conflicting bytes: " + row["name"])
+        supporting_by_name[row["name"]] = row
+    supporting = [supporting_by_name[name] for name in sorted(supporting_by_name)]
     inputs.sort(key=lambda row: row["name"])
     fingerprint = _digest(json.dumps(
         [{"id": row["name"], "sha256": row["sha256"]} for row in inputs],
@@ -218,10 +349,179 @@ def load_source_edition(directory):
     result = {
         "source_context": context, "classification_coverage": coverage,
         "source_files": inputs, "supporting_files": supporting, "validation": validation,
+        "manifest_path": str(root / (
+            NATIVE_MANIFEST_NAME if network is not None and _present(root, NATIVE_MANIFEST_NAME)
+            else MANIFEST_NAME
+        )) if (_present(root, MANIFEST_NAME)
+               or (network is not None and _present(root, NATIVE_MANIFEST_NAME))) else None,
     }
     if network is not None:
         result["native_network"] = network
     return result
+
+
+
+def _validate_import_manifest(root, edition):
+    """Check every selected scientific member, including cross-date aliases."""
+    root = Path(root).resolve(strict=True)
+    manifest_path = Path(edition["manifest_path"]).resolve(strict=True)
+    manifest_root = manifest_path.parent
+    manifest = _read_json(manifest_path.read_bytes(), manifest_path.name)
+    if (not isinstance(manifest, dict) or manifest.get("schema") != "upstate.sources/v1"
+            or not isinstance(manifest.get("entries"), list)):
+        raise ValueError("Choose an upstate.sources/v1 watershed import manifest")
+    matches = [entry for entry in manifest["entries"]
+               if isinstance(entry, dict) and entry.get("role") == "SOURCE_WATER_CONTEXT"]
+    if len(matches) != 1:
+        raise ValueError("Import requires exactly one SOURCE_WATER_CONTEXT entry")
+    entry = matches[0]
+    context_name = _relative_name(entry.get("path"))
+    context_parent = PurePosixPath(context_name).parent
+    if PurePosixPath(context_name).name != CONTEXT_NAME:
+        raise ValueError("Retain the original full-domain context filename")
+    companions = entry.get("companions", [])
+    if not isinstance(companions, list):
+        raise ValueError("The watershed context companions must be a list")
+    declared = {}
+    for member in [entry] + companions:
+        if not isinstance(member, dict):
+            raise ValueError("Retain each watershed source companion path and hash")
+        name = _relative_name(member.get("path"))
+        if name in declared:
+            raise ValueError("The watershed manifest repeats a source member: " + name)
+        info, body = _member(manifest_root, name)
+        _expected_body(member, body, name)
+        declared[name] = {"descriptor": member, "info": info}
+
+    required = edition["source_files"] + edition.get("supporting_files", [])
+    bindings = {}
+    for row in required:
+        original_name = _relative_name(row["name"])
+        native_name = (context_parent / original_name).as_posix()
+        candidates = [native_name] if native_name in declared else []
+        if not candidates:
+            original_path = Path(row["path"]).resolve(strict=True)
+            candidates = [name for name, member in declared.items()
+                          if Path(member["info"]["path"]) == original_path]
+        if not candidates and "/" not in original_name:
+            # An unchanged top-level table may already be retained in a prior
+            # dated directory. Bind its complete original bytes, not its label.
+            candidates = [name for name, member in declared.items()
+                          if PurePosixPath(name).name == original_name
+                          and member["info"]["bytes"] == row["bytes"]
+                          and member["info"]["sha256"] == row["sha256"]]
+        if len(candidates) != 1:
+            raise ValueError("The chosen watershed manifest must retain one exact scientific member: "
+                             + original_name)
+        selected = candidates[0]
+        member = declared[selected]
+        if (member["descriptor"].get("sha256") != row["sha256"]
+                or member["info"]["sha256"] != row["sha256"]
+                or member["info"]["bytes"] != row["bytes"]):
+            raise ValueError("The watershed manifest must bind the exact source bytes: " + original_name)
+        bindings[original_name] = selected
+    return {"source_id": entry.get("id"), "members": bindings}
+
+
+def _model_input_inventory(edition):
+    return sorted(
+        ({key: row[key] for key in ("name", "bytes", "sha256")}
+         for row in edition["source_files"]),
+        key=lambda row: row["name"],
+    )
+
+
+def import_source_edition(workspace, directory, *, classified_reaches_csv=None,
+                          source_manifest=None):
+    """Import the selected edition and verify its reconstructed model inputs.
+
+    source_manifest can name a parent manifest with cross-date companions.
+    Omitting it uses the maintained edition manifest selection: the separate
+    native manifest when present, otherwise historical complete-sources.json.
+    The existing Workspace owns native companion retention and source views.
+    """
+    root = Path(directory).expanduser().resolve(strict=True)
+    if classified_reaches_csv is not None:
+        retained = (root / "classified-reaches.csv").resolve(strict=True)
+        if Path(classified_reaches_csv).expanduser().resolve(strict=True) != retained:
+            raise ValueError("Retain classified-reaches.csv inside the source edition before import")
+    edition = load_source_edition(root)
+    selected_manifest = source_manifest if source_manifest is not None else edition["manifest_path"]
+    if selected_manifest is None:
+        raise FileNotFoundError("Import requires " + str(root / MANIFEST_NAME)
+                                + " or an explicit source_manifest")
+    manifest_path = Path(selected_manifest).expanduser().resolve(strict=True)
+    if not manifest_path.is_file():
+        raise ValueError("Choose a retained source manifest file")
+    for method in ("import_sources", "source_file"):
+        if not callable(getattr(workspace, method, None)):
+            raise TypeError("workspace must provide Workspace." + method)
+
+    manifest_body = manifest_path.read_bytes()
+    manifest = _read_json(manifest_body, manifest_path.name)
+    if (not isinstance(manifest, dict) or manifest.get("schema") != "upstate.sources/v1"
+            or not isinstance(manifest.get("entries"), list)):
+        raise ValueError("Source manifest must use upstate.sources/v1 and list entries")
+    context_entries = [
+        row for row in manifest["entries"]
+        if isinstance(row, dict) and row.get("role") == "SOURCE_WATER_CONTEXT"
+    ]
+    if len(context_entries) != 1:
+        raise ValueError("Choose a manifest with exactly one SOURCE_WATER_CONTEXT entry")
+    context_entry = context_entries[0]
+    source_id = context_entry.get("id")
+    if not isinstance(source_id, str) or not source_id:
+        raise ValueError("The selected source-water context needs a source ID")
+    context_name = _relative_name(context_entry.get("path"))
+    context_parent = PurePosixPath(context_name).parent
+    if PurePosixPath(context_name).name != CONTEXT_NAME:
+        raise ValueError("The source-water context must retain " + CONTEXT_NAME)
+    companions = context_entry.get("companions", [])
+    if not isinstance(companions, list) or any(not isinstance(row, dict) for row in companions):
+        raise ValueError("Source-water context companions must be a list of source descriptors")
+    declared = {}
+    for row in [context_entry] + companions:
+        name = _relative_name(row.get("path"))
+        if name in declared:
+            raise ValueError("Source-water context repeats a native member: " + name)
+        declared[name] = row
+    selected_inputs = []
+    for name in (CONTEXT_NAME, COVERAGE_NAME) + NETWORK_NAMES:
+        native_name = (context_parent / name).as_posix()
+        if native_name in declared:
+            info, body = _member(manifest_path.parent, native_name)
+            _expected_body(declared[native_name], body, native_name)
+            selected_inputs.append({"name": name, "bytes": info["bytes"], "sha256": info["sha256"]})
+    expected_inputs = _model_input_inventory(edition)
+    if sorted(selected_inputs, key=lambda row: row["name"]) != expected_inputs:
+        raise ValueError("Selected manifest model inputs differ from the registered source edition; "
+                         "choose its exact source_manifest including the selected native network")
+
+    manifest_members = _validate_import_manifest(
+        root, {**edition, "manifest_path": str(manifest_path)})
+    manifest_identity = {"path": str(manifest_path), "bytes": len(manifest_body),
+                         "sha256": _digest(manifest_body)}
+    collection = workspace.import_sources(manifest_path)
+    original_manifest = collection.get("original_manifest", {})
+    if any(original_manifest.get(key) != manifest_identity[key] for key in ("bytes", "sha256")):
+        raise ValueError("The source manifest changed during Workspace import")
+    imported_entries = [
+        row for row in collection["entries"] if row.get("role") == "SOURCE_WATER_CONTEXT"
+    ]
+    if len(imported_entries) != 1 or imported_entries[0].get("id") != source_id:
+        raise ValueError("Workspace import changed the selected source-water context entry")
+    context_path, imported_entry = workspace.source_file(collection["id"], source_id)
+    if imported_entry.get("role") != "SOURCE_WATER_CONTEXT":
+        raise ValueError("Workspace source view does not identify the selected water context")
+    retained = load_source_edition(Path(context_path).resolve(strict=True).parent)
+    if (_model_input_inventory(retained) != expected_inputs
+            or retained["validation"]["source_fingerprint"]
+            != edition["validation"]["source_fingerprint"]):
+        raise ValueError("Imported watershed model inputs differ from the registered source edition")
+    return {**edition, "collection": collection, "source_id": source_id,
+            "source_collection_id": collection["id"], "manifest_path": str(manifest_path),
+            "source_manifest": manifest_identity, "source_manifest_members": manifest_members,
+            "imported_validation": retained["validation"]}
 
 
 def _manifest(edition, *, source_id=None, title=None, uri=None, vintage=None):
@@ -309,26 +609,60 @@ def prepare_source_edition(source_context, classification_coverage, output_dir, 
     if not isinstance(coverage, dict):
         raise ValueError("Choose the retained classification-coverage JSON object")
     if native_network is not None:
-        network_body = Path(native_network).read_bytes()
+        network_path = Path(native_network).resolve(strict=True)
+        network_body = network_path.read_bytes()
         network_name = NETWORK_GZIP_NAME if network_body.startswith(b"\x1f\x8b") else NETWORK_NAME
         bodies[network_name] = network_body
+        decoded = gzip.decompress(network_body) if network_name == NETWORK_GZIP_NAME else network_body
+        native = _read_json(decoded, network_name)
+        references = native.get("source_reference", {}) if isinstance(native, dict) else {}
+        if _present(network_path.parent, NETWORK_SOURCE_NAME):
+            _, provenance_body = _member(network_path.parent, NETWORK_SOURCE_NAME)
+            provenance = _read_json(provenance_body, NETWORK_SOURCE_NAME)
+            if not isinstance(provenance, dict) or provenance.get("source_member") != network_name:
+                raise ValueError("Native provenance must identify the preserved canonical network member")
+            bodies[NETWORK_SOURCE_NAME] = provenance_body
+            references = references or provenance
+        originals = references.get("originals", {}) if isinstance(references, dict) else {}
+        if not isinstance(originals, dict):
+            raise ValueError("Native network original references must be keyed records")
+        for reference in originals.values():
+            if not isinstance(reference, dict):
+                raise ValueError("Native network original reference must be an object")
+            name = _relative_name(reference.get("path"))
+            if name in bodies or name in (*NETWORK_NAMES, NETWORK_SOURCE_NAME, GEOMETRY_NAME, MANIFEST_NAME, NATIVE_MANIFEST_NAME):
+                raise ValueError("Native original filename collides with a model input: " + name)
+            _, body = _member(network_path.parent, name)
+            _expected_body(reference, body, name)
+            bodies[name] = body
     for selected, key in (
             (membership_response, "full_domain_id_response"),
             (additional_huc8_response, "additional_huc8_response")):
         if selected is not None:
             name = _name((coverage.get(key) or {}).get("path"))
-            if name in bodies or name in (*NETWORK_NAMES, GEOMETRY_NAME, MANIFEST_NAME):
+            if name in bodies or name in (*NETWORK_NAMES, GEOMETRY_NAME, MANIFEST_NAME, NATIVE_MANIFEST_NAME):
                 raise ValueError("Original companion filename collides with another source")
             bodies[name] = Path(selected).read_bytes()
     if classified_geometry is not None:
         bodies[GEOMETRY_NAME] = Path(classified_geometry).read_bytes()
+
+    # Carry known original companions already retained beside the source context.
+    from source_tools.watershed_source_validation import (
+        DOMAIN_NAME, NRCS_NAME, CLASSIFIED_NAME, IDS_NAME, ZERO_NAME, OPTIONAL_NAMES,
+    )
+    retained_root = Path(source_context).resolve(strict=True).parent
+    for name in (DOMAIN_NAME, NRCS_NAME, CLASSIFIED_NAME, IDS_NAME, ZERO_NAME, *OPTIONAL_NAMES):
+        if name not in bodies and _present(retained_root, name):
+            bodies[name] = _member(retained_root, name)[1]
 
     target = Path(output_dir).resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".watershed-source-", dir=target.parent) as folder:
         stage = Path(folder)
         for name, body in bodies.items():
-            (stage / _name(name)).write_bytes(body)
+            member = stage / _relative_name(name)
+            member.parent.mkdir(parents=True, exist_ok=True)
+            member.write_bytes(body)
         edition = load_source_edition(stage)
         manifest = _manifest(edition, source_id=source_id, title=title, uri=uri, vintage=vintage)
         bodies[MANIFEST_NAME] = _json_bytes(manifest)
@@ -337,12 +671,15 @@ def prepare_source_edition(source_context, classification_coverage, output_dir, 
             if network_name not in bodies and _present(target, network_name):
                 raise ValueError("Use a new source directory when changing its native network")
         for name, body in bodies.items():
-            selected = target / name
+            selected = target / _relative_name(name)
+            if not selected.resolve().is_relative_to(target):
+                raise ValueError("Source output must stay inside its edition: " + name)
             if selected.exists() or selected.is_symlink():
                 if selected.is_symlink() or not selected.is_file() or selected.read_bytes() != body:
                     raise ValueError("Choose a new output directory for changed source bytes: " + name)
         for name, body in bodies.items():
             if name != MANIFEST_NAME:
+                (target / name).parent.mkdir(parents=True, exist_ok=True)
                 _write_exact(target / name, body)
         _write_exact(target / MANIFEST_NAME, bodies[MANIFEST_NAME])
     result = load_source_edition(target)

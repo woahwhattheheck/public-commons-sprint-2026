@@ -4,17 +4,27 @@
 
 The maintained delivery builder produces report.pdf, report.html, report.md and report-data.json from the original completed baseline, alternatives, grid, profile, source records, observations and map state. The existing scientific_report formatter renders all four formats. Its current quantitative tables, scenario comparisons, source-water geography and receiving-water quantities remain in one report.
 
-The delivery retains the original atlas, linked watershed report, receptor geography, saved spatial views, map exports, GIS metadata and scientific working archive. The report records the actual affine cell dimensions and area: Gura's 300 m, 9 ha grid keeps its own support, while regional 30 m grids retain theirs. Economic annual masses are copied directly from the completed decision edition.
+The delivery retains the original atlas, linked watershed report, receptor geography, saved spatial views, map exports, GIS metadata and scientific working archive. The report records the actual affine cell dimensions and area of the selected grid. Annual exports and supporting areas stay bound to that grid, and retained studies keep their original resolution. Economic annual masses are copied directly from the completed decision edition.
 
 ## Use the operator
 
 1. Build and save an Economic desk edition from the completed watershed report and its chosen reporting zone.
-2. Open the same watershed report. Under Map release, select the completed economic edition. The choices match the exact native report bytes and ordered baseline and alternative cohort.
-3. Choose Build map release. Complete the source context, map settings and responsible metadata contact in the original atlas builder.
-4. The review screen identifies the selected economic edition. Submit through the original delivery.build queue.
+2. In the completed Economic desk edition, choose **Prepare client report**. This opens the original atlas form with its saved native cohort and economic edition selected. You can also open the same watershed report and select the edition under **Map release**. Both routes preserve the exact native report bytes and ordered baseline and alternative cohort.
+3. From the watershed-report route, choose **Build map release**. Complete the source context, map settings and responsible metadata contact in the atlas builder.
+4. In Review and build, use **Refresh compatible economic editions** to inspect or replace the optional edition without rebuilding the prepared selection. Choose its original watershed report when the draft has no report link, then choose an edition and press **Use selected economic edition**. Submit through the original delivery.build queue.
 5. Open the completed release. Download the PDF, offline HTML, Markdown or structured report, the complete economic decision package, or the complete GIS delivery.
 
-Leaving the economic choice at Physical report and maps produces the complete scientific report and seven-map decision guide. The optional edition selector reads completed original economic editions. Reopen the selection if an edition changed or became unavailable.
+Leaving the economic choice at Physical report and maps produces the complete scientific report and seven-map decision guide. The optional edition selector reads completed original economic editions for the exact ordered cohort. A linked report restricts the choices to its original ID and bytes. The atlas re-reads the original release before applying an edition; an unavailable or changed edition leaves the previous binding intact and asks the operator to refresh.
+
+## Revise a map release
+
+The Native runs step keeps a linked watershed report, saved scenario analysis or economic edition on its original baseline and ordered alternatives. Sources, layout, contact and notes remain editable. Choose **Choose a different run cohort** to remove all three kinds of retained result links and select another completed original baseline and land-cover alternatives. Prepared source context, map settings and contact carry forward.
+
+In Review and build, **Remove economic edition** removes only the optional economic binding. Any original watershed-report or scenario-analysis link remains. **Refresh compatible economic editions** lists completed original editions without replacing this draft. Select an edition and press **Use selected economic edition** to replace only its ID and original record hash. Source selections, receptor context, layout, contact, notes and other original result links are preserved. A draft with no watershed-report link can retain an economic edition for its exact cohort without gaining a separate report link.
+
+The picker keeps the chosen option across navigation within the same cohort. Reading choices and applying a replacement update only the economic panel, preserving unfinished contact and notes. A later workspace, selection import or new release invalidates an earlier pending response. A changed or removed economic binding is not overwritten by an older response.
+
+Saved releases reopen with their retained choices. **Revise this selection** creates an editable draft with those same bindings. Loading selection or receptor JSON preserves newer selections and edits made while the file is being read, including unfinished invalid input; reload the file if the draft changed. Current-condition maps require an original baseline, and alternative IDs must be unique and distinct from it.
 
 ## Economic content
 
@@ -43,13 +53,14 @@ report-data.json keeps the original scientific schema, structured table and link
 ## Source composition
 
 - model/client_economics.py validates and binds editions, lists compatible choices, retains complete economic members, and adapts economic content to the existing tuple and table report contract.
-- model/scientific_report.py extends ASTRA13's exact v4 formatter with package-local PDF and HTML links plus Markdown output. Current physical, receiving-water, scenario and observation tables are preserved.
+- model/scientific_report.py composes ASTRA13's current formatter, original biophysical/profile and priority-unit tables, typed publisher and package links, Markdown output, economic support coverage and retained working-material navigation. Physical, receiving-water, scenario and observation tables remain in the same report.
 - model/delivery.py composes the newer atlas and linked-report builder with ASTRA13's guarded overlay labels, receiving-water map captions and scientific table renderer. It collects and attaches receiving-water data once.
 - model/report_release.py exposes compatible completed editions beside the saved report's original map release selection.
 - operator/web/extensions/scenario_reports.mjs adds the optional completed-edition selector and validated handoff.
-- operator/web/map_atlas.mjs shows the chosen economic edition and downloads the completed report and economic package.
+- operator/web/map_atlas.mjs preserves linked cohorts, replaces compatible economic editions within the prepared draft, and opens geographic inspection and paired map comparisons from the saved release. Extract the complete GIS package and open index.html for offline use. Structured report downloads prefer report_data while retaining report_model compatibility for older saved deliveries.
+- operator/web/economic_desk.mjs opens the atlas form directly from a completed edition through the existing report-selection helper, preserving the original ordered cohort and workspace-change guard.
 
-The renderer source preimage is scientific_report.py at a998b30bce14ea4b49fdea41e2ef73031c2d4bf7: 31,003 bytes, SHA-256 b227849449d3f7ed2b39baddc9e721bf272e64d2119db9aab09e5acf1137158b. Its delivery.py was 46,872 bytes, SHA-256 f1088db9c2cc8a87869abca69d6c12145a1a362bc54827a6eb5ae6b159623a0b. The latter lacked newer atlas and report-release hooks and repeated receiving-water collection; the composed delivery uses the retained 45,137-byte main builder, SHA-256 84cd4058e06c55547f07e08cb8fc138214f578991e6f4cb5992cd955b06cf3e9, to preserve those features and existing package recovery.
+The current composition retains the scientific formatter's original biophysical and profile tables, the atlas and linked-report hooks, selected economic and scenario-analysis bindings, original overlay labels, and package recovery. Renderer and delivery versions identify the composed report edition in each saved release.
 
 The single detailed receiving-water section uses the current formatter's tables. The original receiving-water files and full inventory stay in the package. Publication must compose any later shared-file edits from the current repository head.
 
@@ -59,8 +70,14 @@ Use the existing application's Python environment to compile the four Python mod
 
 Check the actual selected grid dimensions and hectares in report-data.json. Confirm the atlas, saved watershed report, source-water and receiving-water assets, saved spatial views and every economic manifest member are in the final package. Reopen the same selected delivery to exercise existing completed-result reuse. Retain the actual generated output and its original IDs with the current receiving owner.
 
-The authored JavaScript modules were parsed in this session; the exported economic-selection helper was exercised for a matching completed edition, physical-only choice and stale-edition rejection. Native Python compile and report rendering belong to the equipped receiving session using the retained original case.
+The authored JavaScript modules were parsed in this session. The economic-selection helper was exercised for a matching completed edition, physical-only choice and stale-edition rejection. The direct Economic desk action exercised that same helper, preserving native report identity, edition SHA and alternative order, while a workspace change stopped navigation. Atlas checks covered in-place edition replacement, retained contact edits, navigation, unavailable editions and stale selection responses. Native Python compilation and report rendering use the equipped receiving session and retained original case.
 
 ## Original work
 
 This integration carries forward ED6E's seven-map decision guide and economic report integration into ASTRA13's maintained scientific formatter. Source document and RFP coverage material remain available separately in the original source bank. All displayed scientific and financial quantities come from the original completed project and Economic desk edition.
+
+## Current-source integration
+
+The prepared-atlas revision is composed with the current scientific v7 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `native-grid-analysis-economic-report-7` binds this report metadata to a new release identity.
+
+The existing native grid record, source-native versus regional audit scope, saved-analysis attachment, package recovery and final atlas-browser snapshot remain in the delivery. The final browser snapshot runs after report and analysis members have been retained. Existing completed releases reopen unchanged through their original identities.

@@ -164,3 +164,72 @@ The source was retrieved through page-specific primary-site search results, incl
 ## Integration ownership
 
 This package provides the source definition and criterion-calculation arm for the existing conservation/scenario work. It complements the ES-EXP parcel-criteria integration and the current reporting-parcel source. The source bank and its native manifest give receiving agents the full code and data needed to adopt it in the current application.
+
+## Closed source intervals and the original Greenwood receiving case
+
+Evaluator implementation revision 1.1.0 accepts an optional `interval` on a
+numeric observation consumed by a published numeric-bin rule. The profile's
+original bins, category matrices and profile identity remain unchanged. Keep
+`value: null` when the source establishes a range rather than an exact value:
+
+```javascript
+const observedHydricArea = {
+  value: null,
+  unit: "acre",
+  interval: {
+    lower: 0,
+    upper: 1.49152006731301,
+    closed: true,
+    unit: "acre",
+    method: "parcel_geometry_area_limit",
+    reference: "Original Greenwood OBJECTID=1/PIN=6913-674-230; the footprint is intersected with that same original parcel.",
+    area_basis: "whole_original_parcel",
+    structural_only: true,
+    source_geometry_sha256: "e4fd893f7ab655d1a9fd8e2944d9122a7786abb26d55ec85310b04ed39f49fab"
+  }
+};
+```
+
+This is the retained original county parcel, not an assumed landscape observation.
+Its original EPSG:3361 polygon has 64,970.61413215472 square international feet,
+6,035.967563544135 square metres, or 1.49152006731301 acres. The international-foot
+factor is 0.3048, as declared by the
+[original CRS definition](https://opengeospatial.github.io/ontology-crs/data/def/crs/EPSG/0/3361/index.html).
+The upper bound applies only to a criterion footprint intersected with this same
+parcel geometry. It does not describe the area of a buffer or watershed outside
+the parcel, and it does not establish the presence or absence of hydric soil.
+
+The evaluator checks finite ordered endpoints, closed bounds, the original field
+domain, matching units and a nonempty method/reference. It evaluates every
+published bin boundary and the intervals between boundaries. A printed gap keeps
+the source's unresolved alternatives; an overlap keeps every matched class. An
+exact value supplied beside an interval must fall inside it. Results retain
+`value_interval`, the original interval observation,
+`points_determined_by_interval` and every encountered classification state.
+
+On the actual Greenwood parcel, both the hydric and sensitive-buffer intersection
+areas are bounded by [0, 1.49152006731301] acres. All values are below the respective
+5-acre and 2-acre first positive score thresholds. Each contribution is therefore
+exactly zero while both exact acreages remain null. The same parcel's land-protection
+possibilities narrow from 0–30 to 0–23 points. Its original protection prerequisite
+retains its unresolved state. The historical scalar-only journey stays in place;
+`../keowee-native-receiving-20261013/source-interval-journey.json` retains the
+new complete original-case result.
+
+The Python observation adapter forwards actual `point_score.metric_bounds` under
+the corresponding profile field. It retains the actual selected field binding and
+original interval, normalizes only the canonical acre spelling, and records the
+in-parcel intersection scope. A bounded metric never becomes an invented exact
+scalar. Boolean, stream-order, source-class and other observation semantics remain
+the original evaluator's.
+
+Run the complete original case from the application root:
+
+```bash
+node source_tools/keowee_interval_receiving.mjs
+```
+
+The command reads and verifies the existing county response, original profile and
+current bound evaluator, recomputes the same original polygon area, and emits the
+complete 35-criterion/eight-category JSON result. It uses existing original source
+files and preserves operation `ECO13-6A4E-KEOWEE-NATIVE-PROFILE`.

@@ -360,11 +360,24 @@ def scientific_sections(value, state):
     for section in authored:
         blocks = list(section["paragraphs"])
         for table in section["tables"]:
-            columns = table["columns"]
+            columns = [
+                {"Annual operations": "Annual operations (currency/year)",
+                 "Annualized/year": "Annualized cost (currency/year)",
+                 "Annual discount rate": "Real annual discount rate"}.get(column, column)
+                for column in table["columns"]
+            ]
+            rows = []
+            for original_row in table["rows"]:
+                row = list(original_row)
+                if len(row) == 3 and row[1] == "Original reference":
+                    target = row[2]
+                    linked = scientific_report.link("Open original estimate", target)
+                    row[2] = linked if isinstance(linked, dict) else target
+                rows.append(row)
             widths = ([1.0, 1.0, 2.3] if columns == ["Alternative", "Estimate attribute", "Original value"]
                       else None)
             blocks.append(scientific_report._table(
-                columns, table["rows"], widths=widths, caption=table.get("caption")))
+                columns, rows, widths=widths, caption=table.get("caption")))
         sections.append((section["title"], blocks))
 
     map_rows, map_links = [], []

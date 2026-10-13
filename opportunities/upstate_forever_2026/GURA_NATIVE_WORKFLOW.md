@@ -9,8 +9,8 @@ the whole Workspace, and can start the operator against those results.
 The workflow reads the native cell size from the selected original land-cover
 raster. Gura source editions remain separate: a 300 m square cell covers 9 ha,
 while a 15 m square cell covers 0.0225 ha. The upstream context distance is a
-separate scientific selection. New intake retains the existing 300 m context
-default; reopening a prepared case retains that case's original grid and
+separate scientific selection. New wrapper intake uses zero added context;
+reopening a prepared case retains that case's original grid and
 context distance. Native rates use the actual pixel area. Regional Upper
 Savannah studies retain their own source grids, collections and programmes.
 
@@ -45,7 +45,7 @@ For a new intake the workflow checks the retained generation-specific InVEST
 
 | Input | SHA256 |
 | --- | --- |
-| NDR.zip | df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4c8af8bea53c6c7d |
+| NDR.zip | df4ba0d9b96152d3bc5eef3c41b6ec701f62ec3548dc4d4d4c8af8bea53c6c7d |
 | SDR.zip | 34351a1305d8e6258c2d566917cfeab5f152096e930ef5b0a834968146bdc779 |
 
 The source code preserves the original Google Cloud Storage object generations
@@ -91,11 +91,33 @@ raster; it does not request resampling. Omitting the option reads the original
 cell size. The same optional expectation is available on `receive_gura.py`.
 
 Use `--upstream-buffer-m DISTANCE` to select the upstream context for a new
-case. For example, `--expected-resolution-m 15 --upstream-buffer-m 300`
-retains 15 m cells and a separate 300 m buffer. A new intake without a buffer
-option uses the existing 300 m context default.
+case. The current wrapper defaults to zero added context. An explicit
+`--upstream-buffer-m 0` retains the original model-domain geometry without
+adding a buffer. To retain a separately selected 300 m context, use
+`--expected-resolution-m 15 --upstream-buffer-m 300`; the source cells stay 15 m.
 
-On resume or `serve`, omitted grid options retain the saved selections.
+Both the workflow and the direct `source_tools.receive_gura` command accept a
+finite nonnegative context distance. Native cell resolution remains strictly
+positive and source-matched. Direct receiving validates both choices before
+copying or extracting any original inputs, so invalid selections do not consume
+receiving storage.
+
+To explicitly continue the retained 15 m edition with zero added context:
+
+```sh
+env GDAL_CACHEMAX=16 GDAL_NUM_THREADS=1 /compatible/python -B -m source_tools.gura_workflow prepare \
+  --workspace /absolute/gura/workspace \
+  --source-directory /absolute/gura/source \
+  --archives /absolute/gura/original-archives \
+  --expected-resolution-m 15 --upstream-buffer-m 0
+```
+
+Use the existing case's actual operation paths. Direct intake retains its
+required archive, table, source-reference and context arguments; the same
+`--upstream-buffer-m 0` selects zero added context there.
+
+On resume or `serve`, omitted grid options retain the saved selections,
+including an original zero buffer.
 The same applies when an interrupted intake already saved
 `programme-selection.json`, and after restoring the Workspace archive.
 An explicit option must match that prepared case; to select another buffer

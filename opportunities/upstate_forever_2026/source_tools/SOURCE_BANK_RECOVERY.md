@@ -53,7 +53,39 @@ It also accepts the completed-run carrier's single `commons.artifact-base64/v1` 
 
 For ordinary input, `--sha256` checks the supplied file bytes. With `--base64`, it checks the decoded archive bytes. For a Markdown envelope, the declared inner artifact hash is checked automatically; the outer Markdown identity is recorded separately.
 
-Source-bank paths are preserved relative to the chosen destination. The bank's `source_root` or `base_path` is returned as provenance metadata and is not prepended silently. A project-relative bank can therefore be recovered into a new project staging directory and installed through its existing source-specific workflow.
+Source-bank paths are preserved relative to the chosen destination. The bank's `source_root`, `base_path`, or `commons.source-map/1` `prefix` is returned as provenance metadata and is not prepended silently. A project-relative bank can therefore be recovered into a new project staging directory and installed through its existing source-specific workflow.
+
+## Receive native Slack Canvas responses
+
+The same receiver accepts the exact JSON returned by `slack_read_canvas`, including its single-text MCP result wrapper. Save the complete provider response, preserving its `canvas_id` and `markdown_content`, and inspect or extract it directly:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect delivery-source-canvas-response.json
+node source_tools/source_bank_cli.mjs extract delivery-source-canvas-response.json received-delivery-source
+```
+
+For [the six-file delivery and portable source carrier](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KMMH8DT), all six original files recover to 114,891 bytes. The retained source JSON is 121,369 bytes, SHA-256 `db241e9512cee077075969fe165b961931b8819e4e98ebcab600a8ff916e580c`. Its files preserve the original coherent repository commit and each Git blob.
+
+A `commons.source-bank-envelope/v1` declares `encoding: "base64+gzip"`, `data`, decoded `bytes`/`sha256`, and `gzip_bytes`/`gzip_sha256`. All four identity fields are required. The receiver checks the compressed identity before decompression, caps expansion at the declared decoded length, then verifies decoded identity and every source member. It retains both envelope identities in the inventory.
+
+Native Canvas responses can add Markdown escaping inside JSON fences. The receiver removes one such transport layer only within an identified Canvas response; ordinary Markdown keeps strict JSON parsing. The inventory also records the Canvas ID and exact returned Markdown identity. The original provider response remains in `.source-bank-recovery/input`.
+
+Provider error responses, multiple text results and excessive wrapper nesting fail explicitly. A single source cohort is required throughout, including numbered packet collections. This lets an equipped receiver use the original result directly without manually rewriting source or stripping transport escaping.
+
+## Receive the complete cumulative application
+
+The same commands accept the current [ECD1 edition 3 application carrier](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KFCT3S9). Save its complete Markdown, including all 148 JSON packet fences:
+
+```sh
+node source_tools/source_bank_cli.mjs inspect cumulative-application.md
+node source_tools/source_bank_cli.mjs extract cumulative-application.md received-cumulative-application
+```
+
+This original cohort contains 586 files and 9,132,400 source bytes. Its `commons.source-map/1` payload is 10,018,711 bytes, SHA-256 `4064517a7a3ca09db90dc3d936413cf07e8af96e4b30e5cb4a3c9c88a91514a8`; the 3,090,920-byte gzip has SHA-256 `ecbcf5601f579f9df775259b146ec75167fc4f0c44fe2025907118e8b239e548`.
+
+A source map stores UTF-8 bodies in `files` and their original descriptors in `file_metadata`. The decoder requires a one-to-one path match, checks every descriptor's required byte length and SHA-256, and accepts only regular source modes `100644` and `100755`. The inventory retains each complete descriptor as `declaredMetadata`, including original Git references and source origins. SHA-256 and byte counts are verified against the recovered body; additional provenance fields preserve the publisher's declarations. The cohort's edition, repository, source reference and application prefix remain in the inventory.
+
+The current source edition has 11 executable-marked members. As with other inputs, the extractor writes all recovered files privately with mode 0600; apply the maintained installer after source inspection to perform the normal application installation.
 
 ## Pure JavaScript use
 
@@ -77,7 +109,7 @@ const originalFile = result.files.find(
 // originalFile.data is the exact Uint8Array; inventory contains metadata without file bodies.
 ```
 
-`decode` accepts a `Uint8Array` or UTF-8 text. For a Slack file read, pass the returned `structuredContent.text_content` directly. For an already parsed original bank or packet array, use `sourceBank(bank)` or `packets(parts)`.
+`decode` accepts a `Uint8Array` or UTF-8 text. For a Slack file read, pass the returned `structuredContent.text_content` directly. For a native Canvas read, pass `JSON.stringify(readCanvasResult)` or its complete returned JSON text. Both the Canvas record and its original single-text MCP wrapper are recognized. For an already parsed original bank or packet array, use `sourceBank(bank)` or `packets(parts)`.
 
 Environments that evaluate a trusted host script instead of loading ES modules can bundle these two reviewed modules at build time. Keep the resulting functions in the host's ordinary source and pass archive bytes as data. The toolkit contains no `eval`, dynamic source compilation, shell calls or fetches.
 
@@ -102,8 +134,11 @@ Passing an object to `encodeSourceBank` creates a new JSON serialization; passin
 | DEFLATE | Stored, fixed-Huffman and dynamic-Huffman blocks; emitted bytes are capped during decompression |
 | gzip | Header extras, names, comments, header CRC, concatenated members, CRC32 and ISIZE verification; output and member-count limits |
 | Source banks | `commons.source-bank/v1`, `upstate.source-files/v1`, `eco-source-text-v1` and legacy `schema: 1`; arrays of descriptors or plain path-to-text mappings |
+| Cumulative source maps | `commons.source-map/1`; UTF-8 `files` mapping plus a matching `file_metadata` mapping with mandatory byte length, SHA-256 and regular-file mode; complete original descriptors retained |
 | Leaf contents | Exact UTF-8 `content`, `content_base64`, or explicit `encoding: "base64"` plus `content`; declared byte lengths and hashes are checked |
 | Carriers | One supported JSON bank/envelope fence, or one complete cohort of `upstate.application-source-part/v1` gzip+base64 packets |
+| Source envelopes | `commons.source-bank-envelope/v1` with required decoded/compressed lengths and SHA-256 identities |
+| Native Canvas results | Original `canvas_id`/`markdown_content` JSON, optionally in one text MCP result; Canvas transport escaping and original carrier identity retained |
 
 Unsupported ZIP variants fail explicitly: encryption, ZIP64, multiple disks, alternate compression methods, symlinks/special files, executable archive preambles and unaccounted local data. Empty directory records are checked and counted; extraction creates the directories needed by files. The complete original archive retains every directory record.
 
@@ -138,6 +173,10 @@ The pure decoder was exercised on the actual retained originals:
 | Native ZIP, 121,182 bytes, SHA-256 `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5` | All 17 members decoded; 1,084,587 output bytes; every ZIP CRC and size matched |
 | Same ZIP in its original Markdown artifact envelope | Same 17 complete member identities |
 | Six-part ECO-SOURCE12 carrier | All 19 files; 573,918 source bytes; decoded JSON SHA-256 `0e79fb406d92a517f294e8be89f8ea143c23ac91096b952779bb06e63662622f` |
+| ECD1 edition 3, 148 packets, 10,018,711-byte JSON | All 586 files and 9,132,400 source bytes matched; every original descriptor retained; 11 executable-marked members recorded |
+| Actual six-file Canvas, its native MCP response, unescaped Markdown and original source JSON | All four input forms recovered the same six paths and hashes, totaling 114,891 bytes |
+| Changed source-envelope gzip identity or excessive provider wrapper nesting | Rejected before source recovery |
+| Changed source-map byte count/hash, missing or orphan metadata, unsupported file mode | Rejected at the source-map descriptor check |
 | Actual ZIP/gzip with lower output limits, altered local ZIP name, mixed packet editions and traversal path | Rejected at the corresponding size, identity or path check |
 
 These checks exercise the original archive and source formats in the JavaScript runtime. The Node filesystem adapter has received source review; run `inspect` followed by `extract` on the retained ZIP above when receiving it on the native host.

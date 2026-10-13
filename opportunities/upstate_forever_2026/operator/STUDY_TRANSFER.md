@@ -1,6 +1,6 @@
 # Transfer an editable scientific study
 
-TokenJunkieLabs · Upper Savannah application · ES26 study-transfer 1
+TokenJunkieLabs · Upper Savannah application · Study transfer 1
 
 The Study transfer desk exports a chosen scientific analysis, experiment programme or native run with the original inputs and saved results needed to continue it. Several selections share one dependency capture and one original portable archive. The receiving scientist can reopen the studies, inspect the same model cases and continue work in the included application.
 
@@ -99,11 +99,21 @@ Use the workspace and application paths returned by restore. Reopen that receive
 
 The study receipt is retained under workspace/study-transfers/<study-id>.json. The original operator receiving flow calls verify_received_studies before workspace registration. It validates the original project and study identities and resolves the selected dependency capture again in the received workspace. Later additional cases and results can extend the received study normally.
 
+## Saved investigations and report revisions
+
+A selected study can carry the original scientific investigation history together with its native model results. The installed investigation integration takes a consistent snapshot of its existing SQLite database while the selected scientific files are frozen. The captured database retains the original project identity and the selected sessions, evidence, plans and native-task records. The exporter first freezes the sessions associated with the selected study, then follows their typed references through the original scientific dependency collector. Runs, saved experiments, source collections, observations and other records needed to reopen those histories join the same locked export. Additional scientific dependencies retain that original conversation cohort. The received project opens those histories in the same investigation interface and can continue them normally.
+
+A report can gain results as its original experiment programme finishes. Conversations therefore retain the exact report revision used when a question was asked. The captured revision includes the original report JSON, its SHA-256 identity and the native evidence link. Reopening an older session displays that retained revision; opening the current analysis can create or reuse the session for its current report.
+
+For command-line exports, the standard investigation database is `intelligence/investigations.sqlite3` under the original Workspace. The operator also supports the database configured by its installed investigation integration. The integration binds the existing project before the scientific export takes its workspace guard, then supplies its native snapshot callback. This keeps the export and original investigation writer on the same project synchronization mechanism.
+
+The study receipt records the captured investigation members and retained identifiers. The original archive verifies every captured member before publication. Receiving validates the original project, retained history and immutable report revisions while allowing new questions, evidence and completed tasks to be added to the received project.
+
 ## Connect the existing transfer desk
 
-The complete study archive is the input to the original TRANSFER12 transport. Its model/PROJECT_TRANSFER.md, model.project_transfer_cli and model.project_transfer_install retain the existing SHA256 block inventory, changed-edition reuse, interrupted-upload continuation, reconstruction and independent receiving workflow.
+The complete study archive is the input to the existing project transfer transport. Its model/PROJECT_TRANSFER.md, model.project_transfer_cli and model.project_transfer_install retain the existing SHA256 block inventory, changed-edition reuse, interrupted-upload continuation, reconstruction and independent receiving workflow.
 
-The browser controller exposes setTransferHandler(callback). When an integration provides this callback, completed study exports show **Transfer archive** and pass:
+Completed study exports show **Transfer archive** in the registered application. The study controller opens the original project-transfer desk through `openExtension('project-transfer', 'openForStudy', selection)`. The receiving desk resolves the completed study task and verifies its original archive before preparing the existing block transfer. Integrations can also supply `setTransferHandler(callback)`; the callback receives:
 
     {
       workspace_key,
@@ -113,7 +123,7 @@ The browser controller exposes setTransferHandler(callback). When an integration
       archive: {id, filename, label, bytes, sha256, url}
     }
 
-archive is the same verified original file ticket used for download. The integration resolves that completed archive through the existing operator and opens the existing transport desk. The archive's study dependency selection and its byte transport keep their original responsibilities.
+archive is the same verified original file ticket used for download. The server resolves the archive from the completed `study.export` task in the same original Workspace. The file ticket describes the export for the browser; the original server-owned task determines the file to capture. The project-transfer desk then provides its existing manifest, missing-block request, transfer parts, archive reconstruction and independent receiving workflow.
 
 Other scientific desks can use the installed extension host to preselect roots:
 
@@ -127,6 +137,23 @@ The controller preserves the selected roots when the registered host then mounts
 
 Use an actual saved analysis and its programme, including a completed native run and a saved observation comparison when available. Preview the selection, export it through the original queue, receive it into a new directory and reopen the same selected identities. Inspect one original native output, its saved observation comparison and its scientific report; then continue an existing programme or create a further analysis from the received runs.
 
-For the browser, exercise selection across two catalog pages, search, the selected-only view, queued export progress, the original download and the existing receiving form. Check the desk in the actual 390-pixel application viewport. Use the original TRANSFER12 changed-edition/continuation route for the resulting archive when joining transport.
+For the browser, exercise selection across two catalog pages, search, the selected-only view, queued export progress, the original download and the existing receiving form. Check the desk in the actual 390-pixel application viewport. Use the existing project transfer continuation route for the resulting archive when joining transport.
 
-Source references: original model/workspace.py, model/portable.py, model/model_selection.py, model/experiments.py, model/experiment_diagnostics.py and operator/extension_registry.py in opportunities/upstate_forever_2026; existing TRANSFER12 source at commit a4be1cce327bbf648d5a2652df2c49c929800d5a.
+Source references: original model/workspace.py, model/portable.py, model/model_selection.py, model/experiments.py, model/experiment_diagnostics.py and operator/extension_registry.py in opportunities/upstate_forever_2026; existing project transfer source at commit a4be1cce327bbf648d5a2652df2c49c929800d5a.
+
+
+## Transfer a Decision study with its original scientific work
+
+Choose **Decision studies** in the Study transfer selector, or choose **Transfer editable study** from a saved Decision study. Several selected decisions can share one capture with diagnostic analyses, experiment programmes and native runs.
+
+For a decision prepared from this scientific workspace, the dependency preview follows every saved revision. It retains the original experiment programme, prepared grid, physical parameter profiles, land-cover scenarios, baseline and alternative runs, comparisons and their original inputs and outputs. It uses the native bridge's declared references; arbitrary source notes remain ordinary retained data. Historical experiment-summary hashes remain creation-time provenance while the original programme can continue accumulating completed cases.
+
+The archive captures a single consistent SQLite generation before resolving the decision dependencies, then retains only the selected studies and their complete revision, calculation, import-provenance and operation histories. Original study and calculation IDs remain unchanged. Retained operation receipts, HTML/CSV reports, implementation selections and decision-project exports travel with the selected study. The receiving Decision studies desk can reopen these downloads through its normal authenticated transport after restart or restore.
+
+The contents preview reports the retained scientific files and lists the selected decision-history counts. The selected database's exact captured size is added to the completed archive. Its frozen bytes are passed to the original portable writer unchanged; ordinary full-workspace backups capture the live decision database through SQLite online backup.
+
+After restore, the original study can gain revisions and calculations. Immutable input revisions and completed answers retain their captured identities. A captured running calculation can enter the original completion or interruption states. A retry can bind its original operation to a new matching calculation attempt after the old attempt fails or is interrupted. Earlier attempts remain in history.
+
+A decision received independently through **Receive project JSON** keeps the donor workspace's scientific references and retained numerical gains. The preview lists those original-workspace references separately. Its complete decision history remains editable and recalculable using the saved gains; open the original scientific workspace for ecological model runs associated with those references. Whole-workspace restore retains the original project identity and provides the full local scientific dependency closure.
+
+The existing **Complete project JSON** export and receive workflow remains available for an independent decision study. **Transfer editable study** uses the original workspace archive and preserves the selected study's original identities.

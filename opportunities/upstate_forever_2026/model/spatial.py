@@ -33,6 +33,7 @@ MAX_MARKERS = 200
 MODES = {"single", "compare", "swipe", "difference"}
 KINDS = ("sources", "grids", "runs", "comparisons", "deliveries")
 DIRECTION = "alternative minus baseline"
+VIEW_DIFFERENCE_DIRECTION = "right source minus left source"
 
 
 def _number(value, label, *, minimum=None, maximum=None):
@@ -247,7 +248,7 @@ class SpatialReview:
                             **{k: alternative["selection"][k] for k in ("grid_id", "profile_id", "scenario_id")})
             for path in sorted((ws.root / "deliveries").glob("*/delivery-state.json")):
                 delivery = read_json(path)
-                if delivery.get("state") != "complete":
+                if delivery.get("state") not in {"complete", "received_snapshot"}:
                     continue
                 for role, item in delivery.get("files", {}).items():
                     add("delivery", delivery["id"], role, item, scope=path.parent,
@@ -755,7 +756,7 @@ class SpatialReview:
 
     def _pair(self, primary, comparison):
         result = {"aligned": False, "comparable": False, "difference_available": False,
-                  "reason": "Select a baseline and an alternative raster", "direction": DIRECTION}
+                  "reason": "Select left and right source rasters", "direction": VIEW_DIFFERENCE_DIRECTION}
         if primary is None or comparison is None:
             return result
         a, b = primary["native"], comparison["native"]
@@ -850,12 +851,12 @@ class SpatialReview:
             data = alternative["data"] - baseline["data"]
             delta = {"data": data, "mask": baseline["mask"] | alternative["mask"] | ~np.isfinite(data),
                      "selection": {"primary": baseline["selection"], "comparison": alternative["selection"]},
-                     "layer": {**alternative["layer"], "title": "Alternative minus baseline",
+                     "layer": {**alternative["layer"], "title": "Right source minus left source",
                                "sha256": None},
                      "units": baseline["units"]}
             delta_scale = self._scale([delta], requested, signed=True)
             images["difference"] = self._image(delta, delta_scale)
-            images["difference"]["direction"] = DIRECTION
+            images["difference"]["direction"] = VIEW_DIFFERENCE_DIRECTION
             images["difference"]["source_sha256s"] = {
                 "baseline": baseline["layer"]["sha256"], "alternative": alternative["layer"]["sha256"]}
         return {"view": view, "size": size, "images": images, "scale": scale,
@@ -1078,7 +1079,7 @@ class SpatialReview:
             value = pixels["comparison"]["value"] - pixels["primary"]["value"]
             if math.isfinite(value):
                 delta = {"value": value, "value_text": _scalar_text(value),
-                         "units": pixels["primary"]["units"], "direction": DIRECTION}
+                         "units": pixels["primary"]["units"], "direction": VIEW_DIFFERENCE_DIRECTION}
         selections = payload.get("overlays", [])
         if not isinstance(selections, list) or len(selections) > MAX_OVERLAYS:
             raise ValueError("Select up to " + str(MAX_OVERLAYS) + " original vector overlays")
@@ -1224,6 +1225,8 @@ class SpatialReview:
             description = self._describe(choice, record)
             bindings.append(self._binding(choice, record, description["native"]))
         value["bindings"] = bindings
+        from .atlas_reviews import save_context
+        save_context(self.workspace, self, payload, value, layers=layers)
         # Preserve original content identities and native backup lock order.
         # The operator's existing task identity makes a received save retry safe.
         with held(self.workspace.root / ".workspace.lock"):
@@ -1279,4 +1282,6 @@ class SpatialReview:
             previous = self.workspace._get("spatial-reviews", identifier(review["previous_review_id"]))
             if previous.get("project_id") != self.workspace.project["id"]:
                 raise ValueError("Saved spatial review history belongs to another project")
+        from .atlas_reviews import validate_saved_context
+        validate_saved_context(self.workspace, self, review, layers=layers)
         return {"id": review["id"], "project_id": review["project_id"], "bindings": len(bindings), "identity": "MATCH"}

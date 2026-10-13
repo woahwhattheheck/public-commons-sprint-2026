@@ -117,13 +117,26 @@ export async function attachConservationDesk(host) {
     collections:['sources','profiles','scenarios','grids','runs','experiments'],
     prefixes:['conservation.','experiment.'],
     openActions:['conservation-open-study','conservation-open-plan',
-      'conservation-use-criteria','conservation-new-parcel-study']
+      'conservation-use-criteria','conservation-new-parcel-study',
+      'conservation-new-source-capture','conservation-open-source-capture',
+      'conservation-criteria-from-sources','conservation-resume-sources',
+      'conservation-resume-criteria','conservation-optimization-open-preview',
+      'conservation-optimization-open-analysis','conservation-new-experiment']
   });
 }
 
 export async function attachDiagnosticsDesk(host) {
   const {attachExperimentDiagnostics} = await import('./experiment_diagnostics.mjs');
-  return adapt(host, attachExperimentDiagnostics, {
+  const catalogue=await host.api('/api/extensions');
+  const desks=new Set((catalogue.extensions??[]).filter(entry=>entry.client?.view).map(entry=>entry.id));
+  const joined={
+    ...host,
+    openInvestigation:typeof host.openExtension==='function'&&desks.has('investigations')?
+      selection=>host.openExtension('investigations','openForDiagnostic',selection):host.openInvestigation,
+    openStudy:typeof host.openExtension==='function'&&desks.has('study-transfer')?
+      roots=>host.openExtension('study-transfer','openForStudies',roots):host.openStudy
+  };
+  return adapt(joined, attachExperimentDiagnostics, {
     view:'experiment-diagnostics', render:true,
     collections:['experiment_diagnostics','sources','profiles','scenarios','grids','runs','observations'],
     prefixes:['diagnostics.']

@@ -192,9 +192,10 @@ def render(state, manifest):
     descriptors = {item["path"]: item for item in
                    list(state.get("files", {}).values()) + list(state.get("maps", {}).values())
                    if isinstance(item, dict) and "path" in item}
+    families = [family for family in MAP_IDS if any(row["family"] == family for row in pages)]
     cards = "".join(_sheet(row, atlas, members) for row in pages)
     options = "".join('<option value="' + _text(family) + '">' + _text(TITLES[family]) +
-                      "</option>" for family in MAP_IDS)
+                      "</option>" for family in families)
     scenarios = "".join('<option value="' + _text(run_id) + '">Alternative ' +
                         str(index) + " / " + _text(run_id[:16]) + "</option>"
                         for index, run_id in enumerate(atlas["scenario_run_ids"], 1))
@@ -223,10 +224,10 @@ def render(state, manifest):
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
             '<meta http-equiv="Content-Security-Policy" content="' + _text(policy) + '">'
             "<title>" + _text(atlas["title"]) + " — Map atlas</title><style>" + STYLE +
-            '</style></head><body><header><div class="eyebrow">Upper Savannah Scientific Workbench / Map atlas</div>'
+            '</style></head><body><header><div class="eyebrow">Scientific Workbench / Map atlas</div>'
             "<h1>" + _text(atlas["title"]) + "</h1><p>" +
             _text(atlas.get("settings", {}).get("subtitle") or
-                  "Explore the seven map families, the selected alternatives and the original source context.") +
+                  "Explore the " + str(len(families)) + " map families, selected alternatives and original source context.") +
             '</p><div class="actions">' + _link(atlas["file"]["path"], "Open complete atlas") +
             _link(atlas["file"]["path"], "Download atlas PDF", download=True) +
             _link(manifest["report_pdf"], "Open scientific report") +
@@ -240,7 +241,7 @@ def render(state, manifest):
             _link("maps/atlas-index.csv", "Map index CSV", download=True) +
             _link("maps/source-context.json", "Original source choices", download=True) +
             '</div></section><section aria-labelledby="browse"><h2 id="browse">Browse map sheets</h2>'
-            '<form data-atlas-filters hidden><label>Map family<select name="family"><option value="">All seven families</option>' +
+            '<form data-atlas-filters hidden><label>Map family<select name="family"><option value="">All retained families</option>' +
             options + '</select></label><label>Scenario<select name="scenario"><option value="">All maps</option>'
             '<option value="reference-context">Baseline / source context</option>' + scenarios +
             '</select></label><label>Find a map or source<input name="search" type="search" autocomplete="off" placeholder="Title, pollutant or raster path"></label></form>'

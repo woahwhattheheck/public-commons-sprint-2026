@@ -2,6 +2,9 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, character => ({"&":
 const number = value => value === null || value === undefined ? "—" : new Intl.NumberFormat(undefined, {maximumFractionDigits: 2}).format(value);
 const words = value => String(value ?? "unspecified").replaceAll("_", " ").replace(/\b[a-z]/g, character => character.toUpperCase());
 const asArray = value => Array.isArray(value) ? value : [];
+const classificationLabels = {"ONRW":"Outstanding National Resource Waters","ORW":"Outstanding Resource Waters","TN":"Trout Natural","TPGT":"Trout Put, Grow, and Take","TPT":"Trout Put and Take","FW":"Freshwaters","SA":"Saltwaters SA","SB":"Saltwaters SB","SFH":"Shellfish Harvesting Waters"};
+const classificationLabelSource = "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf";
+const classificationText = (codes, raw = "") => asArray(codes).map(code => classificationLabels[code] ? classificationLabels[code] + " (" + code + ")" : String(code)).join("; ") || String(raw || "");
 const keyOf = reference => reference ? JSON.stringify({collection_id: reference.collection_id, source_id: reference.source_id}) : "";
 const refOf = value => value ? JSON.parse(value) : null;
 const sourceName = source => source.title || source.source_id || source.id || "Source";
@@ -187,7 +190,8 @@ export function attachWaterQuality(helpers) {
       '<details><summary>Geographic method</summary><p>' + esc(context.method?.assessment_join) + " " + esc(context.method?.classified_reach_join) +
       " " + esc(context.method?.classification_boundary_rule) + "</p><p>" + esc(context.method?.upstream_context) +
       " Measurements use " + esc(context.method?.spatial_measurement_crs) + "; editable geographic exports use " + esc(context.method?.export_crs) +
-      ".</p><p>" + esc(context.method?.model_use) + "</p></details>";
+      ".</p><p>" + esc(context.method?.model_use) + "</p><p>Classification TN means Trout Natural; assessment-cause TN means Total nitrogen. " +
+      link(context.method?.classification_label_source_uri || classificationLabelSource, "SCDES classification names: R.61-68, Section G") + "</p></details>";
     paintTable();
   }
   function paintTable() {
@@ -210,8 +214,8 @@ export function attachWaterQuality(helpers) {
       "<th>Nonattaining</th><th>TMDL nonattaining</th><th>Direct classes</th><th>Downstream high-quality classes</th><th>Upstream nonattaining sites</th><th></th></tr></thead><tbody>" +
       rows.map(row => "<tr><td><code>" + esc(row.huc12) + "</code></td><td>" + esc(row.name) + "</td><td>" + esc(row.focus_utility || "—") +
         '</td><td class="wq-number">' + number(row.assessment_site_count) + '</td><td class="wq-number">' + number(row.nonattaining_site_count) +
-        '</td><td class="wq-number">' + number(row.tmdl_nonattaining_site_count) + "</td><td>" + esc(asArray(row.direct_classification_codes).join(", ") || "—") +
-        "</td><td>" + esc(asArray(row.upstream_of_high_quality_codes).join(", ") || "—") + '</td><td class="wq-number">' +
+        '</td><td class="wq-number">' + number(row.tmdl_nonattaining_site_count) + "</td><td>" + esc(classificationText(row.direct_classification_codes) || "—") +
+        "</td><td>" + esc(classificationText(row.upstream_of_high_quality_codes) || "—") + '</td><td class="wq-number">' +
         number(row.upstream_nonattaining_site_count) + "</td><td>" + button("water-quality-watershed", "Evidence", 'data-huc="' + esc(row.huc12) + '"') + "</td></tr>").join("") +
       (rows.length ? "" : '<tr><td colspan="10">No watersheds match these filters.</td></tr>') + "</tbody></table></div>";
   }
@@ -255,13 +259,14 @@ export function attachWaterQuality(helpers) {
         links.map(relation => {
           const reach = reaches.get(String(relation.source_feature_id)) || {};
           return "<tr><td><code>" + esc(relation.source_feature_id) + "</code></td><td>" + esc(reach.waterbody_name || reach.HYDNAME || "") +
-            "</td><td>" + esc(relation.classification_raw) + "</td><td>" +
+            "</td><td>" + esc(classificationText(relation.classification_codes, relation.classification_raw)) +
+            "<br><small>Source field: " + esc(relation.classification_raw) + "</small></td><td>" +
             (relation.intersection_length_m === null ? "—" : number(relation.intersection_length_m) + " m") +
             "</td><td>" + (relation.intersection_area_m2 === null ? "—" : number(relation.intersection_area_m2) + " m²") + "</td></tr>";
         }).join("") + "</tbody></table></div>" : "<p>No classified reach with a positive intersection is present in the selected layer.</p>") +
-      "<h3>High-quality-water connection</h3><p>Direct codes: " + esc(asArray(row.direct_classification_codes).join(", ") || "No source code") +
+      "<h3>High-quality-water connection</h3><p>Direct classifications: " + esc(classificationText(row.direct_classification_codes) || "No source code") +
       ". Downstream high-quality codes connected through the retained HUC topology: " +
-      esc(asArray(row.upstream_of_high_quality_codes).join(", ") || "No source code") + ".</p>" +
+      esc(classificationText(row.upstream_of_high_quality_codes) || "No source code") + ".</p>" +
       editionTable([context.classification_source, ...asArray(context.assessment_sources)]) + "</div>";
     detail(row.name || row.huc12, html, {kind: "water_quality_contexts", id: currentItem.id});
   }

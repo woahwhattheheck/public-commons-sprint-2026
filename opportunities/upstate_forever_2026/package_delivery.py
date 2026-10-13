@@ -73,8 +73,12 @@ def original_ids(filename, name):
 
 def collect_references(data, *, limits=None):
     limits = capture_limits(limits)
-    require(isinstance(data, dict) and data.get('schema') == 'upstate-ec-sdc-2026/delivery-v1',
-            'Expected the original upstate-ec-sdc-2026/delivery-v1 manifest')
+    require(isinstance(data, dict) and data.get('schema') in (
+            'upstate-ec-sdc-2026/delivery-v1', 'commons.native-study-delivery/v1'),
+            'Choose an original regional RFP or explicit native-study delivery manifest')
+    study = data['schema'] == 'commons.native-study-delivery/v1'
+    if study:
+        require(data.get('delivery_mode') == 'native_study', 'Declare native_study delivery mode')
     rasters = data.get('rasters') if isinstance(data.get('rasters'), dict) else {}
     maps = data.get('maps') if isinstance(data.get('maps'), dict) else {}
     references = []
@@ -86,12 +90,21 @@ def collect_references(data, *, limits=None):
         references.append({'role': 'metadata.' + key, 'path': entry.get('fgdc_xml')})
         if isinstance(entry.get('path'), str) and entry['path']:
             raster_paths.append(entry['path'])
-    for key in dict.fromkeys((*original_ids('audit.py', 'MAPS'), *maps.keys())):
+    required_maps = (original_ids('audit.py', 'MAPS') if not study else (
+        'future_sediment_loss', 'future_nutrient_runoff', 'current_nutrient_export',
+        'current_sediment_export', 'combined_pollutant_export'))
+    for key in dict.fromkeys((*required_maps, *maps.keys())):
         require(isinstance(key, str) and len(key) <= 200, 'Map IDs must be bounded strings')
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
+    if 'grid' in data:
+        grid = data['grid']
+        require(isinstance(grid, dict) and grid.get('schema') == 'upstate.retained-grid/v1',
+                'Expected the original retained grid declaration')
+        references.append({'role': 'model.grid', 'path': grid.get('record')})
     assets = data.get('project_assets', [])
-    require(isinstance(assets, list) and len(assets) <= limits['max_references'] and
+    require(isinstance(assets, list) and (limits['max_references'] is None
+            or len(assets) <= limits['max_references']) and
             all(isinstance(path, str) and path for path in assets),
             'project_assets must be explicit relative paths within max_references=' +
             str(limits['max_references']))
@@ -129,7 +142,8 @@ def unavailable(detail):
             'boundary': 'The original technical audit did not complete; no technical pass or scientific acceptance is inferred.'}
 
 
-def run_original_audit(captured_manifest, index, raster_paths):
+def run_original_audit(captured_manifest, index, raster_paths, *, limits=None):
+    limits = capture_limits(limits)
     # A local XML/VRT file named .tif must not cause GDAL to resolve remote data.
     # The original audit already requires GTiff; check its container before open.
     captured = {entry['path'] for entry in index['artifacts']}
@@ -141,11 +155,13 @@ def run_original_audit(captured_manifest, index, raster_paths):
         if signature not in (b'II*\x00', b'MM\x00*', b'II+\x00', b'MM\x00+'):
             return unavailable('A declared raster lacks a TIFF/BigTIFF container signature; correct the source artifact before native audit.')
     try:
-        spec = importlib.util.spec_from_file_location('upstate_original_audit', HERE / 'audit.py')
+        audit_name = ('native_study_audit.py' if index.get('schema')
+                      == 'commons.native-study-package/v1' else 'audit.py')
+        spec = importlib.util.spec_from_file_location('upstate_selected_delivery_audit', HERE / audit_name)
         require(spec is not None and spec.loader is not None, 'Original audit module cannot be loaded')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        result = module.inspect(captured_manifest)
+        result = module.inspect(captured_manifest, max_manifest_bytes=limits['max_manifest_bytes'])
         require(isinstance(result, dict) and result.get('status') in ('FAIL', 'TECHNICAL_PRECHECK_PASS'),
                 'Original audit returned an unsupported result')
         return result
@@ -198,14 +214,15 @@ def pack(manifest_path, output, *, limits=None):
         index['missing'].append({'roles': ['raster_companion'], 'path': 'delivery/' + relative,
                                  'reason': 'Companion exists beside a declared source raster but was not listed. Add it explicitly to project_assets and capture again.'})
     captured_manifest = output / index['manifestPath']
-    audit = run_original_audit(captured_manifest, index, raster_paths)
+    audit = run_original_audit(captured_manifest, index, raster_paths, limits=limits)
     require(companion_state(source_root, raster_paths) == companions,
             'Raster companion presence changed during packaging; choose a fresh capture')
     audit_raw = json_bytes(audit)
     require(len(audit_raw) <= limits['max_index_bytes'] and
-            len(audit_raw) <= limits['max_file_bytes'],
+            (limits['max_file_bytes'] is None or len(audit_raw) <= limits['max_file_bytes']),
             'Generated audit exceeds the selected metadata/member byte budget')
-    require(sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
+    require(limits['max_total_bytes'] is None or
+            sum(item['bytes'] for item in index['artifacts']) + len(audit_raw)
             <= limits['max_total_bytes'],
             'Captured source and audit exceed the selected total byte budget')
     write_new(output / 'audit.json', audit_raw)
@@ -259,7 +276,7 @@ def main():
     for command in (create, check):
         for key, default in DEFAULT_LIMITS.items():
             command.add_argument('--' + key.replace('_', '-'), type=int, default=default,
-                                 help='Positive integer; default %(default)s' +
+                                 help='Optional positive integer; default %(default)s' +
                                       (' references' if key == 'max_references' else ' bytes'))
     args = parser.parse_args()
     try:

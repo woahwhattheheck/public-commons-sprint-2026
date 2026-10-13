@@ -165,10 +165,8 @@ def create(workspace, experiment_id):
 
 
 
-def sync_completed(workspace, programme):
-    """Retain experiment metrics for native runs completed by its programme."""
-    if programme.get("state") != "complete":
-        return None
+def experiment_origin(workspace, programme):
+    """Resolve the saved experiment behind a programme or its pair continuation."""
     source = programme.get("selection", {}).get("source_reference", "")
     prefix = "upstate.experiment:"
     completion_prefix = "upstate.programme-pair-completion:"
@@ -194,7 +192,19 @@ def sync_completed(workspace, programme):
                 return None
     if not isinstance(source, str) or not source.startswith(prefix):
         return None
-    key = identifier(source[len(prefix):])
+    return {"experiment_id": identifier(source[len(prefix):]),
+            "source_programme_id": source_programme_id}
+
+
+def sync_completed(workspace, programme):
+    """Retain experiment metrics for native runs completed by its programme."""
+    if programme.get("state") != "complete":
+        return None
+    origin = experiment_origin(workspace, programme)
+    if origin is None:
+        return None
+    key = origin["experiment_id"]
+    source_programme_id = origin["source_programme_id"]
     engine = _engine()
     plan = engine._plan(workspace, key)
     reference = _reference(workspace, plan)
@@ -227,6 +237,10 @@ def sync_completed(workspace, programme):
     # The experiment executor retains the actual matched metrics and summary;
     # completed_only prevents native calculation if a run changes meanwhile.
     result = engine.execute(workspace, key, completed_only=True)
+    # Both the native programme and experiment summary locks are released.
+    # An existing study keeps its original source/spatial context when reopened.
+    from .study_report import refresh_existing
+    refresh_existing(workspace, key)
     return {"experiment_id": key, "state": result["state"],
             "source_programme_id": source_programme_id,
             "completed_programme_id": programme.get("programme_id", programme.get("id")),

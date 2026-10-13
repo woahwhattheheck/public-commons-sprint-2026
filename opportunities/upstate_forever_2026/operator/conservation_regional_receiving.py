@@ -215,7 +215,32 @@ def resolve_public_water(workspace, preparation=None):
             raise ValueError("The original public-water preparation needs its actual source_collection_id")
         if original_preparation.get("original_protection_sha256") != ORIGINALS["protection_areas"]["sha256"]:
             raise ValueError("The public-water preparation refers to different original protection polygons")
-        if original_preparation.get("original_protection_features") != len(PROTECTION_OBJECT_IDS):
+        # Both maintained preparers retain the same original polygon bytes.
+        # Current source-water preparation records each source in source_records;
+        # the earlier preparer declared its protection count at the top level.
+        source_records = original_preparation.get("source_records")
+        protection_record = None
+        if source_records is not None:
+            if not isinstance(source_records, list):
+                raise ValueError("The prepared source_records must be the original source list")
+            matches = [
+                row for row in source_records if isinstance(row, dict)
+                and row.get("id") == ORIGINALS["protection_areas"]["id"]
+            ]
+            if len(matches) != 1:
+                raise ValueError("The preparation must retain one original protection source record")
+            protection_record = matches[0]
+            for key in ("sha256", "bytes"):
+                if protection_record.get(key) != ORIGINALS["protection_areas"][key]:
+                    raise ValueError("The prepared protection source " + key + " changed")
+        counts = [
+            value for value in (
+                original_preparation.get("original_protection_features"),
+                protection_record.get("features") if protection_record else None,
+            ) if value is not None
+        ]
+        if not counts or any(type(value) is not int or value != len(PROTECTION_OBJECT_IDS)
+                             for value in counts):
             raise ValueError("The public-water preparation must retain all four original protection records")
     binding = resolve_original(workspace, "protection_areas", collection_id)
     if binding is None and preparation is not None:
@@ -241,6 +266,7 @@ def resolve_public_water(workspace, preparation=None):
                 "source_collection_id": collection_id,
                 "receiving_water_plan_id": original_preparation.get("plan_id"),
                 "native_manifest": original_preparation.get("native_manifest"),
+                "source_records": original_preparation.get("source_records"),
             }
     return binding
 
@@ -574,7 +600,10 @@ def run_protection_study(workspace, receiving, kind, spec):
         "stability": True,
     }
     preview = receiving.run(kind + ".optimization_preview", lambda: optimization.preview(workspace, request))
-    saved = receiving.run(kind + ".optimization_save", lambda: optimization.save(workspace, request))
+    saved = receiving.run(
+        kind + ".optimization_save",
+        lambda: optimization.save(workspace, preview["request"], retained_analysis=preview),
+    )
     plan = saved["plan"]
     selected = [str(value) for value in saved["selected_ids"]]
     if not selected or len(set(selected)) != len(selected):
@@ -924,6 +953,8 @@ def arguments(argv=None):
     if (args.experiment_title or args.experiment_profile_id or args.experiment_axes
             or args.experiment_design != "one_at_a_time") and not (args.prepare_experiment or args.execute_experiment):
         parser.error("Choose --prepare-experiment or --execute-experiment with experiment settings")
+    if args.models and len(args.models) != len(set(args.models)):
+        parser.error("Select each native model once")
     return args
 
 
@@ -1046,7 +1077,7 @@ def main(argv=None):
             }
             if args.grid_id:
                 request["prepare_run"] = {"grid_id": args.grid_id, "profile_id": args.profile_id}
-                if args.models:
+                if args.models and set(args.models) != {"ndr", "sdr"}:
                     request["prepare_run"]["models"] = args.models
             if args.prepare_experiment or args.execute_experiment:
                 request["prepare_experiment"] = {

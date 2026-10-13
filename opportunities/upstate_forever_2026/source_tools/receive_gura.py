@@ -193,7 +193,17 @@ def _same_raster(left: Path, right: Path) -> bool:
     return True
 
 
+def _validate_selection(args):
+    """Validate physical selections before retaining any original input copies."""
+    if not math.isfinite(args.upstream_buffer_m) or args.upstream_buffer_m < 0:
+        raise ValueError("--upstream-buffer-m must retain a nonnegative finite model-context selection")
+    resolution = getattr(args, "expected_resolution_m", None)
+    if resolution is not None and (not math.isfinite(resolution) or resolution <= 0):
+        raise ValueError("--expected-resolution-m must retain the positive finite native source cell size")
+
+
 def receive(args) -> dict:
+    _validate_selection(args)
     source = args.source_directory.resolve()
     source.mkdir(parents=True, exist_ok=True)
     copies = {
@@ -383,13 +393,13 @@ def main(argv=None):
     parser.add_argument("--source-reference", required=True)
     parser.add_argument("--expected-resolution-m", type=float,
                         help="Optional expected native cell size; otherwise read the original land-cover raster")
-    parser.add_argument("--upstream-buffer-m", type=float, required=True)
+    parser.add_argument("--upstream-buffer-m", type=float, required=True,
+                        help="Original nonnegative context distance; zero adds no upstream buffer")
     args = parser.parse_args(argv)
-    if not math.isfinite(args.upstream_buffer_m) or args.upstream_buffer_m <= 0:
-        parser.error("--upstream-buffer-m must retain a positive finite model-context selection")
-    if (args.expected_resolution_m is not None
-            and (not math.isfinite(args.expected_resolution_m) or args.expected_resolution_m <= 0)):
-        parser.error("--expected-resolution-m must retain the positive finite native source cell size")
+    try:
+        _validate_selection(args)
+    except ValueError as error:
+        parser.error(str(error))
     try:
         print(json.dumps(receive(args), ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0

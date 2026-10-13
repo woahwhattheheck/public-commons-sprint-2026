@@ -118,14 +118,216 @@ def _download_links(downloads):
     return " · ".join(links)
 
 
-def _render(summary, rows, profiles, *, downloads=()):
+
+def _execution_section(value):
+    if not value:
+        return ""
+    rows = []
+    for model, item in value["models"].items():
+        rows.append([
+            _text(model.upper()), _number(item["selected_stages"], digits=0),
+            _number(item["calculated_stages"], digits=0), _number(item["reused_stages"], digits=0),
+            _number(item["pending_stages"], digits=0),
+            _number(item["native_elapsed_seconds"]) + " (" + str(item["native_timed_stages"]) + " timed)",
+            _number(item["reuse_elapsed_seconds"]) + " (" + str(item["reuse_timed_stages"]) + " timed)",
+            _number(item["transfer_logical_bytes"], digits=0)
+            + " (" + str(item["transfer_measured_stages"]) + " measured; "
+            + str(item["transfer_unknown_stages"]) + " unknown)",
+        ])
+    return (
+        '<section><h2>Actual execution and reuse</h2>'
+        '<p>Recorded at ' + _text(value["observed_at"]) + '. '
+        + _number(value["materialized_cases"], digits=0) + ' materialized cases from '
+        + _number(value["planned_cases"], digits=0) + ' planned; '
+        + _number(value["read_runs"], digits=0) + ' distinct native run records read.</p>'
+        + _table(["Model", "Selected stages", "Calculated", "Reused", "Pending",
+                  "Local native seconds", "Reuse seconds", "Recorded transfer bytes"], rows)
+        + '<p class="definition">Native time excludes inherited donor time. Totals cover the '
+        'stages with recorded timestamps; unknown timings remain empty. Retained outputs contain '
+        + _number(value["output_files"], digits=0) + ' distinct run/path files and '
+        + _number(value["output_logical_bytes"], digits=0) + ' logical bytes. '
+        'Logical lengths describe retained contents; physical allocation depends on compression '
+        'and file-copy methods. The execution CSV retains each original run and donor.</p></section>')
+
+
+
+def _shortlist_section(value):
+    if not value or not value.get("shortlist"):
+        return ""
+    names = {row["scenario_id"]: row["scenario"] for row in value["shortlist"]}
+    rows, details = [], []
+    for row in value["shortlist"]:
+        rows.append([
+            _text(row["scenario"]),
+            str(row["fully_compared_profiles"]) + " / " + str(row["expected_profiles"]),
+            str(row["frontier_profiles"]), str(row["dominated_profiles"]),
+            str(row["unresolved_profiles"]), _text(row["response"]),
+        ])
+    for row in value["profile_frontiers"]:
+        details.append([
+            _text(row["scenario"]), _text(row["profile"]),
+            _text({"frontier": "On physical frontier", "dominated": "Dominated",
+                   "incomplete": "Incomplete comparison"}[row["state"]]),
+            str(row["comparable_opponents"]) + " / " + str(row["expected_opponents"]),
+            _text("; ".join(names.get(key, key) for key in row["dominated_by"]) or "—"),
+            _text("; ".join(names.get(key, key) for key in row["tradeoff_with"]) or "—"),
+        ])
+    return (
+        '<section><h2>Alternatives to examine together</h2>'
+        '<p>The physical frontier contains alternatives with no observed dominator. '
+        'A dominator lowers at least one selected pollutant without increasing another. '
+        'Frontier membership is established within '
+        'a profile only after every selected opponent has comparable completed results. '
+        'An observed dominator can be identified before that full comparison finishes.</p>'
+        + _table(["Alternative", "Fully compared profiles", "On frontier", "Dominated",
+                  "Unresolved", "Source-profile result"], rows)
+        + '<p class="definition">An alternative stays on the frontier across sources only '
+        'when every selected profile and opponent is covered. Equal alternatives can both '
+        'remain on the frontier. Review each alternative’s baseline effects alongside costs, '
+        'feasibility and policy priorities before choosing an intervention.</p>'
+        + '<details><summary>Frontier and tradeoffs within each profile</summary>'
+        + _table(["Alternative", "Profile", "Physical result", "Compared opponents",
+                  "Dominated by", "Pollutant tradeoffs with"], details)
+        + '<p>The shortlist CSV retains every opponent, unavailable comparison reason, '
+        'native run and paired baseline.</p></details></section>')
+
+def _decision_section(value):
+    if not value:
+        return ""
+    shortlist = _shortlist_section(value)
+    if not value.get("pairs"):
+        return shortlist
+    pairs, ranges = [], []
+    for pair in value["pairs"]:
+        pairs.append([
+            _text(pair["a_scenario"]), _text(pair["b_scenario"]),
+            _text(pair["response"]),
+            str(pair["compared_profiles"]) + " / " + str(pair["expected_profiles"]),
+            "Complete selected cohort" if pair["complete"] else "Partial selected cohort",
+        ])
+        for group in pair["support_groups"]:
+            ranges.append([
+                _text(pair["a_scenario"]), _text(pair["b_scenario"]),
+                _text(POLLUTANTS.get(group["pollutant"], group["pollutant"])),
+                _text(group["units"]),
+                _number(group["minimum_a_advantage"]) + " to " + _number(group["maximum_a_advantage"]),
+                str(len(group["profile_ids"])),
+                _number(group["paired_cells"], digits=0),
+                '<code title="' + _text(group["support_sha256"]) + '">'
+                + _text(group["support_sha256"][:12]) + '</code>',
+            ])
+    return shortlist + (
+        '<section><h2>Compare the management alternatives</h2>'
+        '<p>An alternative dominates when at least one selected pollutant export is lower '
+        'and all others are equal or lower. Each comparison uses the same coefficient profile, '
+        'baseline and identical valid cells for each pollutant. Nutrient and sediment units remain separate.</p>'
+        + _table(["Alternative A", "Alternative B", "Observed ordering", "Compared profiles", "Coverage"], pairs)
+        + '<details><summary>Annual differences on matching cell support</summary>'
+        '<p>Positive A advantage means A exports less than B. Ranges group only profiles with '
+        'the same valid-cell support and annual units. Exact differences and run identities are in the CSV.</p>'
+        + _table(["A", "B", "Export", "Units", "A advantage range", "Profiles", "Paired cells", "Cell support"], ranges)
+        + '</details></section>')
+
+
+def _interpretation_section(value):
+    if not value:
+        return ""
+    sources = {row["profile_id"]: row for row in value["table_sources"]}
+    rows = []
+    for row in value["profiles"]:
+        source = sources.get(row["profile_id"], {})
+        checksum = source.get("sha256", "")
+        rows.append([
+            _text(row["title"]), str(row["class_count"]), str(row["changed_coefficient_cells"]),
+            str(row["changed_native_parameters"]),
+            '<code title="' + _text(checksum) + '">' + _text(checksum[:12]) + '</code>',
+        ])
+    content = (
+        '<section><h2>How the selected sources change the calculation</h2>'
+        '<p>These counts come from the exact coefficient tables and native settings retained '
+        'with the selected profiles. Changes are relative to this experiment’s original baseline profile.</p>'
+        + _table(["Actual profile", "Land-cover classes", "Changed table cells",
+                  "Changed native settings", "Table identity"], rows))
+    if value["native_parameter_changes"]:
+        content += (
+            '<details><summary>Changed native settings</summary>'
+            + _table(["Profile", "Model", "Setting", "Baseline", "Alternative"], [
+                [_text(row["profile"]), _text(row["model"].upper()), _text(row["parameter"]),
+                 _text(row["baseline"]), _text(row["alternative"])]
+                for row in value["native_parameter_changes"]]) + '</details>')
+    if value["transitions"]:
+        def loading(row, constituent):
+            return " → ".join(
+                _number(row["load_" + constituent + "_" + side], digits=3)
+                + " (" + _text(row["load_type_" + constituent + "_" + side] or "basis unknown") + ")"
+                for side in ("before", "after"))
+        content += (
+            '<details><summary>Coefficients for the actual mapped land-cover changes</summary>'
+            '<p>Loading columns are local coefficients in kg/ha/year. C × P is the dimensionless '
+            'local erosion multiplier. Each loading value retains its published basis; load differences '
+            'are calculated only between matching known bases. Routed annual export also depends on runoff, terrain, '
+            'soil, connectivity and downslope retention. Compare these source differences with '
+            'the completed native effects below.</p>'
+            + _table(["Profile", "Alternative", "Class change", "Changed ha",
+                      "N load before → after", "P load before → after", "C × P before → after"], [
+                [_text(row["profile"]), _text(row["scenario"]),
+                 str(row["from_lucode"]) + " → " + str(row["to_lucode"]),
+                 _number(row["changed_area_ha"]),
+                 loading(row, "n"),
+                 loading(row, "p"),
+                 _number(row["usle_cp_before"], digits=6) + " → " + _number(row["usle_cp_after"], digits=6)]
+                for row in value["transitions"]]) + '</details>')
+    return content + (
+        '<p class="definition">The source CSVs retain every changed coefficient, its loading basis, '
+        'native setting, actual transition count and profile/run identity. Retention and routing '
+        'changes can alter downstream exports beyond the changed land-cover cells.</p></section>')
+
+
+def _published_context(interpretation):
+    """Retain the existing source study package when this study uses that lineage."""
+    used = any(source["sha256"] == "b2b5778c5d8c71b2b0c6db370f29a60e987d1be3d491cec91493a0b975b8b9e4"
+               for source in interpretation["table_sources"])
+    references = json.dumps([row["references"] for row in interpretation["profiles"]], ensure_ascii=False)
+    used = used or any(doi in references for doi in (
+        "10.1080/1747423X.2023.2234903", "10.1007/s00267-023-01861-6", "10.3390/land13060893"))
+    if not used:
+        return {}
+    from model.common import file_digest
+    root = Path(__file__).resolve().parents[1]
+    manifest = root / "source/regional-studies-20261013/coefficient-comparison-manifest.json"
+    if not manifest.is_file():
+        return {}
+    value = json.loads(manifest.read_text(encoding="utf-8"))
+    if value.get("schema") != "upstate.published-coefficient-comparison/v1":
+        raise ValueError("Select the maintained published coefficient interpretation")
+    allowed = {
+        "source/regional-studies-20261013/COEFFICIENT_INTERPRETATION.md":
+            ("Published source interpretation", "text/markdown"),
+        "source/regional-studies-20261013/coefficient-comparison.csv":
+            ("Published coefficient comparison", "text/csv"),
+        "source/regional-studies-20261013/transition-coefficients.csv":
+            ("Published transition coefficients", "text/csv"),
+    }
+    result = {}
+    for name, (label, mime) in allowed.items():
+        item = value["files"][name]
+        path = root / name
+        if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:
+            raise ValueError("Published coefficient interpretation changed: " + name)
+        result[path.name] = (label, mime, path.read_bytes())
+    result[manifest.name] = ("Published source manifest", "application/json", manifest.read_bytes())
+    return result
+
+
+def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=None, interpretation=None):
     total = summary["counts"]["cases"]
     completed = summary["progress"]["complete"]
     names = _aliases(profiles)
+    title = str(summary.get("title") or "Scientific watershed study")
     sections = []
     sections.append(
         "<header><p class=\"eyebrow\">TokenJunkieLabs · Ecosystem Sciences</p>"
-        "<h1>Upper Savannah regional study</h1>"
+        "<h1>" + _text(title) + "</h1>"
         "<p>Published source alternatives and land-cover scenarios, calculated through "
         "the selected native InVEST models.</p></header>")
     sections.append(
@@ -143,6 +345,7 @@ def _render(summary, rows, profiles, *, downloads=()):
         "Positive reductions represent lower modeled export. Each land-cover alternative "
         "is paired with the baseline using the same coefficient profile. Percent change "
         "uses alternative minus baseline.</p></section>")
+    sections.extend((_execution_section(execution), _interpretation_section(interpretation)))
     spatial = (profiles or {}).get("spatial_programme", {})
     if spatial.get("scenarios"):
         values = []
@@ -189,6 +392,7 @@ def _render(summary, rows, profiles, *, downloads=()):
             + _table(["Alternative", "Export", "Units", "Reduction range", "Profiles",
                       "Paired cells", "Response", "Cell support"], envelopes)
             + "</section>")
+    sections.append(_decision_section(decisions))
     sections.append(
         "<section><h2>Completed native comparisons</h2>"
         "<div class=\"controls\"><label for=\"profile\">Profile <select id=\"profile\">"
@@ -240,7 +444,7 @@ def _render(summary, rows, profiles, *, downloads=()):
         ensure_ascii=False, allow_nan=False).replace("<", "\\u003c")
     return """<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Upper Savannah regional study</title>
+<title>""" + _text(title) + """</title>
 <style>
 :root{color-scheme:light;font-family:Arial,Helvetica,sans-serif;color:#171717;background:#fff}
 *{box-sizing:border-box}body{margin:0}main{max-width:1440px;margin:auto;padding:32px}
@@ -297,10 +501,70 @@ render();
 """
 
 
+
+def _retained_profiles(workspace, scope, experiment_id):
+    """Recover the original report context from this received experiment."""
+    from model.common import digest, read_json, verify_file
+    context = scope / "study-report-context.json"
+    if context.exists() or context.is_symlink():
+        if context.is_symlink() or not context.is_file():
+            raise ValueError("The retained study report context must be an original file.")
+        value = read_json(context)
+        payload = {name: item for name, item in value.items() if name != "id"}
+        if (value.get("schema") != "upstate.study-report-context/v1"
+                or value.get("experiment_id") != experiment_id
+                or value.get("workspace_id") != workspace.project["id"]
+                or value.get("id") != digest(payload)
+                or not isinstance(value.get("source_profiles"), dict)):
+            raise ValueError("The retained study report context differs from this experiment.")
+        return value["source_profiles"]
+    marker_path = scope / "study-report.json"
+    if not marker_path.exists() and not marker_path.is_symlink():
+        return None
+    if marker_path.is_symlink() or not marker_path.is_file():
+        raise ValueError("The retained study report marker must be an original file.")
+    marker = read_json(marker_path)
+    if (marker.get("schema") != "upstate.study-report-downloads/v1"
+            or marker.get("experiment_id") != experiment_id
+            or marker.get("workspace_id") != workspace.project["id"]):
+        raise ValueError("The retained study report belongs to another experiment.")
+    descriptors = [
+        item for item in marker.get("files", {}).values()
+        if isinstance(item, dict) and item.get("path") == "study-report/study-summary.json"
+    ]
+    if len(descriptors) != 1:
+        raise ValueError("Retain the original study summary before rebuilding its report.")
+    previous = read_json(verify_file(scope, descriptors[0]))
+    if (previous.get("schema") != "upstate.published-study-report/v1"
+            or previous.get("experiment_id") != experiment_id
+            or previous.get("workspace_id") != workspace.project["id"]
+            or previous.get("experiment_summary", {}).get("sha256") != marker.get("summary_sha256")
+            or not isinstance(previous.get("source_profiles"), dict)):
+        raise ValueError("The original study summary differs from its retained report marker.")
+    return previous["source_profiles"]
+
+
+def refresh_existing(workspace, experiment_id):
+    """Refresh an existing complete study report after summary publication."""
+    from model.common import identifier
+    experiment_id = identifier(experiment_id)
+    scope = workspace.root / "experiments" / experiment_id
+    if not any((scope / name).exists() or (scope / name).is_symlink() for name in
+               ("study-report-context.json", "study-report.json")):
+        return None
+    try:
+        return build(workspace, experiment_id)
+    except Exception as error:
+        raise RuntimeError(
+            "The saved experiment summary and native run artifacts remain retained. "
+            "Refreshing the complete study report failed: " + str(error)
+        ) from error
+
+
 def build(workspace, experiment_id, *, profiles=None):
     """Render values from one locked summary and register the retained outputs."""
-    from model import experiments
-    from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, verify_file
+    from model import experiments, study_decisions, study_execution, study_interpretation
+    from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, verify_file
     experiment_id = identifier(experiment_id)
     scope = workspace.root / "experiments" / experiment_id
     # The same lock guards summary publication in the experiment engine and
@@ -312,7 +576,23 @@ def build(workspace, experiment_id, *, profiles=None):
         if summary["id"] != experiment_id or summary["workspace_id"] != workspace.project["id"]:
             raise ValueError("Select the current workspace's original experiment")
         summary_source = describe_file(scope, scope / "summary.json")
+        if profiles is None:
+            profiles = _retained_profiles(workspace, scope, experiment_id)
+        if profiles is not None and not isinstance(profiles, dict):
+            raise ValueError("The study report programme context must be an object.")
         rows = _source_rows(summary, profiles)
+        execution = study_execution.collect(workspace, summary)
+        decisions = study_decisions.analyse(summary)
+        interpretation = study_interpretation.collect(workspace, summary, profiles=profiles)
+        published_context = _published_context(interpretation)
+        context = {
+            "schema": "upstate.study-report-context/v1",
+            "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
+            "source_profiles": profiles or {},
+        }
+        # Retain validated source context before replacing report bodies. This
+        # survives interrupted rendering and the ordinary complete-study archive.
+        atomic_json(scope / "study-report-context.json", {**context, "id": digest(context)})
         directory = scope / "study-report"
         directory.mkdir(parents=True, exist_ok=True)
         with held(directory / ".report.lock", blocking=False):
@@ -325,41 +605,68 @@ def build(workspace, experiment_id, *, profiles=None):
                 "materialized_case_states": dict(Counter(row["state"] for row in summary["rows"])),
                 "sensitivity": summary.get("sensitivity", []),
                 "source_profiles": profiles or {},
+                "title": summary.get("title") or "Scientific watershed study",
+                "execution": execution, "alternative_comparisons": decisions,
+                "source_interpretation": interpretation,
                 "experiment_summary": summary_source,
             }
             atomic_json(directory / "study-summary.json", data)
-            atomic_bytes(directory / "study-comparisons.csv", _csv(rows))
-            # Embed the actual retained bytes, not a reconstruction, so a
-            # separately downloaded HTML report keeps all its data links.
-            downloads = [
-                ("Comparison CSV", "study-comparisons.csv", "text/csv",
-                 (directory / "study-comparisons.csv").read_bytes()),
-                ("Study summary", "study-summary.json", "application/json",
-                 (directory / "study-summary.json").read_bytes()),
+            retained = {
+                "study-summary.json": (
+                    "Study summary", "application/json",
+                    (directory / "study-summary.json").read_bytes()),
+                "study-comparisons.csv": (
+                    "Study comparison CSV", "text/csv", _csv(rows)),
+                "study-execution.csv": (
+                    "Study execution CSV", "text/csv", study_execution.csv_bytes(execution)),
+                "study-alternative-comparisons.csv": (
+                    "Alternative comparison CSV", "text/csv", study_decisions.csv_bytes(decisions)),
+                "study-alternative-shortlist.csv": (
+                    "Alternative shortlist CSV", "text/csv", study_decisions.shortlist_csv_bytes(decisions)),
+                "study-source-coefficients.csv": (
+                    "Actual source coefficient CSV", "text/csv",
+                    study_interpretation.coefficient_csv(interpretation)),
+                "study-native-parameters.csv": (
+                    "Actual native parameter CSV", "text/csv",
+                    study_interpretation.parameter_csv(interpretation)),
+                "study-landcover-transitions.csv": (
+                    "Actual land-cover transition CSV", "text/csv",
+                    study_interpretation.transition_csv(interpretation)),
+                **published_context,
+            }
+            for name, (_, _, body) in retained.items():
+                if name != "study-summary.json":
+                    atomic_bytes(directory / name, body)
+            # Every link embeds its exact retained bytes, so downloaded HTML
+            # remains usable independently of its original directory.
+            downloads = [(label, name, mime, body)
+                         for name, (label, mime, body) in retained.items()]
+            downloads.append(
                 ("Experiment summary", "experiment-summary.json", "application/json",
-                 verify_file(scope, summary_source).read_bytes()),
-            ]
+                 verify_file(scope, summary_source).read_bytes()))
             experiment_csv = summary.get("files", {}).get("csv")
             if experiment_csv is not None:
                 downloads.append(
                     ("Experiment CSV", "experiment-results.csv", "text/csv",
                      verify_file(scope, experiment_csv).read_bytes()))
             atomic_bytes(directory / "index.html",
-                         _render(summary, rows, profiles, downloads=downloads).encode("utf-8"))
-            names = ("index.html", "study-summary.json", "study-comparisons.csv")
-            files = {name: describe_file(workspace.root, directory / name) for name in names}
+                         _render(summary, rows, profiles, downloads=downloads,
+                                 execution=execution, decisions=decisions,
+                                 interpretation=interpretation).encode("utf-8"))
+            labels = {"index.html": "Study report",
+                      **{name: item[0] for name, item in retained.items()}}
+            files = {name: describe_file(workspace.root, directory / name) for name in labels}
             marker = {
                 "schema": "upstate.study-report-downloads/v1",
                 "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
                 "summary_sha256": summary_source["sha256"],
                 "summary": summary_source, "generated_at": summary["generated_at"],
+                "execution_observed_at": execution["observed_at"],
                 "files": {
                     label: {**files[name], "path": "study-report/" + name}
-                    for label, name in (("Study report", "index.html"),
-                                        ("Study summary", "study-summary.json"),
-                                        ("Study comparison CSV", "study-comparisons.csv"))},
+                    for name, label in labels.items()},
             }
-            # Publish the marker after all three complete files. The operator's
+            # Publish the marker after every complete file. The operator's
             # existing download tickets verify their exact lengths and hashes.
             atomic_json(scope / "study-report.json", marker)
             return {

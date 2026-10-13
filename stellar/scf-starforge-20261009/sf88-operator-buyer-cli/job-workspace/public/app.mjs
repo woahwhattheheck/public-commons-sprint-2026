@@ -9,7 +9,20 @@ const initialEntry = new URL(location.href).searchParams.get('entry');
 let requestedEntry = /^[a-f0-9]{64}$/.test(initialEntry ?? '') ? initialEntry : null;
 let selected = null, selectionEpoch = 0, offset = 0, total = 0, pageItems = [], refreshing = false, timer;
 let labelDirty = false, labelRevision = 0, noteDirty = false, annotationRevision = 0, noteRequest = null, collectionRequest = null;
-let previewKey = null;
+let previewKey = null, outputFilesKey = null;
+const packageType = 'application/vnd.stellar-forge.job-result+zip';
+function fileType(value) {
+  const type = String(value ?? '').split(';')[0].toLowerCase();
+  if (type === packageType || type === 'application/zip') return 'ZIP package';
+  if (type === 'text/csv') return 'CSV spreadsheet';
+  if (type === 'text/tab-separated-values') return 'TSV spreadsheet';
+  if (type === 'application/json' || type.endsWith('+json')) return 'JSON document';
+  if (type === 'application/pdf') return 'PDF document';
+  if (type.startsWith('image/')) return type.slice(6).toUpperCase() + ' image';
+  if (type.startsWith('text/')) return 'Text document';
+  return 'Binary file';
+}
+
 const endpoint = (id, action = '') => prefix + '/jobs/' + id + (action ? '/' + action : '');
 function message(text, error = false) {
   byId('message').textContent = text;
@@ -100,8 +113,21 @@ function renderDetail() {
   if (!labelDirty) { byId('jobLabel').value = selected.label; byId('archived').checked = selected.archived; labelRevision = selected.revision; }
   byId('resultState').textContent = resource?.status ?? (saved ? 'Ready for library scan' : status?.result ? 'Ready to retrieve' : 'Waiting');
   const result = saved ?? status?.result;
-  byId('resultMeta').textContent = result ? result.filename + ' · ' + size(result.bytes) + ' · ' + result.contentType + '\nSHA-256 ' + result.sha256 :
+  byId('resultMeta').textContent = result ? result.filename + ' · ' + size(result.bytes) + ' · ' + fileType(result.contentType) :
     'A completed application publishes its result here.';
+  byId('resultTechnical').textContent = result ? JSON.stringify({ 'SHA-256': result.sha256, 'Content type': result.contentType }, null, 2) : 'Retrieve the result to inspect its complete identity.';
+  const packageResult = result?.contentType === packageType;
+  byId('outputFilesPanel').hidden = !packageResult;
+  byId('outputFilesButton').disabled = busy || !saved;
+  const filesKey = selected.id + ':' + (saved?.sha256 ?? '') + ':' +
+    (selected.task?.completedAt ?? '') + ':' + (resource?.status ?? '');
+  if (outputFilesKey !== filesKey) {
+    outputFilesKey = filesKey;
+    byId('outputFiles').replaceChildren();
+    byId('outputFilesStatus').textContent = saved ?
+      'Show the verified files received from this original package. Update the library to refresh previews and downloads.' :
+      'Retrieve the result to receive all declared files and keep the complete package.';
+  }
   const available = resource?.status === 'VERIFIED';
   for (const id of ['previewButton','downloadButton','saveNote','saveCollection']) byId(id).disabled = !available;
   byId('resultLibraryLink').hidden = !resource;
@@ -248,6 +274,59 @@ byId('downloadButton').addEventListener('click', async () => {
     const link = node('a'); link.href = transfer.url; link.download = selected.resource.name;
     document.body.append(link); link.click(); link.remove(); message('Verified download started.');
   } catch (error) { problem(error); }
+});
+
+byId('outputFilesButton').addEventListener('click', async () => {
+  const id = selected?.id, epoch = selectionEpoch, key = outputFilesKey;
+  byId('outputFilesButton').disabled = true;
+  try {
+    const result = await api(endpoint(id, 'outputs'));
+    if (selected?.id !== id || epoch !== selectionEpoch || key !== outputFilesKey) return;
+    byId('outputFiles').replaceChildren();
+    for (const file of result.files) {
+      const row = node('tr'), identity = node('td', file.filename);
+      identity.append(node('span', fileType(file.contentType), 'small'));
+      const technical = node('details', undefined, 'metadata');
+      technical.append(node('summary', 'Technical details'),
+        node('pre', JSON.stringify({ 'Output slot': file.slot, 'Content type': file.contentType,
+          'File SHA-256': file.sha256, 'Package SHA-256': result.package.sha256 }, null, 2)));
+      identity.append(technical);
+      const actions = node('td'), resource = file.resource;
+      const available = result.received && resource?.status === 'VERIFIED';
+      for (const [label, action] of [['Preview', 'preview'], ['Download', 'download'], ['Open in library', 'library']]) {
+        const button = node('button', label); button.type = 'button'; button.disabled = !available;
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            if (action === 'preview') {
+              const preview = await api('/api/resources/' + file.resourceId + '/preview');
+              if (selected?.id === id && epoch === selectionEpoch) {
+                byId('preview').textContent = preview.text ?? 'Binary file. Download it to use the complete file.';
+                message(file.filename + (preview.coverage === 'PREFIX' ? ' · preview covers ' +
+                  size(preview.indexedBytes) + ' of ' + size(preview.bytes) + '.' : ' · complete verified preview.'));
+              }
+            } else if (action === 'download') {
+              const transfer = await api('/api/resources/' + file.resourceId + '/download', { method: 'POST', body: {} });
+              const link = node('a'); link.href = transfer.url; link.download = file.filename;
+              document.body.append(link); link.click(); link.remove(); message('Verified file download started.');
+            } else {
+              await api('/api/selection', { method: 'PUT', body: { id: file.resourceId } });
+              location.assign('/#' + token);
+            }
+          } catch (error) { problem(error); }
+          finally { button.disabled = !available; }
+        });
+        actions.append(button);
+      }
+      row.append(identity, node('td', result.received ? resource?.status === 'VERIFIED' ? 'Verified' : 'Update library' : 'Not yet received'),
+        node('td', size(file.bytes)), actions);
+      byId('outputFiles').append(row);
+    }
+    byId('outputFilesStatus').textContent = result.received ?
+      result.files.length + ' files verified against the original package, job and settlement. Open a file in the library to add notes or save it to a collection.' :
+      'The complete package is verified. Retrieve result again to finish receiving these files from its retained bytes.';
+  } catch (error) { problem(error); }
+  finally { renderDetail(); }
 });
 byId('resultLibraryLink').addEventListener('click', async event => {
   event.preventDefault();

@@ -254,7 +254,7 @@ def _geometry_ids(client, name, aoi):
         raise ValueError("Original SDA polygon ID coverage differs from its count")
     return rows
 
-def _geometry_pages(client, tile, *, page_size):
+def _geometry_pages(client, tile, *, page_size, on_page=None):
     name = tile["name"]
     aoi = _int(tile["aoiid"])
     ids = _geometry_ids(client, name, aoi)
@@ -282,7 +282,11 @@ def _geometry_pages(client, tile, *, page_size):
                 raise ValueError("Native soil polygon has another AOI or coordinate reference")
             if not isinstance(row["GeometryWkb"], str) or not re.fullmatch(r"[0-9A-Fa-f]+", row["GeometryWkb"]):
                 raise ValueError("Native soil geometry lacks its original hexadecimal WKB")
+        if on_page is not None:
+            on_page(rows)
         pages.append({"request": query_name, "ids": selected, "sql": sql})
+        # Release the complete WKB response before receiving the next page.
+        del rows, row
     return ids, pages
 
 def _choice_coefficients(ratings, legend, aoi, result_id):
