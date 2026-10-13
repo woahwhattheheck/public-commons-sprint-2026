@@ -170,6 +170,18 @@ def _install_locked(application, source_root, *, dry_run=False):
                        ("operator/web/app.mjs", app_join)):
         body = (application / name).read_bytes()
         originals[name], pending[name] = body, join(body.decode("utf-8")).encode("utf-8")
+    policy_name = "operator/team_route_policy.json"
+    policy_path = application / policy_name
+    policy_original = policy_path.read_bytes()
+    policy = json.loads(policy_original)
+    read_paths = ["/api/profile-workbench/biophysical/catalog","/api/profile-workbench/biophysical/template","/api/profile-workbench/biophysical/evidence-preview","/api/profile-workbench/biophysical/evidence-inspect","/api/profile-workbench/biophysical/ranges-preview","/api/profile-workbench/biophysical/ranges-inspect"]
+    for path in read_paths:
+        if path in policy.get("writePosts", []) or path in policy.get("adminRoutes", []):
+            raise ValueError("Keep the current route access classification at " + path)
+        if path not in policy["safeViewerPosts"]:
+            policy["safeViewerPosts"].append(path)
+    originals[policy_name] = policy_original
+    pending[policy_name] = (json.dumps(policy, indent=2) + "\n").encode("utf-8")
     changed = [name for name in pending if originals[name] != pending[name]]
     result = {"schema": "upstate.profile-workbench-install/v1",
               "operation_id": "ECO-PROFILES-DD6B", "application": str(application),

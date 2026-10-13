@@ -36,16 +36,21 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
   const $=selector=>root?.querySelector(selector);
   const current=()=>host.getState()?.workspace_key||null;
   const storageKey=key=>'upstate-biophysical-evidence-v1:'+key;
+  const memories=new Map();
   const empty=()=>({drafts:{},requests:[]});
   const scope=()=>({workspace,profileId,generation});
   const alive=s=>Boolean(root?.isConnected&&s.workspace===workspace&&s.profileId===profileId&&s.generation===generation&&current()===workspace);
   function assertActive(s=scope()){if(!alive(s))throw Error('The selected project or profile changed. Reopen its coefficient evidence.');}
   function stored(key){
-    try{const value=JSON.parse(localStorage.getItem(storageKey(key))||'null');if(value?.drafts&&Array.isArray(value.requests))return value;}catch{}
-    return empty();
+    if(memories.has(key))return memories.get(key);
+    let value=null;
+    try{value=JSON.parse(localStorage.getItem(storageKey(key))||'null');}catch{}
+    if(!value?.drafts||!Array.isArray(value.requests))value=empty();
+    memories.set(key,value);return value;
   }
   function save(value=memory,key=workspace){
     if(!value||!key)return;
+    memories.set(key,value);
     try{localStorage.setItem(storageKey(key),JSON.stringify(value));}
     catch{if(key===workspace)setMessage('Browser recovery storage is unavailable. Keep this page open until the operator returns the saved operation.',true);}
   }
@@ -69,7 +74,8 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
   function scenarios(){return list(host.getState()?.data?.scenarios);}
   function baselineRuns(){
     const ids=new Set(scenarios().filter(row=>row.kind==='baseline').map(row=>row.id));
-    return runs().filter(row=>row.state==='complete'&&row.selection?.profile_id===profileId&&ids.has(row.selection?.scenario_id));
+    const scope=canonical([...list(catalog?.profile?.models)].sort());
+    return runs().filter(row=>row.state==='complete'&&row.selection?.profile_id===profileId&&ids.has(row.selection?.scenario_id)&&canonical([...(list(row.selection?.models).length?row.selection.models:['ndr','sdr'])].sort())===scope);
   }
   async function read(operation,payload={},s=scope()){
     assertActive(s);
@@ -146,7 +152,7 @@ export function createBiophysicalEvidence(host,{onProfile=async()=>{}}={}){
     node.innerHTML='<section class="pw-original-source"><h3>'+esc(range.title)+'</h3><p>'+esc(range.reason)+'</p><div class="pw-table-scroll"><table class="pw-table"><thead><tr><th>Parameter position</th><th>Saved profile</th><th>Original table SHA256</th></tr></thead><tbody>'+['lower','central','upper'].map(position=>{
       const item=range.profiles[position];
       return '<tr><td>'+esc(human(position))+'</td><td>'+button('profile',item.title||short(item.profile_id),'data-be-id="'+esc(item.profile_id)+'"')+'</td><td class="mono">'+esc(item.table_sha256)+'</td></tr>';
-    }).join('')+'</tbody></table></div><div class="pw-actions">'+links(range)+'</div><h4>Prepare a native experiment</h4><p>Use a completed baseline run from the original central profile. The prepared experiment appears in Experiments, where its native runs and results follow the existing workflow.</p><label class="pw-field"><span>Central profile baseline run</span><select data-be-field="baseline_run_id" required>'+option('','Choose a completed baseline',!value.baseline_run_id)+baselines.map(row=>option(row.id,(scenarios().find(item=>item.id===row.selection.scenario_id)?.title||'Baseline')+' · '+short(row.id),row.id===value.baseline_run_id)).join('')+'</select></label>'+(!baselines.length?'<p class="pw-note">Complete the original central profile on a baseline land-cover scenario to prepare this experiment.</p>':'')+'<fieldset class="pw-parameters"><legend>Additional land-cover scenarios</legend>'+alternatives.map(row=>'<label class="be-scenario"><input type="checkbox" data-be-scenario="'+esc(row.id)+'"'+(value.scenario_ids.includes(row.id)?' checked':'')+'>'+esc(row.title||short(row.id))+'</label>').join('')+'</fieldset><p class="pw-note">The original experiment uses one-at-a-time comparisons: each endpoint profile on baseline land cover, plus selected scenarios under the central profile.</p><div class="pw-actions">'+button('prepare-experiment','Prepare native experiment',!baselines.some(row=>row.id===value.baseline_run_id)||busy?'disabled':'',true)+'</div></section>';
+    }).join('')+'</tbody></table></div><div class="pw-actions">'+links(range)+'</div><h4>Prepare a native experiment</h4><p>Use a completed baseline run from the original central profile. The prepared experiment appears in Experiments, where its native runs and results follow the existing workflow.</p><label class="pw-field"><span>Central profile baseline run</span><select data-be-field="baseline_run_id" required>'+option('','Choose a completed baseline',!value.baseline_run_id)+baselines.map(row=>option(row.id,(scenarios().find(item=>item.id===row.selection.scenario_id)?.title||'Baseline')+' · '+short(row.id),row.id===value.baseline_run_id)).join('')+'</select></label>'+(!baselines.length?'<p class="pw-note">Complete the original central profile on a baseline land-cover scenario to prepare this experiment.</p>':'')+'<fieldset class="pw-parameters"><legend>Additional land-cover scenarios</legend>'+alternatives.map(row=>'<label class="be-scenario"><input type="checkbox" data-be-scenario="'+esc(row.id)+'"'+(value.scenario_ids.includes(row.id)?' checked':'')+'>'+esc(row.title||short(row.id))+'</label>').join('')+'</fieldset><p class="pw-note">Each saved endpoint profile is evaluated on baseline land cover and every selected scenario. Scenario changes use the matching baseline under that same profile.</p><div class="pw-actions">'+button('prepare-experiment','Prepare native experiment',!baselines.some(row=>row.id===value.baseline_run_id)||busy?'disabled':'',true)+'</div></section>';
   }
   async function refresh({reopen=true}={}){
     const s=scope(),token=++intent,result=await read('catalog',{profile_id:s.profileId},s);
