@@ -707,7 +707,10 @@ def same_archive_members(current, proposed):
     if names != proposed.namelist():
         return False
     for name in names:
-        if current.getinfo(name).file_size != proposed.getinfo(name).file_size:
+        retained, selected = current.getinfo(name), proposed.getinfo(name)
+        if (retained.file_size != selected.file_size
+                or retained.create_system != selected.create_system
+                or (retained.external_attr >> 16) != (selected.external_attr >> 16)):
             return False
         with current.open(name) as left, proposed.open(name) as right:
             while True:
