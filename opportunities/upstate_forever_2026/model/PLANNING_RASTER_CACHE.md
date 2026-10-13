@@ -6,7 +6,7 @@ A shared, operation-local native-block cache now serves those exact windows. Nei
 
 ## Memory budget
 
-The default is 33,554,432 bytes (32 MiB) across all retained raster blocks in this one inventory operation. This counts the actual NumPy data arrays and Boolean masks. Existing caller windows, float64 working arrays, GDAL's cache and Python object overhead remain separate.
+The default is 33,554,432 bytes (32 MiB) across all retained raster blocks in this one inventory operation. This counts the actual NumPy data arrays and Boolean masks. Existing caller windows, float64 working arrays, temporary native-block batch buffers, GDAL's cache and Python object overhead remain separate. Each temporary batch's data and normalized Boolean mask together fit within the same byte limit; this working allocation is additional to retained arrays.
 
 The existing build call accepts an operational keyword:
 
@@ -15,9 +15,9 @@ The existing build call accepts an operational keyword:
 
 The ordinary operator/API selection object can also supply an integer raster_cache_bytes field. The engine removes that operational field before normalizing the scientific selection. A supplied keyword and object field must agree when both are present.
 
-Zero uses ordinary direct Rasterio reads. Negative values, booleans and non-integer budgets are rejected before the engine creates an output directory. If one native block exceeds the entire budget, that raster's requests read only their requested windows directly. No installed dataset is resized, retiled or copied.
+Zero uses ordinary direct Rasterio reads. Negative values, booleans and non-integer budgets are rejected before the engine creates an output directory. If one native block or the complete block-aligned requested rectangle exceeds the entire budget, the request reads only its original window directly. No installed dataset is resized, retiled or copied.
 
-Each cache is created for one inventory build and released by its existing resource stack. Keys identify the actual open single-band dataset and its native block position. Reopening a file in another operation creates a new cache. Returned windows own their data and masks, so changing a returned array cannot change retained blocks.
+Each cache is created for one inventory build and released by its existing resource stack. Keys identify the actual open single-band dataset and its native block position. Reopening a file in another operation creates a new cache. Missing blocks for a requested window are fetched in one contiguous batch, including when the original raster uses narrow strips. The cache copies individual block arrays from that batch so later evictions release their exact retained bytes. Returned windows own their data and masks, so changing a returned array cannot change retained blocks.
 
 ## Scientific identities and continuation
 
@@ -43,14 +43,15 @@ Older completed inventories return status "not-recorded"; their scientific resul
 | requested_pixels | Cells across those requests, including repeated and overlapping windows. |
 | source_reads | Actual calls to dataset.read made by this cache. |
 | source_pixels | Cells returned by those calls; a first native block read can cover more cells than the requested feature window. |
-| cache_hits / cache_misses | Reused or newly read native blocks. |
+| cache_hits / cache_misses | Reused or newly populated native blocks. |
+| block_read_batches | Contiguous reads that populate one or more missing native blocks. |
 | direct_reads | Requests served without retaining native blocks. |
-| disabled_reads / oversized_block_reads | Direct requests caused by a zero budget or a block larger than that budget. |
-| evictions | Previously retained blocks removed to respect the budget. |
+| disabled_reads / oversized_block_reads / oversized_window_reads | Direct requests caused by a zero budget, an oversized native block, or an aligned requested rectangle larger than the budget. |
+| evictions | Previously retained blocks removed to respect the budget; per-source counts identify the request that caused removal. |
 | peak_retained_array_bytes | Largest actual retained data-plus-mask allocation in the operation. |
 | sources | The same counters grouped by the reporting mask or original run/pollutant label. |
 
-These measure Rasterio calls and returned cells. They do not claim a physical disk-read count or an OS/GDAL cache hit. A small budget or widely separated features can produce few hits; larger requested windows may cross several blocks. Compare source_reads and source_pixels with the actual workload before changing the budget.
+These measure Rasterio calls and returned cells. They do not claim a physical disk-read count or an OS/GDAL cache hit. source_reads equals block_read_batches plus direct_reads. A small budget or widely separated features can produce few hits; larger requested windows may cross several blocks. Even a cold request crossing many narrow strips uses at most one Rasterio read. Compare source_reads and source_pixels with the actual workload before changing the budget.
 
 The cache never changes the feature window subdivision to improve a counter. This preserves the original summation order and byte-level scientific output for unchanged inputs.
 
@@ -65,6 +66,6 @@ Run the supplied single check in an existing GIS interpreter against the actual 
       --raster <RETAINED_ALTERNATIVE_MASS_RASTER> \
       --cache-bytes 33554432
 
-Repeat --raster for all selected runs and pollutants. The command reads original data without creating or changing native model outputs. It compares data, masks, dtype, shape, common finite support and float64 window sums against direct Rasterio reads. It covers original block boundaries, raster edges, repeated reads, caller mutation, zero budget, oversized-block fallback and a one-block eviction budget. It prints its input paths/stat identities, helper source hash and actual read counters as JSON.
+Repeat --raster for all selected runs and pollutants. The command reads original data without creating or changing native model outputs. It compares data, masks, dtype, shape, common finite support and float64 window sums against direct Rasterio reads. It covers original block boundaries, raster edges, repeated reads, caller mutation, zero budget, oversized-block and oversized-window fallback, plus a one-block budget with smaller original windows. It prints its input paths/stat identities, helper source hash and actual read counters as JSON.
 
 The reporting mask and annual-mass artifacts must share the same retained grid. Use the already installed native Workspace and its original artifacts. The command performs a receiving check of the read path; native model calculation continues through the maintained Workspace/programme.
