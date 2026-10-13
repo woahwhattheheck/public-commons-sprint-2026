@@ -15,22 +15,33 @@ export default {
       field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
         'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] }]; },
   async prepare(type, settings, context) {
-    const { inputPath, selectedExecutable, applicationEnvironment, runtimeDirectory } = context;
+    const { inputPath, runtimeDirectory } = context;
     const { args, inputs, createDirectories, path, option } = applicationPreparation(settings, inputPath);
     const config = await path('hostConfig', 'file');
     await path('workspaceDirectory', 'directory', true, true);
     const selected = await inspectMerchantRuntime(runtimeDirectory, { load: false });
     const originalModule = join(selected.sourceRoot,
       'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/model.mjs');
+    const hostPathsModule = join(selected.sourceRoot,
+      'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-profile-paths.mjs');
     inputs.push(await inputPath(originalModule, 'file'));
-    const { readRecoveryConfiguration } = await import(pathToFileURL(originalModule).href);
+    try { inputs.push(await inputPath(hostPathsModule, 'file')); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      need(false, 'APPLICATION_NOT_IN_RUNTIME',
+        'Choose an updated recovery runtime containing the complete host profile path source.');
+    }
+    const [{ readRecoveryConfiguration }, { recoveryHostPaths, observeRecoveryPath }] = await Promise.all([
+      import(pathToFileURL(originalModule).href),
+      import(pathToFileURL(hostPathsModule).href),
+    ]);
     const original = await readRecoveryConfiguration(settings.hostConfig);
     need(original.sha256 === config.sha256, 'APPLICATION_RECOVERY_CONFIG_CHANGED',
       'Review the original current recovery host configuration');
     const retained = new Set(inputs.map(item => item.path));
-    const retain = async (value, kind = 'directory', missing = false) => {
+    const retain = async (value, kind = 'directory', missing = false, privateOnly = true) => {
       if (!retained.has(value)) {
-        inputs.push(await inputPath(value, kind, missing, true));
+        inputs.push(await inputPath(value, kind, missing, privateOnly));
         retained.add(value);
       }
     };
@@ -46,9 +57,21 @@ export default {
       await retain(profile.downloadRoot);
       await retain(profile.restoreRoot);
     }
+    // Keep all original startup checks above. The full selection also binds
+    // future paths to their observed absence, without creating an Object or
+    // Support store just to review or start its existing recovery workspace.
+    const paths = [];
+    for (const row of recoveryHostPaths(original.host)) {
+      const observed = await observeRecoveryPath(row);
+      paths.push(observed);
+      if (observed.exists) await retain(observed.path, observed.actualKind, false, false);
+      else await retain(observed.ancestor, 'directory', false, false);
+    }
+    const recoveryHost = { schema: 'stellar-forge.recovery-host-review.v1',
+      configSha256: original.sha256, paths };
     args.push('workspace', 'serve');
     option('--config', settings.hostConfig); option('--directory', settings.workspaceDirectory);
-    return { args, inputs, createDirectories };
+    return { args, inputs, createDirectories, recoveryHost };
   },
   matchRequest(request) { return !request.pythonCommand && request.command === "merchant-recovery-remote" && request.args?.[0] === 'workspace' && request.args?.[1] === 'serve'; },
   createObserver(request, directory, context) {
