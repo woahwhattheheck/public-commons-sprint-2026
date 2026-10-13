@@ -1,0 +1,380 @@
+{
+  "CFDocument": {
+    "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+    "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001",
+    "creator": "TokenJunkie Labs",
+    "title": "Technical services skills — authored commissioning example",
+    "lastChangeDateTime": "2026-10-13T09:00:00Z",
+    "caseVersion": "1.1",
+    "frameworkType": "Competency",
+    "version": "0.2",
+    "description": "Lab-authored reference source. Customer frameworks, mappings and competency judgements are selected separately.",
+    "language": "en",
+    "extensions": {
+      "commons:release": "example-two",
+      "commons:exactCounter": 9007199254740994
+    }
+  },
+  "CFItems": [
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000010",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000010",
+      "fullStatement": "Explain service boundaries",
+      "humanCodingScheme": "TS.1",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000011",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000011",
+      "fullStatement": "Read an integration contract",
+      "humanCodingScheme": "TS.2",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000012",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000012",
+      "fullStatement": "Preserve original identifiers",
+      "humanCodingScheme": "TS.3",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000002
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000013",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000013",
+      "fullStatement": "Review and explicitly disposition source changes",
+      "humanCodingScheme": "TS.4",
+      "lastChangeDateTime": "2026-10-13T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000014",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000014",
+      "fullStatement": "Handle external references",
+      "humanCodingScheme": "TS.5",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000015",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000015",
+      "fullStatement": "Reproduce a handover",
+      "humanCodingScheme": "TS.6",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000016",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000016",
+      "fullStatement": "Escalate ambiguous mappings",
+      "humanCodingScheme": "TS.7",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFItemType": "Skill",
+      "CFItemTypeURI": {
+        "title": "Skill",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040"
+      },
+      "extensions": {
+        "commons:effortHint": 1.0000000000000001
+      }
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000018",
+      "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000018",
+      "fullStatement": "Reopen a received framework edition",
+      "humanCodingScheme": "TS.9",
+      "lastChangeDateTime": "2026-10-13T09:00:00Z"
+    }
+  ],
+  "CFAssociations": [
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000100",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000100",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Explain service boundaries",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000010",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000010"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 2,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000101",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000101",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Read an integration contract",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000011",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000011"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 1,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000102",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000102",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Preserve original identifiers",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000012",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000012"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 3,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000103",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000103",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Review source changes",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000013",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000013"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 4,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000104",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000104",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Handle external references",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000014",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000014"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 5,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000105",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000105",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Reproduce a handover",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000015",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000015"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 6,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000106",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000106",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Escalate ambiguous mappings",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000016",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000016"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 7,
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000120",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000120",
+      "associationType": "isRelatedTo",
+      "originNodeURI": {
+        "title": "Handle external references",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000014",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000014"
+      },
+      "destinationNodeURI": {
+        "title": "External published reference selected by the author",
+        "identifier": "external-skill-A",
+        "uri": "https://example.net/skills/A",
+        "targetType": "ext:Skill"
+      },
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000108",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000108",
+      "associationType": "isChildOf",
+      "originNodeURI": {
+        "title": "Reopen a received framework edition",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000018",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000018"
+      },
+      "destinationNodeURI": {
+        "title": "Technical services skills — authored commissioning example",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000001",
+        "uri": "https://example.org/commons-case/CFDocuments/4b734fb0-450a-4f21-8b16-000000000001"
+      },
+      "sequenceNumber": 8,
+      "lastChangeDateTime": "2026-10-13T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000121",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000121",
+      "associationType": "isRelatedTo",
+      "originNodeURI": {
+        "title": "Review source changes",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000013",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000013"
+      },
+      "destinationNodeURI": {
+        "title": "External CASE framework item not loaded",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000900",
+        "uri": "https://example.net/CASE/CFItems/4b734fb0-450a-4f21-8b16-000000000900"
+      },
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    },
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000122",
+      "uri": "https://example.org/commons-case/CFAssociations/4b734fb0-450a-4f21-8b16-000000000122",
+      "associationType": "precedes",
+      "originNodeURI": {
+        "title": "Explain service boundaries",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000010",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000010"
+      },
+      "destinationNodeURI": {
+        "title": "Read an integration contract",
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000011",
+        "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000012"
+      },
+      "lastChangeDateTime": "2026-10-01T09:00:00Z"
+    }
+  ],
+  "CFDefinitions": {
+    "CFItemTypes": [
+      {
+        "identifier": "4b734fb0-450a-4f21-8b16-000000000040",
+        "uri": "https://example.org/commons-case/CFItemTypes/4b734fb0-450a-4f21-8b16-000000000040",
+        "title": "Skill",
+        "description": "An authored skill statement",
+        "hierarchyCode": "skill",
+        "lastChangeDateTime": "2026-10-01T09:00:00Z"
+      }
+    ]
+  },
+  "CFRubrics": [
+    {
+      "identifier": "4b734fb0-450a-4f21-8b16-000000000050",
+      "uri": "https://example.org/commons-case/CFRubrics/4b734fb0-450a-4f21-8b16-000000000050",
+      "title": "Source inspection reference rubric",
+      "lastChangeDateTime": "2026-10-01T09:00:00Z",
+      "CFRubricCriteria": [
+        {
+          "identifier": "4b734fb0-450a-4f21-8b16-000000000051",
+          "uri": "https://example.org/commons-case/CFRubricCriteria/4b734fb0-450a-4f21-8b16-000000000051",
+          "description": "Retain and identify the original package",
+          "CFItemURI": {
+            "title": "Preserve original identifiers",
+            "identifier": "4b734fb0-450a-4f21-8b16-000000000012",
+            "uri": "https://example.org/commons-case/CFItems/4b734fb0-450a-4f21-8b16-000000000012"
+          },
+          "weight": 0.1250,
+          "position": 1,
+          "rubricId": "4b734fb0-450a-4f21-8b16-000000000050",
+          "lastChangeDateTime": "2026-10-01T09:00:00Z",
+          "CFRubricCriterionLevels": [
+            {
+              "identifier": "4b734fb0-450a-4f21-8b16-000000000052",
+              "uri": "https://example.org/commons-case/CFRubricCriterionLevels/4b734fb0-450a-4f21-8b16-000000000052",
+              "quality": "Original source retained",
+              "score": 1,
+              "position": 1,
+              "rubricCriterionId": "4b734fb0-450a-4f21-8b16-000000000051",
+              "lastChangeDateTime": "2026-10-01T09:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "extensions": {
+    "commons:origin": "Lab-authored, not a Unicon customer dataset",
+    "commons:literalObject": {
+      "number": "9007199254740993",
+      "exponent": "0"
+    }
+  }
+}

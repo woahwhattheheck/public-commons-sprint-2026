@@ -1,0 +1,6 @@
+CASE source desk implementation © 2026 TokenJunkie Labs. MIT license for the supplied implementation.
+The lossless JSON parser body is reused from the maintained MIT Flowable integration source identified in SOURCE_MAP.json.
+The original CASE 1.1 specification is © 1EdTech Consortium, Inc. and its contributors. Full attribution: https://www.imsglobal.org/spec/case/v1p1/ and https://www.1edtech.org/standards/specification-license .
+The CASE specification and its original documents are not relicensed by this project. This consumer is not a claim of 1EdTech conformance certification.
+The technical-services example is authored by TokenJunkie Labs and may be reused under CC0; it contains no customer framework or learner data.
+Customer-supplied packages retain their respective copyright, license and distribution restrictions.
