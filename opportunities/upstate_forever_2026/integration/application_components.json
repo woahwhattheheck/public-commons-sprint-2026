@@ -3199,6 +3199,7 @@
         "eighteenmile_routine_nutrient_flow.sources.json",
         "eighteenmile_scientific_figures.sources.json",
         "model/NATIVE_PROCESS_QUANTITIES.md",
+        "model/native_process_figures.py",
         "model/native_process_report.py",
         "model/observations.py",
         "model/observed_context.py",
