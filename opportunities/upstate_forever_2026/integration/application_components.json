@@ -947,7 +947,13 @@
     "source-preparation": {
       "title": "source preparation",
       "paths": [
-        "operator/extensions/source-preparation.json"
+        "operator/extensions/source-preparation.json",
+        "source_tools/original_huc12_bounds.py",
+        "source_tools/ORIGINAL_HUC12_BOUNDS.md",
+        "source_tools/resume_nhd_originals.py",
+        "source_tools/RESUME_NHD_ORIGINALS.md",
+        "source_tools/capture_water_sources.py",
+        "source_tools/water_context_geometry.py"
       ],
       "requires": [
         "core"
