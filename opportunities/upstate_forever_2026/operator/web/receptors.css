@@ -181,3 +181,8 @@
 @media print {
   .receptor-workbench [data-rc-authoring] { display: none; }
 }
+
+/* Original upstream areas in the maintained native scenario form. */
+.rc-intervention-row{min-width:0;border:1px solid #bbb;padding:14px;margin:12px 0}
+.rc-intervention-row legend{font-weight:600;padding:0 5px}
+.rc-intervention-row textarea{min-height:76px}

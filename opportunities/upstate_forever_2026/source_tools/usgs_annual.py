@@ -409,7 +409,7 @@ def _retained_catchment(directory, original_root, record, selection):
                            "split_catchment": selection["split_catchment"],
                            "original_basin_sha256": selection["basin"]["sha256"],
                            "component_indices": indices})
-    context = {"annual_record_id": record["record_id"], "annual_release": DOI,
+    context = {"catchment_id": catchment_id, "annual_record_id": record["record_id"], "annual_release": DOI,
                "source": source, "identifier": identifier, "station_role": role,
                "station_id": record["station_id"], "flow_station_id": record["flow_station_id"],
                "published_comid": record["comid"], "original_feature": feature_rows[0],
@@ -540,7 +540,9 @@ def prepare(directory, *, original_root, selection_path):
              **describe_file(destination, destination / "catchments.geojson"),
              "id_field": "catchment_id", "companions": companions},
         ]
-        manifest = {"schema": "upstate.sources/v1", "title": selection["title"], "captured_at": now(),
+        manifest_path = destination / "source-manifest.json"
+        captured_at = read_json(manifest_path)["captured_at"] if manifest_path.exists() else now()
+        manifest = {"schema": "upstate.sources/v1", "title": selection["title"], "captured_at": captured_at,
                     "scope": selection.get("scope", {}), "entries": entries,
                     "notes": metadata["notes"]}
         atomic_json(destination / "source-manifest.json", manifest, immutable=True)

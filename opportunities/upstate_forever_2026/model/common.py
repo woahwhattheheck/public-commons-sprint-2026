@@ -188,20 +188,26 @@ def _stream_identity(stream, label, *, expected_state=None, output=None):
         raise ValueError(label + " changed during intake")
     return checksum.hexdigest(), size, state
 
-def _retained_object_matches(path, checksum, size):
+def _retained_object_matches(path, checksum, size, *, verified_state=None):
     try:
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except FileNotFoundError:
         return False
     with os.fdopen(descriptor, "rb") as stream:
-        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+        opened = os.fstat(stream.fileno())
+        if not stat.S_ISREG(opened.st_mode):
             raise ValueError("Retained original object is not a regular file")
-        try:
-            actual, count, state = _stream_identity(stream, "Retained original object")
-        except ValueError:
-            # A concurrent completed publication or view hard link can change
-            # ctime. The caller rechecks under the digest lock before any copy.
-            return False
+        state = _file_state(opened)
+        if verified_state is not None and state == verified_state and size == opened.st_size:
+            # The caller just hashed this exact inode and bound it to checksum.
+            actual, count = checksum, size
+        else:
+            try:
+                actual, count, state = _stream_identity(stream, "Retained original object")
+            except ValueError:
+                # A concurrent completed publication or view hard link can
+                # change ctime. Recheck under the digest lock before any copy.
+                return False
         try:
             current = path.lstat()
         except FileNotFoundError:
@@ -215,51 +221,73 @@ def _retained_object_matches(path, checksum, size):
         return True
 
 def retain_file(project, source, expected_sha256=None):
-    """Verify each input and retain one independent copy of its exact bytes.
-
-    A repeated import reads and verifies the existing object without staging a
-    second copy. The per-digest lock serializes copies of the same new source;
-    it is retained as a zero-byte .lock file and excluded by portable exports.
-    """
+    """Retain one independent input copy, reusing banked bytes and interrupted intake."""
     source = Path(source).resolve(strict=True)
     if not source.is_file():
         raise ValueError("Source is not a regular file")
     directory = Path(project) / "objects"
     directory.mkdir(parents=True, exist_ok=True)
+    expected = identifier(expected_sha256) if expected_sha256 is not None else None
     pending = None
     with source.open("rb") as src:
-        checksum, size, source_state = _stream_identity(src, "Original input")
-        if expected_sha256 and checksum != expected_sha256:
-            raise ValueError("Original source hash differs: " + source.name)
+        if expected is None:
+            checksum, size, source_state = _stream_identity(src, "Original input")
+            source_verified = True
+        else:
+            opened = os.fstat(src.fileno())
+            if not stat.S_ISREG(opened.st_mode):
+                raise ValueError("Original input is not a regular file")
+            checksum, size, source_state = expected, opened.st_size, _file_state(opened)
+            source_verified = False
         destination = directory / checksum
-        # Existing complete objects need no new temporary or lock-file entry.
-        # This also permits legacy retained objects to reopen on a full volume.
-        if _retained_object_matches(destination, checksum, size):
+
+        def matches():
+            return _retained_object_matches(
+                destination, checksum, size,
+                verified_state=source_state if source_verified else None)
+
+        def reused():
+            nonlocal source_verified
+            if not source_verified:
+                src.seek(0)
+                actual, count, _ = _stream_identity(
+                    src, "Original input", expected_state=source_state)
+                if actual != checksum or count != size:
+                    raise ValueError("Original source hash differs: " + source.name)
+                source_verified = True
             if _file_state(os.fstat(src.fileno())) != source_state:
                 raise ValueError("Original input changed during intake")
             _sync_directory(directory)
             _sync_directory(directory.parent)
             return {"sha256": checksum, "bytes": size,
                     "object": "objects/" + checksum, "filename": source.name}
+
+        # An existing verified object reopens without allocating a lock or a
+        # temporary file, including on a full receiving volume.
+        if matches():
+            return reused()
         with held(directory / (".intake-" + checksum + ".lock")):
             if _file_state(os.fstat(src.fileno())) != source_state:
                 raise ValueError("Original input changed during intake")
-            if _retained_object_matches(destination, checksum, size):
-                if _file_state(os.fstat(src.fileno())) != source_state:
-                    raise ValueError("Original input changed during intake")
-                _sync_directory(directory)
-                _sync_directory(directory.parent)
-                return {"sha256": checksum, "bytes": size,
-                        "object": "objects/" + checksum, "filename": source.name}
+            if matches():
+                return reused()
             try:
                 src.seek(0)
-                with tempfile.NamedTemporaryFile(
-                        dir=directory, prefix=".intake-", delete=False) as out:
-                    pending = Path(out.name)
+                candidate = directory / (".intake-" + checksum + ".partial")
+                if candidate.resolve() == source:
+                    raise ValueError("Select an original input outside its unfinished intake path")
+                # Every retry owns the same digest lock and pending name.
+                # Unlink an old alias before creating an independent inode:
+                # truncating a prior installed hard link would damage its object.
+                candidate.unlink(missing_ok=True)
+                descriptor = os.open(candidate, os.O_WRONLY | os.O_CREAT |
+                                     os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                pending = candidate
+                with os.fdopen(descriptor, "wb") as out:
                     copied, copied_size, _ = _stream_identity(
                         src, "Original input", expected_state=source_state, output=out)
                     if copied != checksum or copied_size != size:
-                        raise ValueError("Original input changed during intake")
+                        raise ValueError("Original source hash differs: " + source.name)
                     out.flush()
                     os.fsync(out.fileno())
                 if _file_state(os.fstat(src.fileno())) != source_state:
@@ -267,9 +295,8 @@ def retain_file(project, source, expected_sha256=None):
                 try:
                     os.link(pending, destination)
                 except FileExistsError:
-                    # An older admitted writer may not use the per-digest lock.
-                    # Reuse its complete publication, or atomically repair a
-                    # regular damaged object with the verified independent copy.
+                    # Preserve a complete concurrent publication or atomically
+                    # repair a damaged regular object with this verified copy.
                     if not _retained_object_matches(destination, checksum, size):
                         os.replace(pending, destination)
                         pending = None

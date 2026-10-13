@@ -51,17 +51,18 @@ def source_layer(workspace, selection: dict) -> dict:
            "file": primary, "companions": companions,
            "group": selection.get("group", "Original source layers"),
            "units": selection.get("units", entry.get("units", "source attributes")),
-           "purpose": selection.get("purpose", "categorical" if entry.get("role") == "NLCD" else "context"),
+           "purpose": selection.get("purpose", entry.get("purpose") or ("categorical" if entry.get("role") == "NLCD" else "context")),
            "source": {"collection_id": collection, "id": source_id, "title": entry["title"],
                       "uri": entry["uri"], "vintage": entry["vintage"],
                       "sha256": entry["body"]["sha256"], "role": entry.get("role"),
-                      "units": entry.get("units"), "conversion": entry.get("conversion")},
+                      "units": entry.get("units"), "conversion": entry.get("conversion"),
+                      "received_gis":entry.get("received_gis")},
            "visible": selection.get("visible", False)}
     for key in ("layer", "where", "band", "metric", "direction"):
         if key in selection:
             row[key] = selection[key]
-        elif key == "layer" and entry.get("layer"):
-            row[key] = entry["layer"]
+        elif key in ("layer", "metric", "direction") and entry.get(key) is not None:
+            row[key] = entry[key]
     return row
 
 
@@ -79,6 +80,18 @@ def request(workspace, selection: dict) -> dict:
                              for e in workspace._get("sources", collection_id)["entries"]]
     source_selections = [{**item, "source_collection_id": item.get("source_collection_id") or collection_id}
                          for item in source_selections]
+    # Adopted working layers always retain their attached originals, licences and
+    # edition provenance, including when the operator selected only GIS layers.
+    selected_pairs={(x["source_collection_id"],x["source_id"]) for x in source_selections}
+    for cid in dict.fromkeys(x["source_collection_id"] for x in source_selections):
+        if not cid:continue
+        collection=workspace._get("sources",cid)
+        context_groups={e.get("gis_context_group") for e in collection["entries"]
+                        if (cid,e["id"]) in selected_pairs and e.get("gis_context_group")}
+        for entry in collection["entries"]:
+            if entry.get("gis_required_context") and entry.get("gis_context_group") in context_groups and (cid,entry["id"]) not in selected_pairs:
+                source_selections.append({"source_collection_id":cid,"source_id":entry["id"]})
+                selected_pairs.add((cid,entry["id"]))
     for item in source_selections:
         if not item["source_collection_id"]:
             raise ValueError("Select the retained source collection for every source")
@@ -222,7 +235,7 @@ def catalogue(workspace) -> dict:
     sources=[]
     for collection in workspace.sources():
         sources.append({"id":collection["id"],"title":collection["title"],
-                        "entries":[{k:e.get(k) for k in ("id","title","kind","role","units")}
+                        "entries":[{k:e.get(k) for k in ("id","title","kind","role","units","gis_context_group","gis_required_context")}
                                    for e in collection["entries"]]})
     runs=[]
     for path in sorted((workspace.root/"runs").glob("*/run.json")):
@@ -232,3 +245,155 @@ def catalogue(workspace) -> dict:
     exports=[gis.load(p) for p in sorted((workspace.root/"gis-exports").glob("*/export.json"))]
     return {"schema":"upstate.gis-catalogue/v1","project_id":workspace.project["id"],
             "sources":sources,"runs":runs,"exports":exports}
+
+
+def received(workspace, receipt_id: str):
+    """Read the original retained receiving record and its complete unchanged edition."""
+    from .common import identifier
+    parent=workspace.root/'gis-received'/identifier(receipt_id)
+    value=gis.load(parent/'receipt.json')
+    if value.get('id')!=receipt_id or value.get('project_id')!=workspace.project['id'] or value.get('state')!='complete':
+        raise ValueError('Choose a complete GIS receiving from this scientific Workspace')
+    result=gis.verify(parent/'project')
+    if result['fingerprint']!=value['result']['fingerprint']:
+        raise ValueError('Receive the newly sealed edition before adopting edited GIS files')
+    return parent,value,result
+
+
+def receive(workspace, archive: str | Path, *, source_upload_id: str | None=None) -> dict:
+    """One receiving writer for the original Operator and the installed Workspace CLI."""
+    import json
+    import zipfile
+    archive=Path(archive).resolve(strict=True)
+    original=gis.record(archive.parent,archive)
+    key=gis.fingerprint({'schema':'upstate.gis-receiving/v1','project_id':workspace.project['id'],
+                         'archive_sha256':original['sha256']})
+    parent=workspace.root/'gis-received'/key
+    parent.mkdir(parents=True,exist_ok=True)
+    root=parent/'project'
+    with gis.locked(parent/'.receiving.lock'):
+        if root.exists():
+            result=gis.verify(root)
+            with zipfile.ZipFile(archive) as z:
+                incoming=json.loads(z.read('inventory.json'))
+            if incoming['fingerprint']!=result['fingerprint']:
+                raise ValueError('The received directory differs from the supplied GIS edition')
+        else:
+            result=gis.receive(archive,root)
+        target=parent/'editable-gis.zip'
+        gis.copy_checked(archive.parent,original,target)
+        value={'schema':'upstate.gis-receiving/v1','id':key,'state':'complete',
+               'project_id':workspace.project['id'],'title':gis.load(root/'project.json')['title'],
+               'result':result,'archive':gis.record(workspace.root,target),
+               'source_archive_sha256':original['sha256']}
+        receipt=parent/'receipt.json'
+        if receipt.exists():
+            prior=gis.load(receipt)
+            if prior.get('source_archive_sha256')!=original['sha256']:
+                raise ValueError('The existing receiving belongs to another archive')
+            if prior.get('upload_id'):value['upload_id']=prior['upload_id']
+        if source_upload_id and 'upload_id' not in value:value['upload_id']=source_upload_id
+        gis.save(receipt,value)
+        return value
+
+
+def adopt_sources(workspace, selection: dict) -> dict:
+    """Adopt selected received working layers through the ORIGINAL source importer.
+
+    This appends an independent source edition; it does not edit any original
+    source collection, grid, parameter profile, scenario, numerical run or receipt.
+    """
+    parent,receipt,result=received(workspace,selection['receipt_id'])
+    root=parent/'project';project=gis.load(root/'project.json')
+    reason=selection.get('reason','').strip()
+    title=selection.get('title','').strip()
+    if not reason or not title:
+        raise ValueError('Name the new source edition and explain the adoption')
+    chosen=selection.get('layer_ids')
+    if not isinstance(chosen,list) or not chosen or len(set(chosen))!=len(chosen) or any(not isinstance(x,str) for x in chosen):
+        raise ValueError('Choose each received working layer once')
+    byid={l['id']:l for l in project['layers']}
+    if set(chosen)-set(byid):raise ValueError('Choose existing received layer identities')
+    adopted={'schema':'upstate.gis-source-adoption-selection/v1','adopter_version':gis.VERSION,
+             'project_id':workspace.project['id'],'receipt_id':receipt['id'],
+             'received_edition_id':project['edition_id'],'fingerprint':result['fingerprint'],
+             'title':title,'reason':reason,'layer_ids':chosen}
+    key=gis.fingerprint(adopted)
+    directory=workspace.root/'gis-source-adoptions'/key
+    directory.mkdir(parents=True,exist_ok=True)
+    with gis.locked(directory/'.adoption.lock'):
+        state=directory/'adoption.json'
+        if state.exists():
+            prior=gis.load(state)
+            if prior['selection']!=adopted:raise ValueError('Source adoption selection changed')
+            collection=workspace._get('sources',prior['source_collection_id'])
+            for entry in collection['entries']:workspace.source_file(collection['id'],entry['id'])
+            return prior
+        # Keep source paths relative to the existing receipt parent. Original
+        # Workspace.import_sources performs its normal complete object retention.
+        entries=[]
+        for layer_id in chosen:
+            row=byid[layer_id];path=gis.local(root,row['working_path'])
+            data=row['data'];companions=[]
+            if data['kind']=='raster':
+                import rasterio
+                with rasterio.open(path) as src:
+                    for filename in src.files:
+                        p=Path(filename).resolve(strict=True)
+                        if p==path:continue
+                        rec=gis.record(root,gis.local(root,p.relative_to(root).as_posix()))
+                        companions.append({'path':'project/'+rec['path'],'sha256':rec['sha256']})
+            entry={'id':'GIS_'+row['key'],'title':row['title'],'kind':data['kind'],
+                   'path':'project/'+row['working_path'],'sha256':gis.sha256(path),'companions':companions,
+                   'gis_context_group':key,
+                   'uri':'urn:upstate:received-gis:'+receipt['id']+':'+row['key'],
+                   'vintage':'Received GIS edition '+project['edition_id'],'units':data['units'],
+                   'received_gis':{'receipt_id':receipt['id'],'edition_id':project['edition_id'],
+                                   'layer_id':row['id'],'originals':row['originals'],
+                                   'source':row.get('source'),'run_id':row.get('run_id'),
+                                   'scenario_id':row.get('scenario_id'),'profile_id':row.get('profile_id'),
+                                   'purpose':row.get('purpose'),'metric':row.get('metric'),
+                                   'direction':row.get('direction'),'adoption_id':key,'reason':reason}}
+            for name in ('purpose','metric','direction'):
+                if row.get(name) is not None:entry[name]=row[name]
+            original_source=row.get('source') or {}
+            for name in ('role','conversion'):
+                if original_source.get(name) is not None:entry[name]=original_source[name]
+            if data['kind']=='vector':entry['layer']=data['layer']
+            entries.append(entry)
+        seen_context=set()
+        def context(title, records):
+            signature=tuple((r['path'],r['sha256']) for r in records)
+            if signature in seen_context:return
+            seen_context.add(signature)
+            for rec in records:gis.checked(root,rec)
+            code=gis.fingerprint(signature)
+            entries.append({'id':'GIS_CONTEXT_'+code,'title':title,'kind':'document',
+                            'path':'project/'+records[0]['path'],'sha256':records[0]['sha256'],
+                            'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
+                            'uri':'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
+                            'vintage':'Received GIS edition '+project['edition_id'],
+                            'gis_context_group':key,'gis_required_context':True})
+        for layer_id in chosen:
+            context('Retained originals · '+byid[layer_id]['title'],byid[layer_id]['originals'])
+        for document in project.get('attachments',[]):
+            context(document['title'],document['files'])
+        history=[gis.record(root,p) for p in sorted((root/'history').rglob('*')) if p.is_file()]
+        context('Received GIS edition provenance and retained history',
+                [gis.record(root,root/'project.json'),*history])
+        manifest={'schema':'upstate.sources/v1','title':title,'entries':entries,
+                  'notes':[reason,'Selected independently editable working layers adopted from a complete received GIS edition.'],
+                  'scope':{'gis_source_adoption':adopted}}
+        manifest_path=parent/('source-adoption-'+key+'.json')
+        if manifest_path.exists() and gis.load(manifest_path)!=manifest:
+            raise ValueError('The retained adoption manifest changed')
+        gis.save(manifest_path,manifest)
+        collection=workspace.import_sources(manifest_path)
+        value={'schema':'upstate.gis-source-adoption/v1','id':key,'state':'complete',
+               'project_id':workspace.project['id'],'selection':adopted,
+               'source_collection_id':collection['id'],'title':title,
+               'sources':[{'layer_id':layer_id,'source_id':'GIS_'+byid[layer_id]['key']}
+                          for layer_id in chosen],
+               'manifest':gis.record(workspace.root,manifest_path)}
+        gis.save(state,value)
+        return value
