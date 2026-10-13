@@ -18,6 +18,18 @@ The operation output tree must be outside both the Workspace and application. Or
 
 The default report date is `2026-10-13`. Supply `--as-of YYYY-MM-DD` when intentionally selecting another reporting date; use a new operation for a different immutable selection.
 
+## Standalone fieldwork installation
+
+The current `install_implementation.py` receives the report-retention helper, this native receiver and all three original Greenwood inputs as required source members. It also receives the portable/native operating guides when they are supplied. Existing economics and observation integrations remain in the same package.
+
+```sh
+python -B install_implementation.py \
+  --application /absolute/current/application \
+  --source-root /absolute/pinned/full-source/opportunities/upstate_forever_2026
+```
+
+Use the current complete scientific application for its shared Workspace, Project transfers and portable core. The fieldwork installer keeps its original source-composition/preimage checks, staged writes and backups; it does not replace those shared core modules. The cumulative installation supplies those maintained core dependencies.
+
 ## Original source
 
 The exact original plan is `source/implementation/20261013/greenwood-review-plan.json`. Its original parcel is Greenwood County PIN `6913-674-230`, OBJECTID `1`, CRS EPSG:3361. The plan contains the existing source-review tasks and unresolved observations; native receiving preserves the original scientific statements and does not complete tasks or add field measurements.
