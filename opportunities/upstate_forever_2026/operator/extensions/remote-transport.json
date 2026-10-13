@@ -1,0 +1,9 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "remote-transport",
+  "title": "Secure remote file transport",
+  "version": "1",
+  "assets": [
+    "remote_transport.mjs"
+  ]
+}

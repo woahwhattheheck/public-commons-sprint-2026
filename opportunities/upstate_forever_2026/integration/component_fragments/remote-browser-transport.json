@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "remote-browser-transport",
+  "components": {
+    "remote-browser-transport": {
+      "title": "Existing browser API over verified HTTPS upload chunks",
+      "paths": [
+        "operator/web/remote_transport.mjs",
+        "operator/extensions/remote-transport.json",
+        "integration/REMOTE_BROWSER_TRANSPORT.md"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "remote-browser-transport"
+  ]
+}
