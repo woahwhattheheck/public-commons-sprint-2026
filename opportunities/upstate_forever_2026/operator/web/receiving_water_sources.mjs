@@ -87,7 +87,7 @@ export function attachReceivingSourcePicker({api,endpoint,getState,toast}){
    s.root.querySelectorAll('[data-rws-busy]').forEach(node=>{node.disabled=busy;});
   };
   async function read(path,payload){
-   requireCurrent();const result=await api(endpoint(path),{method:'POST',body:JSON.stringify({workspace,...payload})});requireCurrent();
+   requireCurrent();const result=await api(endpoint(path),{method:'POST',body:{workspace,...payload}});requireCurrent();
    if(result.workspace_key&&result.workspace_key!==workspace)throw Error('The spatial response belongs to another workspace.');
    return result;
   }
