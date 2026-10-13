@@ -4,8 +4,8 @@ import inspect
 from .monitoring_common import ContractError
 from .monitoring_workspace import MonitoringWorkspace
 
-READS = {"comparison.preview", "comparison.get", "comparison.list", "context.catalog", "context.list", "context.get", "context.preview", "campaign.fieldwork.preview-return", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
-WRITES = {"comparison.prepare", "comparison.export", "context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "campaign.fieldwork.return", "export"}
+READS = {"context.native.catalog", "context.native.preview", "comparison.preview", "comparison.get", "comparison.list", "context.catalog", "context.list", "context.get", "context.preview", "campaign.fieldwork.preview-return", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
+WRITES = {"context.native.prepare", "comparison.prepare", "comparison.export", "context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "campaign.fieldwork.return", "export"}
 
 def invoke(workspace, action, params, *, export_root=None):
     if not isinstance(params, dict): raise ContractError("Monitoring parameters must be a JSON object")
@@ -36,6 +36,17 @@ def invoke(workspace, action, params, *, export_root=None):
         try: inspect.signature(function).bind(workspace, **options)
         except TypeError as exc: raise ContractError(str(exc)) from exc
         return function(workspace, **options)
+    if action.startswith("context.native."):
+        from . import monitoring_native_observations as native_observations
+        functions = {"context.native.catalog": native_observations.catalog,
+                     "context.native.preview": native_observations.preview,
+                     "context.native.prepare": native_observations.prepare}
+        function = functions.get(action)
+        if function is None:
+            raise ContractError("Unknown native observational context action")
+        try: inspect.signature(function).bind(workspace, **params)
+        except TypeError as exc: raise ContractError(str(exc)) from exc
+        return function(workspace, **params)
     if action.startswith("context."):
         from . import monitoring_observed_context as observed
         functions = {"context.catalog": observed.catalog, "context.list": observed.list_saved,
