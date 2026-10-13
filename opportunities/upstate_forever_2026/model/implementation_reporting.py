@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import html
 import io
 import json
@@ -28,9 +29,12 @@ OBSERVATION_FIELDS = (
     "id", "activity_id", "visit_id", "site_id", "site_label", "sample_id",
     "collected_at", "parameter", "result_type", "value", "original_text",
     "unit", "basis", "fraction", "qualifier", "detection_limit",
-    "quantitation_limit", "method", "qa_status", "notes", "custody_ref",
+    "quantitation_limit", "method", "method_context", "method_name", "qa_status", "notes", "custody_ref",
+    "laboratory_source_id", "original_csv_sha256", "original_csv_record",
+    "original_line_start", "original_line_end", "mapping_sha256", "import_operation_id",
 )
-SITE_FIELDS = ("id", "label", "latitude", "longitude", "candidate_id", "source_ref")
+SITE_FIELDS = ("id", "label", "latitude", "longitude", "coordinate_reference_system",
+               "candidate_id", "source_ref")
 MONITOR_FIELDS = (
     "id", "title", "objective", "site_ids", "parameters", "method_ref",
     "frequency", "notes",
@@ -88,6 +92,16 @@ def _report_rows(document: dict, table: str, as_of: str | None = None):
             for key in ("visit_id", "site_id", "sample_id", "collected_at", "custody_ref"):
                 row[key] = activity.get(key)
             row["site_label"] = sites[activity["site_id"]]["label"]
+            source, _ = _field_source_context(observation)
+            for exported, original in (
+                    ("laboratory_source_id", "source_link_id"),
+                    ("original_csv_sha256", "csv_sha256"),
+                    ("original_csv_record", "record"),
+                    ("original_line_start", "line_start"),
+                    ("original_line_end", "line_end"),
+                    ("mapping_sha256", "mapping_sha256"),
+                    ("import_operation_id", "operation_id")):
+                row[exported] = source.get(original)
             rows.append(row)
         return OBSERVATION_FIELDS, rows
     if table == "sites":
@@ -166,6 +180,152 @@ def _details(label, value) -> str:
     return ("<details><summary>" + html.escape(label) + "</summary><pre>" +
             html.escape(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)) +
             "</pre></details>")
+
+
+
+def _field_source_context(row):
+    """Read retained original metadata without replacing the native definition."""
+    source = row.get("lab_source")
+    source = source if isinstance(source, dict) else {}
+    original = source.get("original_row")
+    original = original if isinstance(original, dict) else {}
+    return source, original
+
+
+def _field_science_sections(rows):
+    """Describe exact saved result cohorts; compute no concentration estimates."""
+    if not rows:
+        return ("<section><h2>Sampling and analytical support</h2>"
+                "<p>No observations are entered in this plan revision. Its sites "
+                "and visits remain operational records, not measured results.</p></section>")
+    cohorts, sources = {}, {}
+    definition_fields = ("site_id", "parameter", "unit", "basis", "fraction",
+                         "method", "method_context", "method_name")
+    original_fields = ("ProjectIdentifier", "ActivityTypeCode", "ActivityMediaName",
+                       "ResultAnalyticalMethod/MethodIdentifierContext",
+                       "ResultAnalyticalMethod/MethodName")
+    for row in rows:
+        source, original = _field_source_context(row)
+        definition = {key: row.get(key) for key in definition_fields}
+        retained = {key: original.get(key) for key in original_fields}
+        source_identity = {key: source.get(key) for key in
+                           ("source_link_id", "csv_sha256", "mapping_sha256")}
+        key = canonical_bytes([definition, retained, source_identity])
+        if key not in cohorts:
+            cohorts[key] = {"definition": definition, "retained": retained,
+                            "source": source_identity, "rows": []}
+        cohorts[key]["rows"].append(row)
+        source_key = canonical_bytes(source_identity)
+        if source_key not in sources:
+            sources[source_key] = {"identity": source_identity, "rows": []}
+        sources[source_key]["rows"].append(row)
+
+    def members(items, key):
+        return {row[key] for row in items if row.get(key) is not None and row.get(key) != ""}
+
+    def counts(items, key):
+        values = {}
+        for row in items:
+            value = row.get(key)
+            if value is None or value == "":
+                continue
+            encoded = canonical_bytes(value)
+            if encoded not in values:
+                values[encoded] = [value, 0]
+            values[encoded][1] += 1
+        return "; ".join(_text(value) + " (" + str(count) + " rows)"
+                         for value, count in values.values()) or "Not recorded"
+
+    def period(items):
+        stamps = list(members(items, "collected_at"))
+        # Schema-validated native timestamps include an explicit offset.
+        stamps.sort(key=lambda value: (dt.datetime.fromisoformat(value.replace("Z", "+00:00")), value))
+        dated = sum(bool(row.get("collected_at")) for row in items)
+        return _group((("First collection", stamps[0] if stamps else "Not recorded"),
+                       ("Last collection", stamps[-1] if stamps else "Not recorded"),
+                       ("Distinct original timestamps", len(stamps)),
+                       ("Rows without collection time", len(items) - dated)))
+
+    cohort_blocks = []
+    for number, cohort in enumerate(cohorts.values(), 1):
+        items = cohort["rows"]
+        first, definition, retained = items[0], cohort["definition"], cohort["retained"]
+        types = {kind: sum(row["result_type"] == kind for row in items)
+                 for kind in ("numeric", "censored", "text", "missing")}
+        label = _group((("Cohort", number), ("Site", first["site_label"]),
+                        ("Parameter", definition["parameter"])))
+        cohort_blocks.append("<h3>" + html.escape(label.replace("\n", " · ")) + "</h3>")
+        cohort_blocks.append(_table(
+            ("Source and analytical definition", "Retained sampling", "Original results and limits"), [(
+            _group((("Site ID", definition["site_id"]),
+                    ("Source project", retained["ProjectIdentifier"]),
+                    ("Source activity type", retained["ActivityTypeCode"]),
+                    ("Source medium", retained["ActivityMediaName"]),
+                    ("Unit", definition["unit"]), ("Basis", definition["basis"]),
+                    ("Fraction", definition["fraction"]),
+                    ("Method", definition["method"]),
+                    ("Method context", definition["method_context"]),
+                    ("Method name", definition["method_name"]),
+                    ("Original CSV method context", retained[
+                        "ResultAnalyticalMethod/MethodIdentifierContext"]),
+                    ("Original CSV method name", retained[
+                        "ResultAnalyticalMethod/MethodName"]),
+                    ("Source link", cohort["source"]["source_link_id"] or "No laboratory CSV binding"))),
+            _group((("Distinct native activities", len(members(items, "activity_id"))),
+                    ("Distinct visits", len(members(items, "visit_id"))),
+                    ("Distinct sample IDs", len(members(items, "sample_id"))))) +
+                    "\n" + period(items),
+            _group((("Result rows", len(items)), ("Numeric", types["numeric"]),
+                    ("Censored", types["censored"]), ("Text", types["text"]),
+                    ("Missing", types["missing"]), ("Qualifiers", counts(items, "qualifier")),
+                    ("Detection limits in cohort unit", counts(items, "detection_limit")),
+                    ("Quantitation limits in cohort unit", counts(items, "quantitation_limit")),
+                    ("QA status", counts(items, "qa_status")))),
+        )]))
+    parts = [
+        '<section class="scientific-context"><h2>Sampling and analytical support</h2><p>'
+        "Each cohort keeps one exact site, parameter, unit, basis, fraction, method "
+        "definition, original source context and CSV/mapping identity. Blank fields "
+        "remain unrecorded. Method codes from different authorities are not pooled. "
+        "Native fields and explicitly labelled original CSV fields remain distinct.</p>",
+        "<p>Counts describe this saved plan revision. A result row is not an "
+        "independent visit: several activities or analytes can share one visit. "
+        "Activities and visits can recur in different cohorts, so their cohort "
+        "counts must not be added to obtain a plan-wide sampling count. The first "
+        "and last collection times show observed support, not continuous coverage. "
+        "The report's As of date is an operational date, not a sampling endpoint.</p>",
+        "".join(cohort_blocks),
+        "<p>Censored results retain null numeric values and their declared "
+        "qualifiers/limits. This section reports neither substituted concentrations "
+        "nor pooled means, trends, annual loads or threshold findings. Limits "
+        "retain their native observation unit; the unchanged CSV and its selected "
+        "column audit retain the original reported and limit-unit fields.</p>",
+        "<h3>Original result source editions</h3>",
+    ]
+    source_rows = []
+    for entry in sources.values():
+        identity, items = entry["identity"], entry["rows"]
+        original_records, operations = set(), set()
+        for row in items:
+            source, _ = _field_source_context(row)
+            if source.get("record") is not None:
+                original_records.add(canonical_bytes(source["record"]))
+            if source.get("operation_id"):
+                operations.add(source["operation_id"])
+        source_rows.append((
+            identity["source_link_id"] or "No laboratory CSV binding",
+            identity["csv_sha256"] or "Not recorded",
+            identity["mapping_sha256"] or "Not recorded",
+            _group((("Retained result rows", len(items)),
+                    ("Distinct original CSV records", len(original_records)),
+                    ("Native activities", len(members(items, "activity_id"))),
+                    ("Visits", len(members(items, "visit_id"))))),
+            "\n".join(sorted(operations)) or "Not recorded",
+        ))
+    parts.append(_table(("Source link", "Original CSV SHA256", "Selected mapping SHA256",
+                         "Retained support", "Original import operations"), source_rows))
+    parts.append("</section>")
+    return "".join(parts)
 
 
 def _field_forms(activities) -> str:
@@ -375,9 +535,10 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
     ))
     sections.append("</section><section><h2>Sites and monitoring plans</h2>")
     sections.append(_table(
-        ("Site ID", "Label", "Latitude", "Longitude", "Candidate ID", "Source ID"),
+        ("Site ID", "Label", "Latitude", "Longitude", "Declared CRS", "Candidate ID", "Source ID"),
         ((row["id"], row["label"], row.get("latitude"), row.get("longitude"),
-          row.get("candidate_id"), row.get("source_ref")) for row in plan["sites"]),
+          row.get("coordinate_reference_system"), row.get("candidate_id"), row.get("source_ref"))
+         for row in plan["sites"]),
     ))
     sections.append(_table(
         ("Monitoring plan", "Objective", "Site IDs", "Parameters", "Method", "Frequency"),
@@ -418,24 +579,34 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
     ))
     sections.append(_field_forms(plan["activities"]))
     sections.append(_details("Activities, form answers and original fields", plan["activities"]))
-    sections.append("</section><section><h2>Original observations</h2><p>"
+    sections.append("</section>")
+    sections.append(_field_science_sections(observation_rows))
+    sections.append("<section><h2>Original observations</h2><p>"
                     "Every row retains its parameter, result form, reported text, "
                     "unit, basis, fraction, qualifier and limits. Censored results "
                     "retain a null numeric value. Observations are not summed across "
                     "pollutants, converted to loads, or merged with modeled benefits.</p>")
     sections.append(_table(
         ("Result and sample", "Parameter and definition", "Original result",
-         "Type and original limits", "Quality", "Notes"),
+         "Type and original limits", "Quality and source", "Notes"),
         ((_group((("Result", row["id"]), ("Site", row["site_label"]),
-                  ("Sample", row.get("sample_id")))),
+                  ("Sample", row.get("sample_id")), ("Activity", row["activity_id"]),
+                  ("Visit", row["visit_id"]), ("Collected at", row.get("collected_at")))),
           _group((("Parameter", row["parameter"]), ("Basis", row.get("basis")),
-                  ("Fraction", row.get("fraction")), ("Method", row.get("method")))),
+                  ("Fraction", row.get("fraction")), ("Method", row.get("method")),
+                  ("Method context", row.get("method_context")),
+                  ("Method name", row.get("method_name")))),
           _group((("Original text", row["original_text"]), ("Numeric value", row["value"]),
                   ("Unit", row["unit"]))),
           _group((("Type", row["result_type"]), ("Qualifier", row.get("qualifier")),
                   ("Detection limit (original unit)", row.get("detection_limit")),
                   ("Quantitation limit (original unit)", row.get("quantitation_limit")))),
-          row.get("qa_status"), row["notes"]) for row in observation_rows),
+          _group((("QA status", row.get("qa_status")),
+                  ("Original CSV source", row.get("laboratory_source_id")),
+                  ("Original record", row.get("original_csv_record")),
+                  ("Original line start", row.get("original_line_start")),
+                  ("Original line end", row.get("original_line_end")))),
+          row["notes"]) for row in observation_rows),
     ))
     sections.append(_details("Observation provenance and original fields", plan["observations"]))
     sections.append("</section>")
@@ -472,6 +643,7 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;"
         "max-width:1500px;margin:0 auto;padding:32px}"
         "h1{font-size:28px;margin:0 0 8px}h2{font-size:20px;margin-top:28px}"
+        ".scientific-context table{min-width:720px}.scientific-context h3{font-size:16px;margin-bottom:6px}"
         "header{border-bottom:2px solid #333;padding-bottom:20px}"
         ".meta,footer{color:#555}.table-scroll{overflow-x:auto;margin:12px 0}"
         "table{width:100%;border-collapse:collapse;font-size:12px}"
@@ -481,7 +653,8 @@ def render_report_html(document: dict, as_of: str | None = None) -> str:
         "summary{font-weight:600;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}"
         "section{break-inside:auto}footer{border-top:1px solid #aaa;margin-top:28px;padding-top:12px}"
         "@media print{body{padding:0;font-size:10px}table{font-size:10px;table-layout:fixed}"
-        ".table-scroll{overflow:visible}details{break-inside:avoid}summary{display:block}"
+        ".table-scroll{overflow:visible}.scientific-context table{min-width:0}"
+        "details{break-inside:avoid}summary{display:block}"
         "thead{display:table-header-group}tr{break-inside:avoid}h2{break-after:avoid}@page{margin:12mm}}"
         "</style></head><body><header><h1>" + title + "</h1><p class=\"meta\">" +
         meta + "</p><p>" + escape(plan["description"]) +
