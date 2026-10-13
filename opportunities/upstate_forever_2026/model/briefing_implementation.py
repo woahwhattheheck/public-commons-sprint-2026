@@ -42,6 +42,14 @@ def delivery_catalog(workspace):
         rows.append({"id": record["id"], "title": record.get("selection", {}).get("title") or record.get("title") or record["id"],
                      "state": record.get("state"), "available": available,
                      "reason": "" if available else "Generate the original client report and briefing first"})
+    for path in sorted((Path(workspace.root) / "watershed-context-exports").glob("*/export.json")):
+        record = read_json(path)
+        files = record.get("files", {})
+        if all(name in files for name in ("source-context-report-model.json", "source-context-report-briefing.json")):
+            rows.append({"id": record["id"], "choice_key": "source-context:" + record["id"],
+                         "title": record.get("title") or record["id"],
+                         "state": record.get("state"), "available": True,
+                         "kind": "source_context", "reason": ""})
     return {"reports": rows}
 
 def delivery_sources(workspace, delivery_id):
@@ -58,6 +66,29 @@ def delivery_sources(workspace, delivery_id):
             raise ImplementationError("Generate the original client report and briefing before receiving its notes")
         paths[role] = verify_file(directory, record["files"][field])
     return paths
+
+def source_context_sources(workspace, export_id):
+    """Open the exact exported source briefing and its original selection."""
+    key = identifier(export_id)
+    directory = Path(workspace.root) / "watershed-context-exports" / key
+    if directory.is_symlink() or not directory.resolve().is_relative_to(Path(workspace.root).resolve()):
+        raise ImplementationError("Select a source export in this workspace")
+    record = read_json(directory / "export.json")
+    if record.get("id") != key or record.get("state") != "complete":
+        raise ImplementationError("Select the completed original source export")
+    names = {"report": "source-context-report-model.json",
+             "index": "source-context-report-briefing.json",
+             "selection": "selected-watersheds.json"}
+    if any(name not in record.get("files", {}) for name in names.values()):
+        raise ImplementationError("Export this watershed selection with its source briefing first")
+    paths = {role: verify_file(directory, record["files"][name]) for role, name in names.items()}
+    report = read_json(paths["report"])
+    original = paths["selection"].read_bytes()
+    if (report.get("schema") != "upstate.source-context-report/v1"
+            or report.get("source_binding", {}).get("sha256") != _sha(original)
+            or report["source_binding"].get("bytes") != len(original)):
+        raise ImplementationError("The source briefing and retained selected watershed file differ")
+    return {"report": paths["report"], "index": paths["index"]}
 
 def source_bundle(report_path, index_path, notes_path):
     """Verify the retained historical slide index instead of regenerating page IDs."""

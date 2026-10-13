@@ -504,3 +504,7 @@ original profile and observation sources. Extract the ZIP and open
 `watershed-selection-brief.html`; its local source links resolve within the packet.
 The archive includes `packet.json` with each carried file identity. The native
 utility receiver writes the same complete packet for each utility selection.
+
+## Present the original selection and continue the review
+
+Each new saved selection export includes a source-context report/model and an offline briefing/page index, alongside its original watershed brief and complete observation files. Open source-context-report-briefing.html from the extracted utility-watershed-packet.zip to choose an agenda, inspect exact source tables and export actual meeting notes. The Implementation desk's saved-report chooser can receive that same source export and notes as editable, source-linked follow-up. The original scientific interpretation, units, methods, HUC membership and source jurisdiction remain in every report. [Utility source briefing](../docs/UTILITY_SOURCE_BRIEFING.md) gives the complete route through native report, Transfer and independent reopening.

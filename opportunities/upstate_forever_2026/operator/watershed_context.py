@@ -12,6 +12,7 @@ from source_tools.watershed_source_entry import capture_source_entry, retain_sou
 from model import watershed_context as context_model
 from model.utility_watershed_context import utility_selections, PROFILE_NAME
 from model import utility_observed_context as observed_model
+from model import watershed_briefing as briefing_model
 from model.watershed_brief import (
     BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
 )
@@ -622,7 +623,7 @@ class WatershedContextActions:
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
-            "brief_format": BRIEF_FORMAT,
+            "brief_format": BRIEF_FORMAT, "source_briefing_edition": briefing_model.EDITION,
         }
         if utility is not None:
             identity["utility_selection_sha256"] = utility["key"]
@@ -681,6 +682,7 @@ class WatershedContextActions:
                 result["files"]["original-utility-profile.json"] = describe_file(
                     target, target / "original-utility-profile.json")
             result["files"].update(brief_files)
+            result["files"].update(briefing_model.write(target, selection))
             result["files"].update(observed_files)
             if observed_context is not None:
                 result["observed_context"] = {
