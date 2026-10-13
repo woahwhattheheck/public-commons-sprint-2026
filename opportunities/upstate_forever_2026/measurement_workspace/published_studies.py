@@ -209,9 +209,18 @@ def _normalize_bundle(files: dict[str, bytes]) -> dict[str, bytes]:
     if sum(len(value) for value in files.values()) > MAX_SOURCE_BYTES:
         raise ValueError("The study source exceeds the 64 MiB intake limit.")
     files = {_name(name): value for name, value in files.items()}
-    studies = [name for name in files if PurePosixPath(name).name == "study.json"]
+    # A retained source family can include its publisher's own study.json.
+    # Select only metadata at the root that contains this complete companion;
+    # nested originals remain unchanged source documents and version inputs.
+    studies = []
+    for name in files:
+        if PurePosixPath(name).name != "study.json":
+            continue
+        parent = str(PurePosixPath(name).parent)
+        if parent == "." or all(item.startswith(parent + "/") for item in files):
+            studies.append(name)
     if len(studies) != 1:
-        raise ValueError("A companion must contain exactly one study.json.")
+        raise ValueError("A companion must contain exactly one primary study.json at its complete source root.")
     prefix = str(PurePosixPath(studies[0]).parent)
     if prefix == ".":
         normalized = files
