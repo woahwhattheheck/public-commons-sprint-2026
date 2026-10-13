@@ -228,13 +228,18 @@ def load_module(path, name):
 
 
 def package_selected(source_id, archive, panel=None):
+    if panel is not None and source_id not in panel["candidates"]:
+        raise ValueError("Selected source is outside the supplied original comparison")
     manifest_path = ROOT / "SOURCES.json"
-    sources = read(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    sources = json.loads(manifest_bytes)
     selected = [r for r in sources["candidates"] if r["id"] == source_id]
     if len(selected) != 1:
         raise ValueError("Choose one original frozen source ID")
     row = selected[0]
     bound = load_selection(manifest_path, source_id, retained_member(ROOT, row["submission"]))
+    if bound["manifest_sha256"] != hashlib.sha256(manifest_bytes).hexdigest():
+        raise ValueError("Original source selection changed during packaging")
     payloads = {}
     originals = []
 
@@ -308,8 +313,6 @@ def package_selected(source_id, archive, panel=None):
         if failures:
             raise ValueError("Current official archive validation failed: " + "; ".join(failures))
         published = packager.publish_archive(target, payloads)
-    if panel is not None and source_id not in panel["candidates"]:
-        raise ValueError("Selected source is outside the supplied original comparison")
     return {"schema": SCHEMA, "archive": str(target), **published, "release": declaration,
             "members": {name: identity(raw) for name, raw in payloads.items()},
             "official_static_validation": [f.render() for f in findings],
