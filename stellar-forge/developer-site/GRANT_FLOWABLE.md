@@ -1,5 +1,11 @@
 # Flowable contribution to the existing SCF application
 
+## Current combined author edition: native jobs and following Installations
+
+This complete author edition selects **103 source IDs**: all 92 from the native-job author successor, plus 11 newly named following-edition sources. Sixteen complete following-product paths are bound to their merged source; existing path registrations retain their earlier measured editions and select the new explicitly linked edition. All 25 native-job source objects remain unchanged. The earlier 25-, 54-, 67- and 92-source sections below describe their preserved author editions. Receive this whole matched chapter, guide and declaration; the cumulative publisher composes them with its current complete union.
+
+The following-edition product is public PR4876 at `fa8c4876fc20bcfd0e3b123050c44b336d98e54c` and installed PR2047 at `723a3279d0134ab88630fc333ae35827181471a5`. The preserved job application and receiving programme remain selected at their original PR2044 and PR2050 commits. These pins establish delivered source; actual native execution, viewed application use and independent customer receiving remain recorded by their original equipped operations.
+
 This guide receives the complete Flowable process, decision and adaptive-case contribution into the original grant workflow. It uses the maintained product, original native commissioning programme, independent source declaration and existing grant composer.
 
 The chapter is `products/flowable-merchant/GRANT.md`. Its exact heading is:
@@ -7,6 +13,62 @@ The chapter is `products/flowable-merchant/GRANT.md`. Its exact heading is:
 > ## Process, decision and adaptive-case commissioning with complete customer receiving
 
 The declaration is `stellar-forge/developer-site/grant-products/flowable-operations.json`. It preserves all 25 preceding public source selections and their measured edition histories, and adds 29 complete current source selections. These additions cover source authoring, decision programmes, event/document intake, selected document comparison, history/XES, customer Installation and the Source Desk. The new source selections use merged public revision `05d9276b93a1887ce1fd499572d6dfc8f45f7214`. Each declaration binds the complete actual file bytes; earlier source selections retain their original pins.
+
+## Current native job recovery author edition
+
+Operation `SCF-FLOWABLE-NATIVE-JOBS-B43A-20261013` adds the complete merged native job recovery application to this existing author contribution. The matched chapter and declaration now select **92 source IDs**: all earlier 67 source objects and measured editions are retained. Eighteen Merchant source IDs bind the initial job-capable application at `46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2`; seven additional IDs bind the complete installed receiving course, distribution and original helper at `79a88659b13e9da69946c738bb7a89999ed974e7`. The managed entry and operating guide retain both measured editions and select that following merge. The earlier 25-, 54- and 67-source receiving descriptions later in this guide describe their preserved editions.
+
+Receive the entire chapter, updated declaration and this guide together. Preserve the cumulative publisher's current source union, other author contributions, four output files and saved-v7 application. This author successor leaves the requested USD 38,000, 400 prospective hours, 150 days, six funded packages and two selected installation targets unchanged.
+
+### Operate and receive the job-capable installation
+
+Start with the actual complete installed Flowable application, the retained engine connection and the customer's approved corrective operation. Use [JOBS.md](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/79a88659b13e9da69946c738bb7a89999ed974e7/products/flowable-merchant/JOBS.md) to capture all five native queues, inspect the original job and available complete exception, retain a full unfinished working copy, prepare the exact action, review the current-state comparison, and dispatch through the original operation. The guide covers the ordinary CLI and typed client as well as the industrial browser.
+
+Keep native acknowledgment, observed job movement, process completion and customer acceptance as their respective actual results. On an interrupted dispatch, use the original pending request and saved operation. Full current-state comparisons and the original response determine whether an action can be reconciled; an unknown result must not silently produce another mutation.
+
+Receive and reopen the complete workspace through the original export and adoption path. Review the original job capture, all recovery revisions, exact request and response resources, retained exceptions, working-copy downloads and final native observations. Open all applicable source/download/archive members and the actual installed desktop and narrow views under the owner instruction retained below. A private credential reference follows its existing receiving process; the workspace contains the operating record, not a replacement authentication system.
+
+The isolated native Flowable 8 demonstration and browser course remain within the same original job operation `FLOWABLE-NATIVE-JOB-RECOVERY-B43A-20261013`, Sales parent `1791821323.519669`. Its accepting operator must carry the exact complete source, genuine engine settings, original preceding workspace, actual native failures and recovery, desktop at 1440px and narrow at 390px, interrupted original dispatch and independent cold receiving through that existing operation. Preserve the actual execution and observed outcome when incorporating it into the grant.
+
+### Installed native receiving source
+
+The complete native course and installation joins are merged in PR2050 at `79a88659b13e9da69946c738bb7a89999ed974e7`. Select that complete installed source when invoking [job-native-host.py](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/79a88659b13e9da69946c738bb7a89999ed974e7/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-host.py) through [JOB_NATIVE_RECEIVING.md](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/79a88659b13e9da69946c738bb7a89999ed974e7/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/JOB_NATIVE_RECEIVING.md). The declared selection includes the actual original `flowable-native-host.py` helper as well as the full course, distribution and managed entry; its original artifact/process ownership is reused.
+
+Keep the actual previously received workspace, installed source commit, retained publisher WAR and selected runtime paths. The course freezes those inputs, operates the isolated genuine engine, retains native failures and corrective operations, and uses the actual installed browser before exporting and reopening the complete workspace with a second receiver. Preserve the same output directory and original request identities across interruption. Read the guide's complete command, phase settings, source inventory, original-process closure and all-attachments opening instructions.
+
+The application implementation is PR2044; the complete receiving and package integration is PR2050. Their merge identities describe delivered source. Record an accepting operator, actual execution results and observed browser output in the original Flowable receiving operation when it runs. The original cumulative grant publisher incorporates those resulting facts into the same manuscript and saved submission programme.
+
+### Complete additional source selection
+
+| Stable source ID | Complete original file |
+| --- | --- |
+| `flowable-job-recovery-model` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/model.mjs` |
+| `flowable-job-recovery-actions` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs` |
+| `flowable-job-recovery-review` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/review.mjs` |
+| `flowable-job-recovery-browser` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/job-browser.mjs` |
+| `flowable-job-recovery-workspace-browser` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser.mjs` |
+| `flowable-job-recovery-workspace-layout` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/index.html` |
+| `flowable-job-recovery-browser-assets` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser-assets.json` |
+| `flowable-job-recovery-server` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs` |
+| `flowable-job-recovery-client` | `products/flowable-merchant/client.mjs` |
+| `flowable-job-recovery-managed` | `products/flowable-merchant/managed.mjs` |
+| `flowable-job-recovery-types` | `products/flowable-merchant/client.d.mts` |
+| `flowable-job-recovery-cli` | `products/flowable-merchant/cli.mjs` |
+| `flowable-job-recovery-operating` | `products/flowable-merchant/JOBS.md` |
+| `flowable-job-recovery-tool-catalog` | `stellar-forge/mcp-merchant-operator/catalog/flowable-workspace.mjs` |
+| `flowable-job-recovery-tool-provider` | `stellar-forge/mcp-merchant-operator/providers/flowable-workspaces.mjs` |
+| `flowable-job-recovery-merchant-guide` | `products/flowable-merchant/README.md` |
+| `flowable-job-recovery-native` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native.mjs` |
+| `flowable-job-recovery-native-contract` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/JOB_NATIVE_CONTRACT.md` |
+| `flowable-job-recovery-producer` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-host.py` |
+| `flowable-job-recovery-native-course` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-journey.mjs` |
+| `flowable-job-recovery-browser-course` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-browser.mjs` |
+| `flowable-job-recovery-demonstration-source` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/job-recovery-demo.bpmn20.xml` |
+| `flowable-job-recovery-receiving-guide` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/JOB_NATIVE_RECEIVING.md` |
+| `flowable-job-recovery-distribution` | `stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json` |
+| `flowable-job-recovery-original-host` | `stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/flowable-native-host.py` |
+
+Each new declaration binds the immutable commit, full Git blob, byte length and SHA-256 from the actual merged file. New entries are optional for historical chapters, so an earlier full chapter continues to select its own original sources. The current chapter includes all 25 current Merchant links and selects all 92 IDs together. Run the existing `grant-product-sources-core.mjs` receiver against the cumulative publisher's actual current complete source index; retain every unrelated row and author registration. The measured original baseline used for this author's receiving exercise is identified in its full source packet and must not be presented as the later cumulative count.
 
 ## Receive the customer operation
 
@@ -299,6 +361,26 @@ For customer accounting, retain the parent useful task, merchant offer, buyer, r
 
 The [complete chapter](../../products/flowable-merchant/GRANT.md) develops the operating and grant-delivery relationship. The [independent source schema](GRANT_PRODUCT_SOURCES.md) and [Product Sources workspace](GRANT_PRODUCT_AUTHORING.md) explain the original composer and saved authoring APIs. The [Flowable selected installation](../../stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md) retains all original build, application and native receiving commands.
 
+
+## Following editions in the existing customer Installation
+
+The delivered following-source workflow continues the existing Source Desk and native Installation writer. Its full operating guide is `stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_FOLLOWING.md` at the selected product commit recorded by this contribution. Preserve the complete current job-recovery chapter, all preceding source IDs and every historical measured edition when receiving this addition.
+
+Use the current complete product release and the original customer workspace. In the Flowable Source Desk, prepare the complete later candidate through the existing archive/programme/seed/commissioning/binding course. Open the prior completed preparation and retain its request ID, then the later completed preparation and its request ID. A completed following preparation may be the prior preparation in a later round. The later candidate is an ordinary full preparation.
+
+In **Following source edition**, read the actual saved Installations and complete historical pages, select the original Installation and the revision produced from the prior preparation, and compare. The private bridge reads the saved historical/current rows and proves the complete baseline through the original historical normalizer. The full later archive must retain the original programme record. Keep both original Workshare and current case/plan selections.
+
+Review the complete selected-file and native-operation differences. Acknowledge the later source and choose **Keep current**, **Use later** or **Use baseline** for every changed editable field. Retain current workorder, stage, assignments, checks, Workshare and commercial/workflow/calendar/commissioning/effort fields. Record the reviewer and the source/binding decision. Prepare, preview against the actual current case, open the reviewed draft and deliberately Save the next revision of the same Installation. The expected case version and current saved revision remain frozen in the comparison.
+
+The existing typed Flowable Source Desk client and installation-source-desk Python CLI expose `following-compare` and `following-prepare`. Their request contracts retain the same six native selection fields: `installationId`, `baseRevision`, `expectedBaseSha256`, `expectedRevision`, `expectedInstallationSha256` and `expectedVersion`. The private bridge supplies complete native rows. Use the original saved UUID for uncertain-response reconciliation; a changed selection is a new review.
+
+The direct `flowable-installation-following` command prepares or reopens the complete prior/later source directories from the retained native selection and review. The existing `flowable-installation-receive` command consumes that preparation through its original input schema. Select either the deliberate same-ID Save or the exact already-saved next revision. Carry the entire source chain, the original native case archive, all commercial attachments and complete receiving output. Check every historical/current/successor record and each selected programme after independent reopening; selections sharing one full archive all remain in the receiving census.
+
+The full desk working-copy export preserves unfinished authoring. The separate following-working JSON is a complete review record; it accompanies the full desk copy. Download the whole preparation ZIP and extract all contents. `prior/` and `later/` retain complete original metadata, source archives and nested earlier preparations. The completed root metadata is reproduced from those files, including source, programme, archive, native selection, full output inventory and comparison/review identity.
+
+The producing operator continues the original equipped receiving operation and its native engine, browser, case and saved request identities. Operate the exact current application at the presentation width and 390 px; use source choices, native history pages, validation errors, interrupted-request recovery, full downloads and same-ID Save. Open the complete commercial/source/report attachments and all usable ZIP contents, then independently reopen the delivered case and source editions. Return actual operated output and viewed images through that original course. The complete standing producing-operator instruction below applies.
+
+This author addition leaves USD 38,000, 400 prospective hours, 150 days, the six packages and both original installation targets unchanged. E496 remains the original cumulative manuscript/source-union/four-output publisher. Receive the whole matched chapter and measured declaration against its current source union, preserving every other author and the saved-v7 application operation.
 
 ## Producing operator instruction
 
