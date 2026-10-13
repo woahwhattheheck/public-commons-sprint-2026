@@ -17,3 +17,25 @@
 .conformance-metrics .metric strong{font-size:28px}
 [aria-busy=true]{cursor:progress}
 @media(max-width:680px){.conformance-draft{align-items:stretch;flex-direction:column}.conformance-files{grid-template-columns:1fr}.conformance-filter label{min-width:100%}}
+
+/* Complete declared relationship views inside the original conformance operator. */
+.foreign-key-workbench{margin-top:22px}
+.foreign-key-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0}
+.foreign-key-metrics .metric{min-width:0;padding:13px}
+.foreign-key-metrics .metric strong{font-size:24px}
+.foreign-key-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0;padding:15px;border:1px solid var(--line);background:var(--soft)}
+.foreign-key-filters label{display:grid;gap:6px;flex:1 1 190px;font-size:11px;font-weight:600;min-width:0}
+.foreign-key-filters label[hidden]{display:none}
+.foreign-key-filters input,.foreign-key-filters select{min-width:0;width:100%}
+.foreign-key-filters button{min-height:35px}
+.foreign-key-states{display:flex;flex-wrap:wrap;gap:7px}
+.foreign-key-original{display:grid;gap:5px;min-width:135px;max-width:340px}
+.foreign-key-original button{justify-self:start}
+.foreign-key-original code{overflow-wrap:anywhere;white-space:pre-wrap}
+.foreign-key-detail .actions{margin-bottom:15px}
+.foreign-key-detail details{margin-top:18px}
+.foreign-key-policies{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,4fr);gap:12px 20px;font-size:12px}
+.foreign-key-policies dt{font-weight:650;overflow-wrap:anywhere}
+.foreign-key-policies dd{margin:0;line-height:1.65;overflow-wrap:anywhere}
+@media(max-width:1050px){.foreign-key-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.foreign-key-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.foreign-key-filters{padding:12px}.foreign-key-filters label{flex-basis:100%}.foreign-key-policies{grid-template-columns:1fr;gap:5px}.foreign-key-policies dd{margin-bottom:12px}}

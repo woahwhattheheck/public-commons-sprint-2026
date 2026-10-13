@@ -9,6 +9,49 @@ export const directoryNativeContract=JSON.parse(readFileSync(new URL('../directo
 export const directorySourceContract=JSON.parse(readFileSync(new URL('../directory-source-schema.json',import.meta.url),'utf8'));
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
+export const directoryForeignKeyQueries=Object.freeze([
+  {
+    "key": "conformance_foreign_keys",
+    "action": "directory_conformance_foreign_keys",
+    "route": "foreign-keys",
+    "filters": [
+      "table",
+      "state",
+      "ruleId",
+      "sourceId",
+      "recordId"
+    ],
+    "description": "Read every original declared foreign-key outcome, keeping existence, ambiguity, physical values and selected coverage separate."
+  },
+  {
+    "key": "conformance_foreign_key_candidates",
+    "action": "directory_conformance_foreign_key_candidates",
+    "route": "foreign-key-candidates",
+    "filters": [
+      "table",
+      "state",
+      "groupId",
+      "sourceId",
+      "recordId"
+    ],
+    "description": "Read every retained target candidate, including null, invalid and non-tabular original rows; do not choose an ambiguous candidate."
+  },
+  {
+    "key": "conformance_foreign_key_matches",
+    "action": "directory_conformance_foreign_key_matches",
+    "route": "foreign-key-matches",
+    "filters": [
+      "outcomeId",
+      "candidateId"
+    ],
+    "description": "Read every original outcome-to-candidate match with both unchanged source references and exact key identity."
+  }
+].map(row=>{
+  const schemaValue=directoryConformanceContract.querySchemas?.[row.key];
+  need(schemaValue?.type==='object'&&schemaValue.additionalProperties===false&&schemaValue.properties?.offset&&schemaValue.properties?.limit,
+    'HUMAN_SERVICES_DIRECTORY_FOREIGN_KEY_CONTRACT','Install the complete source-owned foreign-key catalogue with this client.');
+  return Object.freeze({...row,schemaValue});
+}));
 export const directoryInputSchemas=directoryNativeContract.inputSchemas;
 export const directorySourceInputSchemas=directorySourceContract.inputSchemas;
 const sourceRoutes=[
@@ -181,6 +224,9 @@ const added=[
     assessmentId:hash('Saved conformance assessment ID.'),offset:page.offset,limit:page.limit,
     table:str('Exact original table or resource type.',{maxLength:128})
   },['assessmentId']),
+  ...directoryForeignKeyQueries.map(row=>tool(row.action,row.description,{
+    assessmentId:hash('Exact saved immutable conformance assessment ID.'),...row.schemaValue.properties
+  },['assessmentId'])),
   tool('directory_conformance_file','Retain the full selected report, finding index, original row file, rule catalogue or complete conformance package.',{
     collection:str('Original conformance file collection.',{enum:['assessments','reviews','comparisons']}),
     recordId:hash('Exact saved conformance record ID.'),

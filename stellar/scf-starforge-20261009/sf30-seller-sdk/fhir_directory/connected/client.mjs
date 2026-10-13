@@ -2,7 +2,7 @@
 import {join,resolve} from 'node:path';
 import {readSourceFile,directory as privateDirectory} from './files.mjs';
 import {openMerchantFileClient,createRetainedDownload} from '../../../../../stellar-forge/mcp-merchant-operator/retained-download.mjs';
-import {humanServicesDirectoryActions,validateHumanServicesDirectoryArguments} from './catalog.mjs';
+import {humanServicesDirectoryActions,validateHumanServicesDirectoryArguments,directoryForeignKeyQueries} from './catalog.mjs';
 import {TOOL_PREFIX,MANIFEST_NAME,MAX_PACKET_BYTES,MAX_RESPONSE_BYTES,SHA,UUID,ALIAS,need,checked,
   decode,encode,digest,parseHumanServicesDirectoryExport} from './contracts.mjs';
 export {humanServicesDirectoryActions} from './catalog.mjs';
@@ -188,8 +188,10 @@ export async function* iterateHumanServicesDirectoryConformance({
 }={}){
   checked(workspace,ALIAS,'workspace alias');checked(assessmentId,SHA,'conformance assessment ID');
   need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
-  need(kind==='findings'||kind==='rows','HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION');
-  const allowed=kind==='findings'?['severity','table','code','sourceId','recordId']:['table'];
+  const foreignKeyQuery=directoryForeignKeyQueries.find(row=>row.action==='directory_conformance_'+kind);
+  need(kind==='findings'||kind==='rows'||foreignKeyQuery,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION');
+  const allowed=foreignKeyQuery?foreignKeyQuery.filters:
+    kind==='findings'?['severity','table','code','sourceId','recordId']:['table'];
   need(filters&&typeof filters==='object'&&!Array.isArray(filters)&&
     Object.keys(filters).every(key=>allowed.includes(key)),'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_FILTERS');
   let offset=0,total;
@@ -203,6 +205,9 @@ export async function* iterateHumanServicesDirectoryConformance({
       Number.isSafeInteger(page.total)&&page.total>=0&&Array.isArray(page.rows)&&
       page.rows.length<=limit&&(total===undefined||page.total===total),
       'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED');
+    if(foreignKeyQuery)need(page.byteBudget===4194304&&Number.isSafeInteger(page.bytes)&&
+      page.bytes>=0&&page.bytes<=page.byteBudget,
+      'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED','Keep the original foreign-key page byte bound.');
     total=page.total;
     const next=offset+page.rows.length;
     need(next<=total&&(page.nextOffset===null?next===total:
@@ -212,6 +217,14 @@ export async function* iterateHumanServicesDirectoryConformance({
     if(page.nextOffset===null)return;
     offset=page.nextOffset;
   }
+}
+/** Stream every selected original relationship page through the complete retained-response reader. */
+export async function* iterateHumanServicesDirectoryForeignKeys({
+  client,workspace,assessmentId,kind='outcomes',filters={},limit=100,requestOptions
+}={}){
+  const selected={outcomes:'foreign_keys',candidates:'foreign_key_candidates',matches:'foreign_key_matches'}[kind];
+  need(selected,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION','Choose outcomes, candidates or matches.');
+  yield* iterateHumanServicesDirectoryConformance({client,workspace,assessmentId,kind:selected,filters,limit,requestOptions});
 }
 /** Receive the full selected native conformance file using the standard retained downloader. */
 export async function downloadHumanServicesDirectoryConformance({
