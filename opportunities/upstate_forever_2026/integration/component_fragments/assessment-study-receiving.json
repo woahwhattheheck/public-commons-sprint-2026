@@ -1,0 +1,70 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "assessment-study-receiving",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/operator/ASSESSMENT_CONTEXT.md",
+  "extend_components": {
+    "assessment-context": {
+      "paths": [
+        "integration/component_fragments/assessment-study-receiving.json",
+        "model/assessment_study_transfer.py",
+        "model/assessment_source_adoption.py",
+        "model/scientific_report_study_transfer.py",
+        "model/study_receiving.py",
+        "operator/assessment_context.py",
+        "operator/assessment_receiving.py",
+        "operator/study_receiving.py",
+        "operator/extensions/assessment-context.json",
+        "operator/extensions/study-transfer.json",
+        "operator/web/assessment_context.mjs",
+        "operator/web/assessment_received_studies.mjs",
+        "operator/web/received_studies.mjs",
+        "operator/ASSESSMENT_CONTEXT.md"
+      ]
+    },
+    "station-assessment": {
+      "paths": [
+        "integration/component_fragments/assessment-study-receiving.json",
+        "model/assessment_study_transfer.py",
+        "model/assessment_source_adoption.py",
+        "model/scientific_report_study_transfer.py",
+        "model/study_receiving.py",
+        "operator/assessment_context.py",
+        "operator/assessment_receiving.py",
+        "operator/study_receiving.py",
+        "operator/extensions/assessment-context.json",
+        "operator/extensions/study-transfer.json",
+        "operator/web/assessment_context.mjs",
+        "operator/web/assessment_received_studies.mjs",
+        "operator/web/received_studies.mjs",
+        "operator/ASSESSMENT_CONTEXT.md"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "integration/component_fragments/assessment-study-receiving.json",
+        "model/assessment_study_transfer.py",
+        "model/assessment_source_adoption.py",
+        "model/scientific_report_study_transfer.py",
+        "model/study_receiving.py",
+        "operator/assessment_context.py",
+        "operator/assessment_receiving.py",
+        "operator/study_receiving.py",
+        "operator/extensions/assessment-context.json",
+        "operator/extensions/study-transfer.json",
+        "operator/web/assessment_context.mjs",
+        "operator/web/assessment_received_studies.mjs",
+        "operator/web/received_studies.mjs",
+        "operator/ASSESSMENT_CONTEXT.md"
+      ],
+      "requires": [
+        "station-assessment"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "integration/component_fragments/assessment-study-receiving.json",
+        "model/assessment_study_transfer.py"
+      ]
+    }
+  }
+}

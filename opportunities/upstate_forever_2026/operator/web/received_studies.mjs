@@ -5,6 +5,7 @@ import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs'
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
 import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 import {receivedEconomicComparisonsHTML,openReceivedEconomicComparison} from './economic_received_comparisons.mjs';
+import {receivedAssessmentHTML,openReceivedAssessment} from './assessment_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -44,13 +45,13 @@ export function attachReceivedStudies(host) {
     if(!root)return;
     const disabled=busy?'disabled':'';
     root.innerHTML='<div class="st-panel-heading"><div><h3>Received studies and original sources</h3>'+
-      '<p>Open a saved study, its scientific reports, original editable plans, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
+      '<p>Open a saved study, its scientific reports, original editable plans, assessment contexts, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Assessment sources</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.assessment_source_count??0)+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -119,6 +120,7 @@ export function attachReceivedStudies(host) {
       }
       html+='</section>';
     }
+    html+=receivedAssessmentHTML(value,!!disabled);
     html+=receivedReviewHTML(host,value,!!disabled);
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
@@ -152,6 +154,17 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
+    if(action?.startsWith('assessment-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      const stillCurrent=()=>current(ws,e)&&opened===value&&selected===value.id;
+      try{
+        return await openReceivedAssessment(host,value,target,{
+          workspace_key:ws,current:stillCurrent,
+        });
+      }catch(reason){if(!stillCurrent())return;throw reason;}
+    }
     if(action?.startsWith('landcover-')){
       const ws=workspace,e=epoch,value=opened;
       if(!value||value.id!==selected||value.workspace_key!==ws)
