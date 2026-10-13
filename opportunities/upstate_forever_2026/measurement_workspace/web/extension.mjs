@@ -5,13 +5,13 @@ import {mountCollectionPanel} from './collections.mjs';
 import {mountMeasurements} from './workspace.js';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),handbackMemory=new Map(),lateResults=new Map(),sedimentMemory=new Map(),benchmarkMemory=new Map(),observationEditionMemory=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
   let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
   const benchmarkKey=(workspace,owner)=>JSON.stringify([workspace,owner]);
-  const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;return !!instance?.hasUnsavedBenchmarks?.();};
+  const unsavedBenchmarks=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of benchmarkMemory)if(identity!==current&&(state?.dirty||state?.pending))return true;for(const [identity,state] of sedimentMemory)if(identity!==current&&(state?.dirty||state?.pending||state?.auxPending))return true;return !!instance?.hasUnsavedBenchmarks?.()||!!instance?.hasUnsavedSediment?.();};
   const unsavedObservationEditions=()=>{const current=root&&displayedPerson!==null?benchmarkKey(key,displayedPerson):null;for(const [identity,state] of observationEditionMemory)if(identity!==current&&(state?.dirty||state?.pending_save||state?.retained_saves?.length))return true;return !!instance?.hasUnsavedObservationEditions?.();};
   const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',beforeUnload);
@@ -94,15 +94,15 @@ export function createMeasuredObservations(capabilities){
         guard();status.textContent=`${result.count} original identifiers registered; source SHA-256 ${result.source_sha256}`;await refresh();
       }catch(error){if(active())status.textContent=error.message;}
     });
-    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css',initialBenchmarkState:benchmarkMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,observationEditionState:observationEditionMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,observationEditionCss:'/web/observation_editions.css',onObservationEditionState:value=>{if(personIdentity()===boundPerson)observationEditionMemory.set(benchmarkKey(boundWorkspace,boundPerson),JSON.parse(JSON.stringify(value)));},sourceHandbackCss:'/web/source_handback.css',sourceHandbackState:handbackMemory.get(boundWorkspace)||null,onSourceHandbackState:value=>{if(personIdentity()===boundPerson)handbackMemory.set(boundWorkspace,JSON.parse(JSON.stringify(value)));}});
+    instance=mountMeasurements(component,{transport:request,css:'/web/measured_observations.css',initialBenchmarkState:benchmarkMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,initialSedimentState:sedimentMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,sedimentScope:boundPerson,onSedimentState:value=>sedimentMemory.set(benchmarkKey(boundWorkspace,boundPerson),JSON.parse(JSON.stringify(value))),observationEditionState:observationEditionMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null,observationEditionCss:'/web/observation_editions.css',onObservationEditionState:value=>{if(personIdentity()===boundPerson)observationEditionMemory.set(benchmarkKey(boundWorkspace,boundPerson),JSON.parse(JSON.stringify(value)));},sourceHandbackCss:'/web/source_handback.css',sourceHandbackState:handbackMemory.get(boundWorkspace)||null,onSourceHandbackState:value=>{if(personIdentity()===boundPerson)handbackMemory.set(boundWorkspace,JSON.parse(JSON.stringify(value)));}});
     paintCurrentNotice();
   }
   function suspend(){
     // The original host detaches after selection changes. Retain the exact old
     // editor locally; never send an old-identity write through the new selection.
-    if(instance&&displayedPerson!==null){const observation=personIdentity()===displayedPerson?instance.snapshotObservationEditions?.():null;if(observation)observationEditionMemory.set(benchmarkKey(key,displayedPerson),JSON.parse(JSON.stringify(observation)));const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);}
+    if(instance&&displayedPerson!==null){const observation=personIdentity()===displayedPerson?instance.snapshotObservationEditions?.():null;if(observation)observationEditionMemory.set(benchmarkKey(key,displayedPerson),JSON.parse(JSON.stringify(observation)));const state=instance.snapshotBenchmarks?.();if(state)benchmarkMemory.set(benchmarkKey(key,displayedPerson),state);const sediment=instance.snapshotSediment?.();if(sediment)sedimentMemory.set(benchmarkKey(key,displayedPerson),sediment);}
     generation++;paintCurrentNotice=()=>{};displayedPerson=null;
-    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true});instance=null;root=null;key=null;
+    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy({retainedBenchmarkState:true,retainedSedimentState:true});instance=null;root=null;key=null;
   }
   return {mount,async prepareLeave(){if(instance)await instance.prepareLeave?.();},cancelLeave(){instance?.cancelLeave?.();},destroy(){suspend();window.removeEventListener('beforeunload',beforeUnload);},update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
 }
