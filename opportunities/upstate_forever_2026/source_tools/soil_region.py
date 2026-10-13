@@ -171,6 +171,10 @@ def _database(path, *, readonly=False):
             );
             CREATE INDEX IF NOT EXISTS soil_tile ON soil(tile);
             CREATE INDEX IF NOT EXISTS soil_mukey ON soil(mukey);
+            CREATE TABLE IF NOT EXISTS soil_capture_tiles (
+                tile TEXT PRIMARY KEY,
+                checkpoint TEXT NOT NULL
+            );
             CREATE VIRTUAL TABLE IF NOT EXISTS soil_bounds USING rtree(
                 id, minx, maxx, miny, maxy
             );
@@ -179,37 +183,153 @@ def _database(path, *, readonly=False):
     return db
 
 
-def _materialize_tile(client, db, tile):
+def _clear_tile(db, name):
+    db.execute("DELETE FROM soil_capture_tiles WHERE tile=?", (name,))
+    db.execute("DELETE FROM soil_bounds WHERE id IN (SELECT id FROM soil WHERE tile=?)",
+               (name,))
+    db.execute("DELETE FROM soil WHERE tile=?", (name,))
+
+
+def _store_rows(db, tile, rows):
+    """Consume one already validated original page without decoding it again."""
     import shapely
     count = 0
+    for row in rows:
+        body = bytes.fromhex(row["GeometryWkb"])
+        geometry = shapely.from_wkb(body)
+        if geometry.is_empty:
+            continue
+        if not geometry.is_valid:
+            raise ValueError("Original soil polygon requires a source correction: "
+                             + str(row[POLYGON_ID]))
+        if not _polygons(geometry):
+            continue
+        properties = {k: v for k, v in row.items() if k != "GeometryWkb"}
+        cursor = db.execute(
+            "INSERT INTO soil(tile,aoiid,native_id,mukey,properties,wkb) VALUES(?,?,?,?,?,?)",
+            (tile["name"], tile["aoiid"], str(row[POLYGON_ID]), _int(row["MapUnitKey"]),
+             canonical(properties).decode("utf-8"), body))
+        left, bottom, right, top = geometry.bounds
+        db.execute("INSERT INTO soil_bounds VALUES(?,?,?,?,?)",
+                   (cursor.lastrowid, left, right, bottom, top))
+        count += 1
+    return count
+
+
+def _materialize_tile(client, db, tile):
+    """Compatibility entry point for a previously described geometry tile."""
+    count = 0
     with db:
-        db.execute("DELETE FROM soil_bounds WHERE id IN (SELECT id FROM soil WHERE tile=?)",
-                   (tile["name"],))
-        db.execute("DELETE FROM soil WHERE tile=?", (tile["name"],))
+        _clear_tile(db, tile["name"])
         for page in tile["pages"]:
             rows = client.query(page["request"], page["sql"], maximum_bytes=64 * 1024 * 1024)
             if [_int(r[POLYGON_ID]) for r in rows] != page["ids"]:
                 raise ValueError("Original geometry page IDs changed")
-            for row in rows:
-                body = bytes.fromhex(row["GeometryWkb"])
-                geometry = shapely.from_wkb(body)
-                if geometry.is_empty:
-                    continue
-                if not geometry.is_valid:
-                    raise ValueError("Original soil polygon requires a source correction: "
-                                     + str(row[POLYGON_ID]))
-                if not _polygons(geometry):
-                    continue
-                properties = {k: v for k, v in row.items() if k != "GeometryWkb"}
-                cursor = db.execute(
-                    "INSERT INTO soil(tile,aoiid,native_id,mukey,properties,wkb) VALUES(?,?,?,?,?,?)",
-                    (tile["name"], tile["aoiid"], str(row[POLYGON_ID]), _int(row["MapUnitKey"]),
-                     canonical(properties).decode("utf-8"), body))
-                left, bottom, right, top = geometry.bounds
-                db.execute("INSERT INTO soil_bounds VALUES(?,?,?,?,?)",
-                           (cursor.lastrowid, left, right, bottom, top))
-                count += 1
+            count += _store_rows(db, tile, rows)
+            del rows
     return count
+
+
+def _tile_index_state(db, name):
+    """Hash existing WKB/index rows in a stream, without parsing geometries."""
+    h = hashlib.sha256()
+    count = 0
+    rows = db.execute("""
+        SELECT s.aoiid,s.native_id,s.mukey,s.properties,
+               b.minx,b.maxx,b.miny,b.maxy,s.wkb
+        FROM soil s LEFT JOIN soil_bounds b ON b.id=s.id
+        WHERE s.tile=? ORDER BY s.native_id
+    """, (name,))
+    for row in rows:
+        if any(value is None for value in row[4:8]):
+            return None
+        header, body = canonical(list(row[:-1])), row[-1]
+        h.update(len(header).to_bytes(8, "big"))
+        h.update(header)
+        h.update(len(body).to_bytes(8, "big"))
+        h.update(body)
+        count += 1
+    return {"rows": count, "sha256": h.hexdigest()}
+
+
+def _tile_original_members(client, tile):
+    """Bind the already received originals inside the tile's SQL transaction."""
+    names = [tile["name"] + suffix
+             for suffix in ("/aoi", "/polygon-count", "/polygon-ids")]
+    names.extend(page["request"] for page in tile["pages"])
+    members = []
+    for name in names:
+        directory = client.root / "original" / name
+        receipts = sorted(directory.glob("[0-9][0-9][0-9][0-9].capture.json"))
+        if not receipts:
+            raise ValueError("The indexed tile lacks its original response: " + name)
+        receipt_path = receipts[-1]
+        record = read_json(receipt_path)
+        request_path = directory / "request.json"
+        request = read_json(request_path)
+        if (record.get("state") != "complete" or record.get("status") != 200
+                or record.get("request_sha256") != request.get("request_sha256")):
+            raise ValueError("Finish the original tile request before indexing: " + name)
+        body = relative_file(directory, record["stored_file"])
+        # Sda.post has just verified this compressed body and its decoded bytes.
+        # Retain that existing identity; do not hash/decompress it a second time.
+        members.extend((describe_file(client.root, request_path),
+                        describe_file(client.root, receipt_path),
+                        {"path": body.relative_to(client.root).as_posix(),
+                         "bytes": record["stored_bytes"],
+                         "sha256": record["stored_sha256"]}))
+    return members
+
+
+def _reuse_tile(client, db, expected, plan_sha256):
+    row = db.execute("SELECT checkpoint FROM soil_capture_tiles WHERE tile=?",
+                     (expected["name"],)).fetchone()
+    if row is None:
+        return None
+    saved = json.loads(row[0])
+    tile = saved["tile"]
+    if (saved.get("schema") != "upstate.soil-indexed-tile/v1"
+            or saved.get("plan_sha256") != plan_sha256
+            or any(tile.get(key) != value for key, value in expected.items())):
+        raise ValueError("The retained tile belongs to another original source selection")
+    for member in saved["originals"]:
+        verify_file(client.root, member)
+    # A changed or interrupted derived index is rebuilt from its exact original
+    # pages. A changed original above is reported instead of silently replaced.
+    actual = _tile_index_state(db, tile["name"])
+    if actual != saved["index"] or actual["rows"] != tile["indexed_polygons"]:
+        return None
+    return saved["ids"], tile
+
+
+def _capture_tile(client, db, expected, *, page_size, plan_sha256):
+    existing = _reuse_tile(client, db, expected, plan_sha256)
+    if existing is not None:
+        return existing[0], existing[1], True
+    created = json.loads(client.post(expected["name"] + "/aoi", {
+        "SERVICE": "aoi", "REQUEST": "create", "AOICOORDS": expected["native_aoi_wkt"]}))
+    tile = {**expected, "aoiid": _int(created["id"])}
+    with db:
+        _clear_tile(db, tile["name"])
+        count = 0
+
+        def consume(rows):
+            nonlocal count
+            count += _store_rows(db, tile, rows)
+
+        ids, pages = _geometry_pages(client, tile, page_size=page_size, on_page=consume)
+        tile.update(polygons=len(ids), pages=pages, indexed_polygons=count)
+        index = _tile_index_state(db, tile["name"])
+        if index is None or index["rows"] != count:
+            raise ValueError("Original soil rows and their spatial index differ")
+        checkpoint = {
+            "schema": "upstate.soil-indexed-tile/v1",
+            "plan_sha256": plan_sha256, "tile": tile, "ids": ids,
+            "originals": _tile_original_members(client, tile), "index": index,
+        }
+        db.execute("INSERT INTO soil_capture_tiles(tile,checkpoint) VALUES(?,?)",
+                   (tile["name"], canonical(checkpoint).decode("utf-8")))
+    return ids, tile, False
 
 
 def _coefficients(batches):
@@ -343,6 +463,7 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
         x0, x1 = math.floor(left / tile_edge_m), math.ceil(right / tile_edge_m)
         y0, y1 = math.floor(bottom / tile_edge_m), math.ceil(top / tile_edge_m)
         tiles, keys, versions = [], set(), {}
+        reused_tiles = 0
         db = _database(root / "soil-polygons.sqlite")
         try:
             for y in range(y0, y1):
@@ -358,12 +479,11 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
                         raise ValueError("Native USDA request rectangle is invalid")
                     name = f"geometry/x{x:+07d}-y{y:+07d}"
                     wkt = box(west, south, east, north).wkt
-                    created = json.loads(client.post(name + "/aoi", {
-                        "SERVICE": "aoi", "REQUEST": "create", "AOICOORDS": wkt}))
-                    tile = {"name": name, "aoiid": _int(created["id"]),
-                            "capture_bounds": list(bounds), "native_aoi_wkt": wkt}
-                    ids, pages = _geometry_pages(client, tile, page_size=page_size)
-                    tile.update(polygons=len(ids), pages=pages)
+                    expected = {"name": name, "capture_bounds": list(bounds),
+                                "native_aoi_wkt": wkt}
+                    ids, tile, reused = _capture_tile(
+                        client, db, expected, page_size=page_size, plan_sha256=digest(plan))
+                    reused_tiles += int(reused)
                     for row in ids:
                         mukey = _int(row["MapUnitKey"])
                         if not 0 < mukey <= 2147483647:
@@ -373,13 +493,14 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
                         if area in versions and versions[area] != version:
                             raise ValueError("Native soil survey version changed: " + area)
                         versions[area] = version
-                    tile["indexed_polygons"] = _materialize_tile(client, db, tile)
                     tiles.append(tile)
                     atomic_json(root / "tiles" / (name.split("/")[-1] + ".json"),
                                 tile, immutable=True)
                     atomic_json(root / "progress.json", {
                         "plan_sha256": digest(plan), "stage": "geometry",
-                        "completed_tiles": len(tiles), "mapunits_seen": len(keys)})
+                        "completed_tiles": len(tiles), "mapunits_seen": len(keys),
+                        "reused_indexed_tiles": reused_tiles,
+                        "newly_indexed_tiles": len(tiles) - reused_tiles})
             if not tiles or not keys:
                 raise ValueError("The domain returned no original soil mapunits")
             batches, parameters = [], None
