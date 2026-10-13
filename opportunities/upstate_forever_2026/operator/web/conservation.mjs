@@ -57,6 +57,7 @@ function freshStudy() {
     parcel_source: "", parcel_layer: "", id_field: "", label_field: "", parcel_where: "",
     reporting_source: "", reporting_layer: "", analysis_crs: "EPSG:5070",
     baseline_run_id: "", alternative_run_ids: [], score_alternative: "", matched_families: [],
+    family_cohort: { scenario_ids: [], choices: {}, reason: "" },
     protected_source: "", protected_layer: "", protected_reference: "", protected_meaning: "",
     protected_relation: "Area intersection",
     water_source: "", water_layer: "", water_reference: "", water_meaning: "",
@@ -528,12 +529,136 @@ export function attachConservation({
     const family = matchedFamilies(study).find(row => row.id === id);
     return family?.label || id;
   }
+  function familyCohort(draft = memory().draft) {
+    const current = getState?.()?.data || {}, retained = memory().overview?.available || {};
+    const combine = name => [...new Map([...(current[name] || []), ...(retained[name] || [])]
+      .map(row => [row.id, row])).values()];
+    const scenarios = new Map(combine("scenarios").map(row => [row.id, row]));
+    const profiles = new Map(combine("profiles").map(row => [row.id, row]));
+    const original = runs().find(row => row.id === draft.baseline_run_id);
+    const baselineScenario = scenarios.get(original?.selection?.scenario_id);
+    const gridId = original?.selection?.grid_id;
+    const cohort = draft.family_cohort || { scenario_ids: [], choices: {}, reason: "" };
+    if (!gridId || baselineScenario?.kind !== "baseline")
+      return { ready: false, rows: [], treatments: [], cohort,
+        reason: "Choose an original-land-cover baseline above to review completed model families on its grid." };
+    const available = runs().filter(run => run.selection?.grid_id === gridId &&
+      run.selection?.profile_id && run.execution?.supported === true && runModels(run).length);
+    const groups = new Map();
+    for (const run of available) {
+      const models = [...runModels(run)].sort();
+      const key = JSON.stringify([run.selection.profile_id, models]);
+      if (!groups.has(key)) groups.set(key, { profile_id: run.selection.profile_id, models, runs: [] });
+      groups.get(key).runs.push(run);
+    }
+    const treatmentIds = new Set();
+    const rows = [];
+    const existing = new Set((draft.matched_families || []).map(row =>
+      JSON.stringify([row.baseline_run_id, row.alternative_run_id])));
+    for (const group of [...groups.values()].sort((a,b) => a.profile_id.localeCompare(b.profile_id) ||
+      a.models.join(",").localeCompare(b.models.join(",")))) {
+      const baselines = group.runs.filter(run => run.selection.scenario_id === baselineScenario.id);
+      if (!baselines.length) continue;
+      const alternatives = new Map();
+      for (const run of group.runs) {
+        const scenario = scenarios.get(run.selection.scenario_id);
+        if (!scenario || scenario.kind === "baseline") continue;
+        treatmentIds.add(scenario.id);
+        if (!alternatives.has(scenario.id)) alternatives.set(scenario.id, []);
+        alternatives.get(scenario.id).push(run);
+      }
+      for (const scenarioId of [...alternatives.keys()].sort()) {
+        if (!(cohort.scenario_ids || []).includes(scenarioId)) continue;
+        const treatments = alternatives.get(scenarioId);
+        const key = JSON.stringify([group.profile_id, group.models, baselineScenario.id, scenarioId]);
+        const choice = cohort.choices?.[key] || {};
+        const baseline = Object.hasOwn(choice, "baseline_run_id") ? choice.baseline_run_id :
+          (baselines.length === 1 ? baselines[0].id : "");
+        const treatment = Object.hasOwn(choice, "alternative_run_id") ? choice.alternative_run_id :
+          (treatments.length === 1 ? treatments[0].id : "");
+        const selectedBaseline = baselines.find(run => run.id === baseline);
+        const selectedTreatment = treatments.find(run => run.id === treatment);
+        rows.push({ key, profile_id: group.profile_id, profile: profiles.get(group.profile_id),
+          models: group.models, baselineScenario, scenario: scenarios.get(scenarioId),
+          baselines, treatments, baseline_run_id: baseline, alternative_run_id: treatment,
+          complete: !!selectedBaseline && !!selectedTreatment,
+          included: choice.included === true,
+          alreadyAdded: existing.has(JSON.stringify([baseline, treatment])) });
+      }
+    }
+    return { ready: true, gridId, baselineScenario, cohort, rows,
+      treatments: [...treatmentIds].sort().map(id => scenarios.get(id)) };
+  }
+  function familyCohortFields(draft) {
+    const scope = familyCohort(draft);
+    if (!scope.ready) return '<p class="cons-help">' + h(scope.reason) + '</p>';
+    const choices = (values, noun) => [["", "Choose the original " + noun], ...values.map(run =>
+      [run.id, (run.title || run.id) + " · " + runQuantityLabel(run) + " · " + run.id])];
+    return '<details class="cons-disclosure"><summary>Add families from completed runs</summary>' +
+      '<p>Review retained treatments across original parameter profiles on grid <code>' + h(scope.gridId) +
+      '</code>. The baseline scenario is ' + h(scope.baselineScenario.title || scope.baselineScenario.id) +
+      '. Every row matches original grid, profile and native model choices. Select the original runs explicitly when a row has more than one match.</p>' +
+      (scope.treatments.length ? '<fieldset><legend>Retained treatment scenarios</legend>' +
+        scope.treatments.map(row => '<label class="cons-check"><input type="checkbox" data-family-treatment="' +
+          h(row.id) + '"' + (scope.cohort.scenario_ids.includes(row.id) ? ' checked' : '') + '> <span>' +
+          h(row.title || row.id) + '<span class="cons-metric-note">' + h(row.id) + '</span></span></label>').join("") +
+        '</fieldset>' : '<p>No supported completed treatment matches this baseline scenario and grid yet.</p>') +
+      (scope.rows.length ? '<div class="cons-actions">' + button("family-cohort-select", "Select complete new pairs") +
+        button("family-cohort-clear", "Clear pair selection") + '</div><div class="cons-table-wrap"><table class="cons-table">' +
+        '<thead><tr><th>Include</th><th>Original profile and treatment</th><th>Baseline run</th><th>Treatment run</th></tr></thead><tbody>' +
+        scope.rows.map((row,index) => '<tr><td><input type="checkbox" data-family-pair="' + index +
+          '" aria-label="Include ' + h(row.scenario.title || row.scenario.id) + ' with ' +
+          h(row.profile?.title || row.profile_id) + '"' + (row.included ? ' checked' : '') +
+          (row.alreadyAdded ? ' disabled' : '') + '></td><th scope="row">' + h(row.profile?.title || row.profile_id) +
+          '<span class="cons-metric-note">' + h(row.scenario.title || row.scenario.id) + ' · ' +
+          h(row.models.map(name => name.toUpperCase()).join(" + ")) + '</span>' +
+          (row.alreadyAdded ? '<span class="cons-metric-note">Already in this study draft</span>' : '') +
+          '</th><td>' + select("cohort." + index + ".baseline_run_id", "Original baseline", row.baseline_run_id,
+            choices(row.baselines, "baseline")) + '</td><td>' +
+          select("cohort." + index + ".alternative_run_id", "Original treatment", row.alternative_run_id,
+            choices(row.treatments, "treatment")) + '</td></tr>').join("") +
+        '</tbody></table></div>' +
+        input("cohort.reason", "Scientific purpose of these matched comparisons", scope.cohort.reason,
+          'placeholder="Describe the treatment question and why these retained settings should be compared"') +
+        '<p class="cons-help">Selected pairs are added to the editable family list below. Their labels, reasons and references can be refined individually. ' +
+        'All declared families determine the common footprint, including families not selected in a later decision comparison.</p>' +
+        button("family-cohort-add", "Add reviewed model families") : '') + '</details>';
+  }
+  function addCohortFamilies() {
+    const draft = memory().draft, scope = familyCohort(draft);
+    if (!scope.ready) throw new Error(scope.reason);
+    const selected = scope.rows.filter(row => row.included && !row.alreadyAdded);
+    if (!selected.length) throw new Error("Select at least one new original baseline/treatment pair.");
+    const reason = String(scope.cohort.reason || "").trim();
+    if (!reason) throw new Error("Describe the scientific purpose of these matched comparisons.");
+    if (selected.some(row => !row.complete))
+      throw new Error("Choose both original runs for every selected pair before adding families.");
+    const ids = new Set((draft.matched_families || []).map(row => row.id));
+    let ordinal = 1;
+    const additions = selected.map(row => {
+      while (ids.has("family_" + ordinal)) ordinal++;
+      const id = "family_" + ordinal++; ids.add(id);
+      return { id, label: (row.scenario.title || row.scenario.id) + " · " +
+          (row.profile?.title || row.profile_id) + " · " + row.models.map(name => name.toUpperCase()).join(" + "),
+        baseline_run_id: row.baseline_run_id, alternative_run_id: row.alternative_run_id,
+        reason: reason + " Original matched profile: " + (row.profile?.title || row.profile_id) + ".",
+        reference: "Original profile " + row.profile_id + "; baseline scenario " + scope.baselineScenario.id +
+          "; treatment scenario " + row.scenario.id + "; grid " + scope.gridId };
+    });
+    draft.family_cohort = { ...scope.cohort, choices: { ...(scope.cohort.choices || {}) } };
+    draft.matched_families = [...(draft.matched_families || []), ...additions];
+    for (const row of selected) {
+      draft.family_cohort.choices[row.key] = { ...draft.family_cohort.choices[row.key], included: false,
+        baseline_run_id: row.baseline_run_id, alternative_run_id: row.alternative_run_id };
+    }
+    return additions.length;
+  }
   function studyFamilyFields(draft, runItems) {
     return '<details class="cons-disclosure"' + (draft.matched_families?.length ? ' open' : '') +
       '><summary>Matched model families</summary><p>Compare treatment effects while keeping each family’s own baseline. ' +
       'A family pairs completed runs with the same parameter profile and grid; describe the scientific setting that makes the pair comparable. ' +
       'The study baseline above continues to define its original current-export and fixed-baseline views.</p>' +
-      (draft.matched_families || []).map((row, index) => {
+      familyCohortFields(draft) + (draft.matched_families || []).map((row, index) => {
         const prefix = "family." + index + ".";
         return '<fieldset><legend>' + h(row.label || "Model family " + (index + 1)) + '</legend><div class="cons-grid">' +
           input(prefix + "label", "Family name", row.label) +
@@ -2612,7 +2737,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric", "data-family-treatment", "data-family-pair"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -2626,7 +2751,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric],[data-family-treatment],[data-family-pair]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -2707,9 +2832,35 @@ export function attachConservation({
       paint();
       return;
     }
+    if (target.hasAttribute("data-family-treatment") && event.type === "change") {
+      ui.draft.family_cohort ||= { scenario_ids: [], choices: {}, reason: "" };
+      const id = target.getAttribute("data-family-treatment"), scope = familyCohort(ui.draft);
+      if (!scope.treatments.some(row => row.id === id)) return;
+      const selected = new Set(ui.draft.family_cohort.scenario_ids);
+      if (target.checked) selected.add(id); else selected.delete(id);
+      ui.draft.family_cohort.scenario_ids = [...selected]; paint(); return;
+    }
+    if (target.hasAttribute("data-family-pair") && event.type === "change") {
+      const scope = familyCohort(ui.draft), row = scope.rows[Number(target.getAttribute("data-family-pair"))];
+      if (!row || row.alreadyAdded) return;
+      ui.draft.family_cohort.choices[row.key] = { ...ui.draft.family_cohort.choices[row.key], included: target.checked };
+      return;
+    }
     const name = target.getAttribute("data-field");
     if (!name) return;
     const value = target.type === "checkbox" ? target.checked : target.value;
+    if (name.startsWith("cohort.")) {
+      ui.draft.family_cohort ||= { scenario_ids: [], choices: {}, reason: "" };
+      if (name === "cohort.reason") ui.draft.family_cohort.reason = value;
+      else {
+        const [, index, field] = name.split(".");
+        const row = familyCohort(ui.draft).rows[Number(index)];
+        if (row && ["baseline_run_id", "alternative_run_id"].includes(field))
+          ui.draft.family_cohort.choices[row.key] = { ...ui.draft.family_cohort.choices[row.key], [field]: value };
+        if (event.type === "change") paint();
+      }
+      return;
+    }
     if (name.startsWith("family.")) {
       const [, index, field] = name.split(".");
       const row = ui.draft.matched_families?.[Number(index)];
@@ -2810,6 +2961,7 @@ export function attachConservation({
       if (category) ui.draft.purpose = category.purpose;
     }
     if (event.type === "change" && name === "baseline_run_id") {
+      ui.draft.family_cohort = { scenario_ids: [], choices: {}, reason: ui.draft.family_cohort?.reason || "" };
       ui.draft.alternative_run_ids = ui.draft.alternative_run_ids.filter(id => id !== value);
       if (ui.draft.score_alternative === value) ui.draft.score_alternative = "";
       if (!allNativeClasses(ui.draft)) ui.draft.method_native_classes = false;
@@ -2965,6 +3117,20 @@ export function attachConservation({
           resetCatalog(ui); ui.readVersion++; clearChecked(ui);
           resetCatalog(ui); clearChecked(ui);
           ui.study = null; ui.plan = null; ui.detailId = null; ui.form = null; paint(); break;
+        case "family-cohort-select":
+        case "family-cohort-clear": {
+          ui.draft.family_cohort ||= { scenario_ids: [], choices: {}, reason: "" };
+          for (const row of familyCohort(ui.draft).rows) {
+            ui.draft.family_cohort.choices[row.key] = { ...ui.draft.family_cohort.choices[row.key],
+              included: name === "family-cohort-select" && row.complete && !row.alreadyAdded };
+          }
+          paint(); break;
+        }
+        case "family-cohort-add": {
+          const count = addCohortFamilies();
+          ui.notice = { kind: "status", message: count + " original matched families added to the study draft." };
+          paint(); break;
+        }
         case "add-family": {
           ui.draft.matched_families ||= [];
           const ids = new Set(ui.draft.matched_families.map(row => row.id));

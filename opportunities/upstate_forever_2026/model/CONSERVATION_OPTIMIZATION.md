@@ -585,6 +585,31 @@ the native study specification:
 These identifiers illustrate the schema; select actual completed run IDs in the
 receiving Workspace. The optional reference is text retained with the family.
 
+### Select completed families in the editor
+
+Choose the study's original-land-cover baseline, then open **Matched model
+families → Add families from completed runs**. Select one or more retained
+treatment scenarios. The editor groups completed, supported native runs by their
+original parameter profile and model choices on the selected grid. Each row
+pairs that profile's own baseline with its treatment.
+
+When a row has several completed matches, choose the original baseline and
+treatment explicitly. Clearing a choice keeps the row unfinished. **Select
+complete new pairs** selects resolved rows; individual checkboxes let you refine
+the cohort. Already authored pairs remain identified in the table.
+
+Enter the scientific purpose, then choose **Add reviewed model families**.
+The complete selection is appended to the editable family list together.
+Refine each family's name, reason or reference there, or keep adding individual
+families through the existing controls. Existing family rows retain their values.
+Changing the study baseline resets the batch chooser to the new original grid
+and baseline scenario while preserving the family list for explicit review.
+
+These controls choose retained original runs; saving the study binds those runs
+and derives their common geographic support. Every declared family contributes
+to the pollutant's common footprint. Review that scope before saving, even when
+a later decision comparison uses only some of the families.
+
 ### Common geographic support
 
 Every pollutant has its own common mask across **all families declared in the study**.
