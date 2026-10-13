@@ -49,6 +49,34 @@ Replace the ID labels with the complete identifiers returned by the actual Works
 
 Parameter planners can construct this selection directly. The service validates existing selections and native compatibility; source acquisition and scientific parameter generation retain their existing owners.
 
+## Reuse completed native models
+
+A full NDR/SDR result can use the completed NDR stage from one original run and the completed SDR stage from another. In **Create programme** or **Copy selections**, choose the target full grid, parameter profile and land-cover scenario, select **NDR + SDR** (or inherit both grid models), and choose **Reuse completed NDR and SDR**.
+
+Select **Completed NDR source** and **Completed SDR source** by their original run IDs. Each choice displays the original profile, land-cover case and stage completion time. A completed stage remains selectable when another stage or the reporting step caused its enclosing run to fail. The catalogue reads retained metadata; actual input compatibility is resolved by the native assembler when the programme runs.
+
+Source and target grid/profile identifiers may differ when they represent separate partial-model and combined selections. The assembler compares the actual selected native inputs, parameters, runtime and source outputs. It copies the completed model stages into the ordinary target run, then finishes the target's reporting outputs. The target keeps its normal native selection identity. Execution checkpoints each assembly stage, so an interruption can continue the same target and source stages.
+
+An explicit selection row uses:
+
+    {
+      "key": "combined-baseline",
+      "title": "Combined completed baseline models",
+      "profile_id": "TARGET_FULL_PROFILE_ID",
+      "scenario_id": "TARGET_SCENARIO_ID",
+      "models": ["ndr", "sdr"],
+      "source_runs": {
+        "ndr": "ORIGINAL_COMPLETED_NDR_RUN_ID",
+        "sdr": "ORIGINAL_COMPLETED_SDR_RUN_ID"
+      }
+    }
+
+**Review planned runs** shows the selected models, calculation method and original source IDs for each case. The saved programme links to those source runs beside its target run. The result catalogue's **Original native run** field identifies the actual source of each reported quantity; a target already completed before the request retains its existing scientific lineage.
+
+The catalogue includes `model_selection_available`, `completed_model_assembly_available`, and separate `completed_model_runs.ndr` and `completed_model_runs.sdr` arrays. Each source record retains its selection, completion time, stage hash and runtime hash. These are the same selections supported by the browser and native CLI. The browser requests completed sources only when opening the creation/copy form; ordinary status refreshes read the lighter programme catalogue.
+
+**Copy selections** retains explicit NDR/SDR choices, source runs, purpose and source reference. Experiment annotations remain attached while their grid, profile, land-cover case and model scope are unchanged.
+
 ## Shared Python service
 
 Import **ComputeProgrammes** from **model.compute_programme** and construct it with the current **Workspace** instance.
@@ -75,7 +103,7 @@ The current operator's authentication, request identities and task queue apply t
 
 | Route | Request / behaviour |
 | --- | --- |
-| GET /api/programmes/catalog?workspace=… | Programme and prepared-input catalogue |
+| GET /api/programmes/catalog?workspace=… | Programme and prepared-input catalogue; add include_sources=1 to include completed native source stages |
 | GET /api/programmes/detail?workspace=…&programme_id=… | Saved programme and authenticated output links |
 | GET /api/programmes/report?workspace=…&programme_id=… | Saved result catalogue |
 | POST /api/programmes/preview | {workspace, selection} |
@@ -123,6 +151,8 @@ The programme keeps one overall reference case. Each experiment case also retain
 
 Other screens can open this workflow with **programmes.fromExperiment(experiment_id)**. The existing native run desk passes prepared selections with **programmes.create({selection})**, and reopens a saved programme with **programmes.open(programme_id)**. These calls use the same workspace, authentication, original tasks and result downloads.
 
+A completed programme created from a saved experiment collects its paired experiment results after the programme's execution locks are released. The operator and the programme CLI use the same continuation service. Reopen the saved experiment to inspect its completed cases, compare same-profile alternatives, download the experiment report, and build paired ensemble maps. See **model/EXPERIMENT_PROGRAMME_CONTINUATION.md** for the complete retained-case and recovery workflow.
+
 ## Continuation and source updates
 
 The browser's **Continue unfinished runs** and **Run selected cases** clear an earlier pause before resuming. A paused programme keeps its original cases. If the process ended during coordination, resumption records the interrupted attempt and the native stages already present, then verifies and reuses those outputs.
@@ -141,8 +171,27 @@ Run its command-line help from the full application:
 
 Supply the actual retained archive paths with **--ndr-archive** and **--sdr-archive**, the separate current original CSV paths with **--ndr-table** and **--sdr-table**, separate workspace and source directories, the installed source reference, and an explicit model-context buffer. The current receiver preserves the original 300-metre reference resolution; every square cell covers 9 hectares. **--upstream-buffer-m** selects a separate model-context distance. Each table's original source URI, complete bytes and row lineage are retained independently of the archive's older sample tables. The receiver reads the scientific coefficients and load semantics from the original tables. Use the original regional workspace for the Upper Savannah study; the Gura workspace is named for its source study and exercises the same native application path.
 
+The full source now includes both original 3.20 biophysical CSVs under **source/gura-original-tables-3.20/**. Their exact publisher revision, source paths, hashes and original URLs are in **source/gura-original-tables-3.20/source.json**. Pass these retained files directly to **--ndr-table** and **--sdr-table**. The intake streams and verifies an existing extracted member against its original ZIP entry before reuse, avoiding another member-sized temporary copy on a retry.
+
+The pinned 3.20 native NDR exports are annual kilograms per hectare; native SDR sediment export is annual metric tonnes per hectare. The reporting conversion multiplies each native raster by its actual affine pixel area in hectares. Thus a 30-metre square regional cell uses 0.09 hectare, and an original 300-metre Gura cell uses 9 hectares. Original native output files and reported mass-per-cell outputs remain separate in the retained run. The version-specific model guides linked above document these quantities.
+
 ## Source operation
 
 **UPSTATE-SCIENTIFIC-PROGRAMMES-A73C-20261012**, part of **UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012**.
 
 Implementation: TokenJunkieLabs. Existing application and third-party license notices remain with their source.
+
+## Paired scenario maps from completed programmes
+
+Open a completed programme and use **Build paired maps** beside an available alternative. The selector matches original baseline and alternative runs by the same parameter profile, grid and native model version. NDR-only, SDR-only and combined profiles retain their actual model scope. Each candidate shows its original pairs and available quantities before calculation; select the member percentiles and review the original inputs to build the maps. The complete paired result, downloads and map viewer use the shared paired-ensemble service.
+
+The catalogue lists missing or incomplete matching baselines with their actual saved profile and scenario selections. Programme status and reports include **ensemble_candidates**, **ensemble_candidate_issues** and **ensemble_pairing**. Each saved report includes the direct paired-service selection JSON for every available candidate. The CLI exposes the same selections:
+
+    python -B -m model.compute_programme_cli --workspace WORKSPACE ensemble-candidates PROGRAMME_ID
+    python -B -m model.compute_programme_cli --workspace WORKSPACE ensemble-selection PROGRAMME_ID CANDIDATE_ID
+
+Ordinary catalogue refreshes read retained programme metadata. The create/copy form explicitly requests completed-model sources when it opens, so the native source scan occurs when those source choices are needed. Command-line callers can use **catalog --without-completed-sources** for the metadata catalogue.
+
+## Original daily flow and calibration context
+
+**source_tools/usgs_flow.py** receives original USGS daily mean discharge for stations intersecting the retained watershed domain. It accepts the original Esri JSON, gzip or ZIP domain source, retains paginated response bodies and station metadata, and writes daily values plus monthly and annual coverage. Units, approval flags, station identifiers and source URLs travel with the retained observations. It imports ordinary Workspace sources with the original domain and response companions. See **source_tools/USGS_FLOW.md** for the receiving commands and the published station context under **source_data/**.

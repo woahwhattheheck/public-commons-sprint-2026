@@ -77,9 +77,11 @@ def install(server):
             return original_item(self, workspace, kind, key)
         app = service(self, workspace)
         result = app.describe(key)
-        records = list(result.get('artifacts', {}).values()) + result.get('reports', {}).get('files', [])
+        reports = result.get('reports', {}).get('files', []) if result.get('state') == 'complete' else []
+        records = list(result.get('artifacts', {}).values()) + reports
         result['_downloads'] = [self._ticket(workspace, app.root / key / row['path'], row, row['path']) for row in records]
-        result['_report_url'] = '/api/file/paired-ensemble/' + workspace + '/' + key + '/index.html'
+        if any(row.get('path') == 'index.html' for row in reports):
+            result['_report_url'] = '/api/file/paired-ensemble/' + workspace + '/' + key + '/index.html'
         return result
 
     def task_view(self, key):
@@ -90,7 +92,8 @@ def install(server):
         elif result['state'] == 'complete' and result['action'] in ('paired_ensemble.build', 'paired_ensemble.resume', 'paired_ensemble.receive'):
             out = self.item(result['workspace'], 'paired_ensemble_products', result['result']['id'])
             result['_downloads'] = out['_downloads']
-            result['_report_url'] = out['_report_url']
+            if '_report_url' in out:
+                result['_report_url'] = out['_report_url']
         return result
 
     def get(self):
@@ -124,7 +127,8 @@ def install(server):
                 name = urllib.parse.unquote(name)
                 app = service(self.app, workspace)
                 result = app.describe(key)
-                records = list(result.get('artifacts', {}).values()) + result.get('reports', {}).get('files', [])
+                reports = result.get('reports', {}).get('files', []) if result.get('state') == 'complete' else []
+                records = list(result.get('artifacts', {}).values()) + reports
                 records += [{'path': 'analysis.json', **fingerprint(app.root / key / 'analysis.json')}]
                 record = next((row for row in records if row['path'] == name), None)
                 if record is None:

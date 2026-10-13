@@ -593,8 +593,19 @@ def _recover_case_bindings(workspace, plan, directory, state):
                 case["binding_recovered_at"] = now()
                 _persist_case(directory, case)
     state.update(native_binding_models=active, models=list(active),
-                 pollutants=list(output_models(active)))
-    return _progress(directory, state)
+                 pollutants=list(output_models(active)), bindings_recovered_at=now())
+    # Previous summaries describe the old model bindings. Keep their files,
+    # and advertise a new summary after the recovered cases are summarized.
+    state.pop("summary_at", None)
+    state["files"] = {}
+    state = _progress(directory, state)
+    if state["progress"]["complete"] != plan["counts"]["cases"]:
+        state["state"] = ("partial" if state["progress"]["complete"] else
+                          "failed" if state["progress"]["failed"] else "prepared")
+        state.pop("completed_at", None)
+        state.pop("error", None)
+        atomic_json(directory / "state.json", state)
+    return state
 
 
 def list_experiments(workspace):
@@ -774,9 +785,26 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
 
 def _records(directory):
     result = []
+    lineage_keys = ("source_run_id", "source_baseline_run_id", "source_selection")
     for path in (directory / "cases").glob("*.json"):
         value = read_json(path)
         identity = {key: value[key] for key in ("run_id", "baseline_run_id", "kind")}
+        retained_lineage = [key in value for key in lineage_keys]
+        if any(retained_lineage):
+            if not all(retained_lineage):
+                raise ValueError("A retained experiment case has incomplete source lineage")
+            source = value["source_selection"]
+            current = value["selection"]
+            if (not isinstance(source, dict) or not isinstance(current, dict)
+                    or digest(source) != value["source_run_id"]
+                    or "models" in source
+                    or source != {key: item for key, item in current.items() if key != "models"}):
+                raise ValueError("A retained experiment case has changed source selection")
+            # A recovered partial-model case keeps its original plan case ID.
+            # Its current native selection is independently checked below.
+            identity = {"run_id": value["source_run_id"],
+                        "baseline_run_id": value["source_baseline_run_id"],
+                        "kind": value["kind"]}
         if (value.get("schema") != CASE_SCHEMA or value.get("id") != path.stem
                 or digest(identity) != path.stem or digest(value["selection"]) != value["run_id"]):
             raise ValueError("A retained experiment case has changed")
@@ -940,11 +968,15 @@ def summarize(workspace, experiment_id):
             state.pop("error", None)
         elif state["progress"]["failed"] or state["state"] == "running":
             state["state"] = "partial" if state["progress"]["complete"] else "failed"
+            state.pop("completed_at", None)
+        else:
+            state["state"] = "partial" if state["progress"]["complete"] else "prepared"
+            state.pop("completed_at", None)
         return _summarize_locked(workspace, experiment_id, plan, state)
 
 
 def read_summary(workspace, experiment_id):
-    _plan(workspace, experiment_id)
+    plan = _plan(workspace, experiment_id)
     directory = _directory(workspace, experiment_id)
     path = directory / "summary.json"
     if not path.exists():
@@ -953,6 +985,17 @@ def read_summary(workspace, experiment_id):
     if (summary.get("schema") != SUMMARY_SCHEMA or summary.get("id") != experiment_id
             or summary.get("workspace_id") != workspace.project["id"]):
         raise ValueError("The retained summary belongs to another experiment")
+    models = selected_models(plan["baseline"])
+    if selected_models(summary) != models:
+        return None
+    if (summary.get("state") == "complete"
+            and summary.get("progress", {}).get("complete") != plan["counts"]["cases"]):
+        return None
+    if plan.get("_legacy_case_ids"):
+        state = _state(workspace, experiment_id)
+        if (state.get("native_binding_models") != models
+                or (state.get("bindings_recovered_at") and not state.get("summary_at"))):
+            return None
     return {**summary, "files": {**summary.get("files", {}),
                                  "json": describe_file(directory, path)}}
 

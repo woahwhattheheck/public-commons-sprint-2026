@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Operate resumable native scientific programmes in an existing Workspace."""
+"""Operate resumable native scientific programmes in an existing Workspace.
+
+Full-model selections can name completed NDR and SDR stages using each run row's
+source_runs object. Catalog lists those original source IDs. Create, resume,
+report and delivery retain the same target run and its original stage lineage.
+"""
 from __future__ import annotations
 
 import argparse
@@ -21,16 +26,21 @@ def parser():
     value.add_argument("--workspace", type=Path, required=True,
                        help="The existing scientific Workspace containing real prepared selections")
     commands = value.add_subparsers(dest="command", required=True)
-    commands.add_parser("catalog", help="List programmes and available original grids/profiles/scenarios")
-    preview = commands.add_parser("preview", help="Resolve named runs without executing native models")
+    catalog = commands.add_parser("catalog", help="List programmes, original selections and completed native source stages")
+    catalog.add_argument("--without-completed-sources", action="store_true",
+                         help="Skip completed native source discovery for a lightweight catalogue")
+    preview = commands.add_parser("preview", help="Resolve named runs and completed source stages without native execution")
     preview.add_argument("selection", type=Path)
     create = commands.add_parser("create", help="Persist or reopen one immutable named-run programme")
     create.add_argument("selection", type=Path)
     create.add_argument("--source-reference",
                         help="The exact installed application revision; otherwise captured file hashes identify it")
-    for name in ("status", "pause", "report", "read-report"):
+    for name in ("status", "pause", "report", "read-report", "ensemble-candidates"):
         command = commands.add_parser(name)
         command.add_argument("programme_id")
+    ensemble = commands.add_parser("ensemble-selection", help="Export one current same-profile pair cohort for the paired map service")
+    ensemble.add_argument("programme_id")
+    ensemble.add_argument("candidate_id")
     for name in ("execute", "resume"):
         command = commands.add_parser(name)
         command.add_argument("programme_id")
@@ -45,22 +55,40 @@ def parser():
     return value
 
 
+def _synchronize_completed(programmes, result):
+    source = result.get("selection", {}).get("source_reference", "")
+    if (result.get("state") != "complete" or not isinstance(source, str)
+            or not source.startswith("upstate.experiment:")):
+        return result
+    from .programme_experiments import sync_completed
+    synchronized = sync_completed(programmes.workspace, result)
+    return {**result, "experiment_sync": synchronized} if synchronized is not None else result
+
+
 def perform(args):
     programmes = ComputeProgrammes(Workspace(args.workspace))
     if args.command == "catalog":
-        return programmes.catalog()
+        return programmes.catalog(include_completed_sources=not args.without_completed_sources)
     if args.command == "preview":
         return programmes.preview(read_json(args.selection))
     if args.command == "create":
         return programmes.create(read_json(args.selection), source_reference=args.source_reference)
     if args.command == "status":
         return programmes.status(args.programme_id)
+    if args.command == "ensemble-candidates":
+        result = programmes.status(args.programme_id)
+        return {name: result[name] for name in ("programme_id", "ensemble_candidates",
+                "ensemble_candidate_issues", "ensemble_pairing")}
+    if args.command == "ensemble-selection":
+        return programmes.ensemble_candidate(args.programme_id, args.candidate_id)["selection"]
     if args.command == "pause":
         return programmes.pause(args.programme_id)
     if args.command == "execute":
-        return programmes.execute(args.programme_id, only_runs=args.runs)
+        result = programmes.execute(args.programme_id, only_runs=args.runs)
+        return _synchronize_completed(programmes, result)
     if args.command == "resume":
-        return programmes.resume(args.programme_id, only_runs=args.runs)
+        result = programmes.resume(args.programme_id, only_runs=args.runs)
+        return _synchronize_completed(programmes, result)
     if args.command == "report":
         return programmes.report(args.programme_id)
     if args.command == "read-report":
