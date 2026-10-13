@@ -10,7 +10,7 @@
   "manifest_self_excluded": true,
   "previous_public_source": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "commit": "8b9f2dc493d7c0c8881d538605d4f3e54c238468"
+    "commit": "8211c201cfe79b171737c2f167c2b16268b237fe"
   },
   "operational_boundary": {
     "live_adoption": false,
@@ -50,9 +50,9 @@
     },
     {
       "path": "README.md",
-      "bytes": 14637,
-      "sha256": "5751755c7f26a7520e74676f96c7c5edbdfc60c2e2dcc2d55de5490111f9716f",
-      "git_blob": "5e1abe6cdbaa0827e3778d55fa9ebbaf62f49d6a"
+      "bytes": 15400,
+      "sha256": "8d6d1318a0cff346e7548fe07e1b6ea535683a56fbd36bc1d8d097c87e79b9bf",
+      "git_blob": "4fd322378a3c235c69865ff2693e422c89b3ad0f"
     },
     {
       "path": "commons-publication-policy.cjs",
@@ -419,6 +419,24 @@
       "bytes": 2813,
       "sha256": "7ffc282f16ff5dea27ebdb38b3e2ec8741df457e5b186fae868acd50fe5cedcd",
       "git_blob": "09127ce3e80d66002273cd4d5e729a7edd43a1be"
+    },
+    {
+      "path": "connected_contact_operator_bridge.cjs",
+      "bytes": 18074,
+      "sha256": "db840bb01995c66d17cc751ccf870e6106cb16227e3b532b878604c1b0c20eba",
+      "git_blob": "890cdd046c652113f7e7cd47854859ffe6de759d"
+    },
+    {
+      "path": "connected_contact_operator_relay.cjs",
+      "bytes": 21938,
+      "sha256": "a4afb742162b4b0c84d5e4c8ca1d64c9c20d15d04df5858d48e1919cb882939d",
+      "git_blob": "fb85c7890c3363cba8ab7c8b553a61186495a0b8"
+    },
+    {
+      "path": "FOREGROUND_PREPARATION_BRIDGE.md",
+      "bytes": 21809,
+      "sha256": "9b2dd2f794ad5020691117161cab79b4b27f53c7c8ae2e546580a32d38d52e0a",
+      "git_blob": "95f8756cd22c3409e91c292c610779b970ac3f20"
     }
   ]
 }
