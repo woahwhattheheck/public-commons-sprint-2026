@@ -5,11 +5,15 @@ import copy
 from pathlib import Path
 from .model import require, member
 from . import parcel_evidence as domain
+from . import address_review
 
-ACTIONS = ("source.inspect", "source.save", "case.save", "finding.save", "source.compare", "succession.save", "report.build")
+ACTIONS = ("address.analyze", "source.inspect", "source.save", "case.save", "finding.save", "source.compare", "succession.save", "report.build")
 def normalize(action, value):
     require(action in ACTIONS and isinstance(value, dict), "EVIDENCE_ACTION", "Choose a complete original evidence action.")
     value = copy.deepcopy(value)
+    if action == "address.analyze":
+        address_review.normalize_payload(value)
+        return value
     keys = {
         "source.inspect": (("file",), ("file",)),
         "source.save": (("file","bytes","sha256","definition"), ("file","bytes","sha256","definition")),
@@ -29,6 +33,8 @@ def normalize(action, value):
 
 def execute(workspace, action, value, common, progress=None):
     value = normalize(action, value)
+    if action == "address.analyze":
+        return address_review.analyze(workspace, value, common)
     if action == "source.inspect":
         return domain.inspect_file(value["file"])
     if action == "source.compare":
@@ -57,6 +63,8 @@ def paged(rows, query):
             "complete":offset+limit>=len(rows)}
 
 def read_route(workspace, path, query):
+    if path.startswith("/api/evidence/address/"):
+        return address_review.read_route(workspace, path, query)
     state = workspace.read()
     saved = domain.data(state)
     if path == "/api/evidence":
