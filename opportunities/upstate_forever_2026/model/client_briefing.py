@@ -151,12 +151,12 @@ def _scientific_cell(value):
     return _text(str(value))
 
 
-def _scientific_figure(figure):
+def _scientific_figure(figure, images=None):
     path = _path(figure.get("path"))
     if path is None or not figure["path"].lower().endswith(".svg"):
         raise ValueError("Retain each original scientific figure in its delivered source path")
     return ('<figure class="scientific-figure"><img style="display:block;max-width:100%;height:auto" src="' +
-            _text(path) + '" alt="' + _text(figure["alt"]) + '"><figcaption>' +
+            _text((images or {}).get(figure["path"], path)) + '" alt="' + _text(figure["alt"]) + '"><figcaption>' +
             ('<strong>' + _text(figure["title"]) + '</strong> ' if figure.get("title") else '') +
             _scientific_cell(figure["caption"]) + '</figcaption></figure>')
 
@@ -188,7 +188,7 @@ def _assets(values):
     return '<ul class="assets">' + ''.join(links) + '</ul>' if links else ''
 
 
-def _slides(report):
+def _slides(report, figure_images=None):
     slides, chapters = [], []
     seen = set()
 
@@ -246,7 +246,7 @@ def _slides(report):
             add(chapter, title, "".join("<p>" + _scientific_cell(value) + "</p>" for value in values),
                 source_section=source_id)
         for figure in section.get("figures", []):
-            add(chapter, title, _scientific_figure(figure), source_section=source_id, kind="figure")
+            add(chapter, title, _scientific_figure(figure, figure_images), source_section=source_id, kind="figure")
         for table_index, table in enumerate(tables):
             columns, rows = table.get("columns"), table.get("rows")
             if not isinstance(columns, list) or not isinstance(rows, list):
@@ -428,12 +428,12 @@ bindMeeting();renderNotes();update();document.querySelectorAll('[data-enhanced]'
 """
 
 
-def render(report, *, report_href, model_href, report_model_bytes=None):
+def render(report, *, report_href, model_href, report_model_bytes=None, figure_images=None):
     binding = _binding(report, report_model_bytes)
     for value in (report_href, model_href):
         if not _path(value):
             raise ValueError("Briefing links must refer to files in the same delivery")
-    slides, chapters = _slides(report)
+    slides, chapters = _slides(report, figure_images)
     model = {"schema": EDITION, "binding": binding, "notes_schema": NOTES_SCHEMA,
              "chapters": chapters,
              "slides": [{key: value for key, value in slide.items() if key != "html"}
