@@ -36,7 +36,9 @@
     ],
     "applicationProviders": [],
     "merchantProviders": [],
-    "browserAssets": []
+    "browserAssets": [
+      "stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs"
+    ]
   },
   "contributions": [
     "flowable-workspaces",
