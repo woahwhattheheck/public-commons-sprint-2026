@@ -1,0 +1,73 @@
+{
+  "schema": "commons.tyk-source-opening.v1",
+  "operation": "TYK-API-MIGRATION-ROLLOUT-D76C-20261012",
+  "source": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "477a52054957f384cbadd804ec906d45db977c44",
+    "tree": "b57b3e433690ed338159364a074b81bfacfc83ed"
+  },
+  "sourceKind": "LOCAL_REPRODUCIBLE_SOURCE_COMPOSITION",
+  "base": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "b8004ce3e455925a27dcb79770e14285689eb497",
+    "tree": "2c8facd5a829f8243fe7c7da052a41e779839c19"
+  },
+  "upstreamOverlay": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "merge": "6b2c52389762e8baf91f754e48952f2186201559",
+    "bank": "de03d8ec2c7b877ae1f04f1b05915f0ec4568344",
+    "bytes": 116819,
+    "sha256": "ce117009b316d0516dc6fb7b1d8c5bf14a00050f481e46400bda31702117c8fa"
+  },
+  "files": 1134,
+  "unchangedFiles": 1129,
+  "sourceBytes": 11108816,
+  "changes": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/gateway-commissioning-model.mjs",
+      "before": "60af588c60420a9856f97484f40dc6a26e524e87",
+      "after": "75739f27cc054236d5efb30d81218336e478c453",
+      "bytes": 19617,
+      "sha256": "61d14858e4679997accce3b3160e24354395129a59a557033da5e0cfa0336be3"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/model.mjs",
+      "before": "0a038d0d72a2fe88e57384b81e1765c32665b961",
+      "after": "85ea391f5135203eb6831a59d95ba27be20cc924",
+      "bytes": 38073,
+      "sha256": "5d126b5201bb0795d279fe909497e1c654df19234f880adf5d000bbb5a9b2ce8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/tyk/workspace/actions.mjs",
+      "before": "98b22c6f45e7d79d87bd3c97f4cbd6a471d3ae87",
+      "after": "0eeb48a70819be1454af1e6cde267f2df253c732",
+      "bytes": 14597,
+      "sha256": "0efb5f1bcce4014962067d1284f9deb84ec20f7134a65cf68cc58772a9ea4c2d"
+    },
+    {
+      "path": "products/tyk-merchant/client.d.mts",
+      "before": "c6d8e2f0a8a45241745030e49e0aff99933a6236",
+      "after": "d449318680dfac060ec48f96ed0dfa8b71e2deb8",
+      "bytes": 26158,
+      "sha256": "53b78f1f3ee29b8147271d750b2cd48cb9d599fc16340da780054a8f69c8f82c"
+    },
+    {
+      "path": "products/tyk-merchant/GATEWAY_COMMISSIONING.md",
+      "before": "833f4de5c95721b4755d4755604165898be62456",
+      "after": "a089f2bc12b0715b458a38335158ffdab806f3dc",
+      "bytes": 15296,
+      "sha256": "6d910e6aac5baf049e2a7fadde0df9af2459221eb915682beaeead9b66392cd7"
+    }
+  ],
+  "packet": {
+    "bytes": 18573554,
+    "sha256": "9d39e582c6e47557b5c2a64b0dcf544a4f3083251ce4e6e71a10e9c62153c95a"
+  },
+  "envelope": {
+    "bytes": 6687094,
+    "sha256": "3efab865324b0f09554fb4d2df793d4fc5539d2321936a9ce19713efe37706d9"
+  },
+  "nativeResult": null,
+  "renderedResult": null,
+  "privatePartnerSourceIncluded": false
+}
