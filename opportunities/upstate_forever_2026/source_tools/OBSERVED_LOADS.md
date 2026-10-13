@@ -66,3 +66,11 @@ Thirteen focused dimensional/support executions cover a known mass sum, zero/mis
 - Actual station/network mapping: https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/derived/station-network-context.csv
 
 LOADEST and WRTDS are not implemented or claimed here. The bounded interpolation method is a transparent first integration option; its uncertainty paragraph explains what it does and does not quantify.
+
+## Matching-volume flow-weighted concentration (v2)
+
+Every selected, seasonal and calendar-period aggregate now retains `quantified_flow_volume_m3` and the point/lower/upper fields `flow_weighted_concentration_mg_l`, `flow_weighted_concentration_lower_mg_l`, `flow_weighted_concentration_upper_mg_l`. The exact conversion is **1000 × mass in kg / matching flow volume in m³**. Both sums use the identical quantified days; missing concentration or discharge days enter neither sum. The result is in mg/L and is distinct from an arithmetic average of grab samples.
+
+A censored period keeps a null point estimate and its propagated lower/upper concentration bounds. These are censoring/interpolation envelopes, not confidence intervals. A zero-volume period has zero transported mass but all three concentration fields are null. Incomplete-period means describe only the retained quantified-day support and do not become full-period or annual observations. Annual mass export admission remains unchanged.
+
+The complete HTML period table and period CSV show mass, matching volume, concentration and coverage together. The kernel result schema is `upstate.observed-load-integration/v2`; prior v1 source/results remain in the repository history and the originally published `outputs/` files are unchanged. Create a new output directory for the v2 CLI product. Saved flow-study callers must bind the kernel generation when retaining a calculated result, while preserving the original selected flow-study identity.
