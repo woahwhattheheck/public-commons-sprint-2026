@@ -88,33 +88,66 @@ def document_policy(body):
 BUNDLED_REPORT_MANIFESTS = (
     "results/assessment-association-review-20261013/sources.json",
     "results/assessment-source-scope-review-20261013/sources.json",
+    "results/assessment-association-review-20261013/observed-sources.json",
+    "results/assessment-source-scope-review-20261013/observed-sources.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-complete.json",
     "source/station-assessment-context/native159-source-context-20261013/sources-all-editions.json",
     "source/water_context/sources-20261013.json",
+    "point_source_history.sources.json",
+    "point_source_load_volume.sources.json",
+    "point_source_scientific.sources.json",
 )
 
 
+def unique_report_entries(entries, *, retained=False):
+    """Prefer the original document when a recipe retains its same HTML.
+
+    Deduplication is confined to one source collection and uses the complete
+    original source path plus bytes and SHA. All typed entries remain registered.
+    """
+    prepared = []
+    for position, entry in enumerate(entries):
+        if retained:
+            members = inventory(entry)
+            primary = member_name(entry["body"].get("view_path") or entry["body"]["filename"])
+            names = html_members(entry)
+        else:
+            members = {member_name(row["path"]): row
+                       for row in [entry, *entry.get("companions", [])]}
+            primary = member_name(entry["path"])
+            names = [name for name in members
+                     if PurePosixPath(name).suffix.lower() in (".html", ".htm")
+                     and (name == primary or re.search(
+                         r"(^open[_-]|report|review|^index\.)",
+                         PurePosixPath(name).name, re.IGNORECASE))]
+        if not names:
+            continue
+        rank = (primary not in names, entry.get("role") == "OBSERVED_CONTEXT", position)
+        prepared.append((rank, position, entry, names, members))
+    selected, seen = [], set()
+    for unused, position, entry, names, members in sorted(prepared, key=lambda row: row[0]):
+        identities = {
+            (members[name].get("source_path", name), members[name].get("bytes"),
+             members[name].get("sha256"))
+            for name in names
+        }
+        # Missing optional raw-manifest identity fields cannot establish sameness.
+        bound = all(size is not None and sha is not None for unused_path, size, sha in identities)
+        if bound and identities.issubset(seen):
+            continue
+        if bound:
+            seen.update(identities)
+        selected.append((position, entry, names))
+    return [(entry, names) for unused, entry, names in sorted(selected, key=lambda row: row[0])]
+
+
 def manifest_reports(value):
-    """Describe readable originals without opening any report or source body."""
-    result = []
-    for row in value["entries"]:
-        names = [member_name(row["path"])] + [
-            member_name(item["path"]) for item in row.get("companions", [])
-        ]
-        html = [
-            name for name in names
-            if PurePosixPath(name).suffix.lower() in (".html", ".htm")
-            and (name == names[0] or re.search(
-                r"(^open[_-]|report|review|^index\.)",
-                PurePosixPath(name).name, re.IGNORECASE))
-        ]
-        if html:
-            result.append({
-                "source_id": row["id"], "title": row["title"],
-                "kind": row["kind"], "role": row.get("role"),
-                "vintage": row["vintage"], "documents": html,
-            })
-    return result
+    """Describe each original preview once without reading source bodies."""
+    return [{
+        "source_id": row["id"], "title": row["title"],
+        "kind": row["kind"], "role": row.get("role"),
+        "vintage": row["vintage"], "documents": names,
+    } for row, names in unique_report_entries(value["entries"])]
 
 
 def manifest_readiness(path, value):
@@ -295,6 +328,15 @@ class SourceReports:
             "body_sha256": entry["body"]["sha256"], "member_count": len(members),
             "html": [{"path": name, "bytes": members[name]["bytes"], "sha256": members[name]["sha256"],
                       "url": self._url(workspace, collection["id"], key, name)} for name in html],
+            "scientific_reports": [
+                {"source_collection_id": collection["id"], "source_id": candidate["id"],
+                 "title": candidate["title"], "vintage": candidate["vintage"]}
+                for candidate in collection.get("entries", [])
+                if candidate.get("role") == "OBSERVED_CONTEXT"
+                and isinstance(candidate.get("metadata"), dict)
+                and isinstance(candidate["metadata"].get("related_source_ids"), list)
+                and entry["id"] in candidate["metadata"]["related_source_ids"]
+            ],
             "related_source_ids": related if isinstance(related, list) else [],
             "source_relationships": metadata.get("source_relationships", []),
         }
@@ -305,9 +347,8 @@ class SourceReports:
         reports = []
         collections = self.operator.ws(workspace).sources()
         for collection in collections:
-            for entry in collection.get("entries", []):
-                if html_members(entry):
-                    reports.append(self._row(workspace, collection, entry))
+            for entry, unused in unique_report_entries(collection.get("entries", []), retained=True):
+                reports.append(self._row(workspace, collection, entry))
         editions = []
         for original in self._available_editions:
             retained = [row for row in collections

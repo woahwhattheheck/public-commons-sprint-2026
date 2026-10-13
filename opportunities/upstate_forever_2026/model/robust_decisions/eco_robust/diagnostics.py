@@ -257,13 +257,31 @@ def _run_selection(row, grid_id, profile_id, scenario_id):
     models = row.get("models")
     if models not in (["ndr"], ["sdr"], ["ndr", "sdr"]):
         raise ValueError("The diagnostic native run has no resolved model selection")
-    selection = {
-        "schema": "upstate.run-selection/v1", "grid_id": grid_id,
-        "profile_id": profile_id, "scenario_id": scenario_id,
-        "invest_version": "3.20.0",
-    }
-    if models != ["ndr", "sdr"]:
-        selection["models"] = list(models)
+    retained = row.get("selection")
+    if retained is None:
+        # Earlier reports contain only canonical 3.20.0 native identities.
+        # Preserve their exact original reconstruction and resulting bindings.
+        selection = {
+            "schema": "upstate.run-selection/v1", "grid_id": grid_id,
+            "profile_id": profile_id, "scenario_id": scenario_id,
+            "invest_version": "3.20.0",
+        }
+        if models != ["ndr", "sdr"]:
+            selection["models"] = list(models)
+    else:
+        if not isinstance(retained, dict):
+            raise ValueError("The diagnostic lost its retained native selection")
+        selection = deepcopy(retained)
+        if (
+            selection.get("schema") != "upstate.run-selection/v1"
+            or selection.get("grid_id") != grid_id
+            or selection.get("profile_id") != profile_id
+            or selection.get("scenario_id") != scenario_id
+            or selection.get("models", ["ndr", "sdr"]) != models
+            or not isinstance(selection.get("invest_version"), str)
+            or not selection["invest_version"].strip()
+        ):
+            raise ValueError("The retained diagnostic selection differs from its native matrix cell")
     if digest(selection) != row.get("run_id"):
         raise ValueError("The diagnostic's native run selection does not match its original content ID")
     return selection
@@ -297,6 +315,11 @@ def _bundle(report, configuration_value, project_id, report_sha256):
             raise ValueError("Metric " + metric + " has no complete common footprint in this report")
         if support.get("units") != UNITS[metric] or support.get("grid_id") != grid_id:
             raise ValueError("The common-support metric has different annual units or grid")
+        versions = support.get("native_versions")
+        if versions is not None and (
+            not isinstance(versions, dict) or versions.get("state") != "compatible"
+        ):
+            raise ValueError("The metric has no compatible producing-version cohort: " + metric)
         count = _positive_count(support.get("valid_cells"), metric + " common support")
         cells = _positive_count(support.get("grid_cells"), metric + " grid")
         if count > cells:
@@ -316,6 +339,8 @@ def _bundle(report, configuration_value, project_id, report_sha256):
             "coverage_denominator": "diagnostic model grid cells",
             "grid_cells": cells, "run_ids": list(run_ids), "mask": deepcopy(mask),
         }
+        if versions is not None:
+            support_records[metric]["native_versions"] = deepcopy(versions)
     for profile_id in profiles:
         base = matrix.get((profile_id, baseline))
         if not base or base.get("state") != "complete":
