@@ -40,7 +40,7 @@ model.conservation_report_source.prepare(workspace, spec) accepts:
 {"plan_id":"ORIGINAL_64_HEX_PLAN_ID","title":"Optional report source title"}
 ~~~
 
-The completed receipt has schema upstate.conservation-report-source/v1 and edition conservation-saved-plan-report/1. It returns id, state, plan_id, study_id, title, source, files, packet and created_at. Its source is exactly {source_collection_id, source_id}, naming the actual imported document. Its files.recipe, files.manifest and files.source_bundle are original Workspace-relative descriptors with path, bytes and sha256. The receipt additionally retains its full immutable selection, every source companion descriptor and the observed-context binding.
+The completed receipt has schema upstate.conservation-report-source/v1 and edition conservation-saved-plan-report/2. It returns id, state, plan_id, study_id, title, source, files, packet and created_at. Its source is exactly {source_collection_id, source_id}, naming the actual imported document. Its files.recipe, files.manifest and files.source_bundle are original Workspace-relative descriptors with path, bytes and sha256. The receipt additionally retains its full immutable selection, every source companion descriptor and the observed-context binding.
 
 get(workspace, report_source_id) verifies and reopens that same receipt, its recipe, manifest, source ZIP and every companion. It verifies the actual imported source document and exact companion membership, then checks the existing observed_context.bind result against the saved binding.
 
@@ -71,6 +71,8 @@ The imported document uses the maintained upstate.observed-report/v1 schema and 
 - Exact original planning and criterion source editions, body hashes, complete source bodies and all declared companions.
 
 The document's inputs list binds every companion by source-relative path, byte count and SHA-256. The native importer retains these members through the original Workspace.import_sources contract. Original native raster references remain in the study/packet; model recomputation uses the complete original Workspace. This report-source delivery carries its retained reporting inputs and does not duplicate all native raster inputs.
+
+For an optimized portfolio, the source reopens its original saved analysis and verifies the original study, selected IDs, request, solver, normalization and file identities. It calls the maintained optimizer export, which packages the ordinary Conservation packet together with its complete optimization analysis, all-candidate CSV and original optimization HTML. Those three original files are also separate source companions and linked report records. The report shows the actual saved objective, constraints, solver result and preference interpretation; the manual-ID persistence mode remains a separate storage detail. No optimizer is run again. Ordinary manually selected portfolios continue through the original Conservation packet export.
 
 The original existing decision-packet.zip remains a complete companion. It includes editable geodata, the full selected portfolio, all candidate rows, the current decision presentation, published criterion details and source register. The new source ZIP contains sources.json, conservation-report.json and every companion, preserving each original source's relative sidecar layout under its own collection/source namespace.
 

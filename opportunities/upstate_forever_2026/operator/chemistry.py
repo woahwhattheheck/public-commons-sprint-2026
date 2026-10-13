@@ -1,9 +1,12 @@
 """Chemical analysis on the original Operator's workspace, queue and downloads."""
 from __future__ import annotations
 from copy import deepcopy
+import html
+from model import chemistry_reports
+from model.common import verify_file
 from model.chemistry import Chemistry, ACTIONS, invoke
 from model.common import digest
-READS = {'catalog', 'case', 'run', 'page'}
+READS = {'catalog', 'case', 'run', 'page', 'report'}
 
 class ChemistryOperations:
     def __init__(self, operator, fault):
@@ -32,12 +35,26 @@ class ChemistryOperations:
         m = self.manager(workspace)
         if operation == 'catalog':
             value = m.catalog()
+            value['reports'] = chemistry_reports.catalog(m.ws)
             # Compact operator state intentionally omits full source entries.
             value['sources'] = [
                 {'id': collection['id'], 'title': collection['title'],
                  'entries': [{'id': entry['id'], 'title': entry.get('title', entry['id']),
                               'kind': entry.get('kind')} for entry in collection['entries']]}
                 for collection in m.ws._list('sources')]
+        elif operation == 'report':
+            value = chemistry_reports.inspect(m.ws, payload['report_id'])
+            original = verify_file(m.ws.root, value['report']).read_text(encoding='utf-8')
+            directory = m.ws.root / chemistry_reports.FOLDER / value['id']
+            for item in value['artifacts']:
+                path = verify_file(m.ws.root, item)
+                relative = path.relative_to(directory).as_posix()
+                ticket = self.operator._ticket(workspace, path, item, label=relative)
+                old = "href='" + html.escape(relative, quote=True) + "'"
+                new = ("href='" + html.escape(ticket['url'], quote=True)
+                       + "' target='_blank' rel='noopener'")
+                original = original.replace(old, new)
+            value = {**value, 'preview_html': original}
         elif operation == 'case': value = m.get_case(payload['case_id'])
         elif operation == 'run': value = m.get_run(payload['run_id'])
         elif operation == 'page':

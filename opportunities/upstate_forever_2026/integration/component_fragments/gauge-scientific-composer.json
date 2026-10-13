@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gauge-scientific-composer",
+  "source_reference": "Gauge support continuation1791875311.030729 above merged3374/aeed653906f9397f058cde3bf080011ac852e9f5; maintained scientific report composer original source/order/title and saved operation reopen. Preserves complete native receiving recovery PR3461/2e4bd7b3cf5062749602edea4e0cd36aa0e46f52.",
+  "extend_components": {
+    "gauge-support": {
+      "paths": [
+        "integration/component_fragments/gauge-scientific-composer.json",
+        "model/gauge_report_context.py",
+        "model/gauge_support.py",
+        "operator/GAUGE_SUPPORT.md",
+        "operator/extensions/gauge-support.json",
+        "operator/gauge_support.py",
+        "operator/install_gauge_support.py",
+        "operator/web/gauge_support.css",
+        "operator/web/gauge_support.mjs",
+        "source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md",
+        "source_tools/receive_gauge_support.py"
+      ],
+      "requires": [
+        "scientific-report-editions"
+      ]
+    }
+  }
+}
