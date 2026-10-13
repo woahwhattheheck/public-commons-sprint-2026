@@ -86,6 +86,14 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace output-export --workspace DIRECTORY (--operation-id UUID | --runtime-id ID --log-file FILENAME) [--selection TOKEN] --output NEW_FILE
   runtime-workspace application-output-page --workspace DIRECTORY --application-id ID --operation-id UUID [--selection TOKEN] [--offset BYTES] [--limit BYTES]
   runtime-workspace application-output-export --workspace DIRECTORY --application-id ID --operation-id UUID [--selection TOKEN] --output NEW_FILE
+  runtime-workspace application-groups --workspace DIRECTORY [--group-id ID] [--run-id UUID] [--limit 20] [--cursor UUID]
+  runtime-workspace application-group-save --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-group-review --workspace DIRECTORY --group-id ID [--run-id UUID]
+  runtime-workspace application-group-start --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-group-continue --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-group-apply-review --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-group-member --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-group-stop --workspace DIRECTORY --group-id ID --run-id UUID
 
 ${workspaceBackupHelp}
 ${runtimeProcedureHelp}
@@ -130,6 +138,14 @@ const allowed = {
   'source-build-catalog': ['--workspace', '--request'], 'source-build-review': ['--workspace', '--request'],
   'source-build-review-show': ['--workspace', '--review-id'],
   'source-build-operation': ['--workspace', '--request'], 'source-build-continue': ['--workspace', '--operation-id'],
+  'application-groups': ['--workspace', '--group-id', '--run-id', '--limit', '--cursor'],
+  'application-group-save': ['--workspace', '--request'],
+  'application-group-review': ['--workspace', '--group-id', '--run-id'],
+  'application-group-start': ['--workspace', '--request'],
+  'application-group-continue': ['--workspace', '--request'],
+  'application-group-apply-review': ['--workspace', '--request'],
+  'application-group-member': ['--workspace', '--request'],
+  'application-group-stop': ['--workspace', '--group-id', '--run-id'],
   applications: ['--workspace', '--history-limit'],
   'application-history': ['--workspace', '--application-id', '--limit', '--cursor'],
   'application-review': ['--workspace', '--request'], 'application-save': ['--workspace', '--request'],
@@ -315,6 +331,26 @@ export async function main(argv = process.argv.slice(2)) {
     if (command === 'source-build-operation' && input?.operation !== 'source-build') fail('SOURCE_BUILD_OPERATION_REQUIRED');
     const method = { 'source-build-catalog': 'sourceBuildsCatalog', 'source-build-review': 'sourceBuildsReview', 'source-build-operation': 'begin' }[command];
     result = await model[method](input);
+  }
+  else if (command === 'application-groups') result = await model.applicationGroupsState({
+    ...(options['--group-id'] ? { groupId: options['--group-id'] } : {}),
+    ...(options['--run-id'] ? { runId: options['--run-id'] } : {}),
+    ...(options['--limit'] ? { limit: Number(options['--limit']) } : {}),
+    ...(options['--cursor'] ? { cursor: options['--cursor'] } : {}),
+  });
+  else if (['application-group-review', 'application-group-stop'].includes(command)) {
+    if (!options['--group-id']) fail('APPLICATION_GROUP_ID_REQUIRED');
+    const method = command === 'application-group-review' ? 'applicationGroupsReview' : 'applicationGroupsStop';
+    result = await model[method]({ groupId: options['--group-id'],
+      ...(options['--run-id'] ? { runId: options['--run-id'] } : {}) });
+  }
+  else if (['application-group-save', 'application-group-start', 'application-group-continue',
+    'application-group-apply-review', 'application-group-member'].includes(command)) {
+    if (!options['--request']) fail('APPLICATION_GROUP_REQUEST_FILE_REQUIRED');
+    const method = { 'application-group-save': 'applicationGroupsSave', 'application-group-start': 'applicationGroupsStart',
+      'application-group-continue': 'applicationGroupsContinue', 'application-group-apply-review': 'applicationGroupsApplyReview',
+      'application-group-member': 'applicationGroupsMember' }[command];
+    result = await model[method](await readJSON(resolve(options['--request'])));
   }
   else if (command === 'applications') result = await model.applicationsState({ historyLimit: options['--history-limit'] === undefined ? 1 : Number(options['--history-limit']) });
   else if (['output-sources', 'output-page', 'output-export'].includes(command)) {

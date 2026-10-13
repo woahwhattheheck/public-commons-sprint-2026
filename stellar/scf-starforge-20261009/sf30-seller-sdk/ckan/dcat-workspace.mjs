@@ -116,57 +116,92 @@ export function dcatRuntimeSelection(environment = process.env) {
 function runEngine(input, environment, signal, progress) {
   const runtime = dcatRuntimeSelection(environment), executable = runtime.command;
   return new Promise((resolve, reject) => {
-    let settled = false, stdoutBytes = 0, stderrBytes = 0;
-    const stdout = [], stderr = [];
-    const process = spawn(executable, ['-B', engine, '--runtime-profile', runtime.runtimeProfile], {
-      env: { ...environment, PYTHONDONTWRITEBYTECODE: '1', PYTHONHASHSEED: '0' },
-      stdio: ['pipe', 'pipe', 'pipe'], shell: false,
-    });
+    let child, closed = false, settled = false, stopping = false, timer = null;
+    let terminalError = null, stdoutBytes = 0, stderrBytes = 0;
+    const stdout = [], stderr = [], signalErrors = [];
+    const cancelled = () => fault('DCAT_REVIEW_CANCELLED', 'The migration review was cancelled.');
+    const unavailable = error => fault('DCAT_RUNTIME_UNAVAILABLE',
+      'Start the prepared ' + runtime.runtimeProfile + ' migration environment with SCF_DCAT_PYTHON. ' + (error.code ?? ''));
     const finish = (error, value) => {
       if (settled) return; settled = true;
+      if (timer !== null) { clearTimeout(timer); timer = null; }
       signal?.removeEventListener('abort', cancel);
-      if (error) reject(error); else resolve(value);
+      if (error) {
+        if (signalErrors.length) error.message += ' Owned child signalling: ' + signalErrors.join('; ');
+        reject(error);
+      } else resolve(value);
     };
-    const cancel = () => {
-      process.kill('SIGTERM');
-      const timer = setTimeout(() => process.kill('SIGKILL'), 5000); timer.unref?.();
-      finish(fault('DCAT_REVIEW_CANCELLED', 'The migration review was cancelled.'));
+    const sendSignal = name => {
+      try { child.kill(name); }
+      catch (error) { signalErrors.push(name + ': ' + (error.code ?? error.message)); }
     };
-    process.on('error', error => finish(fault('DCAT_RUNTIME_UNAVAILABLE',
-      'Start the prepared ' + runtime.runtimeProfile + ' migration environment with SCF_DCAT_PYTHON. ' + (error.code ?? ''))));
-    process.stdout.on('data', chunk => {
-      stdoutBytes += chunk.length;
-      if (stdoutBytes > MAX_REPORT) {
-        process.kill('SIGTERM');
-        finish(fault('DCAT_REPORT_TOO_LARGE', 'The complete migration report exceeds 512 MiB.'));
-      } else stdout.push(chunk);
+    const stop = error => {
+      terminalError ??= error;
+      // Continue consuming the pipes, but never retain a failed report.
+      stdout.length = 0;
+      if (closed || stopping) return;
+      stopping = true;
+      if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+      sendSignal('SIGTERM');
+      timer = setTimeout(() => {
+        if (!closed && child.exitCode === null && child.signalCode === null) sendSignal('SIGKILL');
+      }, 5000);
+      timer.unref?.();
+    };
+    const cancel = () => stop(cancelled());
+    if (signal?.aborted) { finish(cancelled()); return; }
+    try {
+      child = spawn(executable, ['-B', engine, '--runtime-profile', runtime.runtimeProfile], {
+        env: { ...environment, PYTHONDONTWRITEBYTECODE: '1', PYTHONHASHSEED: '0' },
+        stdio: ['pipe', 'pipe', 'pipe'], shell: false,
+      });
+    } catch (error) { finish(unavailable(error)); return; }
+    // An asynchronous spawn error is followed by close; keep ownership until it arrives.
+    child.on('error', error => stop(unavailable(error)));
+    child.stdout.on('data', chunk => {
+      if (closed || terminalError) return;
+      if (chunk.length > MAX_REPORT - stdoutBytes) {
+        stop(fault('DCAT_REPORT_TOO_LARGE', 'The complete migration report exceeds 512 MiB.'));
+      } else { stdoutBytes += chunk.length; stdout.push(chunk); }
     });
-    process.stderr.on('data', chunk => {
+    child.stderr.on('data', chunk => {
+      if (closed) return;
       const keep = Math.min(chunk.length, Math.max(0, 65536 - stderrBytes));
-      if (keep) stderr.push(chunk.subarray(0, keep)); stderrBytes += chunk.length;
+      if (keep) { stderr.push(chunk.subarray(0, keep)); stderrBytes += keep; }
     });
-    process.on('close', code => {
-      if (settled) return;
+    const outputFailed = () => stop(fault('DCAT_ENGINE_OUTPUT_FAILED',
+      'The migration engine output could not be received completely.'));
+    child.stdout.on('error', outputFailed);
+    child.stderr.on('error', outputFailed);
+    child.once('close', code => {
+      closed = true;
+      if (terminalError) { finish(terminalError); return; }
       let result;
       const raw = Buffer.concat(stdout);
       try { result = parseCkanJson(raw); }
       catch { finish(fault('DCAT_ENGINE_FAILED', 'The migration engine did not return its complete JSON result. ' +
         Buffer.concat(stderr).toString('utf8').slice(-4096))); return; }
-      if (![0, 2].includes(code) || result.schema !== 'migration-review.v1') {
-        finish(fault('DCAT_ENGINE_FAILED', result.error?.message ?? result.error ??
+      if (![0, 2].includes(code) || result?.schema !== 'migration-review.v1') {
+        finish(fault('DCAT_ENGINE_FAILED', result?.error?.message ?? result?.error ??
           'The original migration environment could not complete this review.')); return;
       }
-      progress?.({ phase: 'REVIEW_COMPLETE', sourceRecords: result.conservation?.source_count,
-        candidateRecords: result.conservation?.target_count, changes: result.field_changes?.length });
+      try {
+        progress?.({ phase: 'REVIEW_COMPLETE', sourceRecords: result.conservation?.source_count,
+          candidateRecords: result.conservation?.target_count, changes: result.field_changes?.length });
+      } catch (error) { finish(error); return; }
       finish(null, { result, raw });
     });
-    process.stdin.on('error', error => {
-      if (error.code !== 'EPIPE') finish(fault('DCAT_ENGINE_INPUT_FAILED', 'The catalog could not be passed to the migration engine.'));
+    child.stdin.on('error', error => {
+      if (error.code !== 'EPIPE') stop(fault('DCAT_ENGINE_INPUT_FAILED', 'The catalog could not be passed to the migration engine.'));
     });
-    if (signal?.aborted) { cancel(); return; }
     signal?.addEventListener('abort', cancel, { once: true });
-    progress?.({ phase: 'VALIDATING_AND_COMPARING' });
-    process.stdin.end(JSON.stringify(input));
+    if (signal?.aborted) { cancel(); return; }
+    try {
+      progress?.({ phase: 'VALIDATING_AND_COMPARING' });
+      if (!terminalError) child.stdin.end(JSON.stringify(input));
+    } catch (error) {
+      stop(fault('DCAT_ENGINE_INPUT_FAILED', 'The catalog could not be passed to the migration engine. ' + error.message));
+    }
   });
 }
 function reportSummary(report) {

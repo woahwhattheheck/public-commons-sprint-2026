@@ -1,7 +1,7 @@
 import {attachReceivingWaterMonitoring} from './receiving_water_monitoring.mjs';
 import {attachReceivingWaterReport} from './receiving_water_report.mjs';
 import {attachReceivingSourcePicker} from './receiving_water_sources.mjs';
-import {compareQuantityScopes,renderScopeComparison,scopeComparisonCSV} from './receiving_water_scope_compare.mjs';
+import {compareQuantityScopes,renderScopeComparison,scopeComparisonCSV,sourceOriginDescription} from './receiving_water_scope_compare.mjs';
 import {comparePlanEditions,renderPlanComparison,planChangeDetails,accountingReferenceChanges} from './receiving_water_plan_compare.mjs';
 import {copySelection,selectionObject,newReceptor,receptorFields,planFields,revisePlan,analysisFields,reviseAnalysis,groupFields,reviseGroup,changedPaths} from './receiving_water_editing.mjs';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -103,7 +103,7 @@ export function attachReceivingWaters(context){
   function render(){
     switchWorkspace();
     const planRows=plans(),analysisRows=analyses(),tasks=(getState()?.tasks||[]).filter(x=>x.action?.startsWith('receiving.water.')&&['queued','running','failed','interrupted'].includes(x.state));
-    let html='<div class="water-workbench"><header class="water-heading"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Receiving waters</h1><p>Link original water sources and designated reaches to their contributing land. Compare modeled exports for each receiving water and the combined source areas.</p></div><div class="water-actions">'+control('water-catalog-new','Choose published waters')+control('water-profile-new','Use utility profile')+control('water-plan-new','Define receiving areas')+control('water-compare-new','Compare source plans')+control('water-scope-new','Compare quantity supports')+control('water-analyze-new','Analyze model results','',true)+'</div></header>';
+    let html='<div class="water-workbench"><header class="water-heading"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Receiving waters</h1><p>Link original water sources and designated reaches to their contributing land. Compare modeled source-pixel exports reaching streams within each selected support.</p></div><div class="water-actions">'+control('water-catalog-new','Choose published waters')+control('water-profile-new','Use utility profile')+control('water-plan-new','Define receiving areas')+control('water-compare-new','Compare source plans')+control('water-scope-new','Compare quantity supports')+control('water-analyze-new','Analyze model results','',true)+'</div></header>';
     html+='<div class="water-summary"><div><strong>'+fmt(planRows.length)+'</strong><span>Saved source plans</span></div><div><strong>'+fmt(analysisRows.filter(x=>x.state==='complete').length)+'</strong><span>Completed analyses</span></div><div><strong>'+fmt(runs().filter(x=>x.state==='complete').length)+'</strong><span>Available native runs</span></div></div>';
     if(tasks.length)html+=section('Operations',table(['Operation','State','Created',''],tasks.map(t=>'<tr><td>'+esc({'receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.catalog':'Compile published waters','receiving.water.analyze':'Analyze receiving waters','receiving.water.monitoring':'Prepare monitoring network','receiving.water.report.prepare':'Prepare scientific report source'}[t.action]||t.action)+(t.error?'<small class="water-error">'+esc(t.error.message||t.error)+'</small>':'')+'</td><td>'+badge(t.state)+'</td><td>'+esc(t.created_at?new Date(t.created_at).toLocaleString():'')+'</td><td>'+control('water-task','Inspect','data-id="'+esc(t.id)+'"')+'</td></tr>')),'Selections and completed work remain available when the operator reopens.');
     if(catalogs().length)html+=section('Published-water catalogs',table(['Catalog','Original records','Selected waters','As of',''],catalogs().map(row=>'<tr><td><strong>'+esc(row.title||'Published receiving waters')+'</strong><small>'+esc(human(row.state))+'</small></td><td>'+fmt(row.record_count)+'</td><td>'+fmt(row.selected_count)+'</td><td>'+esc(row.as_of||'')+'</td><td>'+control('water-open','Open','data-kind="designation-catalog" data-id="'+esc(row.id)+'"')+'</td></tr>')));
@@ -421,12 +421,12 @@ export function attachReceivingWaters(context){
     if(Array.isArray(row.pollutants)&&row.pollutants.length)return row.pollutants;
     return [...new Set((row.subjects||[]).flatMap(s=>Object.keys(s.metrics?.baseline_physical||{})))];
   }
-  const accountingRoles={total:'Downstream total',upstream_union:'Upstream union',incremental:'Downstream incremental',reservoir_inflow:'Above-reservoir land',other_upstream:'Other upstream land'};
+  const accountingRoles={total:'Whole source area',upstream_union:'Upstream source-area union',incremental:'Remaining source-area partition',reservoir_inflow:'Above-reservoir land',other_upstream:'Other upstream land'};
   function accountingView(row){
     const groups=row.accounting?.groups||[];
     if(!groups.length)return '';
-    return '<section class="water-accounting-summary"><h3>Nested catchment accounting</h3><p class="water-note">Each group partitions its downstream total on the original raster grid. Reservoir catchments identify land export to streams above the dam. The upstream union is a subtotal; use the disjoint partition rows to reconcile with the total.</p>'+
-      table(['Catchment group','Downstream total','Partition',''],groups.map(group=>{
+    return '<section class="water-accounting-summary"><h3>Nested catchment accounting</h3><p class="water-note">Each group partitions source pixels on the original raster grid. Its total is source-to-stream export, not flow or load passing a downstream outlet. Above-reservoir land does not calculate reservoir inflow. The upstream union is a subtotal; disjoint partitions reconcile with the whole source area.</p>'+
+      table(['Catchment group','Whole source area','Partition',''],groups.map(group=>{
         const parent=(row.subjects||[]).find(s=>s.id===group.parent_receptor_id&&s.kind==='receptor')||(row.subjects||[]).find(s=>s.id===group.subject_ids?.total&&s.kind==='receptor');
         return '<tr><td><strong>'+esc(group.title||group.id)+'</strong><small>'+esc(group.id)+'</small></td><td>'+esc(parent?.title||group.parent_receptor_id||group.subject_ids?.total||'')+'</td><td>'+esc((group.partition_roles||[]).map(role=>accountingRoles[role]||human(role)).join(' + '))+'</td><td>'+control('water-accounting-detail','Open accounting','data-id="'+esc(group.id)+'"')+'</td></tr>';
       }))+'</section>';
@@ -436,7 +436,7 @@ export function attachReceivingWaters(context){
     if(!group)throw Error('Choose a catchment group from this saved analysis.');
     const subjects=record.subjects||[],findSubject=role=>subjects.find(row=>row.id===group.subject_ids?.[role]&&row.kind===(role==='total'?'receptor':'accounting'));
     const roles=['total','upstream_union',...(group.partition_roles||[])].filter((role,index,all)=>all.indexOf(role)===index&&group.subject_ids?.[role]);
-    let html='<p>'+esc(group.rationale||'')+'</p><p class="water-note">Totals are modeled land export to streams within the selected source boundaries. Above-reservoir quantities preserve that same meaning. Catchment precision follows the original source relationship.</p>'+
+    let html='<p>'+esc(group.rationale||'')+'</p><p class="water-note">Totals group modeled source-to-stream contributions by their source pixels. They do not calculate load crossing these boundaries or reservoir throughput. Catchment precision follows the original source relationship.</p>'+
       table(['Accounting area','Saved area','Selected cells','Domain area (ha)',''],roles.map(role=>{
         const subject=findSubject(role);return '<tr><th scope="row">'+esc(accountingRoles[role]||human(role))+'</th><td>'+esc(subject?.title||group.subject_ids[role])+'</td><td class="water-number">'+fmt(group.selected_cells?.[role]??subject?.metrics?.selected_cells)+'</td><td class="water-number">'+fmt(subject?.area_in_quantity_scope_ha)+'</td><td>'+(subject?control('water-subject','Physical results','data-id="'+esc(subject.id)+'" data-subject-kind="'+esc(subject.kind)+'"'):'')+'</td></tr>';
       }))+'<p>Selected-cell partition residual: <strong>'+fmt(group.selected_cell_residual)+'</strong>.</p>';
@@ -475,7 +475,9 @@ export function attachReceivingWaters(context){
       field('Area type',select('water_kind',[['receptor','Individual receiving water'],['family_union','Combined family area'],['accounting','Catchment accounting partition']],display.kind,'data-water-filter="kind"','All areas'))+
       field('Model run',select('water_run',runOptions,display.run,'data-water-filter="run"','Baseline'))+
       field('Quantity',select('water_quantity',[['physical','Total export'],['change','Signed export change'],['increased','Increased export'],['avoided','Avoided export']],display.quantity,'data-water-filter="quantity"','Choose quantity'))+'</div>'+
-      '<p class="water-note">Each family combines its contributing areas once. Individual receiving-water totals can overlap. Export changes use the same valid pixels in both runs.</p><div id="water-result-table"></div>'+
+      '<p class="water-note">'+esc(sourceOriginDescription(row.quantity_scope)[0])+'</p>'+
+      '<details><summary>Source support, scenario placement and upstream effects</summary>'+sourceOriginDescription(row.quantity_scope).slice(1).map(text=>'<p>'+esc(text)+'</p>').join('')+'</details>'+
+      '<p class="water-note">Each family combines its source areas once. Individual totals can overlap. Each change uses its original pair of valid pixels; separate restoration and control pairs need not share support.</p><div id="water-result-table"></div>'+
       accountingView(row)+
       '<details><summary>Priority calculation and source interpretation</summary><div class="water-definition">'+
       '<h3>Normalization</h3><pre class="json-view">'+esc(pretty(row.normalization||{}))+'</pre><h3>Physical measurement</h3><pre class="json-view">'+esc(pretty(row.measurement||{}))+'</pre></div></details>'+
@@ -519,6 +521,7 @@ export function attachReceivingWaters(context){
     if(matches.length!==1)throw Error('Choose the individual water or combined family area from the saved receiving-water record.');
     const subject=matches[0];
     let html='<p>'+esc(subject.interpretation||subject.relationship_precision||'')+'</p>'+
+      (subject.metrics?'<p class="water-note">'+esc(sourceOriginDescription(record.quantity_scope)[0])+'</p>':'')+
       table(['Source relationship','Value'],[
         ['Family',families[subject.family]||subject.family],['Method',subject.relationship_precision||subject.relation?.method],
         ['Original source',sourceTitle(subject.source)],['Contribution area (ha)',fmt(subject.contribution_area_ha)],
@@ -530,7 +533,7 @@ export function attachReceivingWaters(context){
     else if(metrics.files?.current_priority)html+='<div class="water-actions">'+spatialControl('Review baseline priority','analysis',record.id,subject.id,'current_priority','','',subject.kind)+'</div>';
     if(metrics){
       const keys=Object.keys(metrics.baseline_physical||{});
-      html+='<h3>Baseline physical export</h3>'+table(['Quantity','Total','Units','Valid cells','Coverage'],keys.map(key=>{
+      html+='<h3>Baseline source export to streams</h3>'+table(['Quantity','Total','Units','Valid cells','Coverage'],keys.map(key=>{
         const v=metrics.baseline_physical[key];return '<tr><th scope="row">'+esc(pollutants[key]||human(key))+'</th><td>'+fmt(v.sum)+'</td><td>'+esc(totalUnits[key]||v.sum_units)+'</td><td>'+fmt(v.valid_cells)+'</td><td>'+percent(v.coverage_fraction)+'</td></tr>';
       }));
       for(const [runId,alt]of Object.entries(metrics.alternatives||{})){
@@ -862,7 +865,7 @@ export function attachReceivingWaters(context){
       field('Source plan',select('analysis_plan',retainedOptions(plans().map(p=>[p.id,p.title]),f.plan,'Retained plan'),f.plan),'',true)+
       field('Baseline native run',select('analysis_baseline',retainedOptions(complete.map(r=>[r.id,runTitle(r.id)]),f.baseline,'Retained run (not complete or available)'),f.baseline),'',true)+
       '<fieldset class="full"><legend>Land-cover alternatives</legend><div id="water-alternatives"></div></fieldset>'+
-      field('Quantity domain',select('analysis_scope',[['reporting','Reporting area'],['model_domain','Full modeled domain']],f.scope),'Reporting uses delivered mass rasters. Full domain uses original native output and its recorded pixel area.',true)+
+      field('Quantity domain',select('analysis_scope',[['reporting','Reporting area'],['model_domain','Full modeled domain']],f.scope),'Reporting summarizes source pixels within the original reporting support. Full domain includes the selected upstream/model support; it does not calculate intake delivery. Both preserve their own native valid cells.',true)+
       accountingFormControls()+
       '<details class="full"><summary>Priority weights and normalization</summary><p>Original weights, caps and reference are retained. Blank new settings use the native defaults for available quantities.</p>'+
       field('Explicit weights',area('analysis_weights',f.weights,'rows="3" spellcheck="false"'),'JSON names original pollutant keys.',true)+

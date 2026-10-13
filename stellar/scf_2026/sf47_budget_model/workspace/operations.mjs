@@ -198,6 +198,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       if(!retainedInstallationSessions.has(c.program.id))retainedInstallationSessions.set(c.program.id,{});
       installationView=mountInstallations({container:$('[data-ops-installations]'),current:c,api,saveApi:transport,
         session:retainedInstallationSessions.get(c.program.id),mutationId,recordingActor,
+        onSources:()=>{if(!available())return;view.tab='sources';render();},
         onCase:async(next,result)=>{
           if(!available()||view.current?.program.id!==next.program.id)return;
           view.current=next;view.events=[];view.nextAfter=null;

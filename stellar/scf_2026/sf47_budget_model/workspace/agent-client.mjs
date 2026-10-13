@@ -54,6 +54,19 @@ const sha = value => {
   need(typeof value === 'string' && HASH.test(value), 'GRANT_INVALID_INPUT', 'Use the exact SHA256.'); return value;
 };
 
+const WORKSHARE_SOURCE_FIELDS = ['sourceId','expectedSourceSha256','packetSourceId','expectedPacketSha256'];
+function workshareSources(body) {
+  id(body.sourceId,'source'); sha(body.expectedSourceSha256);
+  const packet=body.packetSourceId??null, packetSha=body.expectedPacketSha256??null;
+  need((packet===null)===(packetSha===null),'GRANT_INVALID_INPUT',
+    'Select the original receiving packet and its SHA-256 together.');
+  if(packet!==null){
+    id(packet,'source'); sha(packetSha);
+    need(packet!==body.sourceId,'GRANT_INVALID_INPUT',
+      'Select distinct complete commissioning and receiving packet files.');
+  }
+}
+
 const completionDate = value => {
   need(typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value),
     'GRANT_INVALID_INPUT', 'Use the native calendar date in YYYY-MM-DD form.');
@@ -485,6 +498,25 @@ export class GrantWorkspaceClient {
       'GRANT_INVALID_INPUT','Select each original customer cycle once.');
     if(Object.hasOwn(body,'document'))object(body.document,'Complete editable installation document');
     return this.#request('/api/operations/'+caseId+'/installation-workflow-seed',{body,mutation:false});
+  }
+  installationWorkshares(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion',...WORKSHARE_SOURCE_FIELDS],['expectedVersion','sourceId','expectedSourceSha256']);
+    integer(body.expectedVersion,'Current case version'); workshareSources(body);
+    return this.#request('/api/operations/'+caseId+'/installation-workshares',{body,mutation:false});
+  }
+  installationWorkshareSeed(caseId, body) {
+    id(caseId,'operation');
+    exact(body,['expectedVersion',...WORKSHARE_SOURCE_FIELDS,'workshareCaseId','installationId','expectedRevision','document'],
+      ['expectedVersion','sourceId','expectedSourceSha256','workshareCaseId','installationId','expectedRevision']);
+    integer(body.expectedVersion,'Current case version'); workshareSources(body);
+    text(body.workshareCaseId,'Original Workshare case',500);
+    integer(body.expectedRevision,'Current installation edition',0,500);
+    if(body.installationId!==null)id(body.installationId,'installation');
+    need(body.installationId===null?body.expectedRevision===0:body.expectedRevision>=1,
+      'GRANT_INVALID_INPUT','Select edition zero for a new installation or the original current installation edition.');
+    if(Object.hasOwn(body,'document'))object(body.document,'Complete editable installation document');
+    return this.#request('/api/operations/'+caseId+'/installation-workshare-seed',{body,mutation:false});
   }
   installationPreview(caseId, body) {
     id(caseId,'operation');

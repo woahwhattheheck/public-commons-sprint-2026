@@ -4,7 +4,7 @@ This companion carries twelve complete application files for the existing native
 
 ## Receive the complete source companion
 
-The [repair bank](native-actual-repairs-20261013.source.json) is a standard `commons.source-bank/v1` object with application-relative paths and complete UTF-8 file bodies. This second edition is **571,083 bytes**, SHA256 `3eac36bb58268b307788516e9771453bb89e4512d257bff838e7aec1deda7aaf`; its twelve source files total **539,832 bytes**.
+The [repair bank](native-actual-repairs-20261013.source.json) is a standard `commons.source-bank/v1` object with application-relative paths and complete UTF-8 file bodies. This third edition is **572,077 bytes**, SHA256 `761db215d54bf93ecc8568740c3d3a1521ffdc7591ae70ca0a6fb6fabbe56c1c`; its twelve source files total **540,164 bytes**.
 
 The original [metadata-only inventory](receiving-union-20261013.inventory.json) lists every frozen path, byte length and SHA256. Its exact 180,762-byte body has SHA256 `20d48551e4a7a840e7d5ad7a1b1048ab49086e0f00d2e088efde63fd656acf57`. An equipped receiver can compare an already retained application against this inventory before transferring the full source packet. The inventory describes the original frozen edition; it is not a command to replace later installed source.
 
@@ -16,17 +16,63 @@ Verify each full bank and each member's UTF-8 bytes and SHA256 before placement.
 | `operator/web/spatial.mjs` | PR4152 | Applies map aspect and swipe geometry through trusted CSSOM under the original CSP. |
 | `model/cartography.py` | PR4190 | Separates scale notes and legends and preserves geographic aspect. |
 | `model/implementation_qc.py`, `model/implementation_qc_actions.py`, `model/review_handback.py` | PR4132 | Retains the matching complete recipient/QC source family. |
-| `operator/receptor_operator.py`, `operator/web/receptors.mjs`, `operator/extensions/receptors.json`, `operator/RECEPTORS_OPERATOR.md` | PR4252 + PR4261 | Embeds verified original image companions in the authenticated printable view and prepares nested report links before wrappers. |
+| `operator/receptor_operator.py`, `operator/web/receptors.mjs`, `operator/extensions/receptors.json`, `operator/RECEPTORS_OPERATOR.md` | PR4252 + PR4261 + PR4290 | Embeds verified original image companions in the authenticated printable view and prepares nested report links before wrappers. |
 | `operator/delivery_preview.py` | Existing unchanged dependency | Provides the original bounded image parser and policy used by the preview repair. |
 | `model/study_transfer.py` | Actual operated PR4230 lock block, composed into frozen source | Prevents reacquiring the same native lock while preserving the original frozen imports and family behavior. |
 
 Each member records `frozen_976_sha256`, or null if the frozen bank did not contain the path. Reuse an installed identical body. A body matching its exact frozen predecessor can receive the complete successor at its owning worker's application boundary. Preserve a different newer installed body and compose with its current owner.
+
+## Materialize the requested metadata comparison input
+
+The equipped SOURCEPATH13 receiver requested one compact gzip/base64 form of the exact inventory after its connector returned the original JSON as text. [receiving-union-20261013.inventory.encoded.json](receiving-union-20261013.inventory.encoded.json) is that same inventory: envelope **99,541 bytes**, SHA256 `376f8590fbf273f104e25b26558b61b1bb5f35b95d59ed810d17e3673ae3fe04`; gzip **74,374 bytes**, SHA256 `fa5251718f41896e205b91b39d3dbb62cc0b7141e64cbb2359dd42ec88f3e84b`. The decoded metadata remains the original **180,762 bytes / 20d48551e4a7a840e7d5ad7a1b1048ab49086e0f00d2e088efde63fd656acf57**.
+
+At that receiver's actual local-file boundary, save the complete returned envelope as one file and use the standard-library decoder below. The two arguments are the actual envelope file and an owned metadata destination. The decoder verifies gzip/CRC and the fixed original SHA before writing, reuses an identical output, and preserves a different existing file.
+
+```sh
+python -B - ACTUAL_ENVELOPE_FILE OWNED_INVENTORY_FILE <<'PY'
+import base64
+import gzip
+import hashlib
+import json
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1])
+target = pathlib.Path(sys.argv[2])
+envelope = json.loads(source.read_text(encoding="utf-8"))
+if envelope.get("encoding") != "gzip+base64":
+    raise ValueError("Expected the original gzip/base64 metadata carrier")
+raw = gzip.decompress(base64.b64decode(envelope["content_base64"], validate=True))
+expected = "20d48551e4a7a840e7d5ad7a1b1048ab49086e0f00d2e088efde63fd656acf57"
+if len(raw) != 180762 or hashlib.sha256(raw).hexdigest() != expected:
+    raise ValueError("Original inventory byte identity differs")
+inventory = json.loads(raw)
+if inventory.get("schema") != "commons.source-inventory/v1" or len(inventory["files"]) != 976:
+    raise ValueError("Original inventory schema or file count differs")
+if target.exists():
+    if target.read_bytes() != raw:
+        raise FileExistsError("Preserve the different existing inventory: " + str(target))
+else:
+    with target.open("xb") as output:
+        output.write(raw)
+print(json.dumps({"path": str(target.resolve()), "bytes": len(raw),
+                  "sha256": expected, "files": len(inventory["files"])}))
+PY
+```
+
+Feed the resulting unchanged `commons.source-inventory/v1` JSON into the existing original-source comparison against the physically retained application. Return exact matched, missing and different-edition paths/hashes to the same SOURCEPATH3434/4036 operation. The original source owner supplies exact missing bodies; newer installed peer editions stay authoritative. The existing full-packet publisher retains its already-issued operation.
 
 ### Archive-lock source boundary
 
 The included dispatcher is **62,501 bytes**, SHA256 `84d8d08f578da1deceebc74cf5f3f45cb3a38e11595d24560ca1a6d005963e77`, Git blob `4841c4691aea2c880fcec112f4213cd12a6cd762`. It changes only the actual native path-token lock block in the frozen **62,180-byte** predecessor, SHA256 `54d6f27b873b94fb0fe6be8120743134fa2621f87f0e4cbde237411e1ceb2ef6`. Reversing that one block reconstructs the exact frozen body.
 
 Current public PR4230 also has a newer 64,931-byte dispatcher with Parameter and source-refresh additions. Keep that newer installed edition and its dependencies. This bank's frozen-compatible composition introduces no Parameter import and does not replace that current source. The actual completed receiver already has its working lock correction.
+
+### Authenticated printable links
+
+The final scoped preview successor, PR4290, permits same-origin identity only within the generated, script-free preview sandbox. This keeps the ordinary Strict session cookie available when the user follows a nested report or downloads an attachment. Default source access remains none; scripts and forms remain disabled, and original images remain verified data images. The generic file route and original downloadable files are unchanged.
+
+During the existing visual handback, follow the complete actual sequence: saved report → Printable view → original child report → original attachment. Use the same authenticated application. This checks the specific browser transition found in the native product; original scientific/source editions and completed archives remain reusable.
 
 ## Completed original native receiving
 

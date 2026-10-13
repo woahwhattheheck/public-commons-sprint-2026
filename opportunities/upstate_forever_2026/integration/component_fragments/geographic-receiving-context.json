@@ -31,7 +31,10 @@
         "model/rasters.py",
         "model/spatial_esri.py",
         "model/reuse.py",
-        "model/profiles.py"
+        "model/profiles.py",
+        "model/geographic_scenario_contrasts.py",
+        "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
+        "model/geographic_utility_groups.py"
       ],
       "requires": [
         "receiving-water-report",

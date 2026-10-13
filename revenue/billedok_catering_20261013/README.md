@@ -28,7 +28,7 @@ The customer uses the supplied complete files and attachments. Repository paths 
 
 ## Research and offer
 
-The full research input records each current primary page, its observed purchasing or kitchen workflow, published contact, proposed demonstration and questions to establish fit. BilledOK's public product and imprint establish the founder and company. The prepared offer is in outreach/initial-offer.txt and .html. The contact page is retained as the current public source until its published email is read directly. Customer file selections and offer preparation do not dispatch a message.
+The full research input records each current primary page, its observed purchasing or kitchen workflow, published contact, proposed demonstration and questions to establish fit. BilledOK's public product and imprint establish the founder and company. The prepared offer is in outreach/initial-offer.txt and .html. The original public imprint directly publishes marco@billedok.de in its data-copy and aria-label fields; its Cloudflare address decodes identically. The complete original page was received on October 13, 2026 (25,874 UTF-8 bytes, SHA256 1e21e72cda4d604cc4db0aedc80d5aa75d9baeb851106c2b9a966eb79abbbf9f). Customer file selections and offer preparation do not dispatch a message.
 
 The actual rendering state is retained in validation.json. Complete its original desktop and phone receiving before describing the outgoing files as visually ready. Existing customer source bodies and operating records stay intact through that continuation.
 

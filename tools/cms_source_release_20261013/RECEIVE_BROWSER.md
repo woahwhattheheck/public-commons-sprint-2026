@@ -112,3 +112,9 @@ For the May/August course, the independent result should use all 378 original Ma
 ## Source meaning
 
 This course records review decisions about receiving the data handover. It does not alter CMS source values, infer clinical quality, fill unavailable values or turn an archive replacement date into a publication date. Original identifiers remain literal strings. The working delivery remains one complete current product, with exact originals available through its normal controls.
+
+## Receive the exact compact paired attachment
+
+Append `--paired-review "$CMS_TOOL/examples/may-2026-to-august-2026/comparison-review-compact.html"` to either existing source-input course. The driver records the supplied file's exact bytes and SHA in the same operation identity, then opens it in a separate fresh browser context. It waits for original-source receiving, uses the existing change inspector, saves a review, downloads comparison JSON/CSV plus the complete handover and all original before/after files, reloads and re-imports/re-exports that same review. Desktop/390px light/dark captures are labeled `supplied-paired-review`; the separately downloaded ordinary viewer keeps its own receiving record.
+
+A different supplied attachment requires a separate output directory rather than overwriting an earlier edition. The producer must open these actual images and downloaded attachments. This option receives the complete compact file even when its full source content exceeds a Page's embed limit.

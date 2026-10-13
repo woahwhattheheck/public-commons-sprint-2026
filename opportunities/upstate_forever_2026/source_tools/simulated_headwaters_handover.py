@@ -19,6 +19,8 @@ import zipfile
 CASE = "uploads/simulated-headwaters/selected-case.json"
 RECEIPT = "uploads/simulated-headwaters/original-demo-receiving.json"
 SCHEMA = "upstate.simulated-headwaters-handover/v1"
+SOURCE_FILES = ("source_tools/simulated_headwaters_handover.py",
+                "docs/SIMULATED_HEADWATERS_HANDOVER.md")
 
 
 def _name(value):
@@ -380,6 +382,12 @@ def _render(case, receipt, complete, report_files, map_files, browser):
         '<li>Open <code>application/START_HERE.md</code> for the maintained launch and runtime instructions.</li>'
         '<li>Open its retained Workspace to inspect the saved model results, reports, Programme, field plan and customer history.</li></ol>'
         '<p>Keep this complete handover together so the report assets, recording and downloads remain available offline.</p>'
+        '<details><summary>Exact opening-page source and guide</summary>'
+        '<p>These complete files produced this opening page. The original scientific archive retains its own '
+        'application and report edition. Reopening a completed rehearsal can create a new handover page '
+        'without replacing that archive.</p>'
+        + _file_list(["handover/source/" + name for name in SOURCE_FILES])
+        + '<p>The file index binds these source bytes and every generated or copied handover member.</p></details>'
         '<details><summary>Original project and source identities</summary>' + details
         + '<p>' + _link("handover/contents.json", "Open the handover file index")
         + ' · ' + _link(CASE, "Open the frozen scientific selection")
@@ -420,6 +428,15 @@ def build_members(output, complete):
         if (browser.get("state") != "COMPLETE"
                 or browser.get("rehearsal_id") != complete["rehearsal_id"]):
             raise ValueError("Use the same completed recorded browser course")
+    application = Path(__file__).resolve().parents[1]
+    source_files = {}
+    for name in SOURCE_FILES:
+        target = "handover/source/" + name
+        if target in extra:
+            raise ValueError("Opening-page source collides with an original handover member: " + target)
+        body = _path(application, name).read_bytes()
+        extra[target] = body
+        source_files[name] = {"path": target, **member_identity(body)}
     page = _render(case, receipt, complete, report_files, map_files, browser)
     extra["START_HERE.html"] = page.encode("utf-8")
     extra["handover/contents.json"] = (json.dumps({
@@ -430,6 +447,7 @@ def build_members(output, complete):
         "scientific_report_id": receipt["scientific_report"]["id"],
         "delivery_id": receipt["delivery_id"],
         "report_files": report_files, "map_files": map_files,
+        "source_files": source_files,
         "members": {name: member_identity(value) for name, value in sorted(extra.items())},
     }, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
     return extra

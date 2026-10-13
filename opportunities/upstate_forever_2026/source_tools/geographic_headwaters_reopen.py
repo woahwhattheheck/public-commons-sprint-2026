@@ -71,7 +71,8 @@ def _scientific_identity(scientific):
 
 def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id,
                 output, *, receiving_lock_fd, receiving_lock_path,
-                review_response_id=None, receiving_context=None, scenario_context=None):
+                review_response_id=None, receiving_context=None, scenario_context=None,
+                reference_basis=None):
     """Retain and run one complete read-only cold-reopen invocation."""
     support = _support()
     root = Path(restored["directory"]).resolve(strict=True)
@@ -105,11 +106,13 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
             "application": str(application), "workspace": str(workspace),
             "project": manifest["project"], "members": manifest["members"],
             "archive_sha256": restored["archive_sha256"],
+            "archive_delivery": manifest.get("delivery"),
             "prepared": prepared, "scientific": _scientific_identity(scientific),
             "delivery_id": delivery_id, "review_id": review_id,
             "review_response_id": review_response_id,
             "receiving_context": receiving_context,
             "scenario_context": scenario_context,
+            "reference_basis": reference_basis,
             "receiving_lock": lock_identity,
         }
         support._write(request_path, request)
@@ -143,7 +146,8 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
                 or result.get("geographic_edition_id") != prepared["id"]
                 or result.get("archive_sha256") != restored["archive_sha256"]
                 or result.get("application") != str(application)
-                or result.get("workspace") != str(workspace)):
+                or result.get("workspace") != str(workspace)
+                or result.get("reference_basis") != reference_basis):
             raise ValueError("Cold receiving returned a different source, project or invocation")
         for name, identity in snapshots.items():
             if support._identity(support._member(application, name).lstat()) != identity:
@@ -176,6 +180,49 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
         raise
 
 
+def _reference_course(ws, files, prepared, basis):
+    """Open one complete reference trio and the original unfinished full design."""
+    from source_tools.geographic_archive import reference_snapshot
+    support = _support()
+    snapshot = reference_snapshot(ws, prepared, basis)
+    for item in snapshot["members"].values():
+        files.file(ws.root, item)
+    plan = snapshot["plan"]
+    reference_ids = basis["reference_run_ids"]
+    states = {}
+    for member in plan["members"]:
+        files.json("profiles/" + member["profile_id"] + ".json")
+        profile = ws._get("profiles", member["profile_id"])
+        support._sources(ws, files, profile["source_collection_id"])
+        scenarios = [plan["baseline_scenario_id"], *plan["alternative_scenario_ids"]]
+        if [item["scenario_id"] for item in member["runs"]] != scenarios:
+            raise ValueError("The received reference snapshot changed a planned scenario order")
+        for item in member["runs"]:
+            key = item["run_id"]
+            saved = files.json("runs/" + key + "/run.json")
+            run = ws.inspect_run(key)
+            expected = {"grid_id": plan["grid_id"], "profile_id": member["profile_id"],
+                        "scenario_id": item["scenario_id"]}
+            if saved != run or any(run["selection"].get(name) != value for name, value in expected.items()):
+                raise ValueError("The received reference snapshot changed an original native selection")
+            states[key] = run["state"]
+            if run["state"] == "complete":
+                support._run(ws, files, key, expected)
+            elif key in reference_ids:
+                raise ValueError("The selected original reference run is not complete")
+            else:
+                files.descriptors(ws.root / "runs" / key, run.get("artifacts", {}))
+    support._comparison(ws, files, basis["comparison_id"], reference_ids)
+    return {"kind": "reference_course_snapshot", "ensemble_id": plan["id"],
+            "completion_scope": "reference", "reference_state": "reference_complete",
+            "course_state": basis["course_state"], "native_runs": len(reference_ids),
+            "planned_native_runs": len(states), "reference_run_ids": reference_ids,
+            "completed_run_ids": sorted(key for key, state in states.items() if state == "complete"),
+            "pending_run_ids": sorted(key for key, state in states.items() if state != "complete"),
+            "native_progress": basis["native_progress"], "pending_members": basis["pending_members"],
+            "paired_products": snapshot["paired_products"]}
+
+
 def _inspect(request, lock_fd):
     if request.get("schema") != SCHEMA:
         raise ValueError("Use the retained geographic receiving request")
@@ -201,7 +248,26 @@ def _inspect(request, lock_fd):
     if saved != prepared:
         raise ValueError("The delivered geographic preparation changed")
     case = {**prepared, "scientific_study": request["scientific"]}
-    parameter = support._parameter_course(ws, files, {"ensemble_id": prepared["ensemble_id"]}, case)
+    reference_basis = request.get("reference_basis")
+    if reference_basis is not None:
+        original_delivery = request.get("archive_delivery")
+        original = (original_delivery or {}).get("files", {}).get("handover_record")
+        if not original or original.get("path") != "delivery/handover-record.json":
+            raise ValueError("Retain the reference opening page inside this original archive")
+        expected = request["members"].get(original["path"])
+        if expected is None or any(original.get(key) != expected[key] for key in ("bytes", "sha256")):
+            raise ValueError("The reference opening record differs from its archived descriptor")
+        path = support._member(ws.root.parent, original["path"])
+        before = support._check_file(path, expected)
+        handover = support._read(path)
+        if (handover.get("reference_basis") != reference_basis
+                or handover.get("prepared") != prepared
+                or handover.get("scientific", {}).get("id") != request["scientific"]["source_operation_id"]
+                or handover.get("delivery_id") != request["delivery_id"]
+                or support._identity(path.lstat()) != before):
+            raise ValueError("The archived opening page changed its selected reference edition")
+    parameter = (support._parameter_course(ws, files, {"ensemble_id": prepared["ensemble_id"]}, case)
+                 if reference_basis is None else _reference_course(ws, files, prepared, reference_basis))
     runs = [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
     scenarios = [prepared["baseline_scenario_id"], *prepared["alternative_scenario_ids"]]
     if len(runs) != len(scenarios) or len(set(runs)) != len(runs):
@@ -225,7 +291,7 @@ def _inspect(request, lock_fd):
     scientific = support._native_study_source(ws, files, {
         "ensemble_id": prepared["ensemble_id"],
         "source_operation_id": request["scientific"]["source_operation_id"],
-        "expected": request["scientific"]}, case, delivery)
+        "expected": request["scientific"]}, case, delivery, reference_basis=reference_basis)
     context = request.get("receiving_context")
     expected_source_ids = {
         prepared["source_collection_id"], request["scientific"]["source"]["source_collection_id"]}
@@ -281,6 +347,8 @@ def _inspect(request, lock_fd):
         "geographic_edition_id": prepared["id"], "ensemble_id": prepared["ensemble_id"],
         "run_ids": runs, "delivery_id": delivery_id, "customer_review_id": review_id,
         "parameter_course": parameter, "scientific_source": scientific,
+        "reference_basis": reference_basis,
+        "completion_scope": "full_course" if reference_basis is None else "reference",
         "receiving_context": context,
         "scenario_context": interpretation,
         "review_response_id": request.get("review_response_id"),

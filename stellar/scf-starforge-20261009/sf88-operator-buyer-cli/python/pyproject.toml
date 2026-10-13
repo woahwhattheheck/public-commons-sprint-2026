@@ -24,6 +24,7 @@ agents = [
 ]
 
 [project.scripts]
+stellar-forge-event-analysis = "stellar_forge_buyer.event_feed_analysis:main"
 stellar-forge-analysis-project = "stellar_forge_buyer.analysis_projects:main"
 stellar-forge-dbnomics-analysis = "stellar_forge_buyer.dbnomics:main"
 stellar-forge-duckdb = "stellar_forge_buyer.duckdb_cli:main"
