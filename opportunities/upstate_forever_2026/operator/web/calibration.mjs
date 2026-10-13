@@ -22,13 +22,16 @@ const nativeButton = (kind,id,label) => '<button type="button" class="small" dat
 const section = (title,description,body,extra='') => '<section class="section"><header class="section-header"><div><h2>'+esc(title)+'</h2>'+(description?'<p>'+esc(description)+'</p>':'')+'</div>'+extra+'</header>'+body+'</section>';
 const notesList = values => (values??[]).length ? '<ul class="calibration-notes">'+values.map(value=>'<li>'+esc(typeof value==='string'?value:pretty(value))+'</li>').join('')+'</ul>' : '';
 
+export function createCalibrationDesk(host){return attachCalibration(host);}
+
 export function attachCalibration({getState,api,endpoint,openForm,submitAction,detail,fileList,openItem,showTask,toast}){
-  let mounted=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
+  let mounted=null,lastMarkup=null,generation=0,activeReport=null,activeTab='ranking',page=0,query='',sortKey='rank',sortDirection=1;
   let activeDraft=null,previewResult=null,previewIdentity=null,formToken=null;
   const current = () => getState()?.workspace_key;
   const sourceData = () => getState()?.data ?? {};
-  const plans = () => sourceData().calibration_plans ?? [];
-  const reports = () => sourceData().calibrations ?? [];
+  const calibrationData = () => sourceData().calibration ?? sourceData();
+  const plans = () => calibrationData().calibration_plans ?? [];
+  const reports = () => calibrationData().calibrations ?? [];
   const named = (kind,id) => {
     const row=(sourceData()[kind]??[]).find(item=>item.id===id);
     return row?.title||row?.metadata?.title||row?.spec?.title||short(id);
@@ -66,15 +69,20 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function mount(root){
     mounted=root;
-    if(activeReport)bindReport();
+    repaint();
+  }
+  function update(){
+    if(!mounted||activeReport)return;
+    const markup=render();
+    if(markup!==lastMarkup){mounted.innerHTML=markup;lastMarkup=markup;}
   }
   function detach(){
-    mounted=null;
+    mounted=null;lastMarkup=null;
     generation++;
   }
   function repaint(){
     if(!mounted)return;
-    mounted.innerHTML=render();
+    lastMarkup=render();mounted.innerHTML=lastMarkup;
     if(activeReport)bindReport();
   }
   function savedDraft(){
@@ -91,11 +99,26 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   function sourceRows(collection){
     return (sourceData().sources??[]).find(row=>row.id===collection)?.entries.filter(row=>row.kind==='vector')??[];
   }
+  function candidateParameters(row){
+    if(Array.isArray(row.available_parameters))return row.available_parameters;
+    const retained=(sourceData().runs??[]).find(run=>run.id===(row.id||row.run_id));
+    const models=row.selected_models??retained?.selection?.models;
+    if(Array.isArray(models))return pollutants.filter(parameter=>models.includes(parameter==='sediment'?'sdr':'ndr'));
+    return pollutants;
+  }
+  function sharedParameters(group,ids){
+    const selected=ids.length?(group?.runs??[]).filter(row=>ids.includes(row.id||row.run_id)):group?.runs??[];
+    if(!selected.length)return [];
+    return pollutants.filter(parameter=>selected.every(row=>candidateParameters(row).includes(parameter)));
+  }
+  function candidateModels(row){
+    return Array.isArray(row.selected_models)?row.selected_models.map(name=>String(name).toUpperCase()).join(' + '):'Original native run';
+  }
   function candidateTable(catalog,draft){
     const group=catalog.candidate_groups.find(row=>groupKey(row)===draft.group);
     if(!group)return '<p class="note">Choose a retained grid and unchanged land-cover baseline.</p>';
-    return table(['Use','Completed parameter profile','Model period',''],group.runs.map(row=>
-      '<tr><td><input type="checkbox" name="calibration_candidates" value="'+esc(row.id||row.run_id)+'" '+(draft.selection.candidate_run_ids?.includes(row.id||row.run_id)?'checked':'')+' aria-label="Use '+esc(row.title)+'"></td><td><strong>'+esc(row.title||named('profiles',row.profile_id))+'</strong><small class="mono">'+esc(short(row.id||row.run_id))+'</small></td><td>'+esc(typeof row.model_period==='object'?pretty(row.model_period):row.model_period||'Recorded with profile')+'</td><td>'+nativeButton('runs',row.id||row.run_id,'Open run')+'</td></tr>'));
+    return table(['Use','Completed parameter profile','Native outputs','Model period',''],group.runs.map(row=>
+      '<tr><td><input type="checkbox" name="calibration_candidates" value="'+esc(row.id||row.run_id)+'" '+(draft.selection.candidate_run_ids?.includes(row.id||row.run_id)?'checked':'')+' aria-label="Use '+esc(row.title)+'"></td><td><strong>'+esc(row.title||named('profiles',row.profile_id))+'</strong><small class="mono">'+esc(short(row.id||row.run_id))+'</small></td><td>'+esc(candidateModels(row))+'<small>'+esc(candidateParameters(row).map(human).join(', '))+'</small></td><td>'+esc(typeof row.model_period==='object'?pretty(row.model_period):row.model_period||'Recorded with profile')+'</td><td>'+nativeButton('runs',row.id||row.run_id,'Open run')+'</td></tr>'));
   }
   function filterRow(name='',value='',type=null){
     type=type||(value===null?'null':typeof value==='number'?'number':typeof value==='boolean'?'boolean':'text');
@@ -140,7 +163,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       if(!weightText||!Number.isFinite(weight)||weight<0)throw Error('Use a nonnegative weight for '+pollutant+'.');
       const scaleText=val('calibration_scale_'+pollutant).trim();
       objective[pollutant]={weight};
-      if(scaleText){
+      if(scaleText&&weight>0){
         const scale=Number(scaleText);
         if(!Number.isFinite(scale)||scale<=0)throw Error('Use a positive annual-load normalization scale for '+pollutant+'.');
         objective[pollutant].normalization_scale=scale;
@@ -245,7 +268,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const selection=draft?.selection??{schema:'upstate.calibration-selection/v1',title:'',candidate_run_ids:[],
       observation_id:'',catchments:{},objective:Object.fromEntries(pollutants.map(name=>[name,{weight:1}])),notes:[]};
     const selectedGroup=catalog.candidate_groups.find(group=>group.runs.some(row=>selection.candidate_run_ids?.includes(row.id||row.run_id)));
-    draft={workspace,selection,group:draft?.group||groupKey(selectedGroup||first),raw:draft?.raw??null};
+    draft={workspace,selection,group:draft?.group||groupKey(selectedGroup||first),raw:draft?.raw??null,remembered_weights:draft?.remembered_weights??{}};
     activeDraft=draft;previewResult=null;previewIdentity=null;formToken=crypto.randomUUID();
     const token=formToken;
     const collections=(sourceData().sources??[]).filter(row=>row.entries.some(entry=>entry.kind==='vector'));
@@ -257,7 +280,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       '<div class="calibration-form"><div class="form-grid">'+
       field('Selection title',input('calibration_title',selection.title,'text','required'),'Use the scientific question or retained study name.',true)+
       field('Native grid and unchanged baseline',select('calibration_run_group',catalog.candidate_groups.map(group=>[groupKey(group),named('grids',group.grid_id)+' · '+named('scenarios',group.scenario_id)]),draft.group),'Profiles compared together must use this same grid and baseline.',true)+
-      '<fieldset class="full"><legend>Completed candidate profiles</legend><div id="calibration-candidates">'+candidateTable(catalog,draft)+'</div></fieldset>'+
+      '<fieldset class="full"><legend>Completed candidate runs and profiles</legend><div id="calibration-candidates">'+candidateTable(catalog,draft)+'</div></fieldset>'+
       field('Original annual-load observations',select('calibration_observation',catalog.observations.filter(row=>row.admitted_count>0).map(row=>[row.id||row.observation_id,row.title+' · '+row.admitted_count+' annual records']),selection.observation_id),'',true)+
       '<div class="full page-actions">'+button('inspect-observation','Inspect original observations')+'</div>'+
       field('Catchment source edition',select('calibration_collection',collections.map(row=>[row.id,row.title]),collection))+
@@ -268,7 +291,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       '<details class="technical full"><summary>Exact source selection and observation records</summary><p class="note">Leave these empty to use the selected original layer and eligible observation records.</p><div id="calibration-filters">'+Object.entries(selection.catchments?.where??{}).map(([name,value])=>filterRow(name,value)).join('')+'</div>'+button('filter-add','Add exact catchment filter')+
       field('Original observation record IDs',textArea('calibration_records',(selection.observation_record_ids??[]).join('\n')),'Optional. One actual retained record ID per line.',true)+'</details>'+
       field('Observation period weighting',select('calibration_temporal_weighting',[['whole_years','Complete years · equal annual weight'],['elapsed_days','Elapsed days · derived annual period rates']],selection.temporal_weighting||'whole_years'),'Use the original annual-estimation method. Complete calendar or water years receive equal weight, including leap years.',true)+
-      '<fieldset class="full"><legend>Parameter-selection objective</legend><p class="note">A zero weight excludes a pollutant from profile selection. Automatic normalization uses calibration observations only. Supply an explicit positive annual-load scale when the study requires one.</p>'+
+      '<fieldset class="full"><legend>Parameter-selection objective</legend><p class="note">A zero weight excludes a pollutant from profile selection. Automatic normalization uses calibration observations only. Supply an explicit positive annual-load scale when the study requires one.</p><p class="note" id="calibration-output-support"></p>'+
       table(['Pollutant','Relative weight','Annual mass scale','Scale source or rationale'],pollutants.map(name=>'<tr><th scope="row">'+esc(human(name))+'<small>'+esc(units[name])+'</small></th><td>'+input('calibration_weight_'+name,objective[name]?.weight??(selection.observation_id?0:1),'number','min="0" step="any" required aria-label="'+name+' weight"')+'</td><td>'+input('calibration_scale_'+name,objective[name]?.normalization_scale??'','number','min="0" step="any" placeholder="From calibration observations" aria-label="'+name+' annual normalization scale"')+'</td><td>'+input('calibration_scale_reference_'+name,objective[name]?.scale_reference??'','text','aria-label="'+name+' scale source or rationale"')+'</td></tr>'))+'</fieldset>'+
       '<fieldset class="full"><legend>Calibration and validation groups</legend><p class="note" id="calibration-preview-note">Inspect the original catchments to assign calibration and validation groups.</p><div id="calibration-group-body"></div></fieldset>'+
       field('Interpretation notes',textArea('calibration_notes',(selection.notes??[]).join('\n')),'Retain period assumptions and relevant reservoir, point-source or source-edition context.',true)+
@@ -300,7 +323,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
           $('#calibration-candidates').innerHTML=candidateTable(catalog,activeDraft);
           const reference=$('[name="calibration_reference_run"]',form());
           if(reference)reference.outerHTML=select('calibration_reference_run',(catalog.candidate_groups.find(group=>groupKey(group)===activeDraft.group)?.runs??[]).map(row=>[row.id||row.run_id,row.title]),'',false);
-          invalidatePreview();
+          updateObjective();
         });
         $('[name="calibration_collection"]',form()).addEventListener('change',()=>{
           const node=$('[name="calibration_source"]',form());
@@ -309,21 +332,35 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
           invalidatePreview();
         });
         const observationNode=$('[name="calibration_observation"]',form());
+        let objectiveInitialized=false;
         const updateObjective=()=>{
-          const parameters=catalog.observations.find(row=>(row.id||row.observation_id)===observationNode.value)?.parameters;
-          if(!parameters)return;
+          const observed=catalog.observations.find(row=>(row.id||row.observation_id)===observationNode.value)?.parameters;
+          const group=catalog.candidate_groups.find(row=>groupKey(row)===val('calibration_run_group'));
+          const common=sharedParameters(group,chosen('calibration_candidates'));
+          const parameters=Array.isArray(observed)?common.filter(parameter=>observed.includes(parameter)):common;
           for(const parameter of pollutants){
             const node=$('[name="calibration_weight_'+parameter+'"]',form());
-            if(!parameters.includes(parameter)){node.value='0';node.disabled=true;}
-            else{
-              if(node.disabled)node.value='1';
+            if(!parameters.includes(parameter)){
+              if(!node.disabled&&(objectiveInitialized||!Object.hasOwn(activeDraft.remembered_weights,parameter)))activeDraft.remembered_weights[parameter]=node.value;
+              node.value='0';node.disabled=true;
+            }else{
+              if(node.disabled)node.value=activeDraft.remembered_weights[parameter]??'1';
               node.disabled=false;
             }
+            for(const suffix of ['scale_','scale_reference_']){
+              const control=$('[name="calibration_'+suffix+parameter+'"]',form());
+              if(control)control.disabled=!parameters.includes(parameter);
+            }
           }
+          const notice=$('#calibration-output-support');
+          objectiveInitialized=true;
+          if(notice)notice.textContent=parameters.length?
+            'Common candidate outputs'+(Array.isArray(observed)?' with original annual observations':'')+': '+parameters.map(human).join(', ')+'. Other pollutant weights are zero.':
+            'Choose candidates with a shared modeled pollutant and an original observation edition containing that annual load.';
           invalidatePreview();
         };
         observationNode.addEventListener('change',updateObjective);
-        updateObjective();
+        $('#calibration-candidates').addEventListener('change',updateObjective);
         form().addEventListener('input',draftInput);
         form().addEventListener('change',draftChange);
         form().addEventListener('close',captureDraft,{once:true});
@@ -342,6 +379,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
             if(value.type==='checkbox')node.checked=value.checked;else node.value=value.value;
           }
         }
+        updateObjective();
         retainDraft();
       });
   }
@@ -379,8 +417,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const groups=plan.spatial_groups?.groups??[];
     const body='<div class="page-actions">'+button('revise','Revise selection',id)+button('analyze',progress.state==='failed'?'Resume analysis':'Analyze selection',id,true)+
       (progress.result_id?button('report','Open results',progress.result_id):'')+'</div>'+
-      '<dl class="definition"><dt>State</dt><dd>'+stateBadge(progress)+'</dd><dt>Observation edition</dt><dd>'+esc(named('observations',selection.observation_id))+'</dd><dt>Candidate runs</dt><dd>'+number(selection.candidate_run_ids.length)+'</dd><dt>Catchment source</dt><dd>'+esc(named('sources',selection.catchments.source_collection_id))+' / '+esc(selection.catchments.source_id)+'</dd><dt>ID field</dt><dd>'+esc(selection.catchments.id_field)+'</dd></dl>'+
-      section('Candidate native runs','Every candidate uses the same original baseline and grid.',table(['Profile','Run',''],(plan.candidates??[]).map(row=>'<tr><td>'+esc(row.title||named('profiles',row.profile_id))+'</td><td class="mono">'+esc(short(row.run_id||row.id))+'</td><td>'+nativeButton('runs',row.run_id||row.id,'Open native run')+'</td></tr>')))+
+      '<dl class="definition"><dt>State</dt><dd>'+stateBadge(progress)+'</dd><dt>Observation edition</dt><dd>'+esc(named('observations',selection.observation_id))+'</dd><dt>Candidate runs</dt><dd>'+number(selection.candidate_run_ids.length)+'</dd><dt>Distinct profiles</dt><dd>'+number(plan.distinct_profile_count??new Set((plan.candidates??[]).map(row=>row.profile_id)).size)+'</dd><dt>Modeled pollutants</dt><dd>'+esc((plan.predicted_parameters??Object.keys(selection.objective??{}).filter(parameter=>Number(selection.objective[parameter]?.weight)>0)).map(human).join(', '))+'</dd><dt>Catchment source</dt><dd>'+esc(named('sources',selection.catchments.source_collection_id))+' / '+esc(selection.catchments.source_id)+'</dd><dt>ID field</dt><dd>'+esc(selection.catchments.id_field)+'</dd></dl>'+
+      section('Candidate native runs','Every candidate uses the same original baseline and grid.',table(['Profile','Native outputs','Run',''],(plan.candidates??[]).map(row=>'<tr><td>'+esc(row.title||named('profiles',row.profile_id))+'</td><td>'+esc(candidateModels(row))+'<small>'+esc(candidateParameters(row).map(human).join(', '))+'</small></td><td class="mono">'+esc(short(row.run_id||row.id))+'</td><td>'+nativeButton('runs',row.run_id||row.id,'Open native run')+'</td></tr>')))+
       section('Retained catchment groups','The saved split is used exactly as selected.',table(['Group','Catchments','Partition'],groups.map(group=>'<tr><td class="mono">'+esc(short(group.id))+'</td><td>'+esc((group.catchment_ids??[]).join(', '))+'</td><td>'+badge(selection.validation_group_ids?.includes(group.id)?'validation':'calibration')+'</td></tr>')))+
       notesList(selection.notes)+fileList(packet._downloads||[])+
       '<details class="technical"><summary>Original selection and analysis progress</summary><pre class="json-view">'+esc(pretty({selection,progress}))+'</pre></details>';
@@ -408,13 +446,13 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return rows;
   }
   const columns={
-    ranking:[['rank','Rank'],['title','Candidate profile'],['objective_score','Calibration loss'],['status','Outcome'],['run_id','Native run']],
+    ranking:[['rank','Rank'],['title','Candidate profile'],['selected_models','Native models'],['objective_score','Calibration loss'],['status','Outcome'],['run_id','Native run']],
     metrics:[['partition','Partition'],['profile_title','Profile'],['parameter','Pollutant'],['units','Units'],['groups','Groups'],['n','Catchments'],['rmse','RMSE'],['mean_bias','Mean bias'],['nash_sutcliffe_efficiency','NSE'],['normalized_mse','Normalized MSE']],
     validation:[['parameter','Pollutant'],['units','Units'],['groups','Groups'],['n','Catchments'],['rmse','RMSE'],['mean_bias','Mean bias'],['nash_sutcliffe_efficiency','NSE']],
     observations:[['partition','Partition'],['group_id','Group'],['catchment_id','Catchment'],['parameter','Pollutant'],['units','Units'],['observed','Observed annual load'],['modeled','Selected modeled load'],['residual','Residual'],['records','Original records']],
     groups:[['id','Group'],['partition','Partition'],['catchment_ids','Catchments'],['station_ids','Stations'],['observation_count','Records'],['parameters','Pollutants']],
-    envelope:[['partition','Partition'],['parameter','Pollutant'],['units','Units'],['group_id','Group'],['catchment_id','Catchment'],['observed_annual_mass','Observed load'],['minimum','Minimum candidate load'],['median','Median candidate load'],['maximum','Maximum candidate load'],['candidate_count','Candidates']],
-    stability:[['group_id','Omitted calibration group'],['state','Fold outcome'],['selected_run_id','Selected without group'],['same_as_full_selection','Selection unchanged'],['objective_score','Calibration loss']],
+    envelope:[['partition','Partition'],['parameter','Pollutant'],['units','Units'],['group_id','Group'],['catchment_id','Catchment'],['observed_annual_mass','Observed load'],['minimum','Minimum candidate load'],['median','Median candidate load'],['maximum','Maximum candidate load'],['candidate_count','Candidate runs'],['distinct_profile_count','Distinct profiles'],['expected_profiles','Expected profiles']],
+    stability:[['group_id','Omitted calibration group'],['state','Fold outcome'],['selected_run_id','Selected without group'],['selected_profile_id','Selected profile'],['same_as_full_selection','Run unchanged'],['same_profile_as_full_selection','Profile unchanged'],['objective_score','Calibration loss']],
     exclusions:[['run_id','Candidate run'],['observation_id','Observation'],['catchment_id','Catchment'],['parameter','Pollutant'],['reason','Reason']],
   };
   const tabTitles={ranking:'Profile ranking',metrics:'Physical fit',validation:'Independent validation',observations:'Observed and modeled',groups:'Catchment groups',envelope:'Candidate envelope',stability:'Group stability',exclusions:'Exclusions'};
@@ -422,7 +460,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const value=row[key];
     if(key==='run_id'&&value)return nativeButton('runs',value,short(value));
     if(key==='selected_run_id'&&value)return nativeButton('runs',value,short(value));
-    if(key==='same_as_full_selection')return value===true?'Yes':value===false?'No':'—';
+    if(key==='profile_id'||key==='selected_profile_id')return value?nativeButton('profiles',value,short(value)):'—';
+    if(key==='same_as_full_selection'||key==='same_profile_as_full_selection')return value===true?'Yes':value===false?'No':'—';
+    if(key==='selected_models'&&Array.isArray(value))return esc(value.map(name=>String(name).toUpperCase()).join(' + '));
     if(Array.isArray(value))return esc(value.map(item=>typeof item==='object'?pretty(item):item).join(', '));
     if(value&&typeof value==='object')return '<details><summary>Details</summary><pre class="json-view">'+esc(pretty(value))+'</pre></details>';
     if(['id','group_id'].includes(key))return '<span class="mono" title="'+esc(value)+'">'+esc(short(value))+'</span>';
@@ -464,10 +504,11 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return header(view.title||report.title,report.selected_run_id?'Original observations and completed native model runs. Lower calibration loss selects the retained parameter profile; validation describes that selected profile on the reserved catchment groups.':'The retained candidate outcomes identify the observations and native catchment support needed to complete parameter selection.',
       button('back','All calibrations')+button('plan','Open selection',report.plan_id)+button('export','Export complete results',report.id,true))+
       '<div class="cards">'+[
-        ['Selected parameter profile',report.selected_run_id?(selected?.title||named('profiles',report.selected_profile_id)):'No eligible candidate',report.selected_run_id?'Native run '+short(report.selected_run_id):'Inspect the retained candidate outcomes below.'],
+        ['Selected parameter profile',report.selected_run_id?(selected?.title||named('profiles',report.selected_profile_id)):'No eligible candidate',report.selected_run_id?candidateModels(selected||{selected_models:report.selected_models})+' · native run '+short(report.selected_run_id):'Inspect the retained candidate outcomes below.'],
+        ['Candidate runs',number(view.candidate_count??report.candidate_count??view.ranking.length),number(view.distinct_profile_count??report.distinct_profile_count??new Set(view.ranking.map(row=>row.profile_id)).size)+' distinct parameter profiles with their original run identities.'],
         ['Calibration loss',number(selected?.objective_score),'Saved pollutant weights and calibration-only normalization.'],
         ['Validation groups',number(independent),independent?'Assessment: '+human(view.validation_state):'All selected groups were used for calibration.'],
-        ['Non-dominated profiles',number(view.pareto_run_ids?.length),'Candidate tradeoffs retained across pollutant metrics.'],
+        ['Non-dominated candidate runs',number(view.pareto_run_ids?.length),'Candidate tradeoffs retained across pollutant metrics.'],
       ].map(([title,value,note])=>'<div class="card"><h3>'+esc(title)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
       (view.observations.length?section('Observed and modeled annual loads','The dashed diagonal marks equal observed and modeled load. Circles show calibration catchments; outlined squares show validation catchments.',
         '<div class="calibration-plots">'+pollutants.map(name=>scatter(view.observations,name)).join('')+'</div>'):'')+
@@ -514,5 +555,5 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       return;
     }
   }
-  return {render,mount,detach,dispatch,taskActions};
+  return {render,mount,update,detach,dispatch,taskActions};
 }

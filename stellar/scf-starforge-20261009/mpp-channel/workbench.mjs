@@ -4,13 +4,14 @@ import { regular } from '../distribution/runtime-workspace/storage.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { requireValue as need, hash, stable, now } from '../mpp-charge/storage.mjs';
 import { responseRecord, storedResponse } from '../mpp-charge/merchant.mjs';
-import { publicURL, merchantConfig, profileKey, streamKey, channel, draftTask, funderConfig, draftFunder, MAX_BODY } from './config.mjs';
+import { publicURL, merchantConfig, profileKey, streamKey, channel, draftTask, funderConfig, draftFunder, draftOpening, MAX_BODY } from './config.mjs';
 import { saveTask, authorizeTask, resumeTaskAuthority, stopTask } from './authority.mjs';
 import { preparePurchase, executePurchase, refreshChallenge, responseFor, cancelPurchase } from './buyer.mjs';
 import { createMerchant, merchantContract } from './merchant.mjs';
 import { registerLocalMerchant } from './transport.mjs';
 import { prepareClose, executeClose, reconcileClose, cancelUnsignedClose,
   prepareCollection, executeCollection, reconcileCollection, cancelUnsignedCollection, closeView } from './settlement.mjs';
+import { prepareOpening, executeOpening, reconcileOpening, cancelOpening, openingView } from './opening.mjs';
 import { prepareFunding, executeFunding, reconcileFunding, cancelUnsignedFunding, fundingView } from './funding.mjs';
 import { loadChannelNative, dependencyRootFor, observeChannel } from './runtime.mjs';
 import { exportChannel, receiveChannel, parseBundle, assertOperating } from './receiving.mjs';
@@ -165,6 +166,11 @@ export function createChannelWorkbench({workspace,environment=process.env}) {
   }
   async function action(name,body) {
     need(body && typeof body==='object' && !Array.isArray(body), 'MPP_CHANNEL_OPERATION_INPUT_REQUIRED');
+    if(name==='opening-template')return draftOpening();
+    if(name==='opening-prepare')return prepareOpening({...body,workspace});
+    if(name==='opening-execute' || name==='opening-resume')return executeOpening({...body,workspace,environment});
+    if(name==='opening-reconcile')return reconcileOpening({...body,workspace});
+    if(name==='opening-cancel')return cancelOpening({...body,workspace});
     if(name==='funder-template') {
       const selected=body.stream?await selectedChannelProfile(body.stream):null;
       return {...draftFunder(selected?.channel ?? body.channel),
@@ -234,6 +240,10 @@ export function createChannelWorkbench({workspace,environment=process.env}) {
     if(kind==='tasks') return readTask(workspace,key);
     if(kind==='purchases') {
       const row=await workspace.read(groups.purchases,key);need(row,'MPP_CHANNEL_PURCHASE_NOT_FOUND',404);return purchaseView(row);
+    }
+    if(kind==='openings') {
+      const row=await workspace.read(groups.openings,key);
+      need(row,'MPP_CHANNEL_OPENING_NOT_FOUND',404);return openingView(row);
     }
     if(kind==='funders')return funderProfile(key);
     if(kind==='funding' || kind==='settlements') {

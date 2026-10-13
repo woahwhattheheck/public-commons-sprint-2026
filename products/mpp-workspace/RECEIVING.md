@@ -133,7 +133,7 @@ For continued operation on another host, retain the complete native workspace, p
 
 In **Channel work**, choose the actual original channel and **Create operating handover**. Use one stable handover ID. The application saves the immutable complete file before recording the transfer of channel operation.
 
-The handover contains every task edition and authority, budget reservation, original request, signed cumulative commitment, merchant profile edition, accepted delivery, exact response, funder selection, funding/refund operation, collection/close record and coherent chain observation for that channel. It also includes the native SDK namespace, executable application source, package manifest/lockfile, required handlers and selected input files.
+The handover contains each channel opening's complete selected WASM, original profile, derived address, salt, terminal authority and signed upload/creation stages, plus every task edition and authority, budget reservation, original request, signed cumulative commitment, merchant profile edition, accepted delivery, exact response, funder selection, funding/refund operation, collection/close record and coherent chain observation for that channel. It also includes the native SDK namespace, executable application source, package manifest/lockfile, required handlers and selected input files.
 
 ### Transfer the retained file
 
@@ -162,7 +162,7 @@ starforge mpp-workspace channel state --dir "$RECEIVING_MPP_PRODUCT"
 
 The browser can receive the complete bundle directly. The same original receiver checks all records and source/input files before joining them. Matching retained records allow interrupted receiving to continue; a conflicting operated record remains available for resolution. It restores source and inputs to actual receiving paths while preserving every historical profile and source identity.
 
-The READY receiving record and the full original bundle remain in that workspace. Tasks reopen as **RECEIVED**. The receiving operator selects authority for future purchases; existing reservations and signed commitments keep their original recovery path. Continue an unfinished purchase, funding operation, collection or close using its original ID. Signed transactions retain their original envelope and authority; the recipient selects its host signer environment only when an original operation still needs an unsigned preparation. Open the same product again to retain this complete history.
+The READY receiving record and the full original bundle remain in that workspace. Tasks reopen as **RECEIVED**. The receiving operator selects authority for future purchases; existing reservations and signed commitments keep their original recovery path. Continue an unfinished opening, purchase, funding operation, collection or close using its original ID. An opening's native `opening-resume` uses the received runtime binding and retained compiled bytes; `opening-reconcile` reads its original signed transaction. The original source host and compiled-file paths remain historical profile data. Signed transactions retain their original envelope and authority; the recipient selects its host signer environment only when an original operation still needs an unsigned preparation. Open the same product again to retain this complete history.
 
 The outgoing workspace retains the original file and readable history after transfer. Channel operation continues in the receiving workspace. A subsequent handover includes the restored files and all retained profile editions.
 
