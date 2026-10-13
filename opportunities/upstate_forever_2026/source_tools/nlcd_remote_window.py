@@ -60,6 +60,12 @@ def _integer(value, name):
     return native._positive_integer(value, name)
 
 
+def _file_identity(path):
+    info = path.stat()
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
 class OriginalRanges:
     """Disk-backed source ranges; each completed chunk has its own byte receipt."""
 
@@ -113,10 +119,14 @@ class OriginalRanges:
                     or not re.fullmatch(r"[0-9a-f]{64}", str(prefix_sha256 or ""))):
                 raise ValueError("A retained prefix requires its exact path, byte count and SHA256")
             path = Path(prefix).resolve(strict=True)
-            if not path.is_file() or path.stat().st_size != prefix_bytes or file_digest(path) != prefix_sha256:
+            identity = _file_identity(path)
+            if (not path.is_file() or identity[2] != prefix_bytes
+                    or file_digest(path) != prefix_sha256):
                 raise ValueError("The supplied original prefix differs from its completed byte identity")
+            if _file_identity(path) != identity:
+                raise ValueError("The selected original prefix changed while verifying its SHA256")
             self.prefix = {"path": path, "bytes": prefix_bytes, "sha256": prefix_sha256,
-                           "stat": (path.stat().st_size, path.stat().st_mtime_ns)}
+                           "stat": identity}
         self._emit()
 
     def snapshot(self):
@@ -143,10 +153,9 @@ class OriginalRanges:
         record = self.records.get(start)
         if record:
             path = _regular(self.root, record["path"])
-            info = path.stat()
-            identity = (info.st_size, info.st_mtime_ns)
+            identity = _file_identity(path)
             body = path.read_bytes()
-            if len(body) != record["bytes"]:
+            if len(body) != record["bytes"] or _file_identity(path) != identity:
                 raise ValueError("A retained original range changed during reuse")
             if self.verified.get(start) != identity:
                 if hashlib.sha256(body).hexdigest() != record["sha256"]:
@@ -164,14 +173,14 @@ class OriginalRanges:
         details = {}
         if self.prefix and end < self.prefix["bytes"]:
             p = self.prefix["path"]
-            info = p.stat()
-            if (info.st_size, info.st_mtime_ns) != self.prefix["stat"]:
+            identity = _file_identity(p)
+            if identity != self.prefix["stat"]:
                 raise ValueError("The selected original prefix changed during range preparation")
             with p.open("rb") as source:
                 source.seek(start)
                 body = source.read(length)
-            if len(body) != length:
-                raise ValueError("The selected original prefix ended inside a retained chunk")
+            if len(body) != length or _file_identity(p) != identity:
+                raise ValueError("The selected original prefix changed while reading a retained chunk")
             self.prefix_bytes_read += length
             details = {"origin": "retained-original-prefix",
                        "prefix_bytes": self.prefix["bytes"],
@@ -207,11 +216,13 @@ class OriginalRanges:
         sha = hashlib.sha256(body).hexdigest()
         # A crash may leave a complete body before its companion receipt. Re-read
         # that original range and compare it before adopting the retained body.
-        if destination.exists():
-            if destination.stat().st_size != length or file_digest(destination) != sha:
-                raise ValueError("An unreceipted original range differs from the pinned provider body")
-        else:
+        if not destination.exists():
             atomic_bytes(destination, body)
+        identity = _file_identity(destination)
+        if identity[2] != length or file_digest(destination) != sha:
+            raise ValueError("The retained original range differs from the pinned provider body")
+        if _file_identity(destination) != identity:
+            raise ValueError("The retained original range changed while verifying its SHA256")
         record = {
             "schema": "upstate.original-range/v1", "entity_sha256": digest(ENTITY),
             "start": start, "end": end, "bytes": length, "sha256": sha,
@@ -220,8 +231,7 @@ class OriginalRanges:
         atomic_json(_regular(self.root, f"ranges/{start:016d}.json"), record, immutable=True)
         self.records[start] = record
         self.retained_bytes += length
-        info = destination.stat()
-        self.verified[start] = (info.st_size, info.st_mtime_ns)
+        self.verified[start] = identity
         self._emit()
         return body
 
