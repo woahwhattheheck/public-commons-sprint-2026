@@ -203,3 +203,69 @@ The original-source preview takes the workspace's existing native-operation gate
 `operator/calibration.py` adapts the scientific records and writes comparison exports. `operator/web/calibration.mjs` provides the existing operator's calibration view and forms. `operator/web/calibration.css` supplies scoped monochrome styling. `operator/extensions/calibration.json` binds them to the maintained extension host. `operator/install_calibration.py` performs current-source registration and migration; `source_tools/calibration_assembly.py` composes the complete receiving edition before its final source identities are recorded.
 
 The scientific model API remains `catalog(workspace)`, `preview(workspace, selection)`, `prepare(workspace, selection)`, `inspect(workspace, plan_id)`, and `analyze(workspace, plan_id)`. See the companion model guide for the complete scientific input schema and source-native command-line workflow.
+
+## Published observation-error sensitivity
+
+Open a completed nominal calibration and select **Analyze published observation errors**. The existing task queue reuses its original modeled predictions, selected candidate, catchment groups, pollutant weights and normalization scales. Choose a finite nonnegative standard-error multiplier. The default is **1**; **0** reproduces the nominal comparison.
+
+The source is the standard error retained with each original annual observation. The scientific module retains conversion to annual comparison units and the temporal aggregation already used by the nominal calibration. Missing standard errors remain explicit in source coverage and affected comparison rows. No default percentage or replacement error is supplied.
+
+The completed analysis appears in **Published observation uncertainty** on the original calibration page. Open it to inspect:
+
+- **Ranking sensitivity:** each challenger's nominal, minimum and maximum objective gap relative to the originally selected run. A positive gap favors the original selection. The plot marks zero, the source-error range and the nominal gap; the complete table remains searchable and sortable.
+- **First-tie multiplier:** the earliest standard-error multiplier that can produce a tie under the fixed objective and nonnegative source bounds. Missing contributing errors, equivalent predictions and thresholds outside finite numerical representation retain their exact scientific state.
+- **Annual reference ranges:** original catchment, hydrologic group, pollutant, annual mass, source record IDs and complete or incomplete uncertainty coverage.
+- **Published standard errors:** original source values and units, converted annual standard errors and each retained source issue.
+- **Source contributions:** coefficients and endpoints for original records contributing to each challenger comparison. A shared original record ID retains one source perturbation across all references that use it.
+- **Selected validation:** modeled annual load and residual ranges for the originally selected model on reserved validation catchments, with native/source coverage retained. No challenger ranking uses these rows.
+- **Nominal reproduction:** original and reproduced calibration objective values, absolute differences and numerical tolerance.
+
+These are deterministic sensitivity ranges over the declared marginal source bounds. They do not assign a probability to a possible reversal or change the nominal selected profile. Dependence among distinct original estimates is not assumed away. Validation catchments remain outside challenger ranking; their reference bands and selected-model residual ranges are descriptive. Overall partial coverage can coexist with an exact comparison when the missing record's shared coefficient cancels, or at multiplier zero.
+
+### Retained records and operations
+
+| Action | Payload | Result |
+| --- | --- | --- |
+| `calibration.uncertainty` | `{"report_id":"<original calibration ID>","standard_errors":1}` | Retained `uncertainty_id`, original `report_id` / `plan_id`, coverage state and selection sensitivity. |
+| `calibration.uncertainty.export` | `{"uncertainty_id":"<retained analysis ID>"}` | Complete report package and file inventory. |
+
+`GET /api/calibration/uncertainty?id=<ID>` uses the existing workspace query context and returns the original scientific analysis with retained downloads. The registered item kind is `calibration-uncertainties`. Existing calibration state includes `calibration_uncertainties`, allowing the open nominal result to show newly completed analyses after the ordinary task refresh.
+
+The provider delegates scientific work to:
+
+```python
+from model import calibration_uncertainty
+
+analysis = calibration_uncertainty.analyze(
+    workspace, original_calibration_id, standard_errors=1.0
+)
+retained = calibration_uncertainty.inspect(workspace, analysis["id"])
+```
+
+The equations, nonnegative bounds, source conversions, shared-record coefficients and nominal reproduction rules are in [CALIBRATION_UNCERTAINTY.md](../model/CALIBRATION_UNCERTAINTY.md).
+
+### Complete sensitivity package
+
+Select **Export sensitivity package** in the sensitivity view. The retained directory is `calibration-uncertainty-exports/<analysis ID>/`; the task exposes the complete ZIP and each individual file through the original verified operator ticket transport.
+
+| File | Content |
+| --- | --- |
+| `index.html` | Readable printable analysis, signed-gap interpretation, complete result tables and source coverage. |
+| `uncertainty.json` | Complete scientific sensitivity record. |
+| `calibration.json` | Original nominal calibration, preserved exactly. |
+| `selection.json` | Original saved calibration plan, preserved exactly. |
+| `pairwise.csv` | Signed challenger gaps, ranking states and first-tie multipliers. |
+| `reference_units.csv` | Catchment/pollutant annual reference bounds and source support. |
+| `source_records.csv` | Original source standard errors and converted annual mass ranges. |
+| `source_attribution.csv` | Original record contributions to each candidate's gap range. |
+| `selected_validation.csv` | Selected-model annual predictions and residual ranges on reserved validation catchments. |
+| `candidate_scores.csv` | Nominal objective reproduction for each retained candidate. |
+| `manifest.json` | Exact member byte lengths, SHA-256s and original analysis identities. |
+
+CSV output retains additional scientific fields, serializes structured source details as JSON and protects spreadsheet cells beginning with formula characters. Reopening an existing export checks retained member and archive identities before offering downloads.
+
+### Install and restore
+
+This edition adds `model/calibration_uncertainty.py` and `model/CALIBRATION_UNCERTAINTY.md` to the complete calibration source cohort. Use the receiving application's maintained `install_extensions.py` through the same calibration installer and cumulative assembly commands described above. The installer records the exact current observation-handoff browser and provider predecessors, preserving independent native core and shared host edits.
+
+The maintained portable workspace inventory walks the complete workspace, including `calibration-uncertainties` and `calibration-uncertainty-exports`. The registered `verify_workspace` hook reopens each retained sensitivity record through the scientific module's `inspect` validator. It checks the original calibration, plan, observation edition, source object bytes, source stamp, selected identities and fixed objective. Restore does not rerun the nominal model or sensitivity calculation.
