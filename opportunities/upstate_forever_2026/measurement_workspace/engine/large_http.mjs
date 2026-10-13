@@ -1,3 +1,4 @@
+import {handoverOperation} from './eco_handover.mjs';
 /** Namespaced small-message transport through the existing authenticated RPC. */
 import {InputError} from './parse.mjs';
 import {sourceList,sourceFiles,sourceFileChunk} from './large_sources.mjs';
@@ -5,6 +6,7 @@ import {beginIntake,putChunk,intakeStatus,listIntakes,prepareIntake,commitIntake
 import {exportEdition,listEditions,editionInfo,editionChunk,receiveIntake} from './large_delivery.mjs';
 import {previewLargeCollection,receiveLargeCollection,largeCollectionStatus,largeCollectionEditions,publishLargeCollection} from './large_collections.mjs';
 export async function largeOperation(w,method,parts,query,body={}){
+ if(parts[0]==='handovers')return handoverOperation(w,method,parts.slice(1),body);
  if(parts[0]==='collections'){
   if(parts.length===2&&parts[1]==='preview'&&method==='POST')return previewLargeCollection(w,body);
   if(parts.length===2&&parts[1]==='receive'&&method==='POST')return receiveLargeCollection(w,body);

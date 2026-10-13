@@ -1,0 +1,32 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-eco-handover",
+  "source_reference": "Complete native Measurements exportEdition and project.zip; selected source family for original LDA receiving.",
+  "components": {
+    "measurement-eco-handover": {
+      "title": "Complete scientific project handover",
+      "paths": [
+        "measurement_workspace/ECO_LDA_HANDOVER.md",
+        "measurement_workspace/engine/eco_handover.mjs",
+        "measurement_workspace/engine/eco_handover_cli.mjs",
+        "measurement_workspace/engine/handover_archive.py",
+        "measurement_workspace/engine/large_delivery.mjs",
+        "measurement_workspace/engine/large_http.mjs",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/web/eco_handovers.mjs",
+        "measurement_workspace/web/extension.mjs",
+        "measurement_workspace/extension.py",
+        "measurement_workspace/operator.py",
+        "operator/web/eco_handovers.mjs",
+        "operator/web/measured_observations_extension.mjs",
+        "operator/extensions/measured-observations.json"
+      ],
+      "requires": [
+        "measurement-large-files"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-eco-handover"
+  ]
+}
