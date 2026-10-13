@@ -300,9 +300,11 @@ print styling.
 
 Use **Save view and transfer project** and the installed **Project continuity**
 panel to carry task history and unfinished original inputs. Its command-line
-entry point is `operator/project_continuity_cli.py`; the maintained
-`operator/project_transfer_cli.py` supplies the underlying incremental block
-transport. Both use the existing queue and native archive.
+entry point is `operator/project_continuity_cli.py` (the historical
+`operator/project_transfer_cli.py` delegates to that same command); the maintained
+`python -m model.project_transfer_cli` supplies the underlying incremental block
+transport. The continuity command uses the existing queue and native archive;
+the lower-level protocol command works with the retained block inventory.
 
 On the receiving computer, **Open received project** selects the new workspace.
 **Save or continue the selected analysis** opens its saved guide, and **Resume

@@ -31,6 +31,12 @@ DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.m
                 "install_extensions.py")
 VERSION = "upstate.calibration-registration/v3"
 PREDECESSORS = {
+    "model/CALIBRATION_REVIEW.md": {
+        "2e074fac920846af9cb50013c520e83e0808b95c3d148e4f7734199f1ec9bbd0",
+    },
+    "operator/web/calibration_review.mjs": {
+        "dfead8c5d57617ed5b2dc22fd8674687a9441d0da64e17abf122280f89fe8a9d",
+    },
     "operator/web/calibration_maps.mjs": {
         "520d4224204e7567507410877562e01c24db6c00ab65e66f096d99a175c5a193",
     },
@@ -43,6 +49,7 @@ PREDECESSORS = {
         "ea20e443b4152012cac68c9ef0f322ddb1529f3ce45c7995e4bc3c47a0c9bfd1",
     },
     "operator/calibration.py": {
+        "f606ecace454c6ce9f7644dddd68a0637f0e243106dc6d56e404c38bf44003ae",
         "9440c787158558bccf0df44314de00872ce560ab31ea71246e51446a58edbac3",
         "20764e08b5e66ef4d64d3099c7778dced81a0e587ec26013f24835629d177cfa",
         "804cd4e54600fa358d7554d10de9605d26a96b74bc8a10df6d77465544707961",
@@ -70,6 +77,7 @@ PREDECESSORS = {
         "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
     },
     "operator/CALIBRATION.md": {
+        "d77a8b7cb6e8fac7a83148356de08322f96badc1cf481dda676150eeae2ba836",
         "e9a139100b382867c5afdfccf3a5691318cc34886f40227a508f6bba9403eaca",
         "a531f22fa04bf1c2ea6476866246b1d09751f9f393846280ec1c5d923a7dcb64",
         "6b9eff4d235c967ba1e7329c426d9c66599858e350fa341decffdd7c0945a3a3",
@@ -79,6 +87,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "d1e92bc00687a7ef5c470ba9e4902e2e78677742f01794b6725c91ec33acd768",
         "88e464da584ec4f34c9f71d0a0211ebfa25e90ab3e10f021613a73157ca4764d",
         "7aef9208344921e01033c548a9420b60eeccf596c104dc8f6486c0837de6b35c",
         "4a3a1b816c20d75f034b82bacbda5388c784e4b2cf12852e222260707015acea",

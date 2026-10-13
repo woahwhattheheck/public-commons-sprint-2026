@@ -449,6 +449,7 @@ export function mountDirectoryCorrections({root,api,download,getState,notify=()=
    if(saved){try{await restoreWorking(JSON.parse(saved));}catch(error){S.error='The retained working copy needs review: '+error.message;}}
    render();return S.workspaceId;
   },
+  async openSaved(kind,id){return task(async()=>{await openRecord(kind,id);persist();});},
   dispose(){persist();S.disposed=true;generation++;window.removeEventListener('beforeunload',beforeUnload);},
   busy:()=>S.busy,
   dirty:()=>S.dirty||!!S.pending

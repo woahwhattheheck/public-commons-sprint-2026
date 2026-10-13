@@ -103,7 +103,7 @@
       "showTask"
     ],
     "styles": [
-      "scientific-setup.css"
+      "/web/scientific-setup.css"
     ],
     "view": {
       "id": "scientific-setup",

@@ -141,7 +141,7 @@ def catalog(workspace):
                 "scenario_kind": scenario["kind"],
                 "profile_title": profile.get("title", profile["id"]),
                 "completed_at": run.get("completed_at"),
-                "runtime_version": run.get("runtime", {}).get("version"),
+                "runtime_version": (run.get("runtime") or {}).get("version"),
             })
         except (ValueError, OSError, KeyError, TypeError) as error:
             issues.append({"run_id": path.parent.name, "error": str(error)})

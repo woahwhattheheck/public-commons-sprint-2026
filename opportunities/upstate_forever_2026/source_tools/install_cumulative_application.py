@@ -264,7 +264,39 @@ def compose(root, records=None):
         ], "Native Investigations and scientific interpretation", records)
     registered_desks_join(root, records)
     context_desks_join(root, records)
+    continuity_join(root, records)
     return records
+
+
+def continuity_join(root, records):
+    """Compose the complete continuity family through its original installers."""
+    if not (root / "operator/extensions/project-continuity.json").is_file():
+        return
+    required = (
+        "operator/project_continuity.py",
+        "operator/extension_modules/project_continuity.py",
+        "operator/project_transfer.py",
+        "operator/extensions/project-transfer.json",
+        "model/project_transfer.py",
+        "model/project_transfer_workspace.py",
+        "model/project_transfer_install.py",
+        "source_tools/install_project_continuity.py",
+        "source_tools/apply_dependency_startup.py",
+    )
+    missing = [name for name in required if not (root / name).is_file()]
+    if missing:
+        raise ValueError("Complete project continuity source is missing: " + ", ".join(missing))
+    transport = module(root, "model/project_transfer_install.py")
+    source = (root / "operator/server.py").read_text("utf-8")
+    if not transport["registry_registration"](root, source):
+        raise ValueError("Complete project continuity requires the maintained transfer descriptor and original shared provider.")
+    apply_function(root, [
+        ("operator/server.py", transport["registry_patch"]),
+    ], "Single registered original transfer provider", records)
+    result = module(root, "source_tools/install_project_continuity.py")["apply"](root)
+    records.append({"component": "Complete project archive scope", "result": result})
+    result = module(root, "source_tools/apply_dependency_startup.py")["apply"](root)
+    records.append({"component": "Dependency-aware original extension startup", "result": result})
 
 
 def registered_desks_join(root, records):
