@@ -1,0 +1,346 @@
+{
+  "schema": "commons-semantic-reference-inputs/1",
+  "source_bundle_blob": "a5e23bcb36ff63563f32f77dd5f135e8d78a1a3f",
+  "retrieved_at": "2026-10-12 03:02:51 UTC",
+  "files": [
+    {
+      "path": "dcat-ap/3.0.1/dcat-ap-SHACL.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/shacl/dcat-ap-SHACL.ttl",
+      "git_blob_sha": "a6022f1eefa0b00a10804fe128f5a7060668b579",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://api.github.com/repos/SEMICeu/DCAT-AP/git/blobs/a6022f1eefa0b00a10804fe128f5a7060668b579",
+      "modified": false,
+      "bytes": 155471
+    },
+    {
+      "path": "dcat-ap/3.0.1/ranges.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/shacl/ranges.ttl",
+      "git_blob_sha": "93fb195b1ace93afb60e654aa9caa442bae2f2f1",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://api.github.com/repos/SEMICeu/DCAT-AP/git/blobs/93fb195b1ace93afb60e654aa9caa442bae2f2f1",
+      "modified": false,
+      "bytes": 80322
+    },
+    {
+      "path": "dcat-ap/3.0.1/CHANGELOG.md",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/CHANGELOG.md",
+      "git_blob_sha": "d4f5a9011ef616e626f2b3b9dbf6ec3499db7c7b",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://api.github.com/repos/SEMICeu/DCAT-AP/git/blobs/d4f5a9011ef616e626f2b3b9dbf6ec3499db7c7b",
+      "modified": false,
+      "bytes": 3884
+    },
+    {
+      "path": "dcat-ap/LICENSE",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "LICENSE",
+      "git_blob_sha": "4ea99c213c5c0c005ae4e80df8e52169d06896ec",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://api.github.com/repos/SEMICeu/DCAT-AP/git/blobs/4ea99c213c5c0c005ae4e80df8e52169d06896ec",
+      "modified": false,
+      "bytes": 18656
+    },
+    {
+      "path": "w3c/org.ttl",
+      "repo": "w3c/ns",
+      "source_path": "org.ttl",
+      "git_blob_sha": "5677c010475a7754803c4da6bd3f021984b8b15d",
+      "license": "PDDL-1.0",
+      "git_blob_url": "https://api.github.com/repos/w3c/ns/git/blobs/5677c010475a7754803c4da6bd3f021984b8b15d",
+      "modified": false,
+      "bytes": 84162
+    },
+    {
+      "path": "w3c/shacl.ttl",
+      "repo": "w3c/data-shapes",
+      "source_path": "shacl/shacl.ttl",
+      "git_blob_sha": "ccf3ee86be729e0fc44f826c01594babbb2f4bac",
+      "license": "W3C-2015",
+      "git_blob_url": "https://api.github.com/repos/w3c/data-shapes/git/blobs/ccf3ee86be729e0fc44f826c01594babbb2f4bac",
+      "modified": false,
+      "bytes": 53531
+    },
+    {
+      "path": "w3c/shacl-shacl.ttl",
+      "repo": "w3c/data-shapes",
+      "source_path": "shacl/shacl-shacl.ttl",
+      "git_blob_sha": "1aa2a2a74be654181dd10ff38ca7068a747afa61",
+      "license": "W3C-Software-and-Document",
+      "git_blob_url": "https://api.github.com/repos/w3c/data-shapes/git/blobs/1aa2a2a74be654181dd10ff38ca7068a747afa61",
+      "modified": false,
+      "bytes": 12603
+    },
+    {
+      "path": "w3c/LICENSE.md",
+      "repo": "w3c/data-shapes",
+      "source_path": "LICENSE.md",
+      "git_blob_sha": "63ff9303924801d0d4e9abd9c84e3cc6feccbe7b",
+      "license": "W3C-Software-and-Document",
+      "git_blob_url": "https://api.github.com/repos/w3c/data-shapes/git/blobs/63ff9303924801d0d4e9abd9c84e3cc6feccbe7b",
+      "modified": false,
+      "bytes": 165
+    },
+    {
+      "path": "w3c/NAMESPACE_SOURCE.md",
+      "repo": "w3c/ns",
+      "source_path": "README.md",
+      "git_blob_sha": "389e311c42d2d5b761044c79e6b6f89d3182a966",
+      "license": null,
+      "git_blob_url": "https://api.github.com/repos/w3c/ns/git/blobs/389e311c42d2d5b761044c79e6b6f89d3182a966",
+      "modified": false,
+      "bytes": 459
+    },
+    {
+      "path": "w3c/dcat3.ttl",
+      "repo": "w3c/ns",
+      "source_path": "dcat3.ttl",
+      "git_blob_sha": "72db97e60b63dbb1fa1db51c47c414268a1efee6",
+      "git_blob_url": "https://api.github.com/repos/w3c/ns/git/blobs/72db97e60b63dbb1fa1db51c47c414268a1efee6",
+      "license": "CC-BY-4.0",
+      "modified": false,
+      "bytes": 200345
+    },
+    {
+      "path": "w3c/examples/basic-example.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/basic-example.ttl",
+      "git_blob_sha": "9b28243b3ea64c71e2ff2eca27b2fb1b604ea9e0",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/9b28243b3ea64c71e2ff2eca27b2fb1b604ea9e0",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 2369
+    },
+    {
+      "path": "w3c/examples/basic-example.jsonld",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/basic-example.jsonld",
+      "git_blob_sha": "3996baf725110971652f0501c0a73facc295176c",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/3996baf725110971652f0501c0a73facc295176c",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 5507
+    },
+    {
+      "path": "w3c/examples/conformance-standards.trig",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/conformance-standards.trig",
+      "git_blob_sha": "dcac9db94bd3d95dd0b0f20f85d8f5c239dc4321",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/dcac9db94bd3d95dd0b0f20f85d8f5c239dc4321",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 7853
+    },
+    {
+      "path": "w3c/examples/csiro-dap-examples.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/csiro-dap-examples.ttl",
+      "git_blob_sha": "fad0575f998843127a491d06c6774a53d7355393",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/fad0575f998843127a491d06c6774a53d7355393",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 20986
+    },
+    {
+      "path": "w3c/examples/relation-examples.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/relation-examples.ttl",
+      "git_blob_sha": "61f48c53db444977d91ee61a234424a1e17de25e",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/61f48c53db444977d91ee61a234424a1e17de25e",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 1770
+    },
+    {
+      "path": "w3c/examples/genoa-busstop.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/genoa-busstop.ttl",
+      "git_blob_sha": "880a85bf3e8d1150c5ff4b0f43ca670fdfaa2923",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/880a85bf3e8d1150c5ff4b0f43ca670fdfaa2923",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 2843
+    },
+    {
+      "path": "w3c/examples/spatial-properties.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/spatial-properties.ttl",
+      "git_blob_sha": "3e0c51931ef6809381980732a7ae27a03b40eff2",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/3e0c51931ef6809381980732a7ae27a03b40eff2",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 2670
+    },
+    {
+      "path": "w3c/examples/temporal-properties.ttl",
+      "repo": "w3c/dx-dcat",
+      "source_path": "TR/examples/temporal-properties.ttl",
+      "git_blob_sha": "3d3a897319715f60bce382473c299f635013ca85",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/3d3a897319715f60bce382473c299f635013ca85",
+      "license": "W3C-Document-2023 (implementation/code-component terms retained in notices)",
+      "modified": false,
+      "source_role": "Published W3C technical example; not a live dataset freshness or SAIC customer-data claim",
+      "bytes": 2855
+    },
+    {
+      "path": "w3c/examples/LICENSE.md",
+      "repo": "w3c/dx-dcat",
+      "source_path": "LICENSE.md",
+      "git_blob_sha": "d6c89e58a3881775823d291c3853708343065b1e",
+      "git_blob_url": "https://api.github.com/repos/w3c/dx-dcat/git/blobs/d6c89e58a3881775823d291c3853708343065b1e",
+      "license": "W3C-Document-2023",
+      "modified": false,
+      "bytes": 146
+    },
+    {
+      "path": "notices/W3C-SOFTWARE-2015.txt",
+      "repo": null,
+      "source_path": null,
+      "git_blob_sha": null,
+      "git_blob_url": null,
+      "license": "License notice",
+      "modified": true,
+      "source_url": "https://www.w3.org/copyright/software-license-2015/",
+      "modification": "Full notice body retained as plain text with source attribution; website navigation and license-version history omitted.",
+      "bytes": 1908
+    },
+    {
+      "path": "notices/W3C-SOFTWARE-2023.txt",
+      "repo": null,
+      "source_path": null,
+      "git_blob_sha": null,
+      "git_blob_url": null,
+      "license": "License notice",
+      "modified": true,
+      "source_url": "https://www.w3.org/copyright/software-license-2023/",
+      "modification": "Full notice body retained as plain text with source attribution; website navigation and license-version history omitted.",
+      "bytes": 1927
+    },
+    {
+      "path": "notices/W3C-DOCUMENT-2023.txt",
+      "repo": null,
+      "source_path": null,
+      "git_blob_sha": null,
+      "git_blob_url": null,
+      "license": "License notice",
+      "modified": true,
+      "source_url": "https://www.w3.org/copyright/document-license-2023/",
+      "modification": "Full notice body retained as plain text with source attribution; website navigation and license-version history omitted.",
+      "bytes": 3338
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/shapes.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/shapes.ttl",
+      "git_blob_sha": "550615d7479d59627d8122f0424a1eabb5bd2f55",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/shapes.ttl",
+      "modified": false,
+      "bytes": 20619
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/range.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/range.ttl",
+      "git_blob_sha": "56440f2fe72b82c46ffbddac4b871f9dc66888ad",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/range.ttl",
+      "modified": false,
+      "bytes": 12490
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/shapes_recommended.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/shapes_recommended.ttl",
+      "git_blob_sha": "07f55954f3a49dbba47f2131f5ddf7afbad0c590",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/shapes_recommended.ttl",
+      "modified": false,
+      "bytes": 10170
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/mdr-vocabularies.shape.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/mdr-vocabularies.shape.ttl",
+      "git_blob_sha": "2b0663bb50000a0f1115e061f09247abc4f92a3b",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/mdr-vocabularies.shape.ttl",
+      "modified": false,
+      "bytes": 19592
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/imports.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/imports.ttl",
+      "git_blob_sha": "47cc2efc350094f60db29d0edbafd9bd2071285f",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/imports.ttl",
+      "modified": false,
+      "bytes": 1435
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/mdr_imports.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/mdr_imports.ttl",
+      "git_blob_sha": "a5363b31df83864bbdd9153602a21721a4ed5083",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/mdr_imports.ttl",
+      "modified": false,
+      "bytes": 1622
+    },
+    {
+      "path": "dcat-ap/3.0.1/html/shacl/deprecateduris.ttl",
+      "repo": "SEMICeu/DCAT-AP",
+      "source_path": "releases/3.0.1/html/shacl/deprecateduris.ttl",
+      "git_blob_sha": "c02a5bd853e97a475f364869ccb183c451f3017c",
+      "license": "CC-BY-4.0",
+      "git_blob_url": "https://github.com/SEMICeu/DCAT-AP/blob/4470b8ea907b7eb9ec55ab22befd1ecd2210ff32/releases/3.0.1/html/shacl/deprecateduris.ttl",
+      "modified": false,
+      "bytes": 4144
+    }
+  ],
+  "source_addenda": [
+    {
+      "blob": "b23eb3759d25b5a75ebf93e885088e08595589f2",
+      "retrieved_at": "2026-10-12 04:06:23 UTC",
+      "purpose": "Original DCAT-AP 3.0.1 executable modular profile, separate from generated constraint-ID family",
+      "commit": "4470b8ea907b7eb9ec55ab22befd1ecd2210ff32",
+      "repo": "SEMICeu/DCAT-AP"
+    }
+  ],
+  "validation_profiles": {
+    "dcat-ap-3.0.1-official": {
+      "title": "Documented DCAT-AP 3.0.1 modular shape profile",
+      "shape_files": [
+        "dcat-ap/3.0.1/html/shacl/shapes.ttl",
+        "dcat-ap/3.0.1/html/shacl/range.ttl",
+        "dcat-ap/3.0.1/html/shacl/mdr-vocabularies.shape.ttl"
+      ],
+      "ontology_files": [
+        "w3c/dcat3.ttl"
+      ],
+      "source_reference": "https://semiceu.github.io/DCAT-AP/releases/3.0.1/",
+      "source_index_blob": "b35f139624e4cc5a550992756c7c62bbd99cff20",
+      "upstream_commit": "4470b8ea907b7eb9ec55ab22befd1ecd2210ff32",
+      "recommended_properties": false,
+      "deprecated_terms_profile": false,
+      "external_vocabulary_imports": false,
+      "scope": "Evaluate exactly the three documented original shape modules against the retained snapshot, with the explicitly selected original W3C DCAT 3 ontology. Recommended/deprecated extensions and vocabulary import manifests remain available original sources; they are not silently selected or fetched.",
+      "notes": [
+        "The specification explicitly links html/shacl modules and describes the generated shacl/dcat-ap-SHACL.ttl as an additional constraint-ID design.",
+        "Do not union these modules merely to repair dangling IRIs in the separate generated family. Preserve both original families; select a documented profile for a new validation job.",
+        "Import manifests contain owl:imports for explicit source acquisition. Existing operator import/network prohibition remains unchanged; retain manifests and add actual captured vocabulary sources as selected ontology inputs.",
+        "The files carry some 3.0.0 namespace IRIs internally despite residing in the official 3.0.1 release; preserve source bytes exactly."
+      ]
+    }
+  }
+}

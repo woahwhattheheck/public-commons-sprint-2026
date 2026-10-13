@@ -1,0 +1,33 @@
+{
+  "@context": {
+    "ex": "https://dcat.example.org/",
+    "label": "http://www.w3.org/2000/01/rdf-schema#label",
+    "link": {
+      "@id": "http://www.w3.org/ns/prov#used",
+      "@type": "@id"
+    }
+  },
+  "@graph": [
+    {
+      "@id": "ex:jsonDataset",
+      "link": "_:shared"
+    },
+    {
+      "@id": "ex:jsonGraph",
+      "@graph": [
+        {
+          "@id": "_:shared",
+          "label": "Retained JSON-LD blank node"
+        }
+      ]
+    },
+    {
+      "@id": "ex:jsonEmpty",
+      "@graph": []
+    },
+    {
+      "@id": "_:emptyBlank",
+      "@graph": []
+    }
+  ]
+}

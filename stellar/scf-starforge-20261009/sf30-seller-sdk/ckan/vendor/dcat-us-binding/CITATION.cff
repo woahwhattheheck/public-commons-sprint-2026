@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: "dcat-us-binding: a generated RDF binding for DCAT-US 3.0"
+message: "If you use this work, please cite it."
+type: software
+authors:
+  - family-names: Rovai
+    given-names: Fabio
+    orcid: "https://orcid.org/0009-0001-7244-794X"
+repository-code: "https://github.com/fabio-rovai/dcat-us-binding"
+doi: "10.5281/zenodo.22307001"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22307001"
+    description: "Concept DOI, always resolves to the latest version"
+  - type: doi
+    value: "10.5281/zenodo.22307002"
+    description: "Version DOI for release v0.2.0"
+license: MIT
+version: 0.2.0
+date-released: "2026-09-04"
+keywords: [DCAT, DCAT-US, JSON-LD, SHACL, RDF, open data, metadata, interoperability]

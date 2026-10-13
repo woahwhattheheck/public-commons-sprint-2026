@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dcat-us-binding"
+version = "0.1.0"
+description = "A generated JSON-LD context and SHACL shapes for DCAT-US 3.0, derived from the published JSON Schema"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Fabio Rovai"}]
+keywords = ["dcat", "dcat-us", "json-ld", "shacl", "rdf", "open-data", "metadata"]
+dependencies = ["rdflib>=7.0", "pyshacl>=0.25"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+dcat-us-binding = "dcat_us_binding.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]

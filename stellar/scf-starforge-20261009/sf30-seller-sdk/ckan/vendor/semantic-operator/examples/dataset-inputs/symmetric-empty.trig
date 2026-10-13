@@ -1,0 +1,4 @@
+@prefix : <https://dcat.example.org/> .
+_:first :p :object .
+_:second :p :object .
+_:first {}

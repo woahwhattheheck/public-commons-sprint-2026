@@ -56,6 +56,104 @@ function selectTable(document) {
   }
   return { document, table: document };
 }
+// Zürich publishes its field dictionary as JSON-encoded label/description pairs.
+// Bind only explicit technical names from that known source profile. The complete
+// original package remains in the capture; annotations never infer column types.
+function packageFieldDictionary(capture) {
+  const pkg = capture.package ?? {};
+  if (capture.manifest.catalogOrigin !== 'https://data.stadt-zuerich.ch' ||
+      !Object.hasOwn(pkg, 'sszFields') || pkg.sszFields === null || pkg.sszFields === '') return null;
+  const profile = 'zurich-ssz-fields.v1', property = 'sszFields';
+  const raw = pkg[property], problems = [], bindings = new Map(), entries = [];
+  const problem = (code, message, field) => problems.push(issue(code, message, field, property));
+  let decoded;
+  if (typeof raw !== 'string' || Buffer.byteLength(raw) > 1048576) {
+    problem('PACKAGE_DICTIONARY_FORMAT_INVALID',
+      'The original package field dictionary must be a JSON string no larger than 1 MiB.');
+  } else {
+    try { decoded = parseCkanJson(Buffer.from(raw)); }
+    catch { problem('PACKAGE_DICTIONARY_JSON_INVALID', 'The original package field dictionary is not valid JSON.'); }
+  }
+  if (decoded !== undefined && (!Array.isArray(decoded) || decoded.length > 1024)) {
+    problem('PACKAGE_DICTIONARY_ENTRIES_INVALID',
+      'The original package field dictionary must contain at most 1,024 label/description pairs.');
+    decoded = undefined;
+  }
+  const names = new Set(capture.fields.map(field => field.id)), candidates = new Map();
+  for (let index = 0; index < (decoded?.length ?? 0); index++) {
+    const original = decoded[index];
+    if (!Array.isArray(original) || original.length !== 2 ||
+        original.some(value => typeof value !== 'string') ||
+        original[0].length > 1024 || original[1].length > 65536) {
+      entries.push({ index, original: plain(original), state: 'invalid' });
+      problem('PACKAGE_DICTIONARY_ENTRY_INVALID',
+        'A package field definition is not a supported label/description pair.');
+      continue;
+    }
+    const [sourceLabel, notes] = original;
+    const match = /^(.+?)\s*\(technisch:\s*([^()]+)\)\s*$/.exec(sourceLabel);
+    const field = match?.[2].trim(), label = match?.[1].trim();
+    const entry = { index, sourceLabel, notes, ...(field ? { sourceField: field } : {}),
+      ...(label ? { label } : {}), state: 'unbound' };
+    entries.push(entry);
+    if (!field || !label || field.length > 512 || RESERVED_NAMES.has(field) ||
+        /[\u0000-\u001f]/.test(field)) {
+      problem('PACKAGE_DICTIONARY_FIELD_UNBOUND',
+        'This source label has no supported explicit technical field name.');
+      continue;
+    }
+    if (!names.has(field)) {
+      problem('PACKAGE_DICTIONARY_FIELD_ABSENT',
+        'This package definition has no matching field in the selected resource.', field);
+      continue;
+    }
+    const selected = candidates.get(field) ?? [];
+    selected.push(entry); candidates.set(field, selected);
+  }
+  for (const [field, selected] of candidates) {
+    if (selected.length !== 1) {
+      for (const entry of selected) entry.state = 'ambiguous';
+      problem('PACKAGE_DICTIONARY_FIELD_AMBIGUOUS',
+        'Multiple package definitions name this field; review their original entries before choosing its meaning.', field);
+      continue;
+    }
+    selected[0].state = 'bound'; bindings.set(field, selected[0]);
+  }
+  const context = {};
+  if (typeof pkg.sszBemerkungen === 'string' && pkg.sszBemerkungen.length <= 262144)
+    context.sszBemerkungen = pkg.sszBemerkungen;
+  const source = { profile, property, packageId: capture.manifest.packageId,
+    definitionSha256: identity(decoded === undefined ? plain(raw) : plain(decoded)),
+    entries, ...(Object.keys(context).length ? { context } : {}) };
+  return { source, bindings, issues: problems };
+}
+function dictionaryForField(field, definition, packageDictionary, issues) {
+  const original = object(field.info) ? plain(field.info) : null;
+  const selected = packageDictionary?.bindings.get(field.id);
+  if (!selected) return { dictionary: original };
+  const provenance = { profile: packageDictionary.source.profile,
+    property: packageDictionary.source.property, entry: selected.index,
+    sourceLabel: selected.sourceLabel, label: selected.label, notes: selected.notes,
+    binding: 'explicit-technical-field', packageId: packageDictionary.source.packageId,
+    definitionSha256: packageDictionary.source.definitionSha256 };
+  const dictionary = { ...(original ?? {}) };
+  for (const property of ['label', 'notes']) {
+    if (!meaningful(dictionary[property])) dictionary[property] = selected[property];
+    else if (dictionary[property] !== selected[property]) issues.push(issue(
+      'PACKAGE_DICTIONARY_DATASTORE_CONFLICT',
+      'The DataStore field dictionary and package definition differ. The existing DataStore annotation remains effective; both original definitions are retained.',
+      field.id, property));
+  }
+  for (const [property, value] of [['titles', selected.label], ['dc:description', selected.notes]]) {
+    if (meaningful(definition?.[property]) && identity(definition[property]) !== identity(value))
+      issues.push(issue('PACKAGE_DICTIONARY_CSVW_CONFLICT',
+        'The selected CSVW definition and package annotation differ. The existing CSVW annotation remains effective; both original definitions are retained.',
+        field.id, property));
+  }
+  return { dictionary, dictionarySource: provenance,
+    ...(original ? { providerDictionary: original } : {}) };
+}
+
 export function describeCkanSemantics(capture) {
   const reference = capture.manifest.semanticSchema ?? null;
   let document = null, table = {}, schema = {}, definitions = [], issues = [];
@@ -84,12 +182,14 @@ export function describeCkanSemantics(capture) {
   }
   if (capture.manifest.semanticConsistency === 'semantics-changed')
     issues.push(issue('SOURCE_SCHEMA_CHANGED_DURING_CAPTURE', 'The provider changed its schema between the retained before and after responses.'));
+  const packageDictionary = packageFieldDictionary(capture);
+  if (packageDictionary) issues.push(...packageDictionary.issues);
   const byName = new Map(definitions.map(column => [column.name, column]));
   const fields = capture.fields.map(field => {
-    const dictionary = object(field.info) ? plain(field.info) : null;
     const definition = byName.get(field.id);
     if (definition?.virtual === true) throw fault('CKAN_SEMANTIC_VIRTUAL_FIELD_CONFLICT');
-    return { sourceField: field.id, providerType: field.type ?? null, dictionary,
+    return { sourceField: field.id, providerType: field.type ?? null,
+      ...dictionaryForField(field, definition, packageDictionary, issues),
       sourceDefinition: definition ? plain(definition) : null };
   });
   const names = new Set(fields.map(field => field.sourceField));
@@ -103,8 +203,9 @@ export function describeCkanSemantics(capture) {
   const aboutUrl = schema.aboutUrl ?? table.aboutUrl ?? document?.aboutUrl ?? null;
   const context = document?.['@context'] ?? 'http://www.w3.org/ns/csvw';
   const value = { schema: 'stellar-forge.ckan-source-semantics.v1',
-    hasDefinitions: Boolean(reference) || fields.some(field => field.dictionary && Object.values(field.dictionary).some(meaningful)),
-    source: { ...plain(sourceAttribution(capture)), schemaUrl: reference?.url ?? null,
+    hasDefinitions: Boolean(reference) || Boolean(packageDictionary) || fields.some(field => field.dictionary && Object.values(field.dictionary).some(meaningful)),
+    source: { ...plain(sourceAttribution(capture)),
+      ...(packageDictionary ? { packageDictionary: packageDictionary.source } : {}), schemaUrl: reference?.url ?? null,
       schemaSha256: reference?.sha256 ?? null, dataUrl: typeof table.url === 'string' ? table.url : null },
     fields, primaryKey, aboutUrl, context: plain(context),
     virtualColumns: definitions.filter(column => column.virtual === true).map(plain), issues };
@@ -278,7 +379,10 @@ export function projectCkanSemantics(capture, projection) {
     }
     issues.push(...localIssues);
     return { name, sourceField: spec.field, type: spec.type, nullable: spec.nullable ?? false,
-      encoding: spec.encoding ?? 'native', dictionary: field.dictionary, sourceDefinition: field.sourceDefinition,
+      encoding: spec.encoding ?? 'native', dictionary: field.dictionary,
+      ...(field.dictionarySource ? { dictionarySource: field.dictionarySource } : {}),
+      ...(field.providerDictionary ? { providerDictionary: field.providerDictionary } : {}),
+      sourceDefinition: field.sourceDefinition,
       projectedDefinition: projected, issues: localIssues };
   });
   const missingKey = source.primaryKey.filter(name => !aliases.has(name));
