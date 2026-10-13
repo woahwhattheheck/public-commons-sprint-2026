@@ -1,0 +1,108 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "catalogue-delivery-workbench",
+  "title": "Catalogue Delivery Workbench customer commissioning",
+  "task": {
+    "name": "Commission complete catalogue delivery, native approval and recurring customer receiving",
+    "purpose": "Give an accountable customer operator one complete source-to-destination history: original CSV editions, reviewed metadata and FileStore delivery, actual native contributor/reviewer decisions, useful implementation screens and independently received editable work.",
+    "request": "Receive the original Workshare, Installation and private source selections. Name the producer, catalogue, deployment, native-operation, commercial, approval and receiving owners. Retain complete source editions and their original identifiers, filenames, metadata, periods and manifests. Prepare the unchanged authorized private application and independently receive its full source using the actual local Python. Review and start the original delivery/implementation/approval application through Applications. Use all original Store/ApprovalStore contracts, actual destination/source/revision/principal checks and saved provider operation identities. Register host-declared customer-agent aliases, immutable inputs, explicit producer paths, targets, credential references and independent receiving destinations. Retain full original requests/responses and complete artifacts. Adopt actual completed original native evidence without redispatch; uncertain work remains with its original operator and reconciliation. Export complete implementation plus separate native approval archives, independently receive both original review graphs, operate deliberate local edits and cold reopen the full history. Record only observed acceptance evidence in Installation.",
+    "completeOutput": "One complete customer catalogue delivery edition with full source and metadata meaning, reviewed original plan, actual native upload/readback and approval evidence when required, original implementation/resource/profile bindings, request/review/history, all readable and byte-complete exports and independently received editable source/workspace.",
+    "repeatTrigger": "A distinct approved producer edition, source period, resource population or accepted metadata/workflow change creates a linked task. Retries, chunk reads, duplicate exports, receiving copies and reopening of the same result remain the original task.",
+    "pricedUnit": "One agreed complete customer implementation baseline or accepted recurring catalogue edition. Preserve existing integer atomic price/count/budget, spending, supplier and acceptance selections; separate hosting/source maintenance, native operation and review responsibility."
+  },
+  "source": {
+    "reference": "Select the full authorized private original application and literal external source manifest/SHA, complete original source editions, Workshare/customer profile and actual native result/implementation/approval package descriptors. The public package carries generic integration source and no private case source, commercial material or credential values.",
+    "mode": "The original Store owns complete CSV parsing, reviewed plans, FileStore uploads/readback, package request leases and recurring feeds. Original ApprovalStore and provider journal own actual source/revision/principal/operation/decision history. Original Implementation owns complete profile/resource/source comparisons and export/receiving. Generic installed adapters attach to this same engine.",
+    "population": "Retain all selected CSV rows, columns, exact cells, supplied producer manifests and source periods, full implementation identifier comparisons and complete native response objects. Preserve long identifiers, leading zeroes and empty strings. Label selected subsets as subsets and retain every unresolved difference.",
+    "meaning": "A queued or accepted activity is not a completed provider request. A local full-row comparison is not authentic CKAN/approval execution. Readback must bind actual complete source bytes/metadata, original protected fields, actual principal permission and saved native operation/event identity. Earlier rejected and later approved editions remain separately inspectable.",
+    "changePolicy": "Retain each host requestId and exact original body before dispatch; keep native request_id/operation_id/revision semantics intact. Reuse actual observed responses, preserve uncertain dispatch and reconcile through the original action. Never infer request completion from timeout or change a prior request to fit a new source. Preserve the declared original input filename and complete bytes."
+  },
+  "receiving": {
+    "application": "TJLabs Catalogue Delivery Workbench at products/catalogue-delivery-workbench; commands catalogue-delivery-workbench, -prepare, -managed and -receive. Original application/source authority and business archives are privately supplied; generic public wrappers do not redistribute them.",
+    "acceptanceRule": "Verify the complete selected source and actual local imports, then operate the original three screens and customer-agent transport. Bind actual original delivery/native approval phases, source bytes, distinct principals and APPLIED operation/event observations. Download all full artifacts and validate every original package member, receive independently and cold reopen full history plus deliberate local notes. View actual desktop/narrow screenshots, controls and all outgoing attachments before presentation.",
+    "changeAndWithdraw": "Keep prior source, plan, job, feed, implementation and review versions. Use original revision guards, package locks, native permissions and explicit reconcile/retry actions. Applications Stop drains the selected listener/worker and accepted local work; it does not prove a prior remote request had no effect. Commercial changes and withdrawals use existing Installation.",
+    "recovery": "Read complete retained host requests and original saved operation/job state. HTTP_OBSERVED is an exchange, not business acceptance. Safe replay is limited to actual source-native stable identities; ambiguous other mutations remain DISPATCH_UNCERTAIN. Original approval restore requires a fresh destination; implementation receive preserves exact package members and worker remains stopped. Later local work is not overwritten by a receipt replay.",
+    "maintenance": "Deliver all new reusable wrapper/source publicly and complete authorized original source/operating artifacts privately. Preserve actual sender and native receiver, full source authority, token-reference names, actual result identities and opening instructions. The complete private source transfer is separate from implementation's filtered source export and separate approval archives."
+  },
+  "steps": [
+    {
+      "title": "Receive the complete task and source authority",
+      "result": "Join actual Workshare/Installation scope, periods, responsibility, exact private source manifest and original native owner. Keep payment/assignment selections unchanged."
+    },
+    {
+      "title": "Prepare and independently receive source",
+      "result": "Verify every selected original file and exact inventory; retain actual Python/import receipts and full private portable source transfer."
+    },
+    {
+      "title": "Review the original managed application",
+      "result": "Use Applications Review/Save/Start with actual private configuration, source, actor, workspace, explicit worker choice, service credential files and shared request journal."
+    },
+    {
+      "title": "Retain exact complete producer editions",
+      "result": "Capture declared complete CSV and optional original manifests with original filenames; inspect full rows and exact identifier/metadata meaning."
+    },
+    {
+      "title": "Review destination and source plan",
+      "result": "Inspect the existing CKAN resource and protected metadata, compare actual complete baseline and explicitly approve the original selected plan."
+    },
+    {
+      "title": "Continue original delivery and reconciliation",
+      "result": "Use the same native job/package lease and actual upload/readback. Preserve uncertain outcomes and require actual prior-request closure before explicit retry."
+    },
+    {
+      "title": "Review the delivered edition with native principals",
+      "result": "Track actual completed source, refresh native revision/permissions and preserve contributor request and reviewer reject/approve operations/events. Keep local notes distinct."
+    },
+    {
+      "title": "Operate the customer implementation and agent",
+      "result": "Use complete private profile, resource bindings and identifier comparisons. The 49 installed tools reuse original34 operations and retain full bodies, artifacts and exact request selections."
+    },
+    {
+      "title": "Export complete original operating packages",
+      "result": "Retain full implementation ZIP and each selected approval archive, plus full private application transfer and actual native phase outputs."
+    },
+    {
+      "title": "Receive independently and inspect actual outgoing product",
+      "result": "Use original readers, merge only identical base records and complete review graphs, operate local notes with history, cold reopen and view actual desktop/narrow controls/downloads/attachments."
+    },
+    {
+      "title": "Record acceptance and next useful edition",
+      "result": "Save observed result/receiver/source/native identities in existing Installation. Only distinct approved scope/source periods create additional useful tasks."
+    }
+  ],
+  "inputs": [
+    "Existing complete Workshare/Installation packet: customer, scope, owners, periods, network/asset/recipient, integer atomic price/count/budget, spending and acceptance selections.",
+    "Authorized full private application, literal exact source manifest/SHA and full unchanged original source provenance; public wrapper distribution is separate.",
+    "Complete original CSV editions, declared original filenames and supplied producer manifests, exact identifier/column semantics and full population references.",
+    "Existing CKAN target/package/resource and original native backend/operation/result selections; explicit host credential references and actual principal permissions.",
+    "Complete original customer implementation profile, staff/deployment responsibilities, resource bindings, source comparisons and recurring feed contracts.",
+    "Full original delivery/readback, native request/decision/reconciliation history, two or more distinct source editions as selected, all original operating archives and independently received history.",
+    "Actual viewed desktop/narrow screens, useful controls, complete downloads and reopened ZIP/report/PDF attachments through the original equipped receiver."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/catalogue-delivery-workbench/tools.mjs",
+      "blob": "4a67f520f7e42f19342e2fa59aa4be3b87a937dd"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/mcp.mjs",
+      "blob": "f68a53e7aa5fa682ea4ccf668e5190ce9a6dfc2e"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/requests.mjs",
+      "blob": "bef8291b0080bf158bbd87e463d774eb9d340b61"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/files.mjs",
+      "blob": "4f0f9085c86bb12e5d8b7900a399d0f3698a00c6"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/setup.mjs",
+      "blob": "943b07c0dab1cb32331cca6d0248013b996d0c31"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/source-manifest.schema.json",
+      "blob": "69e2da0a1f7f875b79b3f1d2749a38d6c251285c"
+    }
+  ]
+}

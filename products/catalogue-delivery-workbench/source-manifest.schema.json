@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Private complete Catalogue Delivery source selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "stellar-forge.catalogue-delivery-workbench-source.v1"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 25000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 33554432
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "description": "This generic schema carries no customer or case selection. Supply the complete authorized private original application separately. Preparation and launch validate the exact source leaf set, safe distinct paths and every declared byte/SHA, retaining the original delivery, implementation, approval, MCP and backend source."
+}
