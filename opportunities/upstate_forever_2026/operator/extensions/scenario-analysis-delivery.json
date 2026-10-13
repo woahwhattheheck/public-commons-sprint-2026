@@ -2,10 +2,11 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scenario-analysis-delivery",
   "title": "Scenario analysis delivery continuation",
-  "version": "1",
+  "version": "2",
   "order": 66,
   "assets": [
-    "scenario_analysis_delivery.mjs"
+    "scenario_analysis_delivery.mjs",
+    "native_versions.mjs"
   ],
   "backend": {
     "module": "scenario_analysis_delivery_operator",

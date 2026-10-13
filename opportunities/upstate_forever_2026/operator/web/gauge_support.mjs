@@ -43,11 +43,12 @@ const svgMap = (edition,stationId) => {
 export function attachGaugeSupport(host) {
   let root=null,workspace=null,state=null,catalog=null,edition=null,selected='',search='',error='',message='';
   let busy=false,generation=0,controller=null,currentTask=null,request=null,catalogRequest=0,detailRequest=0,pendingEditionId=null;
+  let reportTask=null,reportRequest=null,reportDelivery='',reportReady=null,reportBusy=false,reportHandled=null;
   let draft={title:'Regional gauge and catchment support',report_id:'',reporting_huc12s:[],huc_sources:[],utility_sources:[]};
   const storageKey=()=> 'upstate:gauge-support:'+workspace;
-  function save(){try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,selected,currentTask,request}));}catch{}}
+  function save(){try{sessionStorage.setItem(storageKey(),JSON.stringify({draft,selected,currentTask,request,reportTask,reportRequest,reportDelivery,reportReady,reportHandled}));}catch{}}
   function restore(){try{const value=JSON.parse(sessionStorage.getItem(storageKey())||'null');
-    if(value){draft=value.draft||draft;selected=value.selected||'';currentTask=value.currentTask;request=value.request;}}catch{}}
+    if(value){draft=value.draft||draft;selected=value.selected||'';currentTask=value.currentTask;request=value.request;reportTask=value.reportTask||null;reportRequest=value.reportRequest||null;reportDelivery=value.reportDelivery||'';reportReady=value.reportReady||null;reportHandled=value.reportHandled||null;}}catch{}}
   function read(operation,payload={}){return host.api('/api/gauge-support/'+operation,{method:'POST',body:{workspace,...payload}});}
   function note(){if(!root)return;const e=root.querySelector('[data-gs-error]'),m=root.querySelector('[data-gs-message]');
     e.hidden=!error;e.textContent=error;m.hidden=!message;m.textContent=message;}
@@ -79,10 +80,11 @@ export function attachGaugeSupport(host) {
     if(!root)return;root.querySelector('[data-gs-editions]').innerHTML=options(list(catalog?.editions),edition?.id||'',row=>row.id,row=>row.title+' · '+(row.summary?.gauge_count||0)+' gauges','Choose saved support report');
   }
   function renderTasks(){
-    if(!root)return;const tasks=list(state?.tasks).filter(row=>row.workspace===workspace&&row.action==='gauge.support.build');
+    if(!root)return;const tasks=list(state?.tasks).filter(row=>row.workspace===workspace&&['gauge.support.build','gauge.support.report'].includes(row.action));
     root.querySelector('[data-gs-tasks]').innerHTML=tasks.length?'<h2>Saved operations</h2><div class="gs-actions">'+tasks.slice(0,8).map(task=>
-      button('task',(task.id===currentTask?'Current · ':'')+task.state+' · '+(task.payload?.selection?.title||'Gauge support'),'data-id="'+esc(task.id)+'"')+
-      (task.state==='complete'&&task.result?.id?button('open','Open result','data-id="'+esc(task.result.id)+'"'):'')).join('')+'</div>':'';
+      button('task',(task.id===currentTask?'Current · ':'')+task.state+' · '+(task.action==='gauge.support.report'?'Scientific report source':task.payload?.selection?.title||'Gauge support'),'data-id="'+esc(task.id)+'"')+
+      (task.state==='complete'&&task.result?.id?button('open','Open result','data-id="'+esc(task.result.id)+'"'):'')+
+      (task.state==='complete'&&task.action==='gauge.support.report'&&task.result?.source?button('report-task','Open report form','data-id="'+esc(task.id)+'"'):'')).join('')+'</div>':'';
   }
   function renderResult(){
     if(!root)return;const result=edition?.result,container=root.querySelector('[data-gs-result]');
@@ -99,6 +101,10 @@ export function attachGaugeSupport(host) {
       '<p class="gs-muted">Saved regional report '+esc(result.regional.report_id)+' · original station geography '+esc(result.station_edition_id)+
       ' · source edition '+esc(edition.id)+'</p><div class="gs-actions">'+button('station-edition','Open source station geography')+
       button('reuse','Use this selection')+button('verify','Verify and reopen linked source')+'</div><div>'+important.map(fileLink).join('')+'</div>'+
+      '<div class="gs-row"><label>Scientific report selection<select data-gs-report-delivery>'+options(list(state?.data?.deliveries),reportDelivery,row=>row.id,row=>row.title||row.id,'New report selection')+'</select></label>'+
+      button('report','Use in scientific report',reportBusy?'disabled':'')+
+      (reportReady?.gauge_support_id===edition.id?button('report-open','Open prepared report form'):'')+'</div>'+
+      '<p class="gs-muted">Retain this saved edition and its complete source package in the existing scientific/client report. Choose a saved delivery to preserve its native runs, overlays and previously selected studies.</p>'+
       '<details><summary>All source-preserving downloads</summary>'+files.map(fileLink).join('')+'</details></section>'+
       '<section class="gs-card"><h2>Gauges and original flow coverage</h2><label>Find gauge<input type="search" data-gs-search value="'+esc(search)+'" placeholder="Station, name or HUC12"></label>'+
       '<div class="gs-table"><table><thead><tr><th>Gauge</th><th>Point membership</th><th>Whole catchment km²</th><th>Within region</th><th>Numeric days</th><th>Original series</th></tr></thead><tbody>'+
@@ -154,8 +160,43 @@ export function attachGaugeSupport(host) {
     }catch(problem){if(root&&key===workspace&&version===generation)fail(problem);}
     finally{if(root&&key===workspace&&version===generation){busy=false;renderForm();note();}}
   }
+  async function openReport(value){
+    if(!value?.source||!value?.delivery_selection)throw Error('Complete the original gauge report source operation first.');
+    const key=workspace,version=generation;
+    await host.refresh({force:true});
+    if(!root||key!==workspace||version!==generation)return;
+    state=host.getState();
+    await host.openDelivery(clone(value.delivery_selection));
+  }
+  function acceptReport(task){
+    if(!task||task.action!=='gauge.support.report')return;
+    if(task.state==='complete'&&task.result?.source){
+      reportReady=task.result;reportBusy=false;
+      if(reportHandled!==task.id){reportHandled=task.id;message='Gauge source and original map package retained. Open the prepared report form to choose or review native runs and delivery settings.';save();renderResult();note();}
+    }else if(['failed','cancelled','canceled','paused','interrupted'].includes(task.state)){
+      reportBusy=false;
+      if(reportHandled!==task.id){reportHandled=task.id;message='Report source operation '+task.state+'. Open its saved operation for the original result or error.';save();renderResult();note();}
+    }
+  }
+  async function prepareReport(){
+    if(reportBusy||!edition)return;
+    const payload={edition_id:edition.id,...(reportDelivery?{delivery_id:reportDelivery}:{})};
+    const key=workspace,version=generation,signature=canonical(payload);
+    if(!reportRequest||reportRequest.signature!==signature)reportRequest={signature,id:'gauge-report-'+crypto.randomUUID()};
+    reportBusy=true;error='';message='Retaining the saved gauge edition, maps and original source companions…';save();renderResult();note();
+    try{
+      const task=await host.api('/api/actions',{method:'POST',body:{workspace:key,action:'gauge.support.report',payload,operation_id:reportRequest.id}});
+      if(!root||key!==workspace||version!==generation)return;
+      reportTask=task.id;save();acceptReport(task);
+      await host.refresh({force:true});
+      if(!root||key!==workspace||version!==generation)return;
+      state=host.getState();renderTasks();acceptReport(list(state?.tasks).find(row=>row.id===reportTask));
+      if(task.state==='complete'&&task.result?.source)await openReport(task.result);
+    }catch(problem){if(root&&key===workspace&&version===generation){reportBusy=false;fail(problem);renderResult();}}
+  }
   function change(event){
     const target=event.target,field=target.dataset.gsField;
+    if(target.matches('[data-gs-report-delivery]')){reportDelivery=target.value;reportRequest=null;save();return;}
     if(target.matches('[data-gs-editions]')){if(target.value)open(target.value);return;}
     if(!field)return;
     if(field==='report_id'){draft.report_id=target.value;draft.reporting_huc12s=list(report()?.hucs).map(row=>row.huc12);renderForm();}
@@ -177,6 +218,9 @@ export function attachGaugeSupport(host) {
     const action=target.dataset.gsAction,key=workspace,version=generation;
     try{
       if(action==='refresh')await refresh();
+      else if(action==='report')await prepareReport();
+      else if(action==='report-open')await openReport(reportReady);
+      else if(action==='report-task'){const task=list(state?.tasks).find(row=>row.id===target.dataset.id);if(task?.result?.source)await openReport(task.result);}
       else if(action==='all-hucs'||action==='priority-hucs'){draft.reporting_huc12s=list(report()?.hucs).filter(row=>action==='all-hucs'||row.priority).map(row=>row.huc12);save();renderForm();}
       else if(action==='open')await open(target.dataset.id);
       else if(action==='task')host.showTask(target.dataset.id);
@@ -189,6 +233,7 @@ export function attachGaugeSupport(host) {
   function mount(container,initial=host.getState()){
     detach();root=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;generation++;
     catalog=null;edition=null;error='';message='';busy=false;selected='';search='';currentTask=null;request=null;
+    reportTask=null;reportRequest=null;reportDelivery='';reportReady=null;reportBusy=false;reportHandled=null;
     draft={title:'Regional gauge and catchment support',report_id:'',reporting_huc12s:[],huc_sources:[],utility_sources:[]};restore();controller=new AbortController();
     root.innerHTML='<section class="gauge-support"><header><div><h1>Gauge support</h1><p>Original gauge locations, whole-catchment coverage and regional watershed relationships.</p></div>'+button('refresh','Refresh sources')+'</header>'+
       '<p class="gs-error" data-gs-error role="alert" hidden></p><p data-gs-message role="status" hidden></p><div data-gs-draft></div>'+
@@ -202,7 +247,7 @@ export function attachGaugeSupport(host) {
   }
   function update(next){
     if(!root)return;const key=host.getWorkspace()||next?.workspace_key;if(key!==workspace){const container=root;mount(container,next);return;}
-    state=next;renderTasks();const task=list(state?.tasks).find(row=>row.id===currentTask);
+    state=next;renderTasks();acceptReport(list(state?.tasks).find(row=>row.id===reportTask));const task=list(state?.tasks).find(row=>row.id===currentTask);
     if(task?.state==='complete'&&task.result?.id&&edition?.id!==task.result.id&&pendingEditionId!==task.result.id)open(task.result.id);
   }
   function detach(){generation++;catalogRequest++;detailRequest++;pendingEditionId=null;controller?.abort();controller=null;root=null;catalog=null;edition=null;busy=false;}

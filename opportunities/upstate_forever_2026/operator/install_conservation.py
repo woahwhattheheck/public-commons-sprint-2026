@@ -116,6 +116,7 @@ KNOWN_PRIOR = {
         "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed"
     ],
     "model/conservation_scenarios.py": [
+        "94cbda2df01573a12639e28da24277e1fa1a2a4dd72c3195f059f34404592768",
         "7d219c37ccd94094bf1e3355433ed12499a5aec389220cc7608d76140643ae6d",
         "a6c5f1f98bae9e4b9add1a013a10801a9e8bb9771d35c24418f455f5c219ac91",
         "2bc3fa18d2ed4e8b59310e4a442411b7f7b91aec585ac2d1916060ce8345e25b",
@@ -570,10 +571,19 @@ def patch_registered_app(text):
         text = re.sub(pattern, lambda match: replacement, text)
     branch = REGISTERED_REPAIR["registered_block"]
     if branch not in text:
-        pattern = r"(?m)^  if\(extensions\.render\(view,\$\('#content'\),state\)\)\{[^\n]+\}\s*$"
-        text, count = re.subn(pattern, lambda match: branch, text)
-        if count != 1:
-            raise ValueError("Expected the current registered desk render branch")
+        # Other registered desks remove their obsolete standalone controllers.
+        # Preserve that complete current owner branch and its remaining cleanup.
+        native_dispatch = re.findall(
+            r"(?ms)^  if\(extensions\.hasView\(view\)\)\{\n.*?"
+            r"^    extensions\.render\(view,\$\('#content'\),state\);return;\n  \}",
+            text)
+        if len(native_dispatch) > 1:
+            raise ValueError("Preserve one current registered desk render branch")
+        if not native_dispatch:
+            pattern = r"(?m)^  if\(extensions\.render\(view,\$\('#content'\),state\)\)\{[^\n]+\}\s*$"
+            text, count = re.subn(pattern, lambda match: branch, text)
+            if count != 1:
+                raise ValueError("Expected the current registered desk render branch")
     if re.search(r"\bconservation\.(render|mount|detach|dispatch|taskActions)|const conservation=|import \{attachConservation", text):
         raise ValueError("Compose the remaining direct Conservation browser wiring before installation")
     return text

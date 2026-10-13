@@ -20,7 +20,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, held, identifier, now, read_json, relative_file, verify_file)
 from . import station_geography as geography
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 KIND = "assessment-contexts"
 SCHEMA = "upstate.assessment-geographic-context/v1"
 PACKAGE = "upstate.assessment-context-package/v1"
@@ -88,6 +88,111 @@ def _rows(study, table):
             records[identity] = row
     return sorted(records.values(), key=lambda row: row["row_number"])
 
+
+def _row_id(row):
+    """Stable original record identity across destination Workspace rebinding."""
+    reference = row["source_ref"]
+    checksum = identifier(reference.get("source_sha256"))
+    return digest({"source_sha256":checksum,
+                   "row_number":row["row_number"],
+                   "record_pointer":reference.get("record_pointer") or reference.get("original_record_pointer")})
+
+def _source_assessment(binding):
+    if binding["source_sha256"] == KNOWN_ASSESSMENT_SHA:
+        return _copy(KNOWN_ASSESSMENT), list(KNOWN_ASSESSMENT)
+    source = binding["source_metadata"]
+    metadata = source.get("metadata") or {}
+    values = {"title":binding.get("title") or "",
+              "status":source.get("publication_status") or metadata.get("assessment_status") or "",
+              "vintage":source.get("vintage") or "",
+              "reference":binding.get("uri") or ""}
+    return values, [name for name,value in values.items() if value]
+
+def _summary_assessment(inventories):
+    values = {}
+    for name in ("title","status","vintage","reference"):
+        original = list(dict.fromkeys(item["assessment"][name] for item in inventories))
+        values[name] = original[0] if len(original)==1 else " | ".join(original)
+    return values
+
+def _normalize_inventory(study, value):
+    table, binding = _table_record(study, value)
+    fields = value.get("fields")
+    allowed = {"watershed","cause","use","county","support","assessment_edition","assessment_title",
+               "assessment_status","assessment_vintage","assessment_reference"}
+    if not isinstance(fields,dict) or not {"watershed","cause","use"} <= set(fields):
+        raise ValueError("Select each inventory's original watershed, cause and use fields")
+    if set(fields)-allowed:
+        raise ValueError("Unknown original assessment field binding")
+    fields = {key:_text(value,"Original "+key+" field") for key,value in fields.items()}
+    available = {name for row in _rows(study,table) for name in row["original"]}
+    if set(fields.values())-available:
+        raise ValueError("A selected field is absent from this original assessment inventory")
+    assessment = value.get("assessment") or {}
+    if not isinstance(assessment,dict):
+        raise ValueError("Retain the original source assessment metadata")
+    defaults, locked = _source_assessment(binding)
+    assessment = {name:_text(defaults[name] if name in locked else assessment.get(name),
+                            "Assessment "+name) for name in ("title","status","vintage","reference")}
+    return {"table":table,"fields":fields,"assessment":assessment,
+            "table_source_sha256":binding["source_sha256"]}, binding
+
+def _selected_rows(study, selection, bindings):
+    records = {}
+    for inventory,binding in zip(selection["inventories"],bindings):
+        fields = inventory["fields"]
+        for row in _rows(study,inventory["table"]):
+            original = row["original"]
+            required = [fields[name] for name in ("watershed","cause","use")]
+            if any(name not in original for name in required):
+                raise ValueError("A required original field is absent from the selected inventory row")
+            def value(name):
+                return original.get(fields[name]) if name in fields else None
+            native = row["native_assessment"]
+            assessment = {}
+            native_names = {"status":"publication_status","vintage":"source_vintage","reference":"source_uri"}
+            for name in ("title","status","vintage","reference"):
+                selected = native.get(native_names.get(name,"assessment_title"))
+                if selected is None or _field(selected).strip()=="":
+                    selected = value("assessment_"+name)
+                assessment[name] = selected if selected is not None and _field(selected).strip() else inventory["assessment"][name]
+            if binding["source_sha256"] == KNOWN_ASSESSMENT_SHA:
+                assessment = _copy(KNOWN_ASSESSMENT)
+            edition = (value("assessment_edition") if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA
+                       else native.get("source_vintage") or value("assessment_edition"))
+            if edition is None or _field(edition).strip()=="":
+                edition = assessment["vintage"]
+            item = {**row,"assessment_row_id":_row_id(row),
+                    "original_watershed_value":value("watershed"),
+                    "cause":value("cause"),"impaired_use":value("use"),
+                    "county":value("county"),"use_support":value("support"),
+                    "assessment":assessment,"assessment_edition":edition,
+                    "original_edition_source":{name:original.get(name,native.get(name)) for name in
+                        ("source_id","source_sha256","evidence_kind","assessment_period","status_date")},
+                    "assessment_record_id":original.get("id",native.get("assessment_record_id"))}
+            identity = item["assessment_row_id"]
+            if identity in records:
+                # Duplicate references to identical original bytes are one record.
+                left = {k:v for k,v in records[identity].items() if k!="source_ref"}
+                right = {k:v for k,v in item.items() if k!="source_ref"}
+                if canonical(left)!=canonical(right):
+                    raise ValueError("One original assessment record has conflicting inventory bindings")
+            else:
+                records[identity] = item
+    rows = list(records.values())
+    axes = {"causes":"cause","uses":"impaired_use","counties":"county",
+            "editions":"assessment_edition","supports":"use_support"}
+    for category,field in axes.items():
+        wanted = selection["filters"].get(category,[])
+        if set(wanted)-{_field(row[field]) for row in rows}:
+            raise ValueError("A filter value is absent from the selected original "+category)
+    rows = [row for row in rows if all(not selection["filters"].get(category) or
+            _field(row[field]) in selection["filters"][category] for category,field in axes.items())]
+    if not rows:
+        raise ValueError("The selected original assessment filters contain no study rows")
+    return rows
+
+
 def options(workspace, geography_id, table=None):
     study = geography.inspect(workspace, geography_id, include_result=True)
     tables = []
@@ -97,7 +202,7 @@ def options(workspace, geography_id, table=None):
         fields = sorted({key for row in records for key in row["original"]})
         values = {key: sorted({_field(row["original"].get(key)) for row in records}) for key in fields}
         aliases={"watershed":("publisher_huc12","huc12"),"cause":("cause_code","cause_raw","cause"),
-                 "use":("use","impaired_use"),"county":("county",),
+                 "use":("use","impaired_use"),"county":("county",),"support":("use_support",),
                  "assessment_edition":("assessment_edition","source_vintage"),
                  "assessment_title":("assessment_title",),
                  "assessment_status":("assessment_status","publication_status"),
@@ -111,16 +216,13 @@ def options(workspace, geography_id, table=None):
             # Choose the most complete original column; keep alias order on ties.
             defaults["cause"]=max(cause_candidates,key=lambda name:sum(
                 bool(_field(row["original"].get(name)).strip()) for row in records))
+        assessment_defaults, locked_fields = _source_assessment(binding)
         tables.append({"reference": _source_ref(reference), "title": binding.get("title"),
                        "uri": binding.get("uri"), "vintage": binding["source_metadata"].get("vintage"),
                        "source_sha256": binding["source_sha256"], "row_count": len(records),
                        "assessment_locked":binding["source_sha256"]==KNOWN_ASSESSMENT_SHA,
-                       "assessment_defaults": (_copy(KNOWN_ASSESSMENT)
-                           if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA
-                           else {"title":binding.get("title") or "",
-                                 "status":(binding["source_metadata"].get("metadata") or {}).get("assessment_status",""),
-                                 "vintage":binding["source_metadata"].get("vintage") or "",
-                                 "reference":binding.get("uri") or ""}),
+                       "assessment_defaults": assessment_defaults,
+                       "assessment_locked_fields": locked_fields,
                        "fields": fields, "values": values, "default_fields": defaults})
     watersheds = []
     for reference in study["selection"].get("watersheds", []):
@@ -144,43 +246,48 @@ def catalog(workspace):
                           if row.get("unit_type") == "parcel"]}
 
 def _selection(study, value):
+    if not isinstance(value,dict):
+        raise ValueError("Choose a complete assessment context selection")
     result = _copy(value)
     result["station_geography_id"] = study["id"]
-    result["title"] = _text(result.get("title"), "Context title")
-    table, binding = _table_record(study, result)
-    result["table"] = table
+    result["title"] = _text(result.get("title"),"Context title")
+    requested = result.get("inventories")
+    if requested is None:
+        requested = [{key:result.get(key) for key in ("table","fields","assessment")}]
+    if not isinstance(requested,list) or not requested:
+        raise ValueError("Select one or more retained original assessment inventories")
+    inventories, bindings, seen = [], [], set()
+    for item in requested:
+        if not isinstance(item,dict):
+            raise ValueError("Each selected inventory needs its source, fields and assessment metadata")
+        inventory,binding = _normalize_inventory(study,item)
+        identity = _key(inventory["table"])
+        if identity in seen:
+            raise ValueError("Select each retained assessment inventory once")
+        seen.add(identity); inventories.append(inventory); bindings.append(binding)
+    result["inventories"] = inventories
+    # The full edition metadata remains on each inventory and each result row.
+    result["assessment"] = _summary_assessment(inventories)
+    for name in ("table","fields","table_source_sha256"):
+        result.pop(name,None)
+    if len(inventories)==1:
+        result.update({name:_copy(inventories[0][name]) for name in ("table","fields","table_source_sha256")})
     result["watershed_source"] = _source_ref(result["watershed_source"])
-    if _key(result["watershed_source"]) not in {
-            _key(row) for row in study["selection"].get("watersheds", [])}:
+    if _key(result["watershed_source"]) not in {_key(row) for row in study["selection"].get("watersheds",[])}:
         raise ValueError("Select a watershed source retained by this study")
-    basis = result.get("relationship_basis", "published_watershed")
-    if basis not in ("published_watershed", "station_membership"):
+    basis = result.get("relationship_basis","published_watershed")
+    if basis not in ("published_watershed","station_membership"):
         raise ValueError("Choose published_watershed or station_membership")
     result["relationship_basis"] = basis
-    fields = result.get("fields")
-    if not isinstance(fields, dict) or not {"watershed","cause","use"} <= set(fields):
-        raise ValueError("Select original watershed, cause and impaired-use fields")
-    if set(fields) - {"watershed","cause","use","county","assessment_edition","assessment_title",
-                      "assessment_status","assessment_vintage","assessment_reference"}:
-        raise ValueError("Unknown assessment field binding")
-    fields = {key:_text(value, "Original " + key + " field") for key,value in fields.items()}
-    result["fields"] = fields
     filters = result.get("filters") or {}
-    if not isinstance(filters, dict) or set(filters) - {"causes","uses","counties","editions"}:
-        raise ValueError("Choose exact original cause, use and county filters")
-    for key, values in filters.items():
-        if not isinstance(values, list) or any(not isinstance(item,str) for item in values):
+    if not isinstance(filters,dict) or set(filters)-{"causes","uses","counties","editions","supports"}:
+        raise ValueError("Choose exact original cause, use, county, edition and support filters")
+    for name,values in filters.items():
+        if not isinstance(values,list) or any(not isinstance(item,str) for item in values):
             raise ValueError("Assessment filters must list exact original text values")
-        filters[key] = sorted(set(values))
+        filters[name] = sorted(set(values))
     result["filters"] = filters
-    assessment = result.get("assessment")
-    if not isinstance(assessment, dict):
-        raise ValueError("Retain the selected assessment title, status, vintage and reference")
-    result["assessment"] = (_copy(KNOWN_ASSESSMENT) if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA else
-                                {key:_text(assessment.get(key), "Assessment " + key)
-                                 for key in ("title","status","vintage","reference")})
-    result["table_source_sha256"] = binding["source_sha256"]
-    return result, binding
+    return result,bindings
 
 def _csv(rows, columns):
     output = io.StringIO(newline="")
@@ -204,22 +311,41 @@ def _assessment_groups(rows):
     for row in rows:
         identity={"assessment":row["assessment"],"edition":row["assessment_edition"],
                   "cause":row["cause"],"impaired_use":row["impaired_use"],
-                  "original_edition_source":row["original_edition_source"]}
+                  "original_edition_source":row["original_edition_source"],"use_support":row.get("use_support")}
         key=digest(identity)
-        group=groups.setdefault(key,{"id":key,**_copy(identity),"station_ids":set(),"row_numbers":[]})
+        group=groups.setdefault(key,{"id":key,**_copy(identity),"station_ids":set(),"row_numbers":[],"row_ids":[]})
         group["station_ids"].add(row["station_id"]);group["row_numbers"].append(row["row_number"])
-    return [{**value,"station_ids":sorted(value["station_ids"]),"row_numbers":sorted(value["row_numbers"]),
+        group["row_ids"].append(row.get("assessment_row_id") or _row_id(row))
+    return [{**value,"station_ids":sorted(value["station_ids"]),"row_numbers":sorted(value["row_numbers"]),"row_ids":sorted(value["row_ids"]),
              "station_count":len(value["station_ids"]),"assessment_row_count":len(value["row_numbers"])}
             for key,value in sorted(groups.items())]
 
+def _source_references(result):
+    references = []
+    for group in result.get("assessment_groups", []):
+        reference = group.get("assessment", {}).get("reference")
+        if isinstance(reference, str) and reference.strip() and reference not in references:
+            references.append(reference)
+    if not references and result.get("assessment", {}).get("reference"):
+        references.append(result["assessment"]["reference"])
+    return references
+
 def _report(result):
     esc = lambda value: html.escape(str(value), quote=True)
+    source_links = []
+    for reference in _source_references(result):
+        if reference.lower().startswith(("https://", "http://")) and not any(
+                character.isspace() or character == "|" for character in reference):
+            source_links.append('<a href="' + esc(reference) +
+                                '" target="_blank" rel="noopener noreferrer">' + esc(reference) + '</a>')
+        else:
+            source_links.append(esc(reference))
     rows = "".join("<tr>" + "".join("<td>" + esc(row.get(key,"")) + "</td>" for key in
                   ("watershed_id","station_count","assessment_row_count","causes","uses")) + "</tr>"
                   for row in result["watersheds"])
     groups = "".join("<tr>"+"".join("<td>"+esc(value)+"</td>" for value in
               (row["edition"],row["assessment"]["title"],row["assessment"]["status"],
-               row["assessment"]["vintage"],row["cause"],row["impaired_use"],row["assessment_row_count"]))+
+               row["assessment"]["vintage"],row["cause"],row["impaired_use"],row.get("use_support"),row["assessment_row_count"]))+
               "</tr>" for row in result["assessment_groups"])
     issues = "".join("<li>" + esc(row["station_id"]) + " / original row " +
                      str(row["row_number"]) + ": " + esc(row["geographic_status"]) + "</li>"
@@ -233,12 +359,12 @@ def _report(result):
             esc(result["assessment"]["status"]) + " · " + esc(result["assessment"]["vintage"]) +
             "</p><p>" + esc(RELATION) + "</p><p>Association basis: " +
             esc(result["relationship_basis"]) + ". Absence is unknown under this selected station inventory.</p>" +
-            "<p>Original source: " + esc(result["assessment"]["reference"]) +
+            "<p>Original sources: " + " · ".join(source_links) +
             "</p><h2>Selected watershed context</h2><table><thead><tr><th>Original watershed ID</th>"
             "<th>Distinct stations</th><th>Assessment rows</th><th>Original causes</th><th>Original uses</th>"
             "</tr></thead><tbody>" + rows + "</tbody></table><h2>Unresolved or multiple associations</h2><ul>" +
             issues + "</ul><h2>Original assessment editions and cause/use groups</h2><table><tr>"
-            "<th>Edition</th><th>Title</th><th>Status</th><th>Vintage</th><th>Cause</th><th>Use</th><th>Rows</th>"
+            "<th>Edition</th><th>Title</th><th>Status</th><th>Vintage</th><th>Cause</th><th>Use</th><th>Original support</th><th>Rows</th>"
             "</tr>"+groups+"</table><p>Complete original rows, both association methods and source identities accompany "
             "this report in JSON and CSV.</p></html>").encode("utf-8")
 
@@ -255,23 +381,8 @@ def _context_binding(collection_id, selection):
 def build(workspace, value):
     study = geography.inspect(workspace, identifier(value.get("station_geography_id")),
                               verify=True, include_result=True)
-    selection, binding = _selection(study, value)
-    rows = _rows(study, selection["table"])
-    fields, filters = selection["fields"], selection["filters"]
-    field_names = set(fields.values())
-    if any(field_names - set(row["original"]) for row in rows):
-        raise ValueError("A selected original field is absent from an assessment row")
-    for category, field in (("causes","cause"),("uses","use"),("counties","county"),("editions","assessment_edition")):
-        wanted = filters.get(category, [])
-        if wanted and field not in fields:
-            raise ValueError("Select the original "+field+" field before filtering "+category)
-        if wanted:
-            available = {_field(row["original"].get(fields[field])) for row in rows}
-            if set(wanted) - available:
-                raise ValueError("A filter value is absent from the selected original " + category)
-            rows = [row for row in rows if _field(row["original"].get(fields[field])) in wanted]
-    if not rows:
-        raise ValueError("The selected original assessment filters contain no study rows")
+    selection, bindings = _selection(study, value)
+    rows = _selected_rows(study,selection,bindings)
     polygons = [feature for feature in study["watershed_geojson"]["features"]
                 if _key(feature["properties"]["source_ref"]) == _key(selection["watershed_source"])]
     if not polygons:
@@ -282,27 +393,17 @@ def build(workspace, value):
         by_published.setdefault(_field(native), []).append(feature)
     associations, selected_rows = {}, []
     for row in rows:
-        original_id = _field(row["original"][fields["watershed"]])
+        original_id = _field(row["original_watershed_value"])
         memberships = [m for m in row["computed_memberships"]
                        if _key(m["source_ref"]) == _key(selection["watershed_source"])]
         published = by_published.get(original_id, []) if original_id else []
         computed_ids = {digest(m["source_ref"]) for m in memberships}
         computed = [feature for feature in polygons if feature["id"] in computed_ids]
         chosen = published if selection["relationship_basis"] == "published_watershed" else computed
-        item = {**row, "original_watershed_value": row["original"][fields["watershed"]],
+        item = {**row,
                 "published_polygon_ids":[feature["id"] for feature in published],
                 "computed_polygon_ids":[feature["id"] for feature in computed],
                 "selected_polygon_ids":[feature["id"] for feature in chosen],
-                "cause":row["original"][fields["cause"]], "impaired_use":row["original"][fields["use"]],
-                "assessment":(_copy(KNOWN_ASSESSMENT) if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA
-                    else {name:(row["original"][fields["assessment_"+name]]
-                                if "assessment_"+name in fields else selection["assessment"][name])
-                          for name in ("title","status","vintage","reference")}),
-                "original_edition_source":{name:row["original"].get(name,row["native_assessment"].get(name))
-                    for name in ("source_id","source_sha256","evidence_kind","assessment_period","status_date")},
-                "assessment_record_id":row["original"].get("id",row["native_assessment"].get("assessment_record_id")),
-                "assessment_edition":row["original"].get(fields.get("assessment_edition"))
-                                     if fields.get("assessment_edition") else None,
                 "geographic_status":"unmatched" if not chosen else "multiple" if len(chosen)>1 else "matched",
                 "association_agreement":(set(f["id"] for f in published) == set(computed_ids)) if published and computed else None,
                 "association_status":("both_resolved_agree" if set(f["id"] for f in published)==set(computed_ids)
@@ -326,6 +427,7 @@ def build(workspace, value):
                    "station_ids":sorted({row["station_id"] for row in members}),
                    "source_ref":native["source_ref"],
                    "assessment_row_numbers":sorted({row["row_number"] for row in members}),
+                   "assessment_row_ids":sorted({row["assessment_row_id"] for row in members}),
                    "assessment_groups":_assessment_groups(members)}
         summaries.append(summary)
         properties = {key:summary[key] for key in
@@ -354,7 +456,8 @@ def build(workspace, value):
         if not start.exists():
             atomic_json(start,{"created_at":now(),"build_id":build_id},immutable=True)
         created = read_json(start)["created_at"]
-        summary = {"assessment_row_count":len(selected_rows),
+        summary = {"inventory_count":len(selection["inventories"]),
+                   "assessment_row_count":len(selected_rows),
                    "station_count":len({row["station_id"] for row in selected_rows}),
                    "watershed_count":len(features),
                    "unmatched_row_count":sum(row["geographic_status"]=="unmatched" for row in selected_rows),
@@ -369,19 +472,20 @@ def build(workspace, value):
                   "summary":summary,"rows":selected_rows,"watersheds":summaries,
                   "assessment_groups":_assessment_groups(selected_rows),
                   "original_geography_id":study["id"],"original_geography_build_id":study["build_id"],
-                  "assessment_source":binding}
+                  "assessment_source":bindings[0] if len(bindings)==1 else None,
+                  "assessment_sources":bindings}
         atomic_json(destination/"selection.json",selection,immutable=True)
         atomic_json(destination/"context.json",result,immutable=True)
         atomic_json(destination/"context.geojson",{"type":"FeatureCollection","features":features},immutable=True)
         atomic_bytes(destination/"assessment-rows.csv",_csv(selected_rows,[
-            "station_id","row_number","cause","impaired_use","original_watershed_value",
+            "station_id","row_number","assessment_row_id","cause","impaired_use","county","use_support","original_watershed_value",
             "location_status","watershed_status","geographic_status","association_agreement","association_status",
             "computed_boundary_or_overlap","published_polygon_ids","computed_polygon_ids",
             "selected_polygon_ids","computed_memberships","assessment","assessment_edition","assessment_record_id",
             "original_edition_source","native_assessment","source_ref","original"]),immutable=True)
         atomic_bytes(destination/"watershed-context.csv",_csv(summaries,[
             "context_id","watershed_id","station_count","assessment_row_count","causes","uses",
-            "station_ids","assessment_row_numbers","assessment_groups","source_ref"]),immutable=True)
+            "station_ids","assessment_row_numbers","assessment_row_ids","assessment_groups","source_ref"]),immutable=True)
         atomic_bytes(destination/"OPEN_ASSESSMENT_CONTEXT.html",_report(result),immutable=True)
         original_archive = next(item for item in study["files"]
                                 if Path(item["path"]).name=="station-geography.zip")
@@ -397,12 +501,16 @@ def build(workspace, value):
             raise ValueError("Retained original station geography archive changed")
         companion_names = ["selection.json","context.json","assessment-rows.csv",
                            "watershed-context.csv","OPEN_ASSESSMENT_CONTEXT.html","original-station-geography.zip"]
+        original_references = _source_references(result)
+        derived_uri = (original_references[0] if len(original_references) == 1 else
+                       "urn:upstate:assessment-context:" + build_id)
         entry = {"id":SOURCE_ID,"title":selection["title"],"kind":"vector",
-                 "role":"ASSESSMENT_GEOGRAPHIC_CONTEXT","uri":selection["assessment"]["reference"],
+                 "role":"ASSESSMENT_GEOGRAPHIC_CONTEXT","uri":derived_uri,
                  "vintage":selection["assessment"]["vintage"]+" ("+selection["assessment"]["status"]+")",
                  "path":"context.geojson","sha256":file_digest(destination/"context.geojson"),
                  "id_field":"context_id","source_crs":"EPSG:4326",
                  "metadata":{"assessment":selection["assessment"],"relation":RELATION,
+                             "original_source_references":original_references,
                              "negative_coverage":"unknown","original_station_geography":study["id"],
                              "geographic_context":{key:value for key,value in _context_binding("",selection).items()
                                                if key in ("reference","relation","meaning")}},
@@ -418,7 +526,8 @@ def build(workspace, value):
                           "original-station-geography.zip","sources.json","geographic-context-binding.json"]
         inventory = [describe_file(destination,destination/name) for name in exported_names]
         package = {"schema":PACKAGE,"version":VERSION,"selection":selection,
-                   "table_source_sha256":binding["source_sha256"],
+                   "table_sources":[{"reference":item["table"],"sha256":binding["source_sha256"]}
+                                    for item,binding in zip(selection["inventories"],bindings)],
                    "watershed_source_sha256":next(s["source_sha256"] for s in study["sources"]
                       if _key(s)==_key(selection["watershed_source"])),
                    "files":inventory}
@@ -461,6 +570,8 @@ def parcel_associations(workspace, context_id, study_id):
     except ImportError:
         from shapely.strtree import STRtree
     context = inspect(workspace,context_id,verify=True,include_result=True)
+    for row in context["result"]["rows"]:
+        row.setdefault("assessment_row_id",_row_id(row))
     study = conservation.inspect(workspace,identifier(study_id),include_candidates=False)
     if study["selection"]["spec"]["unit_type"]!="parcel":
         raise ValueError("Choose an original parcel study")
@@ -485,7 +596,7 @@ def parcel_associations(workspace, context_id, study_id):
             atomic_json(started,{"created_at":now()},immutable=True)
         rows,relationships,features=[],[],[]
         for unit in units:
-            zone=unit["clipped"];pieces=[];linked=[];hits=[];station_ids=set();row_numbers=set()
+            zone=unit["clipped"];pieces=[];linked=[];hits=[];station_ids=set();row_numbers=set();row_ids=set()
             for found in tree.query(zone):
                 if hasattr(found,"geom_type"):
                     indices=[i for i,p in enumerate(shapes) if p is found]
@@ -502,9 +613,11 @@ def parcel_associations(workspace, context_id, study_id):
                          "watershed_id":native["watershed_id"],"relation":relation,
                          "overlap_area_ha":area/10000.0,"reporting_parcel_fraction":area/zone.area,
                          "station_ids":native["station_ids"],"assessment_row_numbers":native["assessment_row_numbers"],
+                         "assessment_row_ids":native.get("assessment_row_ids") or sorted(
+                            _row_id(row) for row in context["result"]["rows"] if feature["id"] in row["selected_polygon_ids"]),
                          "original_watershed_source":native["source_ref"]}
                     relationships.append(hit);hits.append(hit);linked.append(feature["id"])
-                    station_ids.update(native["station_ids"]);row_numbers.update(native["assessment_row_numbers"])
+                    station_ids.update(native["station_ids"]);row_numbers.update(native["assessment_row_numbers"]);row_ids.update(hit["assessment_row_ids"])
                     if area>0:
                         pieces.append(overlap)
             union_area=float(unary_union(pieces).area) if pieces else 0.0
@@ -515,8 +628,8 @@ def parcel_associations(workspace, context_id, study_id):
                  "reporting_context_fraction":union_area/zone.area,
                  "association_status":"area_overlap" if union_area>0 else "boundary_contact" if linked else "no_selected_context_intersection",
                  "context_ids":sorted(set(linked)),"station_ids":sorted(station_ids),
-                 "assessment_row_numbers":sorted(row_numbers),"context_count":len(set(linked)),
-                 "station_count":len(station_ids),"assessment_row_count":len(row_numbers),
+                 "assessment_row_numbers":sorted(row_numbers),"assessment_row_ids":sorted(row_ids),"context_count":len(set(linked)),
+                 "station_count":len(station_ids),"assessment_row_count":len(row_ids),
                  "original_parcel_attributes":_copy(unit["properties"]),
                  "geometry_corrections":_copy(unit.get("geometry_corrections",[])),
                  "source_axes":_copy(unit.get("source_axes")),
@@ -546,12 +659,12 @@ def parcel_associations(workspace, context_id, study_id):
         atomic_json(directory/"parcel-context.geojson",{"type":"FeatureCollection","features":features})
         columns=["parcel_id","label","association_status","full_parcel_area_ha","reporting_parcel_area_ha",
                  "context_overlap_area_ha","reporting_context_fraction","context_count","station_count",
-                 "assessment_row_count","context_ids","station_ids","assessment_row_numbers",
+                 "assessment_row_count","context_ids","station_ids","assessment_row_numbers","assessment_row_ids",
                  "original_parcel_attributes","geometry_corrections","source_axes","source_array_index"]
         atomic_bytes(directory/"parcel-context.csv",_csv(rows,columns))
         atomic_bytes(directory/"parcel-context-relationships.csv",_csv(relationships,[
             "parcel_id","context_id","watershed_id","relation","overlap_area_ha","reporting_parcel_fraction",
-            "station_ids","assessment_row_numbers","original_watershed_source"]))
+            "station_ids","assessment_row_numbers","assessment_row_ids","original_watershed_source"]))
         atomic_json(directory/"original-parcel-study.json",study)
         context_archive=next(item for item in context["files"] if Path(item["path"]).name=="assessment-context.zip")
         shutil.copyfile(verify_file(workspace.root,context_archive),directory/"assessment-context.zip")
@@ -667,12 +780,25 @@ def receive(workspace, path, *, max_extracted_bytes=2*1024**3):
                                    max_extracted_bytes=max_extracted_bytes)
         selection = _copy(package["selection"])
         selection["station_geography_id"]=study["id"]
-        for field,hash_name in (("table","table_source_sha256"),("watershed_source","watershed_source_sha256")):
-            matches=[row for row in study["sources"] if row["source_sha256"]==package[hash_name]
-                     and row["source_id"]==selection[field]["source_id"]]
+        def rebind(reference, expected):
+            matches=[row for row in study["sources"] if row["source_sha256"]==expected
+                     and row["source_id"]==reference["source_id"]]
             if len(matches)!=1:
                 raise ValueError("Received original context source is absent or ambiguous")
-            selection[field]=_source_ref(matches[0])
+            return _source_ref(matches[0])
+        if "inventories" in selection:
+            expected=package.get("table_sources")
+            if not isinstance(expected,list) or len(expected)!=len(selection["inventories"]):
+                raise ValueError("The context package must retain every original inventory identity")
+            for inventory,original in zip(selection["inventories"],expected):
+                if _key(original["reference"])!=_key(inventory["table"]):
+                    raise ValueError("The context inventory source order changed")
+                inventory["table"]=rebind(inventory["table"],original["sha256"])
+                if inventory.get("table_source_sha256")!=original["sha256"]:
+                    raise ValueError("The context inventory source identity changed")
+        else:
+            selection["table"]=rebind(selection["table"],package["table_source_sha256"])
+        selection["watershed_source"]=rebind(selection["watershed_source"],package["watershed_source_sha256"])
         result=build(workspace,selection)
         atomic_json(receipt,{"id":result["id"],"original_selection":package["selection"]},immutable=True)
         return result
