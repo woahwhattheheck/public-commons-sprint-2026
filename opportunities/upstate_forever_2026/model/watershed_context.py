@@ -881,7 +881,9 @@ def render_watershed_report(report: Mapping) -> str:
         lines.extend([
             f"- **Canonical JSON SHA-256.** `{source['canonical_sha256']}`", "",
         ])
-    lines.extend(["", f"Context identifier: {report['id']}", ""])
+    lines.extend(["", "The complete source identities, original state records and query "
+                  "references accompany the JSON exports.", "",
+                  f"Context identifier: {report['id']}", ""])
     return "\n".join(lines)
 
 
