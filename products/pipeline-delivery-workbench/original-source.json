@@ -1,0 +1,291 @@
+{
+  "schema": "stellar-forge.pipeline-delivery-workbench-original-source.v1",
+  "repository": "woahwhattheheck/commons",
+  "commit": "3cf4363327938957e886c891a13673064d0206dc",
+  "applicationPrefix": "revenue/snowpack_dagster_delivery_workspace/",
+  "programmePrefix": "operations/snowpack-original-dagster-delivery-20261012/",
+  "operation": "snowpack3459-original-dagster-dbt-delivery-20261012",
+  "files": [
+    {
+      "path": "workbench/DELIVERY_SCOPE.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/DELIVERY_SCOPE.md",
+      "gitBlob": "93ca66c3034eb6c7f078cea4ba2629b2fce5c335",
+      "bytes": 2713,
+      "sha256": "a1f8a777e36722760cddae7a4ec14ea8c6e0af5ab21885bcd8805942c292bc22"
+    },
+    {
+      "path": "workbench/HTTP_API.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/HTTP_API.md",
+      "gitBlob": "5a2fc11b992d5c9da12d3c21f643504123da6ce9",
+      "bytes": 16935,
+      "sha256": "2a48da881d11cb814fb65512785b2d1e1be6975c5f7d657b0a24d09ee397896a"
+    },
+    {
+      "path": "workbench/NATIVE_OPERATION.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/NATIVE_OPERATION.md",
+      "gitBlob": "91f6a778146160bdfbd5ca085e1c62dac258ff72",
+      "bytes": 6784,
+      "sha256": "9019ec7b82fe7ebd2cd244e49525b02d3238212fbfa2e4408f454547d8a036ea"
+    },
+    {
+      "path": "workbench/README.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/README.md",
+      "gitBlob": "fe4ef9fabbff9d1ad6d0409b7eaea47aae107eb3",
+      "bytes": 9508,
+      "sha256": "6d2dc645912c17f959adcf85fa51ee16e062e2457a6db6171bcd9eae75213b1b"
+    },
+    {
+      "path": "workbench/SOURCE_PROVENANCE.json",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/SOURCE_PROVENANCE.json",
+      "gitBlob": "f4a546a4fb360d212ecf3f815de96f197b92c792",
+      "bytes": 1799,
+      "sha256": "12597e7093bfb601d5668b89f69bd942b26b85a9974ab3203df4adc4dd4e094d"
+    },
+    {
+      "path": "workbench/STAFF_BROWSER.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/STAFF_BROWSER.md",
+      "gitBlob": "a06e970e749768f28720a6bd75a8a7bee0e22fe3",
+      "bytes": 11431,
+      "sha256": "9df8b539f84ab935882a8c3cece9c4e19699f7b1f61395a746976275c70668d7"
+    },
+    {
+      "path": "workbench/app.js",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/app.js",
+      "gitBlob": "9e44608b90708af8ee3c054417bd0fdd18514d1d",
+      "bytes": 66551,
+      "sha256": "2d70cba95cf36289e8b4ad6b2edbdae823dd30ffad61545a3ee38b10863570b2"
+    },
+    {
+      "path": "workbench/artifacts.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/artifacts.py",
+      "gitBlob": "a8ae73e5cfb9e1b28aed6b5621019e209503fd7a",
+      "bytes": 5938,
+      "sha256": "fcf509da0e204901b3d54a33ca0c6068ce94fbac93c57f3a22a7cf4b144d2501"
+    },
+    {
+      "path": "workbench/cli.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/cli.py",
+      "gitBlob": "a1a40b5c5c5570700ad2295ff061c416d2623f0c",
+      "bytes": 8218,
+      "sha256": "e3bd52dc4083238670c870ea810e6d456fd473508553173ba96f53ed46a5d5b5"
+    },
+    {
+      "path": "workbench/common.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/common.py",
+      "gitBlob": "7593bd115bea7789f0d4598bfa2fbf57186815e3",
+      "bytes": 6198,
+      "sha256": "f1d9d350cec226f11f26df048466c233d81241bfec66b02fe30d8c109c78fd07"
+    },
+    {
+      "path": "workbench/examples/README.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/README.md",
+      "gitBlob": "f7b7a8ec0f605b06890b85e855044eeb8f0fcf87",
+      "bytes": 1218,
+      "sha256": "7d2874b01e22a50b4dcf2cf13637f116c630fb23d1dfdedf3a718e4342edbacd"
+    },
+    {
+      "path": "workbench/examples/SOURCE.json",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/SOURCE.json",
+      "gitBlob": "b0a69cd80a874d7ce5ce491a49185cbb0172a14e",
+      "bytes": 3679,
+      "sha256": "615e86d2fda00f73c641f8ae325c72cdbd76d454aaccf8601e6e4bac11ff554b"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/LICENSE",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/LICENSE",
+      "gitBlob": "8dada3edaf50dbc082c9a125058f25def75e625a",
+      "bytes": 11357,
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/README.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/README.md",
+      "gitBlob": "4d8cd6f374f6e9f39567e64e027586d8221837bd",
+      "bytes": 16404,
+      "sha256": "b48da310694f7f8b89099fa5b90f26791f18b34a95c8c4f802b5856dfbd543b9"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/dbt_project.yml",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/dbt_project.yml",
+      "gitBlob": "ff5f0670b7531061b42f56ef7d9e721936c61bdb",
+      "bytes": 541,
+      "sha256": "f3b26fc334f4f889f2cc8879a3d3c1a8ff0fb0b9b0001514d8efded8c390a732"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/customers.sql",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/customers.sql",
+      "gitBlob": "016a004fe529365f247e9cd78e1c4ef42f42ff30",
+      "bytes": 1195,
+      "sha256": "455b90a31f418ae776213ad9932c7cb72d19a5269a8c722bd9f4e44957313ce8"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/docs.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/docs.md",
+      "gitBlob": "c6ae93be07a08fea3c8f3998e53aeb966f5e0466",
+      "bytes": 1068,
+      "sha256": "28e3aee589b6731980cfe1a280c171486224a093776ee3ccde474c8a0d87901e"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/orders.sql",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/orders.sql",
+      "gitBlob": "cbb293491182131b5f630e619bcb74a70f08deda",
+      "bytes": 970,
+      "sha256": "53950235d8e29690d259e95ee49bda6a5b7911b44c739b738a646dc6014bcfcd"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/overview.md",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/overview.md",
+      "gitBlob": "40e1d8f17b35d6339d65976f8d8eb0e569c0f949",
+      "bytes": 281,
+      "sha256": "200f2765262a955bbc74adba407f633540d87d839d158f80bf7cbe3f3a93fbf7"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/schema.yml",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/schema.yml",
+      "gitBlob": "e6dba09894c2fbff9bc5d4b99503e1ce36efbcd4",
+      "bytes": 2367,
+      "sha256": "91819c46a359d707743d20aae0d117d2bbdcac6e74e719de2c4149a97fde4e2d"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/staging/schema.yml",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/staging/schema.yml",
+      "gitBlob": "36f4bb981e5e407a6051df52519bcdf2528498fd",
+      "bytes": 725,
+      "sha256": "0a8cbc1108aabe9ff1a8b73dc4f5c85d170a313a5028e5e3785731e0b334fca7"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/staging/stg_customers.sql",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/staging/stg_customers.sql",
+      "gitBlob": "cad047269506e91574cba11bb19df50df6c256ec",
+      "bytes": 326,
+      "sha256": "6f18a29204dad1de6dbb0c288144c4990742e0a1e065c3b2a67b5f98334c22ba"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/staging/stg_orders.sql",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/staging/stg_orders.sql",
+      "gitBlob": "a654dcb9474a783aa8cb0aee566e87d9ad185421",
+      "bytes": 349,
+      "sha256": "afffa9cbc57e5fd2cf5898ebf571d444a62c9d6d7929d8133d30567fb9a2ce97"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/models/staging/stg_payments.sql",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/models/staging/stg_payments.sql",
+      "gitBlob": "700cf7f4f657b7c42c679699d0005f97cec52f4b",
+      "bytes": 442,
+      "sha256": "eb899938258d1fba27fca716a7c334119912a2f9601282026097a7b6ce8cfcd2"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/seeds/raw_customers.csv",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/seeds/raw_customers.csv",
+      "gitBlob": "b3e6747d69a20ff27f06e7513e13c0d377f6d5e6",
+      "bytes": 1302,
+      "sha256": "24579b4b26098d43265376f3c50be8b10faf8e8fd95f5508074f10f76a12671d"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/seeds/raw_orders.csv",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/seeds/raw_orders.csv",
+      "gitBlob": "7c2be078882c545e662356f865c0d3ca03060a80",
+      "bytes": 2723,
+      "sha256": "ee6c68d1639ec2b23a4495ec12475e09b8ed4b61e23ab0411ea7ec76648356f7"
+    },
+    {
+      "path": "workbench/examples/jaffle_shop/seeds/raw_payments.csv",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/examples/jaffle_shop/seeds/raw_payments.csv",
+      "gitBlob": "a587baab5955d158a8892e0f79c3ace43d372828",
+      "bytes": 2560,
+      "sha256": "03fd407f3135f84456431a923f22fc185a2154079e210c20b690e3ab11687d11"
+    },
+    {
+      "path": "workbench/index.html",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/index.html",
+      "gitBlob": "0401503efde3f23c108b9a97fd129b7cfb1cbc9e",
+      "bytes": 17477,
+      "sha256": "d162080eb1d61375908775bfafb89bc661d817744d34e588f0c5d0e2eeb83f47"
+    },
+    {
+      "path": "workbench/native.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/native.py",
+      "gitBlob": "5fcc0e8eb6f64e07d9407b8d7d42bd5753752824",
+      "bytes": 20563,
+      "sha256": "8cf7bceee78a3b04cdb4103f4e65b5a189b00eb4f7ebfbb580d89a101748cc5c"
+    },
+    {
+      "path": "workbench/receiving.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/receiving.py",
+      "gitBlob": "8431863d98d3a5188dba6e07ad1b9f51eb222831",
+      "bytes": 30576,
+      "sha256": "e6db600f67bcb4b2627f10cd79217590fb0b5bd50d8d86835b261301cd3e8540"
+    },
+    {
+      "path": "workbench/requirements.txt",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/requirements.txt",
+      "gitBlob": "0b25b4bf5c997d0f804f1014bc83125f0a096cca",
+      "bytes": 53,
+      "sha256": "14b72c33f647b342a44d7541b734c2aa7705335ef87c3d36df4114dad9b8e950"
+    },
+    {
+      "path": "workbench/runner.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/runner.py",
+      "gitBlob": "c9bca97d31a415eb0311870b9d0334a8bb6112e1",
+      "bytes": 18206,
+      "sha256": "42710752f3c991f65cf317dcd9ea47bbb7721f980bf66cb72d5f104760731868"
+    },
+    {
+      "path": "workbench/server.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/server.py",
+      "gitBlob": "5561c6faf71ea1be3106c88cab3cf505c490e9df",
+      "bytes": 31608,
+      "sha256": "46c3587999bee8ec507240b8aea16aadeda0070828551e231be8c6885ddff54a"
+    },
+    {
+      "path": "workbench/style.css",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/style.css",
+      "gitBlob": "01be17093f683a7dd4fc570ccb7fbf22cf93a9ae",
+      "bytes": 9988,
+      "sha256": "d38299fabc925473c21ad81c575cf218974613d7e91b4bf3f636dceba6be914c"
+    },
+    {
+      "path": "workbench/workspace.py",
+      "originalSourcePath": "revenue/snowpack_dagster_delivery_workspace/workspace.py",
+      "gitBlob": "87e649ff8cd160cc9d0202de490f6a65c727fdd3",
+      "bytes": 31095,
+      "sha256": "9017f26401a10434845b1437fdc35984dfb7a029586829b15707604ccd6aaa0f"
+    },
+    {
+      "path": "original-programme/README.md",
+      "originalSourcePath": "operations/snowpack-original-dagster-delivery-20261012/README.md",
+      "gitBlob": "8dafe94a1ea48ebbd5ce729f2b482ba135753c2c",
+      "bytes": 4878,
+      "sha256": "7c294e592103cca4a47e261eaf1ff4f8ad656676335e2c98d81334f35103dd32"
+    },
+    {
+      "path": "original-programme/browser-entry.mjs",
+      "originalSourcePath": "operations/snowpack-original-dagster-delivery-20261012/browser-entry.mjs",
+      "gitBlob": "ee25708bad2cc1e10d3150a9254d6bf3ac89531b",
+      "bytes": 1703,
+      "sha256": "62841c833308c3cfa0a86d6d62a57ed4af922abb5398cf1f791534ac5e226379"
+    },
+    {
+      "path": "original-programme/browser-workflow.mjs",
+      "originalSourcePath": "operations/snowpack-original-dagster-delivery-20261012/browser-workflow.mjs",
+      "gitBlob": "5f3ffbe65ec5e81cd1f0457fd8c2e43d8c2a7e7a",
+      "bytes": 22767,
+      "sha256": "612f314daab6ae3aa0c4b7b528f420cb6db122ab2422e38571446207824737c5"
+    },
+    {
+      "path": "original-programme/launch.py",
+      "originalSourcePath": "operations/snowpack-original-dagster-delivery-20261012/launch.py",
+      "gitBlob": "2c65e873f72fc1d89f20fec9a9347223c4030c8b",
+      "bytes": 3292,
+      "sha256": "d8617e89c7780a9ef4f868c97a8d8217ffe59eaee4648deaae57a797f8f9089f"
+    },
+    {
+      "path": "original-programme/operate.py",
+      "originalSourcePath": "operations/snowpack-original-dagster-delivery-20261012/operate.py",
+      "gitBlob": "9b9ae3305f96fc8218c4f264c00fd2cb02f591e4",
+      "bytes": 13234,
+      "sha256": "f350e4736479bfdbd9477e9208f8d8f9b04bdeae2f5037595dde522707833424"
+    }
+  ],
+  "maintenance": []
+}

@@ -1,0 +1,183 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "pipeline-delivery-workbench",
+  "heading": "## Pipeline Delivery Workbench: original Dagster/dbt customer operation and complete receiving",
+  "sources": [
+    {
+      "id": "pipeline-delivery-original-application",
+      "label": "Complete original35-file staff application",
+      "repository": "woahwhattheheck/commons",
+      "kind": "tree",
+      "path": "revenue/snowpack_dagster_delivery_workspace",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc"
+    },
+    {
+      "id": "pipeline-delivery-original-programme",
+      "label": "Complete original five-file Dagster/dbt operating programme",
+      "repository": "woahwhattheheck/commons",
+      "kind": "tree",
+      "path": "operations/snowpack-original-dagster-delivery-20261012",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc"
+    },
+    {
+      "id": "pipeline-delivery-source-1",
+      "label": "Original complete HTTP API and exact replay",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/HTTP_API.md",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 16935,
+          "sha256": "2a48da881d11cb814fb65512785b2d1e1be6975c5f7d657b0a24d09ee397896a",
+          "git_blob": "5a2fc11b992d5c9da12d3c21f643504123da6ce9"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-2",
+      "label": "Original workspace source/contract/run/review/release model",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/workspace.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 31095,
+          "sha256": "9017f26401a10434845b1437fdc35984dfb7a029586829b15707604ccd6aaa0f",
+          "git_blob": "87e649ff8cd160cc9d0202de490f6a65c727fdd3"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-3",
+      "label": "Original native worker lifetime and recovery",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/native.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 20563,
+          "sha256": "8cf7bceee78a3b04cdb4103f4e65b5a189b00eb4f7ebfbb580d89a101748cc5c",
+          "git_blob": "5fcc0e8eb6f64e07d9407b8d7d42bd5753752824"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-4",
+      "label": "Original installed Dagster/dbt runner",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/runner.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 18206,
+          "sha256": "42710752f3c991f65cf317dcd9ea47bbb7721f980bf66cb72d5f104760731868",
+          "git_blob": "c9bca97d31a415eb0311870b9d0334a8bb6112e1"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-5",
+      "label": "Original complete artifact and criterion semantics",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/artifacts.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 5938,
+          "sha256": "fcf509da0e204901b3d54a33ca0c6068ce94fbac93c57f3a22a7cf4b144d2501",
+          "git_blob": "a8ae73e5cfb9e1b28aed6b5621019e209503fd7a"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-6",
+      "label": "Original complete client/workspace ZIP receiving",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/receiving.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 30576,
+          "sha256": "e6db600f67bcb4b2627f10cd79217590fb0b5bd50d8d86835b261301cd3e8540",
+          "git_blob": "8431863d98d3a5188dba6e07ad1b9f51eb222831"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-7",
+      "label": "Original staff browser operating course",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/STAFF_BROWSER.md",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 11431,
+          "sha256": "9df8b539f84ab935882a8c3cece9c4e19699f7b1f61395a746976275c70668d7",
+          "git_blob": "a06e970e749768f28720a6bd75a8a7bee0e22fe3"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-8",
+      "label": "Exact original dependency pins",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "revenue/snowpack_dagster_delivery_workspace/requirements.txt",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 53,
+          "sha256": "14b72c33f647b342a44d7541b734c2aa7705335ef87c3d36df4114dad9b8e950",
+          "git_blob": "0b25b4bf5c997d0f804f1014bc83125f0a096cca"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-9",
+      "label": "Original end-to-end Dagster/dbt programme",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "operations/snowpack-original-dagster-delivery-20261012/operate.py",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 13234,
+          "sha256": "f350e4736479bfdbd9477e9208f8d8f9b04bdeae2f5037595dde522707833424",
+          "git_blob": "9b9ae3305f96fc8218c4f264c00fd2cb02f591e4"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-delivery-source-10",
+      "label": "Original desktop/mobile browser and downloads",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "operations/snowpack-original-dagster-delivery-20261012/browser-workflow.mjs",
+      "commit": "3cf4363327938957e886c891a13673064d0206dc",
+      "editions": [
+        {
+          "commit": "3cf4363327938957e886c891a13673064d0206dc",
+          "bytes": 22767,
+          "sha256": "612f314daab6ae3aa0c4b7b528f420cb6db122ab2422e38571446207824737c5",
+          "git_blob": "5f3ffbe65ec5e81cd1f0457fd8c2e43d8c2a7e7a"
+        }
+      ]
+    }
+  ]
+}

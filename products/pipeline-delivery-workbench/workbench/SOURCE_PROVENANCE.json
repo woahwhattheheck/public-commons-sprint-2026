@@ -1,0 +1,47 @@
+{
+  "schema": "tjlabs.client-pipeline-source/v1",
+  "recorded_at": "2026-10-12",
+  "implementation": "TJLabs Client Pipeline Delivery Workspace",
+  "sources": [
+    {
+      "purpose": "Original persistent Dagster execute_in_process and run_id API",
+      "url": "https://raw.githubusercontent.com/dagster-io/dagster/1.13.26/python_modules/dagster/dagster/_core/definitions/job_definition.py",
+      "version": "1.13.26"
+    },
+    {
+      "purpose": "Original dbt CLI command/options",
+      "url": "https://raw.githubusercontent.com/dbt-labs/dbt/v1.12.5/core/dbt/cli/main.py",
+      "version": "1.12.5"
+    },
+    {
+      "purpose": "Original local dbt example",
+      "url": "https://github.com/dbt-labs/jaffle_shop_duckdb",
+      "ref": "duckdb",
+      "tree": "20cc904370818ceab08cf19f8fd196e9e81def88",
+      "manifest": "examples/SOURCE.json"
+    },
+    {
+      "purpose": "Native dbt artifacts",
+      "url": "https://docs.getdbt.com/reference/artifacts/run-results-json"
+    },
+    {
+      "purpose": "Snowpack public company route and identity",
+      "url": "https://github.com/snowpackdata"
+    },
+    {
+      "purpose": "Snowpack current delivery services",
+      "url": "https://snowpack-data.com/services/modern-data-stack"
+    },
+    {
+      "purpose": "Snowpack original historical implementation",
+      "url": "https://snowpack-data.com/blog/case-study-replo"
+    }
+  ],
+  "native_requirements": {
+    "dagster": "1.13.26",
+    "dbt-core": "1.12.5",
+    "dbt-duckdb": "1.11.0"
+  },
+  "business_status": "Qualified proposal in preparation; no company response, contract or payment asserted by these source files.",
+  "source_ownership": "TJLabs application; unchanged dbt Labs example retains its original Apache-2.0 license. No Snowpack source or customer data has been copied."
+}
