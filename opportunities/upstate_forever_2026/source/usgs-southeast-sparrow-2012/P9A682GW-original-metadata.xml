@@ -1,0 +1,3994 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Victor L. Roland</origin>
+        <origin>Anne B. Hoos</origin>
+        <pubdate>20200106</pubdate>
+        <title>SPARROW model inputs and simulated streamflow, nutrient and suspended-sediment loads in streams of the Southeastern United States, 2012 Base Year</title>
+        <geoform>comma-delimited text files</geoform>
+        <pubinfo>
+          <pubplace>Reston, VA</pubplace>
+          <publish>U.S. Geological Survey</publish>
+        </pubinfo>
+        <onlink>https://doi.org/10.5066/P9A682GW</onlink>
+        <lworkcit>
+          <citeinfo>
+            <origin>Anne B. Hoos</origin>
+            <origin>Victor L. Roland</origin>
+            <pubdate>2019</pubdate>
+            <title>Spatially Referenced Models of Streamflow and Nitrogen, Phosphorus, and Suspended-Sediment Loads in Streams of the Southeastern United States</title>
+            <geoform>U.S. Geological Survey Scientific Investigations Report 2019-5135</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.3133/sir20195135</onlink>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>The U.S. Geological Survey's (USGS) SPAtially Referenced Regression On Watershed attributes (SPARROW) model was used to aid in the interpretation of monitoring data and simulate streamflow and water-quality conditions in streams across the Southeast Region of the United States. SPARROW is a hybrid empirical/process-based mass balance model that can be used to estimate the major sources and environmental factors that affect the long-term supply, transport, and fate of contaminants in streams. The spatially explicit model structure is defined by a river reach network coupled with contributing catchments. The model is calibrated by statistically relating watershed sources and transport-related properties to monitoring-based water-quality load estimates. This USGS data release includes input and output files associated with 2012 SPARROW simulations of streamflow, total nitrogen, total phosphorus and suspended-sediment load in streams of the Southeast region. Model construction, calibration and results are described in Hoos and Roland (2019, https://doi.org/10.3133/sir20195135).</abstract>
+      <purpose>This USGS data release contains all of the input and output files needed to reproduce the model results described in Hoos and Roland (2019). Model input and output text files provided here can be linked (via the comid attribute) to the shapefiles that are also provided for displaying data as maps.</purpose>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <rngdates>
+          <begdate>19991001</begdate>
+          <enddate>20140930</enddate>
+        </rngdates>
+      </timeinfo>
+      <current>Time period represents period covered by model calibration targets and some of the other input variables.</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-89.9100</westbc>
+        <eastbc>-75.3500</eastbc>
+        <northbc>37.6100</northbc>
+        <southbc>24.4300</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>USGS Thesaurus</themekt>
+        <themekey>SPAtially Referenced Regression On Watershed attributes (SPARROW)</themekey>
+        <themekey>Streamflow</themekey>
+        <themekey>Nutrient Loads</themekey>
+        <themekey>Suspended-sediment loads</themekey>
+        <themekey>Spatial analysis</themekey>
+        <themekey>Statistical analysis</themekey>
+        <themekey>Surface-water quality</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Metadata Identifier</themekt>
+        <themekey>USGS:5d6e70e5e4b0c4f70cf635a1</themekey>
+      </theme>
+      <place>
+        <placekt>Geographic Names Information System (GNIS)</placekt>
+        <placekey>Alabama</placekey>
+        <placekey>Florida</placekey>
+        <placekey>Georgia</placekey>
+        <placekey>Mississippi</placekey>
+        <placekey>North Carolina</placekey>
+        <placekey>South Carolina</placekey>
+        <placekey>Tennessee</placekey>
+        <placekey>Virginia</placekey>
+      </place>
+    </keywords>
+    <accconst>none</accconst>
+    <useconst>none</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntper>Victor L Roland</cntper>
+          <cntorg>Southeast Region: Lower Mississippi-Gulf Water Science Center</cntorg>
+        </cntperp>
+        <cntpos>Hydrologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>640 Grassmere Park</address>
+          <city>Nashville</city>
+          <state>TN</state>
+          <postal>37211</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>615-837-4754</cntvoice>
+        <cntemail>vroland@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>Streamflow and load data, used as calibration targets in the Southeast SPARROW models, were evaluated for trend, accuracy and bias. For all other data, no formal accuracy tests were conducted (for more detail see Hoos and Roland, 2019).</attraccr>
+    </attracc>
+    <logic>All attributes were checked for outliers and to see if the data were within the allowed range for the data.</logic>
+    <complete>Data set is considered complete for the information presented, as described in the abstract. Users are advised to read the rest of the metadata record carefully for additional details.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>No formal positional accuracy tests were conducted</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>No formal positional accuracy tests were conducted</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Schwarz, Gregory E., Wieczorek, Michael E.</origin>
+            <pubdate>2018</pubdate>
+            <title>Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us</title>
+            <geoform>dataset</geoform>
+            <pubinfo>
+              <pubplace>https://www.sciencebase.gov</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/p9pa63sm</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>vector network</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20180101</begdate>
+              <enddate>20181231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>ENHDPlusV2_us</srccitea>
+        <srccontr>The database (ENHDPlusV2_us) contains a topologically reconditioned (enhanced) version of the U.S. Environmental Protection Agency (USEPA) and the USGS NHDPlus Version 2.1 (NHDPlusV2) flowline network. This enhanced version of the drainage network has improved accuracy in networking capabilities used to identify the incremental watershed for each reach (the area that drains directly to a reach without passing through another reach). The ENHDPlusV2_us database also includes attributes for surface-water features, such as streams (identified as perennial or intermittent), lakes, ponds, and artificial reservoirs and attributes to define instream/reservoir decay (delivery fraction).</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Brakebill, John W., Schwarz, Gregory E., Wieczorek, Michael E.</origin>
+            <pubdate>2019</pubdate>
+            <title>An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Data Set, USGS SIR 2019-5127</title>
+            <geoform>Comma separated file</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.3133/sir20195127</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>stream reach attributes</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20190101</begdate>
+              <enddate>20190505</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>Enhanced network</srccitea>
+        <srccontr>This data set provides stream reach diversions and public-supply withdrawals to aid in representation of the diversion and transfer of water within the surface-water drainage network.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Seaber, Paul R., Kapinos, F. Paul, and Knapp, George L.</origin>
+            <pubdate>1987</pubdate>
+            <title>Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</title>
+            <geoform>maps</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://pubs.usgs.gov/wsp/wsp2294/</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>vector</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19870101</begdate>
+              <enddate>20070301</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>HUCs</srccitea>
+        <srccontr>This data set provides the 2- and 8-digit Hydrologic Unit Codes for stream reaches</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Moore, Richard B., Johnston, Craig M., Hayes, Laura</origin>
+            <pubdate>2019</pubdate>
+            <title>Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units</title>
+            <geoform>comma-delimited text</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/P9CFXHGT</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>attribute</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20190101</begdate>
+              <enddate>20190930</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>NHD/WBD crosswalk</srccitea>
+        <srccontr>This data set provides the 12-digit Hydrologic Unit Code for stream reaches</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Wieczorek, M.E., Jackson, S.E., Schwarz, G.E.</origin>
+            <pubdate>2019</pubdate>
+            <title>Select Attributes for NHDPlus Version 2.1 Reach Catchments and Modified Network Routed Upstream Watersheds for the Conterminous United States (ver 2.0, October 2019), USGS Data Release</title>
+            <geoform>comma-delimited text</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/F7765D7V</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>spatial (vector and raster) and attribute data</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20190101</begdate>
+              <enddate>20190102</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>natural and anthropogenic landscape feature data</srccitea>
+        <srccontr>This data set provides information describing all the main sources of the constituent being modeled (water, total nitrogen, total phosphorous, and suspended sediment) and information describing factors affecting the delivery of the constituent from the land to the stream.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Skinner, Kenneth D., Wise Daniel</origin>
+            <pubdate>20190404</pubdate>
+            <title>Point-Source Nutrient Loads to Streams of the Conterminous United States, 2012</title>
+            <geoform>comma-delimited files</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/P9PYVPFT</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>point with attribute</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20120101</begdate>
+              <enddate>20121231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition</srccurr>
+        </srctime>
+        <srccitea>point-source data</srccitea>
+        <srccontr>This data set provides the discharge from point-source facilities to streams and the estimated total nitrogen and total phosphorous loads contributed to streams.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K.</origin>
+            <pubdate>20150501</pubdate>
+            <title>Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information</title>
+            <geoform>remote-sensing image</geoform>
+            <pubinfo>
+              <pubplace>Bethesda, MD</pubplace>
+              <publish>Photogrammetric Engineering and Remote Sensing</publish>
+            </pubinfo>
+            <onlink>http://www.asprs.org/a/publications/pers/2015journals/PERS_May_2015/HTML/index.html#346/z</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>spatial (vector) and attribute data</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20110101</begdate>
+              <enddate>20111231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition</srccurr>
+        </srctime>
+        <srccitea>Land cover</srccitea>
+        <srccontr>This data set provides land cover data for the conterminous U.S.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Stewart, Jana S., Schwarz, Gregory E., Brakebill, John W., Preston, Stephen D.</origin>
+            <pubdate>20190226</pubdate>
+            <title>Catchment-level estimates of nitrogen and phosphorus agricultural use from commercial fertilizer sales for the conterminous United States, 2012</title>
+            <geoform>comma-delimited files</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.3133/sir20185145</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>vector with attributes</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20120101</begdate>
+              <enddate>20121231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition</srccurr>
+        </srctime>
+        <srccitea>fertilizer data</srccitea>
+        <srccontr>This data set provides models nitrogen and phosphorous fertilizer applications to estimate elemental fertilizer use on agricultural lands for the conterminous U.S.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Anning, David W. and Ator, Scott W.</origin>
+            <pubdate>20171018</pubdate>
+            <title>Generalized lithology for the conterminous United States</title>
+            <geoform>Tabular and Vector Digital Data Sets</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/F7R78D4N</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>vector with attributes</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20110101</begdate>
+              <enddate>20110102</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>lithologic data</srccitea>
+        <srccontr>This data set provides generalized lithology for the conterminous U.S.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Saad, David and others</origin>
+            <pubdate>2019</pubdate>
+            <title>Water-quality and streamflow datasets used for estimating long-term mean daily streamflow and annual loads to be considered for use in regional streamflow, nutrient and sediment SPARROW models, United States, 1999-2014</title>
+            <geoform>comma-delimited text</geoform>
+            <pubinfo>
+              <pubplace>Reston, VA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/F7DN436B</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>point</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20190101</begdate>
+              <enddate>20190102</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>load data</srccitea>
+        <srccontr>This data set provides mean daily streamflow and detrended mean annual total nitrogen, total phosphorous, and suspended-sediment loads to streams.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>All source input data sets and created data listed in this data release are described in detail in the larger work citation, Spatially Referenced Models of Streamflow and Nitrogen, Phosphorus, and Suspended-Sediment Loads in Streams in the Southeastern United States.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spref>
+    <horizsys>
+      <planar>
+        <mapproj>
+          <mapprojn>Albers Conical Equal Area</mapprojn>
+          <albers>
+            <stdparll>29.5</stdparll>
+            <stdparll>45.5</stdparll>
+            <longcm>-96.0</longcm>
+            <latprjo>23.0</latprjo>
+            <feast>0.0</feast>
+            <fnorth>0.0</fnorth>
+          </albers>
+        </mapproj>
+        <planci>
+          <plance>coordinate pair</plance>
+          <coordrep>
+            <absres>0.01</absres>
+            <ordres>0.01</ordres>
+          </coordrep>
+          <plandu>meters</plandu>
+        </planci>
+      </planar>
+      <geodetic>
+        <horizdn>North American Datum of 1983</horizdn>
+        <ellips>GRS_1980</ellips>
+        <semiaxis>6378137.0</semiaxis>
+        <denflat>298.257222101</denflat>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>se_sparrow_model_input.txt</enttypl>
+        <enttypd>This is the SPARROW model input data file also referred to as the sparrow_data1 file. This data file contains one record for each stream segment in the Southeast 2012 SPARROW modeled river basins.  Input attributes include: network, source, land-to-water delivery, instream and in-reservoir decay characteristics of the stream segment and its associated incremental watershed.  Also included are attributes representing monitored streamflow and nutrient and suspended-sediment load, which are used as model calibration targets.</enttypd>
+        <enttypds>Table format defined by Schwarz, G.E., Hoos, A.B., Alexander, R.B., and Smith, R.A., 2006, The SPARROW Surface Water-Quality Model—Theory, Applications and User Documentation: U.S. Geological Survey, Techniques and Methods 6–B3, 248 p. and CD –ROM, available online at https://pubs.er.usgs.gov/publication/tm6B3</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative ComID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>LENGTHKM</attrlabl>
+        <attrdef>Flowline length</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>55.222</rdommax>
+            <attrunit>kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>TermFlag</attrlabl>
+        <attrdef>terminal reach indicator</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>0</edomv>
+            <edomvd>not a terminal reach</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>1</edomv>
+            <edomvd>terminal reach</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>IncAreaKm2</attrlabl>
+        <attrdef>Incremental catchment area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>7984.0449</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CumAreaKm2</attrlabl>
+        <attrdef>Cumulated upstream watershed area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>111330.1225</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DivFrac</attrlabl>
+        <attrdef>diversion fraction of flow remaining in a stream segment after an upstream diversion</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>MAVelUfps</attrlabl>
+        <attrdef>average streamflow velocity, fps</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>7.86472</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>cfromnode</attrlabl>
+        <attrdef>Modified from original NHDPlusV2 node identifier, FROMNODE</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <udom>Unique ID for flowlines modified FROMNODE</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ctonode</attrlabl>
+        <attrdef>Modified from original NHDPlusV2 node identifier, TONODE</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to determine value.</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <udom>Unique ID for flowline's modified TONODE</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ARQuantity</attrlabl>
+        <attrdef>Diversions from outside the model domain</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>11.4</rdommin>
+            <rdommax>310</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_KFACT_UP</attrlabl>
+        <attrdef>Kfactor (erodibility index) in upper soil layer (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.05</rdommin>
+            <rdommax>0.47</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_OM</attrlabl>
+        <attrdef>Soil organic matter content (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.03</rdommin>
+            <rdommax>62.11</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_WTDEP</attrlabl>
+        <attrdef>Depth to water table (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>6</rdommax>
+            <attrunit>feet</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_CLAYAVE</attrlabl>
+        <attrdef>Soil percent clay (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.89</rdommin>
+            <rdommax>68</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_WBM_DT_RUN_2012</attrlabl>
+        <attrdef>PPT-AET, mm/year, detrended to base year 2012</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>64.88</rdommin>
+            <rdommax>1583.72</rdommax>
+            <attrunit>millimeters per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_NATL_P_Nardi</attrlabl>
+        <attrdef>Potential contribution of phosphorus (ppm) to streams from weathering and erosion of surficial geologic materials</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>11612.8</rdommax>
+            <attrunit>parts per million</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_CPRAC16</attrlabl>
+        <attrdef>Percent of catchment in cover crops, 2012</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>31.813</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_EVI_JAS_2012</attrlabl>
+        <attrdef>Summer mean Enhanced Vegetation Index (EVI) derived from 2012 MODIS imagery data</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0.73</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DIST_TO_ST</attrlabl>
+        <attrdef>Average travel distance across catchment to stream</attrdef>
+        <attrdefs>Brakebill, Schwarz, and Wieczorek, 2019, An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Dataset</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>134835.62</rdommax>
+            <attrunit>meter</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_CNPY11_BUFF100</attrlabl>
+        <attrdef>Percent canopy land cover in 100m buffer, 2011 NLCD</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>100</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>mean_dflow_predpd</attrlabl>
+        <attrdef>Mean daily streamflow, cfs</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.690010529</rdommin>
+            <rdommax>26400.99159</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_530_final</attrlabl>
+        <attrdef>Detrended mean annual suspended solids load, kg/yr</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>3343.603354</rdommin>
+            <rdommax>331996706.9</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_154_final</attrlabl>
+        <attrdef>Detrended mean annual suspended-sediment load, kg/yr</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>49947.42866</rdommin>
+            <rdommax>3272040807</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_600_final</attrlabl>
+        <attrdef>Detrended mean annual total nitrogen load, kg/yr</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>358.3807119</rdommin>
+            <rdommax>29619436.29</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_665_final</attrlabl>
+        <attrdef>Detrended mean annual total phosphorus load, kg/yr</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>49.95713037</rdommin>
+            <rdommax>4749660.423</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>hydseq</attrlabl>
+        <attrdef>hydrologic sequence number</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release,</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>flux_c80154_MG</attrlabl>
+        <attrdef>Mean annual (for the decade centered on 2012) sediment load at monitoring sites, kilograms/yr; load is for suspended-sediment at sites where available, otherwise is for total suspended solids</attrdef>
+        <attrdefs>Saad and others, 2019, Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year: U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p., https://doi.org/10.3133/sir20195069.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>3.343603354</rdommin>
+            <rdommax>3272040.807</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rchtype</attrlabl>
+        <attrdef>type of reach (stream or impoundment)</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>0</edomv>
+            <edomvd>flowing</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>1</edomv>
+            <edomvd>terminal</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>2</edomv>
+            <edomvd>non-contributing terminal reach</edomvd>
+            <edomvds>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ppt_aet_cfs</attrlabl>
+        <attrdef>Mean surplus of annual precipitation over evapotranspiration, 2000-2014</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1904.281282</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SpringFlow12</attrlabl>
+        <attrdef>Spring (1st and 2nd magnitude) discharge to streams, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>861.509</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>EffFlow_4952_cfs</attrlabl>
+        <attrdef>Municipal/domestic wastewater discharge to streams, cfs, 2012</attrdef>
+        <attrdefs>Skinner, K.D., and Wise, D.R., 2019, Point-source nutrient loads to streams of the conterminous United States, 2012: U.S. Geological Survey data release, https://doi.org/10.5066/P9PYVPFT</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>224.8906773</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ARSource_noPS</attrlabl>
+        <attrdef>Transfer of water from outside model domain (one case, from Tennessee River to a tributary of the Tombigbee River), cfs</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>310</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lDIST_TO_ST</attrlabl>
+        <attrdef>Log of average travel distance across catchment to stream, meters</attrdef>
+        <attrdefs>Brakebill, Schwarz, and Wieczorek, 2019, An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Dataset</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>11.81181169</rdommax>
+            <attrunit>log of meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lcat_stclay</attrlabl>
+        <attrdef>Log of soil percent clay (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.636576829</rdommin>
+            <rdommax>4.219507705</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>WTLNDPCT_PETmAET</attrlabl>
+        <attrdef>Wetland surface area conditioned by PPT-AET, mm</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>37</rdommax>
+            <attrunit>millimeter</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lWTLNDPCT_PETmAET</attrlabl>
+        <attrdef>Log of wetland surface area conditioned by PPT-AET, meters</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-12.53457671</rdommin>
+            <rdommax>3.610917913</rdommax>
+            <attrunit>log of meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>URB_pct</attrlabl>
+        <attrdef>Percent urban land</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>100</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lURB_pct</attrlabl>
+        <attrdef>Log of percent urban land</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-4.605170186</rdommin>
+            <rdommax>4.605170186</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>EVI2012</attrlabl>
+        <attrdef>Enhanced vegetative index</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.37</rdommin>
+            <rdommax>0.37</rdommax>
+            <attrunit>unitess</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lEVI2012</attrlabl>
+        <attrdef>Natural log of mean enhanced vegetative index</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-0.994252273</rdommin>
+            <rdommax>-0.994252273</rdommax>
+            <attrunit>natural log of unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FarmN</attrlabl>
+        <attrdef>2012 Amount of nitrogen from fertilizer on ag land</attrdef>
+        <attrdefs>Stewart, J.S., Schwarz, G.E., Brakebill, J.W., and Preston, S.D., 2019, Catchment-level estimates of nitrogen and phosphorus agricultural use from commercial fertilizer sales for the conterminous United States, 2012:U.S. Geological Survey Scientific Investigations Report 2018-5145, 52 p., https://doi.org/10.3133/sir20185145</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>18490051.76</rdommax>
+            <attrunit>kilogram</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>MANN2012</attrlabl>
+        <attrdef>Manure total nitrogen from livestock production, kg/yr, 2012</attrdef>
+        <attrdefs>Wieczorek, M.E., Jackson, S.E., and Schwarz, G.E., 2019, Select Attributes for NHDPlus Version 2.1 Reach Catchments and Modified Network Routed Upstream Watersheds for the Conterminous United States: U.S. Geological Survey data release, https://doi.org/10.5066/F7765D7V</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2395020</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>PTSRC_KGN_WWTP</attrlabl>
+        <attrdef>Municipal/domestic wastewater total nitrogen discharge to streams, kg/yr, 2012</attrdef>
+        <attrdefs>Skinner, K.D., and Wise, D.R., 2019, Point-source nutrient loads to streams of the conterminous United States, 2012: U.S. Geological Survey data release, https://doi.org/10.5066/P9PYVPFT</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2396660.34</rdommax>
+            <attrunit>kilograms</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>URB_KM2</attrlabl>
+        <attrdef>Urban land cover</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>250.7035529</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FERTN_NW_kg</attrlabl>
+        <attrdef>Fertilizer total nitrogen applied to agricultural land (national weighted), kg/yr, 2012</attrdef>
+        <attrdefs>Stewart, J.S., Schwarz, G.E., Brakebill, J.W., and Preston, S.D., 2019, Catchment-level estimates of nitrogen and phosphorus agricultural use from commercial fertilizer sales for the conterminous United States, 2012:U.S. Geological Survey Scientific Investigations Report 2018-5145, 52 p., https://doi.org/10.3133/sir20185145</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>48217015.88</rdommax>
+            <attrunit>kilogram per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CMAQ_TD_KG_3yr</attrlabl>
+        <attrdef>Total nitrogen from atmospheric deposition, kg/yr</attrdef>
+        <attrdefs>Wieczorek, M.E., Jackson, S.E., and Schwarz, G.E., 2019, Select Attributes for NHDPlus Version 2.1 Reach Catchments and Modified Network Routed Upstream Watersheds for the Conterminous United States: U.S. Geological Survey data release, https://doi.org/10.5066/F7765D7V</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>4715909.188</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_WBM_DT_RUN_2012_MM</attrlabl>
+        <attrdef>Log of PPT-AET, mm/year, detrended to base year 2012</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>4.17253941</rdommin>
+            <rdommax>7.367531789</rdommax>
+            <attrunit>log of millimeters per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_EVI_JAS_2012</attrlabl>
+        <attrdef>Log of summer mean Enhanced Vegetation Index (EVI) derived from 2012 MODIS imagery data</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-4.605170186</rdommin>
+            <rdommax>-0.314710745</rdommax>
+            <attrunit>log of unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_OM</attrlabl>
+        <attrdef>Log of soil organic matter content (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-3.506557897</rdommin>
+            <rdommax>4.128907007</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_CPRAC16</attrlabl>
+        <attrdef>Log of percent of catchment in cover crops, 2012</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-9.210340372</rdommin>
+            <rdommax>3.459875011</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>MANP2012</attrlabl>
+        <attrdef>Manure total phosphorus from livestock production, kg/yr, 2012</attrdef>
+        <attrdefs>Wieczorek, M.E., Jackson, S.E., and Schwarz, G.E., 2019, Select Attributes for NHDPlus Version 2.1 Reach Catchments and Modified Network Routed Upstream Watersheds for the Conterminous United States: U.S. Geological Survey data release, https://doi.org/10.5066/F7765D7V</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>594578</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>PTSRC_KGP_WWTP</attrlabl>
+        <attrdef>Municipal/domestic wastewater total phosphorus discharge to streams, kg/yr, 2012</attrdef>
+        <attrdefs>Skinner, K.D., and Wise, D.R., 2019, Point-source nutrient loads to streams of the conterminous United States, 2012: U.S. Geological Survey data release, https://doi.org/10.5066/P9PYVPFT</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>396862.001</rdommax>
+            <attrunit>kilograms</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FERTP_NW_kg</attrlabl>
+        <attrdef>Fertilizer total phosphorus applied to agricultural land (national weighted), kg/yr, 2012</attrdef>
+        <attrdefs>Stewart, J.S., Schwarz, G.E., Brakebill, J.W., and Preston, S.D., 2019, Catchment-level estimates of nitrogen and phosphorus agricultural use from commercial fertilizer sales for the conterminous United States, 2012:U.S. Geological Survey Scientific Investigations Report 2018-5145, 52 p., https://doi.org/10.3133/sir20185145</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3895190.853</rdommax>
+            <attrunit>kilogram per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FacPmine</attrlabl>
+        <attrdef>Mined land permitted total phosphorus discharge to streams, kg, 2012</attrdef>
+        <attrdefs>Skinner, K.D., and Wise, D.R., 2019, Point-source nutrient loads to streams of the conterminous United States, 2012: U.S. Geological Survey data release, https://doi.org/10.5066/P9PYVPFT</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>110099.84</rdommax>
+            <attrunit>kilograms</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Pmines_v17</attrlabl>
+        <attrdef>Mined area Phosphorus content, ppm*km2</attrdef>
+        <attrdefs>Terziotti, Silvia, Hoos, A.B., Harned, D.A., and Garcia, A.M., 2010, Mapping watershed potential to contribute phosphorus from geologic materials to receiving streams, southeastern United States: U.S. Geological Survey Scientific Investigations Map 3102, https://pubs.usgs.gov/sim/3102/</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>161186.2677</rdommax>
+            <attrunit>parts per million times square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lGeolP</attrlabl>
+        <attrdef>Log of phosphorus content of bed sediment in small pristine streams (national extent), interpolated using geologic mapping units</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.609437912</rdommin>
+            <rdommax>9.359863217</rdommax>
+            <attrunit>log of milligrams per kilogram</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_KFACTUP</attrlabl>
+        <attrdef>Log of Kfactor (erodibility index) in upper soil layer (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-2.995732274</rdommin>
+            <rdommax>-0.755022584</rdommax>
+            <attrunit>log of unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lWTdepth</attrlabl>
+        <attrdef>Log of depth to water table (from STATSGO)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-1.386294361</rdommin>
+            <rdommax>1.791759469</rdommax>
+            <attrunit>log of feet</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CAT_CPRAC7_13</attrlabl>
+        <attrdef>Percent of catchment in no till or conservation tillage</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>88.2469</rdommax>
+            <attrunit>percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCAT_CPRAC7_13</attrlabl>
+        <attrdef>Log of percent of catchment in no till or conservation tillage</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-9.210340372</rdommin>
+            <rdommax>4.480138568</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>PredRunoff_SESPAR_mm</attrlabl>
+        <attrdef>Incremental flow from catchment to stream</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>4.167337089</rdommin>
+            <rdommax>11125.67998</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lPredRunoff_SESpar_mm</attrlabl>
+        <attrdef>Log of incremental flow from catchment to stream</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.427277244</rdommin>
+            <rdommax>9.317011227</rdommax>
+            <attrunit>log of cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>STRM_PWR_GAIN_fr</attrlabl>
+        <attrdef>Channel: Gain in stream power compared to adjacent upstream reach(es), multiplied by 1 km length, (km)</attrdef>
+        <attrdefs>Brakebill, Schwarz, and Wieczorek, 2019, An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Dataset</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10AC_Urb</attrlabl>
+        <attrdef>Upland: Residuum in igneous, metamorphic, and very fine-grained sedimentary rock, and alluvium, intersected with Urban</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>36.8451</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10D_Urb</attrlabl>
+        <attrdef>Upland: Residuum in sedimentary rocks (discontinuous) intersected with Urban</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>40.0014</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10E_Urb</attrlabl>
+        <attrdef>Upland: All other surficial geology categories (Fine and medium grained sediments, also Residuum in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Urban</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>167.0301</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10ACDE_For</attrlabl>
+        <attrdef>Upland: All surficial geology categories intersected with Forest (in other words, all Forested land)</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>106.6518</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10ACD_BSH</attrlabl>
+        <attrdef>Upland: Residuum in igneous, metamorphic, sedimentary (discontinuous), and very fine-grained sedimentary rock, and alluvium, intersected with Shrub,Scrub,Herbaceous,Barren</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>29.9331</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10E_BSHP</attrlabl>
+        <attrdef>Upland: All other surficial geology categories (Fine and medium grained sediments, also Residual materials in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Shrub,Scrub,Herbaceous,Barren</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>408.9078</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10ACE_Ag</attrlabl>
+        <attrdef>Upland: All surficial geology categories  except Residuum in sedimentary rock (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2167.6095</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Soller10D_Ag</attrlabl>
+        <attrdef>Upland: Residuum in sedimentary rocks (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Homer, C.G., Dewitz, J.A., Yang, L., Jin, S., Danielson, P., Xian, G., Coulston, J., Herold, N.D., Wickham, J.D., and Megown, K., 2015, Completion of the 2011 National Land Cover Database for the conterminous United States—Representing a decade of land cover change information: Photogrammetric Engineering and Remote Sensing, v. 81, no. 5, p. 345–354; Soller, D.R., Reheis, M.C., Garrity, C.P., Van Sistine, D.R., 2009, Map database for surficial materials in the conterminous United States: U.S. Geological Survey Data Series 425, http://pubs.usgs.gov/ds/425</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>24.2046</rdommax>
+            <attrunit>square kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>lCNPY11_BUFF100</attrlabl>
+        <attrdef>Log of percent canopy land cover in 100m buffer, 2011 NLCD</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-2.302585093</rdommin>
+            <rdommax>4.605170186</rdommax>
+            <attrunit>log of percent</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rchTOT_RipWet</attrlabl>
+        <attrdef>Width (area in catchment divided by channel length) of riparian wetland, scaled to time of travel in reach</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3486.677145</rdommax>
+            <attrunit>kilometer</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>contrchdecay_RRLite</attrlabl>
+        <attrdef>Reach time of travel (days) per meter of stream depth, where depth is estimated as a continuous function of stream discharge PredQ_SESpar and other channel characteristics (using the 6-parameter regional regression equation)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>6.036052667</rdommax>
+            <attrunit>days</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>bpowerconsu_QAed</attrlabl>
+        <attrdef>Consumptive use at power plants, 2010, expressed as fraction of flow (MAFlowUcfs), and additional transformations</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.282</rdommin>
+            <rdommax>1.282</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>bsWWithdrPopS</attrlabl>
+        <attrdef>Surface-water withdrawal for municipal water supply based on popn served, 2013, expressed as fraction of flow (MAFlowUcfs), and additional transformations</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1.057</rdommin>
+            <rdommax>1.057</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rhload_withNID_ypm_KL</attrlabl>
+        <attrdef>Reciprocal areal hydraulic load for water bodies in karst landscape (Florida), estimated from NHD (Moore and others), add NID to supplement, calculate using PredQ_SESpar</attrdef>
+        <attrdefs>Brakebill, Schwarz, and Wieczorek, 2019, An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Dataset</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2704.227698</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>rhload_withNID_ypm_NotKL</attrlabl>
+        <attrdef>Reciprocal areal hydraulic load for water bodies not in karst landscape (Florida), estimated from NHD(Moore and others), add NID (2320 reservoirs, 130 are intermediate-large) to supplement, calculate using PredQ_SESpar</attrdef>
+        <attrdefs>Brakebill, Schwarz, and Wieczorek, 2019, An Enhanced Hydrologic Stream Network Based on the NHDPlus Medium Resolution Dataset</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>651.0456273</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>GWWithdr</attrlabl>
+        <attrdef>Groundwater withdrawal (county level) from unconfined aquifer, 2010, expressed as fraction of flow (MAFlowUcfs), and additional transformations</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3.912023005</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FL_GNIS_Na</attrlabl>
+        <attrdef>Flowline Geographic Names Information System Identifier (GNIS) taken from original source data where available.</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <udom>Character string of geographic feature name.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC_8</attrlabl>
+        <attrdef>8-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Information not available from source.</edomvd>
+            <edomvds>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC_12</attrlabl>
+        <attrdef>12-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units: https://doi.org/10.5066/P9CFXHGT</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Information not available from source.</edomvd>
+            <edomvds>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units: https://doi.org/10.5066/P9CFXHGT</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units</codesetn>
+            <codesets>https://doi.org/10.5066/P9CFXHGT</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC_4</attrlabl>
+        <attrdef>4-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Information not available from source.</edomvd>
+            <edomvds>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>se_sparrow_model_output_FLOW.txt</enttypl>
+        <enttypd>This file includes SPARROW simulated long-term average streamflows in the Southeast Region SPARROW streams.  Output attributes include accumulated and incremental streamflow, by source, at each stream reach in the network.</enttypd>
+        <enttypds>Table format defined by Schwarz, G.E., Hoos, A.B., Alexander, R.B., and Smith, R.A., 2006, The SPARROW Surface Water-Quality Model—Theory, Applications and User Documentation: U.S. Geological Survey, Techniques and Methods 6–B3, 248 p. and CD –ROM, available online at https://pubs.er.usgs.gov/publication/tm6B3</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>IncAreaKm2</attrlabl>
+        <attrdef>Incremental catchment area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>397.7658</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CumAreaKm2</attrlabl>
+        <attrdef>Cumulated upstream watershed area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>111330.1225</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_q</attrlabl>
+        <attrdef>Accumulated streamflow, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>57261.07245</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_q_paet</attrlabl>
+        <attrdef>Accumulated streamflow from precipitation minus actual ET, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>56350.73802</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_q_spr</attrlabl>
+        <attrdef>Accumulated streamflow from springs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2459.253007</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_q_wwtp</attrlabl>
+        <attrdef>Accumulated streamflow from external waste-water treatment discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>705.3440732</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_q_div</attrlabl>
+        <attrdef>Accumulated streamflow from diversions into the model area</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>315.9954003</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_q</attrlabl>
+        <attrdef>Accumulated streamflow standard error, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>10915.61411</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_q_paet</attrlabl>
+        <attrdef>Accumulated streamflow from precipitation minus actual ET standard error, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>10743.11861</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_q_spr</attrlabl>
+        <attrdef>Accumulated streamflow from springs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>669.5013984</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_q_wwtp</attrlabl>
+        <attrdef>Accumulated streamflow from external waste-water treatment discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>199.1348874</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_q_div</attrlabl>
+        <attrdef>Accumulated streamflow from diversions into the model area</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>60.22182067</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_q</attrlabl>
+        <attrdef>Incremental streamflow, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>709.3426943</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_q_paet</attrlabl>
+        <attrdef>Incremental streamflow from precipitation minus actual ET, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>130.2665476</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_q_spr</attrlabl>
+        <attrdef>Incremental streamflow from springs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>637.1897862</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_q_wwtp</attrlabl>
+        <attrdef>Incremental streamflow from external waste-water treatment discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>171.2036111</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_q_div</attrlabl>
+        <attrdef>Incremental streamflow from diversions into the model area</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>315.9954003</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_q</attrlabl>
+        <attrdef>Incremental streamflow standard error, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>183.1885117</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_q_paet</attrlabl>
+        <attrdef>Incremental streamflow from precipitation minus actual ET standard error, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>29.46023014</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_q_spr</attrlabl>
+        <attrdef>Incremental streamflow from springs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>173.4405614</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_q_wwtp</attrlabl>
+        <attrdef>Incremental streamflow from external waster-water treatment discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>48.38877967</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_q_div</attrlabl>
+        <attrdef>Incremental streamflow from diversions into the model area</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>60.22182067</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>RES_DECAY</attrlabl>
+        <attrdef>Flux decayed in reservoir, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>169.3034887</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>6.77477E-06</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_RES_DECAY</attrlabl>
+        <attrdef>Flux decayed in reservoir standard error, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>66.54660541</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target standard error, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0.124913959</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>se_sparrow_model_output_TN.txt</enttypl>
+        <enttypd>This file includes SPARROW simulated long-term average total nitrogen load in Southeast SPARROW Region streams.  Output attributes include accumulated and incremental total nitrogen load, by source, at each stream reach in the network.</enttypd>
+        <enttypds>Table format defined by Schwarz, G.E., Hoos, A.B., Alexander, R.B., and Smith, R.A., 2006, The SPARROW Surface Water-Quality Model—Theory, Applications and User Documentation: U.S. Geological Survey, Techniques and Methods 6–B3, 248 p. and CD –ROM, available online at https://pubs.er.usgs.gov/publication/tm6B3</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>IncAreaKm2</attrlabl>
+        <attrdef>Incremental catchment area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>397.7658</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CumAreaKm2</attrlabl>
+        <attrdef>Cumulated upstream watershed area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>111330.1225</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>wbm_meanq</attrlabl>
+        <attrdef>Mean streamflow from the Southeast SPARROW flow model</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>56268.10496</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn</attrlabl>
+        <attrdef>Accumulated nitrogen load, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>29696399.05</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn_wwtp</attrlabl>
+        <attrdef>Accumulated nitrogen load from wastewater treatment facility point sources, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>4576286.065</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn_fert</attrlabl>
+        <attrdef>Accumulated total nitrogen load from farm fertilizer</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2554580.844</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn_man</attrlabl>
+        <attrdef>Accumulated total nitrogen load from manure</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2631768.26</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn_atm</attrlabl>
+        <attrdef>Accumulated total nitrogen load from atmospheric deposition</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>20389115.24</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tn_urb</attrlabl>
+        <attrdef>Accumulated total nitrogen load from urban land</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1594267.344</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn</attrlabl>
+        <attrdef>Accumulated nitrogen load standard error, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>11511349.73</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn_wwtp</attrlabl>
+        <attrdef>Accumulated nitrogen load from wastewater treatment facility point sources standard error, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1800427.814</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn_fert</attrlabl>
+        <attrdef>Accumulated total nitrogen load from farm fertilizer standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1099464.78</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn_man</attrlabl>
+        <attrdef>Accumulated total nitrogen load from manure standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1326522.079</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn_atm</attrlabl>
+        <attrdef>Accumulated total nitrogen load from atmospheric deposition standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>8030212.264</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tn_urb</attrlabl>
+        <attrdef>Accumulated total nitrogen load from urban land standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>752052.2844</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn</attrlabl>
+        <attrdef>Incremental nitrogen load, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2424761.044</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn_wwtp</attrlabl>
+        <attrdef>Incremental nitrogen load from wastewater treatment facility point sources, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2415121.403</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn_fert</attrlabl>
+        <attrdef>Incremental total nitrogen load from farm fertilizer</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>210093.1982</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn_man</attrlabl>
+        <attrdef>Incremental total nitrogen load from manure</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>59639.55105</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn_atm</attrlabl>
+        <attrdef>Incremental total nitrogen load from atmospheric deposition</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>136364.4719</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tn_urb</attrlabl>
+        <attrdef>Incremental total nitrogen load from urban land</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>38152.57262</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn</attrlabl>
+        <attrdef>Incremental nitrogen load standard error, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>953464.1486</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn_wwtp</attrlabl>
+        <attrdef>Incremental nitrogen load from wastewater treatment facility point sources standard error, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>949959.3013</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn_fert</attrlabl>
+        <attrdef>Incremental total nitrogen load from farm fertilizer standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>88469.13888</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn_man</attrlabl>
+        <attrdef>Incremental total nitrogen load from manure standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>30052.26116</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn_atm</attrlabl>
+        <attrdef>Incremental total nitrogen load from atmospheric deposition standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>106044.1824</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tn_urb</attrlabl>
+        <attrdef>Incremental total nitrogen load from urban land standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>17078.56703</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>RES_DECAY</attrlabl>
+        <attrdef>Flux decayed in reservoir, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>253028.6998</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_RES_DECAY</attrlabl>
+        <attrdef>The amount that accumulated total nitrogen load leaving the reach is reduced because of reservoir attenuation within the given reach standard error, in units of kg/yr.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>117078.1616</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target standard error, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0.272187603</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>se_sparrow_model_output_TP.txt</enttypl>
+        <enttypd>This file includes SPARROW simulated long-term average total phosphorus load in Southeast Region streams.  Output attributes include accumulated and incremental total phosphorus load, by source, at each stream reach in the network.</enttypd>
+        <enttypds>Table format defined by Schwarz, G.E., Hoos, A.B., Alexander, R.B., and Smith, R.A., 2006, The SPARROW Surface Water-Quality Model—Theory, Applications and User Documentation: U.S. Geological Survey, Techniques and Methods 6–B3, 248 p. and CD –ROM, available online at https://pubs.er.usgs.gov/publication/tm6B3</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CumAreaKm2</attrlabl>
+        <attrdef>Accumulated upstream watershed area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>111330.1225</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>IncAreaKm2</attrlabl>
+        <attrdef>Incremental catchment area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>397.7658</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>wbm_meanq</attrlabl>
+        <attrdef>Mean streamflow, cfs</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>56268.10496</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp</attrlabl>
+        <attrdef>Accumulated total phosphorus load, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3283814.284</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_geo</attrlabl>
+        <attrdef>Accumulated total phosphorus load natural sources</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1803764.431</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_man</attrlabl>
+        <attrdef>Accumulated total phosphorus load from manure</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>523817.1041</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_wwtp</attrlabl>
+        <attrdef>Accumulated total phosphorus load from wastewater treatment plants</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>617487.0606</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_fert</attrlabl>
+        <attrdef>Accumulated total phosphorus load from farm fertilizer</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>136990.1452</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_mining_fac</attrlabl>
+        <attrdef>Accumulated total phosphorus load from permitted mining facility discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>386402.6653</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_urb</attrlabl>
+        <attrdef>Accumulated total phosphorus load from urban land</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>254364.2247</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_tp_mines</attrlabl>
+        <attrdef>Accumulated total phosphorus load from mined areas</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>123509.0365</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp</attrlabl>
+        <attrdef>Incremental total phosphorus load, kg/yr</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>386493.928</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_geo</attrlabl>
+        <attrdef>Incremental total phosphorus load natural sources</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>5965.253259</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_man</attrlabl>
+        <attrdef>Incremental total phosphorus load from manure</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>23045.16772</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_wwtp</attrlabl>
+        <attrdef>Incremental total phosphorus load from wastewater treatment plants</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>249267.3219</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_fert</attrlabl>
+        <attrdef>Incremental total phosphorus load from farm fertilizer</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>29829.94456</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_mining_fac</attrlabl>
+        <attrdef>Incremental total phosphorus load from permitted mining facility discharge</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>386402.6653</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_urb</attrlabl>
+        <attrdef>Incremental total phosphorus load from urban land</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>12088.19688</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_tp_mines</attrlabl>
+        <attrdef>Incremental total phosphorus load from mined areas</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>27710.97978</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>RES_DECAY</attrlabl>
+        <attrdef>Flux decayed in reservoir</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>68939.78334</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp</attrlabl>
+        <attrdef>Accumulated total phosphorus load standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2519302.235</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_geo</attrlabl>
+        <attrdef>Accumulated total phosphorus load natural sources standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1417344.69</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_wwtp</attrlabl>
+        <attrdef>Accumulated total phosphorus load from wastewater treatment plants standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>492425.6256</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_fert</attrlabl>
+        <attrdef>Accumulated total phosphorus load from farm fertilizer standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>116037.2496</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_man</attrlabl>
+        <attrdef>Accumulated total phosphorus load from manure standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>404945.499</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_mining_fac</attrlabl>
+        <attrdef>Accumulated total phosphorus load from permitted mining facility discharge standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>301155.9801</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_mines</attrlabl>
+        <attrdef>Accumulated total phosphorus load from mined areas standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>107191.6895</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_tp_urb</attrlabl>
+        <attrdef>Accumulated total phosphorus load from urban land standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>198846.6779</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp</attrlabl>
+        <attrdef>Incremental total phosphorus load standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>301217.3512</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_geo</attrlabl>
+        <attrdef>Incremental total phosphorus load natural sources standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>4609.453655</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_wwtp</attrlabl>
+        <attrdef>Incremental total phosphorus load from wastewater treatment plants standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>193478.2599</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_fert</attrlabl>
+        <attrdef>Incremental total phosphorus load from farm fertilizer standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>25588.04582</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_man</attrlabl>
+        <attrdef>Incremental total phosphorus load from manure standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>18480.17209</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_mining_fac</attrlabl>
+        <attrdef>Incremental total phosphorus load from permitted mining facility discharge standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>301155.9801</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_mines</attrlabl>
+        <attrdef>Incremental total phosphorus load from mined areas standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>23747.70925</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_tp_urb</attrlabl>
+        <attrdef>Incremental total phosphorus load from urban land standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>9376.212609</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_RES_DECAY</attrlabl>
+        <attrdef>The amount that accumulated total phosphorus load leaving the reach is reduced because of reservoir attenuation within the given reach standard error, in units of kg/yr.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>53777.02085</rdommax>
+            <attrunit>kilograms per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target standard error, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0.172153788</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>se_sparrow_model_output_SS.txt</enttypl>
+        <enttypd>This file includes SPARROW simulated long-term average suspended-sediment load in Southeast streams.  Output attributes include accumulated and incremental suspended-sediment load, by source, at each stream reach in the network.</enttypd>
+        <enttypds>Table format defined by Schwarz, G.E., Hoos, A.B., Alexander, R.B., and Smith, R.A., 2006, The SPARROW Surface Water-Quality Model—Theory, Applications and User Documentation: U.S. Geological Survey, Techniques and Methods 6–B3, 248 p. and CD –ROM, available online at https://pubs.er.usgs.gov/publication/tm6B3</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CumAreaKm2</attrlabl>
+        <attrdef>Accumulated upstream watershed area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>111330.1225</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>IncAreaKm2</attrlabl>
+        <attrdef>Incremental catchment area, km2</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>397.7658</rdommax>
+            <attrunit>square kilometers</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>wbm_meanq</attrlabl>
+        <attrdef>Mean streamflow</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>56268.10496</rdommax>
+            <attrunit>cubic feet per second</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss</attrlabl>
+        <attrdef>Accumulated suspended-sediment load</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2323915.998</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_chan</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from channel sources</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>223294.0869</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_uigsra</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in igneous, metamorphic, and very fine-grained sedimentary rock, and alluvium, intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>211819.6763</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_uris</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>50469.90602</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_usother</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residuum in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>92573.31631</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_ufor</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All surficial geology categories intersected with Forest (in other words, all Forested land)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>610625.7745</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_uigsrafor</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in igneous, metamorphic, sedimentary (discontinuous), and very fine-grained sedimentary rock, and alluvium, intersected with Shrub, Scrub, Herbaceous, and Barren</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>482819.4252</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_usotherbsh</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residual materials in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Shrub, Scrub, Herbaceous, and Barren</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>115511.2672</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_usotherag</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All surficial geology categories  except Residuum in sedimentary rock (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>119553.753</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>al_ss_ursag</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>535314.5604</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss</attrlabl>
+        <attrdef>Incremental suspended-sediment load</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>18842.80064</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_chan</attrlabl>
+        <attrdef>Incremental suspended-sediment load from channel sources</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>21.01857384</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_uigsra</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in igneous, metamorphic, and very fine-grained sedimentary rock, and alluvium, intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>16365.81989</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_uris</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2388.626512</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_usother</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residuum in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Urban</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>11608.80487</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_ufor</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All surficial geology categories intersected with Forest (in other words, all Forested land)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>7069.343711</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_uigsrafor</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in igneous, metamorphic, sedimentary (discontinuous), and very fine-grained sedimentary rock, and alluvium, intersected with Shrub, Scrub, Herbaceous, and Barren</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3622.3309</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_usotherbsh</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residual materials in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Shrub, Scrub, Herbaceous, and Barren</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2463.952441</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_usotherag</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All surficial geology categories  except Residuum in sedimentary rock (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3281.379075</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>il_ss_ursag</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Agricultural (Cropland and Pasture)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>9478.067724</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>RES_DECAY</attrlabl>
+        <attrdef>The amount that accumulated suspended-sediment load leaving the reach is reduced because of reservoir attenuation within the given reach.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>268308.2109</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss</attrlabl>
+        <attrdef>Accumulated suspended-sediment load standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>1581690.644</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_chan</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from channel sources standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>186348.3983</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_uigsra</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in igneous, metamorphic, and very fine-grained sedimentary rock, and alluvium, intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>140681.8811</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_uris</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>43538.78037</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_usother</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residuum in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>70265.2342</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_ufor</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All surficial geology categories intersected with Forest (in other words, all Forested land) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>433561.9469</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_uigsrafor</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in igneous, metamorphic, sedimentary (discontinuous), and very fine-grained sedimentary rock, and alluvium, intersected with Shrub, Scrub, Herbaceous, and Barren standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>405341.493</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_usotherbsh</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residual materials in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Shrub, Scrub, Herbaceous, and Barren standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>94236.617</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_usotherag</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: All surficial geology categories  except Residuum in sedimentary rock (discontinuous) intersected with Agricultural (Cropland and Pasture) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>103631.7623</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>alse_ss_ursag</attrlabl>
+        <attrdef>Accumulated suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Agricultural (Cropland and Pasture) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>404426.6507</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss</attrlabl>
+        <attrdef>Incremental suspended-sediment load standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>15637.22663</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_chan</attrlabl>
+        <attrdef>Incremental suspended-sediment load from channel sources standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>16.65726778</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_uigsra</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in igneous, metamorphic, and very fine-grained sedimentary rock, and alluvium, intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>13544.52949</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_uris</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2493.887052</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_usother</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residuum in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Urban standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>9947.397754</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_ufor</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All surficial geology categories intersected with Forest (in other words, all Forested land) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>6067.1372</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_uigsrafor</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in igneous, metamorphic, sedimentary (discontinuous), and very fine-grained sedimentary rock, and alluvium, intersected with Shrub, Scrub, Herbaceous, and Barren standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>3878.530683</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_usotherbsh</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All other surficial geology categories (Fine and medium grained sediments, also Residual materials in alluvium and in carbonate and fine-grained sedimentary rock) intersected with Shrub, Scrub, Herbaceous, and Barren standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2950.456378</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_usotherag</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: All surficial geology categories  except Residuum in sedimentary rock (discontinuous) intersected with Agricultural (Cropland and Pasture) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2650.65099</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ilse_ss_ursag</attrlabl>
+        <attrdef>Incremental suspended-sediment load from upland: Residuum in sedimentary rocks (discontinuous) intersected with Agricultural (Cropland and Pasture) standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>8319.934673</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_RES_DECAY</attrlabl>
+        <attrdef>Flux decayed in reservoir standard error</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>174866.852</rdommax>
+            <attrunit>metric tons per year</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SE_DEL_FRAC</attrlabl>
+        <attrdef>Fraction of load leaving a reach that is delivered to a downstream target standard error, fraction</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>an empty or blank value</edomv>
+            <edomvd>Insufficient information available to calculate value.</edomvd>
+            <edomvds>Producer defined</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>0.145352364</rdommax>
+            <attrunit>unitless</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>SE_Catchments</enttypl>
+        <enttypd>Shapefile of catchments for the Southeast SPARROW region</enttypd>
+        <enttypds>Horizon Systems, 2019, NHDPlus Version 2-NHDPlusV2 Data, http://www.horizon-systems.com/nhdplus.</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Contains the location and shape of the vector feature</attrdef>
+        <attrdefs>ESRI ArcGIS</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Polygon</edomv>
+            <edomvd>contains the location and shape of a polygon</edomvd>
+            <edomvds>ESRI ArcGIS</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>GNIS_NAME</attrlabl>
+        <attrdef>Flowline Geographic Names Information System Identifier (GNIS) derived from original source data.</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <udom>Character string of geographic feature name if available from source.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC8</attrlabl>
+        <attrdef>8-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC12</attrlabl>
+        <attrdef>12-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units: https://doi.org/10.5066/P9CFXHGT</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units</codesetn>
+            <codesets>https://doi.org/10.5066/P9CFXHGT</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC4</attrlabl>
+        <attrdef>4-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+    </detailed>
+    <detailed>
+      <enttyp>
+        <enttypl>se_reaches</enttypl>
+        <enttypd>Shapefile of stream reaches for Southeast SPARROW model area</enttypd>
+        <enttypds>Horizon Systems, 2019, NHDPlus Version 2-NHDPlusV2 Data, http://www.horizon-systems.com/nhdplus.</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Contains the location and shape of the vector feature</attrdef>
+        <attrdefs>ESRI ArcGIS</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Polyline ZM</edomv>
+            <edomvd>contains the location and shape of a polyline with Z and M values</edomvd>
+            <edomvds>ESRI ArcGIS</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>COMID</attrlabl>
+        <attrdef>Unique reach identifier (negative COMID = closed catchment) taken from NHDPlusV2 source data item, COMID</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release</codesetn>
+            <codesets>https://doi.org/10.5066/P9PA63SM</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>GNIS_NAME</attrlabl>
+        <attrdef>Flowline Geographic Names Information System Identifier (GNIS) derived from original source data.</attrdef>
+        <attrdefs>Schwarz, G.E., and Wieczorek, M.E., 2018, Database of modified routing for NHDPlus version 2.1 flowlines: ENHDPlusV2_us: U.S. Geological Survey data release, https://doi.org/10.5066/P9PA63SM</attrdefs>
+        <attrdomv>
+          <udom>Character string of geographic feature name if available from source.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC8</attrlabl>
+        <attrdef>8-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC12</attrlabl>
+        <attrdef>12-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units: https://doi.org/10.5066/P9CFXHGT</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Moore, R.B., Johnston, C.M., and Hayes, L., 2019, Crosswalk Table Between NHDPlus V2.1 and its Accompanying WBD Snapshot of 12-Digit Hydrologic Units</codesetn>
+            <codesets>https://doi.org/10.5066/P9CFXHGT</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>HUC4</attrlabl>
+        <attrdef>4-digit Hydrologic Unit Code</attrdef>
+        <attrdefs>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p. https://pubs.usgs.gov/wsp/wsp2294/</attrdefs>
+        <attrdomv>
+          <codesetd>
+            <codesetn>Seaber, P.R., Kapinos, F.P., and Knapp, G.L., 1987, Hydrologic Unit Maps: U.S. Geological Survey Water-Supply Paper 2294, 63 p.</codesetn>
+            <codesets>https://pubs.usgs.gov/wsp/wsp2294/</codesets>
+          </codesetd>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntperp>
+          <cntper>U.S. Geological Survey - ScienceBase</cntper>
+          <cntorg>U.S. Geological Survey - ScienceBase</cntorg>
+        </cntperp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+          <country>United States</country>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty. Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government.</distliab>
+    <techpreq>There are no technical prerequisites to view or edit the comma-delimited text files.</techpreq>
+  </distinfo>
+  <metainfo>
+    <metd>20200821</metd>
+    <metc>
+      <cntinfo>
+        <cntperp>
+          <cntper>Kenneth D Skinner</cntper>
+          <cntorg>NW-PACIFIC ISLAND REG: IDAHO WATER SCI CTR</cntorg>
+        </cntperp>
+        <cntpos>Hydrologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>Mail Stop 939, 230 Collins Road</address>
+          <city>Boise</city>
+          <state>ID</state>
+          <postal>83702</postal>
+          <country>United States</country>
+        </cntaddr>
+        <cntvoice>208-387-1343</cntvoice>
+        <cntemail>kskinner@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>
