@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "simulated-customer-review",
+  "components": {
+    "simulated-customer-review": {
+      "title": "Simulated field customer requests and complete engineering handback",
+      "paths": [
+        "model/simulated_customer_review.py",
+        "docs/SIMULATED_CUSTOMER_REVIEW.md",
+        "integration/component_fragments/simulated-customer-review.json"
+      ],
+      "requires": [
+        "eco13",
+        "implementation"
+      ]
+    }
+  },
+  "required_components": [
+    "simulated-customer-review"
+  ],
+  "source_reference": "Same original simulated field operation through native customer review, assigned engineering, exact revised evidence, complete packages and restored-project receiving."
+}
