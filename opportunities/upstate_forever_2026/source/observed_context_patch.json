@@ -80,8 +80,8 @@
   },
   "additions": {
     "source/import_observed_context.py": {
-      "bytes": 13821,
-      "sha256": "32f34e028661510c6a94501625349095fddbad5d1fca973e6166b302046f138e"
+      "bytes": 13666,
+      "sha256": "5de7bcc4ce42424f97448f7160940482b6c098fa783692e5c75166db1b3d2af2"
     },
     "operator/web/observed_series.mjs": {
       "bytes": 9643,
