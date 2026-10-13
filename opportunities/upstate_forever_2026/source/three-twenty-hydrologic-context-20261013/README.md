@@ -1,6 +1,6 @@
 # Three and Twenty Creek: original hydrologic linkage
 
-This complete geographic companion connects the four monitoring stations used by the retained 2026 and 2021–2025 observation studies. It uses the original USGS Network Linked Data Index (NLDI) responses and unchanged Water Quality Portal station coordinates. It provides an interactive map, original location representations, the complete returned downstream and upstream flowlines, and source-bound station-to-station geometric distances.
+This complete geographic companion connects the four monitoring stations used by the retained 2026 and 2021–2025 observation studies. It uses the original USGS Network Linked Data Index (NLDI) responses and unchanged Water Quality Portal station coordinates. It provides an interactive map, original location representations, the complete returned downstream and upstream flowlines, source-bound station-to-station geometric distances, and original contributing catchments with native polygon area and incremental-land analysis.
 
 ## Results in the retained source edition
 
@@ -29,15 +29,28 @@ The 45-reach original upstream network already captured for SV-833 is available 
 
 This geography makes the sampling comparisons easier to interpret. The [retained January 14, 2026 comparison](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/fd5c88455da42fe6a696823612eb7b4e13e569a0/opportunities/upstate_forever_2026/observations/three_twenty_2026/same-day-contrasts.csv) spans approximately 15.109 km of returned mainstem geometry and 38 minutes between the literal original sampling clocks. The records do not establish that the same water parcel was sampled. Historical comparison tables may label station B minus station A in a different order from river flow: comparison order and downstream direction are distinct.
 
+## Original contributing catchments and native GIS measurements
+
+The four basin responses retain one original Polygon each. In upstream-to-downstream order they have 273, 392, 498 and 540 original coordinate positions, including ring-closing positions. SV-735 has an exterior ring and one interior ring; the hole remains part of the original geometry.
+
+The query returns whole contributing catchments associated with the indexed station reach. With `splitCatchment=false`, its outlet reach retains the whole contributing catchment. This is distinct from clipping a polygon exactly at a monitoring point. The catchment layer has its own explicit source identity and geographic support alongside the original station positions.
+
+The native Python producer uses pyproj and Shapely to validate the original and projected geometry, transform original WGS84 vertices to EPSG:5070, and measure planar polygon areas in square metres and square kilometres. Projected vertices are joined by straight segments. The original coordinate sequences remain unchanged in the delivered source responses.
+
+For each of the three consecutive downstream station pairs, the producer computes the actual polygon intersection, upstream land outside the downstream catchment, and downstream land outside the upstream catchment. The last operation creates the incremental land polygon. It records exact native coverage, overlap fraction, topology relations, area-balance residuals and all nonzero outside areas. The report and source tables retain those raw results. Scalar area subtraction is displayed separately from the actual polygon difference.
+
+Use the four original outlines to inspect whole contributing catchments. When the native result is attached, use the incremental layer to inspect the additional land between consecutive stations. The source hashes, original station COMIDs and full 65-reach directed endpoint chain bind the analysis to these exact locations. The areas describe this original geographic support. They do not designate restoration cells or replace the scenario's four placement polygons. The separate native NDR/SDR runs retain their own full upstream modeling domain and reporting-mask interpretation.
+
 ## Original inputs and reproducibility
 
-Fourteen unchanged original inputs are retained:
+Eighteen unchanged original inputs are retained:
 
 - Seven new original NLDI responses: three indexed station features, three coordinate hydrolocations and the SV-833 downstream-mainstem flowline response.
 - Three previously captured SV-833 originals: indexed feature, coordinate hydrolocation and upstream whole reaches.
 - Four original WQP station CSV bodies, including the original multi-station catalogue containing SV-833.
+- Four original NLDI whole contributing-catchment responses: the retained SV-833 polygon and newly captured RS-26250, SV-735 and SV-111 polygons. All queries request `simplified=false&splitCatchment=false`.
 
-The input manifest contains each original public query URL, application-relative path, UTF-8 byte length and SHA-256. The seven newly captured NLDI bodies are also attached to the existing [Upper Savannah primary source page](https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84). Exact original bytes are reused; source coordinates and records are not rewritten.
+The input manifest contains each original public query URL, application-relative path, UTF-8 byte length and SHA-256. The ten newly captured NLDI bodies are also attached to the existing [Upper Savannah primary source page](https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84). Exact original bytes are reused; source coordinates and records are not rewritten.
 
 The pure JavaScript analysis, report renderer and output writers are retained with the inputs. The Node command verifies the complete original and authored inputs before rebuilding all derived outputs, source registration and inventory in a separate directory:
 
@@ -48,6 +61,18 @@ node source/three-twenty-hydrologic-context-20261013/build_study.mjs --app-root 
 The resulting output uses the original application-relative layout. Import `three_twenty_hydrologic_context.sources.json` through the maintained Sources workflow. It registers the report, complete analysis, location and original reach layers, and comparison tables together with their complete source/code closure.
 
 Open the generated report, use the station/extent/layer controls, inspect the original records, download the map and tables, and reopen the delivered source package. The companion joins the existing observed-data and regional model workflow; the maintained NHDPlus HR source collection and native NDR/SDR run owners keep their original execution.
+
+## Reproduce the native catchment analysis
+
+When an actual native result is retained, it is an explicit computed input to the report. Its exact bytes and SHA-256 appear in `input-manifest.json.native_analysis`. The Node rebuild reads that same result and verifies it before rendering the measured areas and incremental geometry. The result also binds every original basin, indexed station and downstream-network source, its descriptor, native producer and actual runtime. A source-only edition omits that optional descriptor and displays the original catchment geometry without native area or incremental results.
+
+Run the source-native GIS producer into a new output directory:
+
+```sh
+python source/three-twenty-hydrologic-context-20261013/native_catchments.py --application /ABSOLUTE/APPLICATION --inputs /ABSOLUTE/APPLICATION/source/three-twenty-hydrologic-context-20261013/native-catchment-inputs.json --output /ABSOLUTE/NEW_NATIVE_OUTPUT
+```
+
+The four native output files preserve the complete area/topology result, derived incremental GeoJSON and two numerical tables. `NATIVE_CATCHMENTS.md` explains their exact input and output contract. Keep the measured result with its producer/runtime and compare a regenerated result to that source edition before changing the final report's computed-input identity.
 
 ## Current Ecosystem delivery direction
 
@@ -105,8 +130,8 @@ owner-directed schedules.
 
 ## Open the river context inside the observation studies
 
-The maintained Published Studies registry attaches this source manifest to the SV-833 2021–2026, four-station 2026, and three-station historical 2021–2025 editions when the companion is installed. New imports retain its nine Sources entries under `application-context/three-twenty-hydrologic-context/`, alongside the selected study's unchanged original observations and statistical basis. The historical study still has three observation stations; the geographic companion keeps its explicit four-station scope. Reopen the exported Study and Workspace to use the same original map, report, source links and downloads.
+The maintained Published Studies registry attaches this source manifest to the SV-833 2021–2026, four-station 2026, and three-station historical 2021–2025 editions when the companion is installed. New imports retain its river, catchment and native-analysis Sources entries under `application-context/three-twenty-hydrologic-context/`, alongside the selected study's unchanged original observations and statistical basis. The historical study still has three observation stations; the geographic companion keeps its explicit four-station scope. Reopen the exported Study and Workspace to use the same original map, report, source links and downloads.
 
-The complete delivery contains 35 files. Native Sources closes 34 of these: its manifest and all 33 original, authored and output companions. The external `family.json` inventories those 34 members; its exclusion from its own inventory avoids a circular hash. All inputs needed to reproduce the 35-file delivery remain inside the native source closure. Published Studies additionally validates the external inventory against every native source member and retains it, so its exported geographic context carries the complete 35-file family.
+The complete source family contains every original, authored input and derived output listed in `family.json`, together with that inventory. Native Sources retains the manifest and all of its original, authored, analytical and native-output companions. Published Studies additionally validates the external inventory against every source member and retains it, so the exported geographic context carries the complete family. Every input needed to reproduce the delivery remains available.
 
-The original-source hyperlinks use paths relative to the report directory. They resolve in the application directory, the native Sources viewer after its common source parent is removed, and the retained Published Studies context. Rebuild into a new output directory with the command above. For an existing populated application, `Workspace(existing_path).import_sources(manifest_path)` admits the nine Sources entries without starting or changing a native model run.
+The original-source hyperlinks use paths relative to the report directory. They resolve in the application directory, the native Sources viewer after its common source parent is removed, and the retained Published Studies context. Rebuild into a new output directory with the command above. For an existing populated application, `Workspace(existing_path).import_sources(manifest_path)` admits the declared Sources entries without starting or changing a native model run.

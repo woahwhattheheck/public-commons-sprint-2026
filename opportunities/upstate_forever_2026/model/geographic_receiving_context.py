@@ -299,6 +299,7 @@ def prepare(workspace, prepared, *, scopes=SCOPES, progress=None):
         "allocation_implementation_sha256": file_digest(allocation.__file__),
         "allocation_rendering_sha256": file_digest(allocation.rendering.__file__),
         "allocation_contrasts_sha256": file_digest(allocation.contrasts.__file__),
+        "allocation_siting_sha256": file_digest(allocation.siting.__file__),
         "allocation_utility_profile_sha256": file_digest(
             Path(__file__).resolve().parents[1] / "source/receptor-profiles/utility-focus-20261012.json"),
         "plan_selections": specs, "quantity_scopes": list(scopes),

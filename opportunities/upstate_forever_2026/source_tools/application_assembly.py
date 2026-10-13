@@ -3,6 +3,22 @@
 
 Run directly or as python -m source_tools.application_assembly. Uses only the
 Python standard library; source inputs are never imported or executed.
+
+For a complete source bank declaring commons.source-composition/v1, opt in to
+its explicit delta/support selection with --declared-overlay INDEX (base is 0):
+    python source_tools/application_assembly.py /actual/application \\
+        --overlay /retained/complete-bank.json --declared-overlay 1 \\
+        --edition selected-report-source --output /fresh/application
+
+Unselected overlays keep the original exact predecessor rules. Selected
+supporting members fill absent paths and preserve existing installed bodies.
+Selected delta members still need their exact predecessor or SHA-bound literal
+patches. Every patch is checked against its complete published postimage before
+it is joined with current source. Conflicting anchors stop before publication;
+they never authorize a whole-file replacement of an unknown successor. The
+result retains actual pre/post hashes and selected edit outcomes. Component and
+source validation, atomic fresh-directory receiving, and the original native
+workspace remain part of the existing receiving course.
 """
 from __future__ import annotations
 
@@ -319,6 +335,9 @@ def join_source_banks(documents):
              "external_sources": [originals[name] for name in sorted(originals)],
              "source_bank_blocks": [{"bytes": len(body), "sha256": sha256(body)}
                                     for body in documents]}
+    declared = _joined_composition(parsed)
+    if declared is not None:
+        value["composition"] = declared
     return canonical(value)
 
 
@@ -1150,7 +1169,190 @@ def layer_from_document(document, receipt=None):
     return Layer(document, files, checked, receipt)
 
 
-def compose(layers, *, edition, operation_id=None, include_receiver=True, inspect_only=False):
+DECLARED_COMPOSITION_SCHEMA = "commons.source-composition/v1"
+
+
+def _joined_composition(documents):
+    """Keep explicit source-join declarations when one bank spans several blocks."""
+    selected = [value.get("composition") for value in documents
+                if value.get("composition") is not None]
+    if not selected:
+        return None
+    if any(not isinstance(value, dict) for value in selected):
+        raise ValueError("Invalid source-bank composition declaration")
+    if len({canonical(value) for value in selected}) == 1:
+        return selected[0]
+    if any(value.get("schema") != DECLARED_COMPOSITION_SCHEMA for value in selected):
+        raise ValueError("Source-bank blocks have different composition declarations")
+    paths = {"delta_paths": set(), "supporting_exact_paths": set()}
+    patches = {}
+    for document in documents:
+        value = document.get("composition")
+        if value is None:
+            continue
+        prefix = document.get("prefix")
+        for key in paths:
+            rows = value.get(key)
+            if not isinstance(rows, list):
+                raise ValueError("Source composition requires explicit " + key)
+            for name in rows:
+                paths[key].add(source_member_name(name, prefix))
+        rows = value.get("patches", [])
+        if not isinstance(rows, list):
+            raise ValueError("Source composition patches must be a list")
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError("Invalid source composition patch")
+            name = source_member_name(row.get("path"), prefix)
+            row = {**row, "path": name}
+            if name in patches and canonical(patches[name]) != canonical(row):
+                raise ValueError("Source-bank blocks have different source patches: " + name)
+            patches[name] = row
+    if paths["delta_paths"] & paths["supporting_exact_paths"]:
+        raise ValueError("Source-bank blocks disagree on delta and support membership")
+    return {"schema": DECLARED_COMPOSITION_SCHEMA,
+            **{key: sorted(values) for key, values in paths.items()},
+            "patches": [patches[name] for name in sorted(patches)]}
+
+
+def _source_occurrences(text, anchor):
+    positions = []
+    start = 0
+    while True:
+        found = text.find(anchor, start)
+        if found < 0:
+            return positions
+        positions.append(found)
+        start = found + 1
+
+
+def declared_composition(layer):
+    """Validate the selected delta/support partition and original literal edits."""
+    value = layer.document.get("composition")
+    if not isinstance(value, dict) or value.get("schema") != DECLARED_COMPOSITION_SCHEMA:
+        raise ValueError("Selected declared overlay needs " + DECLARED_COMPOSITION_SCHEMA)
+    partitions = {}
+    for key in ("delta_paths", "supporting_exact_paths"):
+        rows = value.get(key)
+        if not isinstance(rows, list):
+            raise ValueError("Declared overlay requires explicit " + key)
+        names = [source_member_name(name, layer.document.get("prefix")) for name in rows]
+        if len(set(names)) != len(names):
+            raise ValueError("Declared overlay repeats a path in " + key)
+        partitions[key] = set(names)
+    delta, support = partitions["delta_paths"], partitions["supporting_exact_paths"]
+    if delta & support or delta | support != set(layer.files):
+        raise ValueError("Declared delta and support paths must partition every complete source member")
+    rows = value.get("patches", [])
+    if not isinstance(rows, list) or len(rows) > MAX_FILES:
+        raise ValueError("Invalid declared source patch inventory")
+    patches = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Invalid declared source patch")
+        name = source_member_name(row.get("path"), layer.document.get("prefix"))
+        if name not in delta or name in patches:
+            raise ValueError("Each source patch must select one unique delta member: " + name)
+        for key in ("preimage_sha256", "postimage_sha256"):
+            if not isinstance(row.get(key), str) or not re.fullmatch(r"[0-9a-f]{64}", row[key]):
+                raise ValueError("Invalid source patch " + key + ": " + name)
+        if row["postimage_sha256"] != layer.metadata[name]["sha256"]:
+            raise ValueError("Source patch postimage differs from complete member: " + name)
+        if layer.metadata[name]["encoding"] != "utf-8":
+            raise ValueError("Guarded source composition requires UTF-8 text: " + name)
+        edits = row.get("edits")
+        if edits is None and "before" in row and "after" in row:
+            edits = [{"before": row["before"], "after": row["after"]}]
+        if not isinstance(edits, list) or not edits or len(edits) > MAX_FILES:
+            raise ValueError("Source patch needs nonempty original edit declarations: " + name)
+        checked = []
+        for edit in edits:
+            if (not isinstance(edit, dict)
+                    or not isinstance(edit.get("before"), str) or not edit["before"]
+                    or not isinstance(edit.get("after"), str) or not edit["after"]
+                    or edit["before"] == edit["after"]
+                    or "\0" in edit["before"] or "\0" in edit["after"]):
+                raise ValueError("Source patches require distinct nonempty text anchors: " + name)
+            checked.append({"before": edit["before"], "after": edit["after"]})
+        # Complete published postimages bind the edits to an actual original body.
+        # Reverse and forward replay prove both identities before touching a base.
+        before = layer.files[name]
+        for edit in reversed(checked):
+            if len(_source_occurrences(before, edit["after"])) != 1:
+                raise ValueError("Source patch cannot recover its unique original preimage: " + name)
+            before = before.replace(edit["after"], edit["before"], 1)
+        if sha256(before.encode("utf-8")) != row["preimage_sha256"]:
+            raise ValueError("Source patch original preimage identity differs: " + name)
+        replay = before
+        for edit in checked:
+            if len(_source_occurrences(replay, edit["before"])) != 1:
+                raise ValueError("Source patch original before anchor is not unique: " + name)
+            replay = replay.replace(edit["before"], edit["after"], 1)
+        if replay != layer.files[name]:
+            raise ValueError("Source patch replay differs from complete postimage: " + name)
+        patches[name] = {key: row[key] for key in ("preimage_sha256", "postimage_sha256")}
+        patches[name]["edits"] = checked
+    return {**partitions, "patches": patches,
+            "sha256": sha256(canonical(value))}
+
+
+def compose_guarded_source(current, incoming, patch, name):
+    """Join verified edits to the actual source, retaining unrelated newer text."""
+    declared_after = patch["postimage_sha256"]
+    if sha256(current.encode("utf-8")) == declared_after:
+        return current, {"state": "already_published", "edits": []}
+    current_hash = sha256(current.encode("utf-8"))
+    if current_hash == patch["preimage_sha256"]:
+        return incoming, {"state": "original_preimage",
+                          "edits": [{"index": index, "state": "applied"}
+                                    for index in range(len(patch["edits"]))]}
+    # A successor can contain every final edit with overlapping context. Reverse
+    # replay and a full forward round-trip recognize that complete state first.
+    restored = current
+    already = True
+    for edit in reversed(patch["edits"]):
+        if len(_source_occurrences(restored, edit["after"])) != 1:
+            already = False
+            break
+        restored = restored.replace(edit["after"], edit["before"], 1)
+    if already:
+        replay = restored
+        for edit in patch["edits"]:
+            if len(_source_occurrences(replay, edit["before"])) != 1:
+                already = False
+                break
+            replay = replay.replace(edit["before"], edit["after"], 1)
+        if already and replay == current:
+            return current, {"state": "retained_successor",
+                             "edits": [{"index": index, "state": "already_present"}
+                                       for index in range(len(patch["edits"]))]}
+    result, outcomes = current, []
+    for index, edit in enumerate(patch["edits"]):
+        old, new = edit["before"], edit["after"]
+        old_positions = _source_occurrences(result, old)
+        new_positions = _source_occurrences(result, new)
+        # An insertion may contain its complete before anchor inside its after.
+        outside = [position for position in old_positions
+                   if not any(start <= position and position + len(old) <= start + len(new)
+                              for start in new_positions)]
+        if len(new_positions) == 1 and not outside:
+            state = "already_present"
+        elif not new_positions and len(old_positions) == 1:
+            result = result.replace(old, new, 1)
+            state = "applied"
+        else:
+            raise ValueError(
+                "Guarded source join conflict: " + name + "; edit=" + str(index)
+                + "; current_sha256=" + current_hash
+                + "; before_matches=" + str(len(old_positions))
+                + "; after_matches=" + str(len(new_positions))
+                + ". Compose this exact edit with the current source; the installed body is unchanged.")
+        outcomes.append({"index": index, "state": state})
+    return result, {"state": "composed_successor", "edits": outcomes}
+
+
+def compose(layers, *, edition, operation_id=None, include_receiver=True, inspect_only=False,
+            declared_overlays=()):
     """Apply caller-selected complete layers in order; never edit an input tree."""
     if not layers:
         raise ValueError("Choose a complete application base")
@@ -1165,15 +1367,48 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
                          "or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
+    if (not isinstance(declared_overlays, (list, tuple, set))
+            or any(type(index) is not int or not 0 < index < len(layers)
+                   for index in declared_overlays)
+            or len(set(declared_overlays)) != len(declared_overlays)):
+        raise ValueError("Declared overlays must select unique overlay indexes after base zero")
+    selected_compositions = {index: declared_composition(layers[index])
+                             for index in declared_overlays}
     files, metadata, changes, externals, references = {}, {}, [], {}, {}
     for index, layer in enumerate(layers):
         origin = layer.receipt["payload_sha256"]
+        selected = selected_compositions.get(index)
         for name, content in sorted(layer.files.items()):
             item = dict(layer.metadata[name])
             previous = metadata.get(name)
             expected = item.pop("base_sha256", None)
             declarations = item.pop("predecessor_declarations", [])
+            support = selected is not None and name in selected["supporting_exact_paths"]
+            if support and previous is not None:
+                changes.append({"layer": index, "path": name,
+                                "action": "preserved_support",
+                                "previous_sha256": previous["sha256"],
+                                "sha256": previous["sha256"],
+                                "declared_sha256": item["sha256"],
+                                "composition_sha256": selected["sha256"]})
+                continue
+            if support:
+                # This explicit support selection supplies only absent members.
+                expected = None
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
+            guarded = None
+            patch = selected["patches"].get(name) if selected is not None else None
+            if previous is not None and patch is not None:
+                if previous.get("encoding", "utf-8") != "utf-8":
+                    raise ValueError("Current source is not UTF-8 for guarded composition: " + name)
+                content, guarded = compose_guarded_source(files[name], content, patch, name)
+                body = content.encode("utf-8")
+                item.update(bytes=len(body), sha256=sha256(body), mode=previous["mode"])
+                if item["sha256"] != patch["postimage_sha256"]:
+                    item["git_blob"] = None
+                guarded.update(composition_sha256=selected["sha256"],
+                               declared_preimage_sha256=patch["preimage_sha256"],
+                               declared_postimage_sha256=patch["postimage_sha256"])
             if previous is None:
                 action = "added"
             elif previous["sha256"] == item["sha256"] and previous["mode"] == item["mode"]:
@@ -1183,7 +1418,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             # Complete snapshots belong at layer zero. A changed overlay must
             # identify the actual member it joins; later arrival is not recency.
             if ((action == "added" and expected is not None)
-                    or (action == "replaced"
+                    or (action == "replaced" and guarded is None
                         and (expected is None or expected != previous["sha256"]))):
                 current = previous["sha256"] if previous else "<absent>"
                 raise ValueError(
@@ -1205,6 +1440,8 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
                     change["base_sha256"] = expected
                 if declarations:
                     change["predecessor_declarations"] = declarations
+                if guarded is not None:
+                    change["guarded_composition"] = guarded
                 changes.append(change)
             files[name], metadata[name] = content, item
         def keep_reference(original):
@@ -1291,6 +1528,8 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
         "family_inventories": family_inventories,
         "edition": edition, "operation_id": operation_id,
         "layers": [layer.receipt for layer in layers],
+        "declared_overlays": [{"layer": index, "composition_sha256": selected["sha256"]}
+                              for index, selected in sorted(selected_compositions.items())],
         "changes": changes,
         "members": {name: {key: item[key] for key in ("bytes", "sha256", "mode")}
                     for name, item in sorted(metadata.items())},
@@ -1526,6 +1765,8 @@ def main(argv=None):
     parser.add_argument("base", type=Path, help="Complete application JSON/gzip/Canvas, or the actual installed application directory")
     parser.add_argument("--overlay", action="append", type=Path, default=[],
                         help="Complete component carrier to apply; repeat in selected source order")
+    parser.add_argument("--declared-overlay", action="append", type=int, default=[], metavar="INDEX",
+                        help="Apply this overlay\'s explicit delta/support partition and verified literal patches; base is 0")
     parser.add_argument("--edition", required=True, help="Stable name of this cumulative application")
     parser.add_argument("--operation-id")
     parser.add_argument("--family-component", action="append", default=[],
@@ -1541,7 +1782,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.family_component:
-            if args.overlay or args.output or args.archive_path or args.expect:
+            if args.overlay or args.output or args.archive_path or args.expect or args.declared_overlay:
                 raise ValueError("Family export uses one retained application directory and --source-map or --inspect")
             if not args.base.is_dir() or (not args.inspect and not args.source_map):
                 raise ValueError("Choose the original application directory and --source-map, or --inspect")
@@ -1572,7 +1813,7 @@ def main(argv=None):
             pins[index] = expected
         layers = [read_layer(path, payload_sha256=pins.get(index)) for index, path in enumerate(paths)]
         document = compose(layers, edition=args.edition, operation_id=args.operation_id,
-                           inspect_only=args.inspect)
+                           inspect_only=args.inspect, declared_overlays=args.declared_overlay)
         payload = canonical(document)
         receipt = source_receipt(document, payload)
         result = {**receipt, "edition": args.edition,
@@ -1580,6 +1821,9 @@ def main(argv=None):
                   "added": sum(change["action"] == "added" for change in document["assembly"]["changes"]),
                   "replaced": [change for change in document["assembly"]["changes"]
                                if change["action"] == "replaced"],
+                  "preserved_support": [change for change in document["assembly"]["changes"]
+                                        if change["action"] == "preserved_support"],
+                  "declared_overlays": document["assembly"]["declared_overlays"],
                   "external_sources": document["external_sources"],
                   "local_dependencies": local_dependencies(document),
                   "component_inventory": document["component_inventory"],

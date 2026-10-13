@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MODEL_FILES = ('gis_study_context.py', 'gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
+MODEL_FILES = ('gis_revision_context.py', 'gis_study_context.py', 'gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
                'gis_vector_review.py', 'gis_project_cli.py',
                'gis_project_native.py', 'gis_project_view.html', 'GIS_PROJECTS.md', 'requirements-gis.txt')
 OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
@@ -18,8 +18,14 @@ OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'operator/extensions/gis-projects.json', 'operator/gis_vector_reviews.py',
     'operator/extensions/gis-vector-reviews.json',
     'source_tools/receive_native_study_gis.py', 'source/GIS_NATIVE_STUDY.md',
-    'integration/component_fragments/gis-native-study.json')
+    'integration/component_fragments/gis-native-study.json',
+    'source_tools/receive_run_revision_gis.py', 'source/GIS_RUN_REVISION.md',
+    'integration/component_fragments/gis-run-revision.json')
 SHARED_REPORT_FILES = {
+    'operator/web/run_revision.mjs': {'4cdfa55c29efe0546ba32debf3b1d5e96953c6327543e2b5be54c5b37b0935fd', '22f01d2c4f9edee410a30e4ba681daba4f6383b7a69d66fbadccda4d1185e768'},
+    'operator/web/run_workbench.mjs': {'d7aae8e14cd8b3843b6f9b71e853eb7e0d83a9d73d88cbaa7933129f0fe58d18'},
+    'operator/web/native_run_history.mjs': {'62d5fa9476183b833ddd70e788c9ed0df61fe3d20bcd8fa36730e7dd5682757f'},
+
     'operator/source_report_editions.py': {'f291275fad9ef4064d718a48012a0601b4bd7b4f60d5ccb1186646aa4a4c4756'},
     'operator/web/source_report_editions.mjs': {'9ab75d0a9b64d32087d74974d8d35af345dc3647a53146402e95a2832a50d302'},
 }
@@ -124,15 +130,18 @@ def _vector_server_source(text):
 
 PREVIOUS_NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
                                    'workspace, one("native_study_collection"), one("native_study_source")))\n')
-NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
+PREVIOUS_CONTEXT_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
                           'workspace, one("native_study_collection"), one("native_study_source"), '
                           'one("scientific_report_id"), one("execution_history_id")))\n')
+NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
+                          'workspace, one("native_study_collection"), one("native_study_source"), '
+                          'one("scientific_report_id"), one("execution_history_id"), one("run_revision_id")))\n')
 ORIGINAL_CATALOGUE = '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n'
 
 
 def server_source(text):
     # Normalize our exact earlier direct route before the existing vector joins.
-    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, NATIVE_STUDY_CATALOGUE):
+    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, PREVIOUS_CONTEXT_CATALOGUE, NATIVE_STUDY_CATALOGUE):
         if route in text:
             text = once(text, route, ORIGINAL_CATALOGUE, 'native-study direct route')
     text = _vector_server_source(_base_server_source(text))

@@ -1,0 +1,41 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gis-run-revision",
+  "components": {
+    "gis-run-revision": {
+      "title": "Original run revision, exact execution history and editable GIS handover",
+      "requires": [
+        "core",
+        "gis-projects",
+        "run-revisions",
+        "native-run-history"
+      ],
+      "paths": [
+        "model/gis_revision_context.py",
+        "model/gis_study_context.py",
+        "model/gis_workspace.py",
+        "model/gis_project.py",
+        "operator/gis_projects.py",
+        "operator/web/gis-projects.mjs",
+        "operator/web/run_revision.mjs",
+        "operator/web/run_workbench.mjs",
+        "operator/web/native_run_history.mjs",
+        "source_tools/receive_run_revision_gis.py",
+        "source/GIS_RUN_REVISION.md",
+        "install_gis_projects.py",
+        "integration/component_fragments/gis-run-revision.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ]
+    }
+  },
+  "required_components": [
+    "gis-run-revision"
+  ],
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "original_revision": "upstate.run-revision-handover/v1",
+    "original_gis": "upstate.gis-request/v1",
+    "original_history": "upstate.native-run-history/v1",
+    "source_claim": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791893870464319?thread_ts=1791724121.853269"
+  }
+}

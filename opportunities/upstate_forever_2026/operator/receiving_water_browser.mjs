@@ -284,6 +284,36 @@ function verifyReview(review, target, catalog) {
   assert.ok(review.view?.crs && review.view.bounds?.length === 4);
   const layer = selected => catalog.layers.find(row => row.id === selected?.layer_id);
   const reference = layer(review.reference);
+  if (target.kind === 'plan-comparison') {
+    const expected=target.plan_map;
+    assert.equal(expected.schema,'upstate.receiving-water-plan-map/v1');
+    assert.equal(expected.reference.id,target.reference_id);
+    assert.equal(expected.candidate.id,target.id);
+    assert.equal(expected.subject_id,target.subject);
+    assert.equal(review.primary,null);assert.equal(review.comparison,null);
+    assert.deepEqual(review.overlays,expected.overlays);
+    assert.equal(review.title,expected.title);assert.equal(review.notes,expected.notes);
+    assert.equal(review.view.crs,expected.view.crs);
+    const shown=review.view.bounds,original=expected.view.bounds;
+    const tolerance=Math.max(...original.map(Math.abs),1)*1e-10;
+    assert.ok(shown[0]<=original[0]+tolerance&&shown[1]<=original[1]+tolerance&&
+      shown[2]>=original[2]-tolerance&&shown[3]>=original[3]-tolerance,
+      'The saved viewport must include every selected original boundary.');
+    for(const binding of expected.bindings){
+      const actual=layer(binding.selection);
+      assert.equal(actual?.owner_id,binding.plan_id);
+      assert.equal(actual.subject_id,target.subject);
+      assert.equal(actual.geometry_role,binding.geometry_role);
+      assert.equal(actual.sha256,binding.sha256);assert.equal(actual.bytes,binding.bytes);
+      const saved=review.bindings.find(row=>row.selection?.layer_id===binding.selection.layer_id&&row.selection?.layer===binding.selection.layer);
+      assert.ok(saved,'The saved review retains each original geographic source binding.');
+      assert.deepEqual(saved.selection,binding.selection);
+      assert.equal(saved.sha256,binding.sha256);assert.equal(saved.bytes,binding.bytes);
+      assert.equal(saved.group,'receiving-water-plan');assert.equal(saved.receiving_water_plan_id,binding.plan_id);
+      assert.equal(saved.subject_id,target.subject);
+    }
+    return;
+  }
   assert.equal(reference?.owner_id, target.id);
   if (target.kind === 'plan') {
     assert.equal(reference.group, 'receiving-water-plan');
@@ -310,6 +340,13 @@ function verifyReview(review, target, catalog) {
   assert.ok(review.bindings.some(row => row.receiving_water_plan_id === report.plan_id));
 }
 async function openTarget(target) {
+  if(target.kind==='plan-comparison'){
+    const root=await openPlanPair(target.reference_id,target.id);
+    await root.locator('[data-water-compare-search]').fill(target.subject);
+    await root.locator('[data-action="spatial-item"]'+attr('data-kind','receiving-water-plan-comparison')+
+      attr('data-reference-id',target.reference_id)+attr('data-id',target.id)+attr('data-subject',target.subject)).click();
+    await readyMap();return;
+  }
   await openWater(target.kind, target.id);
   if (target.kind === 'plan' && target.subject) {
     await page.locator('[data-water-filter="family"]').selectOption('');
@@ -359,6 +396,26 @@ function casesFor(plan, analysis) {
     }
   }
   assert.ok(cases.length, 'Choose existing original receiving areas.');
+  return cases;
+}
+
+
+async function planComparisonCases(reference,candidateId){
+  const candidate=await api(endpoint('/api/receiving-waters/plan',{plan_id:candidateId}));
+  assert.equal(candidate.state,'complete');
+  const ids=[...new Set([...reference.receptors,...candidate.receptors].map(row=>row.id))];
+  const cases=[];
+  for(const subject of ids){
+    if(c.subjects&&!c.subjects.some(row=>row.id===subject&&(!row.kind||row.kind==='receptor')))continue;
+    const request={reference_plan_id:reference.id,candidate_plan_id:candidate.id,subject_id:subject,
+      reference_record_sha256:reference.record_sha256,candidate_record_sha256:candidate.record_sha256};
+    const map=await api(endpoint('/api/receiving-waters/plan-map',request));
+    assert.equal(map.workspace_key,workspace);assert.equal(map.project_id,report.project_id);
+    assert.equal(map.reference.record_sha256,reference.record_sha256);
+    assert.equal(map.candidate.record_sha256,candidate.record_sha256);
+    cases.push({kind:'plan-comparison',id:candidate.id,reference_id:reference.id,
+      subject,subject_kind:'receptor',statistic:'areas',plan_map:map});
+  }
   return cases;
 }
 
@@ -675,7 +732,7 @@ try {
   assert.equal(plan.state, 'complete');
   report.plan_id = plan.id; report.analysis_id = analysis?.id || null;
   const cases = casesFor(plan, analysis); report.total_cases = cases.length;
-  const catalog = await api(endpoint('/api/spatial/catalog'));
+  let catalog = await api(endpoint('/api/spatial/catalog'));
   report.runtime = await api('/api/runtime');
   await checkpoint();
   if (selection.editable_selection) {
@@ -683,6 +740,8 @@ try {
     await editableSelection('plan', plan);
     if (analysis) await editableSelection('analysis', analysis);
     await operatePlanComparison(plan, analysis);
+    cases.push(...await planComparisonCases(plan,report.editable_selection.records.plan.id));
+    report.total_cases=cases.length;catalog=await api(endpoint('/api/spatial/catalog'));await checkpoint();
   }
   if(scopeAnalysis){attempt.stage='operate_quantity_support_comparison';await operateScopeComparison(analysis,scopeAnalysis);}
   attempt.stage = 'operate_maps';
@@ -709,6 +768,7 @@ try {
     const screenshot = path.join(output, key + '-attempt-' + report.attempts.length + '.png');
     await page.screenshot({path: screenshot, fullPage: true});
     row.screenshot = await fileRecord(screenshot);
+    if(target.kind==='plan-comparison')await captureEditable('plan-geography-'+key);
     row.saved_and_exported = true; await checkpoint();
   }
   attempt.stage = 'cold_reopen';

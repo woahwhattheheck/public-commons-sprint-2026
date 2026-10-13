@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-water-plan-geography",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "extend_components": {
+    "receiving-waters": {
+      "paths": [
+        "integration/component_fragments/receiving-water-plan-geography.json",
+        "model/receiving_water_plan_map.py",
+        "operator/web/receiving_water_plan_compare.mjs",
+        "operator/web/receiving_water_spatial.mjs"
+      ]
+    }
+  }
+}

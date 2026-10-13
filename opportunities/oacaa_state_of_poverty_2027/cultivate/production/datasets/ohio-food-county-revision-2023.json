@@ -1,0 +1,176 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-food-county-revision-2023",
+  "title": "Revised 2023 county child estimates — original report comparison",
+  "description": "Nine same-year comparisons between the original report Table 10 and the current source redistribution. These are release corrections, not changes between measurement years.",
+  "publicationPeriod": "Map the Meal Gap 2026 source working edition",
+  "dataPeriod": "2023, compared across releases",
+  "geography": "Nine Northeast Ohio counties",
+  "methodology": "The original report transcription is retained with its table-part locators. Revised values come from the complete received county CSV. Differences use tenths of one percentage point; no significance inference is made.",
+  "source": {
+    "title": "OACAA Table 10 and revised Feeding America county estimates",
+    "url": "https://www.feedingamerica.org/sites/default/files/2026-09/Map%20the%20Meal%20Gap%20Technical%20Brief.pdf",
+    "locator": "Technical brief physical pages 4–5; original report Table 10 and current HCI CSV 2023 rows.",
+    "publisher": "Feeding America",
+    "retrievedAt": "2026-10-13",
+    "note": "The publisher states that the previous county release used the wrong unemployment year. This correction did not affect statewide results.",
+    "rights": "Published statistical facts with attribution. Source representation and original URLs are retained; publisher branding and narrative are not licensed for reuse."
+  },
+  "columns": [
+    {
+      "key": "geography",
+      "label": "County",
+      "kind": "text",
+      "role": "label",
+      "unit": "",
+      "period": "2023",
+      "definition": "Original county identity."
+    },
+    {
+      "key": "period",
+      "label": "Data year",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "2023",
+      "definition": "Both values describe 2023."
+    },
+    {
+      "key": "original_rate",
+      "label": "Original report rate",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "2023",
+      "definition": "Child rate printed in the original OACAA Table 10."
+    },
+    {
+      "key": "revised_rate",
+      "label": "Revised source rate",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "2023",
+      "definition": "Current redistribution of Feeding America 2023 county estimate."
+    },
+    {
+      "key": "difference_pp",
+      "label": "Revision difference",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percentage points",
+      "period": "2023",
+      "definition": "Revised source rate minus original report rate; same data year."
+    }
+  ],
+  "rows": [
+    {
+      "id": "food-revision-ashland",
+      "values": {
+        "geography": "Ashland County, Ohio",
+        "period": "2023",
+        "original_rate": "19.7",
+        "revised_rate": "19.4",
+        "difference_pp": "-0.3"
+      },
+      "locator": "Original 2026 report Table 10 part 1; Original CSV record 3",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-ashtabula",
+      "values": {
+        "geography": "Ashtabula County, Ohio",
+        "period": "2023",
+        "original_rate": "23.3",
+        "revised_rate": "23.0",
+        "difference_pp": "-0.3"
+      },
+      "locator": "Original 2026 report Table 10 part 1; Original CSV record 15",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-cuyahoga",
+      "values": {
+        "geography": "Cuyahoga County, Ohio",
+        "period": "2023",
+        "original_rate": "26.0",
+        "revised_rate": "25.3",
+        "difference_pp": "-0.7"
+      },
+      "locator": "Original 2026 report Table 10 part 4; Original CSV record 27",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-geauga",
+      "values": {
+        "geography": "Geauga County, Ohio",
+        "period": "2023",
+        "original_rate": "10.1",
+        "revised_rate": "9.5",
+        "difference_pp": "-0.6"
+      },
+      "locator": "Original 2026 report Table 10 part 6; Original CSV record 39",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-lake",
+      "values": {
+        "geography": "Lake County, Ohio",
+        "period": "2023",
+        "original_rate": "16.2",
+        "revised_rate": "15.6",
+        "difference_pp": "-0.6"
+      },
+      "locator": "Original 2026 report Table 10 part 9; Original CSV record 51",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-lorain",
+      "values": {
+        "geography": "Lorain County, Ohio",
+        "period": "2023",
+        "original_rate": "19.3",
+        "revised_rate": "18.4",
+        "difference_pp": "-0.9"
+      },
+      "locator": "Original 2026 report Table 10 part 10; Original CSV record 63",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-medina",
+      "values": {
+        "geography": "Medina County, Ohio",
+        "period": "2023",
+        "original_rate": "12.3",
+        "revised_rate": "11.7",
+        "difference_pp": "-0.6"
+      },
+      "locator": "Original 2026 report Table 10 part 11; Original CSV record 75",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-portage",
+      "values": {
+        "geography": "Portage County, Ohio",
+        "period": "2023",
+        "original_rate": "16.5",
+        "revised_rate": "16.3",
+        "difference_pp": "-0.2"
+      },
+      "locator": "Original 2026 report Table 10 part 14; Original CSV record 87",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    },
+    {
+      "id": "food-revision-summit",
+      "values": {
+        "geography": "Summit County, Ohio",
+        "period": "2023",
+        "original_rate": "21.0",
+        "revised_rate": "20.7",
+        "difference_pp": "-0.3"
+      },
+      "locator": "Original 2026 report Table 10 part 16; Original CSV record 99",
+      "note": "Feeding America documents correction of 2023 county estimates because the prior release used 2022 unemployment data. Statewide estimates were unaffected. This compares the same measurement year."
+    }
+  ]
+}
