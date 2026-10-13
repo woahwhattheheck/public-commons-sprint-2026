@@ -28,7 +28,10 @@
         "source_tools/geographic_scenario_interpretation.mjs",
         "source_tools/geographic_headwaters_reopen.py",
         "source_tools/receive_geographic_headwaters.py",
-        "CURRENT_OWNER_DIRECTION.md"
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/compute_programme.py",
+        "model/receptor_study_transfer.py",
+        "model/geographic_programme.py"
       ]
     }
   }

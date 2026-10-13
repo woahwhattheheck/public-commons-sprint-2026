@@ -528,6 +528,72 @@ def _ensemble(closure, prepared):
             "selection_sha256": course["selection_sha256"], "run_ids": sorted(runs)}
 
 
+def _programmes(closure, prepared):
+    """Follow saved adopted Programmes through their original typed visitor."""
+    if not closure.selection.get("include_related_results", True):
+        return
+    from .common import read_json
+    from .compute_programme import ComputeProgrammes
+
+    prepared_member = "geographic-headwaters/" + prepared["id"] + "/prepared.json"
+    source_reference = ("geographic-edition:" + prepared["id"] + " / prepared-sha256:" +
+                        closure.files[prepared_member]["sha256"])
+    keys = ("baseline", "restoration", "matched-control")
+    run_ids = [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+    scenario_ids = [prepared["baseline_scenario_id"], *prepared["alternative_scenario_ids"]]
+    owner = ComputeProgrammes(closure.workspace)
+    for path in sorted((closure.root / "compute-programmes").glob("*/programme.json")):
+        # Discover only the exact original binding; do not capture unrelated
+        # programmes or follow filesystem aliases while looking for it.
+        if path.is_symlink() or path.parent.is_symlink():
+            continue
+        try:
+            candidate = read_json(path)
+        except (OSError, ValueError):
+            continue
+        selection = candidate.get("selection") if isinstance(candidate, dict) else None
+        if not isinstance(selection, dict) or selection.get("source_reference") != source_reference:
+            continue
+        key = identifier(path.parent.name)
+        owner._check_record(key, candidate)
+        if candidate["identity"].get("source_reference") != source_reference:
+            raise ValueError("The saved Geographic Programme changed its original source reference")
+        selected_runs = selection.get("runs")
+        bound_runs = candidate.get("runs")
+        if (selection.get("grid_id") != prepared["grid_id"]
+                or selection.get("baseline_run") != "baseline"
+                or not isinstance(selected_runs, list) or len(selected_runs) != 3
+                or not isinstance(bound_runs, list) or len(bound_runs) != 3):
+            continue
+        matches = True
+        for name, run_id, scenario_id, requested, bound in zip(
+                keys, run_ids, scenario_ids, selected_runs, bound_runs):
+            if (not isinstance(requested, dict) or not isinstance(bound, dict)
+                    or requested.get("key") != name or bound.get("key") != name
+                    or requested.get("native_run_id") != run_id or bound.get("run_id") != run_id
+                    or requested.get("profile_id") != prepared["profile_id"]
+                    or requested.get("scenario_id") != scenario_id
+                    or requested.get("models") != ["ndr", "sdr"]
+                    or bound.get("native_selection", {}).get("grid_id") != prepared["grid_id"]
+                    or bound.get("native_selection", {}).get("profile_id") != prepared["profile_id"]
+                    or bound.get("native_selection", {}).get("scenario_id") != scenario_id
+                    or digest(bound.get("native_selection")) != run_id):
+                matches = False
+                break
+        if not matches:
+            # A separately authored programme may reuse a provenance string.
+            # It is not this exact original adopted three-run programme.
+            continue
+        relative = "compute-programmes/" + key + "/programme.json"
+        if closure.read(relative) != candidate:
+            raise ValueError("The saved Geographic Programme changed during selection")
+        closure.need("compute-programmes", key,
+                     "Saved Geographic Programme for the exact original reference cohort")
+        # The maintained visitor owns programme/progress/report trees, native
+        # donors, comparisons, deliveries and pair-completion descendants.
+        # Its existing locks protect those files during the second resolution.
+
+
 def _prepared(closure, expected):
     key = identifier(expected.get("id"))
     prefix = "geographic-headwaters/" + key + "/"
@@ -581,6 +647,7 @@ def _prepared(closure, expected):
             raise ValueError("Geographic prepared run differs from its original selection")
         _footprint(closure, footprint_id, run_id)
     _ensemble(closure, value)
+    _programmes(closure, value)
     _node(closure, "geographic-headwaters", key, value["selection"]["title"],
           "Editable Geographic case and complete original input receipt")
     return value

@@ -14,7 +14,8 @@
     "workspace_transport_commit": "cc01c5710da426fd5c4f571fd2d040afd3cea1a3",
     "returned_review_engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
     "returned_review_provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
-    "returned_review_panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7"
+    "returned_review_panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
+    "returned_review_receiving_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409"
   },
   "files": [
     {
@@ -58,6 +59,11 @@
       "sha256": "341fefc51c2f423310a49e3a3fed45f990766700375fe66f15e8252301a97c0e"
     },
     {
+      "path": "checks/measurement_returned_reviews_operator.py",
+      "bytes": 17623,
+      "sha256": "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f"
+    },
+    {
       "path": "checks/returned_review_capacity.mjs",
       "bytes": 8950,
       "sha256": "24c6b8c0e8f32aeb69a538c885c421b779858b7a87b9759ca19a188ee6994d9c"
@@ -94,8 +100,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-returned-reviews-native.json",
-      "bytes": 878,
-      "sha256": "4a5a3ab52a5beacc45564f9aa3f1bf53c2fdc88f5c93ea410ffb55df952d19aa"
+      "bytes": 937,
+      "sha256": "e16de5a4089e4c9789065aa82193a422b6b262b26f2d6ce985be87c50fe6e761"
     },
     {
       "path": "integration/component_fragments/measurement-returned-reviews.json",
@@ -299,8 +305,8 @@
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 11783,
-      "sha256": "da23e0107596642f60f87d0356582bab01b7eacdabe391e7d01fbdee229d3089"
+      "bytes": 12775,
+      "sha256": "cb7387d6ee2340f85cf0c7c42c0de3c9d490c1d7863091f93c237f2e23c88d15"
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",

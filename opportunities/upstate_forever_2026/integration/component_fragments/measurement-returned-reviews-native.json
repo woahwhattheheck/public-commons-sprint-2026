@@ -10,7 +10,8 @@
         "operator/extensions/measurement-returned-reviews-native.json",
         "operator/web/measured_returned_reviews.mjs",
         "measurement_workspace/web/returned_reviews.mjs",
-        "operator/MEASUREMENT_RETURNED_REVIEWS.md"
+        "operator/MEASUREMENT_RETURNED_REVIEWS.md",
+        "checks/measurement_returned_reviews_operator.py"
       ],
       "requires": [
         "measurement-returned-reviews"

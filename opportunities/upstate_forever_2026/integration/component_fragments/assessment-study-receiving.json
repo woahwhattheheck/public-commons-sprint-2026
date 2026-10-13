@@ -332,7 +332,8 @@
         "operator/scientific_source_reader.py",
         "operator/web/scientific_source_reader.mjs",
         "operator/extensions/source-reports.json",
-        "operator/SOURCE_REPORTS.md"
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ]
     },
     "station-assessment": {
@@ -664,7 +665,8 @@
         "operator/scientific_source_reader.py",
         "operator/web/scientific_source_reader.mjs",
         "operator/extensions/source-reports.json",
-        "operator/SOURCE_REPORTS.md"
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ]
     },
     "study-transfer": {
@@ -996,7 +998,8 @@
         "operator/scientific_source_reader.py",
         "operator/web/scientific_source_reader.mjs",
         "operator/extensions/source-reports.json",
-        "operator/SOURCE_REPORTS.md"
+        "operator/SOURCE_REPORTS.md",
+        "model/ensemble_coefficient_evidence.py"
       ],
       "requires": [
         "station-assessment"
