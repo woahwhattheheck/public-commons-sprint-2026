@@ -6,6 +6,7 @@ import hashlib
 import http.client
 import json
 import os
+import re
 import ssl
 import time
 import urllib.error
@@ -101,23 +102,30 @@ def run(args):
                  response_file=str(directory / response_name))
             need(isinstance(result, dict) and result.get("workspace_id") == args.workspace_id,
                  "WORKSPACE_CHANGED", "This response belongs to another original workspace; retain the selected workspace.", 409)
-            need(isinstance(result.get("native_json"), str), "NATIVE_RESPONSE", "The complete native response text is missing.", 502)
-            native = result["native_json"].encode("utf-8")
-            need(hashlib.sha256(native).hexdigest() == result.get("native_sha256"),
-                 "NATIVE_DIGEST", "The exact native response digest differs.")
-            native_name = "native-" + str(number).zfill(6) + ".json"
-            save(directory / native_name, native)
-            attempt["native_file"] = native_name
-            attempt["native_sha256"] = result["native_sha256"]
-            native_value = parse(native)
-            need(isinstance(native_value, dict) and native_value.get("ok") is True,
-                 "NATIVE_RESPONSE", "The original native response has no successful envelope.", 502)
-            native_value = native_value.get("value")
             if path == "/v1/health":
-                need(isinstance(native_value, dict) and
-                     native_value.get("workspace", {}).get("workspace_id") == args.workspace_id,
+                need(isinstance(result.get("native_workspace"), dict) and
+                     result["native_workspace"].get("workspace_id") == args.workspace_id
+                     and result.get("state") == "CONNECTED",
                      "WORKSPACE_CHANGED", "The actual native health belongs to another workspace.", 409)
+                need(isinstance(result.get("native_state_sha256"), str) and
+                     re.fullmatch(r"[0-9a-f]{64}", result["native_state_sha256"]) and
+                     type(result.get("native_state_bytes")) is int and result["native_state_bytes"] > 0,
+                     "HEALTH_PROVENANCE", "The selected original health observation is incomplete.", 502)
+                attempt["native_state_sha256"] = result["native_state_sha256"]
+                attempt["native_state_bytes"] = result["native_state_bytes"]
             else:
+                need(isinstance(result.get("native_json"), str), "NATIVE_RESPONSE", "The complete native response text is missing.", 502)
+                native = result["native_json"].encode("utf-8")
+                need(hashlib.sha256(native).hexdigest() == result.get("native_sha256"),
+                     "NATIVE_DIGEST", "The exact native response digest differs.")
+                native_name = "native-" + str(number).zfill(6) + ".json"
+                save(directory / native_name, native)
+                attempt["native_file"] = native_name
+                attempt["native_sha256"] = result["native_sha256"]
+                native_value = parse(native)
+                need(isinstance(native_value, dict) and native_value.get("ok") is True,
+                     "NATIVE_RESPONSE", "The original native response has no successful envelope.", 502)
+                native_value = native_value.get("value")
                 expected_id = selected["id"]
                 response_id = ("command_id" if selected["kind"] == "command" else
                                "delivery_id" if selected["kind"] == "delivery" else "record_id")
