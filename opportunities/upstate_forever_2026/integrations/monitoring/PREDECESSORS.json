@@ -170,5 +170,10 @@
     "src/opportunities/upstate_forever_2026/operator/web/monitoring_fieldwork.mjs": "3fd06327c4ba24ab45dac440d2c21a96c2ea7d4d2b792a6eb82c0614d4e7685b",
     "src/opportunities/upstate_forever_2026/source_tools/receive_monitoring_fieldwork.py": "0013adef7cece77ff1c043bb06420a143d50b786686e79ab8de0cde565266eac",
     "src/opportunities/upstate_forever_2026/source_tools/return_monitoring_fieldwork.py": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be"
+  },
+  "maintained-before-budget-study-transfer-556144861e56a26f68f6e97c41e2c89767a92cda": {
+    "src/opportunities/upstate_forever_2026/model/monitoring_study_transfer.py": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring-frontiers.mjs": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0",
+    "src/opportunities/upstate_forever_2026/model/MONITORING_STUDY_TRANSFER.md": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce"
   }
 }

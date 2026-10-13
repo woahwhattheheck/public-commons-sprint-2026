@@ -187,8 +187,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 39178,
-      "sha256": "449b7946932d6fd9830048595f7079fbe9abde848ca5d007f69c5ab1e989c8c4",
+      "bytes": 40043,
+      "sha256": "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",

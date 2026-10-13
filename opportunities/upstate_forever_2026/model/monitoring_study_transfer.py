@@ -11,16 +11,18 @@ import copy
 from .common import canonical, digest, identifier, read_json
 
 ROOT_KINDS = ("monitoring_networks", "monitoring_plans", "monitoring_frontiers",
-              "monitoring_heads", "monitoring_observed_contexts")
+              "monitoring_heads", "monitoring_observed_contexts",
+              "monitoring_frontier_comparisons")
 IMMUTABLE_KINDS = ("monitoring_networks", "monitoring_plans", "monitoring_frontiers",
                    "monitoring_revisions", "monitoring_events",
-                   "monitoring_observed_contexts")
+                   "monitoring_observed_contexts", "monitoring_frontier_comparisons")
 MUTABLE_KINDS = ("monitoring_heads", "monitoring_frontier_jobs")
 DOCUMENTS = {"monitoring-report-sources": "report.json"}
 LABELS = {
     "monitoring_networks": "Monitoring networks",
     "monitoring_plans": "Monitoring designs",
-    "monitoring_frontiers": "Monitoring budget comparisons",
+    "monitoring_frontiers": "Monitoring budget frontiers",
+    "monitoring_frontier_comparisons": "Saved Monitoring budget choices",
     "monitoring_heads": "Editable monitoring campaigns",
     "monitoring_revisions": "Monitoring campaign revisions",
     "monitoring_events": "Monitoring field events",
@@ -203,12 +205,27 @@ def _report(closure, key, value):
     closure.tree(prefix)
     closure._descriptors(record["files"])
     closure._source_refs(record["source"], "Retained original Monitoring report source")
-    for row in closure.read(prefix + "/history-records.json"):
-        kind = {"plans": "monitoring_plans", "networks": "monitoring_networks",
-                "revisions": "monitoring_revisions", "events": "monitoring_events"}.get(row.get("kind"))
-        if kind is None:
-            raise ValueError("A Monitoring report has an unknown original history kind.")
-        closure.need(kind, row["id"], "Original reported Monitoring history")
+    if selection.get("comparison_id"):
+        comparison_id = identifier(selection["comparison_id"])
+        comparison = _native(closure, "monitoring_frontier_comparisons", comparison_id)
+        expected = {
+            "comparison_id": comparison_id,
+            "frontier_id": comparison["frontier_id"],
+            "network_id": comparison["network_id"],
+            "plan_ids": comparison["plan_ids"],
+            "context_ids": comparison["selection"]["context_ids"],
+        }
+        if closure.read(prefix + "/comparison-records.json") != expected:
+            raise ValueError("The Monitoring report changed its exact saved budget choices.")
+        closure.need("monitoring_frontier_comparisons", comparison_id,
+                     "Editable original budget comparison behind the retained report")
+    else:
+        for row in closure.read(prefix + "/history-records.json"):
+            kind = {"plans": "monitoring_plans", "networks": "monitoring_networks",
+                    "revisions": "monitoring_revisions", "events": "monitoring_events"}.get(row.get("kind"))
+            if kind is None:
+                raise ValueError("A Monitoring report has an unknown original history kind.")
+            closure.need(kind, row["id"], "Original reported Monitoring history")
     closure.monitoring_reports[key] = {
         "id": key, "record_sha256": record["record_sha256"],
         "source": copy.deepcopy(record["source"]),
@@ -228,7 +245,8 @@ def include_source(closure, collection_id, entry):
         return False
     recipe = closure.read(entry["body"]["object"])
     if (recipe.get("schema") != observed_context.SCHEMA
-            or recipe.get("report_context_kind") != "monitoring-design-and-field-history"):
+            or recipe.get("report_context_kind") not in {
+                "monitoring-design-and-field-history", "monitoring-budget-comparison"}):
         raise ValueError("The selected Monitoring report lost its original recipe contract.")
     project_id = recipe.get("project_id")
     if not isinstance(project_id, str) or not project_id:
@@ -245,6 +263,10 @@ def include_source(closure, collection_id, entry):
     expected = {"source_collection_id": identifier(collection_id), "source_id": entry["id"]}
     if report.get("source") != expected:
         raise ValueError("The local Monitoring producer names another original source edition.")
+    expected_kind = ("monitoring-budget-comparison" if report.get("selection", {}).get("comparison_id")
+                     else "monitoring-design-and-field-history")
+    if recipe["report_context_kind"] != expected_kind:
+        raise ValueError("The Monitoring source recipe differs from its native report selection.")
     closure.need("monitoring-report-sources", key,
                  "Editable history of the explicitly ordered Monitoring report")
     return True
@@ -281,6 +303,28 @@ def _field_return(closure, event):
                  "Campaign revision reviewed for the original fieldwork return")
 
 
+def _comparison(closure, key, value):
+    """Reopen the original saved choice, preserving its exact immutable inputs."""
+    from .monitoring_frontier_comparison import inspect
+    inspected = inspect(closure.workspace, key)
+    if inspected != {**value, "id": key}:
+        raise ValueError("The saved Monitoring budget comparison changed while selected.")
+    selection = value["selection"]
+    if (selection["frontier_id"] != value["frontier_id"]
+            or selection["baseline_plan_id"] != value["baseline_plan_id"]
+            or value["baseline_plan_id"] not in value["plan_ids"]):
+        raise ValueError("The Monitoring comparison changed its retained baseline choice.")
+    closure.need("monitoring_frontiers", value["frontier_id"],
+                 "Original completed budget frontier of the saved comparison")
+    closure.need("monitoring_networks", value["network_id"],
+                 "Original source network of the saved budget comparison")
+    for plan_id in value["plan_ids"]:
+        closure.need("monitoring_plans", plan_id, "Original compared Monitoring design")
+    for context_id in selection["context_ids"]:
+        closure.need("monitoring_observed_contexts", context_id,
+                     "Exact per-plan observed context of the saved budget comparison")
+
+
 def visit(closure, kind, key, value):
     if kind not in LABELS:
         return False
@@ -296,7 +340,9 @@ def visit(closure, kind, key, value):
     if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
         raise ValueError("The original Monitoring record changed: " + kind + "/" + key)
     reason = "Original " + LABELS[kind].lower()
-    if kind == "monitoring_networks":
+    if kind == "monitoring_frontier_comparisons":
+        _comparison(closure, key, value)
+    elif kind == "monitoring_networks":
         _bindings(closure, value["source_bindings"], reason)
     elif kind == "monitoring_plans":
         closure.need("monitoring_networks", value["network_id"], reason)
@@ -373,6 +419,8 @@ def related(closure):
     networks = {key for kind, key in roots if kind == "monitoring_networks"}
     plans = {key for kind, key in roots if kind == "monitoring_plans"}
     campaigns = {key for kind, key in closure.nodes if kind == "monitoring_heads"}
+    frontiers = {key for kind, key in roots if kind == "monitoring_frontiers"}
+    comparisons = {key for kind, key in roots if kind == "monitoring_frontier_comparisons"}
     contexts = [closure.read("monitoring_observed_contexts/" + key + ".json")
                 for kind, key in roots if kind == "monitoring_observed_contexts"]
     plans.update(row["plan_id"] for row in contexts if row.get("plan_id"))
@@ -383,6 +431,17 @@ def related(closure):
                 closure.need(folder, path.stem, "Saved work on the explicitly selected Monitoring network")
                 if folder == "monitoring_plans":
                     plans.add(path.stem)
+    # Only explicitly chosen networks/frontiers discover other saved choices.
+    # A comparison retains its own exact contexts through the typed visitor;
+    # an implicitly reached network does not expand to every later comparison.
+    if networks or frontiers:
+        for path in sorted((closure.root / "monitoring_frontier_comparisons").glob("*.json")):
+            value = _related_row(closure, path)
+            if value is not None and (value.get("network_id") in networks
+                    or value.get("frontier_id") in frontiers):
+                comparisons.add(path.stem)
+                closure.need("monitoring_frontier_comparisons", path.stem,
+                             "Saved choices on the explicitly selected Monitoring frontier")
     # A selected design carries its editable campaigns. Comparing against the
     # retained current revision avoids matching arbitrary hashes or prose.
     if networks or plans:
@@ -408,7 +467,8 @@ def related(closure):
         if value is None or value.get("state") != "complete":
             continue
         selection = value.get("selection", {})
-        if selection.get("campaign_id") in campaigns or selection.get("plan_id") in plans:
+        if (selection.get("campaign_id") in campaigns or selection.get("plan_id") in plans
+                or selection.get("comparison_id") in comparisons):
             closure.need("monitoring-report-sources", path.parent.name, "Completed report for the selected Monitoring study")
 
 
@@ -489,7 +549,8 @@ def catalogue(workspace, kind):
                 record = workspace._get(kind, key)
                 title, state = record.get("title"), record.get("status") or "saved"
                 selection = {name: record[name] for name in
-                             ("network_id", "plan_id", "campaign_id", "campaign_revision_id") if record.get(name)}
+                             ("network_id", "plan_id", "campaign_id", "campaign_revision_id",
+                              "frontier_id", "baseline_plan_id") if record.get(name)}
             row = {"kind": kind, "id": key, "title": title or key[:12], "state": state,
                    "updated_at": record.get("created_at") or "", "selection": selection}
         except (ValueError, KeyError, OSError, TypeError) as error:

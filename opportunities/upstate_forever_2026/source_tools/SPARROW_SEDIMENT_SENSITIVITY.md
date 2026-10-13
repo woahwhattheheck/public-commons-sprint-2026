@@ -120,3 +120,12 @@ Original regional data release:
 The exact complete original sediment table and release metadata travel inside
 each prepared source. Annual-load estimation details from the separate national
 F7DN436B release retain their own original estimator and sampling support.
+
+## Complete application component
+
+The maintained `sparrow-sediment-method-context` fragment registers the CLI,
+this guide, and its original annual-source and verified-copy dependencies.
+It requires the existing core, observed-context consumer and saved scientific
+report editions. Ordinary application assembly picks up
+`integration/component_fragments/sparrow-sediment-method-context.json`;
+receive the complete current component before running the command above.

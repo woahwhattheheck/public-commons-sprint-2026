@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, quote, urlsplit
 import uuid
 
 from migration_workspace import MigrationWorkspace, MigrationError
+import financial_workspace
 from migration_portable import PortableService
 
 READS = {
@@ -29,7 +30,11 @@ READS = {
     "case.plan.get", "case.plan.items", "case.rehearsal.get", "case.rehearsal.items",
     "case.rehearsal.compare", "case.review.get", "case.cutover.get", "case.list",
 }
+READS.update(financial_workspace.READS)
 STATIC = {
+    "/financial": ("public/financial.html", "text/html; charset=utf-8"),
+    "/financial.js": ("public/financial.js", "text/javascript; charset=utf-8"),
+    "/financial.css": ("public/financial.css", "text/css; charset=utf-8"),
     "/": ("public/migration-index.html", "text/html; charset=utf-8"),
     "/migration-style.css": ("public/migration-style.css", "text/css; charset=utf-8"),
     "/migration-app.js": ("public/migration-app.js", "text/javascript; charset=utf-8"),
@@ -199,7 +204,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 kind = query.get("kind", [""])[0]
                 identifier = query.get("id", [""])[0]
                 format_name = query.get("format", ["ndjson"])[0]
-                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"}:
+                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"} | set(financial_workspace.KINDS):
                     raise ValueError("Choose a complete case migration export")
                 if format_name not in {"ndjson", "csv"}:
                     raise ValueError("Choose NDJSON or CSV")

@@ -30,6 +30,7 @@ if a.title is not None and not a.title.strip():
 app = Path(a.app_root).resolve(strict=True)
 sys.path.insert(0, str(app))
 from model.workspace import Workspace
+from model import observed_context
 from model import observed_report_render as renderer
 
 ws = Workspace(a.workspace, create=a.create_workspace,
@@ -40,7 +41,8 @@ choices = []
 for manifest in manifests:
     collection = ws.import_sources(manifest)
     matches = [entry for entry in collection["entries"]
-               if entry.get("metadata", {}).get("report_schema") == "upstate.observed-report/v1"]
+               if (entry.get("role") == observed_context.ROLE
+                   or (entry.get("metadata") or {}).get("report_schema") == observed_context.SCHEMA)]
     if len(matches) != 1:
         raise ValueError("Select exactly one original observed-report source in " + str(manifest))
     choices.append({"source_collection_id": collection["id"], "source_id": matches[0]["id"]})
