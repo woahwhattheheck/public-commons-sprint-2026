@@ -96,7 +96,7 @@ class Workspace:
         actor=self._validate_actor(actor)
         if coverage not in ("complete","partial"): raise ValueError("Coverage must be complete or partial")
         if not isinstance(scope_id,str) or not scope_id.strip() or len(scope_id)>240: raise ValueError("An explicit unchanged selection scope is required")
-        if source_format not in ("business_data","resource"): raise ValueError("Choose the original source envelope explicitly")
+        if source_format not in ("business_data","resource","native_json"): raise ValueError("Choose the original source envelope explicitly")
         if not source_paths or not graph_paths: raise ValueError("Resource and graph sources are required")
         sources=[self._retain(p,"resource") for p in source_paths]+[self._retain(p,"graph") for p in graph_paths]+[self._retain(p,"collection") for p in collection_paths]+[self._retain(p,"license") for p in license_paths]
         if len({(s["role"],s["sha256"]) for s in sources})!=len(sources): raise ValueError("Duplicate source files in receiving request")
@@ -111,7 +111,12 @@ class Workspace:
                 parent=priorc.execute("SELECT * FROM releases WHERE id=?",(parent_release,)).fetchone()
                 if not parent or parent["scope_id"]!=scope_id: raise Conflict("The previous release must use the same explicit selection scope")
         context=inspect_context([self.root/s["path"] for s in sources if s["role"]=="graph"],[self.root/s["path"] for s in sources if s["role"]=="collection"])
-        context_hash=digest({"graphs":sorted(s["sha256"] for s in sources if s["role"]=="graph"),"collections":sorted(s["sha256"] for s in sources if s["role"]=="collection")})
+        context_identity={"graphs":sorted(s["sha256"] for s in sources if s["role"]=="graph"),"collections":sorted(s["sha256"] for s in sources if s["role"]=="collection")}
+        # A native publication interpretation is a reviewable meaning change even
+        # when the source graph, vocabulary and resource bytes are unchanged.
+        # Keep legacy context hashes stable for both existing Starches envelopes.
+        if source_format=="native_json":context_identity["source_contract"]="native_json"
+        context_hash=digest(context_identity)
         if coverage=="partial" and parent_release:
             with self.connect() as c:
                 old_context=c.execute("SELECT s.context_hash FROM releases r JOIN snapshots s ON s.id=r.snapshot WHERE r.id=?",(parent_release,)).fetchone()[0]
@@ -125,7 +130,7 @@ class Workspace:
             for source in (s for s in sources if s["role"]=="resource"):
                 with iter_resources(self.root/source["path"],source_format=source_format) as stream:
                     for record in stream:
-                        item=inspect_resource(record,context)
+                        item=inspect_resource(record,context,source_format=source_format)
                         if not item.get("resource_id") or not item.get("graph_id"): raise ValueError("A resource lacks the stable graph/resource identity required for indexed receiving")
                         try:
                             stage.execute("INSERT INTO incoming VALUES(?,?,?,?,?,?,?,?)",(item["graph_id"],item["resource_id"],item["resource_sha256"],canonical(record),canonical(item.get("labels",{})),canonical(item.get("issues",[])),int(bool(item.get("blocking"))),int(item.get("tiles_count",0))))
@@ -153,12 +158,19 @@ class Workspace:
                     c.execute("""INSERT INTO changes SELECT ?,b.graph_id,b.resource_id,'removed',b.record_hash,NULL,0 FROM release_records b
                         LEFT JOIN records n ON n.snapshot=? AND n.graph_id=b.graph_id AND n.resource_id=b.resource_id
                         WHERE b.release_id=? AND n.resource_id IS NULL""",(sid,sid,parent_release))
-                # Meaning changes remain reviewable even if resource JSON is byte-equivalent.
+                # Compare the context actually selected for each accepted record.
+                # A rejected change can retain an older meaning than the release's
+                # latest incoming snapshot. Only explicitly received records can
+                # acquire this new interpretation; partial carry-forward rows do not.
                 if parent_release:
-                    parent=c.execute("SELECT s.context_hash FROM releases r JOIN snapshots s ON s.id=r.snapshot WHERE r.id=?",(parent_release,)).fetchone()
-                    if parent and parent[0]!=context_hash:
-                        c.execute("""INSERT OR IGNORE INTO changes SELECT ?,n.graph_id,n.resource_id,'meaning',b.record_hash,n.record_hash,n.blocking FROM records n JOIN release_records b
-                            ON b.release_id=? AND b.graph_id=n.graph_id AND b.resource_id=n.resource_id WHERE n.snapshot=?""",(sid,parent_release,sid))
+                    c.execute("""INSERT OR IGNORE INTO changes
+                        SELECT ?,n.graph_id,n.resource_id,'meaning',b.record_hash,n.record_hash,n.blocking
+                        FROM records n JOIN incoming.incoming received
+                            ON received.graph_id=n.graph_id AND received.resource_id=n.resource_id
+                        JOIN release_records b
+                            ON b.release_id=? AND b.graph_id=n.graph_id AND b.resource_id=n.resource_id
+                        JOIN snapshots selected ON selected.id=b.context_snapshot
+                        WHERE n.snapshot=? AND selected.context_hash<>?""",(sid,parent_release,sid,context_hash))
                 counts=dict(c.execute("SELECT kind,COUNT(*) FROM changes WHERE snapshot=? GROUP BY kind",(sid,)).fetchall())
                 result=self._finish(c,operation_id,request,{"snapshot":sid,"source_resources":count,"resources":c.execute("SELECT COUNT(*) FROM records WHERE snapshot=?",(sid,)).fetchone()[0],"changes":counts,"context_hash":context_hash},actor,"received")
             return result
@@ -243,6 +255,13 @@ class Workspace:
             if not row:raise KeyError("Unknown release")
             snap=c.execute("SELECT * FROM snapshots WHERE id=?",(row["snapshot"],)).fetchone()
             source_manifest=json.loads(snap["manifest"])
+            selected_contexts={}
+            for (selected_snapshot,) in c.execute("SELECT DISTINCT context_snapshot FROM release_records WHERE release_id=?",(release_id,)):
+                selected_contexts[selected_snapshot]=json.loads(c.execute("SELECT manifest FROM snapshots WHERE id=?",(selected_snapshot,)).fetchone()[0])
+            def inspection_format(snapshot):
+                selected=selected_contexts[snapshot]["source_format"]
+                if selected not in ("business_data","resource","native_json"):raise ValueError("Unsupported retained source contract")
+                return selected
             with zipfile.ZipFile(destination,"w",compression=zipfile.ZIP_DEFLATED) as z:
                 members=[]
                 def put(name,data):
@@ -251,7 +270,7 @@ class Workspace:
                 # Resources remain original wrappers. Static publisher-compatible files are independent of the review UI.
                 for r in c.execute("SELECT * FROM release_records WHERE release_id=? ORDER BY graph_id,resource_id",(release_id,)):
                     put("resources/"+path_id(r["graph_id"])+"/"+path_id(r["resource_id"])+".json",r["record_json"]+"\n")
-                    members[-1].update(context_snapshot=r["context_snapshot"],graph_id=r["graph_id"],resource_id=r["resource_id"])
+                    members[-1].update(context_snapshot=r["context_snapshot"],graph_id=r["graph_id"],resource_id=r["resource_id"],source_envelope="resource",inspection_format=inspection_format(r["context_snapshot"]))
                 # The original StaticFile receiver consumes business_data.resources.
                 # Group by retained meaning context; rejected records can keep older graph/vocabulary editions.
                 downstream=[]
@@ -267,20 +286,24 @@ class Workspace:
                             if count:emit(b",")
                             emit(item["record_json"].encode("utf8"));count+=1
                         emit(b']}}\n')
-                    member={"path":name,"bytes":size,"sha256":sha.hexdigest(),"context_snapshot":context_snapshot,"source_format":"business_data","resources":count}
+                    selected_format=inspection_format(context_snapshot)
+                    member={"path":name,"bytes":size,"sha256":sha.hexdigest(),"context_snapshot":context_snapshot,"source_format":"native_json" if selected_format=="native_json" else "business_data","source_envelope":"business_data","inspection_format":selected_format,"resources":count}
                     members.append(member);downstream.append(dict(member))
                 contexts={}
                 context_sources={}
                 for (context_snapshot,) in c.execute("SELECT DISTINCT context_snapshot FROM release_records WHERE release_id=?",(release_id,)):
-                    original=json.loads(c.execute("SELECT manifest FROM snapshots WHERE id=?",(context_snapshot,)).fetchone()[0])
-                    contexts[context_snapshot]={"context_hash":original["context_hash"],"sources":[s for s in original["sources"] if s["role"] in ("graph","collection","license")]}
+                    original=selected_contexts[context_snapshot]
+                    contexts[context_snapshot]={"context_hash":original["context_hash"],"source_format":inspection_format(context_snapshot),"sources":[s for s in original["sources"] if s["role"] in ("graph","collection","license")]}
                     for s in contexts[context_snapshot]["sources"]:context_sources[s["sha256"]]=s
                 for s in context_sources.values():
                     p=self.root/s["path"]
                     if file_hash(p)!=(s["sha256"],s["bytes"]):raise ValueError("Original context source differs")
                     put("context/"+s["sha256"]+".json",p.read_bytes())
                 put("contexts.json",canonical(contexts)+"\n")
-                put("downstream.json",canonical({"schema":"commons.arches-static-file-delivery.v1","release_id":release_id,"source_format":"business_data","selection":"accepted release records grouped by their selected original meaning context","files":downstream,"contexts":"contexts.json","resource_wrappers":"resources/"})+"\n")
+                formats=sorted({item["source_format"] for item in downstream})
+                downstream_manifest={"schema":"commons.arches-static-file-delivery.v1","release_id":release_id,"source_formats":formats,"format_scope":"per_file","selection":"accepted release records grouped by their selected original meaning context and publication contract","files":downstream,"contexts":"contexts.json","resource_wrappers":"resources/"}
+                if len(formats)==1:downstream_manifest["source_format"]=formats[0]
+                put("downstream.json",canonical(downstream_manifest)+"\n")
                 # Stream the complete decision history rather than materializing every row.
                 review_sha=hashlib.sha256();review_size=0
                 with z.open("review.json","w",force_zip64=True) as review:
@@ -302,7 +325,7 @@ class Workspace:
                         z.write(p,name);members.append({"path":name,"bytes":source["bytes"],"sha256":source["sha256"]})
                     exchanges.append({"operation_id":exchange["operation_id"],"source":source,"archive_path":name,"preview":json.loads(exchange["receipt"]),"created":exchange["created"]})
                 put("review-exchanges.json",canonical({"schema":"commons.arches-review-exchanges.v1","exchanges":exchanges})+"\n")
-                put("README.txt","Reviewed Arches release. resources/<graph>/<resource>.json contains the selected original resource wrappers for direct HTTP/static receiving. business_data/<context>.json contains the same accepted original wrappers in the business_data.resources envelope used by the original StaticFile receiver. downstream.json maps each complete streamed file to its exact selected meaning context. Load its graph and controlled-vocabulary files from contexts.json; keep groups separate when their meaning editions differ. review.json retains the original incoming edition and staff decisions. Original identifiers, numeric values, language keys and selected contexts are preserved.\n")
+                put("README.txt","Reviewed Arches release. resources/<graph>/<resource>.json contains the selected original resource wrappers for direct HTTP/static receiving. business_data/<context>.json contains the same accepted original wrappers in the business_data.resources envelope used by the original StaticFile receiver. downstream.json maps each complete streamed file to its exact selected meaning context and explicit source_format. Select native_json for a native group: stored graph_publication_id binds the original graph while exporter publication_id remains a separate current-export fact. Mixed releases declare formats per file. Individual resource wrappers retain their original values and manifest inspection_format; use the grouped original envelope for direct importer receiving. Load graph and controlled-vocabulary files from contexts.json; keep groups separate when their meaning editions or publication contracts differ. review.json retains the original incoming edition and staff decisions. Original identifiers, numeric values, language keys and selected contexts are preserved.\n")
                 put("MANIFEST.json",canonical({"schema":"commons.arches-release-package.v1","release_id":release_id,"members":members})+"\n")
         sha,size=file_hash(destination);return {"path":str(destination),"sha256":sha,"bytes":size,"release":release_id}
     def export_workspace(self,destination,application_paths=()):
