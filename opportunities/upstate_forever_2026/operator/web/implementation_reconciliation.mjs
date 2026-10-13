@@ -76,7 +76,7 @@ export class FieldReturnReview{
  async start(){
   await this.refreshList();if(!this.alive())return;
   if(this.pending?.id)await this.poll();
-  else if(!this.pending&&this.selected)await this.prepare();
+  else if(!this.pending){if(this.receipt?.task_id)await this.refreshReceipt();if(this.selected)await this.prepare();}
  }
  async refreshList(){
   const turn=++this.turn;const r=await this.request('/api/implementation/reconciliation-conflicts',{id:this.planId});
@@ -161,7 +161,7 @@ export class FieldReturnReview{
  }
  receiptHtml(){
   const r=this.receipt;if(!r)return '';
-  return '<section class="return-note"><h3>Retained reconciliation</h3><p>'+esc(r.status)+' · applied revision '+esc(r.applied_revision)+' · current revision at receipt '+esc(r.current_revision)+'</p><p>The original incoming return, resolution choices and saved revision remain retained. Later native edits remain separate.</p><div class="return-actions">'+button('open-current','Open latest saved plan',!!this.pending||this.busy)+button('receipt-export','Download reconciliation receipt')+'</div>'+this.w.nativeDownloads(r._downloads||[])+'</section>';
+  return '<section class="return-note"><h3>Retained reconciliation</h3><p>'+esc(r.status)+' · applied revision '+esc(r.applied_revision)+' · current revision at receipt '+esc(r.current_revision)+'</p><p>The original incoming return, resolution choices and saved revision remain retained. Later native edits remain separate.</p><div class="return-actions">'+button('open-current','Open latest saved plan',!!this.pending||this.busy)+button('receipt-export','Download reconciliation receipt')+(r.task_id?button('receipt-refresh','Refresh receipt downloads',!!this.pending||this.busy)+button('receipt-task','Open original completed task'):'')+'</div>'+this.w.nativeDownloads(r._downloads||[])+'</section>';
  }
  async submit(){
   const p=this.pending;if(!p||this.busy)return;
@@ -184,12 +184,23 @@ export class FieldReturnReview{
   if(task.state==='complete'){
    const result=task.result||{};
    if((result.plan_id||result.plan?.id)!==this.planId||result.operation_id!==p.payload.expected_operation_id)throw Error('The completed reconciliation differs from its original preview.');
-   this.receipt={...clone(result),_downloads:clone(task._downloads||result._downloads||[])};delete this.receipt.plan;
+   this.receipt={...clone(result),task_id:task.id||p.id,_downloads:clone(task._downloads||result._downloads||[])};delete this.receipt.plan;
    this.pending=null;this.preview=null;this.notice='The resolved native revision is retained. The open browser draft has not been replaced.';this.persist();
    await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive())this.render();return;
   }
   if(['failed','cancelled','interrupted'].includes(task.state)){this.error=task.error?.message||'The original reconciliation task '+task.state+'.';this.render();return;}
   this.render();this.timer=setTimeout(()=>this.poll().catch(e=>this.fail(e)),2000);
+ }
+ async refreshReceipt(){
+  const prior=this.receipt;if(!prior?.task_id||this.pending||this.busy)return;
+  this.busy=true;this.error='';this.render();
+  try{
+   const r=await this.request('/api/task',{id:prior.task_id}),task=r.task||r;
+   if(this.receipt!==prior)return;
+   const result=task.result||{};
+   if(task.id!==prior.task_id||task.workspace!==this.workspace||task.action!=='implementation.reconciliation.apply'||task.state!=='complete'||(result.plan_id||result.plan?.id)!==this.planId||result.operation_id!==prior.operation_id)throw Error('The completed native task differs from this original reconciliation receipt.');
+   this.receipt={...clone(result),task_id:task.id,_downloads:clone(task._downloads||result._downloads||[])};delete this.receipt.plan;this.persist();
+  }finally{if(this.alive()){this.busy=false;this.render();}}
  }
  async action(b){
   const a=b.dataset.returnAction;
@@ -204,6 +215,8 @@ export class FieldReturnReview{
   if(a==='preview-export'){if(this.analysis)download(this.planId+'-return-preview.json',this.analysis);return;}
   if(a==='request-export'){if(this.pending)download(this.planId+'-original-return-request.json',this.pending);return;}
   if(a==='receipt-export'){if(this.receipt)download(this.planId+'-reconciliation-receipt.json',this.receipt);return;}
+  if(a==='receipt-refresh'){await this.refreshReceipt();return;}
+  if(a==='receipt-task'){if(this.receipt?.task_id)await this.host.showTask?.(this.receipt.task_id);return;}
   if(a==='task'){if(this.pending?.id)await this.host.showTask?.(this.pending.id);return;}
   if(a==='retry'){await this.submit();return;}
   if(a==='poll'){await this.poll();return;}

@@ -80,7 +80,11 @@ uses the retained native return, not additional unsubmitted edits made in the
 browser after that return. Save or export those edits as their own work.
 
 When the native request finishes, the dialog shows the applied revision and its
-retained audit downloads. **Open latest saved plan** invokes the existing native
+retained audit downloads. The completed task identity stays with the receipt;
+**Refresh receipt downloads** reads that same task and renews its verified links
+after reopening the server. **Open original completed task** opens its retained
+native history. Neither action starts another reconciliation.
+**Open latest saved plan** invokes the existing native
 reopen workflow. It preserves a separate copy of a dirty browser draft before
 opening the latest saved native revision. A replayed operation may refer to an
 older applied revision; it never replaces later native edits with that historic
