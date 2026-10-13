@@ -1,0 +1,251 @@
+{
+  "schema": "tjlabs.forms-capture.contract.v1",
+  "application_files": [
+    "forms_capture.py",
+    "FORMS_CAPTURE.md",
+    "FORMS_CAPTURE_API.json",
+    "LICENSE"
+  ],
+  "selection": {
+    "schema": "tjlabs.forms-capture.selection.v1",
+    "label": "nonempty string",
+    "edition": "original selected edition",
+    "data_class": "DEMONSTRATION|AUTHORIZED_CUSTOMER_EXPORT",
+    "authority_reference": "actual selected export authority; no credentials",
+    "tenant": "HTTPS origin only; required only when requests is nonempty",
+    "classes": {
+      "definitions": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      },
+      "settings": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      },
+      "responses": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      },
+      "uploads": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      },
+      "workflow": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      },
+      "downstream": {
+        "disposition": "include|exclude|defer",
+        "reference": "original scope decision"
+      }
+    },
+    "limits": {
+      "max_body_bytes": 536870912,
+      "max_archive_members": 100000,
+      "max_expanded_bytes": 4294967296,
+      "timeout_seconds": 120
+    },
+    "requests": [
+      {
+        "id": "safe unique <=48 characters",
+        "asset_class": "one of six classes",
+        "side": "source|target|shared",
+        "route": "named allowlisted GET",
+        "format": "route-specific csv|json|xml|zip",
+        "object_id": "numeric string for routes requiring ID",
+        "params": "only documented original parameters",
+        "coverage": "responses_export requires explicit ID selection or reviewed page inventory",
+        "zip": {
+          "mode": "none|direct|pointer_text|pointer_json_string",
+          "authentication": "none|same_token"
+        },
+        "content_state": "COMPLETE|PARTIAL|REDACTED|UNASSESSED, default UNASSESSED",
+        "expected_media_type": "optional exact base media type",
+        "provenance": "complete original source reference without token URLs"
+      }
+    ],
+    "local_assets": [
+      {
+        "id": "safe unique <=48 characters",
+        "asset_class": "one of six classes",
+        "side": "source|target|shared",
+        "availability": "PRESENT|MISSING|REDACTED",
+        "content_state": "COMPLETE|PARTIAL|REDACTED|UNASSESSED",
+        "path": "relative input path; null if unavailable",
+        "bytes": "exact nonnegative integer; null if unavailable",
+        "sha256": "64 lower hex; null if unavailable",
+        "filename": "original filename",
+        "media_type": "original media type",
+        "provenance": "complete original reference",
+        "inspect_zip": "optional boolean"
+      }
+    ],
+    "attachment_links": [
+      {
+        "entry_id": "safe unique <=48 characters",
+        "logical_id": "explicit canonical identity",
+        "side": "source|target",
+        "asset_id": "exact captured asset ID when PRESENT; exact unavailable declaration ID or null when MISSING/REDACTED",
+        "availability": "PRESENT|MISSING|REDACTED",
+        "form_key": "explicit canonical form",
+        "response_key": "explicit canonical response",
+        "field_key": "explicit canonical field",
+        "ordinal": "explicit repeat ordinal string",
+        "filename": "original filename",
+        "media_type": "original media type",
+        "parent": {
+          "table": "actual mapped original table ID",
+          "record": "positive one-based raw record ordinal",
+          "key_columns": [
+            "original key column"
+          ],
+          "key_values": [
+            "literal original key value"
+          ]
+        },
+        "reference": "original parent and canonical mapping decision"
+      }
+    ]
+  },
+  "routes": {
+    "forms_index": {
+      "path": "api_v1/forms/index.{format}",
+      "formats": [
+        "json",
+        "xml"
+      ]
+    },
+    "admin_forms_index": {
+      "path": "admin/api_v1/forms/index.{format}",
+      "formats": [
+        "json",
+        "xml"
+      ]
+    },
+    "form_definition": {
+      "path": "api_v1/forms/view/{id}.{format}",
+      "formats": [
+        "json",
+        "xml"
+      ],
+      "parameters": [
+        "raw"
+      ]
+    },
+    "responses_export": {
+      "path": "api_v1/responses/export/{id}.{format}",
+      "formats": [
+        "csv",
+        "json",
+        "xml",
+        "zip"
+      ],
+      "parameters": [
+        "date_from",
+        "date_to",
+        "filter",
+        "response_ids",
+        "flag",
+        "unlock",
+        "page",
+        "page_size"
+      ]
+    },
+    "connectors_index": {
+      "path": "api_v1/connectors/index/{id}.{format}",
+      "formats": [
+        "json",
+        "xml"
+      ]
+    },
+    "connector_definition": {
+      "path": "admin/api_v1/connectors/view/{id}.{format}",
+      "formats": [
+        "json",
+        "xml"
+      ]
+    },
+    "themes_index": {
+      "path": "api_v1/themes/index.json",
+      "formats": [
+        "json"
+      ]
+    },
+    "theme_definition": {
+      "path": "admin/api_v1/themes/view/{id}.json",
+      "formats": [
+        "json"
+      ],
+      "body": "opaque original, may be CSS"
+    },
+    "form_elements_index": {
+      "path": "api_v1/form_elements/index.xml",
+      "formats": [
+        "xml"
+      ]
+    },
+    "form_element_definition": {
+      "path": "admin/api_v1/form_elements/view/{id}.xml",
+      "formats": [
+        "xml"
+      ]
+    }
+  },
+  "response_selection": [
+    {
+      "params": {
+        "response_ids": [
+          "123",
+          "124"
+        ],
+        "filter": "all"
+      },
+      "coverage": {
+        "basis": "EXPLICIT_RESPONSE_IDS",
+        "reference": "example original membership selection"
+      }
+    },
+    {
+      "params": {
+        "page": 1,
+        "page_size": 200,
+        "filter": "all"
+      },
+      "coverage": {
+        "basis": "REVIEWED_PAGE_INVENTORY",
+        "inventory_id": "example-reviewed-export",
+        "reference": "each selected page is listed separately; no terminal inference"
+      }
+    }
+  ],
+  "outputs": {
+    "capture": "capture.json, schema tjlabs.forms-capture.v1, status COMPLETE_SELECTED_CAPTURE|CAPTURED_WITH_GAPS; selection_sha256/source_files/classes/assets/archive_members/coverage/operations/api_source/completed_at",
+    "assets": "assets.jsonl; complete original workbench-compatible asset records with exact paths relative to capture root",
+    "members": "archive-members.jsonl; original archive_asset_id/hash/ordinal/name/type/size/CRC/flags plus successful body asset identity",
+    "coverage": "coverage.json; selected/complete/unfinished operations, original response filters and UNRECONCILED returned membership",
+    "worksheet": "mapping-worksheet.json; schema tjlabs.forms-capture.mapping-worksheet.v1; status MAPPING_REQUIRED; full assets/explicit links, attachment_link_review, null manifests and empty table_assets",
+    "archive": "capture-handover.json inside complete ZIP, original delivery plus workbench source; no filename-derived parent mappings",
+    "receiving": "<output>/capture is exact original capture; <output>/receiving.json binds original archive and selection"
+  },
+  "cli": [
+    "python forms_capture.py capture --selection FILE --input-root DIR --output NEW [--token-env NAME] [--resume]",
+    "python forms_capture.py verify --capture DIR",
+    "python forms_capture.py pack --capture DIR --output NEW_ZIP",
+    "python forms_capture.py receive --archive ZIP --output NEW [--max-bytes 21474836480]"
+  ],
+  "python_api": [
+    "capture(selection_path, input_root, output, token_env=None, resume=False) -> capture outcome",
+    "verify(directory) -> exact retained capture outcome",
+    "pack(directory, destination) -> {status:'PACKED',path,bytes,sha256,selection_sha256}",
+    "receive(archive, output, max_bytes=21474836480) -> {status:'RECEIVED',path,capture,selection_sha256}"
+  ],
+  "capacity_and_replay": "Original source/selection are bound before reads; completed operations reused by receipt and complete member hashes. Full failed attempts retained. No automatic polling, pagination or retry. Source receiving default20GiB and max500000 complete members. No network mutation.",
+  "source": {
+    "url": "https://github.com/FormAssembly/formassembly-api",
+    "readme_git_blob": "45c1369e687e0e9f73ec919accb3a521379b8316",
+    "bytes": 21868,
+    "sha256": "77a4633eacdf8cd67cdec5af6f4336edbff11c7d3574ac4b8b0e316b1a787884",
+    "historical_csv_limit": "https://help.formassembly.com/help/340336-export-troubleshooting"
+  },
+  "attribution": "TokenJunkieLabs"
+}
