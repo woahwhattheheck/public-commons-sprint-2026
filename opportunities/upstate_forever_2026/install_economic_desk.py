@@ -12,6 +12,19 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/implementation_cost_review.py",
+    "operator/implementation_cost_review.py",
+    "operator/extensions/implementation-cost-review.json",
+    "operator/web/implementation_cost_review.mjs",
+    "docs/IMPLEMENTATION_COST_REVIEW.md",
+    "source_tools/apply_simulated_restoration_programme.py",
+    "source_tools/derive_native_restoration_programme.py",
+    "source_data/simulated_restoration_programme_20261013/programme.json",
+    "source_data/simulated_restoration_programme_20261013/programme.html",
+    "source_data/sc_conservation_costs_20261013/catalogue.json",
+    "docs/SIMULATED_RESTORATION_PROGRAMME.md",
+    "docs/DERIVE_NATIVE_RESTORATION_PROGRAMME.md",
+    "integration/component_fragments/restoration-programme.json",
     "operator/economic_receive.py",
     "operator/ECONOMIC_RECEIVING_PHASES.md",
     "operator/web/economic_received_comparisons.mjs",
@@ -65,10 +78,20 @@ def run(application, source_root, *, dry_run=False):
     source_root = Path(source_root).resolve(strict=True)
     needed = ("operator/server.py", "operator/extension_registry.py",
               "operator/web/extension_host.mjs", "model/decision_analysis.py",
-              "model/decision_cli.py", "model/decision_desk.html", "model/model_selection.py")
+              "model/decision_cli.py", "model/decision_desk.html", "model/model_selection.py",
+              "model/implementation.py",
+              "model/implementation_schema.py",
+              "model/implementation_reporting.py",
+              "model/portable_implementation.py",
+              "model/implementation_sources.py",
+              "model/implementation_evidence.py",
+              "model/implementation_economics.py",
+              "model/scenario_footprint.py",
+              "operator/web/implementation_core.mjs",
+              "operator/extensions/implementation.json")
     for name in needed:
         if not (application / name).is_file():
-            raise ValueError("Receive the existing extension host and decision companion; missing " + name)
+            raise ValueError("Receive the existing extension host, decision companion, Implementation and Scenario footprint components; missing " + name)
     host = require_host(application)
     # Compile actual receiving source in memory, without importing GIS or making bytecode files.
     for name in ("model/decision_analysis.py", "model/decision_cli.py"):
