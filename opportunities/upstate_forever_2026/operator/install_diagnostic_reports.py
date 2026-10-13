@@ -17,13 +17,17 @@ import subprocess
 import tempfile
 
 PREDECESSORS = json.loads(r'''{
-  "model/diagnostic_report_context.py": null,
+  "model/diagnostic_report_context.py": [
+    null,
+    "30cfe2a94c68e08020c907900384be726bdeb8d4b92607b0dff97d4b57ce6ce6"
+  ],
   "operator/experiment_diagnostics.py": "fd86e59a6223fb0671a5cff79c49a3ee945d4e5b19d3ce934d8b7c2458651d9b",
   "operator/web/experiment_diagnostics.mjs": "41d8de2d22e489621c190b8367f30c566ec9e5724f8f53826fea540f1103f78f",
   "operator/extensions/experiment-diagnostics.json": "958d8df24c61d94cc0651df634abfb29a1735c9bf9c9ccbe61038ad3c2846389",
   "operator/DIAGNOSTIC_REPORTS.md": [
     null,
-    "f607e7f8a42a19a28aa23e89bc2b24101e5fd4a0b03279ab4fb26760b652b29a"
+    "f607e7f8a42a19a28aa23e89bc2b24101e5fd4a0b03279ab4fb26760b652b29a",
+    "d3e7eb5cb7f572fbf2e168052a8184c8e7cd4217231db2beaa1fe0aca7b77a05"
   ],
   "operator/DIAGNOSTICS.md": "ecfbc5e7c2cee90deaaeee1bb306ef532fae9b120b3028aa6932b4fba7443f3b",
   "model/study_report_transfer.py": null,
@@ -51,7 +55,7 @@ def install(application, source):
     with (application / ".diagnostic-report-install.lock").open("a+b") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         before, after = {}, {}
-        for relative, predecessor in {**PREDECESSORS, SELF: [None, "5966d02cbbe99da3715b6d2ef54bf310457a1b237afcc0d40239c7e50cd4876c"]}.items():
+        for relative, predecessor in {**PREDECESSORS, SELF: [None, "5966d02cbbe99da3715b6d2ef54bf310457a1b237afcc0d40239c7e50cd4876c", "0f0cb6e109c931b51cd3a085f35f0fff4b10af01ce6f08f25c09b3fd5cece30f"]}.items():
             body = _bytes(source / relative)
             if body is None:
                 raise ValueError("Complete report source is missing: " + relative)

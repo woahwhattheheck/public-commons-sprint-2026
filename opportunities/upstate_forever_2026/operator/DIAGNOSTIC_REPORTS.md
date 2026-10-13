@@ -151,3 +151,18 @@ study, restore it into a separate original workspace, and reopen both the exact
 report source and the original analysis. For this updated source edition, the
 same `operator/install_diagnostic_reports.py` installer includes the native
 lineage helper and guarded current study-transfer join.
+
+## Producing-stage compatibility in the report
+
+Current diagnostic reports record the actual completed producing-stage versions
+for each native run and per-metric shared support. The report source copies those
+fields unchanged and renders their compatibility state and explanation. NDR
+compatibility governs nitrogen/phosphorus; SDR compatibility governs sediment.
+An incompatible selected model family stays visible as unavailable, with its
+full expected membership. Other compatible metric cohorts can still be read.
+
+Observation tables keep the expected and shared source counts even when
+cross-profile fit is unavailable because of producing-version differences.
+The report shows the original score state and reason beside the separate
+complete/shared-cohort values. Older saved diagnostic reports remain readable;
+they do not acquire invented execution-version metadata.
