@@ -167,6 +167,8 @@ def enrich_observation_context(context: dict[str, Any]) -> dict[str, Any]:
                 eligible_statistical_count=row["eligible_statistical_count"],
                 excluded_statistical_count=row["excluded_statistical_count"])
             if row["excluded_statistical_count"]:
+                item["observation_support"]["basis"] = item["observation_support"]["basis"].replace(
+                    "every retained result row", "every eligible result row")
                 item["observation_support"]["basis"] += (" Source-documented exclusions retain their original values and identifiers; "
                     "interval arithmetic uses only eligible measurements.")
         series.append(item)
@@ -246,7 +248,8 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
             ], "rows": means, "widths": [1, 1.6, 2.4, .8],
              "caption": "Concentration means; display rounded to six significant figures."},
             "Interval notation [a, b) includes a and excludes b. [a, a] means "
-            "every retained result was quantified. Each series keeps its own "
+            + ("every eligible measurement was quantified. " if enriched.get("has_statistical_exclusions")
+               else "every retained result was quantified. ") + "Each series keeps its own "
             "calendar, project and activity type. Printed source-table counts "
             "remain in the published-summary comparison. The structured "
             "observation support retains full numerical endpoints and original result selectors.",
