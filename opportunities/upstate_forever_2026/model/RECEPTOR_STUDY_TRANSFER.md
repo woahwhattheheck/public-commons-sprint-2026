@@ -59,3 +59,18 @@ The component fragment keeps the Receptors, native programme and Study transfer 
 ## Verification
 
 The exact current original Receptor controller was executed in V8 with its transport and document interface stubbed. All six saved-result kinds handed the exact server-returned ID and title to the original selected-study desk. Checks covered a Workspace A → B → A change, detach while reading, repeated clicks, mismatched returned identity, and absent host capability. This is controller execution, not a browser or native scientific run. Actual receiving uses the existing authorized source-water operation and original export/restore queue.
+
+## Open the original received study
+
+In the receiving Workspace, open **Study transfer**. The saved-study catalogue and **Included scientific records** preview show **Open in Source-water areas** beside the original source-water records. The action opens the existing Source-water areas desk and the exact selected result. Its original maps, data downloads, scientific source controls and editable selection remain available in that desk.
+
+| Selected record | Original desk result |
+| --- | --- |
+| Original watershed network | Network, retained HUC12 geometry and upstream memberships |
+| Prepared source-water areas | Original source-area preparation and saved scenario controls |
+| Source-water native programme | Retained programme and original native case progression |
+| Source-water experiment comparison | Original profile comparison and producing-run context |
+| Native receiving-area inventory | Saved inventory and contributing-area quantities |
+| Source geography report | Original captured scientific source, maps and complete files |
+
+Opening a record preserves the existing workspace draft. **Use this saved selection** is the explicit action for adopting a saved selection into that draft. The opening control waits for the original desk catalogue and validates the returned record ID, type and workspace. Moving to another workspace, closing the desk or choosing another result invalidates an older in-flight opening request.

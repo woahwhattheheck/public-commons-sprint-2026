@@ -295,8 +295,8 @@ adapter are the direct maintained entrypoints of this source edition.
 ## Original operator integration
 
 The contribution includes the complete grayscale `Editable GIS projects` panel,
-queued `gis.project.export`, `gis.project.receive` and
-`gis.project.adopt-sources` operations, original upload
+queued `gis.project.export`, `gis.project.receive`, `gis.project.adopt-sources`,
+`gis.project.review` and `gis.vector.review` operations, original upload
 receiving, independent archive copies and the original hash-checked downloads.
 
 Apply the component installer to the current complete application. It uses the
@@ -311,11 +311,25 @@ python install_gis_projects.py --application /path/to/original/application
 The installer composes the actual registration source, preserves unrelated
 source, validates Python syntax before mutation, checks source predecessors and
 retains exact before-images. On a registry application it calls the installed
-`install_extensions.py` source transformations and registers only the GIS-owned
-descriptor and leaves. It removes the exact former GIS-owned direct hooks when
+`install_extensions.py` source transformations and registers the complete
+`gis-projects` and `gis-vector-reviews` descriptors and their source files. It removes the exact former GIS-owned direct hooks when
 migrating an older GIS installation, so the shared registry owns the actions,
 navigation, assets and file routes once. Reapplying the same edition makes no
-changes. Start
+changes.
+
+Both review references are installed together. The `gis-projects` provider
+compares an exported working edition with the received edition; the separate
+`gis-vector-reviews` provider compares original source features with their
+received working features. The installer carries their original model modules,
+providers and descriptors. On a pre-registry application, it upgrades an existing
+GIS installation with the original vector action, authorized catalogue/inspect
+routes, retained-item lookup and task decoration. Reapplying keeps those hooks
+single; migration to the shared registry removes their exact former direct joins
+before the descriptors become the active owners. The application's existing
+authorization, Workspace selection, queue, download tickets and file policies
+remain the same.
+
+Start
 the original `operator/server.py` with its original startup command, then select
 **Editable GIS projects**. Choose an actual source edition, prepared grid and/or
 completed cases. Click **Build complete GIS project**, inspect the original task,
@@ -330,6 +344,43 @@ The component installer selects the current application's host automatically and
 keeps one navigation and task owner. It composes the installed host source in
 memory before writing the completed change; it never replaces that host with the
 older GIS-era server, browser or registry.
+
+### Inspect the exact outgoing populated product
+
+The application-level **AGENTS.md** retains the owner's rendered-product
+instruction, version **2026-10-13.1**. The component installer carries the current
+source copy into the receiving application and preserves its existing local
+instructions. Reapplication updates only the installer's marked instruction
+section when one is present; its ordinary before-image journal retains the
+previous bytes.
+
+Before describing the outgoing GIS application, change report or handover as
+ready, the producing worker must run and open that exact outgoing version, look
+at its rendered screens or actual screenshots, and operate the important controls.
+Use the existing populated county/study Workspace and its retained export,
+received edition and review IDs. Inspect the actual screenshare width and a
+narrow/mobile width, with relevant populated, empty, loading and error states.
+
+In the existing GIS desk, inspect both comparison references, the selected
+original export/received edition, the complete layer report, explicit unpaired
+or skipped-arithmetic explanations, and the optional review context for source
+adoption. Open the actual **REVIEW.html** and its downloads; extract the complete
+report ZIP and follow its relative files after reopening. Inspect the corresponding
+original GIS view, retained atlas legends and editable project entry points.
+Operate the original queued tasks and task recovery in the same application.
+
+Look for unreadable tables, clipped controls, overflow, misleading labels,
+unstyled screens and broken relative files. Fix visible defects in the maintained
+source and inspect the corrected outgoing version. Retain readable plain industrial
+layout and original scientific computations. Code review, DOM counts, HTTP
+responses, screenshot capture without viewing, or another worker's approval do
+not replace seeing the product. Keep the existing native receiving operation;
+this inspection does not create another study or extend the sprint cutoff of
+**2026-10-13 14:00 UTC**.
+
+Include the current owner instruction in every delegated implementation or
+receiving assignment and carry it through consumed build/receiving guides and
+source mirrors. Preserve owner-stopped work and existing provider safeguards.
 
 The complete original-member viewer uses the original file/download service.
 Version 1.2.1 adds the current descriptor's typed nested member binding:

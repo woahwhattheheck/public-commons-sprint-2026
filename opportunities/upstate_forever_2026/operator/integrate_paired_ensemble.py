@@ -31,6 +31,7 @@ REQUIRED = (
     "model/paired_ensemble/ensemble_workspace.py", "model/paired_ensemble/ensemble_rasters.py",
     "model/paired_ensemble/ensemble_store.py", "model/paired_ensemble/ensemble_report.py",
     "model/paired_ensemble/ensemble_portable.py", "model/paired_ensemble/ensemble_cli.py",
+    "model/native_versions.py", "model/model_selection.py",
 )
 
 

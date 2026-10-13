@@ -72,6 +72,7 @@ def normalize_payload(action, raw, workspace):
         "project.receive": {"file", "destination", "expectedSha256"},
         "field.command": {"action", "payload"},
         "parcel.command": {"action", "payload"},
+        "parcel.capture": {"action", "payload"},
         "postgis.select": {"sourceId", "layerId", "connection", "label"},
         "postgis.check": {"sourceId", "layerIds", "connection"},
         "postgis.layers": {"layers"},
@@ -152,6 +153,11 @@ def normalize_payload(action, raw, workspace):
         require(not Path(value["destination"]).is_relative_to(workspace.root) and
                 not workspace.root.is_relative_to(Path(value["destination"])),
                 "ANALYST_RECEIVING_DIRECTORY", "Receive in a separate project directory.")
+    if action == "parcel.capture":
+        from starforge_stac.parcels.capture_operator import normalize
+        require(set(value) == {"action", "payload"}, "PARCEL_CAPTURE_ACTION",
+                "Use the complete named capture action and payload.")
+        value["payload"] = normalize(value["action"], value["payload"])
     if action == "parcel.command":
         from starforge_stac.parcels.operator import normalize
         require(set(value) == {"action", "payload"}, "PARCEL_ACTION_INPUT",
@@ -401,6 +407,13 @@ def execute(workspace, record, progress):
     action, payload = original["action"], original["payload"]
     common = {"revision": original["revision"], "request_id": record["requestId"],
               "actor": original["actor"]}
+    if action == "parcel.capture":
+        from starforge_stac.parcels.capture_operator import execute as capture_execute
+        from starforge_stac.parcels.capture.providers import CaptureError
+        try:
+            return capture_execute(workspace, payload["action"], payload["payload"], common, progress=progress)
+        except CaptureError as error:
+            require(False, error.code, str(error), **error.detail)
     if action == "parcel.command":
         from starforge_stac.parcels.operator import execute as parcel_execute
         return parcel_execute(workspace, payload["action"], payload["payload"], common, progress=progress), []

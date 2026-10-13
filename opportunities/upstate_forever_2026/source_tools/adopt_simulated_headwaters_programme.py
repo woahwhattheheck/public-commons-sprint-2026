@@ -367,6 +367,15 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
                 or any(row["state"] != "complete" or row["artifact"] is None
                        for row in report["rows"])):
             raise ValueError("Retained complete Programme report differs from the original native cases")
+        # Reopening a retained report still verifies its original native bytes.
+        # CompletedWorkspace.run only validates saved completed stages; it cannot
+        # dispatch a model or rewrite Programme progress and comparisons.
+        for run_id in ids:
+            ws.run(run_id)
+        for row in report["rows"]:
+            for name in ("artifact", "comparison_artifact"):
+                if row.get(name) is not None:
+                    verify_file(ws.root, row[name])
         for item in report["files"]:
             verify_file(ws.root, item)
     else:

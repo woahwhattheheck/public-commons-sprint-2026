@@ -5,8 +5,7 @@ import json
 
 from model import parameter_studies as experiments
 from model import parameter_calibration
-from model.common import identifier, read_json, verify_file
-from model.model_selection import selected
+from model.common import identifier
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
 READS = {"catalog", "results", "calibration", "execution"}
@@ -64,59 +63,17 @@ class ParameterStudyAPI:
             raise self.fault("PARAMETER_STUDY_READ", "Choose the parameter catalog, completed results or calibration candidates.")
 
         experiment_id = identifier(payload.get("id"))
-        state = experiments.inspect(workspace, experiment_id)
-        artifact = state.get("artifacts", {}).get("results")
-        if not artifact:
-            raise self.fault("PARAMETER_STUDY_RESULTS", "Run or summarize completed cases to create study results.", 404)
-        path = verify_file(workspace.root / "experiments" / experiment_id, artifact)
-        result = read_json(path)
-        if result.get("experiment_id") != experiment_id or result.get("workspace_id") != workspace.project["id"]:
-            raise self.fault("PARAMETER_STUDY_RESULTS_ID", "The result table belongs to another saved study.", 409)
-
-        areas = result["areas"]
-        pollutants = sorted({row["pollutant"] for row in result["rows"]})
-        area_id = payload.get("area_id") or None
-        pollutant = payload.get("pollutant") or None
-        if area_id and area_id not in {area["id"] for area in areas}:
-            raise self.fault("PARAMETER_STUDY_AREA", "Choose a reporting area from this study.")
-        if pollutant and pollutant not in pollutants:
-            raise self.fault("PARAMETER_STUDY_POLLUTANT", "Choose a pollutant from this study.")
+        from model.parameter_result_query import DEFAULT_RESULTS
         try:
-            offset = max(0, int(payload.get("offset") or 0))
-            limit = max(1, min(1000, int(payload.get("limit") or 100)))
-        except (TypeError, ValueError) as error:
-            raise self.fault("PARAMETER_STUDY_PAGE", "Use whole numbers for the result-table page.") from error
-
-        def matches(row):
-            return (not area_id or row["area_id"] == area_id) and (not pollutant or row["pollutant"] == pollutant)
-
-        matching = [row for row in result["rows"] if matches(row)]
-        if offset >= len(matching):
-            offset = max(0, ((len(matching) - 1) // limit) * limit)
-        return {
-            "experiment_id": experiment_id,
-            "title": result["title"],
-            "purpose": result["purpose"],
-            "design": result["design"],
-            "models": result.get("models") or list(selected(result["baseline_selection"])),
-            "mass_basis": result.get("mass_basis", "Sum of retained annual mass per pixel."),
-            "completed_cases": result["completed_cases"],
-            "total_cases": result["total_cases"],
-            "areas": areas,
-            "pollutants": pollutants,
-            "rows": matching[offset:offset + limit],
-            "ranges": [row for row in result["ranges"] if matches(row)],
-            "total_rows": len(result["rows"]),
-            "filtered_rows": len(matching),
-            "offset": offset,
-            "limit": limit,
-            "comparison_basis": result["comparison_basis"],
-            "range_basis": result["range_basis"],
-            "aggregation": {name: value for name, value in result.get("aggregation", {}).items()
-                            if name != "pairs"},
-            **{name: result[name] for name in (
-                "invest_version", "invest_version_basis", "baseline_selection",
-                "native_versions", "native_run_selections", "native_version_labels", "native_version_guides")
-               if name in result},
-            "artifact_sha256": artifact["sha256"],
-        }
+            return DEFAULT_RESULTS.read(workspace, experiment_id, **{
+                name: payload[name] for name in (
+                    "area_id", "pollutant", "offset", "limit", "range_offset", "range_limit",
+                    "expected_artifact_sha256") if payload.get(name) not in (None, "")
+            })
+        except FileNotFoundError as error:
+            raise self.fault("PARAMETER_STUDY_RESULTS", str(error), 404) from error
+        except BlockingIOError as error:
+            raise self.fault(
+                "PARAMETER_STUDY_RESULTS_BUSY",
+                "The original study is publishing results. Reopen the completed result table after that operation.",
+                409) from error

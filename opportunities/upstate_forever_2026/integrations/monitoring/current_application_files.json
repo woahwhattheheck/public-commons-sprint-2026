@@ -1,7 +1,7 @@
 {
   "schema": "upstate.monitoring-application-files/v1",
   "edition": "monitoring-editable-native-fieldwork-20261013",
-  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery. Selected editable Study transfer retains a saved comparison's original baseline, plans and per-plan contexts, plus its complete scientific report lineage. The same guarded installation retains its maintained inventories and original installers, upgrades exact shared figure-renderer predecessors, and includes the current utility-report dependency of native campaign exports.",
+  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving. Saved comparisons enter the existing scientific report through their exact native records, per-plan context editions, source maps and ordered delivery. Selected editable Study transfer retains a saved comparison's original baseline, plans and per-plan contexts, plus its complete scientific report lineage. The same guarded installation retains its maintained inventories and original installers, upgrades exact shared figure-renderer predecessors, and includes the current utility-report dependency of native campaign exports. The maintained observed-report renderer is installed through its exact historical predecessors, including the original independent-capture inventory correction.",
   "files": [
     "docs/MONITORING_EXPORT_STREAMING.md",
     "docs/MONITORING_FIELDWORK_RETURN.md",
@@ -41,6 +41,7 @@
     "model/monitoring_study_transfer.py",
     "model/monitoring_workspace.py",
     "model/observed_context.py",
+    "model/observed_report_render.py",
     "model/requirements-monitoring.txt",
     "model/scientific_figures.py",
     "model/scientific_map_figures.py",
@@ -79,6 +80,8 @@
     "model/portable_parameter_studies.py",
     "model/receiving_water_monitoring.py",
     "model/receiving_waters.py",
+    "model/scientific_report.py",
+    "model/scientific_tables.py",
     "model/study_delivery_transfer.py",
     "model/study_transfer.py",
     "model/study_transfer_cli.py",
@@ -127,6 +130,11 @@
       "progression_merge": "9e3ecec8b74302ae82978bd9127b6f3f860e3355",
       "shared_renderer_adoption": "Exact complete original bodies through the unchanged Monitoring file inventory and predecessor guard.",
       "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e"
+    },
+    "observed_report_capture": {
+      "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
+      "producer_commit": "08cd869286c8cafd1ef217f20507a365a558ae15",
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
     }
   }
 }

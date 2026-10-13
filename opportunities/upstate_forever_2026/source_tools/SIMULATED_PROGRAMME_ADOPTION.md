@@ -17,7 +17,7 @@ Set the four variables to the receiving interpreter, installed application, reta
 
 The completed-only Workspace adapter takes the original run lock and verifies every retained model artifact. It returns the existing run as reused and has no native execution branch. The maintained Programme owns its normal state transitions, paired comparisons, reports and delivery preview. A missing or unfinished native run produces an actionable error identifying that run.
 
-A repeated adoption reopens an already-complete Programme and verifies its original report, selected native rows and retained report files. It preserves that Programme's progress and comparisons instead of adding another execution attempt. A missing or incomplete report uses the original completed-output-only reconciliation path; an invalid retained report remains an error. The receiving record exposes `programme_reused` for this distinction.
+A repeated adoption reopens an already-complete Programme and verifies its original report, selected native rows and retained report files. It also takes each original run lock through the completed-only adapter, verifies the retained model artifacts and runtime provenance, then verifies every native and comparison artifact referenced by the report rows using its Workspace-relative descriptor. Corrupt or missing native bytes remain an error even when the report JSON and CSV are intact. It preserves that Programme's progress and comparisons instead of adding another execution attempt. A missing or incomplete report uses the original completed-output-only reconciliation path; an invalid retained report remains an error. The receiving record exposes `programme_reused` for this distinction.
 
 ## What appears in the operator
 

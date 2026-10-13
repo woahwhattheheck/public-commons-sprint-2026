@@ -15,7 +15,8 @@ import shutil
 import tempfile
 import zipfile
 
-from .ensemble_store import atomic, canonical, digest, fingerprint, held, identifier, now, read, verify
+from .ensemble_store import (atomic, canonical, digest, fingerprint, held, identifier,
+                             now, read, verify, native_provenance)
 
 SCHEMA = 'upstate.paired-ensemble-report-source/v1'
 REPORT_SCHEMA = 'upstate.observed-report/v1'
@@ -96,6 +97,10 @@ def _completed(directory):
     reports = read(directory / 'reports.json')
     if reports.get('ensemble_id') != state['id']:
         raise ValueError('The retained report belongs to another paired ensemble')
+    provenance = reports.get('native_provenance')
+    if provenance is not None and provenance not in reports['files']:
+        raise ValueError('The original runtime provenance is absent from the scientific source')
+    native_provenance(directory, state, provenance)
     descriptors = [*state['artifacts'].values(), *reports['files']]
     descriptors += [{'path': name, **fingerprint(directory / name)}
                     for name in ('analysis.json', 'reports.json')]
@@ -142,7 +147,7 @@ def _completed(directory):
     return state, reports, members
 
 
-def sections(state):
+def sections(state, runtime=None):
     """Describe the actual tested population, separately for every physical output."""
     selection = state['selection']
     refs = selection.get('source_references') or {}
@@ -160,6 +165,9 @@ def sections(state):
     ]
     if refs.get('invest_version'):
         facts.append(['Retained model version', refs['invest_version']])
+    if refs.get('native_versions'):
+        facts.extend([model.upper() + ' producing version', version]
+                     for model, version in refs['native_versions'].items())
     result = [['Question and selected calculation', [
         selection.get('purpose') or 'Compare the saved baseline and alternative across the explicitly selected profiles.',
         _table(['Design', 'Retained value'], facts, widths=[1.5, 4.4]),
@@ -171,6 +179,25 @@ def sections(state):
             {'title': 'Exact selected profiles, sources, grid and scenarios', 'path': 'original/selection.json'},
         ]},
     ]]]
+    if runtime is not None:
+        runtime_rows = []
+        for run_id, models in sorted(runtime['cohort']['runs'].items()):
+            for model, value in models.items():
+                runtime_rows.append([
+                    run_id, model.upper(), value['comparison_version'], value['basis'],
+                    value.get('requested_version'), value.get('observed_stage_version'),
+                    value.get('observed_run_version'), value.get('stage_completed_at')])
+        result.append(['Original producing-model versions', [
+            'Only the same effective version of each selected model is paired. Completed '
+            'stage runtime takes precedence over observed run runtime and explicitly labeled '
+            'requested-version legacy fallback. NDR and SDR versions remain separate; '
+            'a later stage does not relabel an earlier completed stage.',
+            _table(['Original run', 'Model', 'Compared version', 'Basis', 'Requested',
+                    'Stage observed', 'Run observed', 'Stage completed'], runtime_rows),
+            {'kind': 'links', 'items': [
+                {'title': 'Complete retained native version table', 'path': 'original/native-versions.csv'},
+            ]},
+        ]])
     support_rows, report_summary = [], {}
     for pollutant in selection['pollutants']:
         value = state['summary'][pollutant]
@@ -299,7 +326,8 @@ def capture(project, destination, *, title=None, workspace_id=None):
             expected = identity['producer' if name == 'ensemble_report_source.py' else 'storage_implementation']
             _copy(source, root / 'implementation' / name, expected)
             companions.append({'path': 'implementation/' + name, **expected})
-        report_sections, summary = sections(state)
+        runtime = native_provenance(project, state, reports.get('native_provenance'))
+        report_sections, summary = sections(state, runtime)
         atomic(root / 'science-summary.json', {'ensemble_id': state['id'],
                'input_kind': state['selection'].get('input_kind'),
                'input_description': state['selection'].get('input_description'),

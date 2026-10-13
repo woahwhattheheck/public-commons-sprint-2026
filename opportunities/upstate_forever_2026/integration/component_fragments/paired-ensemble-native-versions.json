@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "paired-ensemble-native-versions",
+  "required_components": [],
+  "extend_components": {
+    "paired-ensemble": {
+      "paths": [
+        "model/native_versions.py",
+        "model/model_selection.py",
+        "integration/component_fragments/paired-ensemble-native-versions.json"
+      ]
+    }
+  }
+}

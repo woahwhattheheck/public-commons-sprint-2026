@@ -208,3 +208,26 @@ result JSON, the correct nested receipt is `review.receipt`; the outer workflow
 receipt has a different schema. Use the nested path unchanged with
 `--continue-receipt`. Never substitute a fabricated edition, review or response ID. Install the current Customer review Study-transfer
 component and its original native review dependencies before enabling this leg.
+
+## Recover an interrupted restore acknowledgement
+
+The complete-workspace and selected-review receiving legs keep the original
+archive, destination and review request. If the original restore has published
+its destination but the course stopped before writing `workspace-restore.json`,
+the receiver uses the maintained `portable.resume_restore` API with the exact
+expected archive SHA256. This reopens the original atomic
+`receiving-complete.json` result and preserves native receiving registrations
+and work subsequently added by the recipient. It never restores over that
+directory or repeats report rendering.
+
+For a successful receiver created before the completion protocol existed, the
+same native API reconciles the original archived bytes and permitted native
+registration before retaining its completion record. Older application source
+without that API retains this course's strict archived-byte recovery. A failed
+native reconciliation is reported directly; it does not fall through to the
+older path. The existing project, saved-edition, review, original-response-prefix
+and selected-study checks still run after receiving.
+
+Continue the same retained operation/output. When continuing an already
+completed S1 result, use `--continue-receipt` with that exact result's receipt;
+in the observed-report wrapper this is its nested `review.receipt`.

@@ -637,16 +637,11 @@ class Operator:
             uploaded = self.upload(required(value, "upload_id"))
             destination = self.restore_root / task["id"]
             if destination.exists():
-                manifest = portable.inspect_archive(uploaded["path"], verify=True)
-                for name, expected in manifest["members"].items():
-                    path = destination.joinpath(*portable.member_name(name).parts)
-                    if not path.is_file() or path.is_symlink() or path.stat().st_size != expected["bytes"] or file_digest(path) != expected["sha256"]:
-                        raise Fault("RECEIVING_CHANGED", "The already-received task directory differs from its original archive.", 409)
-                result = {"schema": "upstate.scientific-workspace-receiving/v1", "project": manifest["project"],
-                          "directory": str(destination), "workspace": str(destination / "workspace"),
-                          "application": str(destination / "application"), "archive_sha256": uploaded["sha256"],
-                          "members": len(manifest["members"]), "selection": manifest["selection"],
-                          "identity": "MATCH", "reused_completed_output": True}
+                try:
+                    result = portable.resume_restore(
+                        uploaded["path"], destination, expected_archive_sha256=uploaded["sha256"])
+                except ValueError as error:
+                    raise Fault("RECEIVING_CHANGED", str(error), 409) from error
             else:
                 result = portable.restore(uploaded["path"], destination)
             restored_workspace = Workspace(result["workspace"])
@@ -1237,7 +1232,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.parameter_studies.read(workspace, parameter_study_reads[url.path],
                         {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit",
                                                      "run_id", "attempt_id", "stream", "log_offset",
-                                                     "expected_attempt_id", "history_offset")}))
+                                                     "expected_attempt_id", "history_offset", "range_offset",
+                                                     "range_limit", "expected_artifact_sha256")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],

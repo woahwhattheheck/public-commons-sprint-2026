@@ -72,3 +72,32 @@ The full rectangular raster includes source cells outside the union. Those total
 `composeOriginalLandcoverChangeContext({files, expectedManifestSha256})` accepts a map of complete original UTF-8 strings or Uint8Array bodies. It returns `{sourceId, recipe, manifest, files, summary, reconciliation}`. All output values in `files` are complete byte arrays. The source ID derives from the full final recipe and its exact original companion identities.
 
 The additive `original-landcover-change-context` component includes this producer, CLI, guide, exact existing archive codec and the complete published analysis source directory. It depends on the existing original-landcover analysis, observed-context and saved scientific-report components. Its source manifest is activated by the ordinary component loader; shared catalogues and original numerical algorithms are unchanged.
+
+
+## Analyst-selected watershed comparison
+
+Open `landcover-change-report.html` and choose **Compare selected watersheds**. Add up to eight original HUC12s. All 217 original names and twelve-character identifiers remain available. The existing complete watershed table and all directional matrices stay available separately.
+
+The selected view compares paired-valid hectares, changed-class hectares and each HUC's changed share. All percentage charts use a 0–100% axis. Area and group charts share a common scale across the selected HUCs; net change uses one symmetric axis around zero. These charts compare the original source cells and do not infer causes, pollutant loads or exact change dates.
+
+Choose any of the nine original groups: water (11), snow/ice (12), developed (21–24), barren (31), forest (41–43), shrub (52), grass (71), agriculture (81–82), and wetland (90,95). Gross gain counts transitions from outside a group into it; gross loss counts transitions from inside to outside. A class switch within a group remains in that group's retained area and is counted separately. Net change equals gross gain minus gross loss. Developed land includes vegetated open space (21), so its hectares are not measured impervious surface. Woody wetlands remain in the wetland group.
+
+Selected union totals are displayed only when the original analysis records zero overlap between HUC pixels. They sum the selected original native-cell supports once; changed percentage is summed changed cells divided by summed paired-valid cells. The complete domain row is never added to individual HUC rows. A HUC polygon remains distinct from an exact gauge catchment or a drinking-water protection footprint.
+
+**Export all selected group rows CSV** includes every selected HUC × nine groups, all original cell counts, unrounded hectares, support counters and source identities. **Export all selected transitions CSV** includes all 256 class pairs per selected HUC, including zero-count pairs. Import HUC12 columns as text to preserve leading zeros. The additional `watershed-group-flows.csv` companion contains every original HUC and the separately labeled unique-domain row: 1,962 complete group rows.
+
+**Print selected comparison** prints the current selected view, including all group rows. The printed view retains the source years and original analysis-manifest identity. Ordinary printing continues to include the report's complete original watershed table.
+
+### Open the selection in the native desk
+
+The offline **Save selection JSON** download uses `upstate.observed-landcover-selection-request/v1`. It retains the original analysis source ID and SHA256, source-manifest SHA256, polygon SHA256, the two original raster years and hashes, ordered HUC12 IDs, title, and separate chart hints. It contains no invented Workspace collection ID.
+
+In **Observed watershed change**, choose **Open saved selection JSON**. The desk resolves exactly one current catalogue source with that analysis ID and hash (using an explicitly selected matching collection when identical editions occur more than once), then opens the original native inputs API and checks its polygon and raster identities before changing the draft. Missing, ambiguous, foreign or stale imports retain the current draft. Import the completed original source first if it is absent. Chart hints stay outside the original native save payload. Inspect and save through the maintained task action to produce the original complete Scientific Reports source and editable Workspace records.
+
+A complete native saved comparison JSON can also open in this offline report when the original analysis, polygon and raster identities match and it contains at most eight HUCs. The native desk can retain larger original selections; the offline side-by-side view asks for a selection of up to eight. The original native report does not carry the upstream source-manifest digest, so that format is matched by its original analysis body and polygon/raster bindings; portable requests additionally verify the retained source-manifest digest when reopened offline.
+
+### Rendered inspection before human delivery
+
+Use the exact regenerated HTML and source edition. Inspect desktop, 360 px and 320 px viewports: all source, matrix and comparison controls remain within the page; full tables scroll in labeled keyboard-focusable regions; long original HUC names wrap; eight chosen watersheds remain removable. Read the matrix column and row class labels after changing area or units, and its visible zero/NoData key. Exercise selected group and quantity, fixed percentage and symmetric net axes, CSV downloads, saved JSON reopening, native import, and selected-only print. Confirm a foreign edition and a late file read preserve the edited draft. Record the actual browser/version, output path and source hash with the receiving operation; controlled-module checks are separate from rendered inspection.
+
+Comparison SVGs keep a 650 px plotting width and 11 px text, including in narrow two-column cards. Each plot has a labeled keyboard-focusable horizontal scrolling region, with its caption outside the scroll. Printing uses one full-width figure per row and keeps the original readable text scale.

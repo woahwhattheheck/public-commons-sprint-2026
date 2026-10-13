@@ -11,10 +11,12 @@ The console contains five working areas:
 | Host | Inspect configured capabilities and declaration identities, compare saved host bindings, retain an approved revision and review original native status. |
 | Tools | Search the actual configured catalog, keep favorites, review each tool's schema and save named immutable request revisions. |
 | Requests | Run an exact saved revision, retain the native return, reopen earlier revisions, recover an original operation and download its exact JSON. |
-| Workflows | Arrange native requests into complete operations with input bindings, required results, recovery and named receiving ownership. Export and install reviewed recipes to reuse the whole operating procedure. |
+| Workflows | Arrange native requests into complete operations with input bindings, required results, recovery and named receiving ownership. Export and install reviewed recipes to reuse the whole operating procedure. Save recurring customer series and review each complete period or source edition. |
 | Customers | Receive an original seller-generated client, retain partial progress, resume the same reviewed export and download its verified files or original archive. |
 
 Use [Workflow recipes](WORKFLOW_RECIPES.md) to export a complete saved operation, review another profile’s configured native tools and inputs, and install all of its requests and first workflow edition together. The complete source, review and original installation travel with its profile.
+
+Use [Recurring customer work](WORKFLOW_SERIES.md) to keep the customer, complete native procedure and calendar together across fresh periods and source editions. Review each saved cycle, start its original native run, and carry the complete profile and selected customer files to another operator with `starforge merchant-workflow-series`.
 
 Use [OpenAPI policy workflows and customer delivery](OPENAPI_WORKFLOWS.md) for a complete reusable API operation: retain explicit policy inputs, pause on the original native review, publish and export the selected package, receive every customer file, and install its portable receiving procedure. The browser and `starforge merchant-openapi-workflows` command share the same saved profiles, editions and run IDs.
 
