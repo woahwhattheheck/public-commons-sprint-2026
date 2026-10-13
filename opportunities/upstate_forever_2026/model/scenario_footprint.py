@@ -397,10 +397,27 @@ def _preview_png(mask_path, destination, maximum_side=640):
     import numpy as np
     import rasterio
     from rasterio.enums import Resampling
+    from rasterio.warp import reproject
     with rasterio.open(mask_path) as src:
         scale = min(1.0, maximum_side / max(src.width, src.height))
         width, height = max(1, round(src.width * scale)), max(1, round(src.height * scale))
-        data = src.read(1, out_shape=(height, width), masked=True, resampling=Resampling.max)
+        if (height, width) == (src.height, src.width):
+            data = src.read(1, masked=True)
+        else:
+            # Maximum is a GDAL warp resampler, not a RasterIO read resampler.
+            # Keep the original grid extent and ignore its original nodata so
+            # every display cell still shows whether any valid cell changed.
+            values = np.full((height, width), 255, dtype=src.dtypes[0])
+            reproject(
+                source=rasterio.band(src, 1), destination=values,
+                src_transform=src.transform, src_crs=src.crs,
+                src_nodata=src.nodata,
+                dst_transform=src.transform * rasterio.Affine.scale(
+                    src.width / width, src.height / height),
+                dst_crs=src.crs, dst_nodata=255,
+                resampling=Resampling.max,
+            )
+            data = np.ma.array(values, mask=values == 255)
         invalid = np.ma.getmaskarray(data)
         pixels = np.full((height, width), 246, dtype="uint8")
         pixels[np.ma.getdata(data) == 1] = 48
