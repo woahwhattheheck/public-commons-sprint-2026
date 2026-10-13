@@ -1,4 +1,5 @@
 // MIT. Flowable whole-source commissioning in the original SF47 Source Desk.
+import {createFlowableFollowingDesk,validateFlowableFollowingWork} from './operations_flowable_following.mjs';
 import {Sha256,sha256File} from './operations_installation_source_hash.mjs';
 import {staffRequest,assertStaffRequestActor,currentStaffContext} from './staff-session.mjs';
 import {parseExactMappingJSON,nativeJSONCanonical} from './operations_installation_mapping_reconciliation.mjs';
@@ -27,7 +28,7 @@ function object(text,label){
  if(!record(value))throw new Error(label+' must be a complete JSON object.');return value;
 }
 function checkRequest(x){
- if(!record(x)||!UUID.test(x.requestId??'')||!['import','catalogue','inspect','template','prepare'].includes(x.method)||
+ if(!record(x)||!UUID.test(x.requestId??'')||!['import','catalogue','inspect','template','prepare','following-compare','following-prepare'].includes(x.method)||
   !record(x.args)||x.args.requestId!==x.requestId||x.sha256!==hash(nativeJSONCanonical({method:x.method,args:x.args})))
   throw new Error('Keep the complete original Flowable request and its unchanged identity.');
  return x;
@@ -44,6 +45,7 @@ export function validateFlowableSourceWork(value){
  for(const x of value.requests)checkRequest(x);
  if(value.pending)checkRequest(value.pending);
  for(const key of ['catalogue','inspection','template','prepared','preview','nativeWorkshares','nativeSelection'])if(value[key]!==null&&!record(value[key]))throw new Error('Keep the complete '+key+' source view.');
+ validateFlowableFollowingWork(value.following);
  return value;
 }
 
@@ -67,6 +69,7 @@ export function createFlowableSourceDesk(ctx){
   return '<label class="'+(options.wide?'source-desk-wide':'')+'"><span>'+esc(label)+'</span>'+input+(options.help?'<small>'+esc(options.help)+'</small>':'')+'</label>';
  };
  const detail=(title,value)=>'<details><summary>'+esc(title)+'</summary><pre>'+esc(pretty(value))+'</pre></details>';
+ const following=createFlowableFollowingDesk({ctx,w,needEdit,assertLive,command,retainedText,object,esc,header,table,hint,empty,button,detail,download,touch});
  function touch(){w().dirty=true;ctx.changed();}
  function invalidate(){w().prepared=null;w().preview=null;w().previewBasis=null;w().receivedDraftKey=null;touch();}
  function clearFrom(kind){
@@ -147,6 +150,7 @@ export function createFlowableSourceDesk(ctx){
    state.programmeChoice=result.source.programme.record.id+'@'+result.source.programme.record.revision;
    state.template=clone(result);state.bindingsText=pretty(result.bindings);state.bindings=null;state.bindingRaw={};invalidate();
   }else if(original.method==='prepare'){await hydratePrepared(result,original,owner);state.prepared=clone(result);state.preview=null;state.previewBasis=null;state.dirty=false;}
+  else if(['following-compare','following-prepare'].includes(original.method))await following.adopt(original,result,owner);
   state.openRequestId=current.requestId;ctx.changed();await ctx.persistNow();
   ctx.notice('Retained the complete original '+original.method+' result and all source identities.');return result;
  }
@@ -285,6 +289,7 @@ export function createFlowableSourceDesk(ctx){
   objectValue[parts.at(-1)]=value;delete state.bindingRaw[path];state.bindingsText=pretty(bindings);state.bindings=null;invalidate();
  }
  function edit(target){
+  if(following.edit(target))return true;
   const key=target.dataset.flowableField,binding=target.dataset.flowableBinding,buyer=target.dataset.flowableBuyer;
   if(!key&&!binding&&!buyer)return false;needEdit();
   if(buyer){const b=object(w().bindingsText,'Complete bindings'),ids=new Set(b.buyerDeploymentIds??[]);target.checked?ids.add(buyer):ids.delete(buyer);b.buyerDeploymentIds=[...ids];w().bindingsText=pretty(b);w().bindings=null;invalidate();return true;}
@@ -313,6 +318,7 @@ export function createFlowableSourceDesk(ctx){
  }
  async function action(action,target){
   const key=action.slice('flowable-'.length),state=w();
+  if(key.startsWith('following-'))return following.action(key);
   if(key==='working-download'){download(pretty(state),'FLOWABLE_SOURCE_WORKING.json');return;}
   if(key==='request-download'){download(pretty(state.requests),'FLOWABLE_SOURCE_REQUESTS.json');return;}
   if(key==='status')return loadSaved(state.pending?.requestId??state.openRequestId);
@@ -440,7 +446,7 @@ export function createFlowableSourceDesk(ctx){
     (state.preview?detail('Actual original case preview',state.preview):'')+
     hint('Opening a draft does not save, accept or fund it. Review and use the existing Installation editor Save. Carry every listed file and the full workspace sidecar through complete independent receiving.'):
     empty('Prepare all selected original source, commercial terms and bindings before native preview.'))+
-   '<h4>Saved requests and reopening</h4>'+
+   following.render()+'<h4>Saved requests and reopening</h4>'+
    '<div class="source-desk-fields">'+field('Original request UUID','openRequestId',state.openRequestId,{wide:true})+'</div>'+
    '<div class="source-desk-actions">'+button('Open saved result','open')+button('Refresh saved requests','list')+
    (state.nextOffset!==null&&state.history.length?button('Load next saved requests','more'):'')+'</div>'+
@@ -448,6 +454,6 @@ export function createFlowableSourceDesk(ctx){
    '</section>';
  }
  return {render,edit,chooseFile,action,validate:validateFlowableSourceWork,pending:()=>!!w().pending,dirty:()=>!!w().dirty,
-  async dispose(){disposed=true;for(const controller of controllers)controller.abort();},
+  async dispose(){disposed=true;following.dispose();for(const controller of controllers)controller.abort();},
   controls(){return {pending:!!w().pending,editable:editable(),disposed};}};
 }
