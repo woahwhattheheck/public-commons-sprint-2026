@@ -413,7 +413,8 @@ PROFILES = {
     "sv833": {
         "module": "sv833_observations", "site_id": "SV-833",
         "title": "SV-833 original observations and scientific reports",
-        "results": 610, "activities": 56, "limits": 606, "parameter": "Escherichia coli",
+        "results": 610, "activities": 56, "limits": 606, "measurements": 575,
+        "parameter": "Escherichia coli",
     },
     "rl18151": {
         "module": "rl18151_observations", "site_id": "RL-18151",
