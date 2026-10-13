@@ -122,6 +122,10 @@ METHODS = [
                    default={"builtin_id": "nlcd-metadata"}),
         ] + RECEIPT_INPUTS,
         "options": DOMAIN_OPTIONS + [
+            _option("read_mode", "Read national product", "choice",
+                    choices=[{"value": "archive", "label": "Read the original ZIP directly"},
+                             {"value": "expanded", "label": "Expand the original national TIFF"}],
+                    help="Archive mode uses the native ZIP reader and retains original member hashes. Omit this option to preserve the helper's existing expanded selection."),
             _option("raster_member", "Land-cover TIFF member", "text",
                     help="Leave blank when the native archive contains one TIFF; otherwise use the exact archive member."),
             _option("expected_features", "Expected domain features", "integer",
@@ -819,6 +823,7 @@ class SourcePreparation:
                 expected_features=options.get("expected_features"),
                 maximum_clip_pixels=options.get("maximum_clip_pixels", 200000000),
                 work_directory=native / "expanded-national-source",
+                **({"read_mode": options["read_mode"]} if "read_mode" in options else {}),
                 **self._domain_options(options, snapshots["domain"])))
         elif method_id == "erosivity":
             from source_tools import erosivity_sources
