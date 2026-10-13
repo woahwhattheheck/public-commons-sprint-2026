@@ -31,14 +31,23 @@ export async function runFieldAssignmentBrowser(inputFile,outputDirectory){
  if(typeof settings.workspace!=='string'||!settings.workspace)throw Error('Choose the actual Workspace key.');
  const output=resolve(outputDirectory);
  for(const original of [settings.application,settings.workspace_path]){if(typeof original!=='string'||!original)throw Error('Supply the original application and Workspace paths.');const source=resolve(original),outward=relative(source,output),inward=relative(output,source);if(!outward||(!outward.startsWith('..')&&!isAbsolute(outward))||!inward||(!inward.startsWith('..')&&!isAbsolute(inward)))throw Error('Keep browser output outside the original application and Workspace.');}
- const cutoff=Date.parse(settings.cutoff||'2026-10-13T14:00:00Z');
- if(!Number.isFinite(cutoff))throw Error('Use the original explicit receiving cutoff.');
- const check=()=>{if(Date.now()>=cutoff)throw Error('The original receiving cutoff has been reached; current artifacts are retained.');};
+ const explicitCutoff=Object.hasOwn(settings,'cutoff');
+ const cutoff=explicitCutoff?Date.parse(settings.cutoff):Infinity;
+ if(explicitCutoff&&(typeof settings.cutoff!=='string'||!Number.isFinite(cutoff)))throw Error('Use a valid explicit receiving cutoff or omit cutoff.');
+ const check=()=>{if(Date.now()>=cutoff)throw Error('The explicit receiving cutoff has been reached; current artifacts are retained.');};
  check();await fs.mkdir(output,{recursive:true});
- const admission={application:resolve(settings.application),workspace_path:resolve(settings.workspace_path),schema:'upstate.field-assignment-browser-admission/v1',origin:operator.origin,workspace:settings.workspace,
+ let admission={application:resolve(settings.application),workspace_path:resolve(settings.workspace_path),schema:'upstate.field-assignment-browser-admission/v1',origin:operator.origin,workspace:settings.workspace,
   input:settings.field_assignment,playwright_module:resolve(settings.playwright_module),executable:resolve(settings.executable),
-  cutoff:new Date(cutoff).toISOString()};
- await atomic(join(output,'selection.json'),json(admission),{immutable:true});
+  cutoff:explicitCutoff?new Date(cutoff).toISOString():null};
+ const selectionPath=join(output,'selection.json');
+ // Preserve the exact earlier journal identity when its sole difference is the
+ // former implicit deadline. A caller-supplied deadline is always enforced above.
+ try{
+  const prior=JSON.parse(await fs.readFile(selectionPath,'utf8'));
+  if(!explicitCutoff&&prior.cutoff==='2026-10-13T14:00:00.000Z'
+      &&equal({...prior,cutoff:null},admission))admission=prior;
+ }catch(error){if(error.code!=='ENOENT')throw error;}
+ await atomic(selectionPath,json(admission),{immutable:true});
  const completion=join(output,'complete.json');
  try{const saved=JSON.parse(await fs.readFile(completion,'utf8'));if(!equal(saved.selection,admission))throw Error('This browser output belongs to another original selection.');for(const row of saved.files){const file=resolve(output,row.path),rel=relative(output,file);if(!rel||rel.startsWith('..')||isAbsolute(rel))throw Error('An original browser artifact leaves its output.');const bytes=await fs.readFile(file);if(bytes.length!==row.bytes||hash(bytes)!==row.sha256)throw Error('A retained browser artifact changed: '+row.path);}return saved;}
  catch(e){if(e.code!=='ENOENT')throw e;}

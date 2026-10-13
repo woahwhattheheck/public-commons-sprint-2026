@@ -40,7 +40,7 @@ ALL ATTACHMENTS count. Literally open, view, play and use the final delivered HT
 
 For the Ecosystem product use plain industrial design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. No decorative template slop. Keep the real workflows, data and computation. Reviews must lead directly to repairs and must not replace hard implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a separate verification product. Prior empty-Workspace screenshots are not acceptance of a completed scientific Workspace.
 
-PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled policy/instruction surface the provider and workers actually read: global and project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions, Commons source mirrors, cloud repository instruction copies, and current build and receiving guides. Every delegating peer includes this complete rule in child assignments, including its all-attachments and final-media clarification. Return exact changed paths, source/version and readback. A Slack ACK alone is not propagation. Preserve all existing owner controls and do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work. Continue the same Ecosystem Sprint Integration assembled product and its original scientific, run, browser and receiver owners. Continue native source, runtime and archive joins rather than diverting everyone to cosmetic review. Preserve October13 cutoff10amEDT/14UTC; this does not expire standing inspection rule or change other owner-directed schedules.
+PERSISTENT PROPAGATION REQUIRED: copy this rule into every active owner-controlled policy/instruction surface the provider and workers actually read: global and project AGENTS, CLAUDE, GEMINI and rules files, provider-specific boot instructions, Commons source mirrors, cloud repository instruction copies, and current build and receiving guides. Every delegating peer includes this complete rule in child assignments, including its all-attachments and final-media clarification. Return exact changed paths, source/version and readback. A Slack ACK alone is not propagation. Preserve all existing owner controls and do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work. Continue the same Ecosystem Sprint Integration assembled product and its original scientific, run, browser and receiver owners. Continue native source, runtime and archive joins rather than diverting everyone to cosmetic review. Bryce's renewed CURRENT_OWNER_DIRECTION.md version 2026-10-13.4 supersedes the earlier Eco cutoff; continue the existing unfinished operation and preserve all other owner controls.
 
 ## Reopen the completed native report edition
 
@@ -184,13 +184,17 @@ Alongside this saved-result course, use the original populated editor to load a 
 
 ## Complete current owner direction
 
-The following complete brief is carried from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3` (Git `8cd1c1f3d371a2fb75471813844e31f489aa8272`). It preserves the current scientific and native owners. This complementary saved-Chemistry report course does not replace the primary actual-geography modeled demonstration.
+The following complete brief is carried from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4` (current source SHA256 `ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609`). It preserves the current scientific and native owners. This complementary saved-Chemistry report course does not replace the primary actual-geography modeled demonstration.
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Current project instructions
+
+Complete as much of the existing Eco science application as possible before the scheduled call, using the existing fleet and complementary workers where useful.
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
 Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
 
@@ -222,6 +226,6 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
