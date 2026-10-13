@@ -43,7 +43,7 @@ python -m starforge_stac.parcels.capture retry \
   --reason "Publisher returned its complete original schema again."
 ~~~
 
-A retry cannot shorten a retained provider deadline. Do not substitute another account, host or endpoint to evade a provider refusal. This public profile sends no credentials or cookies and follows redirects only within its two original HTTPS publisher hosts.
+A retry cannot shorten a retained provider deadline. If execution stops after saving a WAITING or BLOCKED response but before updating progress, the next status or continuation reconstructs admission from that original response. A later local write failure cannot shorten its Retry-After. An explicit retry applies only to its recorded original attempt. Do not substitute another account, host or endpoint to evade a provider refusal. This public profile sends no credentials or cookies and follows redirects only within its two original HTTPS publisher hosts.
 
 ## Coverage and source meaning
 
