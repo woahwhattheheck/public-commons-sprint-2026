@@ -436,7 +436,7 @@ export function attachStationGeography(host) {
     const selected=filteredRows(),limit=75;page=Math.max(0,Math.min(page,Math.max(0,Math.ceil(selected.length/limit)-1)));
     const visible=selected.slice(page*limit,(page+1)*limit);
     target.innerHTML='<div class="sg-table-caption"><span>'+esc(selected.length)+' of '+esc(rows().length)+' stations · '+selected.reduce((total,row)=>total+selectedReferences(row).length,0)+' matching assessment records · page '+esc(page+1)+' of '+Math.max(1,Math.ceil(selected.length/limit))+'</span>'+
-      '<div>'+button('export-filtered','Download station CSV',!edition?'disabled':'')+button('export-assessments','Download assessment records CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
+      '<div>'+(typeof host.openDesk==='function'?button('published-cohort','Open matching observations',!edition||!selected.length?'disabled':''):'')+button('export-filtered','Download station CSV',!edition?'disabled':'')+button('export-assessments','Download assessment records CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
       '<div class="sg-table-scroll"><table><thead><tr><th>Exact station ID</th><th>Assessment causes / county</th><th>Use / support / publication</th><th>Location</th><th>Longitude / latitude</th><th>Watershed membership</th><th>Observed rows</th></tr></thead><tbody>'+
       visible.map(row=>{const coordinates=stationPoint(row),descriptions=selectedValues(row,'station_description');return '<tr'+(String(row.station_id)===String(selectedStation)?' aria-selected="true" class="sg-selected"':'')+'>'+
         '<td>'+button('station',row.station_id,'data-sg-station="'+esc(row.station_id)+'"')+(row.label?'<small>'+esc(row.label)+'</small>':'')+(descriptions.length?'<small class="sg-station-description">'+esc(descriptions.join(' · '))+'</small>':'')+'</td>'+
@@ -468,7 +468,7 @@ export function attachStationGeography(host) {
     const row=rows().find(r=>String(r.station_id)===String(selectedStation));
     if(!row){target.innerHTML='<h3>Station detail</h3><p class="sg-help">Choose a station on the map or in the table to inspect every original location and observation link.</p>';return;}
     const candidates=list(row.candidates), observations=list(edition.result?.observation_links).filter(r=>String(r.station_id)===String(row.station_id));
-    target.innerHTML='<header class="sg-detail-header"><h3>'+esc(row.station_id)+'</h3>'+button('focus-station','Focus map')+'</header>'+
+    target.innerHTML='<header class="sg-detail-header"><h3>'+esc(row.station_id)+'</h3>'+button('focus-station','Focus map')+(typeof host.openDesk==='function'?button('published-station','Open station observations'):'')+'</header>'+
       '<p><strong>'+esc(row.status)+'</strong> · '+esc(row.watershed_status||row.membership_status||'No resolved membership')+'</p>'+
       (list(row.issues).length?'<ul>'+row.issues.map(i=>'<li>'+esc(typeof i==='object'?i.message||JSON.stringify(i):i)+'</li>').join('')+'</ul>':'')+
       inventoryDetail(row)+'<h4>Original location candidates ('+candidates.length+')</h4>'+candidates.map((c,index)=>{
@@ -648,6 +648,25 @@ export function attachStationGeography(host) {
     else if(target.matches('[data-sg-coverage-search]')){coverageSearch=target.value;coveragePage=0;renderCoverage();}
     save();
   }
+
+  async function openObservationStudies(single = false) {
+    if (!edition || typeof host.openDesk !== 'function')
+      throw Error('Open a saved station geography edition in the current application.');
+    const chosen = single ? rows().filter(row => String(row.station_id) === String(selectedStation)) : filteredRows();
+    const ids = [...new Set(chosen.map(row => String(row.station_id)))].sort();
+    if (!ids.length) throw Error('Choose at least one original station.');
+    const key = workspace, id = edition.id;
+    if (key !== host.getWorkspace()) throw Error('Open the original Workspace before selecting its stations.');
+    const view = {scope:single?'Selected station':'All stations matching the current view',
+      search:single?'':search, location_status:single?'':filter, watershed:single?'':watershedFilter,
+      assessment_source:single?'':assessmentSource, assessment_edition:single?'':assessmentEdition,
+      cause:single?'':causeFilter, use:single?'':useFilter, support:single?'':supportFilter,
+      publication:single?'':publicationFilter};
+    save();
+    await host.openDesk('published-studies', 'openForStations', {
+      workspace_key:key, geography_id:id, site_ids:ids, view
+    });
+  }
   function chooseStation(id) {selectedStation=id;renderTable();renderDetail();renderMap();save();}
   function moveView(dx=0,dy=0,scale=1) {
     if(!viewBox)return;
@@ -669,6 +688,8 @@ export function attachStationGeography(host) {
         await host.refresh({force:true});
       }
       else if(act==='go-sources')host.navigate('sources');
+      else if(act==='published-cohort')await openObservationStudies();
+      else if(act==='published-station')await openObservationStudies(true);
       else if(act==='build-microbial'){
         if(!catalog?.utility_microbial?.available)throw Error('Import the complete original utility E. coli source and refresh this desk.');
         await submit('station.geography.utility-microbial',{domain_mode:microbialDomainMode});
