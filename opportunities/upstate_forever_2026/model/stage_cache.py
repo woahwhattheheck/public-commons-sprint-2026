@@ -134,22 +134,21 @@ def _native_member(directory, model, relative):
 
 def _adopt_candidate_file(source_root, descriptor, directory, adopted, *, path=None,
                           transfer=None):
-    """Track independent publications, including a late fsync failure."""
+    """Track new or replaced inodes, including a late fsync failure."""
     relative = descriptor["path"] if path is None else path
     target = destination_file(directory, relative)
     before = target.stat() if target.exists() else None
-    completed = False
     try:
-        result = copy_verified(source_root, descriptor, directory, path=path,
-                               transfer=transfer, replace_mismatch=True)
-        completed = True
-        return result
+        return copy_verified(source_root, descriptor, directory, path=path,
+                             transfer=transfer, replace_mismatch=True)
     finally:
         try:
             current = target.lstat()
         except FileNotFoundError:
             current = None
-        if current is not None and (completed or before is None or
+        # An exact retained file keeps its pre-existing inode and is not ours
+        # to remove if another member of this donor candidate fails later.
+        if current is not None and (before is None or
                 (current.st_dev, current.st_ino) != (before.st_dev, before.st_ino)):
             adopted[relative] = (target, current.st_dev, current.st_ino)
 
