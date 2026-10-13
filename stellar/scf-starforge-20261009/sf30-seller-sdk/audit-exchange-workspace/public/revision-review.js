@@ -127,6 +127,7 @@ export function mountRevisionReview(host){
   // Preserve exact unfinished evidence text independently until it is valid enough
   // for a native decision. A malformed line never erases the saved text.
   function captureEditor(){const row=draft?.decisions.find(r=>r.reviewId===draft.activeReviewId);if(!row)return;
+    if(row.review){draft.editedReviews??={};draft.editedReviews[row.reviewId]=clone(row.review);}
     row.mode=$("revision-review-mode").value;row.reason=$("revision-review-reason").value;
     if(row.mode==="update"){row.review={entityKey:$("revision-review-entity").value};
       for(const field of ["status","title","note","assignee","dueDate"])row.review[field]=$("revision-review-field-"+field).value;
