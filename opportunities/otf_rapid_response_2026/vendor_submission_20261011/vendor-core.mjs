@@ -32,6 +32,7 @@ const asArray = value => Array.isArray(value) ? value : [];
 const obj = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const safe = value => asString(value).replace(/\\/g,'\\\\').replace(/([`*_[\]<>])/g,'\\$1').replace(/[\u0000-\u001f]/g,' ').replace(/\|/g,'\\|');
 const section = (label, value) => `**${label}:** ${value ? safe(value) : 'NOT PROVIDED'}\n`;
+const privateCustody = value => /\binternal\s*:|(?:notion-file-block|file-upload):\/\/|https?:\/\/(?:[a-z0-9-]+\.)*(?:slack\.com|chatgpt\.com|notion\.com|notion\.so|mail\.google\.com)(?:[/:?#]|$)/i.test(value);
 const money = cents => Number.isSafeInteger(cents) && cents > 0 && cents <= 100000000 ? `$${(cents/100).toFixed(2)}` : 'NOT PROVIDED';
 export function check(doc){
 const needs = [];
@@ -87,6 +88,14 @@ export function render(doc,quality,{audience='internal'}={}){
   if(!['internal','submission'].includes(audience))throw Error('Unknown proposal audience');
   if(audience==='submission'&&(quality.needs.length||quality.warnings.length))throw Error('Complete required proposal fields before rendering submission edition');
   const a=obj(doc.applicant),c=obj(doc.contact),q=obj(doc.qualifications),s=obj(doc.supportServices),att=obj(doc.attestations);
+  const evidenceFor=(value,originalKey,publicKey,label)=>{
+    const item=obj(value);
+    const selected=audience==='submission'?(asString(item[publicKey])||asString(item[originalKey])):asString(item[originalKey]);
+    if(audience==='submission'&&(!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(selected)||privateCustody(selected))){
+      throw Error(label+': provide an outward HTTPS evidence reference; retain private custody in '+originalKey);
+    }
+    return safe(selected);
+  };
   const lines=[
     '# OTF Rapid Response Fund 2026 | Vendor submission working draft',
     '',
@@ -97,7 +106,7 @@ export function render(doc,quality,{audience='internal'}={}){
     '## 1. Applicant, technical expertise and personnel',
     section('Applicant',a.name),section('Organization or individual background',a.description),section('Reply owner',c.replyOwner),section('Contact',c.email),
     section('Policy / contracting point of contact',a.policyContact),
-    ...asArray(doc.team).map((m,i)=>`- ${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${safe(obj(m).cvEvidence)})`),
+    ...asArray(doc.team).map((m,i)=>`- ${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${evidenceFor(m,'cvEvidence','cvPublicEvidence',`team[${i}].cvPublicEvidence`)})`),
     '',
     '## 2. Primary requested services and loaded hourly rates',
     ...asArray(doc.services).map((x,i)=>`- ${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${safe(obj(x).offering)}. Method: ${safe(obj(x).method)}`),
@@ -116,7 +125,7 @@ export function render(doc,quality,{audience='internal'}={}){
     ...Object.entries(REQUIRED_QUALIFICATIONS).map(([k,label])=>section(label,q[k])),
     '',
     '## 5. Examples of prior technical work',
-    ...asArray(doc.workExamples).map((x,i)=>`- ${i+1}. **${safe(obj(x).title)}**: ${safe(obj(x).work)}. Evidence/custody: ${safe(obj(x).evidence)}. Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`),
+    ...asArray(doc.workExamples).map((x,i)=>`- ${i+1}. **${safe(obj(x).title)}**: ${safe(obj(x).work)}. ${audience==='submission'?'Evidence':'Evidence/custody'}: ${evidenceFor(x,'evidence','publicEvidence',`workExamples[${i}].publicEvidence`)}.${audience==='internal'?` Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`:''}`),
     '',
     '## 6. Language proficiencies other than English',section('Languages (use "none" when accurate)',doc.languagesOtherThanEnglish),
     '',
@@ -144,7 +153,7 @@ export function render(doc,quality,{audience='internal'}={}){
     for(let i=0;i<body.length;i++){
       body[i]=body[i].replace('## 9. Appendix A and eligibility certification (human owner only)','## 9. Appendix A and eligibility certification')
         .replace(/Human attested TRUE/g,'Confirmed').replace(/Human attested/g,'Confirmed');
-      if(body[i].includes('internal:'))throw Error('Submission edition contains an internal custody reference; provide its publishable attachment or URL');
+      if(privateCustody(body[i]))throw Error('Submission edition contains a private workspace or custody reference; select outward source text and evidence');
     }
     return body.join('\n').trimEnd()+'\n';
   }
