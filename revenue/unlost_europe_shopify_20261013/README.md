@@ -8,18 +8,18 @@ Open `customer/localization-sample/app.html` or `customer/localization-paid/app.
 
 Merchant context retains the original published contacts, source URLs, geographic fit and current-language observations. Pilot scope records the merchant's selected language, current process, reviewer, product/page and commercial notes. Content & review keeps actual source text and manually entered translation side by side. Glossary records protected names and preferred terms. Handover freezes named whole work, produces readable reports and preserves the full edit history.
 
-The working file retains every selected original record, all entered values, prior versions, review decisions and named handovers. Opening a file from the other edition is rejected. A source, entered-translation, tone or relevant glossary change makes an earlier review visibly out of date while retaining the manual text and decision. Stale revision writes and another tab's changed browser copy preserve the operator's entered values; use Reopen browser copy after saving any separate work.
+The working file retains every selected original record, all entered values, prior versions, review decisions and named handovers. Opening a file from the other edition is rejected. A source, entered-translation, tone or relevant glossary change makes an earlier review visibly out of date while retaining the manual text and decision. Stale revision writes and another tab's changed browser copy preserve the operator's entered values; Save working file now preserves unfinished fields in an explicit recovery file; use Reopen browser copy, then restore that draft onto current work.
 
 This is a preparation application for the existing Unlost case. Text and decisions are entered work. Actual translation and store publication happen in the merchant's chosen original tools. App promotion eligibility and commercial terms are confirmed separately in the actual app; the existing research package remains one free profile and five additional profiles for US$20.
 
 ## Complete customer packages
 
-The current fulfillment record contains the same six companies and two immutable editions, all seven original customer files and both original package selections. Seven additive application/source/working/guide files produce two successor packages:
+The current fulfillment record retains the same six companies and two immutable editions, all 14 preceding customer files and all four preceding packages. Seven new recovery-capable application/source/working/guide files produce two successor packages, for totals of 21 files and six packages:
 
-- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02`
-- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02`
+- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-03`
+- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-03`
 
-Each contains all four original customer documents plus the applicable complete application, source, initial working file and shared guide. The maintained seven-module fulfillment engine saves the full files and prepares these exact immutable selections. Whole-record and package reopening are equal. Original records, documents and historical package selections remain byte-preserved; the source before this addition is `source/pre-localization-working-record.json`.
+Each contains all four original customer documents plus the applicable complete application, source, initial working file and shared guide. The maintained seven-module fulfillment engine saves the full files and prepares these exact immutable selections. Whole-record and package reopening are equal. Original records, documents and historical package selections remain byte-preserved; the exact complete source before recovery is `source/pre-recovery-working-record.json`; the earlier original research/package baseline remains `source/pre-localization-working-record.json`.
 
 ## Rebuild and operate
 
@@ -76,16 +76,29 @@ The existing six-merchant record now also produces two complete, self-contained 
 
 Use the original `customer/localization-sample/app.html` or `customer/localization-paid/app.html` for interactive editing. The document viewer previews HTML with scripts disabled, while the separately delivered apps retain their complete interactive behavior. The private receiving Page includes both direct apps and both complete package viewers: https://chatgpt.com/space/page_839214ada674819188a6ca32ca6f0e32 . The existing browser receiving course remains the place for desktop, narrow-screen and downloaded/reopened product use.
 
-Rebuild the complete documents and both portable ZIPs from the unchanged whole record:
+Rebuild the complete documents and both portable ZIPs from the current whole record:
 
 ```sh
 node build-package-documents.mjs working-record.json NEW_COMPLETE_DOCUMENT_OUTPUT
 ```
 
-The reusable `localization/package-documents.mjs` also runs unchanged in connected JavaScript with its existing five modules supplied. It receives the complete original record through the maintained fulfillment engine, verifies whole export equality, selects the two current localization packages, creates ordinary STORE ZIPs, reopens every member with CRC and original byte/hash comparisons, and builds the document envelopes with the maintained DEFLATE implementation. It uses the existing 6A62 customer-package panel without changing that viewer. All complete helper bodies are included. The whole record, original sender/draft, original customer files and existing package selections remain unchanged.
+The reusable `localization/package-documents.mjs` also runs unchanged in connected JavaScript with its existing five modules supplied. It receives the complete original record through the maintained fulfillment engine, verifies whole export equality, selects the two current localization packages, creates ordinary STORE ZIPs, reopens every member with CRC and original byte/hash comparisons, and builds the document envelopes with the maintained DEFLATE implementation. It uses the existing 6A62 customer-package panel without changing that viewer. All complete helper bodies are included. The whole current record includes the recovery successor. Original sender/draft, original customer files and all historical package selections remain unchanged.
 
-The actual connected run received the whole record exactly, built the 248149-byte sample ZIP and390558-byte paid ZIP, and reopened all16 selected member occurrences exactly. Complete archive/panel identities and helper provenance are in `complete-document-receipt.json`. These portable ZIPs use the maintained connected writer's documented file modes/order/timestamp, while `build-localization.cjs` retains its original Node archive writer. The complete selected member bodies agree; archive-level byte identity between those two writers is not required or asserted.
+The actual connected run received the whole record exactly, built both complete current ZIPs, and reopened all16 selected member occurrences exactly. Complete archive/panel identities and helper provenance are in `complete-document-receipt.json`. These portable ZIPs use the maintained connected writer's documented file modes/order/timestamp, while `build-localization.cjs` retains its original Node archive writer. The complete selected member bodies agree; archive-level byte identity between those two writers is not required or asserted.
 
 ## Embedded document presentation
 
 The complete package viewer scopes its foreground, background, typography and controls to a real customer-specific root. This preserves readable presentation when embedded in a Page host. The wrapper retains the unchanged upstream viewer and its complete bootstrap, selects the first outer body opening and last closing boundary, and leaves every original customer file and ZIP byte unchanged. The browser programme compares the actual generated viewer with the served original before operating its file and archive downloads.
+
+
+## Recover unfinished work against the current revision
+
+A dirty editor downloads `localization-<edition>-recovery.json`; a clean editor keeps the ordinary working-file format. The recovery envelope contains that complete saved working bundle plus the exact raw form values and a checksum. Blank fields, invalid URLs, unfinished translations, pilot notes, glossary checkboxes, handover names and unfinished review decisions remain draft values. The unchanged application core never accepts them as saved work without the normal form validation and revision check. Older application versions reject the new envelope instead of dropping its draft.
+
+Opening a recovery file stages an explicit review with its merchant, original saved revision, current revision and every retained field. **Recover draft on current work** restores fields against the current saved revision while retaining its complete history. If another tab changed the browser copy, first export the draft, use **Reopen browser copy**, then recover it. **Open file’s saved work and draft** separately confirms replacement of the browser’s saved base with the exact original saved base carried by the recovery file. Neither path silently merges or approves draft values.
+
+The existing multiple-form warning remains: saving one form asks before discarding other unfinished form edits. The original recovery remains available in the review panel and as a downloadable file, so the operator can reopen it and recover those fields again. Declining either the discard or saved-base replacement keeps the current fields and saved record unchanged.
+
+The same existing browser course now exercises two unfinished content/review forms, an invalid URL and blank required fields, Unicode/newline translation text, a newer second-tab revision, recovery re-export, invalid-save rejection, current-history preservation and both explicit saved-base choices. It captures the real recovery review at desktop and narrow width, downloads and reopens the resulting working and recovery files, and keeps all earlier merchant/content/review/handover checks. These source checks do not substitute for the receiving peer viewing the actual final images and files.
+
+Source repair claim: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791903096188159?thread_ts=1791867144.473299 . The original sender and warm-message approval remain unchanged.
