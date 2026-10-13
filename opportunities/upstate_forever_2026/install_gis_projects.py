@@ -236,6 +236,31 @@ def registration_plan(application):
     return transform, {host: body, registry: registry_body}, 'registry'
 
 
+
+def instruction_source(existing, source):
+    """Carry current owner instructions while retaining receiver-specific content."""
+    body = source.decode('utf-8').strip()
+    if not body:
+        raise ValueError('The application owner instruction file is empty')
+    text = existing.decode('utf-8') if existing is not None else ''
+    if body in text:
+        return existing
+    start = '<!-- BEGIN GIS application owner instructions -->'
+    end = '<!-- END GIS application owner instructions -->'
+    block = start + '\n' + body + '\n' + end
+    if start in text or end in text:
+        if text.count(start) != 1 or text.count(end) != 1 or text.index(end) < text.index(start):
+            raise ValueError('Retain and reconcile the existing GIS owner instruction boundaries')
+        first = text.index(start)
+        last = text.index(end) + len(end)
+        text = text[:first] + block + text[last:]
+    elif not text.strip():
+        text = body + '\n'
+    else:
+        text = text.rstrip() + '\n\n' + block + '\n'
+    return text.encode('utf-8')
+
+
 def install(application, source, dry_run=False):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
     if not (application / 'model/workspace.py').is_file():
@@ -246,6 +271,11 @@ def install(application, source, dry_run=False):
         path=application/name
         if path.is_symlink(): raise ValueError('Original registration file is a symbolic link')
         before[name]=path.read_bytes();planned[name]=fn(before[name].decode('utf-8')).encode('utf-8')
+    instruction = application / 'AGENTS.md'
+    if instruction.is_symlink():
+        raise ValueError('Application owner instruction destination is a symbolic link')
+    before['AGENTS.md'] = instruction.read_bytes() if instruction.exists() else None
+    planned['AGENTS.md'] = instruction_source(before['AGENTS.md'], (source / 'AGENTS.md').read_bytes())
     for name in OWN_FILES:
         data=(source/name).read_bytes();target=application/name
         if target.is_symlink(): raise ValueError('Component destination is a symbolic link')
