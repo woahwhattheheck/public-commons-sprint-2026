@@ -175,14 +175,29 @@ export function checkObservation(result,request,selected,objects,api=API){
  need(result.status===status&&identity(result.value)===identity(value)&&identity(result.numberTokens)===identity(numberTokens)&&identity(result.parseError)===identity(parseError)&&result.stdoutFileId===(stdout?.id??null)&&result.stderrFileId===(stderr?.id??null),'OBSERVATION_PROJECTION_CHANGED');
 }
 
+// API object keys may be canonically reordered in a retained command. Match the
+// complete named catalogue without rewriting the original UI/argument order.
+function catalogueIdentity(rows){
+ need(Array.isArray(rows),'API_IDENTITY');const ids=new Set();
+ const ordered=rows.map(row=>{
+  need(object(row)&&typeof row.id==='string'&&!ids.has(row.id)&&Array.isArray(row.fields),'API_IDENTITY');ids.add(row.id);const names=new Set();
+  const fields=row.fields.map(field=>{need(object(field)&&typeof field.name==='string'&&!names.has(field.name),'API_IDENTITY');names.add(field.name);return field;});
+  fields.sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);return{...row,fields};
+ });
+ ordered.sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);return identity(ordered);
+}
+
 export function inspectPacket(packet){
  keys(packet,['schema','sha256','body']);need(packet.schema===PORTABLE_SCHEMA&&identity(packet.body)===packet.sha256,'PORTABLE_IDENTITY');const p=packet.body;keys(p,['workspace','requests','objects','application','api','createdAt']);
  need(object(p.workspace)&&object(p.workspace.workspace)&&Number.isSafeInteger(p.workspace.workspace.revision)&&p.workspace.workspace.revision>=0,'WORKSPACE_SHAPE');
- need(identity(p.api)===p.workspace.apiSha256&&identity(p.workspace.catalogue)===identity(makeCatalogue(p.api)),'API_IDENTITY');for(const k of ['plans','observations','eventPages','notes','files','exports','history'])need(Array.isArray(p.workspace[k]),'WORKSPACE_SHAPE',{k});
+ need(identity(p.api)===p.workspace.apiSha256&&catalogueIdentity(p.workspace.catalogue)===catalogueIdentity(makeCatalogue(p.api)),'API_IDENTITY');for(const k of ['plans','observations','eventPages','notes','files','exports','history'])need(Array.isArray(p.workspace[k]),'WORKSPACE_SHAPE',{k});
  need(Array.isArray(p.requests)&&Array.isArray(p.objects)&&Array.isArray(p.application),'PORTABLE_SHAPE');
  const objects=new Map();let total=0;for(const row of p.objects){keys(row,['descriptor','contentBase64']);const d=row.descriptor,b=decode64(row.contentBase64);need(d.id==='file-'+hash(b)&&d.sha256===hash(b)&&d.bytes===b.length&&b.length<=MAX_OBJECT&&!objects.has(d.id),'OBJECT_IDENTITY');objects.set(d.id,d);total+=b.length;}need(total<=MAX_OBJECTS,'WORKSPACE_OBJECT_CAPACITY');
  for(const f of p.workspace.files)need(objects.has(f.id)&&identity(objects.get(f.id))===identity(f),'FILE_REFERENCE_CHANGED');
  const ids=new Set();for(const r of p.requests){validateEnvelope(r.envelope);need(r.id===r.envelope.requestId&&r.intentSha256===identity(r.envelope)&&!ids.has(r.id),'REQUEST_IDENTITY');ids.add(r.id);need(['RUNNING','UNCERTAIN','FAILED','COMPLETE'].includes(r.status),'REQUEST_STATE');if(r.status==='COMPLETE')need(r.response?.workspaceId===p.workspace.workspace.id&&r.response.requestId===r.id&&Number.isSafeInteger(r.response.revision),'REQUEST_RESPONSE_IDENTITY');}
+ const names=new Set();for(const f of p.application){need(typeof f.path==='string'&&!path.isAbsolute(f.path)&&f.path.split('/').every(v=>v&&v!=='.'&&v!=='..')&&!f.path.includes('\\')&&!names.has(f.path),'APPLICATION_PATH');names.add(f.path);const b=decode64(f.contentBase64);need(b.length===f.bytes&&hash(b)===f.sha256,'APPLICATION_IDENTITY');}
+ need(names.has('source-files.json')&&names.has('CONTRACT_API.json')&&names.has('server.mjs')&&names.has('lib/workspace.mjs'),'APPLICATION_INCOMPLETE');
+ const manifest=JSON.parse(decode64(p.application.find(f=>f.path==='source-files.json').contentBase64));need(Array.isArray(manifest.files)&&manifest.files.length+1===names.size&&new Set(manifest.files.map(f=>f.path)).size===manifest.files.length&&!manifest.files.some(f=>f.path==='source-files.json'),'APPLICATION_INCOMPLETE');const originalAPI=JSON.parse(decode64(p.application.find(f=>f.path==='CONTRACT_API.json').contentBase64));need(identity(originalAPI)===identity(p.api),'APPLICATION_API_CHANGED');for(const f of manifest.files){const actual=p.application.find(a=>a.path===f.path);need(actual&&actual.bytes===f.bytes&&actual.sha256===f.sha256,'APPLICATION_IDENTITY');}
  let previous=null;for(let i=0;i<p.workspace.history.length;i++){const row=p.workspace.history[i],{sha256,...selected}=row;const request=p.requests.find(r=>r.id===row.requestId);need(row.revision===i+1&&row.previous===previous&&identity(selected)===sha256&&request?.status==='COMPLETE'&&request.response.revision===row.revision&&identity(request.response.result)===row.resultSha256&&request.envelope.method===row.method&&request.intentSha256===row.intentSha256,'HISTORY_IDENTITY');previous=sha256;}need(p.workspace.history.length===p.workspace.workspace.revision,'HISTORY_REVISION');
 
  const historyConfig=(configuration,selected)=>{need(selected,'CONFIGURATION_HISTORY_REQUIRED');const received=clone(selected);received.executionEnabled=false;need(identity(configuration)===identity(selected)||(p.workspace.receivedFrom&&identity(configuration)===identity(received)),'CONFIGURATION_HISTORY_CHANGED');};
@@ -196,18 +211,18 @@ export function inspectPacket(packet){
    historyConfig(configuration,selectedConfig);
    const source=sourceFiles.map(f=>{const row=p.objects.find(o=>o.descriptor.id===f.id);need(row&&row.descriptor.bytes===f.bytes&&row.descriptor.sha256===f.sha256,'EVENT_OBJECT_CHANGED');addFile(f.id);return{path:f.path,bytes:f.bytes,sha256:f.sha256,data:decode64(row.contentBase64)};});
    need(identity(sourceFileIds)===identity([...new Set(sourceFiles.map(f=>f.id))]),'EVENT_FILE_SELECTION_CHANGED');
-   validateEventCapture(page,request.id,configuration,request.envelope.args,expected.eventPages.find(v=>v.id===request.envelope.args.previousPageId),source,p.api);expected.eventPages.push(result);
-  }else if(method==='plan.prepare'){historyConfig(result.config,selectedConfig);checkPlan(result,request,p.api);expected.plans.push(result);}
+   validateEventCapture(page,request.id,configuration,request.envelope.args,expected.eventPages.find(v=>v.id===request.envelope.args.previousPageId),source,originalAPI);expected.eventPages.push(result);
+  }else if(method==='plan.prepare'){historyConfig(result.config,selectedConfig);checkPlan(result,request,originalAPI);expected.plans.push(result);}
   else if(['plan.simulate','plan.execute','observation.capture'].includes(method)){
    need(result.id==='observation-'+request.id&&Array.isArray(result.sourceFileIds)&&result.apiSha256===p.workspace.apiSha256&&result.native?.requestId===request.id&&result.native?.planId===result.planId,'OBSERVATION_BINDING_CHANGED');
-   const selected=invocation(result.configuration,result.actionId,result.parameters,method==='plan.execute',p.api);
+   const selected=invocation(result.configuration,result.actionId,result.parameters,method==='plan.execute',originalAPI);
    need(result.contractId===selected.contract.id&&identity(result.binding)===identity({network:result.configuration.network,contractId:selected.contract.id,contractKey:selected.action.contract,wasmSha256:selected.contract.wasmSha256,apiSha256:p.workspace.apiSha256})&&identity(result.native?.invocation?.argv)===identity(selected.argv),'OBSERVATION_BINDING_CHANGED');
    if(method==='observation.capture'){historyConfig(result.configuration,selectedConfig);need(selected.action.readOnly&&request.envelope.args.actionId===result.actionId&&identity(request.envelope.args.parameters)===identity(result.parameters),'OBSERVATION_REQUEST_CHANGED');}
    else{const plan=expected.plans.find(q=>q.id===request.envelope.args.planId);need(plan&&plan.id===result.planId&&plan.actionId===result.actionId&&identity(plan.parameters)===identity(result.parameters)&&identity(plan.config)===identity(result.configuration),'OBSERVATION_PLAN_CHANGED');}
    for(const id of result.sourceFileIds)addFile(id);
    for(const f of result.native.files){const actual=objects.get('file-'+f.sha256);need(actual&&actual.bytes===Number(f.bytes)&&result.sourceFileIds.includes(actual.id),'OBSERVATION_FILE_CHANGED');}
    if(method==='plan.execute')need(selectedConfig?.executionEnabled===true&&identity(result.configuration)===identity(selectedConfig),'INVOCATION_CONFIGURATION_HISTORY_CHANGED');
-   checkObservation(result,request,selected,p.objects,p.api);
+   checkObservation(result,request,selected,p.objects,originalAPI);
    expected.observations.push(result);
   }else if(method==='source.import'){
    need(hash(decode64(request.envelope.args.contentBase64))===request.envelope.args.sha256&&result.id==='file-'+request.envelope.args.sha256&&result.bytes===request.envelope.args.bytes&&result.sha256===request.envelope.args.sha256,'SOURCE_REQUEST_CHANGED');addFile(result.id);
@@ -220,9 +235,7 @@ export function inspectPacket(packet){
  if(selectedConfig){const received=clone(selectedConfig);received.executionEnabled=false;need(identity(p.workspace.config)===identity(selectedConfig)||(p.workspace.receivedFrom&&identity(p.workspace.config)===identity(received)),'SAVED_CONFIGURATION_CHANGED');}
  for(const request of p.requests.filter(r=>r.status==='COMPLETE'))need(p.workspace.history.some(h=>h.requestId===request.id),'UNBOUND_COMPLETE_REQUEST');
 
- const names=new Set();for(const f of p.application){need(typeof f.path==='string'&&!path.isAbsolute(f.path)&&f.path.split('/').every(v=>v&&v!=='.'&&v!=='..')&&!f.path.includes('\\')&&!names.has(f.path),'APPLICATION_PATH');names.add(f.path);const b=decode64(f.contentBase64);need(b.length===f.bytes&&hash(b)===f.sha256,'APPLICATION_IDENTITY');}
- need(names.has('source-files.json')&&names.has('CONTRACT_API.json')&&names.has('server.mjs')&&names.has('lib/workspace.mjs'),'APPLICATION_INCOMPLETE');
- const manifest=JSON.parse(decode64(p.application.find(f=>f.path==='source-files.json').contentBase64));need(Array.isArray(manifest.files)&&manifest.files.length+1===names.size&&new Set(manifest.files.map(f=>f.path)).size===manifest.files.length&&!manifest.files.some(f=>f.path==='source-files.json'),'APPLICATION_INCOMPLETE');need(identity(JSON.parse(decode64(p.application.find(f=>f.path==='CONTRACT_API.json').contentBase64)))===identity(p.api),'APPLICATION_API_CHANGED');for(const f of manifest.files){const actual=p.application.find(a=>a.path===f.path);need(actual&&actual.bytes===f.bytes&&actual.sha256===f.sha256,'APPLICATION_IDENTITY');}
+
  return{schema:PORTABLE_SCHEMA,sha256:packet.sha256,workspace:clone(p.workspace.workspace),requests:p.requests.length,files:p.objects.length,bytes:total,application:p.application.length};
 }
 export async function receiveWorkspace({packet,directory:root,requestId}){

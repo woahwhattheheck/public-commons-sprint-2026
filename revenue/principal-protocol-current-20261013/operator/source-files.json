@@ -2,8 +2,8 @@
   "schema": "principal.operator-source.v1",
   "edition": "principal-current-accounting-3",
   "api": {
-    "bytes": 40684,
-    "sha256": "8b0e79f6436141ad6375c5bfb601be2be79580c879e407f4e73e37994b92c544"
+    "bytes": 44023,
+    "sha256": "7ae8ac40c64213586ee41bf1f022e7461cf6c947487f9acd82995cf0e037f0d2"
   },
   "files": [
     {
@@ -53,8 +53,8 @@
     },
     {
       "path": "lib/workspace.mjs",
-      "bytes": 32752,
-      "sha256": "2231434cddb6c8db03d3686228c78de0bb55b438e087cf064e581fcecd53dd83"
+      "bytes": 33586,
+      "sha256": "828ad60d38045c0bd121c17825ba99634ea87962d6d4ba841b07b4ec1df53bb8"
     },
     {
       "path": "native/principal_attempt.py",
@@ -93,8 +93,8 @@
     },
     {
       "path": "web/styles.css",
-      "bytes": 5198,
-      "sha256": "60a1a0e021b6b83056c3a089c41ca9283657592672525e3572a61d01c9892006"
+      "bytes": 5550,
+      "sha256": "7a39498e0ae926e493d2d10bb154096b7a25ce51ba26daf7c237a36457ce2f2b"
     },
     {
       "path": "web/sha256.mjs",
@@ -108,8 +108,8 @@
     },
     {
       "path": "web/app.mjs",
-      "bytes": 68351,
-      "sha256": "e77e609fc750240e50d679f717704476b48af9fe82466214ed01deeb57eac65b"
+      "bytes": 68418,
+      "sha256": "22876a57521a6d84a501939e6fa68e04adc83fcc9e2c30d308ec98c9c57a22ca"
     },
     {
       "path": "AGENTS.md",
@@ -123,8 +123,8 @@
     },
     {
       "path": "web/market.mjs",
-      "bytes": 13509,
-      "sha256": "c31a92c5b7e3eb99ab5b97b4f9d7d520f4bc7b09503ef1a11dbc0cdad3be53b9"
+      "bytes": 15053,
+      "sha256": "d64abe39c65de970f95bfdccbb73ba98ddeb7b34f9f74e2234ceefcb84d67ffc"
     },
     {
       "path": "lib/rpc-events.mjs",
