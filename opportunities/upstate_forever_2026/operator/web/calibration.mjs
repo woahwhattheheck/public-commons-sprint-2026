@@ -1,3 +1,4 @@
+import {createCalibrationCatchments} from './calibration_catchments.mjs';
 import {createCalibrationHistory} from './calibration_history.mjs';
 import {createCalibrationReviews} from './calibration_review.mjs';
 import {createCalibrationMaps} from './calibration_maps.mjs';
@@ -44,6 +45,9 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   };
   const draftKey = () => 'upstate-calibration-draft:'+current();
   const form = () => $('#operation-form');
+  const catchmentsDesk=createCalibrationCatchments({current,read,api,openForm,submitAction,detail,fileList,
+    getData:calibrationData,bindForm,formOpening,openForObservations,
+    captureCalibrationDraft:()=>{if(activeDraft?.workspace===current())captureDraft();}});
   const historyDesk=createCalibrationHistory({section,button,number,esc,table});
   const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
@@ -115,7 +119,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(activeUncertainty)return renderUncertainty();
     if(activeReport)return renderReport();
     const all=plans();
-    return header('Calibration and validation','Compare completed baseline parameter profiles against the original annual loads. Keep independent catchment groups outside parameter selection and inspect the chosen profile on those groups.',button('new','New calibration','',true))+
+    return header('Calibration and validation','Compare completed baseline parameter profiles against the original annual loads. Keep independent catchment groups outside parameter selection and inspect the chosen profile on those groups.',button('new','New calibration','',true)+button('catchments-new','Prepare gauge catchments'))+
+      catchmentsDesk.summary()+
       '<div class="cards">'+[
         ['Saved selections',all.length,'Original observations, candidate runs and group assignments.'],
         ['Completed comparisons',reports().length,'Retained parameter rankings and physical error metrics.'],
@@ -160,7 +165,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   }
   function detach(){
     mounted=null;lastMarkup=null;
-    generation++;mapsDesk.invalidate();reviewsDesk.invalidate();
+    generation++;mapsDesk.invalidate();reviewsDesk.invalidate();catchmentsDesk.invalidate();
   }
   function repaint(){
     if(!mounted)return;
@@ -479,10 +484,15 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       !catchments||typeof catchments!=='object'||Array.isArray(catchments)||
       ['source_collection_id','source_id','id_field'].some(key=>typeof catchments[key]!=='string'||!catchments[key].trim()))
       throw Error('The saved annual binding needs its original observation and catchment source identities.');
+    if(value.observation_record_ids!==undefined&&(!Array.isArray(value.observation_record_ids)||
+      !value.observation_record_ids.length||value.observation_record_ids.some(id=>typeof id!=='string'||!id)||
+      new Set(value.observation_record_ids).size!==value.observation_record_ids.length))
+      throw Error('Retain each selected original observation record once.');
     if(value.temporal_weighting!==undefined&&!periodWeighting(value.temporal_weighting))
       throw Error('Use the saved annual source’s whole_years or elapsed_days period weighting.');
     if(activeDraft?.workspace===workspace)captureDraft();
     const handoff=JSON.parse(JSON.stringify({observation_id:value.observation_id,catchments,
+      ...(value.observation_record_ids?{observation_record_ids:value.observation_record_ids}:{}),
       ...(value.temporal_weighting?{temporal_weighting:value.temporal_weighting}:{}),
       ...(typeof value.title==='string'?{title:value.title.trim()}:{})}));
     return newForm(null,handoff);
@@ -553,6 +563,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       if(changedObservation){
         delete selection.observation_record_ids;
         delete selection.delivered_external_loads;
+      }
+      if(handoff.observation_record_ids){
+        selection.observation_record_ids=[...handoff.observation_record_ids];
+        retainedFields=retainedFields?.filter(row=>row.name!=='calibration_records')??null;
       }
       const rebound=new Set(['calibration_observation','calibration_collection','calibration_source',
         'calibration_layer','calibration_id_field','calibration_temporal_weighting']);
@@ -1039,7 +1053,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   function taskActions(task){
     if(!task.action?.startsWith('calibration.')||task.state!=='complete')return '';
     const value=task.result??{};
-    return '<div class="page-actions">'+(value.plan_id?button('plan','Open calibration selection',value.plan_id):'')+
+    return '<div class="page-actions">'+catchmentsDesk.taskActions(task)+(value.plan_id?button('plan','Open calibration selection',value.plan_id):'')+
       (value.report_id?button('report','Open calibration results',value.report_id):'')+
       (value.uncertainty_id?button('uncertainty','Open observation sensitivity',value.uncertainty_id):'')+
       (value.map_id?button('maps-open','Open catchment residual maps',value.map_id):'')+
@@ -1049,6 +1063,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         button('review-source-delivery','Open mapped report form',value.calibration_report_source_id):'')+'</div>';
   }
   async function dispatch(node){
+    if(node.dataset.action?.startsWith('calibration-catchments-'))return catchmentsDesk.dispatch(node);
     if(historyDesk.dispatch(node,repaint))return;
     if(node.dataset.action?.startsWith('calibration-review-')){resultRequest++;return reviewsDesk.dispatch(node);}
     if(node.dataset.action?.startsWith('calibration-maps-')){reviewsDesk.reset();resultRequest++;return mapsDesk.dispatch(node);}
