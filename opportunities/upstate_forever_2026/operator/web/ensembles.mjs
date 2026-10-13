@@ -31,7 +31,7 @@ const choices = (name, rows, empty) => rows.length ? rows.map(row =>
 export function attachEnsembles(context) {
   const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem, refresh, openDelivery, openScientificReport} = context;
   let root=null, generation=0, controller=null, catalog=null, axisCounter=0;
-  let mountedWorkspace=null, rowSignature='', designVersion=0;
+  let mountedWorkspace=null, rowSignature='', designVersion=0, receivedStudy=null;
   if(!document.querySelector('[data-view="ensembles"]')) {
     const navigation=document.createElement('button');
     navigation.type='button';
@@ -49,6 +49,7 @@ export function attachEnsembles(context) {
     root=null;
     mountedWorkspace=null;
     rowSignature='';
+    receivedStudy=null;
     designVersion++;
   }
 
@@ -750,9 +751,11 @@ export function attachEnsembles(context) {
   }
 
   async function inspect(id) {
-    const workspace=currentWorkspace();
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
     const result=await api(endpoint('/api/ensembles/inspect',{ensemble_id:id}));
-    if(workspace!==currentWorkspace())return;
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    if(result.workspace_key!==workspace || result.ensemble?.id!==id)
+      throw Error('Reopen this saved model study in its original Workspace.');
     const item=result.ensemble, summary=result.summary||{}, progress=item.progress||{};
     let content='<div id="ensemble-inspection" data-id="'+escapeHTML(id)+'"><div class="page-actions">'+
       button('inspect','Refresh results',id)+
@@ -819,11 +822,89 @@ export function attachEnsembles(context) {
     detail(item.title||'Scenario sensitivity',content,{kind:'ensemble',id});
   }
 
+
+  async function openSavedStudy(selection={}) {
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    if(selection.workspace_key!==workspace)
+      throw Error('Open this received Study in its original receiving Workspace.');
+    const studyID=selection.study_id, expected=selection.source;
+    if(typeof studyID!=='string'||!/^[0-9a-f]{64}$/.test(studyID) ||
+       !expected?.source_collection_id || !expected?.source_id)
+      throw Error('Choose the saved Study and its original native model source.');
+    const value=await api(endpoint('/api/study-transfer/received-detail',{study_id:studyID}));
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    if(value.workspace_key!==workspace || value.id!==studyID)
+      throw Error('The received Study returned another Workspace or saved identity.');
+    const rows=(value.native_ensemble_sources||[]).filter(row=>
+      row.source?.source_collection_id===expected.source_collection_id&&row.source?.source_id===expected.source_id);
+    if(rows.length!==1)throw Error('The saved Study lost its original native model source.');
+    const row=rows[0], captured=row.captured||{}, item=captured.ensemble, summary=captured.summary;
+    for(const field of ['ensemble_id','report_id','source_operation_id'])
+      if(selection[field] && selection[field]!==row[field])
+        throw Error('The received native study changed its original '+field.replaceAll('_',' ')+'.');
+    if(!item || !summary || item.id!==row.ensemble_id || summary.id!==row.ensemble_id ||
+       captured.release?.id!==row.report_id)
+      throw Error('The native scientific source lacks its original physical report.');
+    receivedStudy={workspace,study_id:studyID,row};
+    const local=row.relationship==='same_project';
+    let html='<div data-native-received-study><p class="eyebrow">RECEIVED MODEL STUDY</p>'+
+      '<p>This view opens the exact physical report retained with '+escapeHTML(value.title||'this Study')+
+      '. Its original source, model choices and common-cell support stay attached to the values below.</p>'+
+      '<div class="page-actions">'+button('received-compose','Add original source to report',row.source_operation_id)+
+      (local?button('inspect','Open editable study',row.ensemble_id):'')+'</div>'+
+      '<div class="cards">'+[
+        ['Parameter cases',numeric(row.member_count)],['Land-cover alternatives',numeric(row.alternative_count)],
+        ['Land-cover rows',numeric(row.landcover_rows)],['Parameter rows',numeric(row.parameter_rows)]
+      ].map(([name,value])=>'<div class="card"><h3>'+escapeHTML(name)+'</h3><strong class="number">'+
+        escapeHTML(value)+'</strong></div>').join('')+'</div>'+
+      '<p>'+escapeHTML(item.reason||'')+'</p>'+
+      '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
+      'Each land-cover contrast uses matching parameter choices; parameter contrasts retain the observed baseline. '+
+      'The original annual units, common-cell coverage and undefined values remain unchanged.</p>';
+    if(!local)html+='<p>This scientific source originated in another project. Its captured choices and results are available here.</p>';
+    const errors=[...(summary.run_errors||[]),...(summary.errors||[])];
+    if(summary.execution_error)errors.push(summary.execution_error);
+    if(errors.length)html+='<section class="section"><h3>Original run and comparison messages</h3><ul>'+
+      errors.map(error=>'<li>'+escapeHTML(error?.message||error?.error?.message||JSON.stringify(error))+'</li>').join('')+
+      '</ul></section>';
+    html+='<h3 class="subheading">Saved land-cover contrasts</h3>'+pairTable(summary)+
+      '<h3 class="subheading">Saved baseline parameter sensitivity</h3>'+pairTable(summary,'sensitivity')+
+      '<h3 class="subheading">Original physical report and tables</h3>'+downloadsHTML(row._numeric_downloads);
+    const reports=(value.reports||[]).filter(report=>(row.report_ids||[]).includes(report.id));
+    for(const report of reports)html+='<h3 class="subheading">'+escapeHTML(report.title||'Saved scientific report')+
+      '</h3>'+downloadsHTML(report._downloads);
+    html+='<h3 class="subheading">Original scientific choices</h3>'+
+      table(['Parameter case','Scenario','Role',...(local?['Open']:[])],
+        (item.members||[]).flatMap(member=>(member.runs||[]).map(run=>'<tr>'+
+          cell(member.label||short(member.id))+cell(run.label||short(run.scenario_id))+cell(label(run.role))+
+          (local?'<td>'+button('open-run','Native run',run.run_id)+'</td>':'')+'</tr>')))+
+      '<details class="technical"><summary>Source data, methods and figures</summary>'+
+      downloadsHTML(row._downloads)+'</details>'+
+      '<details class="technical"><summary>Original model choices and source identities</summary><pre class="json-view">'+
+      escapeHTML(JSON.stringify({
+        source_project_id:row.source_project_id,study_id:studyID,ensemble_id:row.ensemble_id,
+        report_id:row.report_id,source_operation_id:row.source_operation_id,
+        model_scope:row.model_scope,grid_id:item.grid_id,axes:item.axes,
+        sources:summary.sources,members:item.members
+      },null,2))+'</pre></details></div>';
+    detail(row.title||'Received model study',html,{kind:'ensemble-received-study',id:studyID});
+  }
+
+  async function composeReceivedStudy(operationID) {
+    const selected=receivedStudy, workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    if(!selected || selected.workspace!==workspace || selected.row.source_operation_id!==operationID)
+      throw Error('Reopen this original native study from Received Studies.');
+    await refresh({force:true});
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation || receivedStudy!==selected)return;
+    return openScientificReport({workspace_key:workspace,sources:[{...selected.row.source}],title:selected.row.title});
+  }
+
   async function dispatch(node) {
     const action=node.dataset.action.replace(/^ensemble-design-/,''), id=node.dataset.id;
     if(action==='new')return newDesign();
     if(action==='reload')return root?mount(root):undefined;
     if(action==='inspect')return inspect(id);
+    if(action==='received-compose')return composeReceivedStudy(id);
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});
     if(action==='consumer-open')return openConsumer(id);
@@ -870,5 +951,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificReport,scientificDelivery,studyScientificReport};
+  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificReport,scientificDelivery,studyScientificReport,openSavedStudy};
 }
