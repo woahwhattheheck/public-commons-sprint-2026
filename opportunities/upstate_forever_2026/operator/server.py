@@ -50,6 +50,7 @@ from task_requests import TaskRequests
 from team_access import TeamAccess, CONTEXT
 from study_catalogues import StudyCatalogues
 from programme_activity import ProgrammeActivity
+from origin_policy import OriginPolicy, OriginError, advertised_origin as validate_advertised_origin
 
 JSON_GZIP_MIN_BYTES = 32 * 1024
 JSON_ENCODING_QUALITY = re.compile(r"(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\Z")
@@ -1191,11 +1192,10 @@ class Handler(BaseHTTPRequestHandler):
         return self.server.operator
 
     def check_host(self):
-        if self.headers.get("Host") != urllib.parse.urlsplit(self.app.origin).netloc:
-            raise Fault("HOST_INVALID", "Open the original local operator URL.", 403)
-        origin = self.headers.get("Origin")
-        if origin and origin != self.app.origin:
-            raise Fault("ORIGIN_INVALID", "Use the original local operator page.", 403)
+        try:
+            self.checked_origin = self.app.origin_policy.request_origin(self.headers, self.path)
+        except OriginError as error:
+            raise Fault(error.code, str(error), 403) from error
 
     def team_cookie(self):
         jar = cookies.SimpleCookie()
@@ -1244,9 +1244,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         if cookie:
             value = self.app.team.session(self.principal)
-            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + value + "; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=28800")
+            attributes = self.app.origin_policy.cookie_attributes(self.checked_origin)
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + value + attributes)
         if getattr(self, "clear_team_cookie", False):
-            self.send_header("Set-Cookie", self.app.team.cookie_name + "=; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=0")
+            attributes = self.app.origin_policy.cookie_attributes(self.checked_origin, clear=True)
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + attributes)
         self.end_headers()
         self.wfile.write(body)
 
@@ -1301,7 +1303,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.team.state(self.principal, self.app.public_workspaces()))
                 if url.path == "/api/whoami":
                     return self.send_json(200, {"person": self.principal, "workspaces": self.app.public_workspaces(),
-                                               "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary)})
+                                               "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary),
+                                               "advertised_origin": self.app.origin_policy.advertised})
                 if url.path == "/api/task":
                     task = self.app.task(one("id"))
                     self.selected_workspace(task["workspace"])
@@ -1419,7 +1422,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/team":
                 result = self.app.team.change(self.principal, value)
                 if result.get("access_token"):
-                    result["access_url"] = self.app.origin + "/#token=" + result.pop("access_token")
+                    result["access_url"] = self.checked_origin + "/#token=" + result.pop("access_token")
                 return self.send_json(201 if value.get("operation") == "create" else 200, result)
             if url.path == "/api/session":
                 return self.send_json(200, {"connected": True, "person": self.principal,
@@ -1527,7 +1530,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def start_server(directory, *, state_directory=None, create=False, title=None,
                  source_manifests=(), source_roots=(), port=0, restore_directory=None,
-                 upload_limit=4*1024**3, extraction_limit=64*1024**3):
+                 upload_limit=4*1024**3, extraction_limit=64*1024**3, advertised_origin=None):
+    advertised_origin = validate_advertised_origin(advertised_origin)
     directory = Path(directory).resolve()
     operator = Operator(directory, state_directory or directory.with_name(directory.name + "-operator"),
                         create=create, title=title, source_manifests=source_manifests, source_roots=source_roots,
@@ -1541,8 +1545,13 @@ def start_server(directory, *, state_directory=None, create=False, title=None,
     server.daemon_threads = True
     server.operator = operator
     operator.origin = "http://127.0.0.1:" + str(server.server_address[1])
-    return server, {"origin": operator.origin, "operator_url": operator.origin + "/#token=" + operator.capability,
-                    "workspace_key": operator.primary, "project": operator.ws(operator.primary).project}
+    operator.origin_policy = OriginPolicy(operator.origin, advertised_origin)
+    receipt = {"origin": operator.origin, "operator_url": operator.origin + "/#token=" + operator.capability,
+               "workspace_key": operator.primary, "project": operator.ws(operator.primary).project}
+    if advertised_origin:
+        # Only the private local receipt carries the native operator capability.
+        receipt["advertised_origin"] = advertised_origin
+    return server, receipt
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1551,6 +1560,7 @@ def main():
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--title")
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--advertised-origin", help="Exact canonical HTTPS origin of the authenticated transport")
     parser.add_argument("--source-manifest", action="append", default=[])
     parser.add_argument("--source-root", action="append", default=[], help="Original source directory available to registered preparation desks")
     parser.add_argument("--restore-directory")
@@ -1558,6 +1568,10 @@ def main():
     parser.add_argument("--source-extraction-limit-mib", type=int, default=65536)
     parser.add_argument("--launcher-signals", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    try:
+        validate_advertised_origin(args.advertised_origin)
+    except OriginError as error:
+        parser.error(str(error))
     if not 1 <= args.upload_limit_mib <= 65536 or not 1 <= args.source_extraction_limit_mib <= 1048576:
         parser.error("Choose positive explicit upload and source extraction capacities.")
     if args.launcher_signals is not None and not re.fullmatch(r"[0-9a-f]{48}", args.launcher_signals):
@@ -1584,7 +1598,8 @@ def main():
                                        title=args.title, source_manifests=args.source_manifest, source_roots=args.source_root, port=args.port,
                                        restore_directory=args.restore_directory,
                                        upload_limit=args.upload_limit_mib*1024**2,
-                                       extraction_limit=args.source_extraction_limit_mib*1024**2)
+                                       extraction_limit=args.source_extraction_limit_mib*1024**2,
+                                       advertised_origin=args.advertised_origin)
         if not stopping.is_set():
             print(json.dumps(receipt), flush=True)
             server.serve_forever(poll_interval=.3)

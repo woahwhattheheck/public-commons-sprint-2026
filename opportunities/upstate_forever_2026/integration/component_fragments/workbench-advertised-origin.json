@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "workbench-advertised-origin",
+  "source_reference": "ES26-HTTPS-SERVER-20261013",
+  "components": {
+    "workbench-advertised-origin": {
+      "paths": [
+        "operator/origin_policy.py",
+        "operator/server.py",
+        "source_tools/workbench_session.py",
+        "integration/WORKBENCH_HTTPS_ORIGIN.md",
+        "integration/component_fragments/workbench-advertised-origin.json"
+      ],
+      "requires": [
+        "core",
+        "recipient-workbench-opening"
+      ]
+    }
+  },
+  "required_components": [
+    "workbench-advertised-origin"
+  ]
+}
