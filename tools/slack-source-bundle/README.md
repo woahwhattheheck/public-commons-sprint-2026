@@ -59,3 +59,9 @@ The initial larger envelope had manual transcription damage and was replaced bef
 - [Slack Canvas creation](https://docs.slack.dev/reference/methods/canvases.create/)
 
 MIT. No customer source or secret is bundled with this reusable tool.
+
+## Repeated complete source JSON and embedded applications
+
+For a complete UTF-8 JSON/source document that repeats long source strings inside HTML, application banks or native handovers, use [the exact-string transport](EXACT_SOURCE_TRANSPORT.md). Its JavaScript pack/unpack/inspect command preserves the complete original text and byte identity, including original JSON spelling. It does not replace the explicit-file Python bundle above.
+
+The implementation is shared with the maintained Ecosystem source-bank receiver. Existing `source_bank_cli.mjs inspect` and `extract` accept its `commons.exact-source-envelope/v1` output and then apply their original member/path/hash checks. The standalone application component includes the same helper. Reuse the existing source installer or importer after recovery; decoding never executes the recovered content.
