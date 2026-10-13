@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "superset-report",
+  "heading": "## Report and content commissioning and complete receiving",
+  "sources": [
+    {
+      "id": "superset-report-complete-product",
+      "label": "Complete Superset report application and operator handover",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "products/superset-report/OPERATING.md",
+      "commit": "4042d88f2fec313cfde80fff8df05aceaf5708f2"
+    },
+    {
+      "id": "superset-report-selection",
+      "label": "Complete Superset selected-package recipe",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/superset-report.json",
+      "commit": "4042d88f2fec313cfde80fff8df05aceaf5708f2"
+    },
+    {
+      "id": "superset-original-native-customer",
+      "label": "Original Superset customer and full receiving programme",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/superset/examples/README.md",
+      "commit": "7cde1c2537e038b43388f7286fd9c88a0d12994a"
+    },
+    {
+      "id": "superset-original-runtime-installer",
+      "label": "Original source archive and installed-runtime receiving engine",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+      "commit": "7cde1c2537e038b43388f7286fd9c88a0d12994a"
+    }
+  ]
+}
