@@ -35,6 +35,7 @@ SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
+              "receiving-water-plans", "receiving-water-analyses",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
@@ -982,6 +983,8 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
                 elif selected_kind == "experiments":
                     selection = value["selection"]
                     state = read_json(_member(workspace.root, selected_kind + "/" + key + "/state.json"))
+                elif selected_kind in ("receiving-water-plans", "receiving-water-analyses"):
+                    selection, state = value["identity"]["selection"], value
                 else:
                     selection, state = value["selection"], value
                 row = {"kind": selected_kind, "id": key,
