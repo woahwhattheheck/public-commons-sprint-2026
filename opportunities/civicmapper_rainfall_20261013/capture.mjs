@@ -104,7 +104,7 @@ async function completedCapture(task,taskPath,output){
  const retained=await json(output);const reviewed=R.release(retained);
  const original={...task.metadata},actual={...retained.metadata};delete original.retrieved_at;delete actual.retrieved_at;
  if(canonical(original)!==canonical(actual)||canonical(task.request)!==canonical(retained.request)||task.raw_sha256&&task.raw_sha256!==reviewed.fingerprint)throw Error("The existing output belongs to a different original capture. Preserve it and use the matching source.");
- task.completed_at=task.completed_at||retained.metadata.retrieved_at;task.output=path.resolve(output);task.raw_sha256=reviewed.fingerprint;delete task.last_error;await save(taskPath,task);
+ task.completed_at=task.completed_at||retained.acquisition?.completed_at||retained.metadata.retrieved_at;task.output=path.resolve(output);task.raw_sha256=reviewed.fingerprint;delete task.last_error;await save(taskPath,task);
  process.stdout.write(JSON.stringify({capture:output,sha256:reviewed.fingerprint,reopened:true,sensors:reviewed.summaries,warnings:reviewed.warnings},null,2)+"\n");return true;
 }
 
