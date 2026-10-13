@@ -199,12 +199,38 @@ def _store_rows(db, tile, rows):
         geometry = shapely.from_wkb(body)
         if geometry.is_empty:
             continue
+        properties = {k: v for k, v in row.items() if k != "GeometryWkb"}
         if not geometry.is_valid:
-            raise ValueError("Original soil polygon requires a source correction: "
-                             + str(row[POLYGON_ID]))
+            # SDA's geographic AOI clipping can return touching/self-crossing
+            # rings. Preserve the original response; derive a valid index from
+            # the same linework without buffering, smoothing or snapping.
+            reason = shapely.is_valid_reason(geometry)
+            original_body = body
+            original_area = geometry.area
+            original_type = geometry.geom_type
+            geometry = shapely.make_valid(geometry)
+            if geometry.is_empty or not geometry.is_valid or not _polygons(geometry):
+                raise ValueError("Original soil polygon has no valid polygonal "
+                                 "linework: " + str(row[POLYGON_ID]))
+            body = shapely.to_wkb(geometry)
+            properties["geometry_correction"] = {
+                "method": "GEOS MakeValid linework",
+                "source_wkb_sha256": hashlib.sha256(original_body).hexdigest(),
+                "indexed_wkb_sha256": hashlib.sha256(body).hexdigest(),
+                "source_validity_reason": reason,
+                "source_geometry_type": original_type,
+                "indexed_geometry_type": geometry.geom_type,
+                "source_area_square_degrees": original_area,
+                "indexed_area_square_degrees": geometry.area,
+                "area_note": "Diagnostic planar degree areas; native acreage "
+                             "and raster-cell areas remain separate.",
+                "shapely_version": shapely.__version__,
+                "geos_version": shapely.geos_version_string,
+                "reference": "https://shapely.readthedocs.io/en/stable/"
+                             "reference/shapely.make_valid.html",
+            }
         if not _polygons(geometry):
             continue
-        properties = {k: v for k, v in row.items() if k != "GeometryWkb"}
         cursor = db.execute(
             "INSERT INTO soil(tile,aoiid,native_id,mukey,properties,wkb) VALUES(?,?,?,?,?,?)",
             (tile["name"], tile["aoiid"], str(row[POLYGON_ID]), _int(row["MapUnitKey"]),
@@ -345,12 +371,12 @@ def _coefficients(batches):
 
 
 def _write_vector(db, values, destination):
-    """Create a normal geographic layer; original WKB remains in the capture."""
+    """Create the geographic layer and count recorded linework corrections."""
     import shapely
     from shapely.geometry import mapping
     destination = Path(destination)
     pending = destination.with_name(destination.name + ".partial")
-    count = 0
+    count = corrections = 0
     with pending.open("wb") as raw:
         with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as stream:
             stream.write(b'{"type":"FeatureCollection","features":[')
@@ -358,6 +384,7 @@ def _write_vector(db, values, destination):
                     "SELECT tile,aoiid,native_id,mukey,properties,wkb FROM soil ORDER BY tile,native_id"):
                 coefficient = values[mukey]
                 properties = json.loads(props)
+                corrections += int("geometry_correction" in properties)
                 properties.update(source_tile=tile, native_aoiid=aoiid,
                                   native_polygon_id=native_id,
                                   kw_choice=None if coefficient is None else str(coefficient),
@@ -374,7 +401,7 @@ def _write_vector(db, values, destination):
         raw.flush()
         os.fsync(raw.fileno())
     os.replace(pending, destination)
-    return count
+    return count, corrections
 
 
 def _members(root, exclusions=()):
@@ -535,9 +562,13 @@ def capture(manifest_path, source_id, directory, *, vintage, buffer_m=1000,
             atomic_json(root / "survey-editions.json", {
                 "surveys": [surveys_before[k] for k in sorted(versions)],
                 "native_spatial_versions": versions}, immutable=True)
-            features = _write_vector(db, values, root / "soil-mapunits.geojson.gz")
+            features, corrections = _write_vector(
+                db, values, root / "soil-mapunits.geojson.gz")
             summary = {"domain_features": domain_info["feature_count"],
                        "capture_tiles": len(tiles), "soil_polygon_fragments": features,
+                       "geometry_corrected_fragments": corrections,
+                       "geometry_correction_method": "GEOS MakeValid linework; "
+                           "original WKB retained in provider responses",
                        "mapunits": len(values),
                        "rated_mapunits": sum(v is not None for v in values.values()),
                        "unrated_mapunits": sum(v is None for v in values.values()),
