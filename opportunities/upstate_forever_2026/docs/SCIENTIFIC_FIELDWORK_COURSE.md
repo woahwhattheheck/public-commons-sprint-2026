@@ -28,7 +28,7 @@ Repeat --visit-id for an ordered subset of actual visits. Without it, the packet
 ## What completes
 
 1. The original native plan report is retained and registered as an observed scientific source through implementation_report_source.
-2. ScientificReportEditions renders the ordered original report sources and its complete companion ZIP through the real Operator.
+2. The maintained scientific_report_editions lifecycle renders the ordered original report sources; the real Operator prepares its complete companion ZIP. The original full preview is saved before rendering, so a lost completion reply reconnects to that exact edition.
 3. scientific_briefing prepares the original report model, linked figures, slide/meeting-note index and complete briefing ZIP.
 4. field_deployment prepares the selected revision's printable crew packet, offline field workbench, native editable plan, original selected records, calendar, sites and attachments.
 5. The selected scientific report Study includes the native report's complete editable Implementation lineage and crew packets through the existing dependency resolver.
@@ -54,6 +54,7 @@ Both fresh receivers execute source_tools/receive_scientific_fieldwork.py inside
 | --- | --- |
 | intent.json | Exact command selections and optional original source-file digest |
 | original.json | Pinned native plan revision, document digest, ordered sources and visits |
+| scientific-preview.json | Complete original ordered report preview used by the native rendering lifecycle |
 | state.json | Current phase and retained native object identities |
 | scientific-fieldwork-study.zip | Complete selected Study and maintained application |
 | transfer/native-archives/ | Complete Workspace archive and original transfer reconstructions |

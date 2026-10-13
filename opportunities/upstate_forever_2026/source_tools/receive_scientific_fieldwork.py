@@ -29,7 +29,7 @@ from model.implementation import ImplementationStore
 from model.implementation_schema import document_digest
 from model.portable_implementation import report_edition
 from model import field_deployment, implementation_report_source, observed_context
-from model import scientific_briefing, study_receiving, study_transfer
+from model import scientific_briefing, scientific_report_editions, study_receiving, study_transfer
 from model.project_transfer_workspace import NativeProjectTransfer
 
 SCHEMA = "upstate.scientific-fieldwork-course/v1"
@@ -63,7 +63,11 @@ def source_choices(path):
 def plan_report(store, root, state, checkpoint, original):
     if state.get("plan_report"):
         key = state["plan_report"]["id"]
-        return report_edition(store, store.base / original["plan_id"] / "reports" / key)
+        retained = report_edition(store, store.base / original["plan_id"] / "reports" / key)
+        if (retained["revision"] != original["revision"]
+                or retained["document_digest"] != original["document_digest"]):
+            raise ValueError("The retained report differs from the pinned native plan")
+        return retained
     reports = store.list_reports(original["plan_id"])
     wanted = original.get("report_id")
     chosen = next((row for row in reports if
@@ -90,49 +94,63 @@ def plan_report(store, root, state, checkpoint, original):
 
 
 def render_science(workspace, root, state, checkpoint, original, source):
-    # The real Operator supplies the same registered Workspace and original
-    # ScientificReportEditions implementation used by the browser.
+    choices = deepcopy(original["sources"])
+    choice = {name: source[name] for name in ("source_collection_id", "source_id")}
+    if choice not in choices:
+        choices.append(choice)
+    payload = {"sources": choices, "title": original["title"]}
+    preview_path = root / "scientific-preview.json"
+    if state.get("scientific_edition_id"):
+        key = state["scientific_edition_id"]
+        record, _, _ = scientific_report_editions.inspect(workspace, key)
+        scientific_report_editions.validate_request(workspace, payload, record["render_identity"])
+    else:
+        if preview_path.is_file():
+            prepared = read_json(preview_path)
+        else:
+            prepared = scientific_report_editions.preview(workspace, payload)
+            atomic_json(preview_path, prepared, immutable=True)
+        scientific_report_editions.validate_request(workspace, payload, prepared["render_identity"])
+        if state.get("scientific_preview_id") not in (None, prepared["id"]):
+            raise ValueError("The retained scientific preview identifies another operation")
+        checkpoint("rendering_science", scientific_preview_id=prepared["id"])
+        directory = scientific_report_editions.directory(workspace, prepared["id"])
+        if (directory / "operation.json").is_file():
+            # Reconcile an already completed native effect before considering
+            # current formatting source, including a lost edition-publication reply.
+            outcome = scientific_report_editions.render(workspace, {**payload, "preview_id": prepared["id"]})
+        else:
+            outcome = scientific_report_editions.render_prepared(workspace, prepared)
+        key = outcome["scientific_report_edition_id"]
+        record, _, _ = scientific_report_editions.inspect(workspace, key)
+        checkpoint("science_retained", scientific_edition_id=key)
+    # Use the real Operator's existing archive/ticket implementation. Rendering
+    # above is the same model lifecycle used by ScientificReportEditions.
     from server import Operator, Fault
     from source_report_editions import ScientificReportEditions
     operator = Operator(workspace.root, root / "operator-state")
     try:
-        reports = ScientificReportEditions(operator, Fault)
-        if state.get("scientific_edition_id"):
-            key = state["scientific_edition_id"]
-            record, _, _ = reports._inspect(workspace, key)
-        else:
-            choices = deepcopy(original["sources"])
-            choice = {name: source[name] for name in ("source_collection_id", "source_id")}
-            if choice not in choices:
-                choices.append(choice)
-            payload = {"sources": choices, "title": original["title"]}
-            preview = reports.preview(operator.primary, payload)
-            if state.get("scientific_preview_id") not in (None, preview["id"]):
-                raise ValueError("The original scientific selection changed during this operation")
-            checkpoint("rendering_science", scientific_preview_id=preview["id"])
-            outcome = reports.render(operator.primary, {**payload, "preview_id": preview["id"]})
-            key = outcome["scientific_report_edition_id"]
-            record, _, _ = reports._inspect(workspace, key)
-            checkpoint("science_retained", scientific_edition_id=key)
-        reports.export(operator.primary, key)
-        return record
+        ScientificReportEditions(operator, Fault).export(operator.primary, key)
     finally:
         operator.close()
+    return record
 
 
 def briefing(workspace, state, checkpoint, edition_id):
-    if state.get("briefing_id"):
-        key = state["briefing_id"]
+    key = state.get("briefing_id") or state.get("briefing_preview_id")
+    complete = (workspace.root / "scientific-report-briefings" / key / "briefing.json").is_file() if key else False
+    if complete:
         record, _ = scientific_briefing.inspect(workspace, key)
         if record["source_edition_id"] != edition_id:
             raise ValueError("The saved briefing belongs to another scientific report")
     else:
         preview = scientific_briefing.preview(workspace, edition_id)
-        if state.get("briefing_preview_id") not in (None, preview["id"]):
-            raise ValueError("The original briefing changed during this operation")
+        if key not in (None, preview["id"]):
+            state.setdefault("earlier_briefings", []).append({"id": key, "state": "unfinished"})
+            checkpoint("continuing_briefing", earlier_briefings=state["earlier_briefings"])
         checkpoint("preparing_briefing", briefing_preview_id=preview["id"])
         record = scientific_briefing.create(workspace, edition_id, expected_id=preview["id"])
-        checkpoint("briefing_retained", briefing_id=record["id"])
+    checkpoint("briefing_retained", briefing_id=record["id"])
     return scientific_briefing.export(workspace, record["id"])
 
 
@@ -204,11 +222,7 @@ def verify_received(workspace_path, expected_path, output, kind):
         workspace, expected["source_key"], expected["source_operation_id"])
     if source["report_id"] != native_report["id"]:
         raise ValueError("The received scientific source points to another original plan report")
-    from source_report_editions import ScientificReportEditions
-    # The inspector's native contract is Workspace-only; no live Operator or
-    # network is needed to reopen an archived edition.
-    report_reader = ScientificReportEditions(None, ValueError)
-    report, directory, _ = report_reader._inspect(workspace, expected["scientific_edition_id"])
+    report, directory, _ = scientific_report_editions.inspect(workspace, expected["scientific_edition_id"])
     packet = field_deployment.inspect(workspace, selected["id"], expected["deployment_id"])
     if packet["plan"] != expected["deployment_plan"] or packet["selection"] != expected["deployment_selection"]:
         raise ValueError("Receiving changed the original crew packet selection")
