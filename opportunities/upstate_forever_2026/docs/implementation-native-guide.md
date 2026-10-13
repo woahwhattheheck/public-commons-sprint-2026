@@ -37,9 +37,12 @@ full method definition and original CSV record/line range. The existing
 `observations.csv` now gives method context/name and source selectors their own
 columns; the full `lab_source` object and any other original fields remain in
 `extra_json` and unchanged `plan.json`. Site HTML and `sites.csv` expose the
-original declared coordinate reference system alongside coordinates. Wide tables scroll inside their own focusable region at
-narrow widths; long method definitions keep readable column widths. Print output
-uses the page width through the existing print layout.
+original declared coordinate reference system alongside coordinates. Each populated
+table has a labelled, keyboard-focusable scrolling region, readable column widths
+and a sticky header. Its screen viewport is bounded to 36rem so a long result
+register stays usable on a narrow screen; every original row remains in the table.
+Empty registers show a short message. Print output removes the viewport bound,
+uses the page width and repeats the table header.
 
 This uses the existing eleven-member report, existing saved-plan revision and
 normal report manifest/export/reopen route. It adds no installation dependency.
@@ -64,9 +67,20 @@ stay unchanged.
 Continue C5AE's existing completed field/laboratory course with its own retained
 application and Workspace. Refresh only the selected report edition into a new
 output, retain it through the ordinary report operation, and use the maintained
-`source_tools/deliver_field_sources.py` with the explicit new laboratory report
-ID when multiple editions exist. The original evidence packages, source rows,
-two native plans and full Workspace archive keep their own identities.
+`source_tools/deliver_field_sources.py` with `--laboratory-report REPORT_ID` when
+multiple laboratory editions exist. Supply `--station-visit-report REPORT_ID` to
+select a refreshed station/visit report for the exact original plan digest; when
+omitted, the original onboarding report remains selected. Both selections are
+verified through the native report manifest before copying and are bound into
+`delivery.json`. The original onboarding result, evidence packages and native
+plans stay unchanged. A new selection requires a fresh handover output directory.
+
+`START_HERE.html` links directly to `Eighteenmile_Complete_Workspace.zip` and both
+selected report folders. The complete archive carries the saved plans, original
+attachments, historical report editions and newly selected reports together.
+Restore it through the maintained native receiver, then open the exact retained
+report editions from the received working project. Preserve the original completed
+HW13 package while producing this combined scientific and readable presentation.
 
 The producing peer must open and LOOK at the exact refreshed populated HTML,
 both original and native CSV downloads, report/source attachments and received
