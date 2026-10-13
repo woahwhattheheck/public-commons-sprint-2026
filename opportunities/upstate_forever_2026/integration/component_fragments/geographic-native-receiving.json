@@ -24,7 +24,10 @@
         "source_tools/regional_matched_control.py",
         "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
         "source_tools/REGIONAL_MATCHED_CONTROL.md",
-        "source/geographic_headwaters_20261013/PREPARE.md"
+        "source/geographic_headwaters_20261013/PREPARE.md",
+        "source_tools/geographic_scenario_context.py",
+        "source_tools/geographic_scenario_interpretation.mjs",
+        "docs/GEOGRAPHIC_SOURCE_INTERPRETATION_RECEIVING.md"
       ],
       "requires": [
         "core",
