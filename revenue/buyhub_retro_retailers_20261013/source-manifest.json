@@ -1,0 +1,152 @@
+{
+  "schema": "commons.complete-source-manifest/v1",
+  "pack_id": "BUYHUB-UK-RETRO-RETAILERS-379A-20261013",
+  "prepared_at": "2026-10-13T18:47:56.885Z",
+  "files": [
+    {
+      "path": "runtime/host/connected_gzip.cjs",
+      "bytes": 47127,
+      "sha256": "1fc9f3b218c60d029c96bf9f1c1e4de5fcb86918ed5a0570586dc81488440119"
+    },
+    {
+      "path": "runtime/host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "runtime/host/connected_zip.cjs",
+      "bytes": 12090,
+      "sha256": "857c79f789e9cf4f6321bf22804e1c8d55af6758495ae1ba09d4fa72fd97bb26"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+      "bytes": 9998,
+      "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+      "bytes": 12268,
+      "sha256": "75b949c45a4b848671fd78c7b631794d27691b092549e4259edb017c0474fae2"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+      "bytes": 19719,
+      "sha256": "6fd989943d558d806cbb5cdb5e3bad9ee630950aebae13ba6a58dd373d897081"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+      "bytes": 35457,
+      "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 81753,
+      "sha256": "c683ae05e7a83e43ea8d5a3e7a0735f635d20954c1b7002c3c976e2e475b024d"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+      "bytes": 20121,
+      "sha256": "9225050eb8ea3a86fcc02e1845fbe0970473e7ae6bd08a858fb7c806f67562ad"
+    },
+    {
+      "path": "prepare.cjs",
+      "bytes": 6780,
+      "sha256": "9365c0cfa524c964bfbef883dae69d65c47ade07b6464ebac839c77a1a898d79"
+    },
+    {
+      "path": "customer-renderers.cjs",
+      "bytes": 7314,
+      "sha256": "b53fe4f95270f103c09273b283fc8c24db20b99734b93c2e5fc9a7f7b62e5fd7"
+    },
+    {
+      "path": "research.json",
+      "bytes": 27129,
+      "sha256": "391ad9cbd6a91443dbd4dc8527f54f07cbe1d2bc3b9101bfc1c498e1b868c65f"
+    },
+    {
+      "path": "preparation-input.json",
+      "bytes": 48,
+      "sha256": "0a6f775b7fbd035cc2b6cef8bdfd6ef6b52d557d38956446a9dc16faf1902ad6"
+    },
+    {
+      "path": "build.cjs",
+      "bytes": 1962,
+      "sha256": "81bee37125b190ec21363607b499e75b5afe4590c741ee987eccc47e9a5c3a66"
+    },
+    {
+      "path": "browser-documents.mjs",
+      "bytes": 7141,
+      "sha256": "75cd5c0f9c729f5022e7c2a4a8d9ea0ff02e551a0301e42b031fda855f205403"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4302,
+      "sha256": "858f652ac1d49b49881cafa1f3e92582baa1a56c463e3588978d835ed1b1fbcb"
+    },
+    {
+      "path": "first-offer.json",
+      "bytes": 1109,
+      "sha256": "803b35763ab04135d8c01e0345abf5ccf12cfb2a09f1ab14939d6f1008f29519"
+    },
+    {
+      "path": "customer/README.txt",
+      "bytes": 1300,
+      "sha256": "fad227e81de04538b9e755186341cf48f0a9890ef9ddee328517d0c9064371ff"
+    },
+    {
+      "path": "customer/sample/profiles.html",
+      "bytes": 5255,
+      "sha256": "5f4519646cb3772e8455073de2f6dd469fa424b972173efd10bd4e1ed9647677"
+    },
+    {
+      "path": "customer/sample/profiles.csv",
+      "bytes": 2393,
+      "sha256": "c622fae3e5cd5e6c879a3b1853d2470b98015f499e1470826dff775bf6319be2"
+    },
+    {
+      "path": "customer/sample/profiles.md",
+      "bytes": 2750,
+      "sha256": "00c31cdb7a7137f36ca9f6c9c339d863af4fc0e14fbc5d4dfa4aa42bc2970978"
+    },
+    {
+      "path": "customer/sample/profiles.json",
+      "bytes": 3419,
+      "sha256": "2cc94074b4566045ed5b071ea577c50202c1218c2a629386aacb18d93ab1e4e8"
+    },
+    {
+      "path": "customer/paid/profiles.html",
+      "bytes": 14011,
+      "sha256": "cba623de7fd30f556e0b05861ec3843eee1621eadac8aa4ff78b98adc600cb84"
+    },
+    {
+      "path": "customer/paid/profiles.csv",
+      "bytes": 7522,
+      "sha256": "405aceeb28dc687ee748c53f003f2be511931e5bbc4089a8049a265808ef2372"
+    },
+    {
+      "path": "customer/paid/profiles.md",
+      "bytes": 9539,
+      "sha256": "635a73486c88a4c5072a3df4c8d704024db9fce82c654812781eaf5a83052a49"
+    },
+    {
+      "path": "customer/paid/profiles.json",
+      "bytes": 10564,
+      "sha256": "e93a3ecb29050b9672adee1ed8d2f4f2e4f82c561ef4df52528010eb2dd0ec07"
+    },
+    {
+      "path": "working-record.json",
+      "bytes": 133636,
+      "sha256": "9158d721ecd7d40fe54952ab7258366e17198e051004be0bb090eb176383ec37"
+    },
+    {
+      "path": "preparation-receipt.json",
+      "bytes": 267700,
+      "sha256": "3c11a70bc960dd54aa78af48d5975a2e90a1f7c377935ab7786303ea7e3f1667"
+    },
+    {
+      "path": "customer-archives.json",
+      "bytes": 80761,
+      "sha256": "d7dabfcf9be4fd8e5038af7533aaf8097a7477e49f4c7126946fcdbfce2819db"
+    }
+  ]
+}

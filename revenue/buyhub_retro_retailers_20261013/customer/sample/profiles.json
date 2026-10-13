@@ -1,0 +1,40 @@
+{
+  "version": "dealscout.lead-pack.v1",
+  "title": "Free lead sample",
+  "customer": "BuyHub",
+  "prepared_at": "2026-10-13T18:47:56.885Z",
+  "delivery_type": "sample",
+  "criteria": "Eight distinct UK retailer records: one free example, five additional paid profiles and two reserves. Every selected retailer publishes retro-game buying or trade activity and a business contact. Match any sourcing trial to its own platform, region, condition and delivered-cost requirements.",
+  "geography": "United Kingdom",
+  "skills": [
+    "retro games",
+    "console collection buying",
+    "stock sourcing",
+    "marketplace search"
+  ],
+  "quantity": 1,
+  "currency": "USD",
+  "price_minor": 0,
+  "leads": [
+    {
+      "organization": "Hidden Chest Gaming / RetroGear",
+      "company_url": "https://www.hiddenchest.co.uk/",
+      "person": "Ant Harper",
+      "business_need": "Hidden Chest describes itself as an independent shop, names Ant Harper as its console/computer specialist, and advertises refurbished Sinclair hardware. RetroGear explicitly states that it is part of Hidden Chest and buys old consoles, computers, games, peripherals and whole collections.",
+      "source_url": "https://www.hiddenchest.co.uk/",
+      "original_request_date": "",
+      "last_buyer_update": "",
+      "source_checked_at": "2026-10-13",
+      "signal_type": "company_fit",
+      "deadline": "",
+      "contact_route": "mailto:ant@hiddenchest.co.uk",
+      "contact_instructions": "Co-manager; old-computer and console specialist. RetroGear invites collection sellers to request a quote by email. Current Hidden Chest contact information provides Ant's named business address plus the general shop mailbox hiddenchestgaming@gmail.com.",
+      "geography": "The Central Market Hall, High Street, Cradley Heath, B64 5HA, UK",
+      "published_budget": "No software or sourcing budget published.",
+      "why_it_fits": "A focused BuyHub sourcing trial could use separate saved searches and radars for a retailer-selected UK console or 8-bit-computer category. It could bring candidate listings into one review list while Ant retains physical condition, parts, modification, seller and purchase decisions. This is a hypothesis; the retailer's current marketplace use and software are unknown.",
+      "opening_message": "Ant, Hidden Chest's refurbished Sinclair range and RetroGear's collection-buying service caught my eye. Would a saved-search trial for one console or computer category you already buy be useful? BuyHub could surface candidate listings for your review, keeping model, region, condition and delivered cost separate.",
+      "source_status": "open",
+      "status_note": "Public buying/trade activity checked on 13 October 2026. Ask which hardware families and countries the shop currently sources, whether PAL/UK units and imports need separate searches, what modifications or faults are acceptable, and whether peripherals, manuals or original packaging are required. Agree buyer-entered purchase and delivered-cost limits, then inspect actual listings; no sourcing budget, margin, active marketplace account or buying intent has been verified. Current Hidden Chest contact page gives Cradley Heath; RetroGear's Brierley Hill location and online sales text are older. Treat the two brands as one prospect, not two leads. RetroGear is browse-only and must not be described as a current online checkout."
+    }
+  ]
+}
