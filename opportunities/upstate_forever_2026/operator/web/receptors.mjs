@@ -13,7 +13,7 @@ const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosp
 export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
-  let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null;
+  let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
   let filters={profile:'',scenario:'',area:'',pollutant:'',search:''}, page=0;
   const node = selector => frame?.querySelector(selector);
   const currentWorkspace = () => getState()?.workspace_key;
@@ -23,7 +23,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
     experiment_id:'', receptor_profile_id:'', receptor_ids:[],
     profile_ids:null, scenario_ids:null, baseline_run_id:'', alternative_run_ids:[],
     delivery_id:'', delivery_ids_by_baseline:{}, network_source_id:'', network_member:'',
-    network_body_sha256:'', network_decoded_sha256:'',
+    network_body_sha256:'', network_decoded_sha256:'', network_product:null,
   });
   const status = (text, error=false) => {
     const output=node('[data-rc-status]');
@@ -38,22 +38,23 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
   const chooseProfile = id => {
     customProfile=null;draft.receptor_profile_id=id;
     draft.receptor_ids=(selectedProfile()?.receptors||[]).map(row=>row.id);
-    planned=null;draft.network_body_sha256='';draft.network_decoded_sha256='';remember();
+    planned=null;draft.network_body_sha256='';draft.network_decoded_sha256='';draft.network_product=null;remember();
   };
   const nativeReferenceMatches = reference => {
     const spec=selectedProfile();
+    if(draft.network_body_sha256)return reference?.sha256===draft.network_body_sha256;
     if(!spec?.source_collection_id||!spec?.network_source_id)return true;
     if(!reference)return false;
     return (reference.source_collection_id===spec.source_collection_id&&reference.source_id===spec.network_source_id)||
-      reference.sha256===draft.network_body_sha256||reference.sha256===spec.source_reference?.sha256;
+      reference.sha256===spec.source_reference?.sha256;
   };
   const nativeRuns = () => (catalog?.runs||[]).filter(row=>nativeReferenceMatches(row.network_source_reference));
   const nativeExperiments = () => (catalog?.experiments||[]).filter(row=>nativeReferenceMatches(row.network_source_reference));
   function nativeSpecification(spec, reference) {
-    if(!spec.source_collection_id||!spec.network_source_id)return spec;
+    if((!spec.source_collection_id||!spec.network_source_id)&&!draft.network_body_sha256)return spec;
     if(!nativeReferenceMatches(reference))throw Error('Choose native results prepared from this retained watershed source.');
     if(spec.source_collection_id!==reference.source_collection_id||spec.network_source_id!==reference.source_id) {
-      spec.source_network_reference=copy(spec.source_reference||{
+      spec.source_network_reference=copy(spec.source_reference||draft.network_product||{
         source_collection_id:spec.source_collection_id,source_id:spec.network_source_id});
       spec.source_collection_id=reference.source_collection_id;
       spec.network_source_id=reference.source_id;spec.source_reference=copy(reference);
@@ -248,7 +249,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
     try {
       const loaded=await api(endpoint('/api/receptors/'+kind,{id}));
       if(workspace!==requested||epoch!==generation||!frame)return;
-      result=loaded;filters={profile:'',scenario:'',area:'',pollutant:'',search:''};page=0;packageFiles=[];pathSelection=null;
+      result=loaded;filters={profile:'',scenario:'',area:'',pollutant:'',search:''};page=0;packageFiles=[];pathSelection=null;selectedMapHuc='';
       renderResult();status('Saved source-water results reopened.');
     }catch(error){if(epoch===generation)status(error.message||String(error),true);}
     finally{if(epoch===generation)fetching=false;}
@@ -276,8 +277,54 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       '<label>Search<input type="search" data-rc-row-filter="search" placeholder="Area, scenario or profile"></label></div>';
     renderQuantities();renderRanges();renderProducts();
   }
+  function networkMapMarkup() {
+    const view=result.geography_view;
+    if(!view?.shapes?.length)return '';
+    return '<figure class="rc-geography"><div class="rc-toolbar"><button type="button" data-receptor-action="map-in">Zoom in</button>'+
+      '<button type="button" data-receptor-action="map-out">Zoom out</button><button type="button" data-receptor-action="map-reset">Reset view</button></div>'+
+      '<svg data-rc-geography xmlns="http://www.w3.org/2000/svg" viewBox="'+esc(view.view_box.join(' '))+'" role="group" aria-label="Original watershed polygons">'+
+      view.shapes.map(shape=>'<path class="rc-unit" d="'+esc(shape.path)+'" data-receptor-action="map-select" data-huc="'+esc(shape.huc12)+'" tabindex="0" role="button" aria-label="'+
+      esc(shape.huc12+' '+(shape.name||''))+'"><title>'+esc(shape.huc12+' · '+(shape.name||''))+'</title></path>').join('')+
+      '</svg><figcaption><p>Original source polygons. Contributing units are shaded; selected anchors are darkest. Choose a watershed to find its upstream memberships, then inspect its drainage path.</p>'+
+      '<p data-rc-map-status role="status">The complete source package keeps the original geometry and interactive offline map.</p></figcaption></figure>';
+  }
+  function syncNetworkMap() {
+    const svg=node('[data-rc-geography]');
+    if(!svg||!result.geography_view)return;
+    const shapes=new Map(result.geography_view.shapes.map(row=>[row.huc12,row]));
+    for(const path of svg.querySelectorAll('[data-huc]')){
+      const row=shapes.get(path.dataset.huc), member=row.area_ids.some(id=>!filters.area||id===filters.area);
+      const anchor=row.anchor_area_ids.some(id=>!filters.area||id===filters.area);
+      const matches=!filters.search||[row.huc12,row.name,row.tohuc_original,row.source_feature_id].join(' ').toLowerCase().includes(filters.search.toLowerCase());
+      path.classList.toggle('rc-member',member);path.classList.toggle('rc-anchor',anchor);
+      path.classList.toggle('rc-quiet',Boolean((filters.area&&!member)||!matches));
+      path.classList.toggle('rc-chosen',row.huc12===selectedMapHuc);
+    }
+  }
+  function selectMapHuc(huc) {
+    const selected=result.geography_view?.shapes.find(row=>row.huc12===huc);
+    if(!selected)return;
+    selectedMapHuc=huc;filters.search=huc;page=0;
+    const field=node('[data-rc-row-filter="search"]');if(field)field.value=huc;
+    renderMemberships();
+    node('[data-rc-map-status]').textContent=huc+' · '+(selected.name||'')+
+      (selected.area_ids.length?' · Original upstream memberships are listed below.':' · Original source watershed outside the selected receiving-area memberships.');
+  }
+  function zoomNetworkMap(action) {
+    const svg=node('[data-rc-geography]'), full=result?.geography_view?.view_box;
+    if(!svg||!full)return;
+    if(action==='map-reset'){svg.setAttribute('viewBox',full.join(' '));return;}
+    const current=svg.getAttribute('viewBox').split(' ').map(Number);
+    const width=Math.max(full[2]/32,Math.min(full[2],current[2]*(action==='map-in'?1/1.5:1.5)));
+    const height=width*full[3]/full[2];
+    let x=current[0]+current[2]/2,y=current[1]+current[3]/2;
+    const selected=[...svg.querySelectorAll('[data-huc]')].find(path=>path.dataset.huc===selectedMapHuc);
+    if(selected){const box=selected.getBBox();x=box.x+box.width/2;y=box.y+box.height/2;}
+    svg.setAttribute('viewBox',[x-width/2,y-height/2,width,height].join(' '));
+  }
   function renderNetwork() {
     const report=ticketURL(result._report), shared=Object.keys(result.shared_huc12s||{});
+
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(result.title)+'</h2>'+
       '<div class="rc-metrics"><div><strong>'+number(result.network_huc12_count)+'</strong><span>Original HUC12 units</span></div>'+
       '<div><strong>'+number(result.selected_huc12_count)+'</strong><span>Unique contributing units</span></div>'+
@@ -286,6 +333,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       '<button type="button" data-receptor-action="export">Export complete source package</button>'+
       '<button type="button" data-receptor-action="reuse">Use these receiving areas again</button></div>'+
       '<div data-rc-package>'+downloadLinks(packageFiles)+'</div>'+
+      networkMapMarkup()+
       '<p class="rc-note">Membership follows the original ToHUC drainage links upstream from each selected anchor, including the anchor watershed. A watershed can contribute to more than one selected receiving area. Link counts describe steps through the retained network.</p>'+
       '<div class="rc-scroll"><table><caption>Selected receiving areas</caption><thead><tr><th>Area</th><th>Role</th><th>Contributing HUC12 units</th><th>Shared units</th><th>Original anchors</th></tr></thead><tbody>'+
       result.areas.map(area=>'<tr><td>'+esc(area.title)+'</td><td>'+esc(label(area.role))+'</td><td>'+number(area.huc12_count)+'</td><td>'+
@@ -308,6 +356,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       esc(row.hutype)+'</td><td><button type="button" data-receptor-action="path" data-area="'+esc(row.receptor_id)+'" data-huc="'+esc(row.huc12)+'">Inspect path</button></td></tr>').join('')+
       '</tbody></table></div><div class="rc-toolbar"><button type="button" data-receptor-action="previous" '+(page===0?'disabled':'')+'>Previous</button><span>'+
       rows.length+' matching memberships · Page '+(page+1)+' of '+pages+'</span><button type="button" data-receptor-action="next" '+(page+1>=pages?'disabled':'')+'>Next</button></div>';
+    syncNetworkMap();
   }
   function renderPath() {
     const target=node('[data-rc-path]');target.tabIndex=-1;
@@ -407,9 +456,11 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
     if(!result)return;
     draft.mode=result._kind==='comparison'?'experiment':result._kind==='network'?'network':'inventory';draft.title=result.title;
     const selected=result.selection;
-    if(result._kind!=='network'){draft.network_body_sha256='';draft.network_decoded_sha256='';}
+    if(result._kind!=='network'){draft.network_body_sha256='';draft.network_decoded_sha256='';draft.network_product=null;}
     if(result._kind==='network') {
       customProfile=copy(result.identity.receptor_spec);
+      draft.network_product={id:result.id,source_body_sha256:result.source_binding.body_sha256,
+        decoded_source_sha256:result.source_binding.decoded_sha256};
       const source=catalog.network_sources?.find(row=>row.source_collection_id===customProfile.source_collection_id&&row.source_id===customProfile.network_source_id);
       draft.network_source_id=source?.id||'';
       draft.network_member=result.source_binding.zip_member||'';
@@ -443,7 +494,9 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       return submit('receptor.package.export',{kind:result._kind,id:result.id});
     }
     if(action==='reuse')return useSaved();
-    if(action==='path'){pathSelection={area:target.dataset.area,huc:target.dataset.huc};renderPath();node('[data-rc-path]')?.focus();return;}
+    if(action==='path'){pathSelection={area:target.dataset.area,huc:target.dataset.huc};selectedMapHuc=target.dataset.huc;renderPath();syncNetworkMap();node('[data-rc-path]')?.focus();return;}
+    if(action==='map-select')return selectMapHuc(target.dataset.huc);
+    if(['map-in','map-out','map-reset'].includes(action))return zoomNetworkMap(action);
     if(action==='previous'){page--;return renderQuantities();}
     if(action==='next'){page++;return renderQuantities();}
     if(action==='resume'&&pending?.id) {
@@ -490,7 +543,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
     if(root===container&&frame?.isConnected&&workspace===currentWorkspace()){update();return;}
     detach();root=container;workspace=currentWorkspace();
     draft=defaultDraft();customProfile=null;pending=null;result=null;catalog=null;packageFiles=[];
-    planned=null;profileOptions=[];scenarioOptions=[];observing=false;pathSelection=null;
+    planned=null;profileOptions=[];scenarioOptions=[];observing=false;pathSelection=null;selectedMapHuc='';
     try{const saved=JSON.parse(localStorage.getItem(storageKey())||'null');if(saved){draft={...draft,...saved.draft};customProfile=saved.customProfile||null;pending=saved.pending||null;}}catch(_){}
     frame=document.createElement('div');frame.className='receptor-workbench';frame.innerHTML=controls();container.replaceChildren(frame);
     frame.addEventListener('click',event=>{
@@ -499,6 +552,10 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       event.preventDefault();event.stopPropagation();target.disabled=true;
       Promise.resolve(act(target.dataset.receptorAction,target)).catch(error=>status(error.message||String(error),true))
         .finally(()=>{if(target.isConnected)target.disabled=false;});
+    });
+    frame.addEventListener('keydown',event=>{
+      const target=event.target.closest('[data-receptor-action="map-select"]');
+      if(target&&['Enter',' '].includes(event.key)){event.preventDefault();event.stopPropagation();selectMapHuc(target.dataset.huc);}
     });
     frame.addEventListener('change',event=>{
       event.stopPropagation();const target=event.target;
@@ -526,7 +583,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
       }
       if(target.name==='rc-network-source'){
         draft.network_source_id=target.value;draft.network_member='';
-        draft.network_body_sha256='';draft.network_decoded_sha256='';planned=null;
+        draft.network_body_sha256='';draft.network_decoded_sha256='';draft.network_product=null;planned=null;
         node('[data-rc-plan]').replaceChildren();syncControls();
       }
       if(target.name==='rc-network-member'){
@@ -547,7 +604,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast}) {
           const value=JSON.parse(text);
           if(!Array.isArray(value.receptors)||!value.receptors.length)throw Error('Choose a receptor specification containing original watershed anchors.');
           customProfile=value;draft.receptor_profile_id='';draft.receptor_ids=value.receptors.map(row=>row.id);
-          draft.network_body_sha256='';draft.network_decoded_sha256='';
+          draft.network_body_sha256='';draft.network_decoded_sha256='';draft.network_product=null;
           planned=null;syncControls();remember();status('Loaded the complete receptor specification.');
         }).catch(error=>status(error.message||String(error),true));
       }
