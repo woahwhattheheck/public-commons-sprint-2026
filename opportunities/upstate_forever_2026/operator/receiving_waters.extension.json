@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-waters",
   "title": "Receiving waters",
-  "version": "7",
+  "version": "8",
   "order": 52,
   "assets": [
     "receiving_waters.mjs",
@@ -128,7 +128,8 @@
       "fileList",
       "showTask",
       "toast",
-      "openScientificReport"
+      "openScientificReport",
+      "openExtension"
     ],
     "styles": [
       "/web/receiving_waters.css"
