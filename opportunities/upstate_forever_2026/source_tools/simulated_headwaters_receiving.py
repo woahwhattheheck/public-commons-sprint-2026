@@ -425,7 +425,7 @@ def _sources(ws, files, key):
 
 def _customer_review(ws, files, check, receipt):
     """Use the restored application for the exact saved customer case and packages."""
-    from model.simulated_customer_review import inspect_review, receive_review_case, STEPS
+    from model.simulated_customer_review import inspect_export, inspect_review, receive_review_case, STEPS
     key = check["operation_id"]
     relative = "implementation/simulated-customer-reviews/" + key
     files.json(relative + "/operation.json")
@@ -455,7 +455,9 @@ def _customer_review(ws, files, check, receipt):
         _sources(ws, files, collection_id)
     source = Path(check["source"]).resolve(strict=True)
     original_packages = receipt["customer_review_packages"]
-    if source != Path(original_packages["directory"]).resolve(strict=True):
+    expected_packages = {name: value for name, value in original_packages.items()
+                         if name not in ("directory", "original_index", "handback_index")}
+    if inspect_export(source) != expected_packages:
         raise ValueError("Receive the original customer packages selected by this demo receipt")
     for name in ("original_review", "engineering_handback"):
         _check_file(_member(source, original_packages[name]["archive"]["path"]),

@@ -514,6 +514,8 @@ def operate_locked(args, output):
     records = receipt.setdefault("archive_editions", {})
     record = records.setdefault(edition_id, {})
     required_members = [
+        "application/source_tools/simulated_headwaters_receiving.py",
+        "application/model/simulated_customer_review.py",
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
         "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
