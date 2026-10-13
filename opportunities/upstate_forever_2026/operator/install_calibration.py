@@ -36,13 +36,20 @@ DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.m
                 "install_extensions.py", "model/observed_context.py", "model/native_versions.py",
                 "model/model_selection.py", "model/observations.py",
                 "model/observation_support.py", "model/observation_diagnostics.py",
-                "model/common.py")
+                "model/common.py",
+                "model/observed_report_render.py",
+                "operator/source_reports.py",
+                "operator/source_report_editions.py",
+                "operator/web/source_reports.mjs",
+                "operator/web/source_report_editions.mjs",
+                "operator/extensions/source-reports.json")
 VERSION = "upstate.calibration-registration/v3"
 PREDECESSORS = {
     "model/calibration_review.py": {
         "81fbbea2e3aed049336164703f51900db0418cfb94c8eb96c8929da7c8243926",
     },
     "model/CALIBRATION_REPORT_SOURCE.md": {
+        "b64b806fe1aab9ca116e6e6daf4d68944997fcb299f4209e1c1ab72629966af2",
         "83e629f419cabe2a3da91eabdfd35b6e264bce6b4e9fc16cd48c226e548142aa",
     },
     "model/calibration_report_source.py": {
@@ -53,6 +60,7 @@ PREDECESSORS = {
         "2e074fac920846af9cb50013c520e83e0808b95c3d148e4f7734199f1ec9bbd0",
     },
     "operator/web/calibration_review.mjs": {
+        "e783ca91c55741b959d72909dc298562c6c5d769db0f31ef30d09d3fa78351a4",
         "dba247deba72fffb10fe660a038933f3a231f442924f7d3a1041689c00875067",
         "8d130494b0536c577188fcf373a3b24110409030d8eecf28ec60a411c0776842",
         "dfead8c5d57617ed5b2dc22fd8674687a9441d0da64e17abf122280f89fe8a9d",
@@ -69,6 +77,7 @@ PREDECESSORS = {
         "ea20e443b4152012cac68c9ef0f322ddb1529f3ce45c7995e4bc3c47a0c9bfd1",
     },
     "operator/calibration.py": {
+        "6c8c8d2e7501f6a1a16492a02f80090aa3cfc4e3c6b9b55dae6225dbda69b435",
         "bd61bd3aacf606d3ef2f7075585640b67c7021d3bd45cae8d62bcb16ef780a47",
         "f6bbc4b21204860ca7c4df93aa8de06db424c306d4f965b2e5051705a074de2c",
         "4081205000d0071e9c0d0f8dd2d0532b4b2a5f98dbb930d8945c84c58c56461f",
@@ -80,6 +89,7 @@ PREDECESSORS = {
         "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
     },
     "operator/web/calibration.mjs": {
+        "572ce68d4682b68d4597956647b6c153887761e9e4d83afeb572f0977c34021f",
         "dfaa6e6a9032269f8f8d00a45a372646b6441675c34e4a2187fc6abbd58468b3",
         "a7a666cdd7a07ba677457f10cb4aff3216b16a4713f3732cc8a26c4e9420a64f",
         "6d1291c734f4bb731b72584868ca8ec050fb733ea3fbb51f6d7a6d0ddfe8a6b0",
@@ -99,6 +109,7 @@ PREDECESSORS = {
         "6d523b2bf1b10f94b70e9c2a270eea08137e8edf0345160efee497108228386e",
     },
     "operator/extensions/calibration.json": {
+        "61cc40009df717c47f0d1f4d954febd2552a8ad87b9a0722e2e15f86e347843c",
         "0eb78308aa339b690f43750eeba71694b5332593465c6be9cde2d1ca812ea2bb",
         "482005956a6d3ec9347f2cc16700c644055f7c44259e81bc97ac3baf329bd547",
         "92175b71c806f5f71889031dd24d4766bf45d3e9f5a8f5b087c78c735f557f71",
@@ -106,6 +117,7 @@ PREDECESSORS = {
         "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
     },
     "operator/CALIBRATION.md": {
+        "82652a6f5c7ab6491017afc6e5d29c8f27ae6823456fb41940310bd550af4cbd",
         "458bdc8545c8a7a4dc99d9e294cee0b2a12692d6f24ea178377784d5426d5119",
         "a0dcca8637af2a326f92a7318468d21f0487c8275aaeacd9142987af2310f6c2",
         "82042e958306863a9b90b311d6affb17a9d97cf486bfcd044a820e36aab8607d",
@@ -119,6 +131,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "d471c637ad921ed51f0be2bde91610edd37d978070ff228aa174c132addb3563",
         "7e4668a5b7d45ced54e92dd9bc077ab009441eabe4d3befdefcdd56fe9d4972c",
         "545afce9df078a4f968964cdc937d4059bf96d69e476d082360cca805c52269a",
         "9e93c9b0f6b5f4c2cb5ec0fa6e4103d93b9dff01224ddb5cd291fb7bf8ee8103",
@@ -132,6 +145,7 @@ PREDECESSORS = {
         "50360ee8e59a0c318d298fa449498be43f6d47abfbae87e5a88969d3f26aa32a",
     },
     "source_tools/calibration_assembly.py": {
+        "77b7e77efe2af5db0a943a49bd884a81dc490a6f7eb62d273501aa3865a384c4",
         "70f0971d238acbbb6ca8dc35cf07ad9df36c92d30051313760b2c1e34a054daf",
         "a5a6a1c63cafe6dfe4d22a52a32f290b6a0845a4a7da5b0cac370bdf7d7dce8c",
         "d3ab1ab2f4baf0c93d2ad1b390d73e61118ba7c8ee724de44210f07238d96210",

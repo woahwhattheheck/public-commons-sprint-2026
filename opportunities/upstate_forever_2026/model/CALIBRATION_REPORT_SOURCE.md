@@ -12,33 +12,36 @@ file in the ordinary scientific HTML/PDF and complete delivery archive.
    editions.
 2. Open the saved review and choose **Prepare report source**. The original
    task queue builds an immutable source edition from that exact review.
-3. When the task finishes, its action opens the complete delivery form. The
-   review screen also lists the registered edition, its figures and companion
-   count, with **Open complete delivery** and **Open source edition**.
-4. The normal delivery form starts with the review's original selected baseline
-   and this source in its existing ordered **Observed scientific studies**
-   picker. Choose compatible completed land-cover alternatives, required source
-   overlays, map settings and delivery contact.
-5. Add or reorder other original scientific reports in that same picker. The
-   source's sections always identify its own native run, parameter profile,
-   calibration, reference methods and selected supplements.
-6. Build the normal complete client delivery. Its scientific report includes the
-   calibration sections and print-safe vector figures. Its retained source files
-   include the readable original dossier, complete ZIP, maps, tables, source CSV,
-   native run records and original catchment geometry.
-7. Open the delivery and inspect those original report/source links. Receive its
-   ordinary complete or incremental Workspace transfer, reopen the calibration
-   review and registered source, and continue through the same delivery form.
+3. Choose **Open scientific report** in the completed task or its registered
+   source row. The existing Sources composer receives the original source
+   collection and source ID. It keeps prior sources in their original order,
+   appends this source once, and preserves a title or contact already entered.
+4. Inspect the current combined preview and build its saved scientific edition
+   through the maintained queue. Open the saved HTML/PDF/Markdown and inspect
+   the original dossier, ZIP, figures, maps, tables and source companions.
+5. Reopen that same edition through Sources, or receive its ordinary complete
+   or incremental Workspace transfer and continue from the original review.
 
-The native map-delivery form requires complete NDR and SDR outputs for its
-original baseline and compatible future land-cover alternatives. A source can
-still be prepared from a supported partial-model calibration. Its original
-quantities, model scope and source selection remain available in the source
-catalogue; the direct map-delivery button explains the actual missing native
-model family.
+Nutrient-only, sediment-only and combined-model calibrations use this same
+standalone scientific report workflow. Their saved source retains only the
+actual supported pollutant quantities, physical units and native selection.
+There is no new native run or substituted model family.
 
-This feature adds one report-source action to the existing calibration review.
-There is one source picker, one delivery engine and one original task queue.
+**Open mapped report form** remains a separate continuation into the existing
+complete delivery, with the review's selected baseline and this source in its
+ordered **Observed scientific studies** picker. Choose compatible land-cover
+alternatives, required overlays and map settings there. That mapped delivery
+requires complete NDR and SDR outputs for the original baseline. If it cannot
+open, its specific native model issue is displayed while the saved scientific
+report remains available.
+
+The browser uses the maintained
+`host.openScientificReport({workspace_key, sources, title})` capability. It
+validates the original report-source record and exact source choice before
+navigation, discards stale Workspace or review responses, and delegates typed
+source discovery and saved-edition reopening to the original Sources desk.
+Preparing and reopening a historical report source preserves its original
+identity.
 
 ## Scientific content
 
@@ -125,9 +128,10 @@ python -m model.calibration_report_source --workspace /path/to/workspace list
 
 Queued action: calibration.review.source with payload review_id. Native read:
 GET /api/calibration/report-source with the saved report-source record id. It
-returns the source record, original source selector, authenticated JSON download
-and a prefilled delivery_selection when the original baseline satisfies the
-current native map-delivery contract. The original provider decorates the task;
+returns the source record, original source selector, authenticated JSON download,
+and scientific_report_selection with the exact workspace_key, ordered sources
+and title. It also returns a prefilled delivery_selection when the original
+baseline satisfies the current native map-delivery contract. The original provider decorates the task;
 the shared host owns task display and file authorization.
 
 ## Stored edition and original companions
