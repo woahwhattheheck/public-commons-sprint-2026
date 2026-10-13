@@ -39,7 +39,7 @@
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
       "bytes": 7710,
-      "sha256": "7a82815c48f5bde8c0120cce19c7db9221fa0e88145826106b3787487bc26356"
+      "sha256": "9f34e3a87fb8b77a76d66a0c5e8a944e4bb65c68fe46013b4c72928d4658a61d"
     },
     {
       "path": "install_measurement_large_files.py",
@@ -83,8 +83,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 7455,
-      "sha256": "14b5500ba2f08a45560581e81b1d8c17340b93b48541ba79c6702911bc806d59"
+      "bytes": 7889,
+      "sha256": "d2e5127f5d0df6a703c7d56047240304e872ee2e00825daea8ec7d9bc38a84a3"
     },
     {
       "path": "measurement_workspace/engine/collection_zip.mjs",
