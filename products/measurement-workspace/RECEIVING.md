@@ -56,6 +56,10 @@ The producing operator completes this course on the selected outgoing files:
 
 Use the existing equipped operating owner when one already holds the original project. Preserve current user tabs, saved work and that operation's ownership. Source review, parsed JavaScript or an unavailable process is recorded for its actual scope; the native and visual observations come from the actual running product.
 
+## Continue full files through the installed client
+
+[LARGE_FILE_TRANSFERS.md](LARGE_FILE_TRANSFERS.md) gives the complete configured upload, full native edition download and independent recipient course. Export every member and retain `edition.json`; receive the actual inner `project.zip` through the original portable intake. The recipient uses a new transfer on its own original managed workspace. If receiving changes its native UUID, retain the original action and use the existing Applications Stop/Review/Start followed by explicit same-directory transfer rebind. A lost response is reconciled with the same accepted archive and action, without inventing a replacement scientific write. The guide includes complete-source capacity, chunk progress, original-file checks and all additive Merchant tool names.
+
 ## Recover without losing prior work
 
 Preserve original client custody before changing configuration or restarting a service. A managed restart gives a fresh instance receipt; review it and create a successor client configuration. Historical requests still belong to the prior instance and its actual scientific workspace.
