@@ -15,9 +15,10 @@ from urllib.parse import unquote, urlsplit
 from .common import atomic_bytes, atomic_json, describe_file
 from . import rasters, observation_diagnostics
 from .model_selection import run_scope
-from .native_versions import guide_url, model_versions, models_for_outputs, version_label
+from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
+                              model_versions, models_for_outputs, version_label)
 
-REPORT_VERSION = "upstate.scientific-report/v12-observation-diagnostics-v1"
+REPORT_VERSION = "upstate.scientific-report/v13-execution-observation-diagnostics-v1"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -480,6 +481,64 @@ def _receptors(inventory):
     return blocks
 
 
+def execution_provenance(baseline, alternatives):
+    """Freeze original producing-model identity without recomputing quantities."""
+    runs = [baseline] + list(alternatives)
+    selected = {run["id"]: models_for_outputs(run.get("artifacts", {})) for run in runs}
+    def source(runtime):
+        return {key: runtime[key] for key in ("version", "declared_source", "modules", "selected_models")
+                if key in (runtime or {})}
+    return {
+        "schema": "upstate.native-execution/v1", "policy": EXECUTION_VERSION_POLICY,
+        "run_order": [run["id"] for run in runs],
+        "models": {key: list(value) for key, value in selected.items()},
+        "runs": {run["id"]: {
+            "selection": run["selection"],
+            "model_versions": model_versions(run, selected[run["id"]]),
+            "run_runtime_source": source(run.get("runtime")),
+            "stage_runtime_sources": {
+                model: source(((run.get("stages") or {}).get(model) or {}).get("runtime"))
+                for model in selected[run["id"]]},
+        } for run in runs},
+        "source_note": "Exact full run, stage, environment and original source records remain in the retained working project.",
+    }
+
+
+def _native_execution(baseline, alternatives):
+    provenance = execution_provenance(baseline, alternatives)
+    blocks = [
+        "The producing version is read separately for each completed native model stage. "
+        "A later stage can change the run's last recorded runtime without changing earlier completed outputs. "
+        "Fallback and legacy declarations are identified explicitly.",
+        link("Retained native execution records", "native-execution.json"),
+    ]
+    sources = {"completed_stage_runtime": "Completed model stage",
+               "observed_run_fallback": "Observed run fallback; stage version absent",
+               "requested_legacy": "Requested legacy; observed version absent",
+               "unavailable": "Not recorded"}
+    for index, run_id in enumerate(provenance["run_order"]):
+        run = provenance["runs"][run_id]
+        selection = run["selection"]
+        blocks.append(("Reference" if index == 0 else "Alternative " + str(index)) +
+                      " native run " + run_id + ". Scenario " + str(selection.get("scenario_id")) +
+                      "; profile " + str(selection.get("profile_id")) + ".")
+        rows = []
+        for name, value in run["model_versions"].items():
+            rows.append([name.upper(), value.get("comparison_version") or "Not recorded",
+                         sources.get(value.get("basis"), "Not recorded"),
+                         value.get("requested_version") or "Not recorded",
+                         value.get("stage_completed_at") or "Not recorded"])
+        blocks.append(_table(["Model", "Producing InVEST", "Retained source", "Requested", "Stage completed"],
+                             rows, widths=[.6, .9, 1.7, .8, 1.4]))
+        blocks.append("Last recorded run runtime: " +
+                      str(run["run_runtime_source"].get("version") or "Not recorded") + ".")
+        for name, value in run["model_versions"].items():
+            if value.get("reused_from"):
+                blocks.append(_table(
+                    [name.upper() + " reused-stage lineage", "Original retained value"],
+                    list(_retained_rows(value["reused_from"])), widths=[2.2, 3.8]))
+    return blocks
+
 def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
                     profile, grid, priority, observation_results, receptor_inventory=None):
     """Replace machine-record paragraphs and retain independently installed sections."""
@@ -496,7 +555,12 @@ def refine_sections(sections, *, workspace, baseline, alternatives, comparison,
     receptor_blocks = _receptors(receptor_inventory)
     if receptor_blocks is not None:
         replacements["Source-water contributing land"] = receptor_blocks
-    return [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
+    replacements["Native execution provenance"] = _native_execution(baseline, alternatives)
+    result = [(heading, replacements.get(heading, blocks)) for heading, blocks in sections]
+    if not any(heading == "Native execution provenance" for heading, _ in result):
+        at = next((i + 1 for i, (heading, _) in enumerate(result) if heading == "Model and units"), 0)
+        result.insert(at, ("Native execution provenance", replacements["Native execution provenance"]))
+    return result
 
 
 def _retained_rows(value, prefix=""):
@@ -782,6 +846,7 @@ def delivery_sections(state, *, working_archive_path=None):
                        ("source_report_json", "Original watershed report data"),
                        ("working_archive", "Complete scientific workspace"),
                        ("display_scales", "Map scale definitions"),
+                       ("native_execution", "Original producing native execution records"),
                        ("receptor_inventory", "Source-water contributing areas"),
                        ("parcel_source_lineage_report", "County parcel source editions"),
                        ("parcel_source_lineage", "Complete typed parcel source lineage"),

@@ -1,6 +1,6 @@
 # Observed station studies
 
-Seven prepared studies connect the original gauge, lake and outfall sources to the maintained Station Geography desk. The existing saved edition, editable location choice, map, table, source download and portable receiving operations apply to these studies.
+Nine prepared studies connect the original gauge, lake and outfall sources to the maintained Station Geography desk. The existing saved edition, editable location choice, map, table, source download and portable receiving operations apply to these studies.
 
 | Prepared study | Stations | Linked context rows | Original location candidates |
 | --- | ---: | ---: | ---: |
@@ -9,6 +9,8 @@ Seven prepared studies connect the original gauge, lake and outfall sources to t
 | Eighteenmile lake study | 5 | 254 | 5 |
 | Eighteenmile agency outfall locations | 10 | 740 | 18 |
 | Eighteenmile indexed flowline locations | 10 | 740 | 18 |
+| Complete regional observed discharge | 29 | 2,291 | 29 |
+| Complete regional observed discharge and stage | 30 | 2,294 | 30 |
 | HUC05–07 original NWIS gauge positions | 13 | 26,242 | 26 |
 | HUC05–07 original NLDI gauge positions | 13 | 26,242 | 26 |
 
@@ -88,3 +90,28 @@ The root manifest binds all four selected source bodies to one canonical collect
 Use the maintained `--receive-workspace` and `--create-receiving-workspace` options on either build command to reopen its completed geography ZIP in a second Workspace. The existing comparison checks both coordinate candidates, selected original sources, memberships and observation counts. A native run returns actual edition/build IDs and the ordinary report, maps, source inventory and ZIP descriptors.
 
 Include `calibration_station_geography.sources.json` in an application capture's explicit root-source inventory. The added source files themselves remain in the already retained `source/hydrology-huc05-07-20261013/` directory. Existing five study definitions and their original source files are preserved.
+
+## Complete regional discharge and stage views
+
+Two combined prepared studies bring the original observation families into a single regional map. The 29-gauge discharge view links 2,291 period-summary rows: 174 annual, 2,088 monthly and 29 lake-study-period summaries. The 30-station view adds the separate Chauga stage station and its three annual summaries, giving 2,294 context rows. Together the two flow source families retain 59,701 original daily records for 2020–2025. The Horse Creek nonnumeric source record remains in its original daily collection and coverage fields.
+
+| Prepared study | Stations | Period-summary rows | Selected point candidates | Whole catchments |
+| --- | ---: | ---: | ---: | ---: |
+| upper-savannah-usgs-flow-29 | 29 | 2,291 | 29 | 14 |
+| upper-savannah-usgs-observed-30 | 30 | 2,294 | 30 | 14 |
+
+Both views use the original NAD83 gauge coordinates from the two agency inventories. Their selected sites consist of the 16 previously retained flow gauges, the 13 additional observed gauges, and optionally the stage station. The original 67-site inventory remains available separately. The fourteen complete upstream catchments consist of Eighteenmile plus the thirteen additional original NLDI geometries. The application computes their point memberships separately from the original 217-HUC reporting domain. A gauge outside that reporting domain remains a usable observed station with its actual geometry and separate contributing-area support.
+
+Import all three source manifests into the existing scientific Workspace:
+
+```sh
+python -m model.observed_station_studies --workspace /mnt/data/gis12/original-workspace --source-manifest observations/station_context.sources.json --source-manifest calibration_station_geography.sources.json --source-manifest regional_station_context.sources.json --list
+python -m model.observed_station_studies --workspace /mnt/data/gis12/original-workspace --study-id upper-savannah-usgs-flow-29 --build
+python -m model.observed_station_studies --workspace /mnt/data/gis12/original-workspace --study-id upper-savannah-usgs-observed-30 --build --receive-workspace /mnt/data/gis12/received-regional-observed-stations --create-receiving-workspace
+```
+
+The new root manifest binds the three additional summary tables without changing their source bytes. The gauge/catchment selection resolves through the existing canonical calibration manifest, preserving its original publisher responses and transformation records in the portable collection. The separate thirteen-gauge NWIS and NLDI studies continue to expose their full daily records and both coordinate alternatives. Include regional_station_context.sources.json alongside calibration_station_geography.sources.json in an explicit application source inventory.
+
+## Complete retained-source installation
+
+The additive installer validates and installs every primary body and companion in its selected native source manifests. If the application includes the observed hydrology report, supply its current root report recipe and source manifest together in `--source-root`; their complete source closure and calibration binding are validated before publication. `--dry-run` returns changed paths, selected native manifests and retained-source member count. Existing identical originals are reused, generated report/calibration bindings move together, and previous changed files retain the existing backup.

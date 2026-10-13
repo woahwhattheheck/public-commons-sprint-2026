@@ -51,4 +51,10 @@ It adds study/status/query/candidate/selection reads under /api/conservation-cat
 
 The browser receiving continuation recognizes the real **Prepare candidate search** control when present, waits for that original queued task and returns to the same study. It checks the same two actual regional units, retains their complete cohort through **Retain all eligible matches**, and saves one original portfolio using the queued catalog selection. It verifies the exact source-bound cohort and original quantities after reloading, then downloads the original packet. An older controller without catalog controls follows its original manual save path. The native experiment-report continuation uses the same original saved scenario and experiment.
 
+## Resume the same original browser course
+
+Use the same receiving output directory after an interrupted process or connection. Before each catalog preparation, cohort retention, portfolio save or packet export request returns, the course records its exact Workspace action, payload and operation identity. A retry resolves that same original request through the existing idempotent queue and retains the original task ID. It validates the task's Workspace, action and original payload, and resumes an interrupted task once through the maintained task-resume control.
+
+Recovery completes the already-requested phases before reopening the browser. The course then checks the same actual regional units, original source-bound cohort, saved portfolio and exported packet. It preserves the selected IDs and task records across retries; a previously accepted operation is not submitted under a new identity. Legacy receiving directories that already contain task IDs continue through those same tasks. Task links use the original global task panel even when another scientific operation's banner is visible.
+
 The successor preserves the active optimizer-panel additions when composed with OP12's current full module. Native model quantities, native grid resolution and scenario/experiment computation remain owned by their existing model modules.

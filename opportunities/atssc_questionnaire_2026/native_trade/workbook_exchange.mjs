@@ -79,14 +79,18 @@ const wording={
   "Received download length differs from the native file.": "La taille téléchargée diffère de celle du fichier natif.",
   "Received workbook hash differs from the retained native edition.": "L’empreinte du classeur reçu diffère de celle de l’édition native conservée."
 };
+wording['Original formula review issues']='Problèmes à examiner dans les formules originales';
+wording['Reading original source mapping…']='Lecture des correspondances sources originales…';
+wording['The selected original workbook changed. Read its current cell again.']='Le classeur original sélectionné a changé. Relisez sa cellule actuelle.';
+wording['number']='nombre';wording['text']='texte';wording['boolean']='booléen';wording['date']='date';wording['error']='erreur';
 const t=value=>authoredText(value,wording[value]);
 const root = document.querySelector('#exchange');
 const pendingRequests = new Map();
 let activeAction = false;
 function actionControls() {
-  for(const control of root.querySelectorAll('button,input,select,textarea')) control.disabled=activeAction;
+  for(const control of root.querySelectorAll('button')) control.disabled=activeAction;
 }
-const model = {status:null, book:null, sheet:null, definition:null, edits:[], cells:{}, source:null};
+const model = {status:null, book:null, sheet:null, definition:null, template:null, formulaValues:'preserve', edits:[], cells:{}, source:null, inspectGeneration:0, rangeGeneration:0, mappingGeneration:0};
 function node(tag, props={}, ...children) {
   const n=document.createElement(tag);
   for(const [key,value] of Object.entries(props)) {
@@ -96,26 +100,25 @@ function node(tag, props={}, ...children) {
     else if(value!==null && value!==undefined) setDisplayAttribute(n,key,value);
   }
   for(const child of children.flat()) if(child!==null && child!==undefined) (child instanceof Node?n.append(child):appendDisplay(n,child));
-  if(activeAction && ['BUTTON','INPUT','SELECT','TEXTAREA'].includes(n.tagName)) n.disabled=true;
+  if(activeAction && n.tagName==='BUTTON') n.disabled=true;
   return n;
 }
 const text=value=>node('p',{},value);
 function select(items,value) {const n=node('select');for(const [key,label] of items)n.append(node('option',{value:key},label));if(value!==undefined)n.value=value;return n;}
 const input=(value='',type='text')=>node('input',{type,value});
-const field=(label,n,hint)=>node('label',{class:'field'},node('span',{},label),n,hint?node('small',{},hint):null);
+const field=(label,n,hint)=>{setDisplayAttribute(n,'aria-label',label);return node('label',{class:'field'},node('span',{},label),n,hint?node('small',{},hint):null);};
 function error(err) {
   let notice=document.querySelector('#notice');
   if(!notice){notice=node('div',{id:'notice',role:'status','aria-live':'polite'});root.prepend(notice);}
   notice.replaceChildren(text(err.message||JSON.stringify(err)));
 }
-async function guard(fn) {
+async function guard(fn) {try {document.querySelector('#notice')?.replaceChildren();return await fn();}catch(err){error(err);}}
+const button=(label,fn)=>node('button',{type:'button',onclick:async()=>{
   if(activeAction)return;
   activeAction=true;actionControls();
-  try {document.querySelector('#notice')?.replaceChildren();return await fn();}
-  catch(err){error(err);}
+  try {await guard(fn);}
   finally {activeAction=false;actionControls();}
-}
-const button=(label,fn)=>node('button',{type:'button',onclick:()=>guard(fn)},label);
+}},label);
 async function api(method,params={}) {
   const signature=JSON.stringify({method,params});
   const mutation=['import_workbook','exchange_export','exchange_export_answers'].includes(method);
@@ -146,7 +149,7 @@ function stateText(cell) {
   if(cell.state==='blank')return cell.value_node_present?t('Blank · empty value node'):t('Blank · no value node');
   if(cell.state==='text' && cell.value==='')return t('Text · empty string');
   if(cell.state==='formula')return uiJoin([authoredText('Formula · ','Formule · '),cell.cached?.present?uiJoin([authoredText('cached ','en cache '),cell.cached.kind]):authoredText('cache absent','cache absent')]);
-  return cell.state;
+  return t(cell.state);
 }
 async function refresh() {
   model.status=await api('status');
@@ -179,7 +182,10 @@ async function render() {
 }
 async function inspect() {
   if(!model.book)return;
-  model.source=await api('exchange_inspect',{sha256:model.book});
+  const book=model.book,generation=++model.inspectGeneration;
+  const received=await api('exchange_inspect',{sha256:book});
+  if(book!==model.book||generation!==model.inspectGeneration)return;
+  model.source=received;
   const summary=model.source;
   if(!summary.sheets.some(s=>s.name===model.sheet))model.sheet=summary.sheets[0]?.name;
   const sheet=select(summary.sheets.map(s=>[s.name,s.name+' · '+s.state]),model.sheet);
@@ -192,16 +198,18 @@ async function inspect() {
     node('div',{class:'row'},field(t('Worksheet'),sheet),field(t('Cell range'),range),button(t('Read range'),draw)),
     grid,node('details',{},node('summary',{},t('Original names, styles and workbook structure')),node('pre',{},JSON.stringify({date1904:summary.date1904,defined_names:summary.defined_names,styles:summary.styles,sheets:summary.sheets.map(s=>({name:s.name,state:s.state,dimension:s.dimension,counts:s.counts,structure:s.structure}))},null,2))));
   async function draw() {
+    const selectedSheet=sheet.value,request=++model.rangeGeneration;
     model.sheet=sheet.value;
-    const result=await api('exchange_inspect',{sha256:model.book,sheet:sheet.value,range:range.value});
+    const result=await api('exchange_inspect',{sha256:book,sheet:selectedSheet,range:range.value});
+    if(book!==model.book||generation!==model.inspectGeneration||request!==model.rangeGeneration||!panel.isConnected)return;
     model.cells=result.sheets[0].cells;
     grid.replaceChildren(table([t('Cell'),t('State'),t('Value / cached value'),t('Original formula'),t('Edit')],Object.entries(model.cells).map(([address,cell])=>[
       address,stateText(cell),cell.value===null?'':String(cell.value),
       cell.formula?node('code',{},cell.formula.text):'',
-      cell.formula?text(t('Calculation cell')):button(t('Select'),async()=>editCell(sheet.value,address,cell))
+      cell.formula?text(t('Calculation cell')):button(t('Select'),async()=>editCell(selectedSheet,address,cell,book))
     ])));
   }
-  await draw();editPanel();
+  await draw();if(book===model.book&&generation===model.inspectGeneration&&panel.isConnected)editPanel();
 }
 function editPanel() {
   const panel=document.querySelector('#editions-panel');
@@ -211,13 +219,16 @@ function editPanel() {
     text(t('Select original answer cells, review explicit value types, then retain and download the successor workbook.')),
     node('div',{class:'row'},field(t('Worksheet'),sheet),field(t('Cell'),address),
       button(t('Read cell for editing'),async()=>{
-        const result=await api('exchange_inspect',{sha256:model.book,sheet:sheet.value,cells:[address.value.trim().toUpperCase()]});
-        const [a,c]=Object.entries(result.sheets[0].cells)[0];editCell(sheet.value,a,c);
+        const book=model.book,selectedSheet=sheet.value;
+        const result=await api('exchange_inspect',{sha256:book,sheet:selectedSheet,cells:[address.value.trim().toUpperCase()]});
+        if(book!==model.book)return;
+        const [a,c]=Object.entries(result.sheets[0].cells)[0];editCell(selectedSheet,a,c,book);
       })),
     node('div',{id:'cell-editor'}),node('div',{id:'selected-edits'}));
   selectedEdits();
 }
-function editCell(sheet,address,cell) {
+function editCell(sheet,address,cell,book=model.book) {
+  if(book!==model.book)throw Error(renderUI(t('The selected original workbook changed. Read its current cell again.')));
   if(cell.formula)throw Error(renderUI(t('This is an original calculation cell. Select its source answer cells.')));
   const kind=select([['text',t('Text')],['number',t('Exact decimal')],['boolean',t('Boolean')],['date',t('ISO date')],['blank',t('Blank cell')],['absent',t('Remove physical cell')]],['text','number','boolean','date','blank','absent'].includes(cell.state)?cell.state:'text');
   const value=input(cell.value===null?'':String(cell.value));
@@ -225,6 +236,7 @@ function editCell(sheet,address,cell) {
   editor.replaceChildren(node('h3',{},sheet+'!'+address),text(uiJoin([authoredText('Original state: ','État original : '),stateText(cell)])),
     node('div',{class:'row'},field(t('New type'),kind),field(t('New value'),value,t('Use true or false for Boolean values. Blank and absent ignore this field.'))),
     button(t('Add to reviewed edition'),async()=>{
+      if(book!==model.book)throw Error(renderUI(t('The selected original workbook changed. Read its current cell again.')));
       let scalar=value.value;
       if(kind.value==='boolean'){if(!['true','false'].includes(scalar))throw Error(renderUI(t('Enter true or false.')));scalar=scalar==='true';}
       if(['blank','absent'].includes(kind.value))scalar=null;
@@ -242,9 +254,10 @@ function selectedEdits() {
   ])),node('div',{class:'actions'},
     button(t('Download editable change selection'),async()=>downloadJSON('workbook-cell-selection.json',{sha256:model.book,changes:model.edits})),
     button(t('Retain and download Excel edition'),async()=>{
-      const result=await api('exchange_export',{sha256:model.book,changes:model.edits,retain:true});
+      const book=model.book,changes=structuredClone(model.edits);
+      const result=await api('exchange_export',{sha256:book,changes,retain:true});
       await downloadFile(result);downloadJSON('workbook-exchange-manifest.json',result.metadata);
-      model.edits=[];model.book=result.sha256;await refresh();
+      if(book===model.book&&JSON.stringify(changes)===JSON.stringify(model.edits)){model.edits=[];model.book=result.sha256;await refresh();}
       document.querySelector('#notice').replaceChildren(text(uiJoin([authoredText('Retained Excel edition ','Édition Excel conservée '),result.sha256,authoredText('. The original workbook remains available above.','. Le classeur original reste disponible ci-dessus.')])));
     })));
 }
@@ -252,18 +265,26 @@ async function mappings() {
   const panel=document.querySelector('#mapping-panel');
   const defined=model.status.questionnaires.filter(q=>q.version>0);
   if(!defined.length){panel.replaceChildren(node('h2',{},t('Questionnaire source mapping')),text(t('Save the original questionnaire definition in the main workspace to inspect and exchange its bound cells.')));return;}
-  const questionnaire=select(defined.map(q=>[q.id,q.name+' · edition '+q.version]),defined[0].id);
+  if(!defined.some(q=>q.id===model.definition))model.definition=defined[0].id;
+  const questionnaire=select(defined.map(q=>[q.id,q.name+' · edition '+q.version]),model.definition);
   const holder=node('div');
   panel.replaceChildren(node('h2',{},t('Questionnaire source mapping')),
     field(t('Saved definition'),questionnaire),button(t('Read source mapping'),draw),holder);
   async function draw() {
+    const generation=++model.mappingGeneration;
+    holder.replaceChildren(text(t('Reading original source mapping…')));
     const selected=defined.find(q=>q.id===questionnaire.value);
+    model.definition=selected.id;
     const params={questionnaire_id:selected.id,version:selected.version};
     const mapping=await api('exchange_mapping',params);
-    const templates=select(mapping.source_workbooks.map(sha=>[sha,model.status.workbooks.find(w=>w.sha===sha)?.name||sha]),mapping.source_workbooks[0]);
-    const formula=select([['preserve',t('Inspect formulas separately')],['cached',t('Use selected edition cached values')]],'preserve');
+    if(generation!==model.mappingGeneration||!panel.isConnected)return;
+    if(!mapping.source_workbooks.includes(model.template))model.template=mapping.source_workbooks[0];
+    const templates=select(mapping.source_workbooks.map(sha=>[sha,model.status.workbooks.find(w=>w.sha===sha)?.name||sha]),model.template);
+    templates.addEventListener('change',()=>{model.template=templates.value;});
+    const formula=select([['preserve',t('Inspect formulas separately')],['cached',t('Use selected edition cached values')]],model.formulaValues);
+    formula.addEventListener('change',()=>{model.formulaValues=formula.value;});
     holder.replaceChildren(table([t('Question'),t('Type'),t('Source'),t('Scale'),t('Access'),t('Disclosure')],mapping.questions.map(q=>[
-      q.label,q.kind,q.binding?(q.binding.sheet+'!'+(q.binding.cell||(q.source_rows.length<=16?q.source_rows.join(', '):q.source_rows.length+' selected rows'))):t('Authored question'),
+      sourceLabel(q),t(q.kind),q.binding?(q.binding.sheet+'!'+(q.binding.cell||(q.source_rows.length<=16?q.source_rows.join(', '):q.source_rows.length+' selected rows'))):t('Authored question'),
       q.workbook_scale,q.calculated?t('Calculated'):q.source_readonly?t('Original fixed value'):t('Answer input'),q.disclosure||'protected'
     ])),field(t('Original template identity'),templates),
     field(t('Formula value selection'),formula),
@@ -271,23 +292,27 @@ async function mappings() {
       button(t('Download editable source mapping'),async()=>downloadJSON('questionnaire-source-mapping.json',mapping)),
       button(t('Download Excel and complete source records'),async()=>downloadFile(await api('exchange_extract_package',{...params,sha256:model.book,template_sha256:templates.value,formula_values:formula.value}))),
       button(t('Extract mapped values and source states'),async()=>{
-        const extracted=await api('exchange_extract',{...params,sha256:model.book,template_sha256:templates.value,formula_values:formula.value});
+        const book=model.book,template=templates.value;
+        const extracted=await api('exchange_extract',{...params,sha256:book,template_sha256:template,formula_values:formula.value});
         downloadJSON('workbook-source-extraction.json',extracted);
+        if(generation!==model.mappingGeneration||book!==model.book||template!==model.template||!holder.isConnected)return;
         const result=node('section',{class:'panel'},node('h3',{},t('Extraction review')),
-          text(uiJoin([extracted.cells.length,authoredText(' source cells · ',' cellules sources · '),extracted.validation.issues.length,authoredText(' validation issues',' problèmes de validation')])),
+          text(uiJoin([extracted.cells.length,authoredText(' source cells · ',' cellules sources · '),extracted.validation.issues.length,authoredText(' answer validation issues · ',' problèmes de validation des réponses · '),extracted.validation.formula_issues.length,authoredText(' original formula review issues',' problèmes à examiner dans les formules originales')])),
           table([t('Question'),t('Original row'),t('Cell'),t('State'),t('Value')],extracted.cells.map(c=>[c.label,c.source_row??'',c.source.sheet+'!'+c.source.cell,stateText(c.cell),c.cell.value??''])),
           node('details',{},node('summary',{},t('Validation and source review')),node('pre',{},JSON.stringify(extracted.validation,null,2))));
         document.querySelector('#extraction-review')?.remove();result.id='extraction-review';holder.append(result);
       })));
   }
+  questionnaire.addEventListener('change',()=>guard(draw));
   await draw();
 }
+function sourceLabel(question){const context=(question.original_context||[]).map(x=>x.french_text||x.text).filter(Boolean);const row=question.original_row_french_label||question.original_french_text;return authoredText(question.label,row?[...context,row].join(' — '):question.label);}
 async function start() {
   const session=await fetch('/api/session').then(r=>r.json());
   if(!session.authenticated || session.role!=='operator'){
     root.replaceChildren(node('h1',{},t('Workbook Exchange')),text(t('Open the operator workspace to work with original workbooks.')),node('a',{href:'/operator'},t('Open operator session')));return;
   }
   await initializeLanguage(api,session);
-  await guard(refresh);
+  await refresh();
 }
 start().catch(err=>{root.replaceChildren(node('h1',{},t('Workbook Exchange')),node('div',{id:'notice'}));error(err);});

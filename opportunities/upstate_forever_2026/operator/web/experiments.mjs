@@ -125,6 +125,7 @@ export function attachExperiments(context) {
   let summaryRevision=null,nativeByCase={},nativeRefresh=null;
   let details=null,summary=null,search='',metric='all',kind='all',axes={},methods=[],formModels=['ndr','sdr'];
   let generation=0,controller=null,previewGeneration=0,previewController=null,formGeneration=0;
+  let formSourceRunIds=[];
   let ensembleReport=null,ensemblePreviewKey=null,ensemblePreviewGeneration=0,ensemblePreviewController=null;
 
   const data=()=>getState()?.data || {};
@@ -152,6 +153,7 @@ export function attachExperiments(context) {
         scenario_ids:[...new Set(value.scenario_ids||[])],
         profile_ids:[...new Set(value.profile_ids||[])].filter(id=>id!==original),
         design:value.design||'one_at_a_time',
+        source_run_ids:[...new Set(value.source_run_ids||[])].sort(),
         axes:(value.axes||[]).map(axis=>({path:axis.path,values:[...new Set(axis.values||[])],
           reference:String(axis.reference||'').trim()})).sort((x,y)=>x.path.localeCompare(y.path))};
     };
@@ -173,9 +175,38 @@ export function attachExperiments(context) {
       Object.entries(axes||{}).map(([path,spec])=>({path,...(typeof spec==='object'?spec:{})}));
     return entries.filter(entry=>formModels.includes(entry.path.split('.')[0]));
   }
+  function adoptedRuns() {
+    const target=document.querySelector('#experiment-source-runs');
+    if(!target)return;
+    if(target.dataset.loaded==='true') {
+      formSourceRunIds=[...target.querySelectorAll('[name="experiment_source_run"]:checked')].map(node=>node.value);
+    }
+    const chosen=document.querySelector('[name="experiment_baseline"]')?.value;
+    const baseline=(data().runs||[]).find(run=>run.id===chosen);
+    const selected=new Set(formSourceRunIds);
+    const models=JSON.stringify([...runModels(baseline)].sort());
+    const eligible=(data().runs||[]).filter(run=>run.state==='complete'&&baseline&&
+      run.selection?.grid_id===baseline.selection?.grid_id&&JSON.stringify([...runModels(run)].sort())===models);
+    const eligibleIds=new Set(eligible.map(run=>run.id));
+    const rows=new Map(eligible.map(run=>[run.id,run]));
+    for(const id of selected)if(!rows.has(id))rows.set(id,(data().runs||[]).find(run=>run.id===id)||{id});
+    target.innerHTML=rows.size?[...rows.values()].map(run=>{
+      const compatible=eligibleIds.has(run.id);
+      const label=run.selection?runName(run):'Retained original run '+short(run.id);
+      const note=compatible?'Original native ID '+run.id:
+        'Retained selection '+run.id+' — choose a matching baseline or remove this explicit source.';
+      return '<label class="experiment-choice"><input type="checkbox" name="experiment_source_run" value="'+
+        esc(run.id)+'"'+(selected.has(run.id)?' checked':'')+'><span><strong>'+esc(label)+
+        '</strong><small>'+esc(note)+'</small></span></label>';
+    }).join(''):'<p class="note">'+(baseline?
+      'This catalogue has no completed runs on the selected grid and model scope.':
+      'Choose the retained baseline to list completed runs on its grid and model scope.')+'</p>';
+    target.dataset.loaded='true';
+  }
   function syncBaselineModels() {
     const chosen=document.querySelector('[name="experiment_baseline"]')?.value;
     formModels=runModels((data().runs||[]).find(run=>run.id===chosen));
+    adoptedRuns();
     const label=document.querySelector('#experiment-model-scope');
     if(label)label.textContent=chosen?'Native models: '+modelNames(formModels):'Choose the retained baseline to select native models.';
     for(const node of document.querySelectorAll('[name="experiment_axis_path"]')){
@@ -301,7 +332,9 @@ export function attachExperiments(context) {
       '<dt>Native models</dt><dd>'+esc(modelNames(d.models))+'</dd><dt>Design</dt><dd>'+esc(human(s.design))+'</dd><dt>Alternatives</dt><dd>'+
       (s.scenario_ids||[]).map(id=>esc(name('scenarios',id))).join(', ')+
       '</dd><dt>Additional profiles</dt><dd>'+(s.profile_ids||[]).map(id=>esc(name('profiles',id))).join(', ')+
-      '</dd></dl>'+table(['Parameter','Selected values','Reference'],(s.axes||[]).map(a=>'<tr><td>'+esc(a.path)+'</td><td>'+
+      '</dd><dt>Adopted original runs</dt><dd>'+(s.source_run_ids?.length?
+        s.source_run_ids.map(id=>'<button type="button" data-action="item" data-kind="runs" data-id="'+esc(id)+'">'+esc(short(id))+'</button>').join(' '):
+        'Canonical native selections')+'</dd></dl>'+table(['Parameter','Selected values','Reference'],(s.axes||[]).map(a=>'<tr><td>'+esc(a.path)+'</td><td>'+
         a.values.map(parameterValue).join(', ')+'</td><td>'+esc(a.reference)+'</td></tr>'))+'</details>'+
       '<div class="experiment-filters"><label>'+(page.complete?'Search all cases':'Search this page')+'<input data-experiment-filter="search" value="'+esc(search)+
       '" placeholder="Name or retained run ID"></label><label>Case kind<select data-experiment-filter="kind">'+
@@ -322,11 +355,13 @@ export function attachExperiments(context) {
     return Math.floor(seconds/3600)+' h '+Math.floor(seconds%3600/60)+' min';
   }
   function nativeExecution(row) {
+    const adopted=(row.native_source?'<small>Adopted original run</small>':'')+
+      (row.native_baseline_source?'<small>Adopted original paired baseline</small>':'');
     const execution=nativeByCase[row.id];
-    if(!execution)return '<small>Opening native stages…</small>';
-    if(!execution.stages?.length)return esc(execution.state==='unprepared'?'Awaiting preparation':
+    if(!execution)return adopted+'<small>Opening native stages…</small>';
+    if(!execution.stages?.length)return adopted+esc(execution.state==='unprepared'?'Awaiting preparation':
       execution.state==='running'?'Native run running':human(execution.state));
-    return execution.stages.map(stage=>{
+    return adopted+execution.stages.map(stage=>{
       const label={executed:'Executed',reused:'Reused',recovered:'Recovered',complete:'Complete'}[stage.mode]||'Complete';
       const duration=stageDuration(stage.started_at,stage.completed_at);
       const original=stage.origin,originDuration=original&&stageDuration(original.started_at,original.completed_at);
@@ -450,8 +485,11 @@ export function attachExperiments(context) {
     if(selectedAxes.some(x=>!x.path||!formModels.includes(x.path.split('.')[0])))throw Error('Choose parameter rows for '+modelNames(formModels)+' or remove unused rows.');
     if(selectedAxes.some(x=>!x.reference))throw Error('Each parameter choice needs its published reference or study rationale.');
     if(new Set(selectedAxes.map(x=>x.path)).size!==selectedAxes.length)throw Error('Combine values for the same parameter in one row.');
+    const sourceRunIds=[...new Set(values('experiment_source_run'))].sort();
+    if(sourceRunIds.some(id=>!/^[0-9a-f]{64}$/.test(id)))throw Error('Retain the complete original native run IDs.');
     return {schema:'upstate.experiment-selection/v1',title,reason,baseline_run_id:baseline,
       scenario_ids:values('experiment_scenario'),profile_ids:values('experiment_profile'),
+      ...(sourceRunIds.length?{source_run_ids:sourceRunIds}:{}),
       design:field('experiment_design').value,axes:selectedAxes};
   }
   async function newForm(id, options={}) {
@@ -470,6 +508,7 @@ export function attachExperiments(context) {
       if(!currentForm())return;
       selection={...record.selection,title:record.title+' — revised'};
     }
+    formSourceRunIds=[...new Set(selection.source_run_ids||[])];
     const baselineScenarios=new Set((data().scenarios||[]).filter(s=>s.kind==='baseline').map(s=>s.id));
     const baselineRuns=(data().runs||[]).filter(r=>baselineScenarios.has(r.selection?.scenario_id));
     if(!baselineRuns.length)throw Error('Prepare a native run using the retained baseline scenario, grid and parameter profile first.');
@@ -492,6 +531,9 @@ export function attachExperiments(context) {
       '<fieldset><legend>Additional retained parameter profiles</legend><p>The selected baseline profile is included automatically. '
       +'These additional profiles keep their own original tables, references and assumptions.</p><div class="experiment-choices">'+
       profiles.map(row=>checkbox('experiment_profile',row,(selection.profile_ids||[]).includes(row.id))).join('')+'</div></fieldset>'+
+      '<fieldset><legend>Adopt completed original runs</legend><p>Select the completed native sources to use for matching cells. '+
+      'The original engine checks the grid, profile, scenario, model scope and producing-stage versions. The selected baseline is considered automatically. '+
+      'New cells keep the current canonical run selection.</p><div id="experiment-source-runs" class="experiment-choices" data-loaded="false"></div></fieldset>'+
       '<fieldset><legend>Parameter exploration</legend>'+
       (methods.length?'<div class="experiment-method"><label>Published starting profile<select name="experiment_method">'+
         methods.map(method=>option(method.id,method.title)).join('')+'</select></label>'+btn('method','Use regional reference values')+
@@ -515,6 +557,7 @@ export function attachExperiments(context) {
         const task=await submitAction(mode==='save'?'experiment.save':'experiment.run',{selection:chosen});
         if(typeof options.onSubmitted==='function')await options.onSubmitted(task);
       },()=> {
+        adoptedRuns();
         const mode=document.querySelector('[name="experiment_execution"]');
         mode.addEventListener('change',()=>{document.querySelector('#form-submit').textContent=mode.value==='save'?'Save design':'Save and run';});
         document.querySelector('[name="experiment_baseline"]').addEventListener('change',syncBaselineModels);

@@ -1,3 +1,4 @@
+import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 import {attachMonitoringReport} from './monitoring-report.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
 const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
@@ -10,8 +11,9 @@ function component() {
 }
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-export function attachMonitoring(context) {
-  const {getState, api, endpoint, showTask, toast}=context;
+export function attachMonitoring(host) {
+  const {getState, api, endpoint, showTask, toast}=host;
+  const fieldwork=attachMonitoringFieldwork({...host,transport});
   const nodes = new Map(), pendingMemory = new Map();
   const storage = {
     get(key) {
@@ -98,8 +100,10 @@ export function attachMonitoring(context) {
     if(active===node && node.parentNode===root)return;
     active=node;root.replaceChildren(node);
     await node.ready;
-    node.monitoringReport ||= attachMonitoringReport(node,context,key);
+    if(ticket!==generation || workspace()!==key)return;
+    node.monitoringReport ||= attachMonitoringReport(node,host,key);
     node.monitoringReport.update();
+    await fieldwork.mount(root,key);
   }
   async function update() {
     active?.monitoringReport?.update();
@@ -116,9 +120,11 @@ export function attachMonitoring(context) {
       await node.refresh();
       if (!current()) return;
       await node.refreshSources();
+      if (!current()) return;
+      await fieldwork.update();
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();fieldwork.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }

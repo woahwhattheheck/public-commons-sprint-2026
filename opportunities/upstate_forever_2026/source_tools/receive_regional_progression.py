@@ -325,6 +325,19 @@ class Progression:
             self.record(name, {"adopted_completed_journal": True,
                                "journal": describe_file(self.output, report_path)})
             return previous
+        if previous.get("status") == "complete":
+            # An unbound completed journal cannot acquire this new request's
+            # provenance if we stop before the browser replaces it. Preserve
+            # its exact bytes first, then vacate the active journal path.
+            original = report_path.read_bytes()
+            require(json.loads(original) == previous,
+                    "The completed browser journal changed during recovery: " + name)
+            retained = report_path.with_name(
+                "journey-unbound-" + hashlib.sha256(original).hexdigest() + ".json")
+            atomic_bytes(retained, original, immutable=True)
+            require(report_path.read_bytes() == original,
+                    "The browser journal changed while retaining its original bytes: " + name)
+            report_path.unlink()
         atomic_json(intent_path, intent, immutable=True)
         task_ids = {row.get("task_id") for row in previous.get("steps", []) if row.get("task_id")}
         if previous.get("save_task_id"):

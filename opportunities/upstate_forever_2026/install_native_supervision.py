@@ -62,6 +62,14 @@ PREVIOUS["install_native_supervision.py"].append("81f28bb3ac6c0cd8d0328432a6e68e
 PREVIOUS["install_native_supervision.py"].append("ed7828c98bf5a77565dbef47cbf0a2dddd9b71dc77997630b84a1bf60c8ba18d")
 PREVIOUS["operator/NATIVE_JOBS.md"].append("ca2629a57c11c600bd19697d68d82eaafe1795640d1d08a45c9bdcf21a6ffd2c")
 
+# Exact published initial/final r6 and merged operator installer predecessors.
+PREVIOUS.setdefault("operator/programme_jobs.py", []).append("367e0164cf452a33c0f959074d09c49f9baf781a72e89091fbf094bd89420b95")
+PREVIOUS["install_native_supervision.py"].extend([
+    "abedd2b3cf9273e47a9839f0e12827b208aab771d0016e3c2d16fac2bd11b841",
+    "a1662f789268a79a1a949f2cf80d0ed2a00cc12c88ea029273b5bf76df2f3f9a",
+    "d8606e537707dc8439fc622e6ed039ae6d78233947d4167edaa904df61830ad8",
+])
+
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
 
@@ -169,6 +177,22 @@ def builtin_route_patch(text):
     return replace_one(text, segment, replacement, "native built-in route registration")
 
 
+def native_import_patch(text):
+    """Put the original operator path before a retained supervision import."""
+    operator_path = "sys.path.insert(0, str(Path(__file__).resolve().parent))\n"
+    native_import = ("from native_jobs import NativeJobs, NativeJobError, "
+                     "NativeJobCancelled, NativeJobDetached\n")
+    if text.count(native_import) != 1:
+        raise ValueError("The retained native import needs its current operator path join")
+    if operator_path in text and text.index(operator_path) < text.index(native_import):
+        return text
+    import_block = "# " + MARKER + "\n" + native_import
+    if text.count(import_block) != 1:
+        raise ValueError("The retained native import has no exact authored registration")
+    return replace_one(text, import_block, operator_path + import_block,
+                       "retained native import ordering")
+
+
 def server_patch(text, *, retention=False):
     text = builtin_route_patch(text)
     if "# " + MARKER in text:
@@ -188,6 +212,7 @@ def server_patch(text, *, retention=False):
                 "native detach import")
         if "NativeJobDetached" not in text.split("def summary_error", 1)[0]:
             raise ValueError("The current native supervisor import needs its detach type")
+        text = native_import_patch(text)
         text = native_dispatch(text, retention=retention)
         return programme_server_patch(text)
     import_anchor = "from model import portable\n"

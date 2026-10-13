@@ -10,6 +10,7 @@ export const directorySourceContract=JSON.parse(readFileSync(new URL('../directo
 export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingPlansContract=JSON.parse(readFileSync(new URL('../directory-operating-plans-schema.json',import.meta.url),'utf8'));
 export const directoryOperatingReturnsContract=JSON.parse(readFileSync(new URL('../directory-operating-returns-schema.json',import.meta.url),'utf8'));
+export const directoryWorksheetReconciliationContract=JSON.parse(readFileSync(new URL('../directory-correction-worksheet-reconciliation-schema.json',import.meta.url),'utf8'));
 export const directoryCorrectionWorksheetsContract=JSON.parse(readFileSync(new URL('../directory-correction-worksheets-schema.json',import.meta.url),'utf8'));
 export const directoryCorrectionsContract=JSON.parse(readFileSync(new URL('../directory-corrections-schema.json',import.meta.url),'utf8'));
 export const directoryForeignKeyQueries=Object.freeze([
@@ -128,7 +129,7 @@ const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
   'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
-  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns',...directoryCorrectionsContract.collections,...directoryCorrectionWorksheetsContract.collections
+  ...directoryConformanceContract.recordKinds,'operatingPlans','operatingPlanReturns',...directoryCorrectionsContract.collections,...directoryCorrectionWorksheetsContract.collections,...directoryWorksheetReconciliationContract.collections
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -139,6 +140,18 @@ function tool(action,description,properties={},required=[],options={}){
 }
 const originalId=str('Exact original record or operation ID.',{pattern:'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$'});
 const added=[
+  tool('directory_correction_worksheet_reconciliation_catalogue','Read the exact native three-way reconciliation input catalogue.'),
+  tool('directory_correction_worksheet_reconciliation_rows','Read complete typed base, customer proposal and current comparisons or immutable operator decisions.',{
+    collection:str('Exact reconciliation collection.',{enum:directoryWorksheetReconciliationContract.collections}),
+    recordId:hash('Exact immutable reconciliation or review ID.'),offset:page.offset,limit:page.limit,
+    rowKey:hash('Optional exact original worksheet row key.'),state:str('Exact native comparison state or review decision.',{enum:[...directoryWorksheetReconciliationContract.states,...directoryWorksheetReconciliationContract.decisions]})
+  },['collection','recordId']),
+  tool('directory_correction_worksheet_reconciliation_file','Receive the entire original input, row graph, comparison or decisions file, including records larger than the page budget.',{
+    collection:str('Exact reconciliation collection.',{enum:directoryWorksheetReconciliationContract.collections}),
+    recordId:hash('Exact immutable reconciliation or review ID.'),
+    fileKind:str('Complete native file kind.',{enum:['input','rows','comparison','decisions']})
+  },['collection','recordId','fileKind']),
+
   tool('directory_correction_worksheet_rows','Read complete selected worksheet rows, original returned differences or explicit review decisions with exact immutable row keys.',{
     collection:str('Exact worksheet collection.',{enum:directoryCorrectionWorksheetsContract.collections}),
     recordId:hash('Exact immutable worksheet record.'),offset:page.offset,limit:page.limit,
@@ -314,6 +327,10 @@ export const humanServicesDirectoryActions=Object.freeze(Object.fromEntries(huma
   row.name.slice(TOOL_PREFIX.length),row
 ])));
 function validate(value,schema,path){
+  if(schema.oneOf){
+    let matches=0;for(const choice of schema.oneOf){try{validate(value,choice,path);matches++;}catch(error){if(error.code!=='HUMAN_SERVICES_DIRECTORY_INPUT_INVALID')throw error;}}
+    need(matches===1,'HUMAN_SERVICES_DIRECTORY_INPUT_INVALID',path+' must match exactly one declared native input variant.');return;
+  }
   if(schema.anyOf){
     const accepted=schema.anyOf.some(choice=>{
       try{validate(value,choice,path);return true;}

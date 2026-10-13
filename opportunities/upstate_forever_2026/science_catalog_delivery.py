@@ -15,7 +15,7 @@ import math
 import os
 import re
 from datetime import datetime, timezone
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import errno
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit, urlunsplit
@@ -205,6 +205,13 @@ def _declared_companions(row, indexed):
                        "source_binding": copy.deepcopy(declared["source_binding"])})
     return result
 
+@contextmanager
+def repository_read_scope(repository, tenant):
+    """Reuse a repository's optional synchronous metadata snapshot for one read."""
+    opener = getattr(repository, "read_scope", None)
+    with opener(tenant) if callable(opener) else nullcontext():
+        yield repository
+
 def project_repository(repository, tenants):
     """Capture the exact StoreBackedRepository callbacks, without analyzing files."""
     if not all(callable(getattr(repository, name, None))
@@ -214,21 +221,22 @@ def project_repository(repository, tenants):
     for tenant in dict.fromkeys(tenants):
         if not isinstance(tenant, str) or not tenant:
             raise CatalogDeliveryError("Workspace identifier must be a nonempty string.")
-        entry = {"root": str(Path(repository.tenant_root(tenant)).resolve())}
-        for kind, table in TABLES.items():
-            rows, seen = [], set()
-            for original in repository.read_records(tenant, kind):
-                row = copy.deepcopy(dict(original))
-                identifier = _identity(row, tenant, kind)
-                if identifier in seen:
-                    raise CatalogDeliveryError(f"Duplicate original {kind} identifier.")
-                seen.add(identifier)
-                if kind == "job":
-                    row["artifacts"] = [copy.deepcopy(dict(item))
-                                        for item in repository.read_artifacts(tenant, identifier)]
-                rows.append(row)
-            entry[table] = rows
-        result["tenants"][tenant] = entry
+        with repository_read_scope(repository, tenant):
+            entry = {"root": str(Path(repository.tenant_root(tenant)).resolve())}
+            for kind, table in TABLES.items():
+                rows, seen = [], set()
+                for original in repository.read_records(tenant, kind):
+                    row = copy.deepcopy(dict(original))
+                    identifier = _identity(row, tenant, kind)
+                    if identifier in seen:
+                        raise CatalogDeliveryError(f"Duplicate original {kind} identifier.")
+                    seen.add(identifier)
+                    if kind == "job":
+                        row["artifacts"] = [copy.deepcopy(dict(item))
+                                            for item in repository.read_artifacts(tenant, identifier)]
+                    rows.append(row)
+                entry[table] = rows
+            result["tenants"][tenant] = entry
     return result
 
 def _selection(refs):

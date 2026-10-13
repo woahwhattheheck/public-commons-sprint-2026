@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "decisions",
   "title": "Scenario decisions",
-  "version": "4",
+  "version": "5",
   "order": 60,
   "assets": [
     "decision_bridge.mjs",
@@ -10,7 +10,8 @@
     "scenario_decisions.css",
     "decision_transfer.mjs",
     "scenario_handoff.mjs",
-    "decision_submission.mjs"
+    "decision_submission.mjs",
+    "native_versions.mjs"
   ],
   "backend": {
     "module": "decision_workbench",

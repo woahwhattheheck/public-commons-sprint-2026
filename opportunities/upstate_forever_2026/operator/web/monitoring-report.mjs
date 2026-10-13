@@ -162,7 +162,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(!current()||version!==generation)return;
       sourceRows=Array.isArray(response.reports)?response.reports:[];
       const select=find('saved');select.replaceChildren(new Option('Choose a retained report source',''));
-      for(const row of sourceRows)select.add(new Option((row.title||row.id)+(row.campaign_id?' · campaign revision':' · saved design'),row.id));
+      for(const row of sourceRows)select.add(new Option((row.title||row.id)+(row.selection?.campaign_id?' · campaign revision':' · saved design'),row.id));
       if(selectedSaved&&!sourceRows.some(row=>row.id===selectedSaved))selectedSaved='';
       select.value=selectedSaved;persist();renderSelection();
       if(showMessage)status(sourceRows.length+' retained monitoring report source'+(sourceRows.length===1?'':'s')+'.');
