@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "ensemble-scientific-report-composer",
+  "extend_components": {
+    "ensembles": {
+      "paths": [
+        "operator/ensemble_service.py",
+        "operator/web/ensembles.mjs",
+        "operator/extensions/ensembles.json",
+        "model/ENSEMBLE_CONSUMERS.md",
+        "integration/component_fragments/ensemble-scientific-report-composer.json"
+      ],
+      "requires": [
+        "scientific-report-editions"
+      ]
+    }
+  },
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/aeed653906f9397f058cde3bf080011ac852e9f5/opportunities/upstate_forever_2026"
+}
