@@ -1081,6 +1081,120 @@ def comparison_summary(workspace, receiving, run, progress):
     return result
 
 
+def archive_completed_workspace(workspace, receiving, run, progress, destination):
+    """Reuse a complete original archive after a lost final receiving checkpoint."""
+    from model.common import describe_file, identifier
+    from model.model_selection import run_models
+    from model.portable import _archive_identity, _archive_digest, _inspect_archive
+
+    destination = Path(destination).resolve()
+    if destination.is_relative_to(workspace.root.resolve()):
+        raise ValueError("Save the Workspace archive outside its own source tree")
+    if not destination.exists():
+        return workspace.backup(destination, include_intermediates=False)
+    selection = run["selection"]
+    key = identifier(run["id"])
+    if run.get("state") != "complete":
+        raise ValueError("Archive reuse requires the original completed Workspace run")
+    grid = workspace.get_grid(selection["grid_id"])
+    profile = workspace._get("profiles", selection["profile_id"])
+    scenario = workspace._get("scenarios", selection["scenario_id"])
+    collection_ids = {grid["spec"]["source_collection_id"],
+                      profile["source_collection_id"], scenario["source_collection_id"]}
+    with destination.open("rb") as source:
+        before = _archive_identity(source)
+        with zipfile.ZipFile(source) as archive:
+            manifest = _inspect_archive(archive, verify=True)
+            if (manifest["project"] != workspace.project or
+                    manifest["selection"] != {"include_intermediates": False,
+                                               "include_deliveries": True}):
+                raise ValueError("Existing archive belongs to another Workspace or backup selection")
+            members = manifest["members"]
+
+            def same_member(name, expected):
+                captured = members.get(name, {})
+                if any(captured.get(field) != expected[field] for field in ("bytes", "sha256")):
+                    raise ValueError("Existing archive differs from the selected original member: " + name)
+
+            def same_record(relative):
+                path = workspace.root / relative
+                same_member("workspace/" + relative, describe_file(workspace.root, path))
+
+            same_record("runs/" + key + "/run.json")
+            same_record("grids/" + grid["id"] + "/grid.json")
+            for kind, identity in (("profiles", profile["id"]), ("scenarios", scenario["id"])):
+                same_record(kind + "/" + identity + ".json")
+            for collection_id in collection_ids:
+                collection_id = identifier(collection_id)
+                collection = workspace._get("sources", collection_id)
+                same_record("sources/" + collection_id + ".json")
+                original_members = [collection["original_manifest"]]
+                for entry in collection["entries"]:
+                    original_members.extend([entry["body"], *entry.get("companions", [])])
+                for member in original_members:
+                    same_member("workspace/" + member["object"], member)
+            for item in grid["files"].values():
+                same_member("workspace/grids/" + grid["id"] + "/" + item["path"], item)
+            for item in run["artifacts"].values():
+                same_member("workspace/runs/" + key + "/" + item["path"], item)
+
+            state_name = "workspace/gura-receiving/gura-receiving-state.json"
+            if state_name not in members:
+                raise ValueError("Existing archive lacks the original Gura receiving state")
+            saved = json.loads(archive.read(state_name))
+            if (saved.get("schema") != "upstate.gura-receiving/v1" or
+                    saved.get("workspace_id") != workspace.project["id"] or
+                    saved.get("workspace_baseline", {}).get("run_id") != key):
+                raise ValueError("Existing archive records another Gura receiving selection")
+            for model in run_models(run):
+                original = progress["original_sources"][model]
+                archived_original = saved.get("original_sources", {}).get(model, {})
+                if (archived_original.get("archive") != original["archive"] or
+                        archived_original.get("source_files") != original["source_files"]):
+                    raise ValueError("Existing archive changes the original " + model.upper() + " source edition")
+                for item in original["source_files"]:
+                    same_member("workspace/gura-receiving/" + item["path"], item)
+                native = progress.get("native_original", {}).get(model)
+                if native and native.get("state") == "complete":
+                    archived_native = saved.get("native_original", {}).get(model, {})
+                    if (archived_native.get("state") != "complete" or
+                            archived_native.get("selection_id") != native["selection_id"] or
+                            archived_native.get("outputs") != native["outputs"]):
+                        raise ValueError("Existing archive changes the completed original " + model.upper() + " run")
+                    for item in native["outputs"]:
+                        same_member("workspace/gura-receiving/" + item["path"], item)
+            application = {
+                name[len("application/"):]: {field: value[field] for field in ("bytes", "sha256")}
+                for name, value in members.items() if name.startswith("application/")}
+            required = {"model/common.py", "model/workspace.py", "model/native.py",
+                        "model/rasters.py", "model/profiles.py", "model/portable.py",
+                        "model/cli.py", "source_tools/receive_gura_native.py"}
+            if not required.issubset(application):
+                raise ValueError("Existing archive lacks the original native receiving application")
+            application_sha256 = hashlib.sha256(canonical(application)).hexdigest()
+        checksum = _archive_digest(source, before)
+        current = destination.stat()
+        if (current.st_dev, current.st_ino, current.st_size,
+                current.st_mtime_ns, current.st_ctime_ns) != before:
+            raise ValueError("Existing archive changed during original receiving verification")
+    retained = progress.get("backup", {})
+    if retained.get("path") == str(destination) and any(
+            retained.get(field) != value for field, value in
+            (("bytes", before[2]), ("sha256", checksum))):
+        raise ValueError("Existing archive differs from its completed receiving receipt")
+    result = {"schema": manifest["schema"], "project_id": workspace.project["id"],
+              "path": str(destination), "bytes": before[2], "sha256": checksum,
+              "members": len(members), "selection": manifest["selection"],
+              "database_snapshots": manifest.get("database_snapshots", {}),
+              "source_acquisitions": manifest.get("source_acquisitions", {}),
+              "implementation": manifest.get("implementation", {}),
+              "run_id": key, "application_sha256": application_sha256,
+              "application_members": len(application), "reused_completed_archive": True}
+    emit("workspace-archive-reused", path=str(destination), sha256=checksum,
+         run_id=key, application_sha256=application_sha256)
+    return result
+
+
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--application", type=Path, required=True)
@@ -1170,11 +1284,8 @@ def main(argv=None):
                     atomic(receiving / "native-workspace-comparison.json", comparisons)
                     emit("native-workspace-comparison", comparisons=comparisons)
                 if args.archive:
-                    destination = args.archive.resolve()
-                    if destination.is_relative_to(root):
-                        raise ValueError("Save the Workspace archive outside its own source tree")
-                    backup = workspace.backup(destination, include_intermediates=False)
-                    state["backup"] = backup
+                    state["backup"] = archive_completed_workspace(
+                        workspace, receiving, run, state, args.archive)
             state["state"] = "complete"
             state["completed_at"] = now()
             checkpoint()
