@@ -10,7 +10,8 @@ import tempfile
 import uuid
 from .common import (SCHEMA, INVEST_VERSION, ROLES, atomic_json, canonical,
                      describe_file, digest, file_digest, held, identifier, now,
-                     read_json, relative_file, retain_file, verify_file)
+                     read_json, relative_file, retain_file, verify_file,
+                     _retained_object_matches, _sync_directory)
 from .profiles import checked_parameters, inspect_table, scenario_spec
 from .model_selection import (normalize_selection, selected, grid_models, run_models,
                               required_roles, validate_completed_run)
@@ -125,44 +126,54 @@ class Workspace:
         entry = found[0]
         view = self.root / "source-views" / collection_id / digest(source_id)
         view.mkdir(parents=True, exist_ok=True)
-        for body in [entry["body"]] + entry["companions"]:
-            original = relative_file(self.root, body["object"])
-            if original.stat().st_size != body["bytes"] or file_digest(original) != body["sha256"]:
-                raise ValueError("Original scientific source changed: " + source_id)
-            name = body.get("view_path", body["filename"])
-            member = Path(name)
-            if (member.is_absolute() or not member.parts or ".." in member.parts
-                    or member.as_posix() != name or "\\" in name or "\0" in name):
-                raise ValueError("Invalid native source member path")
-            target = view / member
-            if not target.parent.resolve().is_relative_to(view.resolve()) or target.is_symlink():
-                raise ValueError("Native source view escapes its retained directory")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.exists():
-                try:
-                    os.link(original, target)
-                except FileExistsError:
-                    pass
-                except OSError:
-                    pending = None
-                    try:
-                        with original.open("rb") as src, tempfile.NamedTemporaryFile(
-                                dir=target.parent, prefix=".source-view-", delete=False) as out:
-                            pending = Path(out.name)
-                            shutil.copyfileobj(src, out, 1024 * 1024)
-                            out.flush()
-                            os.fsync(out.fileno())
-                        if pending.stat().st_size != body["bytes"] or file_digest(pending) != body["sha256"]:
-                            raise ValueError("Original source changed during native view creation")
+        with held(self.root / "objects" / (".source-view-" + collection_id + "-" + digest(source_id) + ".lock")):
+            for body in [entry["body"]] + entry["companions"]:
+                checksum = identifier(body["sha256"])
+                with held(self.root / "objects" / (".intake-" + checksum + ".lock")):
+                    original = relative_file(self.root, body["object"])
+                    if not _retained_object_matches(original, checksum, body["bytes"]):
+                        raise ValueError("Original scientific source changed: " + source_id)
+                    name = body.get("view_path", body["filename"])
+                    member = Path(name)
+                    if (member.is_absolute() or not member.parts or ".." in member.parts
+                            or member.as_posix() != name or "\\" in name or "\0" in name):
+                        raise ValueError("Invalid native source member path")
+                    target = view / member
+                    if not target.parent.resolve().is_relative_to(view.resolve()) or target.is_symlink():
+                        raise ValueError("Native source view escapes its retained directory")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    if not _retained_object_matches(target, checksum, body["bytes"]):
+                        pending = None
+                        candidate = target.parent / (".source-view-" + uuid.uuid4().hex)
                         try:
-                            os.link(pending, target)
-                        except FileExistsError:
-                            pass
-                    finally:
-                        if pending is not None:
+                            try:
+                                os.link(original, candidate)
+                                pending = candidate
+                            except FileExistsError:
+                                raise
+                            except OSError:
+                                with original.open("rb") as src, tempfile.NamedTemporaryFile(
+                                        dir=target.parent, prefix=".source-view-", delete=False) as out:
+                                    pending = Path(out.name)
+                                    shutil.copyfileobj(src, out, 1024 * 1024)
+                                    out.flush()
+                                    os.fsync(out.fileno())
+                            if not _retained_object_matches(pending, checksum, body["bytes"]):
+                                raise ValueError("Original source changed during native view creation")
+                            # Views are derived, not immutable source editions.
+                            # Reconnect a damaged old hard link after CAS repair.
+                            os.replace(pending, target)
+                            # rename may be a no-op when a concurrent legacy
+                            # writer linked this same inode to the final name.
                             pending.unlink(missing_ok=True)
-            if target.stat().st_size != body["bytes"] or file_digest(target) != body["sha256"]:
-                raise ValueError("Native source view differs: " + source_id)
+                            pending = None
+                            _sync_directory(target.parent)
+                        finally:
+                            if pending is not None:
+                                pending.unlink(missing_ok=True)
+                                _sync_directory(target.parent)
+                    if not _retained_object_matches(target, checksum, body["bytes"]):
+                        raise ValueError("Native source view differs: " + source_id)
         return view / entry["body"].get("view_path", entry["body"]["filename"]), entry
 
     def save_profile(self, value):
