@@ -1,0 +1,28 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ECO-S1-LAB-DISCOVERY-20261013",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 5,
+  "source_bytes": 190976,
+  "banks": [
+    {
+      "name": "laboratory-report-discovery",
+      "original_git_blob": "4e88026e0be6013a237cab8047edd66bd779cd46",
+      "original_bytes": 213766,
+      "original_sha256": "99dcebf949906d840fa9e1280d548907ba8013f4048de9bb085a5d0abcd6b7c4",
+      "gzip_bytes": 55217,
+      "gzip_sha256": "595128396cdf80349936ea49dbc2b0f4cd949f806a4b943cefd2046a779b2a63",
+      "parts": [
+        {
+          "git_blob": "f1b8c75efd0e26d21b88bcb743fefd433ad184f4",
+          "json_bytes": 73848,
+          "json_sha256": "59b17475e2e733215e339fd277f895aa94535e0cc655e81a591cb6566065cdbe",
+          "index": 0,
+          "offset": 0,
+          "bytes": 55217,
+          "sha256": "595128396cdf80349936ea49dbc2b0f4cd949f806a4b943cefd2046a779b2a63"
+        }
+      ]
+    }
+  ]
+}
