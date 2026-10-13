@@ -13,9 +13,33 @@ if Path(original_managed.__file__).resolve() != NDJSON / "managed.py":
 BINDING = "stellar-forge.opensanctions-managed-binding.v1"
 STARTUP = "stellar-forge.opensanctions-workspace-launch.v1"
 SOURCE_FILES = (
-    "model.py", "updates.py", "matching.py", "web.py", "cli.py",
-    "application_binding.py", "cli.mjs", "managed.mjs", "application-provider.mjs",
-    "public/index.html", "public/app.js", "public/style.css", "SOURCE_CONTRACT.json",
+    "model.py",
+    "gleif_portfolio.py",
+    "portfolio_refresh.py",
+    "portfolio_review_cycles.py",
+    "updates.py",
+    "matching.py",
+    "review_cycles.py",
+    "review_exchange.py",
+    "review_exchange_delivery.py",
+    "review_workspace_archive.py",
+    "web.py",
+    "cli.py",
+    "application_binding.py",
+    "cli.mjs",
+    "managed.mjs",
+    "application-provider.mjs",
+    "public/index.html",
+    "public/app.js",
+    "public/gleif-intake.js",
+    "public/portfolio-refresh.js",
+    "public/review-cycles.js",
+    "public/review-exchange.js",
+    "public/reviewer-copy.js",
+    "public/reviewer-copy.html",
+    "public/reviewer-copy.css",
+    "public/style.css",
+    "SOURCE_CONTRACT.json",
 )
 
 # Reuse the native private connection-file context, including its exact-file

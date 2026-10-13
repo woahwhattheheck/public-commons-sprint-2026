@@ -10,6 +10,11 @@ from model import (Domain, Workspace, InputError, MAX_SOURCE, json_bytes, load_j
                    MONITORING_DEFAULT, ndjson_application)
 import matching
 import updates
+import review_cycles
+import gleif_portfolio
+import portfolio_refresh
+import review_exchange
+import review_exchange_delivery
 
 HERE = Path(__file__).resolve().parent
 
@@ -20,11 +25,20 @@ class Handler(ndjson_application.Handler):
     def domain(self):
         return self.server.domain
 
+    def _cycle_branch(self):
+        selected = unquote(self.headers.get("X-Review-Workspace", ""))
+        if selected != str(self.domain.ws.root):
+            raise InputError("Open the original workspace branch for this review cycle request")
+
     def _get(self):
         target = urlsplit(self.path)
         assets = {"/monitor": ("index.html", "text/html; charset=utf-8"),
                   "/monitor/": ("index.html", "text/html; charset=utf-8"),
                   "/monitor/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                  "/monitor/gleif-intake.js": ("gleif-intake.js", "text/javascript; charset=utf-8"),
+                  "/monitor/portfolio-refresh.js": ("portfolio-refresh.js", "text/javascript; charset=utf-8"),
+                  "/monitor/review-cycles.js": ("review-cycles.js", "text/javascript; charset=utf-8"),
+                  "/monitor/review-exchange.js": ("review-exchange.js", "text/javascript; charset=utf-8"),
                   "/monitor/style.css": ("style.css", "text/css; charset=utf-8")}
         if target.path in assets:
             self._gate(api=False)
@@ -40,6 +54,60 @@ class Handler(ndjson_application.Handler):
         q = {k: v[0] for k, v in params.items()}
         path = target.path[len("/api/os/"):]
         d = self.domain
+        if path in {"review-exchanges", "review-exchange", "review-exchange-request",
+                    "review-exchange-compare", "review-exchange-file"}:
+            self._cycle_branch()
+            with d.mutex:
+                if path == "review-exchanges":
+                    return self._json(review_exchange.view(d, offset=int(q.get("offset", "0")), limit=int(q.get("limit", "50"))))
+                if path == "review-exchange":
+                    return self._json(review_exchange.view(d, q["id"], offset=int(q.get("offset", "0")), limit=int(q.get("limit", "50"))))
+                if path == "review-exchange-request":
+                    return self._json(review_exchange.request(d, q["requestId"]))
+                if path == "review-exchange-compare":
+                    return self._json(review_exchange.compare(d, q["returnId"], q["editionId"], q.get("adoptionRequestId")))
+                selected = review_exchange.document(d, q["id"], q["role"])
+                descriptor, raw = selected["descriptor"], selected["bytes"]
+                suffix = ".html" if "html" in descriptor["mediaType"] else ".json"
+                filename = "Reviewer_" + q["role"] + "_" + descriptor["sha256"][:16] + suffix
+                self._headers(200, descriptor["mediaType"], len(raw), filename)
+                self.wfile.write(raw)
+                return
+        if path == "cycle-context":
+            return self._json({"workspace": str(d.ws.root), "name": d.ws.root.name})
+        if path in {"cycles", "cycle", "cycle-request", "cycle-report", "cycle-report-html"}:
+            self._cycle_branch()
+        if path == "cycles":
+            return self._json(review_cycles.view(d))
+        if path == "cycle":
+            return self._json(review_cycles.view(d, q["id"]))
+        if path == "cycle-request":
+            return self._json(review_cycles.request(d, q["id"]))
+        if path == "cycle-report":
+            return self._json(review_cycles.report(d, q["id"], int(q["version"])))
+        if path == "cycle-report-html":
+            raw = review_cycles.report_html(d, q["id"], int(q["version"])).encode("utf-8")
+            self._headers(200, "text/html; charset=utf-8", len(raw)); self.wfile.write(raw); return
+        if path in {"portfolio-refreshes", "portfolio-refresh", "portfolio-refresh-request", "portfolio-refresh-report", "portfolio-refresh-report-html"}:
+            self._cycle_branch()
+            if path == "portfolio-refreshes":
+                return self._json(portfolio_refresh.view(d))
+            if path == "portfolio-refresh":
+                return self._json(portfolio_refresh.view(d, q["id"], offset=int(q.get("offset", "0")),
+                    limit=int(q.get("limit", "50")), kind=q.get("kind"), query=q.get("query", "")))
+            if path == "portfolio-refresh-request":
+                return self._json(portfolio_refresh.operation(d, q["requestId"]))
+            if path == "portfolio-refresh-report":
+                return self._json(portfolio_refresh.report(d, q["id"]))
+            raw = portfolio_refresh.report_html(d, q["id"]).encode("utf-8")
+            self._headers(200, "text/html; charset=utf-8", len(raw)); self.wfile.write(raw); return
+        if path == "portfolio-cycle-reviews":
+            self._cycle_branch()
+            import portfolio_review_cycles
+            return self._json(portfolio_review_cycles.choices(d, q["comparisonId"]))
+        if path == "gleif-intake":
+            self._cycle_branch()
+            return self._json(gleif_portfolio.operation(d, q["requestId"]))
         if path == "state":
             return self._json(d.state())
         if path == "contract":
@@ -90,6 +158,8 @@ class Handler(ndjson_application.Handler):
         d = self.domain
         path = target.path[len("/api/os/"):]
         if path == "object":
+            if self.headers.get("X-Review-Workspace") is not None:
+                self._cycle_branch()
             name = unquote(self.headers.get("X-Original-Name", "original"))
             source_url = unquote(self.headers.get("X-Original-URL", ""))
             body = self._body(MAX_SOURCE)
@@ -112,12 +182,73 @@ class Handler(ndjson_application.Handler):
         body = load_json(self._body(24 * 1024 * 1024).read())
         if not isinstance(body, dict):
             raise InputError("Expected the selected operation's JSON object")
+        if path in {"review-exchange-issue", "review-exchange-command", "review-exchange-return-preview"}:
+            self._cycle_branch()
+            if path == "review-exchange-return-preview":
+                if set(body) != {"file"}:
+                    raise InputError("Select the complete retained original returned file")
+                return self._json(review_exchange_delivery.preview_return(d, body["file"]))
+            try:
+                with d.mutex:
+                    result = (review_exchange_delivery.issue(d, body) if path == "review-exchange-issue"
+                              else review_exchange.command(d, body))
+                return self._json(result, 201)
+            except InputError as error:
+                absent = False
+                try:
+                    absent = not review_exchange.request(d, body.get("requestId"))["committed"]
+                except InputError:
+                    pass
+                return self._json({"error": str(error), "notCommitted": absent,
+                                   "requestId": body.get("requestId")}, 400)
+        if path == "cycle-command":
+            self._cycle_branch()
+            try:
+                return self._json(review_cycles.command(d, body), 201)
+            except InputError as error:
+                absent = False
+                try:
+                    absent = not review_cycles.request(d, body.get("requestId"))["committed"]
+                except InputError:
+                    pass  # Invalid history or request identity cannot establish an absent effect.
+                return self._json({"error": str(error), "notCommitted": absent, "requestId": body.get("requestId")}, 400)
         if path == "published-edition":
             return self._json(updates.receive_published(d, body["metadataUrl"], body.get("entitlement")), 201)
         if path == "edition":
             with d.object_path(body["metadata"]).open("rb") as meta, d.object_path(body["entities"]).open("rb") as entities:
                 return self._json(d.accept_edition(meta, entities, metadata_url=body["metadataUrl"],
                                     label=body.get("label"), entitlement=body.get("entitlement")), 201)
+        if path == "portfolio-refresh-prepare":
+            self._cycle_branch()
+            return self._json(portfolio_refresh.prepare(d, body["before"], body["after"]), 201)
+        if path == "portfolio-refresh-command":
+            self._cycle_branch()
+            try:
+                return self._json(portfolio_refresh.command(d, body), 201)
+            except InputError as error:
+                not_committed = False
+                try:
+                    not_committed = not portfolio_refresh.operation(d, body.get("requestId"))["committed"]
+                except InputError:
+                    pass
+                return self._json({"error": str(error), "requestId": body.get("requestId"),
+                                   "notCommitted": not_committed}, 400)
+        if path == "gleif-preview":
+            self._cycle_branch()
+            return self._json(gleif_portfolio.preview(d, body["original"],
+                offset=body.get("offset", 0), limit=body.get("limit", 50)))
+        if path == "gleif-receive":
+            self._cycle_branch()
+            try:
+                return self._json(gleif_portfolio.receive(d, body), 201)
+            except InputError as error:
+                not_committed = False
+                try:
+                    not_committed = not gleif_portfolio.operation(d, body.get("requestId"))["committed"]
+                except InputError:
+                    pass
+                return self._json({"error": str(error), "requestId": body.get("requestId"),
+                                   "notCommitted": not_committed}, 400)
         if path == "portfolio":
             with d.object_path(body["original"]).open("rb") as original:
                 return self._json(d.accept_portfolio(original, key=body["key"], label=body["label"]), 201)
