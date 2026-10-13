@@ -1,0 +1,34 @@
+# Reopen the complete scientific application
+
+The scientific workspace archive carries its retained workspace and the installed application. The receiving directory has two siblings: `application/` and `workspace/`. Launch the received application's own server with the received workspace, so its saved investigations, scenarios and scientific results use the same supplied modules.
+
+## Capture and reopen
+
+Run the existing workspace commands from the installed application's directory:
+
+```sh
+python -B -m model.cli --workspace /ABSOLUTE/WORKSPACE backup /ABSOLUTE/DELIVERY/workspace.zip
+python -B -m model.cli restore /ABSOLUTE/DELIVERY/workspace.zip /ABSOLUTE/RECEIVED
+python -B /ABSOLUTE/RECEIVED/application/model/cli.py --workspace /ABSOLUTE/RECEIVED/workspace overview
+python -B /ABSOLUTE/RECEIVED/application/operator/server.py --workspace /ABSOLUTE/RECEIVED/workspace
+```
+
+The operator prints the local address to open. Use its workspace selector to confirm the original project, select a saved programme or investigation, inspect a saved result, and continue work. The original source, grid, run, comparison and project identities remain in the archive.
+
+## Application components
+
+Capture includes the core model and operator, source tools and source material, shared run reuse modules, singular `integration/` and plural `integrations/` packages, `eco_intelligence/`, and the installed documentation. Existing top-level setup scripts and environment requirements are retained. Optional components are included when installed; capture does not download a different application edition.
+
+Python bytecode, package caches, active lock files and temporary native recovery reserves are omitted. Ordinary application source is checked again before publication so an installation changing during capture cannot silently produce a mixed application.
+
+## Saved database state
+
+Mutable application databases with SQLite file headers and `.db`, `.sqlite` or `.sqlite3` suffixes are captured with SQLite's online backup API. This includes committed transactions still in a write-ahead log. Each archived database opens independently; its live WAL, shared-memory and rollback-journal companions are omitted.
+
+The archive manifest's `database_snapshots` records identify these captures. Each database is transactionally consistent at its capture point. The existing workspace lock protects the ordinary workspace operation; independently written databases are captured individually. A concurrent application installation or a replaced database causes capture to stop with its specific source path.
+
+Content-addressed source objects, source editions, model runs, grids, delivery products and GeoPackages retain their original bytes. Their checksums and scientific identities keep their existing meaning.
+
+## Existing archives
+
+The archive format remains `upstate.scientific-workspace-archive/v1`. Earlier archives without database snapshot records still open through the same restore command. Each archive member is checked against its retained length and SHA-256 during inspection and extraction. Restore publishes into a new receiving directory and preserves existing destinations.
