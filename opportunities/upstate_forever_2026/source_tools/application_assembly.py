@@ -18,7 +18,9 @@ it is joined with current source. Conflicting anchors stop before publication;
 they never authorize a whole-file replacement of an unknown successor. The
 result retains actual pre/post hashes and selected edit outcomes. Component and
 source validation, atomic fresh-directory receiving, and the original native
-workspace remain part of the existing receiving course.
+workspace remain part of the existing receiving course. A patch group already
+pins its original preimage; omit a duplicate file-level predecessor when the
+same declared installation must also be able to add that member if absent.
 """
 from __future__ import annotations
 
@@ -1180,9 +1182,9 @@ def _joined_composition(documents):
         return None
     if any(not isinstance(value, dict) for value in selected):
         raise ValueError("Invalid source-bank composition declaration")
-    if len({canonical(value) for value in selected}) == 1:
-        return selected[0]
     if any(value.get("schema") != DECLARED_COMPOSITION_SCHEMA for value in selected):
+        if len({canonical(value) for value in selected}) == 1:
+            return selected[0]
         raise ValueError("Source-bank blocks have different composition declarations")
     paths = {"delta_paths": set(), "supporting_exact_paths": set()}
     patches = {}
