@@ -19,6 +19,7 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
     from model import gis_project as gis, gis_workspace
     from model.common import atomic_json, digest
     from model.webmap_sources import CONTEXT_PARENT_SHA256
+    from eco_intelligence.profiling import profile
 
     record_path = state_directory / "webmap-gis-receiving.json"
     report_path = state_directory / "webmap-gis-receiving-result.json"
@@ -37,11 +38,13 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         if len(vectors) != 1 or len(contexts) != 1:
             raise ValueError("Receive one original ten-county vector with its dated county context.")
         identity = {"project_id": native.project["id"], "source_collection_id": collection["id"],
-                    "admission_id": admission["id"]}
+                    "admission_id": admission["id"], "gis_builder_version": gis.VERSION,
+                    "receiving_version": "typed-context-v1"}
         if record_path.is_file():
             receipt = json.loads(record_path.read_text(encoding="utf-8"))
             if receipt.get("identity") != identity:
-                raise ValueError("This receiving state belongs to another original source admission.")
+                raise ValueError("This receiving state belongs to another source admission or GIS version. "
+                                 "Keep its original tasks and use a separate state directory for this version.")
         else:
             receipt = {"schema": "upstate.webmap-gis-receiving/v1",
                        "identity": identity, "phases": {}}
@@ -195,6 +198,42 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         source_binding = adopted_vectors[0]["received_gis"]["source"]
         if (source_binding["collection_id"], source_binding["id"]) != (collection["id"], vector_entry["id"]):
             raise AssertionError("The adopted GIS layer lost its original source identity.")
+        typed_tables = []
+        for original in [entry for entry in entries if entry["kind"] == "table"]:
+            matches = [entry for entry in adopted_collection["entries"]
+                       if entry.get("received_gis", {}).get("context_role") == "attachment"
+                       and entry["received_gis"].get("source", {}).get("collection_id") == collection["id"]
+                       and entry["received_gis"].get("source", {}).get("id") == original["id"]]
+            if len(matches) != 1 or matches[0]["kind"] != "table":
+                raise AssertionError("The adopted original context is not one native typed table.")
+            table = matches[0]
+            spec = next(row for row in source_specs if row["source"]["id"] == original["id"])
+            if table["received_gis"]["source"] != spec["source"]:
+                raise AssertionError("The adopted table changed its original logical source metadata.")
+            for name in (*gis_workspace.SOURCE_METADATA_FIELDS, "role", "conversion"):
+                if name != "webmap_source" and name in spec["source"]:
+                    if table.get(name) != spec["source"][name]:
+                        raise AssertionError("The adopted table changed scientific metadata: " + name)
+            if (table["uri"], table["vintage"], table.get("units")) != (
+                    original["uri"], original["vintage"], spec.get("units")):
+                raise AssertionError("The adopted table lost its source URI, vintage or declared units.")
+            expected_files = [(body["filename"], body["bytes"], body["sha256"])
+                              for body in [original["body"], *original.get("companions", [])]]
+            actual_files = [(body["filename"], body["bytes"], body["sha256"])
+                            for body in [table["body"], *table.get("companions", [])]]
+            if actual_files != expected_files:
+                raise AssertionError("The adopted table changed a primary or ordered companion identity.")
+            original_table, _ = native.source_file(collection["id"], original["id"])
+            adopted_table, _ = native.source_file(adopted_collection["id"], table["id"])
+            original_profile, adopted_profile = profile(original_table), profile(adopted_table)
+            if (adopted_profile != original_profile or adopted_profile.get("format") != "table"
+                    or adopted_profile.get("population") != "complete" or adopted_profile.get("rows") != 10):
+                raise AssertionError("The actual native profiler could not reopen all ten original table rows.")
+            typed_tables.append({"original_source_id": original["id"], "source_id": table["id"],
+                                 "bytes": table["body"]["bytes"], "sha256": table["body"]["sha256"],
+                                 "profile": adopted_profile,
+                                 "geography_basis": table.get("geography_basis"),
+                                 "vintage": table["vintage"], "units": table.get("units")})
         reexported = complete("reexport", "gis.project.export", {
             "title": "Received county sources — complete GIS handover",
             "project_crs": "EPSG:4326",
@@ -210,6 +249,21 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         carried = {(row["bytes"], row["sha256"]) for row in originals(reexport_project)}
         if not required <= carried:
             raise AssertionError("Selecting the adopted working layer omitted original source context.")
+        for table in typed_tables:
+            matches = [row for row in reexport_project.get("attachments", [])
+                       if row.get("source", {}).get("collection_id") == adopted_collection["id"]
+                       and row.get("source", {}).get("id") == table["source_id"]]
+            if len(matches) != 1 or gis.attachment_metadata(reexport_project, matches[0])["kind"] != "table":
+                raise AssertionError("Working-layer-only re-export lost the adopted table type.")
+            row = matches[0]
+            expected_spec = gis_workspace.source_layer(native, {
+                "source_collection_id": adopted_collection["id"], "source_id": table["source_id"]})
+            if row["source"] != expected_spec["source"]:
+                raise AssertionError("Re-export changed the adopted table's full scientific source binding.")
+            if [(item["source_path"], item["bytes"], item["sha256"]) for item in row["files"]] != [
+                    (item["path"], item["bytes"], item["sha256"])
+                    for item in [expected_spec["file"], *expected_spec["companions"]]]:
+                raise AssertionError("Re-export changed an adopted table or companion binding.")
         reuploaded = transfer(reexport_view)
         received_again = complete("receive-reexport", "gis.project.receive", {"upload_id": reuploaded["id"]})
         _, _, received_again_check = project("received", received_again["result"]["id"])
@@ -228,6 +282,8 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             "received_reexport": received_again_check,
             "retained_source_metadata": True, "original_county_attributes": True,
             "original_county_geometries": True,
+            "typed_context_tables": typed_tables,
+            "typed_context_profiles_reopened": True,
             "selected_working_layer_reexports_full_context": True,
             "native_tasks": {phase: row["task_id"] for phase, row in receipt["phases"].items()},
             "delivery": {"path": str(gis.local(native.root, reexport_view["archive"]["path"])),
@@ -253,7 +309,12 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             view = adapter.describe(key, kind, project_id)
             stream, _ = operator.open_download(view["archive_download"]["id"])
             stream.close()
-        operator.ws(key)._get("sources", outcome["adopted_source_collection_id"])
+        reopened_collection = operator.ws(key)._get("sources", outcome["adopted_source_collection_id"])
+        for table in outcome["typed_context_tables"]:
+            selected, entry = operator.ws(key).source_file(reopened_collection["id"], table["source_id"])
+            if (entry["kind"] != "table" or entry["body"]["sha256"] != table["sha256"]
+                    or profile(selected) != table["profile"]):
+                raise AssertionError("Restart changed a retained typed table or its complete profile.")
         outcome.update(status="passed", restart_reopened=True)
         atomic_json(report_path, outcome)
         return outcome

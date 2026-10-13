@@ -6,6 +6,14 @@ from pathlib import Path
 from . import gis_project as gis
 
 
+SOURCE_METADATA_FIELDS = (
+    "provenance", "webmap_source", "scientific_metadata", "geography_basis",
+    "original_fields", "field_vintages", "format", "columns", "column_units",
+    "source_format", "source_crs", "encoding", "decoded_bytes", "decoded_sha256",
+    "community_metadata",
+)
+
+
 def _artifact(workspace, directory, item):
     """Translate the original describe_file contract without altering its identity."""
     path = gis.checked(directory, item)
@@ -61,8 +69,7 @@ def source_layer(workspace, selection: dict) -> dict:
            "visible": selection.get("visible", False)}
     # Keep explicit scientific metadata with the portable originals and working layer.
     # These are the retained source's own values, not inferred units or geography.
-    for key in ("provenance", "webmap_source", "scientific_metadata", "geography_basis",
-                "original_fields", "field_vintages"):
+    for key in SOURCE_METADATA_FIELDS:
         if key in entry:
             row["source"][key] = deepcopy(entry[key])
     for key in ("layer", "where", "band", "metric", "direction"):
@@ -369,25 +376,59 @@ def adopt_sources(workspace, selection: dict) -> dict:
             if data['kind']=='vector':entry['layer']=data['layer']
             entries.append(entry)
         seen_context=set()
-        def context(title, records):
-            signature=tuple((r['path'],r['sha256']) for r in records)
-            if signature in seen_context:return
-            seen_context.add(signature)
-            for rec in records:gis.checked(root,rec)
+        def context(title, records, *, context_id, context_role, metadata=None, source=None):
+            metadata = deepcopy(metadata or {"kind": "document"})
+            source = deepcopy(source or {})
+            kind = metadata["kind"]
+            if kind not in {"table", "document"}:
+                raise ValueError("Retained GIS context must be a table or document")
+            if not records:
+                raise ValueError("Retained GIS context has no original primary file")
+            # Logical source identity is independent of shared content bytes.
+            # A generic layer original cannot suppress a typed table attachment.
+            signature = {"context_id": context_id, "role": context_role,
+                         "metadata": metadata, "source": source,
+                         "files": [{"path": row["path"], "bytes": row["bytes"],
+                                    "sha256": row["sha256"],
+                                    "source_path": row.get("source_path")} for row in records]}
             code=gis.fingerprint(signature)
-            entries.append({'id':'GIS_CONTEXT_'+code,'title':title,'kind':'document',
-                            'path':'project/'+records[0]['path'],'sha256':records[0]['sha256'],
-                            'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
-                            'uri':'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
-                            'vintage':'Received GIS edition '+project['edition_id'],
-                            'gis_context_group':key,'gis_required_context':True})
+            if code in seen_context:return
+            seen_context.add(code)
+            for rec in records:gis.checked(root,rec)
+            entry={'id':'GIS_CONTEXT_'+code,'title':title,'kind':kind,
+                   'path':'project/'+records[0]['path'],'sha256':records[0]['sha256'],
+                   'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
+                   'uri':source.get('uri') or 'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
+                   'vintage':source.get('vintage') or 'Received GIS edition '+project['edition_id'],
+                   'gis_context_group':key,'gis_required_context':True,
+                   'received_gis':{'receipt_id':receipt['id'],'edition_id':project['edition_id'],
+                                   'context_id':context_id,'context_role':context_role,
+                                   'originals':deepcopy(records),'source':source,
+                                   'adoption_id':key,'reason':reason}}
+            if kind == 'table':
+                for name in SOURCE_METADATA_FIELDS:
+                    # Related Web Map IDs still name the original collection.
+                    # Keep that complete relationship under received_gis.source.
+                    if name != 'webmap_source' and name in source:
+                        entry[name] = deepcopy(source[name])
+                for name in ('role','conversion'):
+                    if name in source:
+                        entry[name] = deepcopy(source[name])
+                if 'units' in metadata:
+                    entry['units'] = deepcopy(metadata['units'])
+            entries.append(entry)
         for layer_id in chosen:
-            context('Retained originals · '+byid[layer_id]['title'],byid[layer_id]['originals'])
+            layer = byid[layer_id]
+            context('Retained originals · '+layer['title'],layer['originals'],
+                    context_id=layer_id,context_role='layer_originals',source=layer.get('source'))
         for document in project.get('attachments',[]):
-            context(document['title'],document['files'])
+            context(document['title'],document['files'],
+                    context_id=document['id'],context_role='attachment',
+                    metadata=gis.attachment_metadata(project,document),source=document.get('source'))
         history=[gis.record(root,p) for p in sorted((root/'history').rglob('*')) if p.is_file()]
         context('Received GIS edition provenance and retained history',
-                [gis.record(root,root/'project.json'),*history])
+                [gis.record(root,root/'project.json'),*history],
+                context_id=project['edition_id'],context_role='edition_history')
         manifest={'schema':'upstate.sources/v1','title':title,'entries':entries,
                   'notes':[reason,'Selected independently editable working layers adopted from a complete received GIS edition.'],
                   'scope':{'gis_source_adoption':adopted}}
