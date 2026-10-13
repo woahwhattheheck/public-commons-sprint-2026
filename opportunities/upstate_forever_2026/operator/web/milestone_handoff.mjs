@@ -159,8 +159,12 @@ class MilestoneDesk{
   }finally{if(this.current(c)){this.busy=false;this.render();}}
   this.require(c);return this.submit();
  }
- validateTask(task,p){
-  if(task.workspace!==p.request.workspace||task.operation_id!==p.request.operation_id||task.action!==p.request.action||!same(task.payload,p.request.payload)||!hex(task.id))throw Error('The returned task differs from the exact retained original request.');
+ async validateTask(task,p){
+  const expected=await digest({workspace:p.request.workspace,action:p.request.action,payload:p.request.payload});
+  if(task.workspace!==p.request.workspace||task.action!==p.request.action||!same(task.payload,p.request.payload)||task.request_sha256!==expected||!hex(task.id)||(p.task_id&&task.id!==p.task_id))throw Error('The returned task differs from the exact retained original request or accepted task identity.');
+  // Original Operator may return its existing active task through an operation
+  // alias. Its original operation remains on the task; our requested ID stays
+  // unchanged in p.request.
  }
  async submit(resume=false){
   if(!this.w.pending)throw Error('No original request is pending.');
@@ -171,7 +175,7 @@ class MilestoneDesk{
    let task;
    try{
     const raw=await this.host.api(resume&&p.task_id?'/api/task/resume':'/api/actions',{method:'POST',body:resume&&p.task_id?{id:p.task_id}:clone(p.request)});
-    task=raw.task||raw;this.validateTask(task,p);
+    task=raw.task||raw;await this.validateTask(task,p);
    }catch(error){
     if(w.pending===p&&[400,401,403,404,405,413,415,422].includes(Number(error?.status)))p.rejected={status:error.status,message:error.message};
     this.outcome(w);throw error;
@@ -183,7 +187,7 @@ class MilestoneDesk{
   });
  }
  async adopt(task,c,p){
-  this.validateTask(task,p);this.require(c);
+  await this.validateTask(task,p);this.require(c);
   if(task.state==='complete'){
    c.working.history.push({request:clone(p.request),request_sha256:p.request_sha256,task:clone(task)});
    c.working.pending=null;this.outcome(c.working);
@@ -199,7 +203,7 @@ class MilestoneDesk{
   const p=this.w?.pending;if(!p)return;if(!p.task_id)return this.submit();
   return this.exclusive(async c=>{
    const raw=await this.host.api(this.host.endpoint('/api/task',{id:p.task_id})),task=raw.task||raw;
-   this.validateTask(task,p);p.state=task.state;p.task=clone(task);this.outcome(c.working);this.require(c);await this.adopt(task,c,p);
+   await this.validateTask(task,p);p.state=task.state;p.task=clone(task);this.outcome(c.working);this.require(c);await this.adopt(task,c,p);
   });
  }
  async openSaved(id,responseId=undefined){
@@ -243,6 +247,7 @@ class MilestoneDesk{
   if(action==='criterion'){this.selectedCriterion=b.dataset.id;this.render();return;}
   if(action==='evidence')return this.evidence();
   if(action==='preview')return this.review();
+  if(action==='definition-download'){if(!this.preview||!same(this.preview.definition,this.w.definition))throw Error('Preview the exact current definition first.');download(JSON.stringify(this.preview.definition,null,2)+'\n','Milestone_Authored_Definition.json');return;}
   if(action==='save'){if(!this.preview||!same(this.preview.definition,this.w.definition))throw Error('Preview the exact current definition first.');return this.queue('milestone-handoff.create',{definition:clone(this.w.definition),preview_sha256:this.preview.preview_sha256});}
   if(action==='retry')return this.submit(false);
   if(action==='resume')return this.submit(true);
@@ -304,7 +309,7 @@ class MilestoneDesk{
   html+='</div><div class="mh-actions">'+button('evidence','Load exact original files',locked)+'</div></section>';
   html+='<section><h2>Criterion evidence and exceptions</h2><div class="mh-criteria-nav">'+m.criteria.map(c=>button('criterion',c.id+' · '+c.title,false,'data-id="'+c.id+'" aria-pressed="'+(c.id===this.selectedCriterion)+'"')).join('')+'</div>';
   if(row&&criterion){html+='<h3>'+esc(criterion.title)+'</h3><p>'+esc(criterion.detail)+'</p><label>Engineering evidence note<textarea data-mh-field="criterion-note"'+(locked?' disabled':'')+'>'+esc(row.note)+'</textarea></label><label>Find original files<input data-mh-field="search" value="'+esc(this.search)+'" placeholder="File name, source or role"></label><div data-mh-evidence-list>'+this.evidenceHTML()+'</div><h3>Source and assumption exceptions</h3>'+row.exceptions.map((x,i)=>'<div class="mh-exception"><label>Exception<input data-mh-field="exception-title" data-index="'+i+'" value="'+esc(x.title)+'"'+(locked?' disabled':'')+'></label><label>Responsible owner<input data-mh-field="exception-owner" data-index="'+i+'" value="'+esc(x.owner)+'"'+(locked?' disabled':'')+'></label><label>Detail<textarea data-mh-field="exception-detail" data-index="'+i+'"'+(locked?' disabled':'')+'>'+esc(x.detail)+'</textarea></label>'+button('exception-remove','Remove exception',locked,'data-index="'+i+'"')+'</div>').join('')+button('exception-add','Add source exception',locked);}
-  html+='</section><section><h2>Prepare original recipient review</h2><div class="mh-actions">'+button('preview','Preview this complete selection',locked)+button('save','Save original milestone review',locked||!this.preview||!same(this.preview.definition,d))+'</div>';
+  html+='</section><section><h2>Prepare original recipient review</h2><div class="mh-actions">'+button('preview','Preview this complete selection',locked)+button('save','Save original milestone review',locked||!this.preview||!same(this.preview.definition,d))+button('definition-download','Download authored definition',!this.preview||!same(this.preview.definition,d))+'</div>';
   if(this.preview)html+='<div data-mh-preview="'+this.preview.preview_sha256+'"><p>'+this.preview.summary.selected_files+' original files · '+this.preview.summary.criteria+' criteria · '+this.preview.summary.criteria_without_evidence+' without assigned evidence · '+this.preview.summary.authored_exceptions+' authored exceptions</p><ul>'+this.preview.criteria.map(c=>'<li>'+esc(c.id+' · '+c.title)+' — '+c.evidence.length+' assigned files; '+c.exceptions.length+' exceptions.</li>').join('')+'</ul></div>';
   html+='</section><section><h2>Saved original milestone reviews</h2><div class="mh-scroll"><table><thead><tr><th>Handoff</th><th>Original recipient disposition</th><th>Open</th></tr></thead><tbody>'+this.catalog.reviews.map(r=>'<tr><td>'+esc(r.title)+'<small>'+esc(r.milestone_id)+' · '+esc(r.created_at)+'</small></td><td>'+esc(r.disposition)+'</td><td>'+button('open','Open saved handoff',this.busy,'data-id="'+r.id+'"')+'</td></tr>').join('')+'</tbody></table></div>'+this.catalog.issues.map(i=>'<p class="mh-error">'+esc(i.id+': '+i.message)+'</p>').join('')+'</section>';
   if(this.detail){

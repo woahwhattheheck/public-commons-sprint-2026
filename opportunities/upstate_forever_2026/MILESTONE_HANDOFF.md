@@ -6,7 +6,7 @@ The Milestone handoff desk turns an authored selection of actual source collecti
 
 The retained profile expands DD6B's proposed three-milestone workshare into fifteen evidence criteria. Its source is the complete [post-call package](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QUTPQAF). The amounts and dates in that proposal are commercial proposals, not customer acceptance.
 
-A saved handoff, returned scientific review, ready-for-purpose disposition or engineering handback does not accept a contract, authorize an invoice, record payment or sign an agreement. Bryce's 13 October 2026 instruction permits ordinary account creation and terms-of-service actions under standing authority, but requires him to read and personally sign contracts and confidentiality agreements. This feature does not sign either. All Tim correspondence remains with Bryce; every proposed external follow-up and its exact attachments require his individual approval.
+A saved handoff, returned scientific review, ready-for-purpose disposition or engineering handback does not accept a contract, authorize an invoice, record payment or sign an agreement. [Bryce's 13 October 2026 instruction](https://tokenjunkielabs.slack.com/archives/C0C8KTYSUKU/p1791911082878209) permits ordinary account creation and terms-of-service actions under standing authority, but requires him to read and personally sign contracts and confidentiality agreements. This feature does not sign either. Keep TokenJunkieLabs attribution and original source/license credits in the application, reports and exported case; a prospect's request does not override the existing attribution policy. All Tim correspondence remains with Bryce; every proposed external follow-up and its exact attachments require his individual approval.
 
 The three criteria groups cover:
 
@@ -44,11 +44,11 @@ No shared review store or portable format is replaced. Original Reviews hashes t
 
 Use the existing equipped operator. Do not start a second operator or an overlapping scientific run. Select its exact application directory, native Workspace, Workspace key, base URL and private capability file. The capability stays outside the delivered case.
 
-Author the definition from the actual desk selection. The definition schema is upstate.milestone-handoff-definition/v1, with title, milestone_id, notes, selection and one row for every criterion. Each row retains id, evidence_ids, note and exceptions. The four selection arrays are source_collection_ids, run_ids, delivery_ids and spatial_export_ids. IDs are the real existing source and artifact IDs. Save the normalized definition shown by the actual preview; do not insert invented IDs or a demo dataset.
+Author the definition from the actual desk selection. The definition schema is upstate.milestone-handoff-definition/v1, with title, milestone_id, notes, selection and one row for every criterion. Each row retains id, evidence_ids, note and exceptions. The four selection arrays are source_collection_ids, run_ids, delivery_ids and spatial_export_ids. IDs are the real existing source and artifact IDs. Choose **Download authored definition** after preview to retain the exact normalized definition; do not insert invented IDs or a demo dataset.
 
 Run the same installed application programme:
 
-    python APPLICATION/operations/receive_milestone_handoff.py \
+    python APPLICATION/source_tools/receive_milestone_handoff.py \
       --app APPLICATION \
       --workspace ORIGINAL_WORKSPACE \
       --workspace-key ORIGINAL_KEY \

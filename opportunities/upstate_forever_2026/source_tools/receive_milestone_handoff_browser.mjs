@@ -124,12 +124,27 @@ try{
  });
  await step('original-review-desk',async()=>{
   await saved();await page.locator('[data-mh-action="original"][data-tab="files"]').click();
-  await page.waitForTimeout(300);await screen('03-Original_Review_Files.png');
+  await page.waitForFunction(id=>{
+   const e=document.querySelector('#detail-dialog .customer-review-detail');
+   return e&&e.textContent.includes(id)&&e.querySelector('[data-action="review-tab"][data-tab="files"][aria-pressed="true"]')&&e.querySelector('table tbody tr');
+  },config.review_id);
+  await screen('03-Original_Review_Files.png');
   const desk=await context.newPage();try{
    const url=new URL(config.desk_url,config.operator_url);if(url.origin!==new URL(config.operator_url).origin)throw Error('Original review desk leaves the selected operator');
-   await desk.goto(url.href,{waitUntil:'domcontentloaded'});await desk.locator('body').waitFor({state:'visible'});
+   await desk.goto(url.href,{waitUntil:'domcontentloaded'});
+   const pinned=JSON.parse(fs.readFileSync(path.join(config.root,config.downloads.find(x=>x.file.endsWith('/Pinned_Milestone_Snapshot.json')).file),'utf8'));
+   await desk.waitForFunction(({id,title,requirements,artifacts})=>{
+    const meta=document.querySelector('#review-meta'),list=document.querySelector('#requirements-list');
+    return meta?.textContent.includes(id)&&document.querySelector('#review-title')?.textContent===title&&
+     list&&requirements.every(key=>list.textContent.includes(key))&&
+     artifacts.every(key=>document.querySelector('[data-artifact-id="'+key+'"]'));
+   },{id:config.review_id,title:pinned.review.title,requirements:pinned.review.requirements.map(x=>x.id),artifacts:pinned.review.artifacts.map(x=>x.id)});
    if(!fs.existsSync(path.join(out,'04-Original_Recipient_Desk.png')))await desk.screenshot({path:path.join(out,'04-Original_Recipient_Desk.png'),fullPage:true});record('04-Original_Recipient_Desk.png');
    keep('Original_Recipient_Visible_Text.txt',await desk.locator('body').innerText());
+   await desk.locator('#tab-files').click();await desk.locator('#pane-files').waitFor({state:'visible'});
+   if(!fs.existsSync(path.join(out,'04b-Recipient_Original_Files.png')))await desk.screenshot({path:path.join(out,'04b-Recipient_Original_Files.png'),fullPage:true});record('04b-Recipient_Original_Files.png');
+   await desk.locator('#tab-requirements').click();await desk.locator('#pane-requirements').waitFor({state:'visible'});
+   if(!fs.existsSync(path.join(out,'04c-Recipient_Requirements.png')))await desk.screenshot({path:path.join(out,'04c-Recipient_Requirements.png'),fullPage:true});record('04c-Recipient_Requirements.png');
   }finally{await desk.close();}
   await page.close();await openOperator();return true;
  });
