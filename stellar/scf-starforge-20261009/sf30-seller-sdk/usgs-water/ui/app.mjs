@@ -1,4 +1,5 @@
 import { mountDss } from './dss.mjs';
+import { mountWatershed } from './watershed.mjs';
 const $ = id => document.getElementById(id);
 const make = (tag, text, attrs = {}) => {
   const el = document.createElement(tag);
@@ -10,6 +11,7 @@ let state = null, selectedCapture = null, analysisResult = null, selectedReview 
 const shownFailures = new Set(), customerEditions = new Map();
 let customerEditionKey = null, customerEdition = null, customerPrepared = null, customerDelivery = null;
 const dss = mountDss({ api, notice, make, getState: () => state, refresh });
+const watershed = mountWatershed({ api, notice, make, getState: () => state, refresh });
 const PAGE = 40;
 const sourceRanges = new Map(), sourceFilterValues = new Map(), sourceStatisticValues = new Map();
 const SOURCE_FILTERS = {
@@ -281,12 +283,12 @@ function sourceBounds() {
 async function refresh(reset = false) {
   state = await api('/api/workspace');
   if (reset) applyProjectForm(state.project);
-  renderCaptures(); renderReviews(); renderEditions(); dss.refresh(state);
+  renderCaptures(); renderReviews(); renderEditions(); dss.refresh(state); watershed.refresh(state);
   if (state.jobs?.some(job => job.status === 'RUNNING')) schedulePoll();
 }
 async function refreshStatus() {
   const status = await api('/api/status');
-  Object.assign(state, status); renderCaptures(); renderRuntime(); dss.refresh(state);
+  Object.assign(state, status); renderCaptures(); renderRuntime(); dss.refresh(state); watershed.refresh(state);
   const failure = status.jobs?.find(row => row.status === 'FAILED' && !shownFailures.has(row.id));
   if (failure) { shownFailures.add(failure.id); notice(failure.error?.message ?? ('Capture ' + failure.id + ' could not complete.'), true); }
   if (status.jobs?.some(row => row.status === 'RUNNING')) schedulePoll();
