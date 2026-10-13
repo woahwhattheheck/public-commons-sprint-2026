@@ -18,7 +18,7 @@ const argv=process.argv.slice(2),options={};
 const flags=new Set(['resume-failed-tasks','help']);
 const names=new Set(['control','url','workspace','output','mode','node-modules','chromium','python',
  'progress','source-collection','source-id','source-sha256','registered-source','task-timeout-seconds',
- 'project-id','context','source-revision','mapped-plan','mapped-report','resume-failed-tasks','help']);
+ 'project-id','context','source-revision','mapped-plan','mapped-report','archive-input','resume-failed-tasks','help']);
 for(let i=0;i<argv.length;i++){
  const key=argv[i].replace(/^--/,'');
  assert.ok(argv[i].startsWith('--')&&names.has(key),'Unknown receiving option '+argv[i]);
@@ -26,7 +26,7 @@ for(let i=0;i<argv.length;i++){
  else{assert.ok(argv[i+1]&&!argv[i+1].startsWith('--'),'Supply --'+key);options[key.replaceAll('-','_')]=argv[++i];}
 }
 if(options.help){
- console.log('node operator/community_receiving.mjs --url ORIGINAL_OPERATOR_URL --workspace WORKSPACE_KEY --output PRIVATE_DIRECTORY [--node-modules ORIGINAL_NODE_MODULES] [--chromium ORIGINAL_CHROMIUM] [--python ORIGINAL_PYTHON] [--mode operate|reopen]\nOr supply the same original values in a private --control JSON. Add --mapped-plan ORIGINAL_PLAN_ID --mapped-report ORIGINAL_REPORT_ID to continue an existing programme through explicitly mapped original CSV columns. Reuse its output directory to continue retained tasks.');
+ console.log('node operator/community_receiving.mjs --url ORIGINAL_OPERATOR_URL --workspace WORKSPACE_KEY --output PRIVATE_DIRECTORY [--node-modules ORIGINAL_NODE_MODULES] [--chromium ORIGINAL_CHROMIUM] [--python ORIGINAL_PYTHON] [--mode operate|reopen]\nOr supply the same original values in a private --control JSON. Add --mapped-plan ORIGINAL_PLAN_ID --mapped-report ORIGINAL_REPORT_ID to continue an existing programme through explicitly mapped original CSV columns. A private --archive-input JSON from the original Python controller receives the authentic archived report through source handover, composer and full cold Workspace receiving. Reuse its output directory to continue retained tasks.');
  process.exit(0);
 }
 const control=options.control?JSON.parse(await fs.readFile(options.control,'utf8')):{};
@@ -44,7 +44,14 @@ c.source_sha256=c.source_sha256||'377d4f860fb545215534070309b67e1d26135cdab1ee03
 c.source_collection=c.source_collection||c.source_collection_id;
 c.registered_source=c.registered_source||c.registered_source_id;
 c.context=typeof c.context==='string'?JSON.parse(await fs.readFile(c.context,'utf8')):(c.context||{});
-const mappingCourse=Boolean(c.mapped_plan||c.mapped_report);
+c.archive_input=typeof c.archive_input==='string'?JSON.parse(await fs.readFile(c.archive_input,'utf8')):c.archive_input;
+const archiveCourse=Boolean(c.archive_input),mappingCourse=Boolean(c.mapped_plan||c.mapped_report);
+assert.ok(!(archiveCourse&&mappingCourse),'Choose the original archived report or the genuine mapped Workspace course.');
+if(archiveCourse){
+ assert.equal(c.archive_input.selection?.schema,'upstate.community-archive-input/v1');
+ for(const name of ['report_id','report_sha256','plan_id','table_id'])assert.match(c.archive_input.selection?.[name]||'',/^[0-9a-f]{64}$/);
+ assert.equal(c.archive_input.report.id,c.archive_input.selection.report_id);
+}
 if(mappingCourse){
  assert.match(c.mapped_plan||'',/^[0-9a-f]{64}$/,'Select the original saved Community plan.');
  assert.match(c.mapped_report||'',/^[0-9a-f]{64}$/,'Select that plan’s original saved report.');
@@ -62,10 +69,10 @@ const capability=new URLSearchParams(selectedURL.hash.slice(1)).get('token');
 assert.ok(capability,'Use the original operator_url containing its current #token.');
 const output=path.resolve(c.output);
 await fs.mkdir(output,{recursive:true,mode:0o700});
-const stem=mappingCourse?'community-mapping-browser':'community-browser';
+const stem=archiveCourse?'community-archive-browser':mappingCourse?'community-mapping-browser':'community-browser';
 const statePath=path.resolve(c.progress||path.join(output,stem+'-progress.json'));
 const resultPath=path.join(output,stem+'-result.json');
-const operation=mappingCourse?'UPSTATE-COMMUNITY-MAPPED-ORIGINAL-264B-20261013':'UPSTATE-UTILITY-COMMUNITY-APPLICATION-64B7-20261012';
+const operation=archiveCourse?'UPSTATE-COMMUNITY-ARCHIVE-ORIGINAL-6730-1280-20261013':mappingCourse?'UPSTATE-COMMUNITY-MAPPED-ORIGINAL-264B-20261013':'UPSTATE-UTILITY-COMMUNITY-APPLICATION-64B7-20261012';
 const initial={schema:'upstate.community-browser-receiving/v1',operation,
  original_workspace_key:c.workspace,source_id:c.source_id,source_sha256:c.source_sha256,stages:{},attempts:[]};
 let saved;
@@ -77,8 +84,12 @@ if(mappingCourse){
  if(saved.mapping_selection)assert.deepEqual(saved.mapping_selection,selection,'Continue the same original plan/report pair.');
  else saved.mapping_selection=selection;
 }
+if(archiveCourse){
+ if(saved.archive_selection)assert.deepEqual(saved.archive_selection,c.archive_input.selection,'Continue the exact original complete report input.');
+ else saved.archive_selection=structuredClone(c.archive_input.selection);
+}
 if(c.mode==='operate')assert.equal(saved.original_workspace_key,c.workspace,'Continue the same original workspace.');
-else assert.ok(saved.received&&saved.report,'Complete the original operate segment before reopening its saved output.');
+else assert.ok(saved.received&&(archiveCourse?saved.archive_selection:saved.report),'Complete the original operate segment before reopening its saved output.');
 saved.complete=false;
 const attempt={mode:c.mode,started_at:new Date().toISOString(),workspace_key:c.workspace,
  page_errors:[],http_errors:[],screenshots:[],original_actions:[]};
@@ -675,7 +686,52 @@ const scientificReceiving=communityScientificReceiving({page,saved,c,api,endpoin
  retainedStage,retainedJSON,download,openReport,openCommunityTab,showTask,closeOverlays,navigate,refresh,
  screenshot,form,input,publicItem,output,workspace:()=>workspace});
 
+
+async function retainArchiveOriginals(){
+ for(const name of ['package','report_archive','report_record','handover']){
+  const selected=c.archive_input[name],actual=await fileRecord(selected.path);
+  assert.equal(actual.bytes,selected.bytes,'Complete original '+name+' byte count');
+  assert.equal(actual.sha256,selected.sha256,'Complete original '+name+' SHA256');
+ }
+ const state=await getState();
+ if(!saved.archive_native_records){
+  const original={project_id:state.data.project.id,collections:{}};
+  for(const kind of ['community_tables','community_plans','community_reports']){
+   original.collections[kind]=[];
+   for(const row of state.data[kind]||[])original.collections[kind].push(publicItem(await item(kind,row.id)));
+  }
+  saved.archive_native_records=original;
+  saved.original_records=await retainedJSON('original-archive-workspace-records.json',original);await checkpoint();
+ }
+ await verifyArchiveNativeRecords();
+}
+async function verifyArchiveNativeRecords(){
+ const original=saved.archive_native_records;assert.ok(original);
+ const state=await getState();assert.equal(state.data.project.id,original.project_id);
+ for(const [kind,values]of Object.entries(original.collections)){
+  for(const value of values){
+   assert.ok((state.data[kind]||[]).some(row=>row.id===value.id),'Keep the original native '+kind+' record.');
+   assert.deepEqual(publicItem(await item(kind,value.id)),value,'Original editable Community records remain unchanged.');
+  }
+ }
+}
+async function verifyArchiveReopened(){
+ const state=await getState();assert.equal(state.data.project.id,saved.project_id);
+ await verifyArchiveNativeRecords();
+ const scientific=await scientificReceiving.verify();
+ saved.reopened={workspace_key:workspace,project_id:state.data.project.id,
+  original_report_id:saved.archive_selection.report_id,original_project_id:saved.archive_selection.original_project_id,
+  archive_selection:structuredClone(saved.archive_selection),community_scientific:scientific,
+  checked_at:new Date().toISOString()};
+ await checkpoint();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForFunction(key=>document.querySelector('#workspace-select')?.value===key,workspace);
+ await navigate('sources');
+ await screenshot(c.mode==='reopen'?'archive-new-server-cold-workspace':'archive-restored-workspace');
+}
+
 async function verifyReopened(){
+ if(archiveCourse)return verifyArchiveReopened();
  const state=await getState();assert.equal(state.data.project.id,saved.project_id);
  await verifyCommunityJourney(state);
  for(const [kind,id]of [['sources',saved.source.collection_id],['community_tables',saved.table.id],
@@ -712,7 +768,7 @@ try{
  else saved.project_id=first.data.project.id;
  await checkpoint();
  if(c.mode==='operate'){
-  if(mappingCourse){await operateMappedOriginal();}else{
+  if(archiveCourse){await retainArchiveOriginals();}else if(mappingCourse){await operateMappedOriginal();}else{
   await retainOriginalSource();
   const tableStage=await retainedStage('table','community.table.import',async()=>{
    await navigate('communities');await page.locator('[data-action="community-import"]').first().click();
@@ -736,11 +792,13 @@ try{
   });
   saved.report=await item('community_reports',reportStage.result.id);await checkpoint();await refresh();
   }
+  if(!archiveCourse){
   saved.report_downloads=await inspectReport(saved.report,saved.revised_plan);
   saved.original_records=await retainedJSON('original-community-records.json',{
    schema:'upstate.community-browser-original-records/v1',project_id:saved.project_id,source:saved.source,
    table:publicItem(saved.table),initial_plan:publicItem(saved.initial_plan),revised_plan:publicItem(saved.revised_plan),report:publicItem(saved.report)});
   await checkpoint();
+  }
   const editionKey=c.source_revision||'legacy';
   saved.delivery_editions??={};
   if(saved.workspace_archive&&!saved.active_application_edition&&!saved.delivery_editions.legacy)
@@ -750,8 +808,11 @@ try{
   const deliveryStage=name=>editionKey==='legacy'?name:name+':'+editionKey;
   const deliveryPath=editionKey==='legacy'?output:path.join(output,'application-editions',editionKey);
   await checkpoint();
-  if(mappingCourse)await scientificReceiving.operate({edition,stageName:deliveryStage,directory:deliveryPath});
-  await retainCommunityJourney(edition);
+  if(archiveCourse)await scientificReceiving.operateArchive({edition,stageName:deliveryStage,directory:deliveryPath,input:c.archive_input});
+  else{
+   if(mappingCourse)await scientificReceiving.operate({edition,stageName:deliveryStage,directory:deliveryPath});
+   await retainCommunityJourney(edition);
+  }
   const backup=await retainedStage(deliveryStage('backup'),'workspace.backup',async()=>{
    await page.locator('[data-action="backup"]').first().click();
    await form().locator('[name="include_intermediates"]').setChecked(true);
@@ -785,7 +846,9 @@ try{
  attempt.complete=true;attempt.completed_at=new Date().toISOString();saved.complete=true;await checkpoint();
  const result={schema:'upstate.community-browser-result/v1',operation,complete:true,mode:c.mode,
   project_id:saved.project_id,original_workspace_key:saved.original_workspace_key,source:saved.source,
-  table_id:saved.table.id,initial_plan_id:saved.initial_plan.id,revised_plan_id:saved.revised_plan.id,report_id:saved.report.id,
+  ...(archiveCourse?{archive_selection:saved.archive_selection,archive_native_records:saved.archive_native_records,
+   original_report_id:saved.archive_selection.report_id,original_project_id:saved.archive_selection.original_project_id}:
+   {table_id:saved.table.id,initial_plan_id:saved.initial_plan.id,revised_plan_id:saved.revised_plan.id,report_id:saved.report.id}),
   task_ids:Object.fromEntries(Object.entries(saved.stages).map(([name,row])=>[name,row.task_id])),
   comparison:saved.comparison,report_downloads:saved.report_downloads,workspace_archive:saved.workspace_archive,
   received:saved.received,reopened:saved.reopened,community_journey:saved.community_journey,original_records:saved.original_records,progress:statePath,
@@ -796,7 +859,7 @@ try{
    complete:Boolean(row.complete),error:row.error,screenshots:row.screenshots,page_errors:row.page_errors,http_errors:row.http_errors}))};
  await atomicJSON(resultPath,result);
  console.log(JSON.stringify({operation,complete:true,mode:c.mode,project_id:saved.project_id,
-  report_id:saved.report.id,received_workspace:saved.received.workspace,result:resultPath}));
+  report_id:archiveCourse?saved.archive_selection.report_id:saved.report.id,received_workspace:saved.received.workspace,result:resultPath}));
 }catch(error){
  attempt.error={name:error.name,message:redact(error.message),stack:redact(error.stack)};
  attempt.completed_at=new Date().toISOString();await checkpoint();
