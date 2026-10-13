@@ -1,0 +1,220 @@
+{
+  "schema": "commons.arches-public-source-manifest.v1",
+  "source_edition": "arches-receiving-20261013",
+  "application_license": "MIT",
+  "publisher_cohort": "publisher-source/COHORT.json",
+  "native_publisher": {
+    "repository": "archesproject/arches",
+    "commit": "2127517966462ea024ffb000b2e1fd46bf66d6dd",
+    "files": [
+      {
+        "path": "publisher-native-source/concept_label_test_scheme.xml",
+        "original_path": "tests/fixtures/data/concept_label_test_scheme.xml",
+        "bytes": 1249,
+        "sha256": "69da8828c7abaca62f0d742085898ee80321c75363b2f623db39bea254fb683d",
+        "git_blob": "71543b2dff186aaeb43607c2019346ee055a16cc",
+        "source_url": "https://github.com/archesproject/arches/blob/2127517966462ea024ffb000b2e1fd46bf66d6dd/tests/fixtures/data/concept_label_test_scheme.xml"
+      },
+      {
+        "path": "publisher-native-source/concept_label_test_collection.xml",
+        "original_path": "tests/fixtures/data/concept_label_test_collection.xml",
+        "bytes": 1707,
+        "sha256": "688f01d2cfb86e8c39e8beb8030eeb500975a4dec648907379d537a423a0e566",
+        "git_blob": "e06ed1b8a70d367d90b5552d79ae5b716a339310",
+        "source_url": "https://github.com/archesproject/arches/blob/2127517966462ea024ffb000b2e1fd46bf66d6dd/tests/fixtures/data/concept_label_test_collection.xml"
+      },
+      {
+        "path": "publisher-native-source/concept_label_mixed_case.xml",
+        "original_path": "tests/fixtures/data/concept_label_mixed_case.xml",
+        "bytes": 1249,
+        "sha256": "a8b968eb332d96a89c2d6730b6ed349030fd8689d5c78bc9dcd90c8deca4ee86",
+        "git_blob": "6cfd79444d8390a58c94878521a85da590f73366",
+        "source_url": "https://github.com/archesproject/arches/blob/2127517966462ea024ffb000b2e1fd46bf66d6dd/tests/fixtures/data/concept_label_mixed_case.xml"
+      },
+      {
+        "path": "publisher-native-source/LICENSE.txt",
+        "original_path": "LICENSE.txt",
+        "bytes": 34520,
+        "sha256": "76a97c878c9c7a8321bb395c2b44d3fe2f8d81314d219b20138ed0e2dddd5182",
+        "git_blob": "dbbe3558157f5861bff35dcb37b328b679b0ccfd",
+        "source_url": "https://github.com/archesproject/arches/blob/2127517966462ea024ffb000b2e1fd46bf66d6dd/LICENSE.txt"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "application/arches_workspace.py",
+      "bytes": 35176,
+      "sha256": "b5e1f1dbf89af6ba1507d86bf1ebf6572dbbdc6109fe494a40d1c7564c00886e",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/arches_app.py",
+      "bytes": 12702,
+      "sha256": "837c8c0ee5f9faf35aa54bfd247754e4fbab5b69dd7d7dd14c84fa7c6eddbabe",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/index.html",
+      "bytes": 30239,
+      "sha256": "9107fdf4455da5311b41fefd16ff9119a8345eb2331b9066c1f26d42ce3f8d8a",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/OPERATING_GUIDE.md",
+      "bytes": 15195,
+      "sha256": "3795cf665e2996c69668699f8183cfdefd62524e6025e9a8326ae15b7d38542f",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/operate.py",
+      "bytes": 16435,
+      "sha256": "55f9cbc13826f65ace3fd1a0f77278f85007cf0aa65cd15be68045c96aed849e",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/arches_source.py",
+      "bytes": 44251,
+      "sha256": "b55cf6b877b22f5c6bd83cc473c1b74baf4060c6882aab79c22ccaa6eafb0cfe",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/ARCHES_SOURCE.md",
+      "bytes": 8582,
+      "sha256": "70f835a24d1fe17cacb22158da266d54e59ddd3b5ca37bb7c041c959fe50c47d",
+      "kind": "application-source"
+    },
+    {
+      "path": "publisher-source/sources/before/resource.json",
+      "bytes": 3104,
+      "sha256": "3ec5e5ec370c8870daa2e87aa1bb3e97f6c1fcf23fc56f0cf7bae24e64a808b8",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/sources/after/resource.json",
+      "bytes": 3598,
+      "sha256": "beb5f1c6b57b94af524f5f5ab257189c2aa6925e5f1a209ad7517eead47014ef",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/sources/context/graph.json",
+      "bytes": 60760,
+      "sha256": "b6b3bc08cb669c8dd44f402769ecb040da5213b3fd709b87fc39118d759f6555",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/sources/context/collection.json",
+      "bytes": 1339,
+      "sha256": "a9960341e7c2c9613149926be5d7ec178b98013a41c45fcfdbb7b52de092dfd3",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/sources/context/LICENSE.txt",
+      "bytes": 34520,
+      "sha256": "76a97c878c9c7a8321bb395c2b44d3fe2f8d81314d219b20138ed0e2dddd5182",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/COHORT.json",
+      "bytes": 3885,
+      "sha256": "0e9c8a452e3eae3162a7ab77affd8833a126c161def0a3bdd8b52282d243a820",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-source/SOURCE_QUALIFICATION.md",
+      "bytes": 6706,
+      "sha256": "5801be44884d3219fab3b19bf5b6547308308b91c821afdc0357330c7385f60e",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "application/arches_review_exchange.py",
+      "bytes": 11160,
+      "sha256": "952fc098bdf2614429bbf069d23d690b2a07b5ea210b24d7d5eb27d46d438dcc",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/browser-receiving.mjs",
+      "bytes": 36038,
+      "sha256": "c7f10696ff109b14f8ae4fc03688157235e0bce1eda641fd12d56f98733e7021",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/BROWSER_RECEIVING.md",
+      "bytes": 10295,
+      "sha256": "c9685f40be58c16d0e11049aa4f0b6f8b85b2fad62cd4c6c42e8351deb4993c7",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/receive_public_starches.py",
+      "bytes": 24899,
+      "sha256": "c8f5f0611cc2f5512e9a416faaf118d43eaef4f98c649ce0fec8fb863adcc400",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/PUBLIC_SOURCE_RECEIVING.md",
+      "bytes": 11623,
+      "sha256": "f56292d52c2376965341926fc0458d40c436acab4cea6c6705a685ec7215415e",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/arches_native_skos.py",
+      "bytes": 26104,
+      "sha256": "11b69c4f5c0e5b474281758f3927ee15462f17bf720d1b0d635e79f54dccc2b4",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/NATIVE_SKOS_RECEIVING.md",
+      "bytes": 8017,
+      "sha256": "bdc3ce575f0a4662f6db187187c841e8a5ce5c328daee23626b2a1ccf8b9d2ac",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/native_skos_receiving.py",
+      "bytes": 3287,
+      "sha256": "db450ad2f87456faaeb34f2d8f4c230a65476c601fa83d1e320bee7224cdaeef",
+      "kind": "application-source"
+    },
+    {
+      "path": "publisher-native-source/concept_label_test_scheme.xml",
+      "bytes": 1249,
+      "sha256": "69da8828c7abaca62f0d742085898ee80321c75363b2f623db39bea254fb683d",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-native-source/concept_label_test_collection.xml",
+      "bytes": 1707,
+      "sha256": "688f01d2cfb86e8c39e8beb8030eeb500975a4dec648907379d537a423a0e566",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-native-source/concept_label_mixed_case.xml",
+      "bytes": 1249,
+      "sha256": "a8b968eb332d96a89c2d6730b6ed349030fd8689d5c78bc9dcd90c8deca4ee86",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "publisher-native-source/LICENSE.txt",
+      "bytes": 34520,
+      "sha256": "76a97c878c9c7a8321bb395c2b44d3fe2f8d81314d219b20138ed0e2dddd5182",
+      "kind": "publisher-source-or-cohort"
+    },
+    {
+      "path": "application/LICENSE.txt",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+      "kind": "application-source"
+    },
+    {
+      "path": "application/NOTICE.md",
+      "bytes": 1101,
+      "sha256": "0164b3db8a03f95198b5fbdde2b24e33d7c087132f0ea1b775020988dd5dc6c3",
+      "kind": "application-source"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5222,
+      "sha256": "d783a4f66a77a959b9d8950175e2503c8766dac8cf2f30834640c3d476d4b5d9",
+      "kind": "application-source"
+    }
+  ]
+}
