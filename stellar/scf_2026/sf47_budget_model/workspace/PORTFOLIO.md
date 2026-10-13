@@ -145,3 +145,7 @@ The quoted delivery window sets the promised deadline. The separate **Minimum wo
 Select a ready alternative through the original Forecast handoff to enter its chosen work window. Original milestone receipt dates remain their entered values, and the relative collection conditions stay attached to their original IDs. Undated customer collections remain outside the cash curve until those dates are known.
 
 The operating analysis displays the retained event conditions and the source forecast's undated cost, hours and collection amounts. A complete Portfolio ZIP adds `event-dependent-work.json` for these source tasks. The full operations case remains the portable source for reopening all original quotes, attachments, forecasts and allocations. Previously saved dated forecasts and portfolios retain their complete original calculations and identities.
+
+## Complete named working copies
+
+Use [Portfolio working copies](PORTFOLIO_WORKING_COPIES.md) to retain unfinished controls, source bytes, checkpoints and the exact native save request. [The supplied-page receiving course](PORTFOLIO_WORKING_COPIES_BROWSER.md) continues this original application and case through export, restore and cold reopening.

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from urllib.parse import parse_qs, unquote
 import re
+import json
+from pathlib import Path
 
 from model import Problem
 from operations import Operations, decoded
@@ -27,6 +29,24 @@ def register_static(static):
                    "/forecast.css": ("forecast.css", "text/css; charset=utf-8"),
                    "/portfolio.mjs": ("portfolio.mjs", "text/javascript; charset=utf-8"),
                    "/portfolio.css": ("portfolio.css", "text/css; charset=utf-8")})
+
+
+    # Keep the served Portfolio URLs and immutable source-selection map identical.
+    manifest = json.loads(Path(__file__).with_name("portfolio-browser-assets.json").read_text(encoding="utf-8"))
+    if manifest.get("schema") != "stellar-forge.browser-assets.v1" or manifest.get("root") != "./":
+        raise RuntimeError("Invalid Portfolio browser asset manifest")
+    routes = manifest.get("routes")
+    if not isinstance(routes, list) or not routes:
+        raise RuntimeError("Portfolio browser routes are required")
+    seen = set()
+    for route, (filename, content_type) in routes:
+        if (not isinstance(route, str) or not route.startswith("/") or route.startswith("//")
+                or route in seen or not isinstance(filename, str)
+                or not re.fullmatch(r"[A-Za-z0-9_.-]+", filename)
+                or not isinstance(content_type, str) or "\r" in content_type or "\n" in content_type):
+            raise RuntimeError("Invalid Portfolio browser asset route")
+        seen.add(route)
+        static[route] = (filename, content_type)
 
 
 def store(handler):
