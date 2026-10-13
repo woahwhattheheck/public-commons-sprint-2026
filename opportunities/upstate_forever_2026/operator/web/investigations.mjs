@@ -16,7 +16,7 @@ const actionNames = {
 export function createInvestigationClient(options) {
  const {api,getWorkspace,onChange=()=>{},onNotice=()=>{}}=options;
  const storage=options.storage || globalThis.sessionStorage;
- const contexts=new Map(),refreshes=new Map(),diagnosticFlights=new Map();
+ const contexts=new Map(),refreshes=new Map(),diagnosticFlights=new Map(),registryFlights=new Map();
  const key=w=>'upstate-intelligence:'+w;
  const makeId=()=> 'intelligence_'+(options.randomUUID?.() || globalThis.crypto?.randomUUID?.() ||
    Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2)).replaceAll('-','');
@@ -30,7 +30,7 @@ export function createInvestigationClient(options) {
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
     nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
     diagnosticReport:null,diagnosticIntake:saved.diagnosticIntake||null,diagnosticRead:0,
-    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{}});
+    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{},registryReading:{}});
   }return contexts.get(w);
  };
  const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,diagnosticIntake:c.diagnosticIntake,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
@@ -39,8 +39,23 @@ export function createInvestigationClient(options) {
  const path=(name,w,values={})=>'/api/intelligence/'+name+'?'+new URLSearchParams({workspace:w,...values});
  const read=async(name,w,values={})=>api(path(name,w,values));
  const snapshot=(w=getWorkspace())=>clone(context(w));
- async function catalog(w=getWorkspace()){
-  const c=context(w),value=await read('catalog',w);c.catalog=value;changed(c);return value;
+ function registryRead(name,field,key,label,w){
+  const flightKey=w+':'+name;
+  if(registryFlights.has(flightKey))return registryFlights.get(flightKey);
+  const c=context(w);c.registryReading[key]=true;delete c.readErrors[key];
+  c.error=Object.values(c.readErrors).map(row=>row.label+': '+row.message).join('\n')||null;changed(c);
+  const operation=Promise.resolve().then(()=>read(name,w)).then(value=>{
+   c[field]=value;delete c.readErrors[key];return value;
+  }).catch(error=>{
+   c.readErrors[key]={label,message:error?.message||String(error)};throw error;
+  }).finally(()=>{
+   c.registryReading[key]=false;registryFlights.delete(flightKey);
+   c.error=Object.values(c.readErrors).map(row=>row.label+': '+row.message).join('\n')||null;changed(c);
+  });
+  registryFlights.set(flightKey,operation);return operation;
+ }
+ function catalog(w=getWorkspace()){
+  return registryRead('catalog','catalog','catalog','Saved investigation catalog',w);
  }
  async function session(id,w=getWorkspace()){
   const c=context(w),request=++c.sessionRead;
@@ -58,8 +73,8 @@ export function createInvestigationClient(options) {
   const c=context(w),value=await read('export',w,{session_id:sid,export_id:id});
   if(c.sessionId===sid)c.exported=value;changed(c);return value;
  }
- async function collectionSources(w=getWorkspace()){
-  const c=context(w),value=await read('collection_sources',w);c.sourceCatalog=value;changed(c);return value;
+ function collectionSources(w=getWorkspace()){
+  return registryRead('collection_sources','sourceCatalog','sources','Registered source collections',w);
  }
  async function collection(id,w=getWorkspace(),sid=context(w).sessionId){
   if(!sid)throw Error('Create or reopen an investigation first.');
@@ -459,6 +474,13 @@ export function attachInvestigations(host) {
  }
  function renderResources(state){
   clear(nodes.resources);const term=(nodes.filter.value||'').toLowerCase(),inventory=state.catalog?.inventory||{};
+  const readError=state.readErrors?.catalog;
+  if(!state.catalog){
+   nodes.resources.append(el('p',readError?'Workspace catalog unavailable: '+readError.message:
+    state.registryReading?.catalog?'Reading the workspace catalog…':'Refresh originals to read the workspace catalog.',
+    readError?'intelligence-error':'intelligence-muted'));return;
+  }
+  if(readError)nodes.resources.append(el('p','Showing the last loaded catalog. Refresh failed: '+readError.message,'intelligence-error'));
   for(const [kind,name]of [['dataset','datasets'],['job','jobs'],['ensemble','ensembles']]){
    nodes.resources.append(el('h3',kind==='dataset'?'Original data':kind==='job'?'Native model runs':'Saved ensembles'));
    const rows=inventory[name]||[];let count=0;
@@ -701,7 +723,7 @@ export function attachInvestigations(host) {
   target.append(details('Complete retained task',value));
  }
  function renderSession(state){
-  const s=state.session;clear(nodes.evidence);clear(nodes.conversation);clear(nodes.history);clear(nodes.exports);
+  const s=state.session;clear(nodes.evidence);clear(nodes.conversation);clear(nodes.historyList);clear(nodes.exports);
   nodes.current.textContent=s?.title||'Choose or create an investigation';
   nodes.sessionMeta.textContent=s?'Created '+displayTime(s.created)+' · '+s.id:'Saved investigations remain with this scientific workspace.';
   for(const e of s?.evidence||[]){
@@ -714,7 +736,7 @@ export function attachInvestigations(host) {
     const article=el('article',null,'intelligence-message');article.append(el('h3',e.kind==='question'?'Question':e.kind==='answer'?'Answer':'Provider result'));
     article.append(el('p',e.body?.text||e.body?.error||'', 'intelligence-prose'));nodes.conversation.append(article);
    }
-   const item=el('li');item.append(el('strong',e.kind.replaceAll('_',' ')),el('span',displayTime(e.created)),details('Original event',e.body));nodes.history.append(item);
+   const item=el('li');item.append(el('strong',e.kind.replaceAll('_',' ')),el('span',displayTime(e.created)),details('Original event',e.body));nodes.historyList.append(item);
   }
   renderPlans(state);
   const exports=state.exported?[state.exported]:(s?._exports||[]);
@@ -738,7 +760,9 @@ export function attachInvestigations(host) {
   const owner=workspace,generation=epoch;
   const term=(nodes.sourceFilter.value||'').toLowerCase(),chosen=new Set((state.sourceSelection||[]).map(stable));
   const sources=state.sourceCatalog?.sources||[],known=new Set(sources.map(row=>stable(row.ref)));
+  const readError=state.readErrors?.sources,inventoryKnown=!!state.sourceCatalog&&!readError;
   clear(nodes.sourceChoices);
+  if(readError)nodes.sourceChoices.append(el('p',(state.sourceCatalog?'Showing the last loaded file list. Refresh failed: ':'Source inventory unavailable: ')+readError.message,'intelligence-error'));
   let shown=0;
   for(const source of sources){
    if(term&&!json([source.label,source.filename,source.ref,source.units]).toLowerCase().includes(term))continue;
@@ -753,12 +777,15 @@ export function attachInvestigations(host) {
    if(known.has(stable(ref)))continue;
    const label=el('label',null,'intelligence-source-choice'),input=el('input');input.type='checkbox';input.checked=true;
    input.addEventListener('change',()=>{if(root&&workspace===owner&&epoch===generation)client.selectSources([ref],false);});
-   label.append(input,el('span','Selected file is no longer registered: '+ref.id+(ref.member?' / '+ref.member:'')));
+   label.append(input,el('span',(inventoryKnown?'Selected file is no longer registered: ':'Selected file could not be checked: ')+ref.id+(ref.member?' / '+ref.member:'')));
    nodes.sourceChoices.append(label);
   }
-  if(!shown)nodes.sourceChoices.append(el('p',state.sourceCatalog?(term?'No original files match this filter.':'No source files are registered in this workspace.'):'Reading the registered original files…','intelligence-muted'));
-  const missing=(state.sourceSelection||[]).filter(ref=>!known.has(stable(ref))).length;
-  nodes.sourceCount.textContent=chosen.size+' selected · '+sources.length+' registered files'+(missing?' · '+missing+' selected files need review':'');
+  if(!shown&&!readError)nodes.sourceChoices.append(el('p',state.sourceCatalog?(term?'No original files match this filter.':'No source files are registered in this workspace.'):
+   state.registryReading?.sources?'Reading the registered original files…':'Refresh the file list to read the registered original files.','intelligence-muted'));
+  const missing=inventoryKnown?(state.sourceSelection||[]).filter(ref=>!known.has(stable(ref))).length:0;
+  nodes.sourceCount.textContent=chosen.size+' selected · '+(state.sourceCatalog?sources.length+' '+(readError?'last loaded':'registered')+' files':
+   readError?'source inventory unavailable':state.registryReading?.sources?'reading source inventory':'source inventory not loaded')+
+   (missing?' · '+missing+' selected files need review':'');
  }
  function renderCollections(state){
   clear(nodes.sourceExports);
@@ -827,16 +854,18 @@ export function attachInvestigations(host) {
   if(!root)return;
   nodes.notice.textContent=state.error||'';
   nodes.workspace.textContent=host.getState()?.data?.project?.title||state.catalog?.project?.title||'Selected workspace';
-  const cstamp=stable({inventory:state.catalog?.inventory,methods:state.catalog?.native_methods,actions:state.catalog?.actions,nativeExperiments:state.catalog?.native_experiments,sources:state.sourceCatalog});
+  const cstamp=stable({inventory:state.catalog?.inventory,methods:state.catalog?.native_methods,actions:state.catalog?.actions,nativeExperiments:state.catalog?.native_experiments,sources:state.sourceCatalog,catalogError:state.readErrors?.catalog,catalogReading:state.registryReading?.catalog});
   const sstamp=stable({session:state.session,exported:state.exported,collection:state.collection});
   if(cstamp!==lastCatalog){lastCatalog=cstamp;renderResources(state);rebuildFiles(state);renderActionFields(state);}
   selectOptions(nodes.sessions,[{value:'',label:'Choose a saved investigation'},...(state.catalog?.sessions||[]).map(s=>({value:s.id,label:s.title+' · '+displayTime(s.created)}))],state.sessionId);
   renderDiagnosticContext(state);
   const diagnosticStamp=stable({intake:state.diagnosticIntake,report:state.diagnosticReport});
   if(diagnosticStamp!==lastDiagnostic){lastDiagnostic=diagnosticStamp;renderDiagnostic(state);}
-  nodes.provider.textContent=state.catalog?.provider_configured?'Configured model: '+state.catalog.provider_model:'Local analysis ready; configure an assistant model on the server to ask questions.';
+  nodes.provider.textContent=state.readErrors?.catalog?'Workspace catalog unavailable: '+state.readErrors.catalog.message:
+   !state.catalog?(state.registryReading?.catalog?'Reading the workspace catalog…':'Refresh originals to read the workspace catalog.'):
+   state.catalog.provider_configured?'Configured model: '+state.catalog.provider_model:'Local analysis ready; configure an assistant model on the server to ask questions.';
   if(sstamp!==lastSession){lastSession=sstamp;renderSession(state);renderCollections(state);rebuildFiles(state);}
-  const sourceStamp=stable({catalog:state.sourceCatalog,selection:state.sourceSelection});if(sourceStamp!==lastSources){lastSources=sourceStamp;renderSourceChoices(state);}
+  const sourceStamp=stable({catalog:state.sourceCatalog,selection:state.sourceSelection,error:state.readErrors?.sources,reading:state.registryReading?.sources});if(sourceStamp!==lastSources){lastSources=sourceStamp;renderSourceChoices(state);}
   const submissionStamp=stable(state.experimentSubmission);
   if(submissionStamp!==lastSubmission){
    lastSubmission=submissionStamp;
@@ -937,7 +966,7 @@ export function attachInvestigations(host) {
   nodes.sourceExports=el('div');sources.append(nodes.sourceExports);
   const history=section('history','Complete retained investigation');
   const exportButton=button('Create complete JSON and readable HTML',()=>client.queue('intelligence.export',{session_id:client.requireSession()}));exportButton.dataset.submit='true';history.append(exportButton);
-  nodes.exports=el('div');nodes.history=el('ol',null,'intelligence-history');history.append(nodes.exports,nodes.history);
+  nodes.exports=el('div');nodes.historyList=el('ol',null,'intelligence-history');history.append(nodes.exports,nodes.historyList);
   main.append(analyze,assistant,actions,sources,history);layout.append(aside,main);desk.append(layout);root.replaceChildren(desk);show(panel);
  }
  async function mount(node,state=host.getState()){

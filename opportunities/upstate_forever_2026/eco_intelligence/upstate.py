@@ -109,6 +109,32 @@ def _registered(value, trail=()):
             yield from _registered(item, trail + (str(index),))
 
 
+def _run_registered(run):
+    """Yield files owned by this run, following the native stage registries.
+
+    Reused stages copy and register their retained files under this run.
+    Their reused_from and assembly records describe the donor, whose relative
+    paths belong to that donor's directory. Those records remain in native_record
+    and must never be resolved as files of this run.
+    """
+    yield from _registered(run.get("artifacts", {}), ("artifacts",))
+    for name, stage in run.get("stages", {}).items():
+        for field in ("artifact", "files", "companions", "additional_files",
+                      "arguments", "requested_arguments"):
+            if field in stage:
+                yield from _registered(stage[field], ("stages", str(name), field))
+
+
+def _derived_registered(family, record):
+    """Use the original comparison's output registry, not its run provenance."""
+    if family == "comparisons":
+        for index, alternative in enumerate(record.get("alternatives", [])):
+            yield from _registered(alternative.get("artifacts", {}),
+                                   ("alternatives", str(index), "artifacts"))
+    else:
+        yield from _registered(record)
+
+
 @dataclass(frozen=True)
 class NativeAction:
     """A host-selected original operation, never supplied by a browser or provider.
@@ -648,7 +674,7 @@ class UpstateInvestigations:
                 else:
                     root = ws.root
                 selected = {}
-                for trail, body in _registered(record):
+                for trail, body in _derived_registered(family, record):
                     member = str(_member(body["path"]))
                     path = _inside(ws.root, root / member)
                     label = path.relative_to(ws.root).as_posix()
@@ -664,6 +690,8 @@ class UpstateInvestigations:
                                 "native_kind": family, "native_id": key, "native_selection": record.get("selection", record.get("spec")),
                                 "source_record_sha256": record_sha, "file": body,
                                 "registry_locations": [list(trail)],
+                                **({"native_version_provenance": _copy(record["native_version_provenance"])}
+                                   if "native_version_provenance" in record else {}),
                             },
                         }
                     else:
@@ -759,7 +787,7 @@ class UpstateInvestigations:
         run = self._native_run(tenant, ws, job_id)
         root = ws.root / "runs" / run["id"]
         selected = {}
-        for trail, body in _registered(run):
+        for trail, body in _run_registered(run):
             member = str(_member(body["path"]))
             path = _inside(ws.root, root / member)
             prior = selected.get(member)
