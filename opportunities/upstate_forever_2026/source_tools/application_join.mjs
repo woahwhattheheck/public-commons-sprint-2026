@@ -52,7 +52,8 @@ function alias(entry, names, label) {
 }
 function unwrap(input) {
   if (typeof input === "string") return input;
-  if (input && typeof input === "object" && input.schema && input.files) return input;
+  if (input && typeof input === "object" && input.schema &&
+      (input.files || input.schema === "commons.artifact-base64/v1")) return input;
   if (input?.isError) throw Error("Read the successful original source response before composing");
   const structured = input?.structuredContent;
   if (typeof structured?.text_content === "string") return structured.text_content;
@@ -76,22 +77,34 @@ function predecessorMetadata(entry, path) {
     throw Error("Invalid predecessor declarations: " + path);
   const declarations = [...retained];
   const fields = ["base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
-    "before", "base_ref", "base_git_blob", "base"];
+    "before", "base_ref", "base_git_blob", "before_git_blobs", "base"];
   const declared = Object.fromEntries(fields.filter(key => Object.hasOwn(entry, key)).map(key => [key, entry[key]]));
   if (Object.keys(declared).length && !declarations.some(row => canonical(row) === canonical(declared)))
     declarations.push(declared);
-  const hashes = [];
+  const groups = [];
   for (const row of declarations) {
+    const values = [];
     for (const key of ["base_sha256", "replaces_sha256", "before_sha256"])
-      if (row[key] !== undefined && row[key] !== null) hashes.push(row[key]);
+      if (row[key] !== undefined && row[key] !== null) values.push(row[key]);
     for (const key of ["before", "base"])
       if (row[key] && typeof row[key] === "object" && !Array.isArray(row[key]) &&
-          row[key].sha256 !== undefined && row[key].sha256 !== null) hashes.push(row[key].sha256);
+          row[key].sha256 !== undefined && row[key].sha256 !== null) values.push(row[key].sha256);
+    for (const value of values) {
+      const alternatives = Array.isArray(value) ? value : [value];
+      if (alternatives.some(hash => typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash)))
+        throw Error("Invalid predecessor identity: " + path);
+      if (new Set(alternatives).size !== alternatives.length)
+        throw Error("Duplicate predecessor alternative: " + path);
+      if (alternatives.length) groups.push(new Set(alternatives));
+    }
   }
-  if (hashes.some(hash => typeof hash !== "string" || !/^[0-9a-f]{64}$/.test(hash)))
-    throw Error("Invalid predecessor identity: " + path);
-  if (new Set(hashes).size > 1) throw Error("Conflicting predecessor identities: " + path);
-  return {sha256: hashes[0] || null, declarations};
+  if (!groups.length) return {sha256: null, declarations};
+  const allowed = [...groups[0]].filter(hash => groups.every(group => group.has(hash))).sort();
+  if (!allowed.length) throw Error("Conflicting predecessor identities: " + path);
+  return {sha256: allowed.length === 1 ? allowed[0] : allowed, declarations};
+}
+function predecessorMatches(expected, actual) {
+  return expected !== null && (Array.isArray(expected) ? expected : [expected]).includes(actual);
 }
 
 function layerFromDocument(document, {label = "source", payloadSha256 = null, payloadBytes = null} = {}) {
@@ -150,9 +163,11 @@ function layerFromDocument(document, {label = "source", payloadSha256 = null, pa
       for (const row of [left, right]) { delete row.base_sha256; delete row.predecessor_declarations; }
       if (files[path] !== content || canonical(left) !== canonical(right))
         throw Error("Conflicting duplicate source file: " + path);
-      if (prior.base_sha256 && item.base_sha256 && prior.base_sha256 !== item.base_sha256)
-        throw Error("Source-bank blocks select different predecessors: " + path);
-      if (prior.base_sha256) item.base_sha256 = prior.base_sha256;
+      const effective = predecessorMetadata({predecessor_declarations: [
+        {base_sha256: prior.base_sha256 ?? null},
+        {base_sha256: item.base_sha256 ?? null}
+      ]}, path).sha256;
+      if (effective !== null) item.base_sha256 = effective;
       const declarations = [...(prior.predecessor_declarations || [])];
       for (const declared of item.predecessor_declarations || [])
         if (!declarations.some(row => canonical(row) === canonical(declared))) declarations.push(declared);
@@ -247,6 +262,18 @@ function readSourceLayer(input, {label = "source", expectedPayloadSha256 = null}
       }
     }
   }
+  if (document?.schema === "commons.artifact-base64/v1") {
+    if (document.encoding !== "gzip+base64") throw Error("Unsupported original artifact encoding");
+    const compressed = fromBase64(document.content_base64);
+    if (compressed[0] !== 31 || compressed[1] !== 139 ||
+        compressed.length !== document.gzip_bytes || sha256Bytes(compressed) !== document.gzip_sha256)
+      throw Error("Original artifact gzip identity differs");
+    raw = inflateGzip(compressed);
+    if (raw.length !== document.decoded_bytes || sha256Bytes(raw) !== document.decoded_sha256)
+      throw Error("Original artifact JSON identity differs");
+    document = transportJSON(utf8Decode(raw));
+    if (!document?.files) throw Error("Original artifact is not a complete source document");
+  }
   const hash = sha256Bytes(raw);
   if (expectedPayloadSha256 !== null && hash !== expectedPayloadSha256) throw Error("Selected source payload differs: " + label);
   return layerFromDocument(document, {label, payloadSha256: hash, payloadBytes: raw.length});
@@ -267,11 +294,11 @@ function composeApplication(layers, {edition, operationId = null} = {}) {
       incoming.mode = incoming.mode || previous?.mode || "100644";
       const action = !previous ? "added" : previous.sha256 === incoming.sha256 && previous.mode === incoming.mode ? "identical" : "replaced";
       if ((action === "added" && expected !== null) ||
-          (action === "replaced" && expected !== previous.sha256))
+          (action === "replaced" && !predecessorMatches(expected, previous.sha256)))
         throw Error("Source join differs at layer " + index + ": " + name +
           "; current_sha256=" + (previous?.sha256 || "<absent>") +
           "; incoming_sha256=" + incoming.sha256 +
-          "; expected_predecessor_sha256=" + (expected || "<undeclared>") +
+          "; expected_predecessor_sha256=" + (expected === null ? "<undeclared>" : JSON.stringify(expected)) +
           ". Apply the intended source joins to the current member and publish its before_sha256.");
       if (!incoming.git_blob && previous?.sha256 === incoming.sha256) incoming.git_blob = previous.git_blob || null;
       incoming.origins = [...new Set([...(previous?.origins || []), ...(incoming.origins || []), origin])];

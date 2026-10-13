@@ -318,10 +318,11 @@ def join_source_banks(documents):
                        for key in ("bytes", "sha256", "mode")):
                     raise ValueError("Source-bank blocks contain different bodies: " + name)
                 before, incoming = previous.get("base_sha256"), entry.get("base_sha256")
-                if before is not None and incoming is not None and before != incoming:
-                    raise ValueError("Source-bank blocks select different predecessors: " + name)
-                if before is not None:
-                    entry["base_sha256"] = before
+                effective = predecessor_sha256({"predecessor_declarations": [
+                    {"base_sha256": value} for value in (before, incoming)
+                    if value is not None]}, name)
+                if effective is not None:
+                    entry["base_sha256"] = effective
                 declarations = list(previous.get("predecessor_declarations", []))
                 for declared in entry.get("predecessor_declarations", []):
                     if declared not in declarations:
@@ -372,6 +373,8 @@ def provider_payload(value, depth=0):
     if value.get("isError") is True or value.get("error_code") or value.get("error"):
         code = value.get("error_code") or "provider_error"
         raise ValueError("Source transport returned " + str(code))
+    if value.get("schema") == "commons.artifact-base64/v1":
+        return decode_artifact(value).decode("utf-8")
     if is_source_document(value):
         return canonical(value).decode("utf-8")
     candidates = []
@@ -496,6 +499,24 @@ def decode_application_transport(parts, transports):
     return decode_parts(normalized)
 
 
+def decode_artifact(value):
+    """Decode the exact published gzip envelope, preserving both original pins."""
+    if value.get("encoding") != "gzip+base64":
+        raise ValueError("Unsupported original artifact encoding")
+    compressed = decode_base64(value.get("content_base64"))
+    if compressed[:2] != b"\x1f\x8b":
+        raise ValueError("Original artifact does not contain gzip bytes")
+    check_identity(compressed, value.get("gzip_bytes"),
+                   value.get("gzip_sha256"), "original artifact gzip")
+    decoded = uncompress(compressed)
+    check_identity(decoded, value.get("decoded_bytes"),
+                   value.get("decoded_sha256"), "original artifact JSON")
+    document = transport_json(decoded.decode("utf-8"))
+    if not is_source_document(document):
+        raise ValueError("Original artifact is not a complete source document")
+    return decoded
+
+
 def decode_carrier(data, _depth=0):
     """Return the complete decoded JSON bytes from a published source carrier."""
     if _depth > 12:
@@ -509,6 +530,8 @@ def decode_carrier(data, _depth=0):
         value = transport_json(text)
         if is_source_document(value):
             return data.removeprefix(b"\xef\xbb\xbf")
+        if isinstance(value, dict) and value.get("schema") == "commons.artifact-base64/v1":
+            return decode_artifact(value)
         payload = provider_payload(value)
         if payload is None:
             raise ValueError("Provider result contains no complete source payload")
@@ -1035,28 +1058,45 @@ def read_layer(path, *, payload_sha256=None):
 
 
 def predecessor_sha256(entry, name):
-    """Normalize published predecessor spellings without treating refs as hashes."""
+    """Resolve explicit alternatives; independent declarations must intersect.
+
+    Scalars retain their original meaning. A nonempty list names acceptable
+    original bodies, not arrival order. An empty list declares no predecessor.
+    Git-only labels are retained as provenance, never substituted for SHA-256.
+    """
     declarations = entry.get("predecessor_declarations", [])
     if not isinstance(declarations, list) or any(not isinstance(item, dict)
                                                   for item in declarations):
         raise ValueError("Invalid predecessor declarations: " + name)
-    identities = []
+    groups = []
     for declared in (entry, *declarations):
-        for key in ("base_sha256", "replaces_sha256", "before_sha256"):
-            value = declared.get(key)
-            if value is not None:
-                identities.append((key, value))
+        values = [(key, declared[key]) for key in (
+            "base_sha256", "replaces_sha256", "before_sha256") if declared.get(key) is not None]
         for key in ("before", "base"):
             value = declared.get(key)
-            # Existing banks use base="commit-ref"; only objects declare identities.
             if isinstance(value, dict) and value.get("sha256") is not None:
-                identities.append((key + ".sha256", value["sha256"]))
-    for key, value in identities:
-        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
-            raise ValueError("Invalid predecessor identity " + key + ": " + name)
-    if len({value for _, value in identities}) > 1:
+                values.append((key + ".sha256", value["sha256"]))
+        for key, value in values:
+            alternatives = value if isinstance(value, list) else [value]
+            if any(not isinstance(item, str) or not re.fullmatch(r"[0-9a-f]{64}", item)
+                   for item in alternatives):
+                raise ValueError("Invalid predecessor identity " + key + ": " + name)
+            if len(alternatives) != len(set(alternatives)):
+                raise ValueError("Duplicate predecessor alternative " + key + ": " + name)
+            if alternatives:
+                groups.append(set(alternatives))
+    if not groups:
+        return None
+    allowed = set.intersection(*groups)
+    if not allowed:
         raise ValueError("Conflicting predecessor identities: " + name)
-    return identities[0][1] if identities else None
+    ordered = sorted(allowed)
+    return ordered[0] if len(ordered) == 1 else ordered
+
+
+def predecessor_matches(expected, actual):
+    return expected is not None and actual in (
+        expected if isinstance(expected, list) else [expected])
 
 
 def layer_from_document(document, receipt=None):
@@ -1151,7 +1191,7 @@ def layer_from_document(document, receipt=None):
         declarations = list(entry.get("predecessor_declarations", []))
         declared = {key: entry[key] for key in (
             "base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
-            "before", "base_ref", "base_git_blob", "base") if key in entry}
+            "before", "base_ref", "base_git_blob", "before_git_blobs", "base") if key in entry}
         if declared and declared not in declarations:
             declarations.append(declared)
         if declarations:
@@ -1496,13 +1536,13 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True, inspec
             # identify the actual member it joins; later arrival is not recency.
             if ((action == "added" and expected is not None)
                     or (action == "replaced" and guarded is None
-                        and (expected is None or expected != previous["sha256"]))):
+                        and not predecessor_matches(expected, previous["sha256"]))):
                 current = previous["sha256"] if previous else "<absent>"
                 raise ValueError(
                     "Source join differs for layer " + str(index) + ": " + name
                     + "; current_sha256=" + current
                     + "; incoming_sha256=" + item["sha256"]
-                    + "; expected_predecessor_sha256=" + (expected or "<undeclared>")
+                    + "; expected_predecessor_sha256=" + (json.dumps(expected) if expected is not None else "<undeclared>")
                     + ". Join this member against the current source and publish its "
                     + "before_sha256; unchanged bodies and new members compose directly.")
             if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:

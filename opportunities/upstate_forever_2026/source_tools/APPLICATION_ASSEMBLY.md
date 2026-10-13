@@ -82,8 +82,86 @@ Original gzip source parts, bare Base64/gzip carriers, declared plain Base64 par
 
 Original binary companions supplied in `binary_files[]` enter the same validated file inventory as regular source members. Each path has one complete original body.
 
-Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each changed existing member must identify the actual file it updates with `before_sha256`, `base_sha256`, `replaces_sha256`, nested `before.sha256`, or object `base.sha256`. Declared aliases must agree. A string `base` is retained as its source-ref label. Added members and identical postimages compose directly; an already installed postimage remains idempotent even when its declaration names the earlier predecessor. Source-bank fragments preserve the original before/base declarations in the assembled change inventory. Completed snapshot member metadata remains suitable for reopening as the next base.
+Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each changed existing member must identify the actual file it updates with `before_sha256`, `base_sha256`, `replaces_sha256`, nested `before.sha256`, or object `base.sha256`. A scalar names one exact predecessor. A list names explicit acceptable predecessor SHA-256 alternatives; an empty list supplies no predecessor authority. Independent fields and retained declarations must have a nonempty intersection. Duplicate alternatives, malformed identities and contradictory declarations are rejected. A string `base` is retained as its source-ref label. Git-only `before_git_blobs` remain original provenance: the composer never treats an unverified Git label as replacement authority. Added members and identical postimages compose directly; an already installed postimage remains idempotent even when its declaration names the earlier predecessor. Source-bank fragments preserve the original before/base declarations in the assembled change inventory. Completed snapshot member metadata remains suitable for reopening as the next base.
 
+
+
+## Receive the complete regional reference source bank
+
+The ES26 reference/GIS/Programme source at commit
+`60d028318626c091a126ab8708f380021a7e257a` is one additive bank for the
+existing complete regional application. Its 216 full bodies retain the original
+scientific source, Programme continuation, GIS/native-history controls and the
+original GIS edition receiving course. It is not a complete application by itself.
+
+The published `commons.artifact-base64/v1` envelope identifies gzip bytes and the
+exact decoded JSON separately. Both maintained readers accept that original
+envelope, including the complete normal connector result, without an intermediate
+re-serialization. They check gzip membership, compressed length/SHA-256 and decoded
+length/SHA-256 before inspecting source members. `--expect` and
+`expectedPayloadSha256` select the decoded original JSON identity.
+
+The immutable original carrier is Git blob
+`fc5981417acc7d084c7ee295e99d83edd8be53b8`; its decoded JSON is
+5,710,198 bytes / SHA-256
+`21de2be6d4665145a7f7b51291d512263fd4719433c5d0892b9088752602f54a`.
+Keep its complete original metadata and all source bodies. The source reader now
+accepts its published predecessor alternatives rather than treating those lists
+as malformed scalar hashes.
+
+For a member that declares only former Git blob identities, first acquire those
+exact complete original blobs and verify each Git blob identity and SHA-256.
+Retain the full original bodies beside the source package. A separately named
+admission edition can then add those verified SHA-256 alternatives to that
+member's existing declarations. Retain its original Git labels and the original
+carrier identity; do not relabel the original bank as edited or infer permission
+from a branch name. When other SHA-256 declarations already exist, intersect
+them with those exact verified alternatives rather than widening them.
+
+At the existing regional writer's source boundary, use its actual complete
+application as layer zero:
+
+```sh
+"$PYTHON" -B "$SOURCE_TOOLS/application_assembly.py" "$CURRENT_APPLICATION" \
+  --overlay "$SELECTED_COMPLETE_ADMISSION_BANK" \
+  --edition "$ORIGINAL_REGIONAL_SOURCE_EDITION" \
+  --operation-id "$ORIGINAL_REGIONAL_OPERATION" \
+  --inspect
+```
+
+Use the selected admission bank's actual decoded SHA-256 with `--expect 1:HASH`
+when it differs from the original transport above. A plain new member or an
+identical installed postimage remains directly reusable. A changed existing body
+must match a declared exact predecessor; an unknown successor still stops with
+its original path and hashes. Review and compose the intended change into that
+actual full body. An older bank arriving later does not authorize replacement.
+A declared replacement whose target is absent remains a conflict; resolve that
+actual absence through an explicit selected source edition.
+
+After the complete original source selection is coherent, use the same command
+without `--inspect`, adding the existing owned fresh `--output`,
+`--source-map` and `--zip` destinations. Continue the maintained installer or
+source-intake path already selected by the original receiving controller.
+Keep running processes on their admitted source until that controller reaches
+its normal source boundary. Preserve the existing Workspace, completed run IDs,
+selected reference-three Study, original GIS export/receipt IDs and all later
+local edits. The full twelve-run sender and selected three-run recipient remain
+different recorded source selections.
+
+The original `receive_geographic_headwaters.py` result supplies
+`geographic_gis.export.id` and `gis_verification.received.id`; pass those
+actual IDs into the existing `receive_gis_edition_review.py` course on the same
+restored Workspace. Keep its original output and request identity if already
+started. Source admission starts no model, reporting job or browser controller.
+
+Actual native source adoption, complete component closure, every delivered
+map/report/GIS archive and editable application cold reopen must return through
+the existing regional operator. Open and LOOK at the exact outgoing application
+and every attachment; use the intended and narrow layouts, critical controls,
+downloads and received project. Source-reader execution and byte identity checks
+do not establish runtime or visual acceptance. Carry the complete current
+`CURRENT_OWNER_DIRECTION.md` and standing inspection instruction already in
+this guide with the receiving handoff.
 
 ## Join a changed module into current source
 
