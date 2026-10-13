@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-waters",
   "title": "Receiving waters",
-  "version": "6",
+  "version": "7",
   "order": 52,
   "assets": [
     "receiving_waters.mjs",
@@ -146,6 +146,7 @@
     "action_prefixes": [
       "water-"
     ],
-    "dispatch": "dispatch"
+    "dispatch": "dispatch",
+    "task_actions": "taskActions"
   }
 }

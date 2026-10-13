@@ -1,3 +1,4 @@
+import {validateIssuerContextCollections,selectedIssuerContext} from './grant-issuer-core.mjs';
 // MIT. Original submission-draft extension; no separate store or issuer action.
 export const HANDOVER_SCHEMA = 'stellar-forge.grant-submission-handover.v1';
 export const BUNDLE_SCHEMA = 'stellar-forge.grant-reviewer-source-bundle.v1';
@@ -43,12 +44,13 @@ export function emptySelection() {
   return {
     bundleId:null, evidenceIds:[], title:'Prepared submission', actor:'', note:'',
     outputKind:'answers', format:'plain',
+    issuerProgrammeId:null, issuerDraft:{file:null,title:'Issuer programme',actor:'',note:'',receivedAt:'',sourceUrl:''},
     evidenceDraft:{title:'',kind:'source',sourceUrl:'',observedAt:'',note:'',targets:[],file:null},
     returnDraft:{editionId:null,kind:'operator-note',observedAt:'',sourceUrl:'',reference:'',note:'',supersedes:null,file:null},
   };
 }
 export function emptyHandover() {
-  return {schema:HANDOVER_SCHEMA,objects:[],bundles:[],evidence:[],editions:[],returns:[],selection:emptySelection()};
+  return {schema:HANDOVER_SCHEMA,objects:[],bundles:[],evidence:[],editions:[],returns:[],issuerProgrammes:[],selection:emptySelection()};
 }
 export function handoverOf(draft) { return draft.handover || emptyHandover(); }
 export function handoverSelectionOf(draft) { return draft.handover ? clone(draft.handover.selection) : null; }
@@ -227,6 +229,7 @@ export function validateHandover(draft) {
     const seen=new Set();let current=observation;
     while (current) { need(!seen.has(current.id),'Keep an acyclic observation correction history.');seen.add(current.id);current=current.body.supersedes?returned.get(current.body.supersedes):null; }
   }
+  validateIssuerContextCollections(draft,objects);
   const context={objects,bundles,evidence,editions,returns:returned};
   validateSelection(value.selection,context);
   for (const version of draft.versions||[]) validateSelection(version.handoverSelection,context);
@@ -257,6 +260,11 @@ export function editionFileDescriptors(draft,id) {
     bytes:source.bytes,sha256:source.sha256,role:'native-planning-source',
     identityBasis:'Exact original planning file, native document and selected revision retained by the original SF47 bridge.',
   });
+  if(edition.body.issuerProgrammeId){
+    const issuer=selectedIssuerContext(draft,edition.body.issuerProgrammeId);
+    files.push({...clone(issuer.body.file),role:'issuer-programme',issuerProgrammeId:issuer.id,title:issuer.body.title,
+      identityBasis:'Complete original Operations case with selected terms, correspondence, native planning and commissioning history.'});
+  }
   for (const observation of value.returns.filter(row=>row.body.editionId===id && row.body.file)) {
     files.push({...observation.body.file,role:'issuer-observation',observationId:observation.id});
   }

@@ -26,18 +26,27 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 11335,
-      "sha256": "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+      "bytes": 17134,
+      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "predecessor_sha256": [
+        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+      ]
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8104,
-      "sha256": "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a"
+      "bytes": 8438,
+      "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+      "predecessor_sha256": [
+        "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a"
+      ]
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1795,
-      "sha256": "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61"
+      "bytes": 1876,
+      "sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc",
+      "predecessor_sha256": [
+        "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61"
+      ]
     },
     {
       "path": "operator/monitoring_receiving.py",
@@ -56,28 +65,43 @@
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 16434,
-      "sha256": "141b5b423a752ab1119668a233d2810b269dda4303d5056d99576ea9b54e9018"
+      "bytes": 18313,
+      "sha256": "916a5423d4bef8b7e365cfd10faae19043c568725aca9c8d76f66a01f2618c30",
+      "predecessor_sha256": [
+        "141b5b423a752ab1119668a233d2810b269dda4303d5056d99576ea9b54e9018"
+      ]
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 21889,
-      "sha256": "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361"
+      "bytes": 25476,
+      "sha256": "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
+      "predecessor_sha256": [
+        "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361"
+      ]
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 16271,
-      "sha256": "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91"
+      "bytes": 26974,
+      "sha256": "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e",
+      "predecessor_sha256": [
+        "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91"
+      ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
-      "bytes": 2803,
-      "sha256": "2cb77f58869fd051029c8bd263a862bf97b4ff1ddc465d2d2f2b7d7319e7fb76"
+      "bytes": 3193,
+      "sha256": "2aab63ec540ce2f406ccd4eda2c864ca6293fd67bd147d19ca1058050d9cc9db",
+      "predecessor_sha256": [
+        "2cb77f58869fd051029c8bd263a862bf97b4ff1ddc465d2d2f2b7d7319e7fb76"
+      ]
     },
     {
       "path": "integration/component_fragments/monitoring-study-transfer.json",
-      "bytes": 1486,
-      "sha256": "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b"
+      "bytes": 1442,
+      "sha256": "be084556d443de041145bb467ed668fdcdbfe91ee8ffbf71bc143f74a1a609fc",
+      "predecessor_sha256": [
+        "8d205d6c1f7e0044f4b39de8a8c4300179e4a925335ea04cc38ad9883b898e7b"
+      ]
     },
     {
       "path": "model/monitoring_field_return.py",

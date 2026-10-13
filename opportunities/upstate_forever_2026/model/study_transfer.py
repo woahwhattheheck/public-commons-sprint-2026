@@ -24,26 +24,30 @@ from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
 from . import portable, study_delivery_transfer as delivery_transfer
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
+from . import scientific_report_study_transfer as report_editions
+from . import calibration_study_transfer as calibration_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
-              *monitoring_transfer.ROOT_KINDS)
+              *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
-                   *monitoring_transfer.IMMUTABLE_KINDS)
+                   *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
     "experiment-diagnostics": "manifest.json", "comparisons": "comparison.json",
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
+    **report_editions.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
     "experiments": ".experiment.lock", "experiment-diagnostics": ".diagnostics.lock",
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
+    **report_editions.LOCKS,
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
@@ -54,6 +58,8 @@ LABELS = {
     "comparisons": "Native comparisons",
     **delivery_transfer.LABELS,
     **monitoring_transfer.LABELS,
+    **report_editions.LABELS,
+    **calibration_transfer.LABELS,
 }
 
 
@@ -147,6 +153,7 @@ class _Closure:
         self.monitoring_records = {}
         self.monitoring_reports = {}
         self.report_source_records = {}
+        self.scientific_report_records = {}
         self.report_lineage_enabled = report_lineage
         self.external_decision_dependencies = []
 
@@ -408,7 +415,11 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if monitoring_transfer.visit(self, kind, key, value):
+        if report_editions.visit(self, kind, key, value):
+            pass
+        elif calibration_transfer.visit(self, kind, key, value, reason):
+            pass
+        elif monitoring_transfer.visit(self, kind, key, value):
             pass
         elif delivery_transfer.visit(self, kind, key, value):
             pass
@@ -555,6 +566,7 @@ class _Closure:
             "completed_deliveries": delivery_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
+            "scientific_report_editions": report_editions.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
                                  "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
@@ -568,8 +580,8 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
-    for relative in monitoring_transfer.lock_paths(closure):
-        token = ("monitoring-owner-lock", relative)
+    for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure)):
+        token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
             already.add(token)
@@ -808,6 +820,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         }
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
+        if closure.scientific_report_records:
+            identity["scientific_report_editions"] = report_editions.receipt(closure)
         if closure.delivery_records:
             identity["completed_deliveries"] = delivery_transfer.receipt(closure)
         if closure.monitoring_records or closure.monitoring_reports:
@@ -883,6 +897,7 @@ def verify_received_studies(workspace):
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
+        report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):
@@ -899,7 +914,8 @@ def verify_received_studies(workspace):
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
                        "investigations": history, "decision_history": decision_history,
-                       "monitoring_history": monitoring_history})
+                       "monitoring_history": monitoring_history,
+                       "scientific_report_editions": len(receipt["identity"].get("scientific_report_editions", []))})
     return result
 
 
@@ -912,6 +928,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind in report_editions.ROOT_KINDS:
+            for row in report_editions.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind in monitoring_transfer.ROOT_KINDS:
             for row in monitoring_transfer.catalogue(workspace, selected_kind):

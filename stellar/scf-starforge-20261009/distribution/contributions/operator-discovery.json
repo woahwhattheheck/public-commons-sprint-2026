@@ -1,15 +1,17 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "operator-discovery",
-  "description": "Search installed registrations and source-owned capabilities; match product requirements, prepare original source reviews and retain complete product plans; export readable product and native build briefings.",
+  "description": "Search installed registrations and source-owned capabilities; match product requirements, prepare original source reviews, retain complete product plans and save customer operating procedures; export readable product and native build briefings.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/discovery"
   ],
   "commands": {
-    "discover": "stellar/scf-starforge-20261009/distribution/discovery/cli.mjs"
+    "discover": "stellar/scf-starforge-20261009/distribution/discovery/cli.mjs",
+    "grant-reporting-plan": "stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-plan-cli.mjs"
   },
   "commandDescriptions": {
-    "discover": "Find installed commands, match complete product requirements, export original registrations and prepare source build review requests"
+    "discover": "Find installed commands, match complete product requirements, prepare source build reviews and save customer operating plans with original registrations and revision history",
+    "grant-reporting-plan": "Create the original reporting procedure from a complete preparation or selected references; capture an existing managed Grant case and full source project for native receiving"
   },
   "exports": {
     "./operator/discovery": {
@@ -41,6 +43,30 @@
     "./operator/product-plan-runtime": {
       "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/product-plan-runtime.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/product-plan-runtime.mjs"
+    },
+    "./operator/operating-plans": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs"
+    },
+    "./operator/grant-reporting-plan": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-plan.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-plan.mjs"
+    },
+    "./operator/grant-reporting": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-core.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-core.mjs"
+    },
+    "./operator/grant-reporting/input": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-input.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-input.mjs"
+    },
+    "./operator/operating-plan-returns": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return.mjs"
+    },
+    "./operator/operating-plan-returns/workbook": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return-workbook.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan-return-workbook.mjs"
     }
   },
   "applicationProviders": {
@@ -51,5 +77,14 @@
       "server": "stellar/scf-starforge-20261009/distribution/discovery/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/distribution/discovery/browser-assets.json"
     }
+  ],
+  "supportFiles": [
+    "stellar/scf_2026/sf47_budget_model/workspace/source-tables-core.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/source-workbooks.mjs",
+    "stellar-forge/developer-site/dist/source-table-workspace.mjs",
+    "stellar-forge/developer-site/dist/onboarding.mjs",
+    "stellar-forge/developer-site/dist/source-document-tables.mjs",
+    "stellar-forge/developer-site/dist/source-table-intake.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/document_evidence/operating_procedure.mjs"
   ]
 }

@@ -115,3 +115,40 @@ identity includes its original role, logical source ID, explicit type, metadata
 and ordered file bindings, so a generic layer original cannot suppress a typed
 table that happens to use the same bytes. Selecting an adopted working layer
 continues to carry every required table, document, original file and companion.
+
+
+## Use the offline source desk
+
+Open `OPEN_GIS.html` directly from the extracted GIS directory and choose
+**Sources and tables**. This is the same offline opener as the retained map;
+the original layer controls, legends and geographic view remain available under
+**Layers**.
+
+The source list includes every layer's original files and every typed table or
+document attachment. Search the original title, date, scientific metadata or
+filename. Select the Census context to see its original estimate vintage,
+whole-county geography, units and column definitions beside the literal rows.
+Leading-zero identifiers and empty values remain unchanged. Row search and
+pagination work inside the extracted file; clicking a column sorts its displayed
+values as text, and **Original row order** restores their source order.
+
+Each source exposes its primary download and every declared companion. These
+include the exact original Web Map, extracted features, historical attributes,
+geometry provenance, Census metadata, crosswalk, original-feature join and
+readable population report. The editable working layer has its own download.
+
+The catalogue embeds complete county tables. For other large sources it embeds
+up to 2,000 display rows within a one-million-character display budget, and states
+whether the entire table is displayed. Search and sort apply to those displayed
+rows. The full original table and all companions always remain in the handover.
+
+**Save this view** retains the selected source or layer, table search, text sort,
+page, visible layers and map extent. The view address carries the same selection.
+It is bound to the exact GIS selection and edition, so a saved view cannot apply
+a source selection from another project edition. Browser storage is optional;
+the view address supports reopening when local storage is unavailable.
+
+The original receiving driver checks the embedded offline table values against
+both complete ten-row source CSVs before and after native adoption and
+working-layer-only re-export. This joins the human-readable opener to the same
+typed scientific sources and companion identities checked by the native flow.

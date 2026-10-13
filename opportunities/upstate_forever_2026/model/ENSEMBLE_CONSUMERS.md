@@ -371,7 +371,7 @@ context and its report travel in the maintained complete Workspace backup.
 
 A saved annual-reference calibration can now be prepared as an original scientific source in the same Workspace. This carries its actual candidate ranking, physical catchment quantities, declared objective, original observation rows, source periods, selected spatial holdout, source-error sensitivity, and any exact-period daily-flow support into the maintained scientific formatter.
 
-Open the saved calibration from **Scenario sensitivity → saved scientific results**. Choose **Prepare scientific report**. The original Operations queue packages and registers the source, then writes PDF, offline HTML, Markdown, structured report data and a ZIP containing every report source companion. Reopen that same saved result for its downloads. **Include in delivery** refreshes the actual source catalogue and opens the existing delivery form with this report selected. Its ordinary run and source selectors remain available. Other scientific sources can be selected in their intended order.
+Open the saved calibration from **Scenario sensitivity → saved scientific results**. Choose **Prepare scientific report**. The original Operations queue packages and registers the source, then writes PDF, offline HTML, Markdown, structured report data and a ZIP containing every report source companion. Reopen that same saved result for its downloads. **Compose scientific report** opens the existing **Sources → Prepare a scientific report** composer with the actual registered source appended to its ordered draft. The composer keeps earlier source choices, title and contact. Preview the selected sources, prepare the complete report through the original queue, then reopen its saved edition and complete ZIP. **Include in delivery** opens the native maps-and-delivery form with this source selected; its ordinary run and source selectors remain available.
 
 The equivalent current CLI is:
 
@@ -398,7 +398,11 @@ The result appends the exact collection/document pair once, preserves the existi
 
 Existing extension consumers can open the same form through
 `host.openExtension("ensembles", "scientificDelivery", {workspace_key, consumer_id, delivery_selection})`.
-The optional `delivery_selection` preserves the caller's existing sources. The current shared host supplies `refresh` and `openDelivery`; no second report picker or queue is introduced.
+The optional `delivery_selection` preserves the caller's existing sources. The current shared host supplies `refresh` and `openDelivery` for native maps and delivery. To open the standalone ordered scientific composer, use:
+
+`host.openExtension("ensembles", "scientificReport", {workspace_key, consumer_id})`.
+
+The service resolves the saved report's actual source collection/document and original title. The client refreshes the current Workspace, rejects a changed Workspace or superseded request, then calls `host.openScientificReport({workspace_key, sources, title})`. The existing Sources controller checks each typed source, appends only missing choices after the existing draft order, and preserves an already-entered title/contact. Source preparation, standalone composition and native delivery continue to use their maintained queues and retained records.
 
 ### Original numerical interpretation
 
@@ -476,3 +480,45 @@ descriptor and browser remain compatible. Reopen the saved calibration and use
 **Refresh scientific report** to create its version 2 source, then **Include in
 delivery** to append that actual source to the existing ordered scientific source
 selection. Earlier selected report editions remain available independently.
+
+
+## Compose a complete report from a saved calibration
+
+Use the current integrated application with the `scientific-report-editions`
+component and its existing shared host capability. The ensemble descriptor
+declares `openScientificReport`; the original native `openDelivery` capability
+remains required for the separate map-delivery action.
+
+1. Open the actual saved study and its completed calibration result in
+   **Scenario sensitivity**. **Prepare scientific report** retains the complete
+   original calibration, optional source-error analysis and selected daily-flow
+   context as a registered scientific source. Its standalone files remain
+   directly downloadable from that saved result.
+2. Select **Compose scientific report**. The original Sources composer opens in
+   the same Workspace. This source is included once, after any existing ordered
+   draft choices. Add another retained scientific study if wanted, then use
+   Earlier, Later or Remove to set its place.
+3. Keep or edit the report title and contact. **Preview selected sources** binds
+   the exact current source editions and companions. A changed title, contact or
+   order requires a fresh preview.
+4. **Prepare PDF, HTML and data** submits the existing `source-reports.render`
+   operation. Reopen the completed saved report, then use the existing complete
+   report ZIP action for its scientific data, original source members, figures,
+   selection and report edition.
+5. Back up the Workspace through the same Sources workflow. After an independent
+   restore, open its Sources desk and the saved scientific report edition. The
+   original consumer, calibration and source collection remain editable in
+   Scenario sensitivity; the composed report preserves the selected edition.
+
+This path also supports actual single-model calibration sources. The report
+composer uses those typed scientific sources without requiring a full paired
+NDR/SDR map delivery. The native **Include in delivery** action continues to use
+its original complete-run and map selection requirements.
+
+The existing `GET /api/ensembles/scientific-source?consumer_id=...` response now
+includes `scientific_report_selection` with the actual `workspace_key`, ordered
+`sources` and original source `title`. The saved consumer detail and the
+completed `ensemble.scientific-source` task return that same handoff. Preparing
+or opening this handoff does not start another model run or rerun calibration.
+The receiving Sources controller remains the single owner of the draft,
+preview, queued report, saved edition, export and reopening workflow.

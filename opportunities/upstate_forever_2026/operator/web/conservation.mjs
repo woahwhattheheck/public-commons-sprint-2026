@@ -100,7 +100,7 @@ function sourceRef(raw, layer, label) {
 }
 
 export function attachConservation({
-  getState, api, endpoint, submitAction, showTask, toast, fileList,
+  getState, api, endpoint, submitAction, showTask, toast, fileList, openScientificReport,
 } = {}) {
   const memories = new Map();
   let mounted = null;
@@ -110,7 +110,7 @@ export function attachConservation({
   function memory(key = workspace()) {
     if (!memories.has(key)) memories.set(key, {
       overview: null, overviewLoading: false, taskStamp: "", readVersion: 0,
-      study: null, plan: null, selectedIds: new Set(), page: 1, pageSize: 25,
+      study: null, plan: null, reportSource: null, selectedIds: new Set(), page: 1, pageSize: 25,
       search: "", eligibility: "all", sort: "score", direction: "desc", form: null,
       ranges: Object.fromEntries(["rank", "score", "area_ha", "reporting_area_ha", "cost", "protected_fraction", "source_water_fraction"].flatMap(name => [[name + "_min", ""], [name + "_max", ""]])),
       metricFilter: { pollutant: "", case: "baseline", field: "value", min: "", max: "", availability: "" },
@@ -1588,13 +1588,59 @@ export function attachConservation({
       [25, 50, 100].map(size => option(size, size, ui.pageSize)).join("") +
       "</select></label></div>";
   }
+  function scientificReportButton(record, selectedWorkspace = workspace()) {
+    const source = record?.source;
+    if (record?.state !== "complete" || !source?.source_collection_id || !source?.source_id) return "";
+    if (typeof openScientificReport !== "function") {
+      return '<p class="cons-help">The retained report source is available in Sources → Scientific Reports.</p>';
+    }
+    return button("compose-report", "Compose scientific report",
+      'data-workspace="' + h(selectedWorkspace) + '" data-source-collection="' +
+      h(source.source_collection_id) + '" data-source-id="' + h(source.source_id) +
+      '" data-report-title="' + h(record.title || "Conservation decision") + '"', memory().busy);
+  }
+  function reportSourcesView(planId = null) {
+    const rows = (memory().overview?.report_sources || []).filter(row => !planId || row.plan_id === planId);
+    if (!rows.length) return "";
+    return '<section class="cons-report-sources" aria-label="Retained scientific report sources">' +
+      '<h2>Scientific report sources</h2><p>Each source retains its saved portfolio, original study, ' +
+      'quantities, source editions and complete decision packet. Open it in the existing composer ' +
+      'to combine it with other scientific reports.</p><div class="cons-table-wrap">' +
+      '<table class="cons-table"><thead><tr><th scope="col">Report</th><th scope="col">Saved portfolio</th>' +
+      '<th scope="col">Retained edition</th><th scope="col">Open</th></tr></thead><tbody>' +
+      rows.map(row => '<tr><th scope="row">' + h(row.title || row.id) + '</th><td>' +
+        h(row.plan_id || "") + '</td><td>' + h(row.created_at || row.id) +
+        '</td><td><div class="cons-actions">' + scientificReportButton(row) +
+        button("report-source", "Source and original files", 'data-report-id="' + h(row.id) + '"', memory().busy) +
+        '</div></td></tr>').join("") + '</tbody></table></div></section>';
+  }
+  function reportSourceView() {
+    const row = memory().reportSource;
+    if (!row) return "";
+    const source = row.source || {};
+    return '<section class="cons-detail" aria-label="Scientific report source"><div class="cons-section-title">' +
+      '<div><h2>' + h(row.title || "Conservation decision") + '</h2><p class="cons-metric-note">' +
+      'Retained scientific report source ' + h(row.id) + '</p></div>' +
+      button("close-form", "Close report source", "", memory().busy) + '</div>' +
+      '<p>This edition uses the saved portfolio and original source material. The complete candidate ' +
+      'inventory, selected quantities, decision packet and geographic files travel with the report.</p>' +
+      '<dl class="cons-definitions"><dt>Original study</dt><dd>' + h(row.study_id) +
+      '</dd><dt>Saved portfolio</dt><dd>' + h(row.plan_id) +
+      '</dd><dt>Source collection</dt><dd>' + h(source.source_collection_id) +
+      '</dd><dt>Source entry</dt><dd>' + h(source.source_id) + '</dd></dl>' +
+      '<div class="cons-actions">' + scientificReportButton(row) +
+      button("open-plan", "Open original saved portfolio", 'data-plan-id="' + h(row.plan_id) + '"', memory().busy) +
+      '</div>' + (fileList ? fileList(row._downloads || []) : "") + '</section>';
+  }
+
   function portfolioView(plan) {
     const summary = plan.summary || {}, study = memory().study, optimization = plan.selection?.optimization;
     return '<section class="cons-detail" aria-label="Saved portfolio"><div class="cons-section-title"><div>' +
       "<h2>" + h(plan.title || plan.id) + '</h2><p class="cons-metric-note">Saved portfolio ' +
       h(plan.id) + "</p></div>" +
       button(optimization ? "optimization-export" : "export-plan", "Export this saved portfolio", 'data-plan-id="' + h(plan.id) +
-        '" data-study-id="' + h(plan.study_id) + '"', memory().busy) + "</div>" +
+        '" data-study-id="' + h(plan.study_id) + '"', memory().busy) +
+      button("prepare-report", "Prepare scientific report", 'data-plan-id="' + h(plan.id) + '"', memory().busy) + "</div>" +
       '<div class="cons-summary"><div><span>Selected units</span><strong>' +
       h(summary.parcels ?? (plan.selected_ids || []).length) + "</strong></div>" +
       "<div><span>Full selected footprint</span><strong>" + number(summary.whole_unit_union_area_ha) + " ha</strong></div>" +
@@ -1925,7 +1971,7 @@ export function attachConservation({
           h(plan.study_id || "") + "</td><td>" +
           button("open-plan", "Open", 'data-plan-id="' + h(plan.id) + '"', ui.busy) +
           "</td></tr>").join("") + "</tbody></table></div>" :
-        "<p>Saved portfolios will appear here with their original study and selection.</p>") + scenarioBridgesView() + "</section>";
+        "<p>Saved portfolios will appear here with their original study and selection.</p>") + reportSourcesView() + scenarioBridgesView() + "</section>";
   }
   function content() {
     const ui = memory(), study = ui.study;
@@ -1943,6 +1989,7 @@ export function attachConservation({
       (ui.form === "study" ? studyForm() : "") +
       (ui.form === "sources" ? sourceAcquisitionForm() : "") +
       (ui.form === "source-result" ? sourceCaptureView() : "") +
+      (ui.form === "report-source" ? reportSourceView() : "") +
       (ui.form === "scenario" && ui.scenario?.conservation_scenario_id ? scenarioForm() : "") +
       (study ? '<section class="cons-study"><div class="cons-section-title"><div><h2>' +
         h(study.title || study.spec?.title || study.id) + '</h2><p class="cons-metric-note">' +
@@ -1960,7 +2007,7 @@ export function attachConservation({
         "</p>" + (study.error ? '<div class="cons-notice cons-error" role="alert">' +
           h(typeof study.error === "string" ? study.error : study.error.message || JSON.stringify(study.error)) +
           "</div>" : "") + studyLineage(study) + nativeExecution(study) +
-        (ui.plan ? portfolioView(ui.plan) : "") +
+        (ui.plan ? portfolioView(ui.plan) + reportSourcesView(ui.plan.id) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
         (ui.form === "optimization" ? optimizationForm() : "") +
         (ui.form === "optimization-result" ? optimizationResultView() : "") +
@@ -2516,6 +2563,34 @@ export function attachConservation({
           for (const key of Object.keys(ui.ranges)) ui.ranges[key] = "";
           ui.metricFilter = { pollutant: "", case: "baseline", field: "value", min: "", max: "", availability: "" };
           ui.page = 1; await loadCandidatePage(true); break;
+        case "prepare-report": {
+          const planId = node.dataset.planId || ui.plan?.id;
+          if (!planId) throw new Error("Open the saved portfolio to prepare its report source.");
+          await queue("conservation.report.source.prepare", { plan_id: planId });
+          break;
+        }
+        case "report-source": {
+          const key = workspace(), version = ++ui.readVersion, form = ui.form;
+          const reportId = node.dataset.reportId;
+          if (!reportId) throw new Error("Choose a retained scientific report source.");
+          const result = await read("report-source", { report_source_id: reportId });
+          if (!result || workspace() !== key || ui.readVersion !== version || ui.form !== form) return true;
+          ui.reportSource = result; ui.form = "report-source"; ui.notice = null; paint();
+          break;
+        }
+        case "compose-report": {
+          const key = workspace();
+          if (node.dataset.workspace && node.dataset.workspace !== key)
+            throw new Error("Open this report source in its original Workspace.");
+          if (typeof openScientificReport !== "function")
+            throw new Error("Open Sources → Scientific Reports to select this retained report source.");
+          const source = { source_collection_id: node.dataset.sourceCollection, source_id: node.dataset.sourceId };
+          if (!source.source_collection_id || !source.source_id)
+            throw new Error("Complete the saved portfolio's scientific report preparation.");
+          await openScientificReport({ workspace_key: key, sources: [source],
+            title: node.dataset.reportTitle || "Conservation decision" });
+          break;
+        }
         case "export-study":
           await queue("conservation.export", { study_id: node.dataset.studyId || ui.study?.id }); break;
         case "export-plan":
@@ -2607,6 +2682,11 @@ export function attachConservation({
         'data-plan-id="' + h(result.plan.id) + '"') +
         button("optimization-open-analysis", "Open retained decision analysis",
           'data-study-id="' + h(result.plan.study_id) + '" data-analysis-id="' + h(result.analysis?.id || "") + '"') + '</div>';
+    }
+    if (task.action === "conservation.report.source.prepare" && task.state === "complete") {
+      return '<div class="cons-actions">' + scientificReportButton(result, task.workspace || workspace()) +
+        (result.plan_id ? button("open-plan", "Open original saved portfolio",
+          'data-plan-id="' + h(result.plan_id) + '"') : "") + "</div>";
     }
     if (task.action === "conservation.sources.capture") {
       return '<div class="cons-actions">' + sourceCaptureButtons(result) + "</div>";

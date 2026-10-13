@@ -374,6 +374,14 @@ export function createExtensionHost(host) {
     const selectedWorkspace = workspaceKey(host.getState());
     if (task.workspace && task.workspace !== selectedWorkspace) return '';
     let entry = [...entries.values()].find(candidate => candidate.actions.has(task.action));
+    // A registered backend provider can retain result controls on its existing desk.
+    // Task payloads never choose a module: only this decorated public task hint and
+    // an already registered client with an explicit task_actions method are used.
+    const taskDesk = task._extension_task_actions?.extension_id;
+    if (!entry?.client.task_actions && typeof taskDesk === 'string' && identifier.test(taskDesk)) {
+      const requested = entries.get(taskDesk);
+      if (requested?.client.task_actions) entry = requested;
+    }
     // Backend-only optimization tasks retain the original Conservation links.
     // Reuse that authored controller without claiming another provider's actions.
     if (!entry?.client.task_actions && task._conservation &&

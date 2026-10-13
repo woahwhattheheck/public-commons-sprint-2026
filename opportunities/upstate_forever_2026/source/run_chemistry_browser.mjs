@@ -7,16 +7,16 @@ import { resolve, join, relative, basename } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const {values:args}=parseArgs({options:{
- 'url-file':{type:'string'},workspace:{type:'string'},'case-id':{type:'string'},
+ 'url-file':{type:'string'},workspace:{type:'string'},'case-id':{type:'string'},'restored-selection':{type:'string'},
  'source-collection':{type:'string'},'source-id':{type:'string'},'edited-project':{type:'string'},
  request:{type:'string'},reason:{type:'string'},output:{type:'string'},
  receive:{type:'boolean',default:false},transfer:{type:'boolean',default:false},resume:{type:'boolean',default:false},
  video:{type:'boolean',default:false},headed:{type:'boolean',default:false},
- 'browser-channel':{type:'string'},'browser-executable':{type:'string'},'task-timeout-seconds':{type:'string',default:'3600'},
+ 'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},'task-timeout-seconds':{type:'string',default:'3600'},
  help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--browser-channel NAME | --browser-executable PATH] [--output DIRECTORY] [--resume]');
+ console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE | --restored-selection ORIGINAL_RUNS.json) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--output DIRECTORY] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','chemistry-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -25,7 +25,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>JSON.stringify(value,(_key,item)=>item&&!Array.isArray(item)&&typeof item==='object'?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 const required=(value,message)=>{if(!value)throw Error(message);};
 let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='',savedCase,completedRun;
-let requestState, journalWritable=false, preparedProject=null, preparedRequest=null;
+let requestState, journalWritable=false, preparedProject=null, preparedRequest=null, restoredSelection=null, selectedRuns=[];
 const stopped=new Set(['failed','interrupted','cancelled']);
 async function readOptional(path){
  try{return await readFile(path,'utf8');}catch(error){if(error.code==='ENOENT')return null;throw error;}
@@ -43,9 +43,11 @@ async function persistRequests(){
 }
 function browserRuntime(){
  required(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ const rendererLimit=args['browser-renderer-limit']===undefined?null:Number(args['browser-renderer-limit']);
+ required(rendererLimit===null||(/^[1-9][0-9]*$/.test(args['browser-renderer-limit'])&&Number.isSafeInteger(rendererLimit)&&rendererLimit<=32),'Choose a browser renderer limit between 1 and 32.');
  return{kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
   executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
-  channel:args['browser-channel']||null,headless:!args.headed};
+  channel:args['browser-channel']||null,headless:!args.headed,renderer_process_limit:rendererLimit};
 }
 async function initializeContinuation(){
  browserRuntime();
@@ -54,7 +56,20 @@ async function initializeContinuation(){
  const requestBytes=args.request?await readFile(resolve(args.request)):null;
  preparedProject=projectBytes?JSON.parse(projectBytes.toString('utf8')):null;
  preparedRequest=requestBytes?JSON.parse(requestBytes.toString('utf8')):null;
- const input={workspace:args.workspace,case_id:args['case-id']||null,
+ let input;
+ if(args['restored-selection']){
+  required(!args['case-id']&&!args['source-collection']&&!args['source-id']&&!args['edited-project']&&!args.request&&!args.reason,'Choose retained completed runs or a new scientific editing/calculation course.');
+  const bytes=await readFile(resolve(args['restored-selection']));
+  restoredSelection=JSON.parse(bytes.toString('utf8'));
+  required(restoredSelection.schema==='upstate.chemistry-browser-selection/v1','Choose a restored native chemistry selection.');
+  for(const key of ['project_id','case_id'])required(typeof restoredSelection[key]==='string'&&restoredSelection[key].trim(),'The restored selection must name its original '+key+'.');
+  required(Array.isArray(restoredSelection.run_ids)&&restoredSelection.run_ids.length&&
+   restoredSelection.run_ids.every(id=>typeof id==='string'&&id.trim())&&
+   new Set(restoredSelection.run_ids).size===restoredSelection.run_ids.length,'Select distinct original completed analysis IDs.');
+  input={mode:'restored-native',restored_selection_sha256:hash(bytes),workspace:args.workspace,
+   project_id:restoredSelection.project_id,case_id:restoredSelection.case_id,run_ids:restoredSelection.run_ids,
+   receive:args.receive,transfer:args.transfer};
+ }else input={workspace:args.workspace,case_id:args['case-id']||null,
   source_collection_id:args['source-collection']||null,source_id:args['source-id']||null,
   edited_project_sha256:projectBytes?hash(projectBytes):null,
   request_sha256:requestBytes?hash(requestBytes):null,
@@ -76,7 +91,7 @@ async function initializeContinuation(){
   required(!retained&&!previous,'This output already contains a journey. Use --resume to continue its original tasks, or choose a new output directory.');
   requestState={schema:'upstate.chemistry-browser-requests/v1',created_at:new Date().toISOString(),input,requests:{}};
  }
- journal.workspace_key=args.workspace;journal.browser_runtime=browserRuntime();journalWritable=true;
+ journal.workspace_key=args.workspace;journal.browser_runtime=browserRuntime();if(restoredSelection)journal.input=input;journalWritable=true;
  await persistRequests();await writeJournal();
 }
 function hasRequest(action){return Boolean(requestState.requests[action]);}
@@ -90,6 +105,7 @@ async function writeJournal(){
  if(!journalWritable)return;
  await atomicText(join(output,'journey.json'),redact(JSON.stringify(journal,null,2))+'\n');
 }
+async function stage(name){journal.current_step=name;await writeJournal();}
 async function record(name,details={}){
  journal.steps.push({name,completed_at:new Date().toISOString(),...details});await writeJournal();
 }
@@ -256,17 +272,23 @@ async function receiveProject(archive){
  const result=received.result;required(result?.original_case_id===savedCase.id&&result?.archive_sha256===archive.sha256,'Receiving did not identify the exported original case and archive.');
  const receivedCase=await chemistry('case',{case_id:result.case_id});
  required(canonical(receivedCase.project)===canonical(savedCase.project),'Receiving changed the original chemical project.');
- const mapped=result.adopted_runs.find(row=>row.original_run_id===completedRun.id);
- required(mapped,'Receiving omitted the selected completed analysis.');
- const receivedRun=await chemistry('run',{run_id:mapped.run_id});
- required(receivedRun.state==='complete'&&canonical(receivedRun.selection.request)===canonical(completedRun.selection.request),'Receiving changed the original analysis request.');
- required(canonical(receivedRun.artifacts)===canonical(completedRun.artifacts),'Receiving changed native result artifact identities.');
- const field=resultField(completedRun.mode);
- const before=await chemistry('page',{run_id:completedRun.id,field,offset:0,limit:200});
- const after=await chemistry('page',{run_id:receivedRun.id,field,offset:0,limit:200});
- required(canonical(before.rows)===canonical(after.rows)&&before.total===after.total,'Received result rows differ from the original completed analysis.');
- await refreshDesk();await chooseCase(receivedCase.id);await openRun(receivedRun.id);await shot('07-received-editable-chemistry');
- await record('Received the original editable chemical project',{source_collection_id:collection.id,source_id:collection.entries[0].id,case_id:receivedCase.id,run_id:receivedRun.id,archive_sha256:archive.sha256});
+ const mappedRuns=[];
+ await refreshDesk();await chooseCase(receivedCase.id);
+ for(const original of selectedRuns){
+  const mapped=result.adopted_runs.find(row=>row.original_run_id===original.id);
+  required(mapped,'Receiving omitted a selected completed analysis.');
+  const receivedRun=await chemistry('run',{run_id:mapped.run_id});
+  requireOriginalRun(receivedRun,receivedCase,mapped.run_id);
+  required(receivedRun.mode===original.mode&&canonical(receivedRun.selection.request)===canonical(original.selection.request),'Receiving changed the original analysis request or mode.');
+  required(canonical(receivedRun.artifacts)===canonical(original.artifacts),'Receiving changed native result artifact identities.');
+  const field=resultField(original.mode);
+  const before=await chemistry('page',{run_id:original.id,field,offset:0,limit:200});
+  const after=await chemistry('page',{run_id:receivedRun.id,field,offset:0,limit:200});
+  required(canonical(before.rows)===canonical(after.rows)&&before.total===after.total,'Received result rows differ from the original completed analysis.');
+  await openRun(receivedRun.id);mappedRuns.push({original_run_id:original.id,run_id:receivedRun.id});
+ }
+ await shot('07-received-editable-chemistry');
+ await record('Received the original editable chemical project',{source_collection_id:collection.id,source_id:collection.entries[0].id,case_id:receivedCase.id,run_id:mappedRuns[0].run_id,adopted_runs:mappedRuns,archive_sha256:archive.sha256});
 }
 async function backupRestore(){
  await page.locator('[data-view="journey"]').click();
@@ -281,37 +303,101 @@ async function backupRestore(){
  const restored=await queue('#form-submit','workspace.restore');
  required(restored.result?.identity==='MATCH'&&restored.result?.workspace_key,'Original receiving did not confirm workspace identity.');
  required(restored.result.workspace_key!==currentWorkspace,'Choose an independent receiving workspace.');
- await openWorkspace(restored.result.workspace_key);await openDesk();await chooseCase(savedCase.id);await openRun(completedRun.id);
- const reopenedCase=await chemistry('case',{case_id:savedCase.id}),reopenedRun=await chemistry('run',{run_id:completedRun.id});
- required(canonical(reopenedCase.project)===canonical(savedCase.project),'Full workspace receiving changed the chemical project.');
- required(canonical(reopenedRun.selection)===canonical(completedRun.selection),'Full workspace receiving changed the native analysis selection.');
- await record('Reopened chemical analysis after complete workspace restore',{workspace_key:currentWorkspace,case_id:savedCase.id,run_id:completedRun.id,archive_sha256:archive.sha256});
+ await openWorkspace(restored.result.workspace_key);await openDesk();const reopenedCase=await chooseCase(savedCase.id);
+ required(canonical(nativeRecord(reopenedCase))===canonical(nativeRecord(savedCase)),'Full workspace receiving changed the retained chemical case or original source references.');
+ for(const original of selectedRuns){
+  await openRun(original.id);const reopenedRun=await chemistry('run',{run_id:original.id});
+  required(canonical(nativeRecord(reopenedRun))===canonical(nativeRecord(original)),'Full workspace receiving changed the native completed analysis.');
+ }
+ await record('Reopened chemical analyses after complete workspace restore',{workspace_key:currentWorkspace,case_id:savedCase.id,run_id:completedRun.id,run_ids:selectedRuns.map(run=>run.id),archive_sha256:archive.sha256});
  await shot('08-restored-chemistry-workspace');
+}
+function nativeRecord(value){
+ const {workspace_key,_downloads,...native}=value;return native;
+}
+function requireOriginalRun(run,originalCase,id){
+ required(run.id===id&&run.state==='complete'&&run.case_id===originalCase.id&&
+  run.selection?.case_id===originalCase.id&&run.selection.project_sha256===originalCase.project_sha256,
+  'Select an original completed analysis of the retained chemical case.');
+}
+async function inspectCompletedRun(run,index){
+ await stage('open-completed-analysis-'+run.id);
+ await refreshDesk();await openRun(run.id);await shot(restoredSelection?'02-native-'+index:'02-native-chemical-results');
+ const fields=await page.locator('[data-result-field] option').evaluateAll(nodes=>nodes.map(node=>node.value));
+ const wanted=run.selection.request.mode==='simulate'?'samples':resultField(run.mode);
+ if(fields.includes(wanted)){
+  if(await page.locator('[data-result-field]').inputValue()!==wanted){
+   const selected=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/chemistry/page'&&new URL(response.url()).searchParams.get('run_id')===run.id&&new URL(response.url()).searchParams.get('field')===wanted);
+   await page.locator('[data-result-field]').selectOption(wanted);await json(await selected,'Opened selected original records');
+  }
+  await page.locator('[data-result-table] > p').waitFor();
+  if(await page.locator('[data-action="chemistry-next"]').isEnabled()){
+   for(const [action,offset] of [['next',100],['previous',0]]){
+    const read=page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname==='/api/chemistry/page'&&url.searchParams.get('run_id')===run.id&&url.searchParams.get('field')===wanted&&Number(url.searchParams.get('offset'))===offset;});
+    await page.locator('[data-action="chemistry-'+action+'"]').click();const result=await json(await read,'Paged original analysis records');
+    await page.waitForFunction(result=>document.querySelector('[data-result-table] > p')?.textContent?.startsWith(String(result.total?result.offset+1:0)+'–'),result);
+   }
+  }
+ }
+ await shot(restoredSelection?'03-records-'+index:'03-original-result-records');
+ const tickets=restoredSelection?(run._downloads||[]):['.html','.csv','.json'].map(ext=>(run._downloads||[]).find(row=>row.filename?.endsWith(ext))).filter(Boolean);
+ if(restoredSelection)required(tickets.length>=run.artifacts.length,'The original result view omitted retained analysis file tickets.');
+ for(let n=0;n<tickets.length;n++){
+  const ticket=tickets[n];
+  const link=page.locator('[data-chemistry-result] a[download][href="'+ticket.url+'?download=1"]');await link.waitFor();
+  const name=restoredSelection?'chemistry-'+run.id+'-'+n+'-'+basename(ticket.filename):
+   'chemistry-result'+['.html','.csv','.json'].find(ext=>ticket.filename.endsWith(ext));
+  await saveDownload(link,name,ticket);
+ }
+
+ await record('Inspected original completed analysis',{run_id:run.id,mode:run.mode,selection:run.selection,artifacts:run.artifacts});
 }
 async function main(){
  await mkdir(join(output,'exports'),{recursive:true});
  required(args['url-file']&&args.workspace,'Supply the original --url-file and --workspace.');
- required(Boolean(args['case-id'])!==Boolean(args['source-collection']||args['source-id']),'Choose a retained case or an original project source.');
- if(!args['case-id'])required(args['source-collection']&&args['source-id'],'Supply both original project source IDs.');
+ if(!args['restored-selection']){
+  required(Boolean(args['case-id'])!==Boolean(args['source-collection']||args['source-id']),'Choose a retained case or an original project source.');
+  if(!args['case-id'])required(args['source-collection']&&args['source-id'],'Supply both original project source IDs.');
+ }
  if(args['edited-project'])required(args.reason?.trim(),'State --reason for the supplied original project edit.');
  await initializeContinuation();
  privateURL=(await readFile(resolve(args['url-file']),'utf8')).trim();
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original operator HTTP/HTTPS startup URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
  required(capability,'Use the original startup URL containing its capability fragment.');
+ await stage('launch-browser');
  browser=await chromium.launch({headless:!args.headed,
   ...(args['browser-channel']?{channel:args['browser-channel']}:{}),
-  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{})});
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{}),
+  ...(args['browser-renderer-limit']?{args:['--renderer-process-limit='+browserRuntime().renderer_process_limit]}:{})});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
+ await stage('open-original-workspace');
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();
- let caseId=args['case-id'];
+ let caseId=restoredSelection?.case_id||args['case-id'];
  if(!caseId){
   if(!hasRequest('chemistry.case.from-source'))await page.locator('.chemistry-panel [data-source]').selectOption(JSON.stringify({source_collection_id:args['source-collection'],source_id:args['source-id']}));
   const imported=await queue('[data-action="chemistry-from-source"]','chemistry.case.from-source');caseId=imported.result?.id;
   required(caseId,'Native source intake returned no retained chemical case.');await refreshDesk();
  }
  const baseline=await chooseCase(caseId);await record('Opened original retained chemical scenario',{case_id:baseline.id,project_sha256:baseline.project_sha256,source_refs:baseline.source_refs});
+ if(restoredSelection){
+  await stage('bind-original-completed-analyses');
+  const state=await apiGet('/api/state',{workspace:args.workspace,compact:'1'});
+  required(state.workspace_key===args.workspace&&state.data?.project?.id===restoredSelection.project_id,'The receiving operator belongs to a different original scientific project.');
+  savedCase=baseline;
+  for(const id of restoredSelection.run_ids){
+   const run=await chemistry('run',{run_id:id});
+   requireOriginalRun(run,savedCase,id);selectedRuns.push(run);
+  }
+  const retained={case_sha256:hash(canonical(nativeRecord(savedCase))),
+   runs:selectedRuns.map(run=>({id:run.id,sha256:hash(canonical(nativeRecord(run)))}))};
+  if(requestState.restored)required(canonical(requestState.restored)===canonical(retained),'The retained case or completed analysis changed after this browser operation.');
+  else{requestState.restored=retained;await persistRequests();}
+  completedRun=selectedRuns[0];
+  await record('Bound original completed analyses in the receiving Workspace',{project_id:restoredSelection.project_id,case_id:savedCase.id,source_refs:savedCase.source_refs,...retained});
+  await shot('01-retained-chemical-editor');
+ }else{
  let project=args['edited-project']?structuredClone(preparedProject):structuredClone(baseline.project);
  const reason=args.reason||'Retained working continuation of the original chemical scenario.';
  // Explicitly test invalid input in the actual editor, then restore the selected original project.
@@ -334,45 +420,33 @@ async function main(){
  const runTask=await queue('[data-action="chemistry-execute"]','chemistry.run');
  completedRun=await chemistry('run',{run_id:runTask.result?.id});
  required(completedRun.state==='complete'&&completedRun.case_id===savedCase.id,'Original chemical analysis did not complete for the saved edition.');
- await refreshDesk();await openRun(completedRun.id);await shot('02-native-chemical-results');
- const fields=await page.locator('[data-result-field] option').evaluateAll(nodes=>nodes.map(node=>node.value));
- const wanted=request.mode==='simulate'?'samples':resultField(completedRun.mode);
- if(fields.includes(wanted)){
-  if(await page.locator('[data-result-field]').inputValue()!==wanted){
-   const selected=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/chemistry/page'&&new URL(response.url()).searchParams.get('run_id')===completedRun.id&&new URL(response.url()).searchParams.get('field')===wanted);
-   await page.locator('[data-result-field]').selectOption(wanted);await json(await selected,'Opened selected original records');
-  }
-  await page.locator('[data-result-table] > p').waitFor();
-  if(await page.locator('[data-action="chemistry-next"]').isEnabled()){
-   for(const [action,offset] of [['next',100],['previous',0]]){
-    const read=page.waitForResponse(response=>{const url=new URL(response.url());return url.pathname==='/api/chemistry/page'&&url.searchParams.get('run_id')===completedRun.id&&url.searchParams.get('field')===wanted&&Number(url.searchParams.get('offset'))===offset;});
-    await page.locator('[data-action="chemistry-'+action+'"]').click();const result=await json(await read,'Paged original analysis records');
-    await page.waitForFunction(result=>document.querySelector('[data-result-table] > p')?.textContent?.startsWith(String(result.total?result.offset+1:0)+'–'),result);
-   }
-  }
+ selectedRuns=[completedRun];
  }
- await shot('03-original-result-records');
- for(const ext of ['.html','.csv','.json']){
-  const ticket=(completedRun._downloads||[]).find(row=>row.filename?.endsWith(ext));if(!ticket)continue;
-  const link=page.locator('[data-chemistry-result] a[download][href="'+ticket.url+'?download=1"]');await link.waitFor();
-  await saveDownload(link,'chemistry-result'+ext,ticket);
- }
+ for(let i=0;i<selectedRuns.length;i++)await inspectCompletedRun(selectedRuns[i],i);
+ await stage('export-original-editable-project');
  // The original library selection drives project export independently from editor state.
  await page.locator('.chemistry-panel [data-case]').selectOption(savedCase.id);
  const exported=await queue('[data-action="chemistry-export"]','chemistry.export');
  const archive=await taskDownload(exported,'.zip','editable-chemistry.zip');
- required(exported.result?.run_ids?.includes(completedRun.id),'Editable project omitted its selected completed native analysis.');
- await record('Exported original editable project and completed analysis',{case_id:savedCase.id,run_id:completedRun.id,archive_sha256:archive.sha256});
+ required(selectedRuns.every(run=>exported.result?.run_ids?.includes(run.id)),'Editable project omitted a selected completed native analysis.');
+ await record('Exported original editable project and completed analyses',{case_id:savedCase.id,run_id:completedRun.id,run_ids:selectedRuns.map(run=>run.id),archive_sha256:archive.sha256});
+ await stage('fresh-browser-reopen');
  const first=page,fresh=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
  try{
   page=await fresh.newPage();page.setDefaultTimeout(60000);page.on('pageerror',errors);
-  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();await chooseCase(savedCase.id);await openRun(completedRun.id);
+  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();const reopened=await chooseCase(savedCase.id);
+  required(canonical(nativeRecord(reopened))===canonical(nativeRecord(savedCase)),'Fresh browser changed the retained chemical case.');
+  for(const original of selectedRuns){
+   await openRun(original.id);const run=await chemistry('run',{run_id:original.id});
+   required(canonical(nativeRecord(run))===canonical(nativeRecord(original)),'Fresh browser changed the original completed analysis.');
+  }
   await shot('05-fresh-browser-chemistry');await record('Reopened the original case and completed analysis in a fresh browser',{case_id:savedCase.id,run_id:completedRun.id});
  }finally{await fresh.close();page=first;currentWorkspace=args.workspace;}
- if(args.receive)await receiveProject(archive);
- if(args.transfer)await backupRestore();
+ if(args.receive){await stage('receive-editable-project');await receiveProject(archive);}
+ if(args.transfer){await stage('receive-complete-workspace');await backupRestore();}
  required(!journal.browser_errors.length,'Browser exception: '+journal.browser_errors.join('; '));
- journal.status='complete';journal.case_id=savedCase.id;journal.run_id=completedRun.id;journal.workspace_key=args.workspace;
+ journal.current_step='complete';journal.status='complete';journal.case_id=savedCase.id;journal.run_id=completedRun.id;journal.workspace_key=args.workspace;
+ if(restoredSelection)journal.run_ids=selectedRuns.map(run=>run.id);
 }
 try{await main();}catch(error){journal.status='failed';journal.error=redact(error.stack||error.message);process.exitCode=1;try{if(page)await shot('failure');}catch{}}
 finally{

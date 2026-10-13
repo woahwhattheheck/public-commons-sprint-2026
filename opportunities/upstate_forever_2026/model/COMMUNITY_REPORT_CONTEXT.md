@@ -14,6 +14,14 @@ The Community report keeps the exact saved plan, original community table, inter
 
 The task’s completed-result buttons remain available after reopening the operator. Source preparation does not change the original plan or report.
 
+## Read changes between saved plans
+
+Build a new Community report from a saved revised plan to receive its **Changes from previous saved plan** register. Open that report in Communities to see interventions added or removed, exact field and order changes, plan-detail changes, selected whole block groups, entered cost estimates, and original scientific/CSV lineage. **Open previous saved plan** returns to the retained parent edition.
+
+Entered-estimate totals and their difference carry the number of interventions with and without an estimate. Missing estimates remain separate. Community counts describe the original whole source block groups, including their overlapping utility and watershed memberships.
+
+The report retains `previous-plan.json`, `plan-revision-summary.json` and `plan-revision-changes.csv`. The CSV stores exact before/after values as JSON. Preparing this report as a scientific source carries those same original files and register sections into the ordered composer. Initial plans and reports created before this register retain their existing content; a new report edition adds the register without changing an earlier report.
+
 ## Native course
 
 From the maintained application root, use the actual saved report ID and its `files["community-report.json"]["sha256"]`:
