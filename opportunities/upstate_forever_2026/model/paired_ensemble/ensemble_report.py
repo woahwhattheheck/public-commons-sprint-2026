@@ -98,6 +98,50 @@ def _preview(path, target, statistic):
             'nodata': 'checkerboard'}
 
 
+def _input_records(selection):
+    """Expose each retained original source independently of native run caches."""
+    rows = []
+    for member in selection['members']:
+        for pollutant in selection['pollutants']:
+            rasters = member['rasters'][pollutant]
+            for side in ('baseline', 'alternative'):
+                original = rasters[side]
+                rows.append({
+                    'member_id': member['id'],
+                    'profile_id': member.get('profile_id'),
+                    'scenario_id': member.get('scenario_id'),
+                    'pollutant': pollutant,
+                    'side': side,
+                    'run_id': member.get(side + '_run_id'),
+                    'units': rasters['units'],
+                    'bytes': original['bytes'],
+                    'sha256': original['sha256'],
+                })
+    return rows
+
+
+def _input_identity_section(rows):
+    e = lambda value: html.escape(str(value), quote=True)
+    records = []
+    for row in rows:
+        records.append('<tr><th scope="row"><code>' + e(row['member_id']) +
+                       '</code></th><td>' + e(LABELS[row['pollutant']]) +
+                       '</td><td>' + e(row['side'].capitalize()) +
+                       '</td><td>' + e(row['units']) + '</td><td>' +
+                       e(_number(row['bytes'])) + '</td><td><code>' +
+                       e(row['sha256']) + '</code></td><td><code>' +
+                       e(row['run_id'] or 'Not retained') + '</code></td></tr>')
+    return ('<details><summary>Original baseline and alternative raster identities</summary>'
+            '<p>Every row identifies one original input raster. Native run identifiers are shown '
+            'where retained; received quantitative results remain readable using these original '
+            'raster identities. Profile and scenario identifiers are included in the CSV.</p>'
+            '<p><a href="input-rasters.csv">Original input raster CSV</a></p>'
+            '<div class="table-scroll"><table class="input-rasters"><thead><tr>'
+            '<th>Member</th><th>Pollutant</th><th>Input</th><th>Raster units</th>'
+            '<th>Bytes</th><th>Original SHA-256</th><th>Native run</th>'
+            '</tr></thead><tbody>' + ''.join(records) + '</tbody></table></div></details>')
+
+
 def export_reports(directory):
     directory = Path(directory).resolve(strict=True)
     state = read(directory / 'analysis.json')
@@ -114,6 +158,10 @@ def export_reports(directory):
             'planned_member_count': selection['planned_member_count'],
             'support': selection['support'], 'summary': state['summary']})
         atomic(directory / 'selection.json', selection)
+        input_rows = _input_records(selection)
+        text_file(directory / 'input-rasters.csv', _csv(input_rows, [
+            'member_id', 'profile_id', 'scenario_id', 'pollutant', 'side',
+            'run_id', 'units', 'bytes', 'sha256']))
         member_rows, coverage_rows, distribution_rows = [], [], []
         for pollutant, summary in state['summary'].items():
             for member in summary['members']:
@@ -138,6 +186,15 @@ def export_reports(directory):
         previews = []
         for pollutant, summary in state['summary'].items():
             title = LABELS[pollutant]
+            pixel_units = state['artifacts'][pollutant + '--mean_reduction']['units']
+            threshold = selection['improvement_thresholds'][pollutant]
+            threshold_text = ('Improvement counts a tested pair only when baseline minus alternative '
+                              'is greater than ' + _number(threshold) + ' ' + pixel_units + '.')
+            common_area = summary.get('common_projected_grid_area_ha')
+            reporting_area = summary.get('reporting_projected_grid_area_ha')
+            area_text = ('' if common_area is None or reporting_area is None else
+                         ' Common-support projected grid area: ' + _number(common_area) +
+                         ' of ' + _number(reporting_area) + ' ha.')
             rows = []
             for i, member in enumerate(summary['members'], 1):
                 name = member.get('profile_id') or member['id']
@@ -171,28 +228,29 @@ def export_reports(directory):
             sections.append('<section id="' + e(pollutant) + '"><h2>' + e(title) + '</h2><p class="coverage">' +
                             e(_number(summary['common_cells'])) + ' / ' + e(_number(summary['reporting_cells'])) +
                             ' reporting pixels support every selected pair (' + e(percent) + '). ' +
-                            e(_number(summary['partial_pair_cells'])) + ' pixels have only partial pair coverage.</p><p><strong>Whole-reporting-area member totals:</strong> ' +
+                            e(_number(summary['partial_pair_cells'])) + ' pixels have only partial pair coverage.' + e(area_text) + '</p><p>' + e(threshold_text) + '</p><p><strong>Member totals on common valid reporting pixels:</strong> ' +
                             e(spread) + '</p><p class="muted">Basin quantiles are computed from complete member totals on the same common pixels. They are not sums of pixel quantiles.</p>' +
                             '<div class="figures">' + ''.join(figures) + '</div><details><summary>All ' + str(len(rows)) +
                             ' paired member totals · ' + e(summary['units']) + '</summary><div class="table-scroll"><table><thead><tr>' +
-                            '<th>Profile / member</th><th>Baseline</th><th>Alternative</th><th>Reduction</th><th>Reduction %</th><th>Pair-valid pixels</th>' +
+                            '<th>Profile / member</th><th>Baseline · common pixels</th><th>Alternative · common pixels</th><th>Reduction · common pixels</th><th>Reduction % · common pixels</th><th>Pair-valid pixels</th>' +
                             '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table></div></details></section>')
         downloads = ''.join('<li><a href="' + quote(a['path']) + '">' + e(LABELS[a['pollutant']] + ' · ' + a['statistic'].replace('_', ' ') + ' · ' + a['units']) + '</a></li>'
                             for a in state['artifacts'].values())
-        source_json = e(json.dumps(selection.get('source_references'), indent=2, ensure_ascii=False))
+        source_json = e(json.dumps(selection.get('source_references', []), indent=2, ensure_ascii=False))
+        input_section = _input_identity_section(input_rows)
         page = ('''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>''' + e(selection['title']) + '''</title><style>
-:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#ededeb;color:#202020;font:16px/1.55 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:28px}header,section{background:#fff;border:1px solid #bbb;padding:24px;margin:0 0 22px}h1{font-size:30px;line-height:1.2;margin:10px 0}h2{font-size:23px;margin:0 0 10px}h3{font-size:16px}a{color:inherit;text-underline-offset:3px}code{font:12px ui-monospace,monospace;overflow-wrap:anywhere}p{max-width:100ch}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em}.muted,figcaption{color:#555;font-size:14px}.coverage{border-left:4px solid #444;padding-left:12px}.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.facts div{border-top:1px solid #aaa;padding:12px 0}.facts strong{display:block;font-size:19px}.figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}figure{margin:0}figure img{display:block;width:100%;max-width:100%;height:auto;image-rendering:pixelated;border:1px solid #777;object-fit:contain}figcaption{margin:7px 0 18px}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:10px;border-bottom:1px solid #ccc;text-align:right}th:first-child{min-width:220px;text-align:left;max-width:380px;white-space:normal}summary{cursor:pointer;font-weight:600;padding:14px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}nav{display:flex;flex-wrap:wrap;gap:10px 22px;margin:18px 0}.downloads{columns:2;column-gap:30px}.downloads li{break-inside:avoid;padding-bottom:7px}@media(max-width:700px){main{padding:12px}header,section{padding:16px}.figures{grid-template-columns:1fr}h1{font-size:25px}.downloads{columns:1}}@media print{body{background:#fff}main{padding:0}header,section{break-inside:avoid}.table-scroll{overflow:visible}details>summary{display:none}details>*{display:block}a{text-decoration:none}}
-</style></head><body><main><header><div class="eyebrow">TokenJunkieLabs · Watershed ensemble analysis</div><h1>''' + e(selection['title']) + '</h1><p>' + e(selection['purpose']) + '</p><p><strong>Inputs:</strong> ' + e(selection['input_description']) + '</p>' +
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#ededeb;color:#202020;font:16px/1.55 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:28px}header,section{background:#fff;border:1px solid #bbb;padding:24px;margin:0 0 22px}h1{font-size:30px;line-height:1.2;margin:10px 0}h2{font-size:23px;margin:0 0 10px}h3{font-size:16px}a{color:inherit;text-underline-offset:3px}code{font:12px ui-monospace,monospace;overflow-wrap:anywhere}p{max-width:100ch}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em}.muted,figcaption{color:#555;font-size:14px}.coverage{border-left:4px solid #444;padding-left:12px}.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.facts div{border-top:1px solid #aaa;padding:12px 0}.facts strong{display:block;font-size:19px}.figures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}figure{margin:0}figure img{display:block;width:100%;max-width:100%;height:auto;image-rendering:pixelated;border:1px solid #777;object-fit:contain}figcaption{margin:7px 0 18px}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:10px;border-bottom:1px solid #ccc;text-align:right}table.input-rasters td{white-space:normal;text-align:left;min-width:100px}table.input-rasters td:nth-child(6){min-width:180px}th:first-child{min-width:220px;text-align:left;max-width:380px;white-space:normal}summary{cursor:pointer;font-weight:600;padding:14px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}nav{display:flex;flex-wrap:wrap;gap:10px 22px;margin:18px 0}.downloads{columns:2;column-gap:30px}.downloads li{break-inside:avoid;padding-bottom:7px}@media(max-width:700px){main{padding:12px}header,section{padding:16px}.figures{grid-template-columns:1fr}h1{font-size:25px}.downloads{columns:1}}@media print{body{background:#fff}main{padding:0}header,section{break-inside:avoid}.table-scroll{overflow:visible}details>summary{display:none}details>*{display:block}a{text-decoration:none}}
+</style></head><body><main><header><div class="eyebrow">TokenJunkieLabs · Paired raster ensemble analysis</div><h1>''' + e(selection['title']) + '</h1><p>' + e(selection['purpose']) + '</p><p><strong>Input kind:</strong> ' + e(selection.get('input_kind', 'explicit paired rasters')) + '</p><p><strong>Inputs:</strong> ' + e(selection['input_description']) + '</p>' +
         '<div class="facts"><div><strong>' + str(selection['selected_member_count']) + ' of ' + str(selection['planned_member_count']) +
         '</strong>Selected / planned members</div><div><strong>Positive = reduction</strong>Baseline minus alternative</div><div><strong>' +
         e(selection['grid']['width']) + ' × ' + e(selection['grid']['height']) + '</strong>Original raster grid</div></div><p><strong>Displayed support:</strong> ' +
         e(SUPPORT_LABELS[selection['support']]) + '</p><p>Quantiles describe the explicitly tested profiles. The improvement fraction divides improved pairs by valid pairs at each pixel. Read its valid-pair count to see where support varies. Missing pixels stay missing. Nutrient and sediment quantities are reported separately.</p>' +
         '<nav>' + ''.join('<a href="#' + p + '">' + LABELS[p] + '</a>' for p in selection['pollutants']) + '<a href="#files">Files and methods</a></nav><code>Analysis ' + e(state['id']) + '</code></header>' + ''.join(sections) +
-        '<section id="files"><h2>Files and methods</h2><nav><a href="paired-members.csv">Complete paired-member CSV</a><a href="coverage.csv">Coverage CSV</a><a href="basin-quantiles.csv">Basin quantiles CSV</a><a href="summary.json">Quantitative JSON</a><a href="selection.json">Exact selection and sources</a><a href="analysis.json">Full analysis record</a></nav><p>Per-pixel quantiles use linear interpolation at (n−1)q. The improvement threshold is retained per pollutant in its native pixel-mass units. Common-support basin totals always use identical pixels for every member. A percentage reduction with zero baseline is unavailable; negative original values remain in the calculation and are counted in the complete CSV.</p><p>Projected-grid area is pixel determinant × coordinate-unit conversion; it is not a separate geodesic-area estimate. Raster overviews retain affine row orientation, without a cartographic north-arrow claim.</p><details><summary>All quantitative GeoTIFFs</summary><ul class="downloads">' + downloads + '</ul></details><details><summary>Original source, profile and scenario references</summary><pre>' + source_json + '</pre></details><p class="muted">Complete result files can be received offline. Use the original scientific Workspace backup to transfer model inputs and run caches as well. Full numeric precision is retained in JSON, CSV and GeoTIFF; displayed values are rounded for reading.</p></section></main></body></html>')
+        '<section id="files"><h2>Files and methods</h2>' + input_section + '<nav><a href="input-rasters.csv">Original input raster CSV</a><a href="paired-members.csv">Complete paired-member CSV</a><a href="coverage.csv">Coverage CSV</a><a href="basin-quantiles.csv">Basin quantiles CSV</a><a href="summary.json">Quantitative JSON</a><a href="selection.json">Exact selection and sources</a><a href="analysis.json">Full analysis record</a></nav><p>Per-pixel quantiles use linear interpolation at (n−1)q. The improvement threshold is retained per pollutant in its native pixel-mass units. Common-support basin totals always use identical pixels for every member. A percentage reduction with zero baseline is unavailable; negative original values remain in the calculation and are counted in the complete CSV.</p><p>Projected-grid area is pixel determinant × coordinate-unit conversion; it is not a separate geodesic-area estimate. Raster overviews retain affine row orientation, without a cartographic north-arrow claim.</p><details><summary>All quantitative GeoTIFFs</summary><ul class="downloads">' + downloads + '</ul></details><details><summary>Original source, profile and scenario references</summary><pre>' + source_json + '</pre></details><p class="muted">Complete result files can be received offline. Use the original scientific Workspace backup to transfer model inputs and run caches as well. Full numeric precision is retained in JSON, CSV and GeoTIFF; displayed values are rounded for reading.</p></section></main></body></html>')
         text_file(directory / 'index.html', page)
         atomic(directory / 'previews.json', previews)
-        names = ['index.html', 'summary.json', 'selection.json', 'paired-members.csv',
+        names = ['index.html', 'summary.json', 'selection.json', 'input-rasters.csv', 'paired-members.csv',
                  'coverage.csv', 'basin-quantiles.csv', 'previews.json'] + [p['path'] for p in previews]
         report = {'schema': 'upstate.ensemble-reports/v1', 'ensemble_id': state['id'],
                   'entrypoint': 'index.html', 'files': [{'path': name, **fingerprint(directory / name)} for name in names]}
