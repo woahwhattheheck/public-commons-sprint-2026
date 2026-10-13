@@ -2,8 +2,9 @@
   "schema": "upstate.operator-extension/v1",
   "id": "scientific-inspection",
   "title": "Readable scientific inspection",
-  "version": "1",
+  "version": "2",
   "assets": [
-    "scientific_inspection.mjs"
+    "scientific_inspection.mjs",
+    "scientific_inspection.css"
   ]
 }
