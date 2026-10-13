@@ -23,9 +23,10 @@ from .common import atomic_bytes, atomic_json, describe_file, digest, file_diges
 from .implementation import ImplementationStore
 from .implementation_schema import ImplementationError, document_digest, validate_plan
 from . import observed_context
+from .implementation_observation_quality import summarize_field_quality, write_quality_sources, quality_sections
 
 SCHEMA = "upstate.implementation-observation-context/v1"
-EDITION = "field-observations-20261013-v1"
+EDITION = "field-observations-20261013-v2-quality"
 REPORT_IDENTITY = "upstate.implementation-observation-report-source/v1"
 FIELDS = (
     "record_id", "station_id", "site_label", "site_latitude", "site_longitude",
@@ -283,6 +284,9 @@ def _preview(workspace, saved_plan, existing_report_selection):
     context = _context(workspace, saved_plan, existing_report_selection)
     rows = _rows(context["plan"])
     summary = _summary(context["plan"], rows, context["identity"])
+    context["quality"] = summarize_field_quality(
+        context["plan"], attachment_inventory=context["identity"]["attachment_inventory"])
+    summary["measurement_quality"] = context["quality"]["summary"]
     result = {"schema": SCHEMA, "edition": EDITION, "plan": context["identity"]["plan"],
               "operation_id": context["operation_id"], "summary": summary,
               "source_collection_id": None, "observation_ids": [], "report_source": None}
@@ -348,12 +352,14 @@ def _source_collection(workspace, context, root, rows):
         _retain(path, root / name, item)
         names.append(name)
     atomic_bytes(root / "field-observations.csv", _csv(rows), immutable=True)
+    names.extend(write_quality_sources(root, context["quality"]))
     members = [_describe(root, root / name) for name in sorted(set(names))]
     by_name = {item["path"]: item for item in members}
     entries = []
     for path, kind, suffix, title in [
         ("original/revision.json", "document", "revision", "Original saved field plan and revision event"),
         ("field-observations.csv", "table", "observations", "Original field observations and source relationships"),
+        ("quality/summary.json", "document", "quality", "Original measurement definitions and campaign coverage"),
     ]:
         entries.append({
             "id": "field-" + suffix + "-" + context["operation_id"][:24],
@@ -407,22 +413,6 @@ def _compose_existing(workspace, selected, root):
 
 def _sections(context, rows, summary, observation_ids):
     plan = context["plan"]
-    groups = {}
-    for row in rows:
-        key = tuple(row[name] for name in ("station_id", "parameter", "unit", "basis", "fraction", "method", "activity_method", "qa_status"))
-        group = groups.setdefault(key, {"counts": collections.Counter(), "dated": [], "undated": 0})
-        group["counts"][row["result_type"]] += 1
-        if row["collected_at"]:
-            group["dated"].append(row["collected_at"])
-        else:
-            group["undated"] += 1
-    grouped = []
-    for key, group in sorted(groups.items()):
-        dates = sorted(group["dated"], key=lambda value: dt.datetime.fromisoformat(value.replace("Z", "+00:00")))
-        c = group["counts"]
-        grouped.append(list(key) + [str(c["numeric"]), str(c["censored"]), str(c["text"]),
-                                   str(c["missing"]), dates[0] if dates else "",
-                                   dates[-1] if dates else "", str(group["undated"])])
     sample_rows = []
     for row in rows[:200]:
         sample_rows.append([row[key] for key in ("record_id", "station_id", "sample_id", "collected_at",
@@ -444,13 +434,7 @@ def _sections(context, rows, summary, observation_ids):
             "Collection dates index original samples; they do not declare daily averages. Planned and visited dates remain separate. "
             "Original latitude/longitude are retained without assigning an unstated datum or catchment.",
         ]],
-        ["Field measurement groups and collection support", [
-            {"kind": "table", "columns": ["Site", "Parameter", "Unit", "Basis", "Fraction", "Method", "Activity method", "QA",
-                "Numeric", "Censored", "Text", "Missing", "First collection", "Last collection", "Undated"],
-             "rows": grouped},
-            "Groups preserve declared units and measurement definitions. All qualifiers and result types remain visible. "
-            "Numeric values are original measurements; no cross-unit conversion, censor substitution or annual load calculation is applied.",
-        ]],
+        *quality_sections(context["quality"]),
         ["Original field result detail", [
             ("The first 200 rows in original saved order are shown; the complete CSV and saved revision are included."
              if len(rows) > 200 else "All saved observation rows are shown in original order."),
@@ -496,7 +480,8 @@ def _report(workspace, context, root, rows, result, source_members, editions):
         "sections": sections, "inputs": companions,
         "source_links": list(dict.fromkeys(list(recipe.get("source_links", [])) + [
             "field/field-observations.csv", "field/original/revision.json",
-            "field/original/plan.json", "field/original/attachment-inventory.json", "observation-editions.json"])),
+            "field/original/plan.json", "field/original/attachment-inventory.json", "observation-editions.json",
+            "field/quality/summary.json"])),
         "implementation_observation_identity": context["identity"],
         "implementation_observation_ids": result["observation_ids"],
         "implementation_source_collection_id": result["source_collection_id"],
