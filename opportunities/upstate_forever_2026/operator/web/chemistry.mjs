@@ -8,7 +8,7 @@ function table(rows,columns){
  if(!rows?.length)return '<p class="chemistry-muted">No records in this selection.</p>';
  return `<div class="chemistry-scroll"><table><thead><tr>${columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${columns.map(c=>`<td>${esc(valueText(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
-export function csvObservations(text, reference){
+export function csvObservations(text, reference, project=null){
  if(!reference?.trim())throw new Error('State the source reference for the observation file.');
  let rows=[],row=[],cell='',quoted=false;
  for(let i=0;i<=text.length;i++){
@@ -20,14 +20,70 @@ export function csvObservations(text, reference){
  }
  if(rows.length<2)throw new Error('Observation CSV needs a header and at least one record.');
  const header=rows.shift().map(x=>x.trim().replace(/^\uFEFF/,''));
- if(new Set(header).size!==header.length)throw new Error('Observation CSV repeats a column.');
- for(const field of ['id','reach','species','day','mg_l','sigma_mg_l'])if(!header.includes(field))throw new Error(`Missing CSV column ${field}.`);
+ if(new Set(header).size!==header.length||header.some(x=>!x))throw new Error('Observation CSV needs unique, nonempty column names.');
+ for(const field of ['id','reach','day','sigma_mg_l'])if(!header.includes(field))throw new Error(`Missing CSV column ${field}.`);
+ const known=project?new Map((project.species||[]).map(s=>[s.id,s])):null,ids=new Set();
  return rows.map((row,i)=>{
-  if(row.length!==header.length)throw new Error(`CSV row ${i+2} has a different column count.`);
+  const fail=message=>{throw new Error(`Row ${i+2}: ${message}`);};
+  if(row.length!==header.length)fail('different column count.');
   let r=Object.fromEntries(header.map((h,j)=>[h,row[j]]));
-  for(const key of ['day','mg_l','sigma_mg_l']){if(!r[key].trim()||!Number.isFinite(Number(r[key])))throw new Error(`Row ${i+2}: ${key} must be a number.`);r[key]=Number(r[key]);}
-  return {...r,role:r.role||'fit',qualifier:r.qualifier||'equal',provenance:{kind:'user-selected-observation',reference}};
+  for(const key of ['id','reach'])if(!r[key]?.trim())fail(key+' is required.');
+  if(ids.has(r.id))fail('observation ID is repeated.');ids.add(r.id);
+  const numeric=key=>{if(!String(r[key]??'').trim()||!Number.isFinite(Number(r[key])))fail(key+' must be a finite number.');r[key]=Number(r[key]);};
+  for(const key of ['day','sigma_mg_l'])numeric(key);
+  if(r.day<0||r.sigma_mg_l<=0)fail('day must be nonnegative and sigma_mg_l positive.');
+  r.role=r.role?.trim()||'fit';r.qualifier=r.qualifier?.trim()||'equal';
+  if(!['fit','holdout'].includes(r.role))fail('role must be fit or holdout.');
+  if(!['equal','below','interval'].includes(r.qualifier))fail('qualifier must be equal, below or interval.');
+  if(r.species?.trim()){
+   if(['measurement','components'].some(k=>r[k]?.trim()))fail('choose a species or a compound measurement, not both.');
+   if(known&&!known.has(r.species))fail('species is absent from the selected project.');
+   if(r.basis?.trim()){if(known&&known.get(r.species).basis!==r.basis)fail('basis differs from the selected species.');}else delete r.basis;
+   for(const key of ['measurement','components'])delete r[key];
+  }else{
+   delete r.species;
+   if(!r.measurement?.trim()||!r.basis?.trim())fail('a compound measurement requires measurement, basis and components.');
+   try{r.components=JSON.parse(r.components);}catch{fail('components must be a JSON array of {species,weight}.');}
+   if(!Array.isArray(r.components)||!r.components.length)fail('components must be a nonempty JSON array.');
+   const seen=new Set();
+   for(const component of r.components){
+    if(!component||typeof component.species!=='string'||!component.species.trim()||seen.has(component.species)
+      ||typeof component.weight!=='number'||!Number.isFinite(component.weight)||component.weight<=0)fail('components require unique species and positive finite numeric weights.');
+    seen.add(component.species);
+    if(known&&(!known.has(component.species)||known.get(component.species).basis!==r.basis))fail('every component must use the exact declared conserved basis.');
+   }
+  }
+  if(r.qualifier==='interval'){
+   if(String(r.mg_l??'').trim())fail('interval records omit mg_l; keep the original two limits.');
+   delete r.mg_l;
+   for(const key of ['lower_mg_l','upper_mg_l'])numeric(key);
+   if(r.lower_mg_l<0||r.upper_mg_l<=r.lower_mg_l)fail('interval limits require 0 ≤ lower_mg_l < upper_mg_l.');
+   for(const key of ['lower_closed','upper_closed']){
+    const supplied=String(r[key]??'').trim();
+    if(!['true','false'].includes(supplied))fail(key+' must explicitly be true or false.');
+    r[key]=supplied==='true';
+   }
+  }else{
+   numeric('mg_l');if(r.mg_l<0)fail('mg_l must be nonnegative.');
+   for(const key of ['lower_mg_l','upper_mg_l','lower_closed','upper_closed']){
+    if(String(r[key]??'').trim())fail(key+' belongs to interval records.');
+    delete r[key];
+   }
+  }
+  return {...r,provenance:{kind:'user-selected-observation',reference}};
  });
+}
+function observationView(row){
+ const r=row.observation||row.candidate||row,compound=Array.isArray(r.components);
+ const expression=compound?r.components.map(c=>String(c.weight)+' × '+c.species).join(' + '):r.species;
+ const limit=r.qualifier==='interval'
+  ?(r.lower_closed?'[':'(')+r.lower_mg_l+', '+r.upper_mg_l+(r.upper_closed?']':')')
+  :(r.qualifier==='below'?'≤ ':'')+(r.observed_mg_l??r.mg_l??'');
+ return {id:r.id,measurement:compound?r.measurement:r.species,operator:expression,basis:r.basis,
+  reach:r.reach,day:r.day,role:r.role,qualifier:r.qualifier||'equal',reference_or_limits:limit,
+  error_scale:r.sigma_mg_l,prediction:row.predicted_mg_l??r.predicted_mg_l,
+  interval_contains_prediction:r.interval_contains_prediction,
+  source:r.provenance?.reference};
 }
 export function attachChemistry(host){
  const {getState,api,endpoint,submitAction,showTask,toast,fileList}=host;
@@ -127,7 +183,7 @@ export function attachChemistry(host){
   <div class="chemistry-actions">${button('save','Save immutable scenario edition')}</div>
   <h3>Run request</h3><label>Analysis<select data-mode>${['simulate','attribute','sensitivity','calibrate','monitoring','uncertainty'].map(m=>`<option>${m}</option>`).join('')}</select></label>
   <label>Complete analysis request<textarea data-request rows="12" spellcheck="false">${esc(pretty({mode:'simulate',sample_days:[0,...(project?.phases||[]).map(p=>p.until_day)]}))}</textarea></label>
-  <details><summary>Import observation CSV</summary><p>Columns: id, reach, species, day, mg_l, sigma_mg_l. Optional: role (fit or holdout), qualifier (equal or below).</p><label>Observation source reference<input data-observation-reference></label><input type="file" data-observation-file accept=".csv,text/csv"></details>
+  <details><summary>Import observation CSV</summary><p>Every row uses id, reach, day and positive sigma_mg_l. Supply species for a single pool, or measurement, basis and components for a weighted measurement. Components is a quoted JSON array of unique {species, weight} objects; all pools must share the exact conserved basis.</p><p>Use qualifier equal or below with mg_l, or interval with lower_mg_l, upper_mg_l, lower_closed and upper_closed. Interval endpoints require explicit true/false; leave mg_l empty. Optional role is fit or holdout.</p><p>Weights define the measurement operator; they do not convert mass bases. A total-N measurement must use nonoverlapping modeled pools so a component already included in TKN is not counted twice.</p><label>Observation source reference<input data-observation-reference></label><input type="file" data-observation-file accept=".csv,text/csv"></details><details><summary>Review measurement definitions and limits</summary><div data-observation-review></div></details>
   <div class="chemistry-actions">${button('execute','Run selected analysis')}</div>
   <p class="chemistry-muted">Calibration saves a child scenario. Holdout observations remain outside fitting. Uncertainty requires explicit distributions, draw count and seed. Monitoring design requires a prior precision matrix and candidate errors.</p>`;
   function physical(){
@@ -135,6 +191,13 @@ export function attachChemistry(host){
    const groups=[['reaches','Reach storage',['volume_m3','temperature_c']],['flows','Water transport',['m3_day']],['loads','External chemical loading',['kg_day']],['reactions','First-order transformation',['rate_day','theta','reference_temperature_c']]];
    area.querySelector('[data-physical]').innerHTML=groups.map(([group,label,fields])=>`<details open><summary>${esc(label)}</summary><div class="chemistry-scroll"><table><thead><tr><th>Original ID / connection</th>${fields.map(f=>`<th>${esc(f)}</th>`).join('')}<th>Source reference</th></tr></thead><tbody>${(value[group]||[]).map((r,i)=>`<tr><td>${esc(r.id)}<br><small>${esc([r.source,r.target,r.reach,r.species].filter(Boolean).join(' → '))}</small></td>${fields.map(f=>`<td><input aria-label="${esc(r.id+' '+f)}" type="number" step="any" data-physical-group="${group}" data-row="${i}" data-field="${f}" value="${esc(r[f]??'')}"></td>`).join('')}<td>${esc(r.provenance?.reference||'')}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
   }
+  function observations(){
+   const target=area.querySelector('[data-observation-review]');
+   try{const q=parse(area.querySelector('[data-request]'),'Analysis request'),rows=q.observations||[];
+    target.innerHTML=table(rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','error_scale','source']);
+   }catch(error){target.textContent=error.message;}
+  }
+  observations();area.querySelector('[data-request]').addEventListener('change',observations);
   physical();
   area.querySelector('[data-physical]').addEventListener('change',e=>{
    const target=e.target;if(!target.dataset.physicalGroup)return;
@@ -146,7 +209,7 @@ export function attachChemistry(host){
   area.querySelector('[data-project]').addEventListener('change',physical);
   area.querySelector('[data-project-file]').addEventListener('change',async e=>{try{const file=e.target.files[0];if(file){const p=JSON.parse(await file.text());area.querySelector('[data-project]').value=pretty(p);physical();}}catch(e){report(e)}});
   area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);}catch(e){report(e)}});
-  area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');q.observations=csvObservations(await f.text(),area.querySelector('[data-observation-reference]').value);area.querySelector('[data-request]').value=pretty(q);}catch(e){report(e)}});
+  area.querySelector('[data-observation-file]').addEventListener('change',async e=>{try{const f=e.target.files[0];if(!f)return;let q=parse(area.querySelector('[data-request]'),'Analysis request');const text=await f.text();if(!root||current!==editorGeneration||!area.isConnected)return;const imported=csvObservations(text,area.querySelector('[data-observation-reference]').value,parse(area.querySelector('[data-project]'),'Chemical project'));q.observations=imported;area.querySelector('[data-request]').value=pretty(q);observations();area.querySelector('[data-observation-review]').parentElement.open=true;}catch(e){report(e)}});
  }
  async function openRun(id,field='final',offset=0){
   sourceGeneration++;reportGeneration++;
@@ -154,12 +217,12 @@ export function attachChemistry(host){
   selectedRun=id;page=offset;const run=await read('run',{run_id:id});if(!root||current!==runGeneration)return;
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
   target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}${run.state==='complete'?button('report-prepare','Prepare scientific report',id):''}</div>${fileList(run._downloads||[])}
-  <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
+  <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','interval_scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
   target.querySelector('[data-result-field]').addEventListener('change',e=>openRun(id,e.target.value,0).catch(report));
   if(run.state==='complete'){
    const result=await read('page',{run_id:id,field,offset,limit:100});if(selectedRun!==id||!root||current!==runGeneration)return;
    const columns=[...new Set(result.rows.flatMap(row=>Object.keys(row)))];
-   target.querySelector('[data-result-table]').innerHTML=`<p>${result.total?result.offset+1:0}–${result.offset+result.rows.length} of ${result.total} records</p>${table(result.rows,columns)}`;
+   target.querySelector('[data-result-table]').innerHTML=(field==='observations'?'<h3>Measurement operators and original limits</h3>'+table(result.rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','prediction','interval_contains_prediction','error_scale'])+'<h3>Complete retained result fields</h3>':'')+`<p>${result.total?result.offset+1:0}–${result.offset+result.rows.length} of ${result.total} records</p>${table(result.rows,columns)}`;
    target.querySelector('[data-action="chemistry-next"]').disabled=result.next_offset===null;
    target.querySelector('[data-action="chemistry-previous"]').disabled=offset===0;
   }
