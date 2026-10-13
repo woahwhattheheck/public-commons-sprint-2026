@@ -217,3 +217,58 @@ original report digest and workspace identity. Close only this adapter when
 finished. The full receiving commands in `OPERATING.md` reopen a new sparse
 working warehouse from the complete package, with all prior decisions and
 request histories intact.
+
+## Continue the original visible receiving workflow
+
+The source-owned receiving function is
+`sf88-operator-buyer-cli/native-receiving/decision-carry-browser.mjs`, relative
+to the selected `stellar/scf-starforge-20261009` source. It operates this same
+panel and the original request journals. The caller supplies an already running
+local workspace and the existing installed browser:
+
+~~~js
+const result = await runDecisionCarryBrowserReceiving({
+  url: originalPrivateLaunchUrl,
+  input: {
+    operation_id: originalOperationId,
+    source_commit: selectedSourceCommit,
+    workspace_id: originalWorkspaceId,
+    pair_id: selectedPairId,
+    source_report_id: frozenEarlierReportId,
+    target_run_id: laterRunId,
+    scope_basis: reviewedEngineeringBasis,
+    actor: reviewingEngineer,
+    reason: explicitSelectionReason,
+  },
+  outputDirectory: originalReceivingDirectory,
+  playwright: installedPlaywrightModuleOrAbsolutePath,
+  chromium: installedChromiumExecutable,
+});
+~~~
+
+Import the named function from the complete selected source file. Preserve the
+same input and output directory when continuing an interrupted operation. Keep
+the private launch URL with the local caller. The function starts its own browser
+context, closes that context on exit, and leaves the existing workspace listener
+under its original owner's control.
+
+This receiving operation reads every candidate in the selected review and
+explicitly selects **all eligible decisions** after opening their complete
+selection. Choose its input only when that complete eligible set is the
+engineer's intended selection. Use the ordinary panel for a smaller selection.
+At least one eligible decision is required. The function inspects representative
+original rows and groups for every available kind/state, reopens the same
+application and request after reload, freezes the actual target report, then
+downloads every declared handover file through the panel's supported individual
+file controls. It does not turn an ineligible source or changed policy into an
+eligible one.
+
+The returned `download_directory` and `manifest_sha256` identify the complete
+original handover. Inspect and receive that directory with the existing
+reconciliation package commands above, retaining the original workspace UUID.
+The result also records the actual review, application, report, export and
+request IDs. The browser profile remains beside the receiving directory so a
+continuation can recover its original request IDs; keep it private and exclude
+it from the customer handover. A completed browser return verifies all saved
+handover file lengths and hashes again. Browser screenshots and its diagnostic
+journal are internal operating records, separate from the original handover.

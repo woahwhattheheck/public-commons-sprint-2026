@@ -100,7 +100,8 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/PRIOR_DECISIONS.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.html",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.js",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.css"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/carry-forward.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/native-receiving/decision-carry-browser.mjs"
   ],
   "merchantProviders": {
     "coinmetrics-cloud-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/cloud-delivery/merchant-provider.mjs"
