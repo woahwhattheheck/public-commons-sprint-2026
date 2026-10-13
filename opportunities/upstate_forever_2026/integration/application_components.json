@@ -273,22 +273,26 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_discharge_sources",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_catchments",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_reference_flow_support",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "original_gauge_split_capture",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -700,6 +704,7 @@
         "model/ensemble_operations.py",
         "model/ensemble_references.py",
         "model/ensemble_report.py",
+        "model/ensemble_scientific_figures.py",
         "model/ensemble_scientific_source.py",
         "model/ensembles.py",
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
@@ -717,17 +722,20 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_parameter_studies",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "saved_study_consumers",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         },
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "complete_operating_guide",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -869,7 +877,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "paired_raster_studies",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -905,7 +914,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "source_profile_intake",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -1319,7 +1329,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_soil_preparation",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
@@ -1584,7 +1595,9 @@
         "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
         "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
         "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+        "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
         "source/receptor-topology/20261013/utility-focus-profile.json",
+        "source/receptor-topology/20261013/utility-topology-results.json",
         "source/utility-observed-context/20261013/README.md",
         "source/utility-observed-context/20261013/inputs.json",
         "source/utility-observed-context/20261013/regional-nutrient-series.csv",
@@ -1595,6 +1608,7 @@
         "source/utility-observed-context/20261013/utility-station-coverage.csv",
         "source/utility-observed-context/20261013/utility-station-year-method.csv",
         "source/utility-observed-context/20261013/utility-year-coverage.csv",
+        "source/utility-source-context/20261013/inputs.json",
         "source/utility-source-context/20261013/utility-source-context.json",
         "source/water_context/20261013/classified-full-domain-query.json",
         "source/water_context/20261013/classified-reaches.csv",
@@ -1631,7 +1645,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "watershed_source_reporting",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ],
       "source_manifests": [
@@ -3147,7 +3162,8 @@
         {
           "inventory": "integration/a74f-component-inventory-20261013.json",
           "family": "regional_gauge_support",
-          "revision": "4e6b5a7641df0cee912382c691622b6793a91c31"
+          "revision": "c33b6223523fd720d09f4ee819c7fdc9528cbc77",
+          "source_basis": "Current inventory records exact source blobs, including the complete scientific-report continuation"
         }
       ]
     },
