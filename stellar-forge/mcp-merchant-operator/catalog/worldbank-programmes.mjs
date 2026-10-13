@@ -20,7 +20,19 @@ const columns = { anyOf: [{ type: 'null' }, { type: 'object', maxProperties: 256
   propertyNames: { pattern: '^(0|[1-9][0-9]*)$' }, additionalProperties: {
     type: 'array', minItems: 1, maxItems: 4096, items: { type: 'object', additionalProperties: true } } }] };
 const selected = { ...workspace, exportId: sha };
+const intake={...workspace,intakeId:id};
+const intakeRequest=request({id,bytes:{type:'integer',minimum:1,maximum:32*1024*1024},sha256:sha,filename:text(240)});
 const descriptors = [
+ ['intake_list','Read one original source-intake history page; follow next_before. Read intake_status for available local upload bytes.',{...workspace,...page},['workspace'],true],
+ ['intake_begin','Retain one exact approved ZIP identity before chunk upload. Replay the same ID, byte count, SHA256 and filename.',{...workspace,request:intakeRequest},['workspace','request'],false],
+ ['intake_status','Read original intake, locally available_bytes, registration state, exact source revision and original ZIP identity.',intake,['workspace','intakeId'],true],
+ ['intake_chunk','Upload or restore one exact original aligned 256 KiB chunk. Resume from status.available_bytes; read status after each replayed chunk.',{...intake,request:request({offset:{type:'integer',minimum:0},sha256:sha,content:text(349528)})},['workspace','intakeId','request'],false],
+ ['intake_register','Register the complete approved source through the same original Analysis owner. Explicit resume is required for a failed/interrupted attempt. This preserves existing view/report/workbook selections.',{...intake,resume},['workspace','intakeId'],false],
+ ['intake_wait','Read this original registration until it leaves REGISTERING or the selected interval expires.',{...intake,...wait},['workspace','intakeId'],true],
+ ['intake_export','Retain the complete registered original ZIP, registration and original intent for portable receiving after the Analysis owner closes.',{...intake,expectedSha256:sha},['workspace','intakeId','expectedSha256'],false],
+ ['intake_manifest','Read the full retained source-intake export manifest.',selected,['workspace','exportId'],true],
+ ['intake_file','Read the complete original registered source file by exact manifest, hash and byte offset.',{...selected,file:text(200),expectedManifestSha256:sha,expectedSha256:sha,readId:text(128),offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES}},['workspace','exportId','file','expectedManifestSha256','expectedSha256'],true],
+ ['intake_file_release','Release this exact retained original source read.',{...selected,readId:text(128)},['workspace','exportId','readId'],false],
  ['connections','Read host-declared original Analysis workspaces and allowed programme names.',{},[],true],
  ['state','Read the original Analysis workspace and its exact saved identity.',workspace,['workspace'],true],
  ['list','Read one complete programme page. Follow next_before to retain all pages; only declared programme names are shown.',{...workspace,before:pattern(WORLDBANK_NAME),limit:page.limit},['workspace'],true],

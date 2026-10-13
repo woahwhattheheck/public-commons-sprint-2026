@@ -122,6 +122,9 @@ export class WorldBankProgrammeClient {
     }
   }
   async download(programme, operationId, descriptor, output) {
+    return this.#download(operation(programme, operationId) + '/files/' + encodeURIComponent(worldBankFileName(descriptor.name)), descriptor, output);
+  }
+  async #download(route, descriptor, output) {
     worldBankDescriptor(descriptor);
     try {
       const saved = await inspectConsoleWorkflowFile(output, descriptor);
@@ -129,7 +132,7 @@ export class WorldBankProgrammeClient {
         'The retained output contains different original bytes.', 'WORLDBANK_FILE_CHANGED');
       return { state: 'REOPENED', path: output, ...saved };
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    return this.#response(operation(programme, operationId) + '/files/' + encodeURIComponent(worldBankFileName(descriptor.name)),
+    return this.#response(route,
       undefined, async response => {
         need(response.headers.get('x-content-sha256') === descriptor.sha256 &&
           response.headers.get('content-length') === String(descriptor.bytes),
@@ -147,6 +150,34 @@ export class WorldBankProgrammeClient {
           return { bytes, sha256 };
         });
       }, { timeoutMs: 60 * 60 * 1000 });
+  }
+
+  intakeList(options) { return this.json('worldbank-intake' + page(options)); }
+  async intakeStatus(intakeId) {
+    const value = await this.json('worldbank-intake/' + id(intakeId));
+    need(value.workspace_id === this.#workspaceId && value.id === intakeId,
+      'Keep the original intake and workspace identity.', 'WORLDBANK_INTAKE_CHANGED');
+    return value;
+  }
+  intakeBegin(request) { id(request?.id); return this.json('worldbank-intake', request); }
+  intakeChunk(intakeId, request) { return this.json('worldbank-intake/' + id(intakeId) + '/chunks', request); }
+  intakeRegister(intakeId, { resume = false } = {}) {
+    need(typeof resume === 'boolean', 'Choose explicit registration continuation.');
+    return this.json('worldbank-intake/' + id(intakeId) + '/register', { resume });
+  }
+  async intakeWait(intakeId, { timeoutMs = 120000, pollMs = 500 } = {}) {
+    need(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 120000 &&
+      Number.isSafeInteger(pollMs) && pollMs >= 100 && pollMs <= 10000, 'Select the original registration wait.');
+    const until = Date.now() + timeoutMs;
+    for (;;) {
+      const value = await this.intakeStatus(intakeId);
+      if (value.status !== 'REGISTERING' || Date.now() >= until) return value;
+      await delay(Math.min(pollMs, Math.max(1, until - Date.now())), undefined,
+        { signal: AbortSignal.any([this.#controller.signal, this.#signal].filter(Boolean)) });
+    }
+  }
+  intakeDownload(intakeId, descriptor, output) {
+    return this.#download('worldbank-intake/' + id(intakeId) + '/original', descriptor, output);
   }
   close() { this.#closing = true; this.#controller.abort(); }
 }
