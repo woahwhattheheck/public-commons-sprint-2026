@@ -74,16 +74,16 @@
     "source_files": 252,
     "source_bytes": 3892300,
     "source_json_sha256": "49d32e6b7f5c3a764054076c65059cc6856f33d7b7cef5d6408adbd0de7d5c67",
-    "fresh_public_main": "77b65a741c84c812ff78a6d7eb63c8e9cd74a974",
+    "fresh_public_main": "c619bb3f72223231e0e382d27533d13c95226c39",
     "meaning": "Compose the current source and original component installers; continue the existing scientific Workspace and task. This source carrier does not claim a native model or browser run.",
     "current_public_shared_preimages": {
       "operator/server.py": {
-        "bytes": 58700,
-        "sha256": "299055bada5626d93bb3c6fd09b4eb5abe61f8c017fa7c4b0b002f1db775b508"
+        "bytes": 58743,
+        "sha256": "5518c0baac04e753b525672c79ebd4efccca3f29b0ec55f8834aba1d316e6528"
       },
       "operator/web/app.mjs": {
-        "bytes": 115408,
-        "sha256": "3eac30c695ce8cccc55819b6596cae6f4c85372dbf2989d15f47722042815a95"
+        "bytes": 116157,
+        "sha256": "974f088776a81067508f8f9bf6499ef8f93e8b2bfd0d32aa00d79354b8fb8c73"
       },
       "operator/web/index.html": {
         "bytes": 4367,
@@ -91,22 +91,22 @@
       }
     },
     "public_composition": {
-      "commit": "77b65a741c84c812ff78a6d7eb63c8e9cd74a974",
+      "commit": "c619bb3f72223231e0e382d27533d13c95226c39",
       "shared_preimages": {
         "operator/server.py": {
-          "bytes": 58700,
-          "sha256": "299055bada5626d93bb3c6fd09b4eb5abe61f8c017fa7c4b0b002f1db775b508"
+          "bytes": 58743,
+          "sha256": "5518c0baac04e753b525672c79ebd4efccca3f29b0ec55f8834aba1d316e6528"
         },
         "operator/web/app.mjs": {
-          "bytes": 115408,
-          "sha256": "3eac30c695ce8cccc55819b6596cae6f4c85372dbf2989d15f47722042815a95"
+          "bytes": 116157,
+          "sha256": "974f088776a81067508f8f9bf6499ef8f93e8b2bfd0d32aa00d79354b8fb8c73"
         },
         "operator/web/index.html": {
           "bytes": 4367,
           "sha256": "98f3ae2dec118f6ddb587267b2d504bab1dbfcbb77082f136c91fcb0982735cc"
         }
       },
-      "preserved": "Current ECSA run invocation, retained-source reuse, receiving-water controls, completed-model selection, native grid sizes, extension registration and all existing programme/scientific bodies."
+      "preserved": "Current ECSA run invocation, retained-source reuse, receiving-water controls, completed-model selection, native grid sizes, extension registration and all existing programme/scientific bodies. Current programme include_sources, paired-ensemble action labels and asynchronous source-preview selection guards remain unchanged."
     },
     "previous_public_main": "dba111837afa668fbcd65e9ce423b144cfc7c7de"
   },

@@ -19,9 +19,10 @@ const complete = run => run?.state === 'complete' && nativeModels(run.selection)
     outputs[model].every(name => !!run.artifacts?.[name]));
 
 const reusableStage = (run, model) => {
-  const stage = run?.stages?.[model];
+  const stage = run?.stages?.[model] || run?.stage_summary?.[model];
+  const fileCount = stage?.files ? Object.keys(stage.files).length : stage?.file_count;
   return !['running', 'queued'].includes(run?.state) && nativeModels(run?.selection).includes(model) &&
-    !!stage?.completed_at && Object.keys(stage.files || {}).length > 0;
+    !!stage?.completed_at && Number.isInteger(fileCount) && fileCount > 0;
 };
 
 export function attachRunAssembly({api, getState, openForm, submitAction, openItem}) {
@@ -61,11 +62,14 @@ export function attachRunAssembly({api, getState, openForm, submitAction, openIt
         ' · grid ' + short(original.grid_id) + ' · run ' + short(run.id) + ' · ' + run.state;
       const row = {run, label, sameCase: sameCase(original, target),
         search: [label, run.id, original.grid_id, original.profile_id, original.scenario_id, title(grids.get(original.grid_id))].join(' ').toLocaleLowerCase()};
-      for (const model of models) candidates[model].push({...row, label: model.toUpperCase() + ' completed ' + run.stages[model].completed_at + ' · ' + row.label});
+      for (const model of models) {
+        const completedAt = (run.stages?.[model] || run.stage_summary?.[model]).completed_at;
+        candidates[model].push({...row, completedAt, label: model.toUpperCase() + ' completed ' + completedAt + ' · ' + row.label});
+      }
     }
     for (const model of order) candidates[model].sort((left, right) =>
       Number(right.sameCase) - Number(left.sameCase) ||
-      String(right.run.stages[model].completed_at).localeCompare(String(left.run.stages[model].completed_at)) || left.run.id.localeCompare(right.run.id));
+      String(right.completedAt).localeCompare(String(left.completedAt)) || left.run.id.localeCompare(right.run.id));
     if (order.some(model => !candidates[model].length))
       throw Error('Complete an original NDR stage and an original SDR stage in this workspace before combining their results.');
     const chosen = Object.fromEntries(order.map(model => [model, candidates[model].find(row => row.sameCase)?.run.id || '']));
