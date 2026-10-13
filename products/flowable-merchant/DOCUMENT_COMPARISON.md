@@ -83,3 +83,7 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Preserve unfinished operator work
+
+Download the unfinished working package before closing the browser. It contains the complete original source, the exact current selection text (including unfinished JSON), reviewer text and every retained disposition/note. Reopening it restores working text without declaring a reviewed result. Compare the current source again before exporting a reviewed receiving package; its original validation and observed source identities still apply. Changing selected pairs retains prior notes in the working package, while final receiving contains only the current validated report rows.
