@@ -1,8 +1,11 @@
 """Original task/read/download transport for editable Conservation designs."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from model import conservation_design as model
-from model.common import verify_file
+from model.common import atomic_json, describe_file, held, identifier, verify_file
+from model.reuse import copy_verified
 
 ACTIONS = frozenset({"conservation.design.prepare", "conservation.design.receive"})
 
@@ -61,6 +64,35 @@ class ConservationDesign:
             raise self.Fault("CONSERVATION_DESIGN_ROUTE", "Choose a retained design operation.", 404)
         return self._call(self._downloads, workspace_key, record)
 
+    def _receive(self, workspace, value):
+        if "upload_id" not in value:
+            return model.receive(workspace, value)
+        if set(value) != {"upload_id"}:
+            raise ValueError("Supply exactly the original upload_id for a browser handover")
+        upload = self.operator.upload(identifier(value["upload_id"]))
+        if upload["bytes"] > model.MAX_BUNDLE_BYTES or upload["bytes"] <= 0:
+            raise ValueError("Receive a complete original design ZIP up to 100 MiB")
+        original = Path(upload["path"])
+        sha = identifier(upload["sha256"])
+        relative = "conservation-design/uploads/" + sha + "/original.zip"
+        directory = workspace.root / "conservation-design" / "uploads" / sha
+        directory.mkdir(parents=True, exist_ok=True)
+        with held(directory / ".upload.lock", blocking=False):
+            descriptor = copy_verified(
+                original.parent,
+                {"path": original.name, "sha256": upload["sha256"], "bytes": upload["bytes"]},
+                workspace.root, path=relative)
+            receipt = {key: upload[key] for key in
+                       ("id", "filename", "mime_type", "bytes", "sha256", "object")}
+            receipt["workspace_file"] = descriptor
+            receipt_path = directory / (identifier(upload["id"]) + ".json")
+            atomic_json(receipt_path, receipt, immutable=True)
+        result = model.receive(workspace, {"file": descriptor})
+        return {**result, "operator_upload": {
+            "id": upload["id"], "filename": upload["filename"],
+            "bytes": upload["bytes"], "sha256": upload["sha256"],
+            "file": descriptor, "receipt": describe_file(workspace.root, receipt_path)}}
+
     def invoke(self, task):
         value = task.get("payload")
         if not isinstance(value, dict):
@@ -69,7 +101,7 @@ class ConservationDesign:
         if task["action"] == "conservation.design.prepare":
             return self._call(model.prepare, ws, value)
         if task["action"] == "conservation.design.receive":
-            return self._call(model.receive, ws, value)
+            return self._call(self._receive, ws, value)
         raise self.Fault("CONSERVATION_DESIGN_ACTION", "Choose a supported design operation.", 404)
 
     def decorate_task(self, task):

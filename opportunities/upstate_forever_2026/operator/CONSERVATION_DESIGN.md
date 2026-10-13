@@ -13,15 +13,15 @@ Download **Complete editable project ZIP**. Start the supplied original editor:
 
 The editor's startup line gives its local URL. Use **Receive project**, create an alternative, edit the desired polygons, and select **Land-cover scenario**. Enter the actual source and replacement land-cover codes and a reason. Supplying an original grid/profile selection requests native preparation; the original partial NDR/SDR scope is preserved. Export the **complete native handover**, which includes original and edited GeoJSON, the exact binding, the editable source project and its member inventory.
 
-Return to **Scenario design** in the main operator and receive this complete ZIP. Browser uploads support 2 MiB ZIPs within the existing 4 MiB action body. For larger designs, retain the full ZIP in the Workspace and use its complete file descriptor; that route supports 100 MiB without sending the bytes through JSON. The model also accepts an already imported document source.
+Return to **Scenario design** in the main operator and choose this complete ZIP. The view uses the existing authenticated binary upload service, with the current operator upload limit and a 100 MiB maximum design handover. The queued request carries only the returned original upload ID. Before native receiving, the provider verifies that upload and retains its exact original bytes and receipt inside this Workspace. The advanced file-descriptor route and an already imported document source remain available.
 
-The queue calls the original editor's register_landcover, which uses Workspace.import_sources, save_scenario and prepare_run. The complete edited footprint is checked against the original model_domain before requesting a run, with reporting-area intersection reported separately. The returned original scenario and run remain available through the ordinary operator scenario/run controls.
+The queue calls the original editor's register_landcover, which uses Workspace.import_sources, save_scenario and prepare_run. The complete edited footprint is checked against the original model_domain before requesting a run, with reporting-area intersection reported separately. The result provides **Open original scenario** and **Open prepared run** buttons using the ordinary operator controls.
 
-The view retains an interrupted operation's identity and supports the existing task resume endpoint. Reopening a design operation rechecks its full files, original plan reference, native scenario and prepared run identity. Downloads preserve the original source bytes. Changing geometry creates an explicitly identified editor revision; it does not alter the source plan.
+The view keeps unsent field selections and the original browser File across tab remounts separately for each Workspace. Its upload is reused after a definite rejected queue request. Once submission is uncertain or accepted, the original operation identity remains recoverable; the normal task list can recover an accepted task even when its first response was lost. The view retains an interrupted operation's identity and supports the existing task resume endpoint. Reopening a design operation rechecks its full files, original plan reference, native scenario and prepared run identity. Downloads preserve the original source bytes. Changing geometry creates an explicitly identified editor revision; it does not alter the source plan.
 
 ## Source composition
 
-Receive every file in this package at the maintained application root. The original scenario-design directory is complete, including its browser, command-line tools, guides and original tests. The only changes to that owner's existing source are three guarded import statements across scenario-design/conservation.py and scenario-design/engine.py so the same module works as a private package and as its existing standalone CLI. scenario-design/__init__.py is additive. No global engine or conservation module aliases are installed.
+Receive every file in this package at the maintained application root. The original scenario-design directory is complete, including its browser, command-line tools, guides and original tests. The only changes to that owner's existing source are three guarded imports: two in scenario-design/conservation.py and one in scenario-design/engine.py. They let the same editor work as a private package and as its existing standalone CLI. scenario-design/__init__.py is additive. No global engine or conservation module aliases are installed.
 
 Additive runtime files:
 
@@ -34,9 +34,9 @@ Additive runtime files:
 
 The ordinary registered extension host reads the descriptor, mounts the client, dispatches the two queue actions, serves its assets, and retains existing authentication and file tickets. There is no shared server or Conservation browser edit. The native editor requires its existing Shapely and PyProj dependencies, already used by the scientific application.
 
-The original editor source and the complete editable receiving must remain under scenario-design/. Its SOURCE_MANIFEST.json is regenerated from the complete package with the import-compatible source and initializer. The original 69,719-byte upstream ZIP had SHA256 77f5a0122d1ffda1512c15ec4f907a90e37c6daa3bbdd622a74a1fcfce3f93b4. The source composition document retains all three exact import guards and original hashes.
+The original editor source and the complete editable receiving must remain under scenario-design/. Its SOURCE_MANIFEST.json is regenerated from the complete package with the import-compatible source and initializer. The original 69,719-byte upstream ZIP had SHA256 77f5a0122d1ffda1512c15ec4f907a90e37c6daa3bbdd622a74a1fcfce3f93b4. The source composition document retains all three exact import guards and original hashes. The supplied start.sh retains its executable mode.
 
-Workspace state is under conservation-design/preparations/<preparation-id>/ and conservation-design/received/<receiving-id>/. These hold views and receiving receipts; authoritative plans, source collections, scenarios and runs remain in their existing directories. A portable Workspace capture must include all Workspace files and the full scenario-design application directory. The editor may retain its independent editable drafts in the directory explicitly selected at startup; export those complete drafts when handing them to another operator.
+Workspace state is under conservation-design/preparations/<preparation-id>/ and conservation-design/received/<receiving-id>/. Browser originals and original upload receipts are retained under conservation-design/uploads/ before receiving; portable capture includes them. These hold views and receiving receipts; authoritative plans, source collections, scenarios and runs remain in their existing directories. A portable Workspace capture must include all Workspace files and the full scenario-design application directory. The editor may retain its independent editable drafts in the directory explicitly selected at startup; export those complete drafts when handing them to another operator.
 
 ## Queued actions and passive reads
 
@@ -50,7 +50,13 @@ conservation.design.prepare payload:
 
 geometry_role is reporting_units, whole_units, reporting_union or whole_unit_union. Preparation is repeat-safe for the exact original binding and choice. Its result includes id, kind=preparation, state=complete, plan_id, study_id, binding_id, project_id and files.binding/project/editable_project.
 
-conservation.design.receive accepts exactly one input:
+conservation.design.receive accepts exactly one input. The normal browser upload uses:
+
+    {"upload_id": "ORIGINAL_OPERATOR_UPLOAD_ID"}
+
+The provider resolves the upload through the existing authenticated operator, verifies its original bytes and hash, and copies the full file into this Workspace before calling model.receive with the retained descriptor. Native source/scenario identities are independent of the transport upload ID.
+
+A complete file already retained in the Workspace uses:
 
     {"file": {"path": "received/design.zip", "bytes": 12345, "sha256": "ACTUAL_SHA256"}}
 
@@ -58,7 +64,7 @@ or an original imported document:
 
     {"source": {"source_collection_id": "ORIGINAL_COLLECTION_ID", "source_id": "ORIGINAL_DOCUMENT_ID"}}
 
-or, for a ZIP at most 2 MiB:
+or, for compatibility with direct clients supplying a ZIP at most 2 MiB:
 
     {"bundle_base64": "COMPLETE_ORIGINAL_BYTES_BASE64"}
 
@@ -102,6 +108,6 @@ Python entry points are prepare(workspace, value), receive(workspace, value), ge
 
 ## Validation and receiving
 
-The complete original editor ZIP was decoded and every member matched its owner's SOURCE_MANIFEST before composition. All three package import edits match exact original strings, and all output file hashes are included in the complete carrier. The additive browser module was syntax-compiled in the JavaScript runtime; the native call sequence and result fields were checked against the maintained Workspace, binding and scenario modules.
+The complete original editor ZIP was decoded and every member matched its owner's SOURCE_MANIFEST before composition. All three package import edits match exact original strings, and all output file hashes are included in the complete carrier. The additive browser module was syntax-compiled and exercised in the JavaScript runtime with injected host, storage and DOM contracts. Focused checks covered a 3 MiB raw File producing a 186-byte queue request, a late Workspace change suppressing task submission, a rejected request preserving editability and reusing its original upload, newest-history-request wins, original operation recovery, per-Workspace draft/File retention, and native scenario/run links. The native call sequence and result fields were checked against the maintained Workspace, binding and scenario modules. Actual GIS/Chromium receiving uses the accepting original application host.
 
 The accepting original application receiver should use its existing actual regional plan: prepare the project; open and edit its original geometry; export the full native handover; receive it through the queue; reload that receiving record and compare its unchanged IDs/files. If an actual compatible native grid/profile is selected, retain that run_id and continue it through the existing run operation. This workflow reuses the selected original operation and does not rerun unrelated native cases.
