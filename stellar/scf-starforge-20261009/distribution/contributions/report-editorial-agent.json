@@ -1,0 +1,40 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "report-editorial-agent",
+  "description": "Original report issue, attributed return, reviewed reconciliation and complete recipient file receiving",
+  "commands": {
+    "report-editorial-agent": "stellar-forge/mcp-merchant-operator/report-editorial-cli.mjs"
+  },
+  "commandDescriptions": {
+    "report-editorial-agent": "Operate original Analysis report editorial returns and receive complete source-bound files"
+  },
+  "exports": {
+    "./merchant/report-editorial/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/report-editorial-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/report-editorial-client.mjs"
+    },
+    "./merchant/report-editorial/native": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/analysis-report-review-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/analysis-report-review-client.mjs"
+    },
+    "./merchant/report-editorial/provider": "./source/stellar-forge/mcp-merchant-operator/providers/report-editorial.mjs"
+  },
+  "merchantProviders": {
+    "report-editorial": "stellar-forge/mcp-merchant-operator/providers/report-editorial.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/analysis-report-review-client.mjs",
+    "stellar-forge/mcp-merchant-operator/analysis-report-review-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/report-editorial-agent.mjs",
+    "stellar-forge/mcp-merchant-operator/report-editorial-client.mjs",
+    "stellar-forge/mcp-merchant-operator/report-editorial-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/report-editorial-connection.mjs",
+    "stellar-forge/mcp-merchant-operator/report-editorial-contracts.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/report-editorial.mjs",
+    "stellar-forge/mcp-merchant-operator/providers/report-editorial.mjs",
+    "stellar-forge/mcp-merchant-operator/report-editorial-cli.mjs",
+    "stellar-forge/mcp-merchant-operator/REPORT_EDITORIAL_AGENT.md",
+    "stellar-forge/mcp-merchant-operator/examples/report-editorial-connection.json",
+    "stellar-forge/mcp-merchant-operator/report-editorial-records.mjs"
+  ]
+}
