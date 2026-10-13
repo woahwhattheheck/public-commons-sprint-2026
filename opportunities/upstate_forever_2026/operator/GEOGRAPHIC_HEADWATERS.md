@@ -1,12 +1,12 @@
 # Geographic model case — original operator integration
 
-This complete additive source joins model.geographic_headwaters.catalog/preview/prepare to the existing SourcePreparation provider and configurable SourceWorkbench. Install the four operator files into the current full application, then open the existing operator at its normal source boundary. Existing active processes retain their current application until their owner reaches that boundary.
+This complete additive source joins model.geographic_headwaters.catalog/preview/prepare to the existing SourcePreparation provider and configurable SourceWorkbench. Install the complete five-file operator family and its additive application component fragment into the current full application, then open the existing operator at its normal source boundary. Existing active processes retain their current application until their owner reaches that boundary.
 
 ## Operate the complete case
 
-Open Geographic model case. Receive new vector source families through the original Sources workflow first, preserving all sidecars and original metadata. Select the imported complete HUC polygon edition, original South Carolina reporting boundary, and published utility protection polygons. Select original reporting HUC12 identifiers using the retained topology browser. Choose the actual original HUC field, optional native layer/member and exact typed attribute conditions. Describe the scientific question and boundary meaning; retain any additional original utility selectors.
+Open Geographic model case. Receive new vector source families through the original Sources workflow first, preserving all sidecars and original metadata. Select the imported complete HUC polygon edition, original South Carolina reporting boundary, and published utility protection polygons. Select original reporting HUC12 identifiers using the retained topology browser. Choose the actual original HUC field, optional native layer/member and exact typed attribute conditions. Describe the scientific question and boundary meaning; retain any additional original utility selectors and optional original intake-point selectors. Intake points preserve their original collection/member/layer/typed properties separately from protection polygons, including when reopening a saved case.
 
-The upstream model domain, selected reporting watersheds, SC reporting intersection, full utility source polygons and utility/reporting intersection remain separately displayed. Preview derives their actual areas and original 30 m lattice from the selected native sources. It does not use a cached raster's extent. Review the declared simulated field seed and corridor width. Other native coefficients and model parameters remain visible in the prepared assumptions/source profile and continue through the original profile editor.
+The upstream model domain, selected reporting watersheds, SC reporting intersection, full utility source polygons and utility/reporting intersection remain separately displayed. Preview derives their actual areas and original 30 m lattice from the selected native sources. It does not use a cached raster's extent. Review the declared simulated field seed and corridor buffer on each side: 90 m means a nominal 180 m total corridor. The producer's actual 256 × 256 raster-window generation method is displayed; its numeric array working set is independent of total grid cells. Other native coefficients and model parameters remain visible in the prepared assumptions/source profile and continue through the original profile editor.
 
 Prepare selected source submits geography.prepare to the original operator task queue. The complete browser request is retained under its original operation ID before dispatch. The producer/source preview, complete control-method source family and installed geographic runtime versions are bound to that request; lost acknowledgement retries the same body. The producer prepares its source collection, grid, profile, baseline/restoration/control scenarios, three native runs, footprints and full parameter study in the same Workspace. Model execution stays in the original run/programme course. Original completed jobs and cases are retained.
 
@@ -29,6 +29,14 @@ Combined editions reuse the existing source composer and CAS objects. Full Works
 - Selection schema: upstate.geographic-headwaters-selection/v1.
 - Native sources use original source_collection_id/source_id, optional layer/part and exact typed where equality.
 - Scientific source values and scope are defined by the native producer; this adapter does not reinterpret geometry or calculate loads.
+
+## Explicit matching editions
+
+The optional Control matching method selects greedy or exact_monge. Leaving it blank preserves the legacy native selection without adding either matching field. A positive integer max_working_bytes can be entered with an explicit method; a budget alone follows the native producer's validation error. The native explicit-method default is 1073741824 bytes, and the separately named exact four-anchor preset declares 2147483648 bytes. Preview, prepared summary and reopening preserve the actual declared method and budget. Installation does not change any admitted case or silently switch its matching method. Use the current6A4E exact-method producer at the existing source adoption boundary.
+
+## Complete application assembly
+
+The additive integration/component_fragments/geographic-operator.json declares this full operator family and its original native source dependencies. The maintained application assembler composes it with the current catalogue and other fragments, so full export/restore retains the provider, manifest, client, stylesheet and guide together. Keep all current fragments and their original native dependencies in the same source edition.
 
 ## Current equipped receiving
 

@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "worldbank-programmes",
-  "description": "Original World Bank programme agent, complete customer files and recurring Console handover",
+  "description": "Original World Bank programme agent, approved source intake and complete customer files",
   "commands": {
     "worldbank-programme-agent": "stellar-forge/mcp-merchant-operator/worldbank-programme-cli.mjs"
   },
@@ -14,7 +14,11 @@
       "import": "./source/stellar-forge/mcp-merchant-operator/worldbank-programme-client.mjs"
     },
     "./merchant/worldbank-programmes/recipes": "./source/stellar-forge/mcp-merchant-operator/console/worldbank-programme-recipes.mjs",
-    "./merchant/worldbank-programmes/provider": "./source/stellar-forge/mcp-merchant-operator/providers/worldbank-programmes.mjs"
+    "./merchant/worldbank-programmes/provider": "./source/stellar-forge/mcp-merchant-operator/providers/worldbank-programmes.mjs",
+    "./merchant/worldbank-programmes/intake": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/worldbank-intake-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/worldbank-intake-client.mjs"
+    }
   },
   "merchantProviders": {
     "worldbank-programmes": "stellar-forge/mcp-merchant-operator/providers/worldbank-programmes.mjs"
@@ -24,6 +28,11 @@
     "stellar-forge/mcp-merchant-operator/examples/worldbank-programme-connection.json",
     "stellar-forge/mcp-merchant-operator/worldbank-programme-client.d.mts",
     "stellar-forge/mcp-merchant-operator/worldbank-programme-agent.mjs",
-    "stellar-forge/mcp-merchant-operator/worldbank-programme-connection.mjs"
+    "stellar-forge/mcp-merchant-operator/worldbank-programme-connection.mjs",
+    "stellar-forge/mcp-merchant-operator/WORLDBANK_SOURCE_INTAKE.md",
+    "stellar-forge/mcp-merchant-operator/worldbank-intake-client.mjs",
+    "stellar-forge/mcp-merchant-operator/worldbank-intake-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/worldbank-intake-agent.mjs",
+    "stellar-forge/mcp-merchant-operator/worldbank-intake-contracts.mjs"
   ]
 }

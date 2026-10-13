@@ -145,7 +145,19 @@ def preview(workspace, selection):
             if Path(artifact.get("path", "")).suffix.lower() in {".tif", ".tiff"}:
                 key = (metric, artifact.get("units"))
                 quantities[key] = {"metric": metric, "units": artifact.get("units")}
+    from . import gis_study_context as context
+    saved_report = (context.report_context(workspace, collection["id"], entry["id"],
+                                          selection["scientific_report_id"])
+                    if selection.get("scientific_report_id") else None)
+    saved_history = (context.history_context(workspace, captured, selection["execution_history_id"])
+                     if selection.get("execution_history_id") else None)
     return {
+        "scientific_reports": context.report_choices(workspace, collection["id"], entry["id"]),
+        "execution_histories": context.history_choices(workspace, runs),
+        "selected_scientific_report": ({k: v for k, v in saved_report.items() if k != "attachment"}
+                                      if saved_report else None),
+        "selected_execution_history": ({k: v for k, v in saved_history.items() if k != "attachment"}
+                                      if saved_history else None),
         "schema": "upstate.native-study-gis-selection/v1", "version": VERSION,
         "source_collection_id": collection["id"], "source_id": entry["id"],
         "source_sha256": entry["body"]["sha256"], "source_title": entry["title"],
@@ -235,6 +247,9 @@ def request(workspace, selection):
                        "files_sha256": rendered["files_sha256"],
                        "source_collection_id": collection["id"], "source_id": entry["id"]},
         })
+    from . import gis_study_context as context
+    saved_contexts = context.selected_contexts(workspace, collection["id"], entry["id"], captured, chosen)
+    result["attachments"].extend(row["attachment"] for row in saved_contexts)
     by_run = {}
     for member in plan["members"]:
         for row in member["runs"]:
@@ -258,6 +273,8 @@ def request(workspace, selection):
         "source_title": entry["title"], "design_title": plan["title"],
         "scope": deepcopy(grid["spec"]), "runs": ids, "comparisons": list(comparisons),
         "context_attachment_id": context_id,
+        "saved_contexts": [{"binding": row["binding"], "title": row["title"],
+                            "attachment_id": row["attachment"]["id"]} for row in saved_contexts],
         "interpretation": "Retained native model artifacts and original numerical report. Source simulation and geography remain those of this selected edition. No values are recomputed or converted.",
     }
     return result

@@ -3,6 +3,7 @@ import { renderOpenApiApplicationReview } from './openapi-application.mjs';
 import { renderApplicationReview } from './application-review.mjs';
 import { renderAccountingApplicationReview } from './accounting-application.mjs';
 import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
+import { createApplicationOutputReader } from './application-output.mjs';
 import { createApplicationLibrary } from './application-library.mjs';
 import { createApplicationInputsView } from './application-inputs.mjs';
 import { createApplicationDrafts } from './application-drafts.mjs';
@@ -18,7 +19,7 @@ const button = (text, action) => {
   node.addEventListener('click', action); return node;
 };
 const query = (path, value) => path + '?' + new URLSearchParams(value);
-const readable = text => String(text ?? '').replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+const readable = text => String(text ?? '').replace(/\x1b\][^\x07]*?(?:\x07|\x1b\\)/g, '')
   .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 function outcomeText(result, source = null) {
   if (!result) return source ? 'Original outcome is null · Receipt: ' + source : 'Original operation retained.';
@@ -205,7 +206,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
   inputForm.append(element('p', 'This is the original application terminal. Review its current prompt, then enter the response yourself. Opening or refreshing this page sends no input.', 'note'),
     field('Terminal response', input), terminalActions, inputStatus);
   const workbookResults = createWorkbookResultsView({ api, message, error });
-  outputPanel.append(outputDescription, output, inputForm, workbookResults.root);
+  const outputReaderRoot = element('div');
+  outputPanel.append(outputDescription, outputReaderRoot, inputForm, workbookResults.root);
+  const outputReader = createApplicationOutputReader({ root: outputReaderRoot, api,
+    getWorkspaceId: () => getState()?.workspaceId, error, output });
   root.replaceChildren(header, intro, libraryRoot, inputRoot, configuration, selectedPanel, history, outputPanel);
   const drafts = createApplicationDrafts({
     root: draftRoot, controls: { label, runtime, kind, settings }, reviewButton,
@@ -643,14 +647,9 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
     const response = await api(query(run.terminal ? '/api/applications/terminal' : '/api/applications/output', { applicationId: app.id, operationId: id }));
     if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     outputPanel.hidden = false;
-    const bottom = output.scrollTop + output.clientHeight >= output.scrollHeight - 40;
-    output.textContent = response.output.available === false
-      ? readable(response.output.error.code + ': ' + response.output.error.message) : readable(response.output.text);
-    if (bottom) output.scrollTop = output.scrollHeight;
-    outputDescription.textContent = id + (response.output.available === false
-      ? response.output.state === 'NOT_CREATED' ? ' · worker output has not been created yet' : ' · retained output is currently unavailable'
-      : ' · ' + response.output.totalBytes + ' retained output bytes' +
-        (response.output.offset ? ' · showing the last ' + (response.output.totalBytes - response.output.offset) + ' bytes' : ''));
+    await outputReader.update({ applicationId: app.id, operationId: id });
+    if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
+    outputDescription.textContent = id;
     if (response.observation?.status === 'UNAVAILABLE')
       outputDescription.textContent += ' · Current process status is unavailable; retained output and results remain attached.';
     const outcome = run.terminal ? response.managedOutcome : response;
@@ -779,7 +778,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
     async choose(id) { navigationVersion++; selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
     reset() {
       scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
-      resetHistory(null); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
+      resetHistory(null); outputReader.reset(); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
       openapiSetup.reset(); inputLibrary.reset(); workbookResults.reset();
     },

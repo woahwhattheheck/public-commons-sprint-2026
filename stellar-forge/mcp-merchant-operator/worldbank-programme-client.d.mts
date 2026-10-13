@@ -18,6 +18,13 @@ export declare class WorldBankProgrammeClient{
  comparison(id:string,options?:Record<string,unknown>):Promise<Record<string,unknown>>;
  wait(name:string,id:string,options?:{timeoutMs?:number;pollMs?:number}):Promise<NativeOperation>;
  download(name:string,id:string,file:FileDescriptor,output:string):Promise<unknown>;
+ intakeList(page?:{before?:number;limit?:number}):Promise<Record<string,unknown>>;
+ intakeStatus(id:string):Promise<import('./worldbank-intake-client.mjs').NativeIntake>;
+ intakeBegin(request:{id:string;bytes:number;sha256:string;filename:string}):Promise<import('./worldbank-intake-client.mjs').NativeIntake>;
+ intakeChunk(id:string,request:{offset:number;sha256:string;content:string}):Promise<Record<string,unknown>>;
+ intakeRegister(id:string,options?:{resume?:boolean}):Promise<Record<string,unknown>>;
+ intakeWait(id:string,options?:{timeoutMs?:number;pollMs?:number}):Promise<import('./worldbank-intake-client.mjs').NativeIntake>;
+ intakeDownload(id:string,file:FileDescriptor,output:string):Promise<unknown>;
  close():void;
 }
 export declare function createWorldBankProgrammeDownload(connect:()=>Promise<unknown>):unknown;

@@ -71,14 +71,23 @@ def make_review_plan(args, selected, data, collection, source_id, project_sha, p
     return plan
 
 
-def verify_plan(store, plan_id, project_sha, collection_id, source_id, edition):
+def verify_plan(ws, store, plan_id, project_sha, collection_id, source_id, edition, dataset_identity):
     plan = store.get(plan_id)
     link = plan.get("watershed_review", {})
-    wanted = {"original_project_sha256": project_sha,
-              "source_collection_id": collection_id, "source_id": source_id,
+    wanted = {"original_project_sha256": project_sha, "source_id": source_id,
               "source_edition": edition}
     if any(link.get(key) != value for key, value in wanted.items()):
         raise ValueError("Native plan belongs to another original review/source")
+    if link.get("source_collection_id") != collection_id:
+        # A maintained desk/UI upgrade changes the source collection even when
+        # the exact original scientific dataset and saved review are unchanged.
+        # Keep the plan's original source; verify the complete original dataset
+        # instead of silently rebinding that frozen native provenance.
+        _, original_source = ws.source_file(link["source_collection_id"], source_id)
+        matches = [item for item in original_source["companions"]
+                   if item.get("view_path", item.get("filename")) == "data/dataset.json"]
+        if len(matches) != 1 or {key: matches[0][key] for key in ("bytes", "sha256")} != dataset_identity:
+            raise ValueError("Updated desk has another original scientific dataset")
     return plan
 
 
@@ -309,12 +318,14 @@ const r=restoreProject(p,d);console.log(JSON.stringify({...p,settings:r.state,no
                     plan = make_review_plan(args, selected, data, collection,
                                             source_id, project_sha, plan_id, as_of)
                     plan = store.create(validate_plan(plan), actor="ECO-CLOUD-REVIEW13")
-                plan = verify_plan(store, plan_id, project_sha, collection["id"], source_id, data["edition"])
+                plan = verify_plan(ws, store, plan_id, project_sha, collection["id"], source_id, data["edition"],
+                                   {key: by_name["data/dataset.json"][key] for key in ("bytes", "sha256")})
                 plan = attachment(store, plan, project, project_sha)
                 inspected, retained = selected_report(store, out, app, plan, as_of)
                 reported = store.get(plan_id, inspected["revision"])
                 result["plan"] = {
                     "id": plan_id, "revision": reported["revision"],
+                    "original_source_collection_id": reported["watershed_review"]["source_collection_id"],
                     "action": "received_original_preserving_current_edits",
                     "task_count": len(reported["tasks"]),
                     "candidate_count": len(reported["candidates"]),

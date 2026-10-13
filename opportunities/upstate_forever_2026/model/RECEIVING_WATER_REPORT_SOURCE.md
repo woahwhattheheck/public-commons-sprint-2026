@@ -69,6 +69,57 @@ geometry operations when the saved plan contains them. This producer neither
 repairs nor reinterprets geometry. A new source-plan edition produced by an
 explicit geometry interpretation receives its own original plan identity.
 
+### Complete source detail in report-source edition 4
+
+The readable classification labels and display-only area/buffer precision from
+edition 3 remain unchanged. The original classification object also accompanies
+the source table in structured report data, including exact source field names,
+nested values, nulls, original precision and publisher area attributes. Those
+publisher attributes stay distinct from the plan's projected contribution area.
+
+Each receiving area's relationship rationale is shown in full. An upstream-HUC
+chapter identifies the original receiving-HUC selection method and gives the
+complete ordered associated HUC list, labeling receiving seeds separately from
+their upstream ancestors. The associated count **includes the receiving HUCs**.
+Boundary-only contacts retain their own rows and count; a boundary contact alone
+does not establish upstream contribution. Membership can overlap between
+receiving areas. Original evidence references and additional relation fields
+are displayed with unambiguous JSON Pointer field paths, explicit value types
+and original array positions.
+
+Geometry notes retain the original reader and analysis CRS, then show each
+selected feature's recorded operation in order. The table identifies the native
+feature, zero-based source-array position when recorded, one-based operation
+number, stage, action and reason. It preserves repeated identical operations at
+different positions. When source and receptor metadata describe the same event,
+the event appears once; structured report data retains both original locations
+and their unchanged original dictionary or encoded-string values. Other original
+operation fields remain in a separate table. The reader's source-collection
+metadata is retained in full alongside the readable geometry table, including
+original CRS WKT, field definitions and reader hashes.
+
+For the actual four-area protection study, the existing reader's operations on
+Pioneer features 131 and 132 are descriptions of already-saved native geometry.
+This chapter performs no new geometry interpretation. Plan/source capture,
+scientific quantities, figures, import verification and immutable record checks
+remain unchanged. A completed analysis still uses the original numerical
+formatter and accounting tables.
+
+Preparing the same saved plan or completed analysis with this source creates a
+new capture edition through the existing action or CLI. Select that returned
+source in the current composer. Previously saved sources and completed reports
+keep their original bytes; reopening them does not regenerate them. The native
+selected-Study transfer explicitly admits edition 4 with the same exact source,
+map and analysis implementation requirements as edition 3. All earlier supported
+editions remain admitted under their original requirements.
+
+At the producing host's existing boundary, open the new actual PDF and HTML,
+inspect the selected source and HUC tables, use original map/source/download
+links and reopen the selected editable Study. Look at desktop and narrow-width
+output and all outgoing attachments. Check the exact selected plan's feature
+operation text and complete structured metadata. Continue the original receiving
+operation; this update adds no source acquisition or model calculation.
+
 ### What a completed-analysis report means
 
 The selected analysis must have state `complete`. Its exact plan record hash

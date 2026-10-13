@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-operator",
+  "components": {
+    "geographic-operator": {
+      "title": "Original geographic model operator and editable source choices",
+      "paths": [
+        "operator/geographic_preparation.py",
+        "operator/extensions/geographic-headwaters.json",
+        "operator/web/geographic_workbench.mjs",
+        "operator/web/geographic_workbench.css",
+        "operator/GEOGRAPHIC_HEADWATERS.md"
+      ],
+      "requires": [
+        "source-preparation",
+        "retained-application-source",
+        "geographic-native-receiving"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-operator"
+  ]
+}

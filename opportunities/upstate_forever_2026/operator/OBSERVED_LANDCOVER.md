@@ -292,3 +292,68 @@ Open the extracted `START_HERE.html` at desktop and 390px width. Use its PDF, of
 
 This is continuation of the existing selected-HUC receiving operation, including its original accepted native handle. Actual geographic baseline/restoration/matched-control NDR/SDR work remains the owner's priority; this annual categorical comparison retains its observational units and paired-valid support. Preserve active owners and processes, carry the actual elapsed operation history, and stop/preserve at **14:00 UTC on 13 October 2026** without an automatic restart.
 
+
+
+## Receive an already staged original analysis
+
+The native comparison/report course accepts the original sources already present on the
+receiving machine. Use `--source-manifest` for a complete retained source manifest, or
+`--source-collection-id` for an original collection already imported into the same Workspace.
+The installed `PUBLISHED` shortcut remains the default when neither option is selected;
+the staged route does not copy or rename a different manifest into that shortcut.
+
+The paired report's existing
+`observations/landcover_2023_2025/scientific-report/model-sources.json` contains ten
+original input entries, including the completed `analysis-run.json` with role
+`LANDCOVER_OBSERVED_CONTEXT`. Its complete original relative bodies must remain beside
+the staged manifest until its queued import completes. For the existing SOL13-DEMO7234
+course, use the same qualified Python, application, Workspace, operator state, output
+directory, operation ID, title, source revision and HUC selections already assigned to
+that course; add:
+
+```sh
+  --source-manifest "$STAGE/observations/landcover_2023_2025/scientific-report/model-sources.json"
+```
+
+For a collection already retained in the Workspace, use its actual ID:
+
+```sh
+  --source-collection-id "$ORIGINAL_COLLECTION_ID"
+```
+
+If that exact collection has several original analysis-run entries, also pass
+`--analysis-source-id "$ORIGINAL_ANALYSIS_SOURCE_ID"`. The course requires one
+unambiguous analysis and preserves its actual body SHA. It never selects an arbitrary
+catalog entry or substitutes a source with the same title.
+
+The explicit manifest uses the original operator's registered-source preview and
+`source.import` task. That task imports every original entry and companion through the
+maintained Workspace API. The next step resolves only the returned collection ID and
+calls the original land-cover input reader, which validates the annual result hashes,
+years, grid, reporting domain, paired support and all directional matrix entries.
+The same comparison, scientific report, downloads, Workspace restore and cold reopen
+then proceed. There is no raster calculation or model job in this intake.
+
+### Resume the same source intake
+
+The intake is recorded separately under `original_source_intake` in
+`selected-huc-receiving.json`. Its request binds the manifest path, bytes and SHA, or the
+explicit existing collection choice; its validated selection retains the actual
+collection ID, analysis source ID and body SHA. The original Course configuration
+does not change. This lets an existing empty course recover from the former missing
+`PUBLISHED` path before any source import has been admitted.
+
+An already admitted original import or saved comparison cannot be silently replaced
+with another intake. On retries, the exact accepted native task and preview are reused. A saved import
+request is reconciled before requiring its temporary manifest again, including a
+process interruption after native completion but before the Course wrote its result.
+An unfinished worker still verifies the original manifest path and hash through that
+same saved preview. Once import has completed, its retained collection reopens without depending on the
+temporary staged manifest. Omitting the explicit option on a retry reuses the saved
+intake; supplying it again must match the same saved request. Use the existing
+`--resume-failed --reviewed-source-revision` repair controls when applying this corrected
+receiver to an incomplete course that already recorded an earlier application edition.
+
+The subsequent `--selected-study`, `--recipient-handover` and cold-reopen modes use
+their completed original comparison/report identities. Do not add a new intake option
+to those continuation commands.
