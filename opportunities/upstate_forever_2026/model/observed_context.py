@@ -1,6 +1,7 @@
 """Bind recovered observations and their figures into the current scientific report."""
 from __future__ import annotations
 import json
+from hashlib import sha256
 from pathlib import Path, PurePosixPath
 import shutil
 from .common import atomic_json, describe_file, file_digest, read_json
@@ -66,10 +67,52 @@ def _source(workspace, selection):
                "member_sha256": {name: members[name]["sha256"] for name in sorted(members)}}
     return {"binding": binding, "recipe": recipe, "entry": entry, "members": members}
 
+def source_choices(selection):
+    """Return the ordered original reports selected for this delivery."""
+    primary = selection.get("source_roles", {}).get(ROLE)
+    if primary is not None and not isinstance(primary, dict):
+        raise ValueError("Select an original primary observed source document")
+    explicit = "observed_context_sources" in selection
+    supplied = selection.get("observed_context_sources")
+    choices = supplied if explicit else ([primary] if primary is not None else [])
+    if not isinstance(choices, list):
+        raise ValueError("Observed report selections must be an ordered list")
+    result, seen = [], set()
+    for choice in choices:
+        if not isinstance(choice, dict):
+            raise ValueError("Select an original observed source collection and document")
+        key = (choice.get("source_collection_id"), choice.get("source_id"))
+        if any(not isinstance(value, str) or not value.strip() for value in key):
+            raise ValueError("Observed report selections need their original source identities")
+        if key in seen:
+            raise ValueError("Select each original observed report once")
+        seen.add(key)
+        result.append({"source_collection_id": key[0], "source_id": key[1]})
+    if explicit and primary is not None:
+        primary_key = (primary.get("source_collection_id"), primary.get("source_id"))
+        if not result or primary_key != (result[0]["source_collection_id"], result[0]["source_id"]):
+            raise ValueError("The primary observed source must be the first selected report")
+    return result
+
+
+def _selected_sources(workspace, selection):
+    return [_source(workspace, {"source_roles": {ROLE: choice}})
+            for choice in source_choices(selection)]
+
+
+def _binding(sources):
+    if not sources:
+        return None
+    if len(sources) == 1:
+        return sources[0]["binding"]
+    return {"schema": "upstate.observed-report-set-binding/v2",
+            "edition": EDITION + "+ordered-reports-v1",
+            "reports": [source["binding"] for source in sources]}
+
+
 def bind(workspace, selection):
-    """Bind this selected original source before the native delivery identity."""
-    source = _source(workspace, selection)
-    return source["binding"] if source else None
+    """Bind every selected original source before the native delivery identity."""
+    return _binding(_selected_sources(workspace, selection))
 
 
 def _retained_member(members, name, prefix):
@@ -170,17 +213,13 @@ def _concentration_support(source):
         "observations": enrich_observation_context(observations),
     }
 
-def collect(workspace, selection, directory, state):
-    """Return current report blocks and retained original assets for one delivery."""
-    source = _source(workspace, selection)
-    if source is None:
-        return None
+def _collect_source(source, directory, state, *, namespace=None):
+    """Retain one original report and its independently bound study context."""
     binding = source["binding"]
-    if selection.get("observed_context_binding") != binding:
-        raise ValueError("Delivery observed source differs from the bound original edition")
     directory = Path(directory)
     members, recipe = source["members"], source["recipe"]
-    prefix = Path("observed-context") / binding["body_sha256"]
+    scope = Path(namespace) if namespace else Path()
+    prefix = Path("observed-context") / scope / binding["body_sha256"]
     files, delivered = {}, {}
     for index, (name, item) in enumerate(sorted(members.items())):
         target = directory / prefix / _relative(name)
@@ -207,7 +246,7 @@ def collect(workspace, selection, directory, state):
     concentration = _concentration_support(source)
     if concentration is not None:
         from measurement_workspace.observation_support import report_sections
-        support_path = directory / "observed-support" / binding["body_sha256"] / "concentration-context.json"
+        support_path = directory / "observed-support" / scope / binding["body_sha256"] / "concentration-context.json"
         atomic_json(support_path, concentration)
         support_file = describe_file(
             directory, support_path, source_id=binding["source_id"],
@@ -250,4 +289,42 @@ def collect(workspace, selection, directory, state):
         {"title": item.get("title", name), "path": item["path"]}
         for name, item in sorted(delivered.items())
         if name in recipe.get("source_links", [])]}]])
+    return {"sections": sections, "binding": binding, "files": files}
+
+
+def collect(workspace, selection, directory, state):
+    """Compose selected original reports while retaining each source's identity."""
+    sources = _selected_sources(workspace, selection)
+    if not sources:
+        return None
+    binding = _binding(sources)
+    if selection.get("observed_context_binding") != binding:
+        raise ValueError("Delivery observed sources differ from their bound original editions")
+    if len(sources) == 1:
+        return _collect_source(sources[0], directory, state)
+    sections = [["Selected observed studies", [
+        "The following original studies are included in the selected order. Each study retains "
+        "its original methods, sampling periods, source quantities, figures and measurement support.",
+        {"kind": "table", "columns": ["Order", "Original report", "Source collection", "Source document"],
+         "rows": [[str(index + 1), source["recipe"].get("title", source["entry"].get("title", "")),
+                   source["binding"]["source_collection_id"], source["binding"]["source_id"]]
+                  for index, source in enumerate(sources)],
+         "widths": [0.4, 2.5, 1.5, 1.5]},
+    ]]]
+    files = {}
+    for index, source in enumerate(sources):
+        original = source["binding"]
+        namespace = sha256(json.dumps(original, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        product = _collect_source(source, directory, state, namespace=namespace)
+        sections.append([source["recipe"].get("title", source["entry"].get("title", "Observed study")), [
+            "Original study edition: " + str(source["recipe"].get("edition", "retained source")) +
+            ". Source collection " + original["source_collection_id"] +
+            "; document " + original["source_id"] + ".",
+        ]])
+        sections.extend(product["sections"])
+        for name, item in product["files"].items():
+            files["report_%03d_" % index + name] = {
+                **item, "source_collection_id": original["source_collection_id"],
+                "observed_report_source_id": original["source_id"],
+            }
     return {"sections": sections, "binding": binding, "files": files}
