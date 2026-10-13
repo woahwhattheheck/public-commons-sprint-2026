@@ -1,0 +1,137 @@
+{
+  "schema": "upstate.f7-retained-catchments/v1",
+  "title": "Original P9 tributary NLDI responses reused without network acquisition",
+  "original_commit": "81120739440bdaf152182e0a35c29cd83b119545",
+  "p9_source_id": "430f1c2185f2cf14a88c992f270b729e81d9de5cecd20ec67def1c26ff86cc03",
+  "p9_preparation_id": "4deee902904529bf1f1ecac709451de7a67158174edd1e4cde0811e431be6ddb",
+  "p9_plan_git_blob": "91b8cccea161aa8956497b6a61ad8d76a1c5aacc",
+  "files": [
+    {
+      "bytes": 567,
+      "path": "nldi/comid-6269342.json",
+      "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342?f=json",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/comid-6269342.json",
+      "git_blob": "94598ff1670d959d32eb454045bcf2a240e91dcc",
+      "bundle_path": "retained-catchments/comid-6269342.json"
+    },
+    {
+      "bytes": 27736,
+      "path": "nldi/basin-comid-6269342.json",
+      "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342/basin?f=json&simplified=false&splitCatchment=false",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6269342.json",
+      "git_blob": "23aa8a66688915c3cd85f978deccce71c6d745b4",
+      "bundle_path": "retained-catchments/basin-comid-6269342.json"
+    },
+    {
+      "bytes": 803,
+      "path": "nldi/comid-11730084.json",
+      "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084?f=json",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/comid-11730084.json",
+      "git_blob": "ba904cac5501986ed777442aa61112581c9b123c",
+      "bundle_path": "retained-catchments/comid-11730084.json"
+    },
+    {
+      "bytes": 37813,
+      "path": "nldi/basin-comid-11730084.json",
+      "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084/basin?f=json&simplified=false&splitCatchment=false",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-11730084.json",
+      "git_blob": "e61b419505d9781b3ee271c0b5313b9edb974ec3",
+      "bundle_path": "retained-catchments/basin-comid-11730084.json"
+    },
+    {
+      "bytes": 878,
+      "path": "nldi/comid-6280111.json",
+      "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111?f=json",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/comid-6280111.json",
+      "git_blob": "35b9272b04cc556f4d11d7eece4e2e42246f163f",
+      "bundle_path": "retained-catchments/comid-6280111.json"
+    },
+    {
+      "bytes": 63709,
+      "path": "nldi/basin-comid-6280111.json",
+      "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111/basin?f=json&simplified=false&splitCatchment=false",
+      "repo_path": "source/usgs-southeast-sparrow-2012/nldi/basin-comid-6280111.json",
+      "git_blob": "c058f06d2f224ec96b3d9865789180dfa5ec4a72",
+      "bundle_path": "retained-catchments/basin-comid-6280111.json"
+    }
+  ],
+  "catchments": [
+    {
+      "catchment_id": "d6a97f6c3d3a4951b1e1819e117bf27d182259596a3a14af0728ed66a8ef93c5",
+      "basin": {
+        "bytes": 27736,
+        "path": "nldi/basin-comid-6269342.json",
+        "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342/basin?f=json&simplified=false&splitCatchment=false"
+      },
+      "component_indices": [
+        0
+      ],
+      "feature": {
+        "bytes": 567,
+        "path": "nldi/comid-6269342.json",
+        "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342?f=json"
+      },
+      "identifier": "6269342",
+      "source": "comid",
+      "split_catchment": false,
+      "station_role": "published_reach"
+    },
+    {
+      "catchment_id": "c09358d30c690db19c117274400e28e15b4ea2e60cb0c3e30f420a6e44b47af7",
+      "basin": {
+        "bytes": 37813,
+        "path": "nldi/basin-comid-11730084.json",
+        "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084/basin?f=json&simplified=false&splitCatchment=false"
+      },
+      "component_indices": [
+        0
+      ],
+      "feature": {
+        "bytes": 803,
+        "path": "nldi/comid-11730084.json",
+        "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084?f=json"
+      },
+      "identifier": "11730084",
+      "source": "comid",
+      "split_catchment": false,
+      "station_role": "published_reach"
+    },
+    {
+      "catchment_id": "4c39889618c8345116860a8f829022b2f606ebd681f4a374e1adc4f9b7ebe658",
+      "basin": {
+        "bytes": 63709,
+        "path": "nldi/basin-comid-6280111.json",
+        "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111/basin?f=json&simplified=false&splitCatchment=false"
+      },
+      "component_indices": [
+        0
+      ],
+      "feature": {
+        "bytes": 878,
+        "path": "nldi/comid-6280111.json",
+        "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab",
+        "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111?f=json"
+      },
+      "identifier": "6280111",
+      "source": "comid",
+      "split_catchment": false,
+      "station_role": "published_reach"
+    }
+  ],
+  "notes": [
+    "All six bodies are identical to the original P9 prepared-tributaries source companions.",
+    "Stevens Creek keeps published reach COMID11730084; the linked flow gauge basin is not substituted.",
+    "Every basin uses the original unsimplified full-reach splitCatchment=false response and component index 0; all original polygon components remain in retained response bytes."
+  ]
+}

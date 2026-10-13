@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "calibration",
   "title": "Calibration and validation",
-  "version": "10+source-design1+profile-history1+native-catchments1+editable-study1",
+  "version": "10+source-design1+profile-history1+native-catchments1+editable-study1+annual-reference1",
   "order": 65,
   "assets": [
     "calibration.mjs",
@@ -11,7 +11,8 @@
     "calibration_review.mjs",
     "calibration_design.mjs",
     "calibration_history.mjs",
-    "calibration_catchments.mjs"
+    "calibration_catchments.mjs",
+    "calibration_reference_errors.mjs"
   ],
   "backend": {
     "module": "calibration",

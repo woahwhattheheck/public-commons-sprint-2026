@@ -1,3 +1,4 @@
+import {referenceErrorOptions,referenceErrorMultiplierNote,referenceErrorSummary} from './calibration_reference_errors.mjs';
 import {createCalibrationCatchments} from './calibration_catchments.mjs';
 import {createCalibrationHistory} from './calibration_history.mjs';
 import {createCalibrationReviews} from './calibration_review.mjs';
@@ -911,10 +912,10 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
 
   const uncertaintyTitles={
     pairwise:'Ranking sensitivity',reference_units:'Annual reference ranges',
-    source_records:'Published standard errors',source_attribution:'Source contributions',selected_validation:'Selected validation',candidate_scores:'Nominal reproduction'
+    source_records:'Published standard errors',source_attribution:'Source contributions',selected_validation:'Selected validation',candidate_scores:'Candidate scores'
   };
   const uncertaintyColumns={
-    pairwise:[['title','Challenger profile'],['selected_models','Native models'],['nominal_gap','Nominal loss gap'],
+    pairwise:[['title','Challenger profile'],['selected_models','Native models'],['nominal_gap','Original loss gap'],['reference_center_gap','Source-center loss gap'],
       ['minimum_gap','Minimum gap'],['maximum_gap','Maximum gap'],['numerical_tolerance','Numerical tolerance'],['state','Sensitivity outcome'],
       ['first_tie_standard_errors','First tie (standard errors)'],['first_tie_state','Tie threshold'],
       ['missing_record_ids','Missing source errors'],['run_id','Native run']],
@@ -938,7 +939,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       ['minimum_endpoint','Source at minimum gap'],['maximum_endpoint','Source at maximum gap']],
     candidate_scores:[['rank','Nominal rank'],['title','Profile'],['selected_models','Native models'],
       ['original_objective_score','Original calibration loss'],['reproduced_objective_score','Reproduced loss'],
-      ['absolute_difference','Absolute difference'],['numerical_tolerance','Numerical tolerance'],['state','Reproduction'],['run_id','Native run']]
+      ['absolute_difference','Absolute difference'],['reference_center_objective_score','Source-center loss'],['numerical_tolerance','Numerical tolerance'],['state','Reproduction'],['run_id','Native run']]
   };
   const sensitivityText={
     strictly_stable:'Selection remains strictly preferred',
@@ -965,32 +966,48 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const start=activeReport?.report?.selected_run_id?
       button('uncertainty-new','Analyze published observation errors',activeReport.report.id,true):'';
     return section('Published observation uncertainty',
-      'Use the standard errors retained with the original annual loads to examine the selected profile’s ranking. Native predictions, pollutant weights and calibration scales remain fixed.',
+      'Choose published errors from the saved annual observations or a retained related annual source edition. Native predictions, pollutant weights and calibration scales remain fixed.',
       '<div class="section-body"><div class="page-actions">'+start+'</div></div>'+
       (rows.length?table(['Retained analysis','Published-error multiplier','Selection sensitivity','Source coverage',''],
         rows.map(row=>'<tr><td>'+esc(when(row.created_at))+'<small class="mono">'+esc(short(row.id))+'</small></td><td>'+number(row.standard_errors)+'</td><td>'+esc(sensitivityLabel(row.selection_sensitivity?.state||row.state))+'</td><td>'+number(row.coverage?.records_with_standard_error)+' / '+number(row.coverage?.source_record_count)+' original records</td><td>'+button('uncertainty','Open sensitivity',row.id)+button('uncertainty-export','Export',row.id)+'</td></tr>')):
         '<p class="calibration-empty">A completed sensitivity analysis will appear here beside this unchanged nominal calibration.</p>'));
   }
-  function uncertaintyForm(reportId){
+  async function uncertaintyForm(reportId){
     reviewsDesk.invalidate();mapsDesk.invalidate();
     if(!reportId)throw Error('Open a completed calibration before analyzing its observation errors.');
-    const workspace=current(),request=++formRequest;
+    const workspace=current(),opening=formOpening(),resultTicket=resultRequest;
+    const catalog=await openingRead(opening,()=>read('catalog'));
+    if(!catalog||!opening.current()||resultTicket!==resultRequest||activeReport?.report?.id!==reportId)return;
+    const request=formRequest;
     let session;
     activeForm?.release();
     const retained=activeUncertainty?.analysis;
+    const referenceId=retained?.calibration_id===reportId?retained.external_reference?.observation_id||'original':'original';
     openForm('Observation uncertainty sensitivity',
-      'Compare the original selected profile with every eligible challenger using the standard errors published with the retained observation records.',
+      'Compare the saved selected profile with every eligible challenger using published annual-reference standard errors.',
       '<div class="calibration-form calibration-uncertainty-form"><div class="form-grid">'+
+      field('Published source-error edition',select('calibration_reference_observation',referenceErrorOptions(catalog,referenceId==='original'?'':referenceId),referenceId),
+        'The saved observation errors remain available. A related F7 edition supplies its original estimates, standard errors, methods and station periods.',true)+
       field('Published standard-error multiplier',input('calibration_uncertainty_multiplier',
         retained?.calibration_id===reportId?retained.standard_errors:1,'number','min="0" step="any" required'),
-        '1 uses one published standard error. 0 reproduces the nominal ranking. Nonnegative source bounds are retained; absent errors remain visible.',true)+
-      '<div class="full calibration-source"><p>The signed gap is challenger loss minus selected loss. Positive values favor the original selection. The first-tie multiplier records the earliest possible tie under the same fixed objective.</p><p>The analysis uses the original marginal error ranges and their shared source-record identities. It does not assign a probability to a reversal or replace the saved nominal selection. Validation ranges remain descriptive.</p></div></div></div>',
+        '<span id="calibration-reference-multiplier-note">'+esc(referenceErrorMultiplierNote(referenceId))+'</span>',true)+
+      '<div class="full calibration-source"><p>The signed gap is challenger loss minus selected loss. Positive values favor the original selection. The first-tie multiplier records the earliest possible tie under the same fixed objective.</p><p>The calculation retains shared source-record identities and the original training and validation groups. Its intervals describe the declared source-error ranges. The complete result includes the source edition and original objective reproduction.</p></div></div></div>',
       'Analyze source uncertainty',async()=>{
         if(current()!==workspace||request!==formRequest||!session?.current())return;
         const text=val('calibration_uncertainty_multiplier').trim(),standard_errors=Number(text);
         if(!text||!Number.isFinite(standard_errors)||standard_errors<0)throw Error('Enter a finite nonnegative standard-error multiplier.');
-        return submitAction('calibration.uncertainty',{report_id:reportId,standard_errors});
-      },()=>{session=bindForm($('.calibration-uncertainty-form',form()));});
+        const reference=val('calibration_reference_observation');
+        if(!reference||!referenceErrorOptions(catalog,referenceId==='original'?'':referenceId).some(row=>row[0]===reference))throw Error('Choose the retained published source-error edition.');
+        return submitAction('calibration.uncertainty',{report_id:reportId,standard_errors,
+          ...(reference==='original'?{}:{reference_observation_id:reference})});
+      },()=>{
+        session=bindForm($('.calibration-uncertainty-form',form()));
+        const source=$('[name="calibration_reference_observation"]',form());
+        if(source)session.listen(source,'change',()=>{
+          const note=$('#calibration-reference-multiplier-note',form());
+          if(note)note.textContent=referenceErrorMultiplierNote(source.value);
+        });
+      });
   }
   async function openUncertainty(id){
     reviewsDesk.reset();mapsDesk.reset();
@@ -1005,10 +1022,12 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(!mounted){location.hash='calibration';return;}
     repaint();
   }
-  function gapPlot(rows){
+  function gapPlot(rows,external=false){
     const usable=rows.filter(row=>Number.isFinite(row.minimum_gap)&&Number.isFinite(row.maximum_gap)).slice(0,24);
     if(!usable.length)return '';
-    const low=Math.min(0,...usable.map(row=>row.minimum_gap)),high=Math.max(0,...usable.map(row=>row.maximum_gap));
+    const point=row=>external?row.reference_center_gap:row.nominal_gap;
+    const points=usable.map(point).filter(Number.isFinite);
+    const low=Math.min(0,...usable.map(row=>row.minimum_gap),...points),high=Math.max(0,...usable.map(row=>row.maximum_gap),...points);
     const span=high-low||1,min=low-span*.04,max=high+span*.04;
     const width=960,left=260,right=30,rowHeight=34,top=40,height=top+usable.length*rowHeight+48;
     const x=value=>left+(width-left-right)*(value-min)/(max-min);
@@ -1017,14 +1036,14 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const marks=usable.map((row,index)=>{
       const y=top+index*rowHeight+16;
       const title=(row.title||short(row.run_id))+': '+number(row.minimum_gap)+' to '+number(row.maximum_gap)+
-        '; nominal '+number(row.nominal_gap)+'. '+sensitivityLabel(row.state);
+        '; '+(external?'source-center ':'original ')+number(point(row))+'. '+sensitivityLabel(row.state);
       return '<g><title>'+esc(title)+'</title><text x="'+(left-12)+'" y="'+(y+4)+'" text-anchor="end">'+esc((row.title||short(row.run_id)).slice(0,33))+'</text>'+
         '<line x1="'+x(row.minimum_gap)+'" y1="'+y+'" x2="'+x(row.maximum_gap)+'" y2="'+y+'" class="calibration-gap-range"/>'+
         '<path d="M '+x(row.minimum_gap)+' '+(y-5)+' v 10 M '+x(row.maximum_gap)+' '+(y-5)+' v 10" class="calibration-gap-range"/>'+
-        (Number.isFinite(row.nominal_gap)?'<circle cx="'+x(row.nominal_gap)+'" cy="'+y+'" r="3.5" class="calibration-fit-mark"/>':'')+'</g>';
+        (Number.isFinite(point(row))?'<circle cx="'+x(point(row))+'" cy="'+y+'" r="3.5" class="calibration-fit-mark"/>':'')+'</g>';
     }).join('');
     return '<figure class="calibration-gap-plot"><figcaption>Challenger loss minus the original selected loss</figcaption>'+
-      '<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Ranges for challenger objective loss minus the original selected loss. Values to the right of zero favor the original selected profile.">'+ticks+marks+'</svg><p>Bars show the retained source-error range; dots show the nominal gap. '+(rows.length>24?'The plot shows the first 24 finite ranges; the table and downloads retain every comparison.':'Every finite comparison is shown; missing ranges remain in the table.')+'</p></figure>';
+      '<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Ranges for challenger objective loss minus the original selected loss. Values to the right of zero favor the original selected profile.">'+ticks+marks+'</svg><p>Bars show the retained source-error range; dots show the '+(external?'F7 source-center':'original reference-point')+' gap. '+(rows.length>24?'The plot shows the first 24 finite ranges; the table and downloads retain every comparison.':'Every finite comparison is shown; missing ranges remain in the table.')+'</p></figure>';
   }
   function renderUncertainty(){
     const {analysis,title}=activeUncertainty,coverage=analysis.coverage??{},sensitivity=analysis.selection_sensitivity??{};
@@ -1042,18 +1061,19 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
         ['Calibration reference coverage',number(coverage.covered_calibration_units)+' / '+number(coverage.calibration_units),'Catchment/pollutant references with retained source uncertainty.'],
         ['Compared challengers',number(sensitivity.compared_candidate_count),number(sensitivity.distinct_profile_count)+' distinct parameter profiles.'],
       ].map(([label,value,note])=>'<div class="card"><h3>'+esc(label)+'</h3><strong class="calibration-card-value">'+esc(value)+'</strong><p>'+esc(note)+'</p></div>').join('')+'</div>'+
+      referenceErrorSummary(analysis)+
       section('Ranking under published observation errors',
         'A positive challenger-minus-selected gap favors the original selection. An interval crossing zero admits a tie or reversal within the declared marginal source ranges. Shared original records retain one perturbation across all references.',
         '<div class="section-body"><p><strong>'+esc(sensitivityLabel(sensitivity.state||analysis.state))+'</strong></p>'+
         '<p>The first-tie multiplier is calculated with the same fixed pollutant weights and calibration scales. Numerical comparison tolerances remain visible with each gap. The calculation is a deterministic sensitivity range; a possible reversal is not a probability or a new profile selection.</p>'+
-        gapPlot(analysis.pairwise??[])+'</div>')+
+        gapPlot(analysis.pairwise??[],Boolean(analysis.external_reference))+'</div>')+
       mapsDesk.summary(analysis.calibration_id,analysis.id)+
       section('Retained sensitivity results','Search and sort complete candidate comparisons, source records and reference ranges. Held-out validation units appear only as descriptive reference bands.',
         '<div class="calibration-tabs" role="tablist" aria-label="Observation uncertainty results">'+Object.entries(uncertaintyTitles).map(([key,label])=>'<button type="button" role="tab" aria-selected="'+(key===activeTab)+'" data-action="calibration-tab" data-tab="'+key+'">'+esc(label)+' <small>'+number(uncertaintyRows(analysis,key).length)+'</small></button>').join('')+'</div>'+
         '<div class="calibration-table-controls">'+field('Find a source or comparison',input('calibration_result_search',query,'search','id="calibration-result-search" placeholder="Profile, station, source record or pollutant"'))+'</div><div id="calibration-result-table">'+resultTable()+'</div>')+
       section('Source methods and retained files','The complete records preserve the published errors, nominal objective reproduction, fixed normalization and exact original record identities.',
         fileList(activeUncertainty._downloads||[])+notesList(notes)+
-        '<details class="technical"><summary>Coverage, fixed objective and original source identity</summary><pre class="json-view">'+esc(pretty({coverage,objective:analysis.objective,normalization:analysis.normalization,temporal_method:analysis.temporal_method,selected_validation:analysis.selected_validation,nominal_reproduction:analysis.nominal_reproduction,source_stamp:analysis.source_stamp,references:analysis.references}))+'</pre></details>');
+        '<details class="technical"><summary>Coverage, fixed objective and original source identity</summary><pre class="json-view">'+esc(pretty({coverage,objective:analysis.objective,normalization:analysis.normalization,temporal_method:analysis.temporal_method,selected_validation:analysis.selected_validation,nominal_reproduction:analysis.nominal_reproduction,external_reference:analysis.external_reference,source_stamp:analysis.source_stamp,references:analysis.references}))+'</pre></details>');
   }
 
   function taskActions(task){

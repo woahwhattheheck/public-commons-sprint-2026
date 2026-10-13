@@ -1,0 +1,222 @@
+{
+  "schema": "upstate.usgs-annual2012-selection/v1",
+  "title": "Upper Savannah — F7 original annual estimates and published errors on retained tributary basins",
+  "source_id": "af89b23daa91db89d2abd558312ae50cf444e82c778d9832779a2ed27208f845",
+  "scope": {
+    "huc8": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ],
+    "reference_base_year": 2012,
+    "selection": "Seven exact station/constituent/published-COMID matches to the retained P9 tributary selection; all eleven original F7 target rows remain context.",
+    "predecessor_source_id": "430f1c2185f2cf14a88c992f270b729e81d9de5cecd20ec67def1c26ff86cc03",
+    "predecessor_preparation_id": "4deee902904529bf1f1ecac709451de7a67158174edd1e4cde0811e431be6ddb",
+    "original_target_context": {
+      "path": "reference-context/original-target-records.json",
+      "bytes": 36838,
+      "sha256": "d30de5b49d45028a6b3e342ed266d68af3ccc5ca31d570ba675ff8b5aca1261e"
+    },
+    "spatial_dependence": "Retain actual upstream-basin overlap groups; no station/constituent split may cross a leakage group",
+    "notes": [
+      "F7 load/standard-error values retain kg/year. Existing observation parsing handles native comparison-unit conversion; no manual sediment conversion is applied here.",
+      "Existing P9 calibration scores, predictions, weights and holdout partitions remain unchanged. A source-error supplement is a distinct sensitivity product, not another fit.",
+      "Original station-specific sampling windows are retained in each complete source row and temporal_basis; the importer retains its original annual flow-support period fields."
+    ]
+  },
+  "records": [
+    {
+      "record_id": "207bbc36b595ebd23a06b4a52833826f5491eaae0fd0448fec98784ccfe718b8",
+      "p9_record_id": "e0d1faa8072f0bfae19487d5dc528742d29ec2794ba72bc347da19765b0d90c5",
+      "expected_catchment_id": "d6a97f6c3d3a4951b1e1819e117bf27d182259596a3a14af0728ed66a8ef93c5",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 27736,
+          "path": "nldi/basin-comid-6269342.json",
+          "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 567,
+          "path": "nldi/comid-6269342.json",
+          "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342?f=json"
+        },
+        "identifier": "6269342",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "5e4bd3467178d45492057bd486ce7574324e733be50b53b26b072fe9bf289117",
+      "p9_record_id": "14d3a73da05bc4e73c32459d1c2745524bc01371acca63c43b1ef7962a1664cb",
+      "expected_catchment_id": "c09358d30c690db19c117274400e28e15b4ea2e60cb0c3e30f420a6e44b47af7",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 37813,
+          "path": "nldi/basin-comid-11730084.json",
+          "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 803,
+          "path": "nldi/comid-11730084.json",
+          "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084?f=json"
+        },
+        "identifier": "11730084",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "af282b12121e534ea469ce173d0b1df69a213c273fc3945e77c29e80a52fe57a",
+      "p9_record_id": "4da871fa12c4c241517247fdf5c8a716b28cc535b43fa3b66d1ab38c529e5832",
+      "expected_catchment_id": "d6a97f6c3d3a4951b1e1819e117bf27d182259596a3a14af0728ed66a8ef93c5",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 27736,
+          "path": "nldi/basin-comid-6269342.json",
+          "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 567,
+          "path": "nldi/comid-6269342.json",
+          "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342?f=json"
+        },
+        "identifier": "6269342",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "d94aaa6ce5458398866d14655339a356e7a78424405706a867d74250e0069909",
+      "p9_record_id": "5b67145912004c1a36a5522692734fe6c4c17652f6a3d912e1b5e499c9f1fc23",
+      "expected_catchment_id": "4c39889618c8345116860a8f829022b2f606ebd681f4a374e1adc4f9b7ebe658",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 63709,
+          "path": "nldi/basin-comid-6280111.json",
+          "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 878,
+          "path": "nldi/comid-6280111.json",
+          "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111?f=json"
+        },
+        "identifier": "6280111",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "f1dbc717b1a8e9c6d8c152aeb1c1f07b55c89fa4feca504ec137a5d1de666b7d",
+      "p9_record_id": "bfd82b95e4db783510093abddadde207f11d2f1d035a4cabc16e728b47b9b856",
+      "expected_catchment_id": "c09358d30c690db19c117274400e28e15b4ea2e60cb0c3e30f420a6e44b47af7",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 37813,
+          "path": "nldi/basin-comid-11730084.json",
+          "sha256": "338793342fe1db2c63788e6970ccdb4581f7c83df8f7a7df596271078d9202e4",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 803,
+          "path": "nldi/comid-11730084.json",
+          "sha256": "8f181918336be3f88919755a150f1643c9984b573bd0417ca6af627bd542fa9b",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11730084?f=json"
+        },
+        "identifier": "11730084",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "03359d14b8823421ab22691fe47765be3d51b21b7f099b380e7ad48b95d79b25",
+      "p9_record_id": "4322744b8bd02e236fabecf82058f598648d55a941ddf717b4fb9a13a5a896a8",
+      "expected_catchment_id": "d6a97f6c3d3a4951b1e1819e117bf27d182259596a3a14af0728ed66a8ef93c5",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 27736,
+          "path": "nldi/basin-comid-6269342.json",
+          "sha256": "206b6a6654e538b188212914634a7fa1fcf11c3c55b13eca7ea124cad0b2bb62",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 567,
+          "path": "nldi/comid-6269342.json",
+          "sha256": "0e985e1459d067f3230b033df92ffda1c6c450e84c5bac71c30782022dec1f26",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6269342?f=json"
+        },
+        "identifier": "6269342",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    },
+    {
+      "record_id": "83e6eac48ada27f72eb20ea8b0b0a6337cecdc2d7d4f5259ede24991246fdaaa",
+      "p9_record_id": "cbf8a90194107357661f410b608e6a581af8940d493a28051ce1b037441bec55",
+      "expected_catchment_id": "4c39889618c8345116860a8f829022b2f606ebd681f4a374e1adc4f9b7ebe658",
+      "retained_catchment": {
+        "basin": {
+          "bytes": 63709,
+          "path": "nldi/basin-comid-6280111.json",
+          "sha256": "444ef5e5987fb5b834333c83a356c71e8e02aad486d6d8dd9e1f1a4ef54d17cb",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111/basin?f=json&simplified=false&splitCatchment=false"
+        },
+        "component_indices": [
+          0
+        ],
+        "feature": {
+          "bytes": 878,
+          "path": "nldi/comid-6280111.json",
+          "sha256": "37714639a340507c5cb759f665c0e6468c9d9b88ed320cd05db12496a68180ab",
+          "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/6280111?f=json"
+        },
+        "identifier": "6280111",
+        "source": "comid",
+        "split_catchment": false,
+        "station_role": "published_reach"
+      },
+      "comparability_note": "A distinct F7DN436B source edition on the exact retained P9A682GW published-reach basin. Original final estimator, kg/year rate, paired standard error, flow-support dates and water-quality sampling-window fields remain unchanged. This is a long-term published annual estimate, not independent annual measurements or proof of same-DEM gauge drainage alignment. Original P9 results and held-out assignments remain historical; no replacement or refit is implied."
+    }
+  ]
+}
