@@ -37,7 +37,7 @@ python3 source_tools/climate_forcing_study.py --workspace /actual/original/works
 
 The existing `run --study ... --case ...` and explicitly authorized `course --execute-alternatives` use that same request through `Workspace.run`. Preserve the sole active native owner and original queued task; do not start the CLI beside a task already executing that case. After completion use `report` and `reopen` to inspect the saved outcomes and original sources.
 
-The installed application must include the matched model, CLI, operator provider/descriptor/browser, `ecsa_runs/upstate.py`, `operator/native_jobs.py` and `model/native_worker.py` successors. The shared worker files also carry concurrent structural and ensemble functionality; compose the complete published successors rather than replacing them with an older climate-only body.
+The installed application must include the matched model, CLI, operator provider/descriptor/browser, `ecsa_runs/upstate.py`, `operator/native_jobs.py` and `model/native_worker.py` successors. The shared worker files carry the current ensemble lifecycle and are also used by the structural-study owner; compose the complete published successors rather than replacing them with an older climate-only body.
 
 ## Scientific meaning
 
