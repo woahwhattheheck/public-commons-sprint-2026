@@ -87,3 +87,5 @@ Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-pol
 ## Preserve unfinished operator work
 
 Download the unfinished working package before closing the browser. It contains the complete original source, the exact current selection text (including unfinished JSON), reviewer text and every retained disposition/note. Reopening it restores working text without declaring a reviewed result. Compare the current source again before exporting a reviewed receiving package; its original validation and observed source identities still apply. Changing selected pairs retains prior notes in the working package, while final receiving contains only the current validated report rows.
+
+Connection labels remain provenance, not evidence of different repository content. The comparator rejects an identical normalized base URL, node ID and version ID on both sides, even when local repository labels differ. Each selected physical version occurs at most once per side of the cohort.
