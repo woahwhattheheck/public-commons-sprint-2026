@@ -1,12 +1,19 @@
 // MIT. Operate the exact built VentCRM customer desks in an already authorized browser.
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
-import {resolve,join,isAbsolute} from 'node:path';
+import {resolve,join,isAbsolute,dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
+import {createRequire} from 'node:module';
 const args=process.argv.slice(2),opts={};for(let i=0;i<args.length;i+=2)opts[args[i]]=args[i+1];
 for(const k of ['--cdp','--delivery','--out','--playwright-module'])if(!opts[k])throw Error('Use --cdp ENDPOINT --delivery COMPLETE_BUILT_DIRECTORY --out NEW_REVIEW_DIRECTORY --playwright-module EXISTING_ENTRY');
 const out=resolve(opts['--out']),delivery=resolve(opts['--delivery']),hash=b=>createHash('sha256').update(b).digest('hex');
-const mod=await import(pathToFileURL(resolve(opts['--playwright-module'])).href),chromium=mod.chromium||mod.default?.chromium;if(!chromium)throw Error('The existing Playwright entry has no Chromium connector.');
+const require=createRequire(import.meta.url),entry=require.resolve(resolve(opts['--playwright-module']));
+let directory=dirname(entry),metadata;
+while(true){try{const p=JSON.parse(await readFile(join(directory,'package.json'),'utf8'));if(['playwright','playwright-core'].includes(p.name)){metadata=p;break;}}catch{}const parent=dirname(directory);if(parent===directory)break;directory=parent;}
+const version=metadata&&/^(\d+)\.(\d+)\./.exec(metadata.version);
+if(!version||Number(version[1])<1||(Number(version[1])===1&&Number(version[2])<60))throw Error('Use the already installed Playwright 1.60 or later for noDefaults.');
+const endpoint=new URL(opts['--cdp']);if(!['http:','https:','ws:','wss:'].includes(endpoint.protocol)||endpoint.username||endpoint.password)throw Error('Use the existing authorized CDP endpoint without embedded credentials.');
+const mod=await import(pathToFileURL(entry).href),chromium=mod.chromium||mod.default?.chromium;if(!chromium)throw Error('The existing Playwright entry has no Chromium connector.');
 const result={schema:'ventcrm.original-browser-receiving.v1',status:'starting',startedAt:new Date().toISOString(),views:[],archives:[],operations:[],errors:[]};
 await mkdir(out,{mode:0o700});
 const save=()=>writeFile(join(out,'receiving.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});
@@ -65,6 +72,7 @@ try{
  await page.locator('[data-tab="setup"]').click({noWaitAfter:true});
  await page.locator('[name="owner"]').fill('Authored receiving exercise — not operator data');
  await page.locator('[name="current_system"]').fill('Authored source used to operate this local desk');
+ for(const key of ['service_area','timezone','migration_scope','rollback_plan','training_plan','support_contact','export_location'])await page.locator('[name="'+key+'"]').fill('Authored receiving exercise: '+key);
  await page.getByRole('button',{name:'Save complete setup',exact:true}).click({noWaitAfter:true});
  const first=await page.evaluate(()=>window.ventcrmProgramme.read());if(first.revision!==1)throw Error('Actual setup save did not advance.');
  await page.locator('[data-tab="records"]').click({noWaitAfter:true});
@@ -73,15 +81,44 @@ try{
  await page.locator('[name="rows"]').fill('1');
  await page.locator('[name="location"]').fill('Authored application receiving copy');
  await page.getByRole('button',{name:'Add record',exact:true}).click({noWaitAfter:true});
+ await page.locator('[data-edit-row]').first().click({noWaitAfter:true});
+ await page.locator('[name="sha256"]').fill('invalid-source-digest');
+ await page.getByRole('button',{name:'Save record',exact:true}).click({noWaitAfter:true});
+ await page.getByText('Source SHA-256 must be 64 lower-case hexadecimal characters.',{exact:true}).waitFor();
+ await page.locator('[name="sha256"]').fill(hash(Buffer.from('id,name\n1,Authored example\n')));
+ await page.getByRole('button',{name:'Save record',exact:true}).click({noWaitAfter:true});
+ const repaired=await page.evaluate(()=>window.ventcrmProgramme.read());
+ if(repaired.revision!==3||repaired.operators[0].registers.files.length!==1)throw Error('Corrected row edit duplicated or lost its original record.');
+
+ const registerRows=[
+  ['mappings',{entity:'customers',source_field:'id',target_field:'customer_id',transform:'Preserve authored identifier',decision:'mapped',note:'Authored receiving example'}],
+  ['custody',{service:'Authored local programme',owner:'Application receiving exercise',reference:'Owned local working JSON',recovery:'Open the saved full working JSON'}],
+  ['exports',{entity:'customers',route:'self_serve',file_ref:'authored.csv',rows:'1',keys:'customer_id',note:'Authored export receiving'}],
+  ['exports',{entity:'linked programme',route:'full_handover',file_ref:'authored-working.json',rows:'1',keys:'customer_id/job_id/invoice_id',note:'Authored complete handover receiving'}]
+ ];
+ for(const [register,values] of registerRows){
+  await page.locator('#register-select').selectOption(register);
+  for(const [key,value] of Object.entries(values)){const field=page.locator('#register-form [name="'+key+'"]');if(['decision','route','status'].includes(key))await field.selectOption(value);else await field.fill(value);}
+  await page.getByRole('button',{name:'Add record',exact:true}).click({noWaitAfter:true});
+ }
  await page.locator('[data-tab="checks"]').click({noWaitAfter:true});
- const sourceCheck=page.locator('form[data-check="source"]');
- await sourceCheck.locator('[name="status"]').selectOption('pass');
- await sourceCheck.locator('[name="evidence"]').fill('Authored application course: actual added source row retained. This is not an operator commissioning result.');
- await sourceCheck.getByRole('button',{name:'Save this check',exact:true}).click({noWaitAfter:true});
+ const checkIds=await page.locator('form[data-check]').evaluateAll(nodes=>nodes.map(x=>x.dataset.check));
+ for(const id of checkIds){
+  const form=page.locator('form[data-check="'+id+'"]');
+  await form.locator('[name="status"]').selectOption('pass');
+  await form.locator('[name="evidence"]').fill('Authored application receiving exercise: '+id+' recorded with the complete working registers. This is not an operator commissioning result.');
+  await form.getByRole('button',{name:'Save this check',exact:true}).click({noWaitAfter:true});
+ }
+ await page.locator('[data-tab="handover"]').click({noWaitAfter:true});
+ await page.locator('#accept-form [name="summary"]').fill('Authored application receiving course accepted. Blank customer starters remain unchanged.');
+ await page.getByRole('button',{name:'Record acceptance',exact:true}).click({noWaitAfter:true});
+ const accepted=await page.evaluate(()=>window.ventcrmProgramme.read());
+ if(accepted.revision!==32||!accepted.operators[0].acceptance)throw Error('The complete visible acceptance course did not finish.');
+ await capture('authored-complete-acceptance-1440');
  const workingDownload=page.waitForEvent('download');
  await page.getByRole('button',{name:'Save working JSON',exact:true}).click({noWaitAfter:true});
  const downloaded=await workingDownload,jsonFile=join(out,'authored-working.json');await downloaded.saveAs(jsonFile);
- const sourceState=JSON.parse(await readFile(jsonFile,'utf8'));if(sourceState.revision!==3)throw Error('The three original UI operations are missing.');
+ const sourceState=JSON.parse(await readFile(jsonFile,'utf8'));if(sourceState.revision!==32)throw Error('The original UI operations, including corrected edit, are missing.');
  await page.locator('#open-file').setInputFiles(jsonFile);
  await page.getByRole('button',{name:'Open this complete working copy',exact:true}).click({noWaitAfter:true});
  const reopened=await page.evaluate(()=>window.ventcrmProgramme.read());if(JSON.stringify(reopened)!==JSON.stringify(sourceState))throw Error('Actual working JSON reopen differs.');
@@ -93,13 +130,14 @@ try{
  await page.locator('[name="notes"]').fill('Authored changed scope requires a renewed review.');
  await page.getByRole('button',{name:'Save complete setup',exact:true}).click({noWaitAfter:true});
  const changed=await page.evaluate(()=>window.ventcrmProgramme.read());
- if(changed.revision!==4||changed.operators[0].checks.source.status!=='unreviewed'||changed.operators[0].acceptance!==null)throw Error('Changed setup did not reopen review.');
+ if(changed.revision!==33||changed.operators[0].checks.source.status!=='unreviewed'||changed.operators[0].acceptance!==null)throw Error('Changed setup did not reopen review.');
  await page.reload({waitUntil:'load'});
  const cold=await page.evaluate(()=>window.ventcrmProgramme.read());if(JSON.stringify(cold)!==JSON.stringify(changed))throw Error('Cold local reopen differs.');
- result.operations.push({kind:'actual_visible_programme',revision:changed.revision,download_reopen_equal:true,changed_scope_reopened:true,cold_reopen_equal:true});
+ result.operations.push({kind:'actual_visible_programme',revision:changed.revision,corrected_invalid_edit_preserves_row:true,complete_visible_acceptance:true,download_reopen_equal:true,changed_scope_reopened:true,cold_reopen_equal:true});
  await writeFile(join(out,'authored-operated-working.json'),JSON.stringify(changed,null,2)+'\n',{mode:0o600});
  if(result.errors.length)throw Error('Original browser reported a JavaScript error.');
  result.status='captured_for_producing_peer_view';
 }catch(e){result.status='interrupted';result.error={message:e.message,stack:e.stack};process.exitCode=1;}
 finally{await page?.close().catch(()=>{});await context?.close().catch(()=>{});result.closedAt=new Date().toISOString();await save();process.stdout.write(JSON.stringify({status:result.status,out,views:result.views.length,error:result.error})+'\n');}
-// The process detaches its CDP client on exit. It never closes the shared browser.
+// Exit this dedicated CLI to detach its CDP client after closing only owned contexts.
+process.exit(process.exitCode||0);

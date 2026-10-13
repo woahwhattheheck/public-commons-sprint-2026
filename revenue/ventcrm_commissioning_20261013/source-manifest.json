@@ -8,8 +8,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 18442,
-      "sha256": "ec891c4b6ae5e302b94f247492dcb2ac9f90d5b445e85fbfc98fa8b990200640"
+      "bytes": 19135,
+      "sha256": "1e48d88d16297c2a22a9bf65ad7cdd69a340c0438e50c472f368cbfb8616a6af"
     },
     {
       "path": "styles.css",
@@ -33,8 +33,8 @@
     },
     {
       "path": "browser-receiving.mjs",
-      "bytes": 9829,
-      "sha256": "2b8bd9e33309d91de541dbd2fd7019c269ebca4dcb6fee6d7e3d07cc9516416b"
+      "bytes": 13661,
+      "sha256": "5bae71330a7d681f0f7a7132e6b2960848fc83e744fd462c0373aa63c5d139c6"
     },
     {
       "path": "criteria.json",
@@ -58,8 +58,8 @@
     },
     {
       "path": "commissioning.html",
-      "bytes": 91373,
-      "sha256": "37d2b0db530f84a19d090506a731ce9e739dda274a3cfd54d2e12e7e0f9816fc"
+      "bytes": 92066,
+      "sha256": "22b6a2fa1da817bd4302f79f74a0ace9cfc61fdc14c8c930375879488166af32"
     },
     {
       "path": "authored-receiving.json",
