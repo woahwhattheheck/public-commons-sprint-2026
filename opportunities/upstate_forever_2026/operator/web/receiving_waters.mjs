@@ -39,7 +39,7 @@ export function attachReceivingWaters(context){
     if(target)target.innerHTML=report.render();
   }});
   let host=null,version=0,controller=null,timer=null,selected=null,record=null,catalog=null,workspaceKey=null;
-  let nextReceptor=1,nextCatalogSource=1,studyRequest=0,formRequest=0;
+  let nextReceptor=1,nextCatalogSource=1,studyRequest=0,formRequest=0,sourceRevisionRequest=0;
   const pageSize=75;
   let searchIndex=new WeakMap();
   let display={search:'',family:'',kind:'',run:'',quantity:'physical'};
@@ -580,8 +580,17 @@ export function attachReceivingWaters(context){
     return selected&&!rows.some(row=>String(row[0])===String(selected))?
       [...rows,[selected,label+' · '+short(selected)]]:rows;
   }
+  function sourceRevisionNote(origin){
+    const row=origin?.sourceRevision;if(!row)return '';
+    return '<section class="full water-comparison-revision" data-water-source-revision data-draft="'+esc(row.draft_id)+'"><h3>Source Updates revision</h3>'+
+      '<p>Saved refresh <code>'+esc(row.refresh_plan_id)+'</code>. Explicit draft fields: '+esc(row.changed_paths.length?row.changed_paths.join(', '):'none; original selection retained')+'.</p>'+
+      '<p>'+esc(row.interpretation)+'</p>'+
+      (row.missing_accounting.length?'<p class="water-error">Review original accounting references absent from the chosen plan before saving.</p><ul>'+
+        row.missing_accounting.map(item=>'<li>'+esc(item.group_id)+' · '+esc(item.field)+' · <code>'+esc(item.id)+'</code></li>').join('')+'</ul>':'')+
+      '<details><summary>Verified replacement source identities</summary><pre class="json-view">'+esc(pretty(row.validated_sources))+'</pre></details></section>';
+  }
   function draftTools(seed,origin){
-    return '<section class="full water-edit-review"><p>'+(origin?
+    return sourceRevisionNote(origin)+'<section class="full water-edit-review"><p>'+(origin?
       'Editing a copy of the original '+esc(origin.kind)+' '+esc(short(origin.id))+'. The saved study and its source files remain available. ':
       '')+'Changes use the existing preparation queue. An unchanged selection can reuse its original completed result.</p>'+
       '<p data-water-edit-summary role="status">Original settings are retained.</p>'+
@@ -1005,6 +1014,39 @@ export function attachReceivingWaters(context){
     if(host)await loadSelection();
     return {kind,id};
   }
+  async function openSourceRevision(value){
+    const workspace=currentWorkspace(),revisionRequest=++sourceRevisionRequest;
+    if(value?.workspace_key!==workspace||!workspace)throw Error('Open this source revision in its original workspace.');
+    const request=selectionObject(value.request,'Source revision request');
+    const kind=request.kind==='plans'?'plan':request.kind==='analyses'?'analysis':null;
+    if(!kind||!/^[0-9a-f]{64}$/.test(request.id||'')||!/^[0-9a-f]{64}$/.test(value.draft_id||''))throw Error('Review the exact saved source-revision draft first.');
+    if(typeof context.navigate==='function')await context.navigate('receiving-waters');
+    if(revisionRequest!==sourceRevisionRequest||workspace!==currentWorkspace())throw Error('The source revision or workspace changed. Reopen the chosen draft.');
+    await openSaved(kind,{workspace_key:workspace,id:request.id});
+    if(revisionRequest!==sourceRevisionRequest||workspace!==currentWorkspace()||
+       (typeof context.getView==='function'&&context.getView()!=='receiving-waters'))throw Error('The workspace or Receiving view changed while opening the original editor.');
+    const marker=version,opening=++studyRequest;
+    const view=typeof context.getView==='function'?context.getView():undefined;
+    const checked=await api(endpoint('/api/receiving-source-impact'),{
+      method:'POST',body:{workspace,action:'revision-draft',payload:request}});
+    if(revisionRequest!==sourceRevisionRequest||workspace!==currentWorkspace()||marker!==version||opening!==studyRequest||
+       (view!==undefined&&view!==context.getView?.()))throw Error('The Receiving view changed. Review the source revision again.');
+    if(checked.workspace_key!==workspace||checked.schema!=='upstate.receiving-source-revision/v1'||
+       checked.kind!==request.kind||checked.record_id!==request.id||checked.draft_id!==value.draft_id)
+      throw Error('The source mapping or draft differs from the reviewed selection. Reopen source impact.');
+    const exact=row=>{
+      if(typeof row==='number'&&(!Number.isFinite(row)||(Number.isInteger(row)&&!Number.isSafeInteger(row))))
+        throw Error('This selection contains numbers outside exact browser integer support. Download the server draft for original native editing.');
+      if(row&&typeof row==='object')for(const item of Object.values(row))exact(item);
+    };
+    exact(checked.selection);exact(checked.original_selection);
+    const seed=selectionObject(checked.selection,'Verified source-revision selection');
+    const origin={kind,id:request.id,selection:copySelection(checked.original_selection),
+      sourceRevision:{refresh_plan_id:checked.refresh_plan_id,draft_id:checked.draft_id,
+        changed_paths:checked.changed_paths,validated_sources:checked.validated_sources,
+        missing_accounting:checked.missing_accounting,interpretation:checked.interpretation}};
+    return kind==='plan'?planForm(seed,origin):analyzeForm(seed.plan_id||'',seed,origin);
+  }
   async function planJsonForm(initialSelection){
     await loadCatalog();
     const initial=jsonObject(pretty(initialSelection),'Receiving-water plan');
@@ -1153,5 +1195,5 @@ export function attachReceivingWaters(context){
     openAnalysis:value=>openSaved('analysis',value),
     openCatalog:value=>openSaved('designation-catalog',value),
     createCatalog:catalogJsonForm,createPlan:planJsonForm,
-    analyze:analyzeForm,openDelivery:openDeliveryForAnalysis,openStudyTransfer:transferStudy};
+    analyze:analyzeForm,openDelivery:openDeliveryForAnalysis,openStudyTransfer:transferStudy,openSourceRevision};
 }
