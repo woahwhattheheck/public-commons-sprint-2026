@@ -1,0 +1,54 @@
+{
+  "schema": "tjl.oacaa.household-benchmarks-source.v1",
+  "retrievedAt": "2026-10-13",
+  "rows": [
+    {
+      "id": "ohio-wage-2024",
+      "measure": "Ohio non-tipped minimum wage",
+      "year": "2024",
+      "value": "10.45",
+      "unit": "USD per hour",
+      "universe": "Non-tipped employees covered by Ohio's state rate; the poster separately identifies smaller-employer, under-16 and other exceptions.",
+      "url": "https://udayton.edu/campus/_resources/files/hr/2024-ohio-mw.pdf",
+      "publisher": "Ohio Department of Commerce; original poster hosted by University of Dayton",
+      "locator": "One-page 2024 poster, NON-TIPPED EMPLOYEES; revision 9/30/23",
+      "evidence": "The original state poster is headed 2024 MINIMUM WAGE and prints $10.45 per hour. It separately identifies the federal rate and exceptions."
+    },
+    {
+      "id": "ohio-wage-2025",
+      "measure": "Ohio non-tipped minimum wage",
+      "year": "2025",
+      "value": "10.70",
+      "unit": "USD per hour",
+      "universe": "Non-tipped employees covered by Ohio's state rate; the poster separately identifies smaller-employer, under-16 and other exceptions.",
+      "url": "https://dam.assets.ohio.gov/image/upload/com.ohio.gov/DICO/WageAndHour/DICO_2025_MW_Poster.pdf",
+      "publisher": "Ohio Department of Commerce",
+      "locator": "One-page 2025 poster, NON-TIPPED EMPLOYEES; revision 9/30/24",
+      "evidence": "The original state poster is headed 2025 MINIMUM WAGE and prints $10.70 per hour. It separately identifies the federal rate and exceptions."
+    },
+    {
+      "id": "census-threshold-2023",
+      "measure": "Official poverty threshold: four people, two related children",
+      "year": "2023",
+      "value": "30900",
+      "unit": "USD per year",
+      "universe": "Four-person family with two related children under 18; geographic-invariant statistical threshold, distinct from HHS guidelines.",
+      "url": "https://www2.census.gov/library/publications/2024/demo/p60-283.pdf",
+      "publisher": "U.S. Census Bureau",
+      "locator": "Appendix A, printed p.17 / physical p.23, four people / two related children; also Table B-1, printed p.34 / physical p.40",
+      "evidence": "Appendix A four-person row: no children 31,428; one 31,942; two 30,900; three 31,008. Table B-1 identifies 30,900 as the 2023 official two-adult/two-child threshold."
+    },
+    {
+      "id": "census-threshold-2024",
+      "measure": "Official poverty threshold: four people, two related children",
+      "year": "2024",
+      "value": "31812",
+      "unit": "USD per year",
+      "universe": "Four-person family with two related children under 18; geographic-invariant statistical threshold, distinct from HHS guidelines.",
+      "url": "https://www2.census.gov/library/publications/2025/demo/p60-287.pdf",
+      "publisher": "U.S. Census Bureau",
+      "locator": "Appendix A, printed p.17 / physical p.23, four people / two related children; also Table B-1, printed p.35 / physical p.41",
+      "evidence": "Appendix A four-person row: no children 32,355; one 32,884; two 31,812; three 31,922. Table B-1 separately reports 30,900 for 2023 and 31,812 for 2024."
+    }
+  ]
+}
