@@ -1,0 +1,30 @@
+{
+  "schema": "upstate.rehearsal-receiving-input/v1",
+  "operation_id": "UPSTATE-REHEARSAL-BRYCE-20261013",
+  "workspace_directory": "/absolute/path/to/retained-upper-savannah-study",
+  "output_directory": "/absolute/path/to/upper-savannah-rehearsal-delivery",
+  "rehearsal": {
+    "title": "Upper Savannah actual selected-case operator rehearsal",
+    "operator": "Bryce",
+    "audience": "Internal product rehearsal",
+    "mode": "recorded",
+    "selection": {
+      "source_collection_id": null,
+      "grid_id": null,
+      "profile_id": null,
+      "baseline_run_id": null,
+      "alternative_run_ids": [],
+      "comparison_id": null,
+      "delivery_id": null,
+      "spatial_review_id": null,
+      "backup_task_id": null,
+      "restore_task_id": null
+    },
+    "notes": "Replace the example paths and select the actual retained study/run IDs. Null selections remain explicitly missing and their dependent steps are deferred.",
+    "science_notes": "Record the actual model/profile choices, source scope, and scientific acceptance state for the selected case."
+  },
+  "fresh_run_ids": [],
+  "step_notes": {},
+  "task_timeout_seconds": 7200,
+  "browser": null
+}

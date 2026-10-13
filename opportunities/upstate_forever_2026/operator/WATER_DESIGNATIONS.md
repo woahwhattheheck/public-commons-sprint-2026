@@ -9,7 +9,7 @@ This desk turns retained source classes or selected feature identities into a re
 3. Preview the choice. The map uses original source geometry in longitude and latitude. The selection summary reports complete feature counts, class counts, mapped line length, and mapped polygon area. Preview geometry is paged; the GeoJSON and CSV export actions include every selected record.
 4. Record a meaningful title and the classification rule's title, source URL, edition and section. High-quality-water saves require the rule title, source and edition. A revised selection retains its original saved-selection reference.
 5. Save the selection. This uses the original operator task queue and retains a native GeoPackage, full GeoJSON and CSV, original feature identities, rule reference, readable HTML report and source manifest.
-6. Reopen a saved selection from the desk. **Use in delivery** opens the existing delivery form with the selected overlay already populated. Complete the original form's run and scenario choices. The original delivery engine reads the selected source directly.
+6. Reopen a saved selection from the desk. **Use in delivery** applies the original saved designation and opens the installed **Map atlas** desk with its complete source binding. Choose the baseline and alternatives, other overlays, receptor profile and print settings there. If the atlas is not installed, the same native selection opens in the original delivery editor. The originating workspace remains bound during loading and navigation.
 7. Transfer the scientific workspace through its normal backup and receiving workflow. The saved designation, its original source, GIS output, rule reference and extension source travel with the workspace.
 
 ## Class and reach choices
@@ -80,7 +80,7 @@ The source-review handoff calls openSelection with collection_id, source_id, opt
 
 The complete incoming handoff is cloned into source_context and retained in the saved native specification. The desk displays the related legal records and their reach associations and can export the complete source context as JSON. Reopening restores that context; choosing a different source edition clears it. This keeps the legal-source relationship attached to the chosen GIS features throughout save, reopen and transfer.
 
-Use-in-delivery calls the original host openDelivery with overlays keyed by the saved purpose, containing the saved source_collection_id, source_id and layer. This preserves the original delivery form's model-run requirements and selection workflow.
+Use-in-delivery calls the original native /api/water-designations/apply route. Its complete overlay retains source_collection_id, source_id, layer, selection_id, rule_reference and native_source_sha256. When registered, the atlas opens through openExtension('map-atlas', 'create', {workspace_key, selection}); otherwise the original host openDelivery receives that same native selection. Copied delivery JSON retains the entire saved overlay.
 
 ## Primary references
 
