@@ -83,7 +83,7 @@ export async function validateMeasurementConfiguration(value,{file='',sha256:con
  need(Object.keys(value).every(k=>['schema','workspaces'].includes(k)),'Unknown Measurements configuration field.');
  const workspaces=Object.create(null);
  for(const [id,row] of Object.entries(value.workspaces)){
-  need(ALIAS.test(id)&&plain(row)&&Object.keys(row).every(k=>['label','connectionFile','connectionSha256','connectionText','tokenEnv','inputs','exportsDirectory','maxResponseBytes'].includes(k)),'Invalid workspace configuration.');
+  need(ALIAS.test(id)&&plain(row)&&Object.keys(row).every(k=>['label','connectionFile','connectionSha256','connectionText','tokenEnv','inputs','files','exportsDirectory','maxResponseBytes'].includes(k)),'Invalid workspace configuration.');
   need(typeof row.label==='string'&&row.label.trim()&&row.label.length<=200&&isAbsolute(row.connectionFile)&&HASH.test(row.connectionSha256),'Name and pin the managed connection file.');
   let bytes;
   if(row.connectionText!==undefined){need(typeof row.connectionText==='string'&&Buffer.byteLength(row.connectionText)<=1024*1024,'Retain the complete bounded original connection JSON text.');const body=Buffer.from(row.connectionText);bytes={body,sha256:sha256(body)};}
@@ -91,17 +91,18 @@ export async function validateMeasurementConfiguration(value,{file='',sha256:con
   need(bytes.sha256===row.connectionSha256,'Managed connection file changed; review the new service instance explicitly.','MEASUREMENT_CONNECTION_CHANGED');
   const connection=validateConnection(parse(bytes.body));need(row.tokenEnv===connection.tokenEnv,'Configured token environment differs from the selected service.');
   need(isAbsolute(row.exportsDirectory)&&!within(resolve(connection.directory),resolve(row.exportsDirectory))&&!within(resolve(row.exportsDirectory),resolve(connection.directory)),'Use a separate private client custody directory outside the scientific workspace.');
-  await privateDirectory(row.exportsDirectory);need(plain(row.inputs??{}),'Inputs must be host-declared aliases.');
+  await privateDirectory(row.exportsDirectory);need(plain(row.inputs??{})&&plain(row.files??{}),'Inputs and original files must be host-declared aliases.');
   const inputs=Object.create(null);for(const [alias,input] of Object.entries(row.inputs??{})){need(ALIAS.test(alias)&&typeof input==='string'&&isAbsolute(input)&&!within(row.exportsDirectory,input),'Input aliases must identify original absolute files outside client custody.');inputs[alias]=input;}
+  const files=Object.create(null);for(const [alias,file] of Object.entries(row.files??{})){need(ALIAS.test(alias)&&typeof file==='string'&&isAbsolute(file)&&!within(row.exportsDirectory,file),'File aliases must identify original absolute files outside client custody.');files[alias]=file;}
   const maximum=row.maxResponseBytes??1024*1024*1024;need(Number.isSafeInteger(maximum)&&maximum>0&&maximum<=MAX_RESPONSE,'Set a complete response bound from 1 byte to 8 GiB.');
-  workspaces[id]=Object.freeze({...row,inputs:Object.freeze(inputs),maxResponseBytes:maximum,connection:Object.freeze(connection)});
+  workspaces[id]=Object.freeze({...row,inputs:Object.freeze(inputs),files:Object.freeze(files),maxResponseBytes:maximum,connection:Object.freeze(connection)});
  }
  const rows=Object.values(workspaces);
  for(const current of rows){
   for(const other of rows){
    need(!within(current.exportsDirectory,other.connection.directory)&&!within(other.connection.directory,current.exportsDirectory),'Keep transport custody outside every configured scientific workspace.');
    if(current!==other)need(!within(current.exportsDirectory,other.exportsDirectory)&&!within(other.exportsDirectory,current.exportsDirectory),'Give configured aliases independent transport custody directories.');
-   for(const input of Object.values(other.inputs))need(!within(current.exportsDirectory,input),'Keep original input files outside all transport custody.');
+   for(const input of [...Object.values(other.inputs),...Object.values(other.files)])need(!within(current.exportsDirectory,input),'Keep original input files outside all transport custody.');
   }
  }
  return Object.freeze({schema:CONNECTIONS_SCHEMA,file,sha256:configurationHash,workspaces:Object.freeze(workspaces)});
@@ -110,7 +111,7 @@ const identity=c=>({instanceId:c.instanceId,workspaceId:c.workspaceId,workspaceB
 export class MeasurementClient{
  #config;#fetch;#env;#active=new Set();#closing=false;#close;#pending=new Map();
  constructor(config,{fetcher=globalThis.fetch,environment=process.env}={}){need(config?.schema===CONNECTIONS_SCHEMA,'Read the complete connection configuration first.');this.#config=config;this.#fetch=fetcher;this.#env=environment;}
- configuration(){return {schema:CONNECTIONS_SCHEMA,workspaces:Object.entries(this.#config.workspaces).map(([id,r])=>({id,label:r.label,connection:identity(r.connection),inputs:Object.keys(r.inputs),maxResponseBytes:r.maxResponseBytes})),operations:OPERATIONS};}
+ configuration(){return {schema:CONNECTIONS_SCHEMA,workspaces:Object.entries(this.#config.workspaces).map(([id,r])=>({id,label:r.label,connection:identity(r.connection),inputs:Object.keys(r.inputs),files:Object.keys(r.files),maxResponseBytes:r.maxResponseBytes})),operations:OPERATIONS};}
  #row(id){const row=this.#config.workspaces[id];need(row,'Select a host-declared workspace.');return row;}
  #root(id,requestId){need(UUID.test(requestId),'Keep the original transport request UUID.');return join(this.#row(id).exportsDirectory,'requests',requestId);}
  async #run(fn){need(!this.#closing,'Measurements client is closing.','MEASUREMENT_CLIENT_CLOSING');let done;const p=new Promise(r=>{done=r;});this.#active.add(p);try{return await fn();}finally{this.#active.delete(p);done();}}
@@ -124,6 +125,8 @@ export class MeasurementClient{
   need(canonical(identity(actual))===canonical(identity(row.connection))&&actual.directory===row.connection.directory,'Live workspace identity differs from the reviewed managed connection.','MEASUREMENT_CONNECTION_CHANGED');
   return {row,token,connection:identity(actual)};
  }
+ async transferRequest(id,{requestId,document,retry=false}={}){return this.#run(async()=>{const op=resolveOperation(document);need(['large-intake-begin','large-intake-chunk','large-intake-prepare','large-intake-commit','large-intake-receive','large-export','large-intake','large-source','large-source-chunk','large-edition','large-edition-chunk'].includes(op.name),'Transfer requests use only the original large-file owner.');return this.#perform(id,requestId,document,json(document),retry);});}
+ async verifyConnection(id){return this.#run(async()=>{const live=await this.#connection(id);return live.connection;});}
  async inspectInput(id,alias){return this.#run(async()=>{const row=this.#row(id),file=row.inputs[alias];need(file,'Choose a host-declared input alias.');const original=await regularFile(file,{maximum:MAX_INPUT});const document=parse(original.body),operation=resolveOperation(document);return {workspace:id,input:alias,bytes:original.bytes,sha256:original.sha256,operation:operation.name,method:operation.method,path:operation.path,effect:operation.effect,replay:operation.replay,note:operation.note};});}
  async read(id,{operation,params={},requestId=randomUUID()}={}){return this.#run(async()=>{const document={operation,params},route=resolveOperation(document);need(route.method==='GET','Read tools accept declared GET operations only.');return this.#perform(id,requestId,document,json(document),false);});}
  async execute(id,{input,expectedSha256,requestId,retry=false}={}){
@@ -213,3 +216,6 @@ export async function copyClientFile(client,id,selection,out){
 }
 
 export async function saveClientJSON(file,value){file=resolve(file);const bytes=json(value);await retained(file,bytes);return{path:file,bytes:bytes.length,sha256:sha256(bytes)};}
+
+// Original publisher reused for immutable transfer descriptors, chunks and receipts.
+export async function saveClientBytes(file,bytes){need(bytes instanceof Uint8Array,'Retain exact bytes.');await retained(resolve(file),Buffer.from(bytes));return{path:resolve(file),bytes:bytes.length,sha256:sha256(bytes)};}
