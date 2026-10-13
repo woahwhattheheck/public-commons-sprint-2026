@@ -6,19 +6,21 @@ The report uses the retained native grid and original modeled quantities. Its st
 
 ## Use
 
-Open **Maps and delivery**, select a retained delivery, and choose **Read report**. Use **Open PDF** for the publication document and **Download complete delivery** for the assembled package. The grouped download lists retain the original file tickets and exact contents.
+Open **Maps and delivery**, select a retained delivery, and choose **Read scientific report**. Use **Open PDF** for the publication document and **Download complete delivery** for the assembled package. The grouped download lists retain the original file tickets and exact contents.
 
 **Create current report edition** rebuilds an earlier saved selection through the original task queue. A retry after a lost response uses the same operation ID. **Revise delivery choices** opens that selection for editing.
 
-A received working archive registers its original report and maps under **Received copy**. Choose **Read report** immediately, or **Prepare complete copy** to resume that same selection and produce its local delivery archives.
+A received working archive registers its original report and maps under **Received copy**. Choose **Read scientific report** immediately, or **Prepare complete copy** to resume that same selection and produce its local delivery archives.
 
 The complete guided journey, controls, scientific interpretation and restore steps are in [the delivery review guide](../operator/DELIVERY_REVIEW.md).
 
+The separate **Read client companion** action opens the retained decision guide. Both report families keep their complete PDF, HTML, Markdown and structured JSON, and their original paths are included in the same package.
+
 ## Installation into an existing source receiver
 
-The committed application already contains the report, delivery engine, archive receiving and operator joins. Keep the application's normal pinned InVEST/GIS environment.
+Use the complete current application revision for an existing cumulative receiver. It already contains both reports, the delivery engine, archive receiving and operator joins, along with newer scientific-report, economic, source-analysis, registry, Portfolio and project-transfer integrations. Keep the application's normal pinned InVEST/GIS environment. The historical packets below retain original source provenance and upgrade paths for their exact declared older hosts; the current cumulative source is the complete production integration.
 
-The guarded operator packet `client-report-operator-typed-7c4f-20261013.json` supports the current typed extension host in public source and the original Gura receiving host from Canvas F0C9JNCF2JC. Its changes preserve the host's extension assets and existing programme, experiment and receiving-water integrations.
+For historical uninstalled source only, the guarded operator packet `client-report-operator-typed-7c4f-20261013.json` supports the current typed extension host in public source and the original Gura receiving host from Canvas F0C9JNCF2JC. Its changes preserve the host's extension assets and existing programme, experiment and receiving-water integrations.
 
 ```sh
 python -B operator/integrate_operations.py integrations/client-report-operator-typed-7c4f-20261013.json --application .
