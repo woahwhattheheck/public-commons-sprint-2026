@@ -3,7 +3,7 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const C=require("./workspace.cjs"),Compose=require("./compose.cjs"),Example=require("./example.cjs");
-const names=["../cmdb_qa.mjs","../cmdb_qa.test.mjs","vendor/connected_sha256.cjs","vendor/zip-original.js","original-adapter.cjs","workspace.cjs","index.template.html","style.css","app.js","compose.cjs","example.cjs","build.cjs","cli.cjs","native-receiving.cjs","browser-receiving.cjs","OPERATOR.md","README.md","SOURCE_PROVENANCE.md","WORKSHARE.md"];
+const names=["../cmdb_qa.mjs","../cmdb_qa.test.mjs","vendor/connected_sha256.cjs","vendor/zip-original.js","original-adapter.cjs","workspace.cjs","store.cjs","index.template.html","style.css","app.js","compose.cjs","example.cjs","build.cjs","cli.cjs","native-receiving.cjs","browser-receiving.cjs","OPERATOR.md","README.md","SOURCE_PROVENANCE.md","WORKSHARE.md"];
 const sha=data=>crypto.createHash("sha256").update(data).digest("hex");
 function build(out){
  const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.resolve(__dirname,name),"utf8")]));

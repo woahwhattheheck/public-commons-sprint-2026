@@ -61,7 +61,7 @@ async function receive(out){
   };
   record("original_browser_started",{connection:result.connection});const context=await createContext({width:1440,height:1080});
   let page=await context.newPage();page.on("pageerror",error=>errors.push(error.message));
-  const idle=()=>page.waitForFunction(()=>!document.body.dataset.busy);
+  const idle=()=>page.waitForFunction(()=>!document.getElementById("cmdb-root").dataset.busy);
   const click=async(selector)=>{await page.locator(selector).click();await idle();};
   const tab=async(name)=>click('[data-tab="'+name+'"]');
   const screenshot=async(name,width)=>{await idle();const dims=await page.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth}));
@@ -151,6 +151,26 @@ with zipfile.ZipFile(archive) as z:
   assert(C.acceptance(phoneWorkspace,phoneWorkspace.runs.at(-1).id).current);await screenshot("phone-complete-receiving",390);
   await page.reload();await page.getByText("Original hardware receiving",{exact:true}).waitFor();await tab("history");
   assert.equal(await page.locator("#content table").first().locator("tbody tr").count(),14);await screenshot("phone-reopened-history",390);
+  const temporaryContext=await createContext({width:390,height:844});
+  await temporaryContext.addInitScript(()=>Object.defineProperty(globalThis,"indexedDB",{configurable:true,get(){throw new DOMException("Storage denied by browser policy","SecurityError");}}));
+  page=await temporaryContext.newPage();page.on("pageerror",error=>errors.push(error.message));
+  await page.goto(origin+"/release/Open_CMDB_Workspace.html");
+  await page.locator("#storage-mode").waitFor({state:"visible"});
+  await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await click('[data-action="example"]');
+  await page.locator("#save-state").filter({hasText:"Session edition 11"}).waitFor();
+  const temporarySaved=await download("#save-file","temporary-original-workspace.json");
+  const temporaryWorkspace=C.receive(fs.readFileSync(temporarySaved,"utf8"));
+  assert.deepEqual(temporaryWorkspace,Example.operate().workspace);
+  await screenshot("phone-temporary-complete-example",390);
+  await page.reload();await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await page.locator("#open-file").setInputFiles(phoneSaved);await idle();
+  await page.locator("#save-state").filter({hasText:"Session edition 14"}).waitFor();await tab("history");
+  assert.equal(await page.locator("#content table").first().locator("tbody tr").count(),14);
+  const temporaryReceived=await download("#save-file","temporary-received-workspace.json");
+  assert.deepEqual(C.receive(fs.readFileSync(temporaryReceived,"utf8")),phoneWorkspace);
+  await screenshot("phone-temporary-complete-reopen",390);
+  result.temporaryReceiving={originalExampleRevision:11,receivedRevision:14,completeOriginalEqual:true,completeReceivedEqual:true,reloadStartsNewSession:true};
   assert.deepEqual(errors,[]);result.status="PASS";result.originalRevision=11;result.receivedRevision=14;result.browserErrors=errors;record("original_browser_complete",{views:views.length});save();
  }catch(error){result.status="FAILED";result.error={message:error.message,stack:error.stack};save();throw error;}
  finally{
