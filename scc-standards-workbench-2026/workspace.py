@@ -20,12 +20,13 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 if __package__:
-    from . import engine, source_intake, consultation, ballot_exchange
+    from . import engine, source_intake, consultation, ballot_exchange, applications
 else:
     import engine
     import source_intake
     import consultation
     import ballot_exchange
+    import applications
 
 SCHEMA="standards-workspace/v1"
 MAX_SOURCE_BYTES=32*1024*1024
@@ -233,7 +234,7 @@ class Workspace:
         result["preview_limit"]=200
         for name in engine.COLLECTIONS:
             result[name]=result.get(name,[])[:200]
-            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews","review_packets","review_responses","review_amendments","review_resolutions","ballot_packets","ballot_returns","ballot_adoptions"):
+            if name in ("editions","ballots","ballot_closures","technical_decisions","phase_reports","invoices","procedural_reviews","review_packets","review_responses","review_amendments","review_resolutions","ballot_packets","ballot_returns","ballot_adoptions","application_drafts","application_editions"):
                 for r in result[name]:
                     for field in ("snapshot","input_snapshot","independence_snapshot","roster","response","comment_bindings"):
                         if field in r:
@@ -298,6 +299,39 @@ class Workspace:
             mapped=map_records(parsed,specification,specification["collection"],state)
             result["mapped"]={**mapped,"rows":mapped["rows"][offset:offset+limit],"errors":mapped["errors"][:100],"error_count":len(mapped["errors"])}
         return {"revision":state["revision"],"source_id":specification.get("source_id"),"parsed":result}
+
+    def application_inspect(self, project_id, payload):
+        with self.connect() as db:
+            db.execute("BEGIN")
+            try:
+                state = self._state(db, project_id)
+                result = applications.inspect(state, payload,
+                    lambda source_id: self._source_bytes(db, state, source_id))
+                db.commit()
+                return result
+            except Exception:
+                db.rollback()
+                raise
+
+    def application_request(self, project_id, command):
+        """Resolve the complete original command without creating another operation."""
+        if not isinstance(command, dict) or command.get("operation") not in applications.OPERATIONS:
+            raise ValueError("Supply the original application command.")
+        request_id = engine.identity(command.get("request_id"), "Request ID")
+        requested = digest({key: command.get(key) for key in
+                            ("operation", "payload", "expected_revision", "actor")})
+        with self.connect() as db:
+            db.execute("BEGIN")
+            state = self._state(db, project_id)
+            row = db.execute("SELECT digest,result FROM requests WHERE project_id=? AND request_id=?",
+                             (project_id, request_id)).fetchone()
+            db.commit()
+        if row is None:
+            return {"found": False, "revision": state["revision"]}
+        if row["digest"] != requested:
+            return {"found": True, "matches": False, "revision": state["revision"]}
+        return {"found": True, "matches": True, "revision": state["revision"],
+                "result": json_read(row["result"])}
 
     def _put(self,state,collection,value):
         previous=next((r for r in state[collection] if r["id"]==value["id"]),None)
@@ -508,7 +542,16 @@ class Workspace:
                 else:
                     record_id=payload.get("id") or operation.split(".")[0]+"-"+uuid.uuid4().hex
                     engine.identity(record_id)
-                    if operation=="ballot.packet":
+                    if operation=="application.save":
+                        collection="application_drafts"
+                        value=applications.save_draft(state,payload,record_id,
+                            lambda source_id:self._source_bytes(db,state,source_id))
+                        operation_result={"application_draft_id":record_id,"input_sha256":value["input_sha256"]}
+                    elif operation=="application.freeze":
+                        collection="application_editions"
+                        value=applications.freeze_application(state,payload,record_id)
+                        operation_result={"application_edition_id":record_id,"input_sha256":value["input_sha256"]}
+                    elif operation=="ballot.packet":
                         collection="ballot_packets";value=ballot_exchange.freeze_packet(state,payload,record_id)
                         operation_result={"packet_id":record_id,"packet_sha256":value["packet_sha256"]}
                     elif operation=="ballot.adopt":
@@ -606,6 +649,7 @@ class Workspace:
 
     def restore(self,state,events,requests,originals):
         self.validate(state)
+        applications.validate_originals(state,originals)
         if len(events)!=state["revision"]:raise ValueError("Archive history must contain every project revision.")
         previous=""
         request_events={}

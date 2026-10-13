@@ -52,3 +52,10 @@ PDFs use the Bitstream Vera fonts supplied with ReportLab, or the explicitly pac
 ## Excluded research and business material
 
 The installer contains the public application, open-licensed sources and plainly authored examples. It excludes restricted procedural originals, prime-contact research, private coordination, correspondence and the separately prepared application/workshare proposal. A complete private project archive is a different artifact from a public installer or selected edition handover.
+
+
+## Application preparation dependencies (0.4.0)
+
+The original-form document path uses pypdf 6.20.1 and pdfplumber 0.11.10, in addition to the existing python-docx and ReportLab dependencies. Their distributions retain their respective licenses and dependency notices. Official project references: https://pypi.org/project/pypdf/6.20.1/ and https://pypi.org/project/pdfplumber/0.11.10/ . The source pins identify the selected dependencies; the original receiving operation records their actual installed execution.
+
+The generic application adapter identifies the issuer's original published form and call by hash and retains their printed geometry. The operator supplies those original bytes through the private workspace source register. Application answers, applicant information, qualifications, CVs, proposed commercial allocations and generated private applications are outside this public source package.
