@@ -129,7 +129,7 @@ def table_preview(path, opts, sheet=None):
                 "fields": fields, "header_row": header_number,
                 "suggested_mapping": {name: matches[0]["id"] for name in TABLE_FIELDS
                                       if len(matches := [field for field in fields
-                                          if re.sub(r"[\\s-]+", "_", field["label"].strip().lower()) == name]) == 1},
+                                          if re.sub(r"[\s-]+", "_", field["label"].strip().lower()) == name]) == 1},
                 "preamble": [{"row": n, "cells": [scalar(x) for x in row]} for n, row in first[:-1]],
                 "rows": [{"row": n, "cells": [scalar(x) for x in row]} for n, row in rows[:PREVIEW_ROWS]],
                 "more_rows": len(rows) > PREVIEW_ROWS,

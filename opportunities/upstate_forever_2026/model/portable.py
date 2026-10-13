@@ -1077,6 +1077,10 @@ def _verify_restored_workspace(manifest, destination):
     if any((restored.root / "scenario-source-contexts").glob("*.json")):
         from .analysis_source_context import verify_workspace as verify_analysis_source_context
         details["scenario_source_context"] = verify_analysis_source_context(restored)
+    # Verify saved independent source comparisons without rerunning native models.
+    if any((restored.root / "independent-comparisons").glob("*/receipt.json")):
+        from .independent_comparison import verify_all as verify_independent_comparisons
+        details["independent_comparisons"] = verify_independent_comparisons(restored)
     # Verify retained original point-source observation bindings before publication.
     if any((restored.root / "point-source-bindings").glob("*.json")):
         from source.retained_point_sources import verify_workspace as verify_point_source_bindings

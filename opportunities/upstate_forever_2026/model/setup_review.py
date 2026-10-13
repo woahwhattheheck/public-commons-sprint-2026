@@ -19,7 +19,7 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, canonical,
                      describe_file, digest, file_digest, held, identifier, now,
                      read_json, relative_file, verify_file)
 from .model_selection import grid_models, selected, required_roles
-from . import reviews
+from . import reviews, setup_configuration
 
 SELECTION_SCHEMA = "upstate.scientific-setup-selection/v1"
 SPECIFICATION_SCHEMA = "upstate.scientific-setup-specification/v1"
@@ -266,13 +266,10 @@ def preview(ws, value):
         "method": {"model_implementation": "Natural Capital Project InVEST",
                    "version": INVEST_VERSION, "source": INVEST_SOURCE,
                    "selected_models": active, "profile_models": profile_models,
-                   "profile": profile},
+                   "profile": profile,
+                   "configuration": setup_configuration.profile_configuration(ws, profile, active)},
         "baseline": baseline, "alternatives": alternatives,
-        "observations": [{"id": row["id"], "metadata": row["metadata"],
-                          "admitted_count": row["admitted_count"],
-                          "context_count": row["context_count"], "row_count": len(row["rows"]),
-                          "original": row["original"]}
-                         for row in observations],
+        "observations": [setup_configuration.observation_configuration(row) for row in observations],
         "validation": selection["validation"], "roles": selection["roles"],
         "source_collection_ids": collection_ids, "source_inventory": inventory, "checks": checks,
         "requirements": requirement_rows, "notes": selection["notes"],
@@ -377,6 +374,8 @@ def render_html(specification):
         "h1{font-size:1.8rem}h2{margin-top:2rem;border-bottom:1px solid #aaa;padding-bottom:.3rem}"
         "table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}th,td{border:1px solid #bbb;padding:.55rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}"
         "th{background:#eee}code{overflow-wrap:anywhere}a{color:inherit}p{max-width:90ch}"
+        ".configuration-table{overflow:auto;max-width:100%}.configuration-table td{min-width:7rem}"
+        "details{margin:1rem 0}summary{cursor:pointer;font-weight:600}"
         "@media print{body{font-size:11px;margin:0;max-width:none}tr{break-inside:avoid}h2{break-after:avoid}}</style>",
         "<main><h1>" + e(s["selection"]["title"]) + "</h1>",
         "<p><strong>Project:</strong> " + e(s["project"]["title"]) + " · <strong>Captured:</strong> " + e(s.get("captured_at", "Preview")) + "</p>",
@@ -413,16 +412,18 @@ def render_html(specification):
                   "source_collection_id": method["profile"]["source_collection_id"],
                   "biophysical_source_id": method["profile"]["biophysical_source_id"],
                   "table_summary": method["profile"]["table_summary"]}),
-              ("NDR parameters", method["profile"].get("ndr")), ("SDR parameters", method["profile"].get("sdr")),
-              ("Reference sources", method["profile"].get("references")), ("Model period", method["profile"].get("model_period"))]),
+              ("Model period", method["profile"].get("model_period"))]),
+        ("<details><summary>Original saved profile</summary>"
+         + setup_configuration.fields_html(method["profile"]) + "</details>"),
+        setup_configuration.configuration_html(method.get("configuration")),
+        ("<p><a href='selected-parameters.csv'>Selected parameters with units and method references (CSV)</a></p>"
+         if method.get("configuration") else ""),
         "<h2>5. Baseline and explicit alternatives</h2>",
         table(["Scenario", "Reason", "Exact source-bound changes"],
               [(s["baseline"]["title"] + " (baseline)", s["baseline"].get("reason"), s["baseline"].get("patches", []))]
               + [(row["title"], row.get("reason"), row["patches"]) for row in s["alternatives"]]),
         "<h2>6. Observations and proposed validation</h2>",
-        table(["Observation edition", "Original metadata", "Retained measurement rows"],
-              [(row["id"], row["metadata"], {"total": row["row_count"], "annual_load_comparison": row["admitted_count"],
-                                            "context": row["context_count"]}) for row in s["observations"]]),
+        setup_configuration.observations_html(s["observations"]),
         "<p><strong>Method:</strong> " + e(s["validation"]["method"]) + "</p>",
         "<p><strong>Intended comparison:</strong> " + e(s["validation"]["intended_comparison"]) + "</p>",
         "<p><strong>Limitations:</strong> " + e(s["validation"]["limitations"]) + "</p>",
@@ -536,6 +537,10 @@ def _capture(ws, prepared, directory, captured_at):
                  "captured_primary", "captured_companions"]))
     _write_text(directory / "prepared-inputs.csv", _csv(specification["grid"]["prepared_inputs"],
                 ["role", "prepared_file", "provenance", "header", "captured_path"]))
+    configuration = specification["method"].get("configuration")
+    if configuration:
+        _write_text(directory / "selected-parameters.csv",
+                    setup_configuration.parameter_csv(configuration))
     scenario_rows = []
     for scenario in [specification["baseline"], *specification["alternatives"]]:
         for index, patch in enumerate(scenario.get("patches", []) or [None]):
@@ -547,6 +552,8 @@ def _capture(ws, prepared, directory, captured_at):
                 ["scenario_id", "title", "kind", "source_collection_id", "reason", "patch_index", "patch"]))
     companion_paths = [row["path"] for row in retained] + [
         "index.html", "source-inventory.csv", "prepared-inputs.csv", "scenario-changes.csv"]
+    if configuration:
+        companion_paths.append("selected-parameters.csv")
     companions = [describe_file(directory, directory / path) for path in companion_paths]
     manifest = {
         "schema": "upstate.sources/v1", "title": prepared["selection"]["title"],

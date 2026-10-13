@@ -137,7 +137,8 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
     root.innerHTML='<section class="pw-panel"><header class="pw-panel-heading"><div><h2>Land-management cases</h2><p>Compare separately named changes to nutrient loading, erosion practices and vegetation retention, then run explicit combinations with the native models.</p></div>'+button('refresh','Refresh')+'</header><div class="pw-panel-body"><p data-mc-message class="pw-message" role="status" aria-live="polite" hidden></p><div data-mc-operations>'+operationHTML()+'</div>'+
       '<p class="pw-note">'+esc(catalog.methods.scope)+'</p><p class="pw-note">'+esc(catalog.methods.load_basis)+'</p>'+
       publishedHTML()+
-      '<div class="pw-inline-form"><label class="pw-field"><span>Saved management design</span><select data-mc-field="saved_id">'+option('','Choose a saved design',!d.saved_id)+saved.map(x=>option(x.id,x.title+' · '+x.profile_count+' profiles',x.id===d.saved_id)).join('')+'</select></label>'+button('open','Open saved design')+button('download','Download editable design')+'<label class="pw-upload">Load design<input type="file" data-mc-upload accept=".json,application/json"></label></div>'+
+      '<div class="pw-inline-form"><label class="pw-field"><span>Saved management design</span><select data-mc-field="saved_id">'+option('','Choose a saved design',!d.saved_id)+saved.map(x=>option(x.id,x.title+' · '+x.profile_count+' profiles',x.id===d.saved_id)).join('')+'</select></label>'+button('open','Open saved design')+button('export-study','Export saved design as Study',!d.saved_id?'disabled':'')+button('download','Download editable design')+'<label class="pw-upload">Load design<input type="file" data-mc-upload accept=".json,application/json"></label></div>'+
+      (memory.previous_drafts?.[profileId]?'<p class="pw-note">A previous working design and its unfinished practice are retained. '+button('previous-draft','Return to previous working design')+'</p>':'')+
       '<div class="pw-two-columns">'+field('title','Design title',d.title)+area('reason','Scientific purpose and assumptions',d.reason)+'</div>'+
       '<details class="pw-original-source" open><summary>'+esc(e.key?'Edit practice: '+e.name:'Add a named practice')+'</summary><div class="pw-form-grid">'+field('practice.name','Practice name',e.name)+
       '<label class="pw-field"><span>Input family</span><select data-mc-field="practice.category"'+(e.changes.length?' disabled':'')+'>'+Object.entries(categories).filter(([k])=>catalog.categories.some(x=>x.id===k&&x.parameters.length)).map(([k,v])=>option(k,v,k===e.category)).join('')+'</select></label>'+area('practice.reason','Practice assumptions and purpose',e.reason)+'</div>'+
@@ -161,7 +162,8 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
     for(const node of $$('[data-mc-action]'))node.disabled=busy||
       (node.dataset.mcAction==='prepare'&&!preview)||
       (node.dataset.mcAction==='published-use'&&!publishedReady)||
-      (node.dataset.mcAction==='published-preview'&&!publishedEligible);
+      (node.dataset.mcAction==='published-preview'&&!publishedEligible)||
+      (['open','export-study'].includes(node.dataset.mcAction)&&!draft().saved_id);
   }
   function changeTable(rows,editable){
     return rows.length?'<div class="pw-table-scroll"><table><thead><tr><th>Land cover</th><th>Coefficient</th><th>Target and units</th><th>Source</th>'+(editable?'<th>Change</th>':'')+'</tr></thead><tbody>'+rows.map((r,i)=>'<tr><td>'+esc(r.lucode)+'</td><td>'+esc(r.parameter)+'</td><td>'+esc(r.value)+' '+esc(r.units)+(r.load_type?'<br>'+esc(r.load_type):'')+'</td><td>'+esc(r.source.title)+'<br>'+esc(r.source.locator)+'<br>'+(/^https?:\/\//i.test(r.source.uri)?'<a href="'+esc(r.source.uri)+'" target="_blank" rel="noopener noreferrer">Open source</a>':esc(r.source.uri))+'</td>'+(editable?'<td>'+button('edit-cell','Edit','data-mc-index="'+i+'"')+button('remove-cell','Remove','data-mc-index="'+i+'"')+'</td>':'')+'</tr>').join('')+'</tbody></table></div>':'';
@@ -185,6 +187,36 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
       '<label class="pw-field"><span>Completed original baseline run</span><select data-mc-field="baseline_run_id">'+option('','Choose native baseline',!d.baseline_run_id)+baselineRuns().map(r=>option(r.id,short(r.id)+' · '+(r.completed_at||''),r.id===d.baseline_run_id)).join('')+'</select></label>'+
       '<fieldset class="pw-model-choice"><legend>Additional mapped land-cover scenarios</legend>'+list(host.getState()?.data?.scenarios).filter(x=>x.kind==='landcover').map(x=>'<label><input type="checkbox" data-mc-scenario="'+esc(x.id)+'"'+(d.scenario_ids.includes(x.id)?' checked':'')+'> '+esc(x.title)+'</label>').join('')+'</fieldset>'+
       '<div class="pw-actions">'+button('experiment','Prepare native experiment',busy?'disabled':'')+finished.map(t=>button('run','Run saved experiment '+short(t.result.id),'data-mc-id="'+esc(t.result.id)+'"')).join('')+'</div><p class="pw-note">The existing Scenario experiments view contains native progress, maps, paired results and downloadable reports for these exact profiles.</p>';
+  }
+  function checkedDesign(value,requested={}){
+    if(!value||value.schema!=='upstate.management-cases/v1'||!/^[0-9a-f]{64}$/.test(value.id||'')||
+       value.id!==requested.management_case_id||value.baseline_profile_id!==profileId||
+       value.selection?.baseline_profile_id!==profileId||
+       value.selection?.expected_table_sha256!==catalog?.biophysical_sha256||
+       (host.getState()?.project?.id&&value.workspace_id!==host.getState().project.id)||
+       (requested.profile_id&&requested.profile_id!==profileId)||
+       (requested.profile_set_id&&requested.profile_set_id!==value.profile_set_id)||
+       (requested.table_sha256&&requested.table_sha256!==catalog.biophysical_sha256))
+      throw Error('The saved management design differs from its original project, profile or coefficient table.');
+    readManagementDraft(value.selection,profileId,catalog.biophysical_sha256);
+    return value;
+  }
+  async function openSavedDesign(requested){
+    const s=scope(),token=++intent,prior=canonical(draft());
+    if(!alive(s)||requested?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(requested?.management_case_id||''))
+      throw Error('Open this saved management design in its original workspace.');
+    const value=await read('inspect',{case_id:requested.management_case_id},s);
+    if(!alive(s)||token!==intent||prior!==canonical(draft()))return null;
+    checkedDesign(value,requested);
+    const d=draft();
+    if(canonical(selection())!==canonical(value.selection)||canonical(d.editing)!==canonical(emptyPractice())||Object.values(d.source).some(text)||Object.values(d.cell).some(text)){
+      memory.previous_drafts??={};memory.previous_drafts[profileId]=copy(d);
+    }
+    record=value;Object.assign(d,copy(value.selection));d.saved_id=value.id;d.editing=emptyPractice();
+    preview=null;publishedPreview=null;publishedIntent++;persist();render();
+    notice('The original saved management design is open. Any different working draft remains available below.');
+    root?.scrollIntoView?.({block:'start'});
+    return {workspace_key:workspace,management_case_id:value.id,profile_id:profileId,profile_set_id:value.profile_set_id};
   }
   async function refresh(){
     const s=scope(),value=await read('catalog',{profile_id:profileId},s);if(!alive(s))return;catalog=value;
@@ -262,7 +294,20 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
     if(name==='remove-combination'){d.combinations.splice(Number(node.dataset.mcIndex),1);invalidate();render();return;}
     if(name==='preview'){const s=scope(),token=++intent,selected=selection(),value=await read('preview',selected,s);if(alive(s)&&intent===token&&canonical(selected)===canonical(selection())){preview={...value,_input_signature:canonical(selected)};render();}return;}
     if(name==='prepare'){if(!preview||preview._input_signature!==canonical(selection()))throw Error('Preview the current source choices before preparing profiles.');return queue('profile.management.prepare',preview.selection);}
-    if(name==='open'){if(!d.saved_id)throw Error('Choose a saved design.');const s=scope(),token=++intent,value=await read('inspect',{case_id:d.saved_id},s);if(!alive(s)||token!==intent)return;record=value;Object.assign(d,copy(value.selection));d.editing=emptyPractice();preview=null;persist();render();return;}
+    if(name==='open'){if(!d.saved_id)throw Error('Choose a saved design.');return openSavedDesign({workspace_key:workspace,management_case_id:d.saved_id});}
+    if(name==='previous-draft'){
+      const prior=memory.previous_drafts?.[profileId];if(!prior)throw Error('No previous working design is retained.');
+      readManagementDraft({selection:managementSelection(prior,profileId,catalog.biophysical_sha256),working_editor:{editing:prior.editing,source:prior.source,cell:prior.cell}},profileId,catalog.biophysical_sha256);
+      memory.previous_drafts[profileId]=copy(d);memory.drafts[profileId]=copy(prior);
+      record=null;preview=null;publishedPreview=null;intent++;publishedIntent++;persist();render();notice('The previous working design and unfinished practice are restored. Preview it before preparing profiles.');return;
+    }
+    if(name==='export-study'){
+      if(!d.saved_id||typeof host.openDesk!=='function')throw Error('Choose a saved design and open the maintained Study transfer desk.');
+      const s=scope(),token=++intent,id=d.saved_id,value=await read('inspect',{case_id:id},s);
+      if(!alive(s)||token!==intent||draft().saved_id!==id)return;
+      checkedDesign(value,{management_case_id:id});persist();
+      return host.openDesk('study-transfer','openForStudies',{workspace_key:workspace,roots:[{kind:'management-cases',id:value.id,title:value.selection.title}]});
+    }
     if(name==='download'){const body=JSON.stringify({schema:'upstate.management-selection/v1',selection:selection(),working_editor:{editing:copy(d.editing),source:copy(d.source),cell:copy(d.cell)}},null,2)+'\n',url=URL.createObjectURL(new Blob([body],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='management-cases-'+short(profileId)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return;}
     if(name==='experiment'){if(!record||!baselineRuns().some(x=>x.id===d.baseline_run_id))throw Error('Select the original completed baseline for this saved design.');return queue('profile.management.experiment.prepare',{case_id:record.id,baseline_run_id:d.baseline_run_id,scenario_ids:copy(d.scenario_ids)});}
     if(name==='run')return queue('experiment.run',{experiment_id:node.dataset.mcId});
@@ -307,7 +352,7 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
     const key=node.dataset.mcField;if(!key)return;
     const parts=key.split('.');if(parts[0]==='practice')d.editing[parts[1]]=node.value;else if(parts.length===2)d[parts[0]][parts[1]]=node.value;else d[key]=node.value;
     if(key==='practice.category'){d.editing.source_mode='coupled';d.cell.parameter='';}
-    if(!['saved_id','baseline_run_id'].includes(key))invalidate();else persist();
+    if(!['saved_id','baseline_run_id'].includes(key))invalidate();else{persist();syncBusy();}
     if(['practice.category','cell.lucode','cell.parameter'].includes(key))render();
   }
   async function mount(node,selected){
@@ -321,5 +366,5 @@ export function createManagementCases(host,{onProfile=async()=>{}}={}){
     const next=canonical(allTasks().map(x=>[x.id,x.state]));if(next!==signature){signature=next;completeOperations().catch(e=>notice(e.message,true));}
   }
   function detach(){persist();generation++;events?.abort();events=null;root=null;busy=false;processing=false;catalog=null;record=null;preview=null;publishedPreview=null;publishedIntent++;signature='';}
-  return {mount,update,detach};
+  return {mount,update,detach,openSavedDesign};
 }

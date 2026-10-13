@@ -13,7 +13,7 @@ export async function main(argv=process.argv.slice(2)){
     ['archivematica','./archivematica.py'],['archivematica-client','./archivematica_client.py'],
     ['roda','./roda.py'],['roda-client','./roda_client.py'],
     ['preservica','./preservica.py'],['preservica-client','./preservica_client.py'],
-    ['workbench','./workbench.py'],
+    ['workbench','./workbench.py'],['collection','./collection_accession.py'],
     ['libnova','./libnova.py'],['libnova-client','./libnova_client.py'],
   ]);
   const route=routes.get(argv[0]);

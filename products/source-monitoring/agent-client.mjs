@@ -58,7 +58,7 @@ export class AgentMonitoringClient{
  async #chunks(selection,consume,maximum=MAX_ARCHIVE,agent=this.#agent){
   need(selection?.kind==='retained'&&HASH.test(selection.sha256)&&Number.isSafeInteger(selection.bytes)&&selection.bytes>=0&&selection.bytes<=maximum,
    'Read a complete retained file descriptor within the original capacity.');
-  let offset=0,readId=null,completed=false;const digest=createHash('sha256');
+  let offset=0,readId=null,completed=false,primary;const digest=createHash('sha256');
   try{
    for(;;){
     const page=await this.#call('file_read',{selection,expectedSha256:selection.sha256,...(readId?{readId}:{}),offset,limit:65536},agent);
@@ -73,7 +73,8 @@ export class AgentMonitoringClient{
     need(chunk.length>0&&page.nextOffset===offset,'Retained file cursor did not advance exactly.');
    }
    need(digest.digest('hex')===selection.sha256,'Complete retained file SHA256 differs.');
-  }finally{if(readId&&!completed)await this.#call('file_release',{readId},agent);}
+  }catch(error){primary=error;throw error;}
+  finally{const cleanup=[];if(readId&&!completed)try{await this.#call('file_release',{readId},agent);}catch(error){cleanup.push(error);}finishOwnedCleanup(primary,cleanup,'Original retained file reader cleanup remains unresolved.');}
  }
  async #bytes(selection,maximum=MAX_REPLY,agent=this.#agent){
   const parts=[];await this.#chunks(selection,part=>parts.push(Buffer.from(part)),maximum,agent);
@@ -138,8 +139,10 @@ export class AgentMonitoringClient{
     media:approved.media??'application/octet-stream',sourceUrl:approved.sourceUrl??''}};
    owned=agent=new MerchantSourceMonitoring({sourceMonitoring:config});entry=[alias,config.files[alias]];
   }
+  let primary;
   try{return await this.#reply(await this.#call(action,{fileAlias:entry[0],bytes:actual.bytes,sha256:actual.sha256,...options},agent),agent);}
-  finally{if(owned)await owned.close();}
+  catch(error){primary=error;throw error;}
+  finally{const cleanup=[];if(owned)try{await owned.close();}catch(error){cleanup.push(error);}finishOwnedCleanup(primary,cleanup,'Original temporary provider cleanup remains unresolved.');}
  }
  upload(path,options={}){const selected=clone({path,options});return this.#run(()=>this.#file(selected.path,256*1024*1024,'upload',selected.options));}
  receiveArchive(path){return this.#run(()=>this.#file(path,MAX_ARCHIVE,'receive_archive',{}));}

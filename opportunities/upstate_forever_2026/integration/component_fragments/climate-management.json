@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "climate-management",
+  "components": {
+    "climate-management": {
+      "title": "Management responses across original climate-forcing periods",
+      "paths": [
+        "integration/component_fragments/climate-management.json",
+        "model/climate_management.py",
+        "model/climate_management_study_transfer.py",
+        "operator/climate_management.py",
+        "operator/extensions/climate-management.json",
+        "operator/web/climate_management.mjs",
+        "operator/web/climate_management.css",
+        "operator/CLIMATE_MANAGEMENT.md"
+      ],
+      "requires": [
+        "core",
+        "climate-forcing",
+        "study-transfer",
+        "extension-startup"
+      ],
+      "import_roots": [
+        "operator"
+      ]
+    }
+  },
+  "required_components": [
+    "climate-management"
+  ],
+  "source_reference": {
+    "edition": "climate-management-20261013",
+    "basis": "Original completed forcing cases, shared finite support and original scientific study delivery"
+  }
+}
