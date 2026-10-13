@@ -384,7 +384,7 @@ class Connector:
                          "Authorization": "Bearer " + native_token,
                          "Accept-Encoding": "identity", "Connection": "close"})
         # Exact advertised origin is configured on the original server by its owner.
-        if method == "POST":
+        if method not in ("GET", "HEAD"):
             original["Origin"] = self.config.origin
         conn = http.client.HTTPConnection(local.hostname, local.port,
                                           timeout=self.config.timeout, blocksize=CHUNK)
@@ -414,7 +414,7 @@ class Connector:
         tree = ast.parse(server.read_text(encoding="utf-8"), filename=str(server))
         routes = {("GET", "/"), ("GET", "/health")}
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in ("do_GET", "do_POST"):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in ("do_GET", "do_POST", "do_PUT", "do_PATCH", "do_DELETE"):
                 method = node.name[3:]
                 for item in ast.walk(node):
                     if isinstance(item, ast.Constant) and isinstance(item.value, str):
@@ -458,7 +458,7 @@ class Connector:
                 routes.add(("GET", "/web/" + path.name))
         for route in self.config.route_extras:
             routes.add((route["method"], route["path"]))
-        routes = {(m, p) for m, p in routes if m in ("GET", "POST") and clean_target(p).path not in DENIED}
+        routes = {(m, p) for m, p in routes if m in ("GET", "POST", "PUT", "PATCH", "DELETE") and clean_target(p).path not in DENIED}
         self.routes = routes
         self.edge.json("POST", "/register", {"operator_id": self.config.operator_id,
                        "protocol": "upstate.eco-transport/v1",
@@ -695,7 +695,7 @@ class Connector:
         with self.locks_guard:
             lock = self.locks.setdefault(request_id, threading.Lock())
         if not lock.acquire(blocking=False):
-            return
+            return False
         try:
             row = self.journal.accept(request)
             if row["state"] == "receiving":
@@ -715,14 +715,18 @@ class Connector:
                 self.publish(request)
         finally:
             lock.release()
+        return True
 
     def worker(self):
         delay = 1
         while not STOP.is_set():
             try:
-                record = self.edge.json("GET", "/poll", timeout=30)
-                if record is not None:
-                    self.handle(record)
+                with self.locks_guard:
+                    active = sorted(key for key, lock in self.locks.items() if lock.locked())
+                target = "/poll" + ("?exclude=" + urllib.parse.quote(",".join(active), safe="") if active else "")
+                record = self.edge.json("GET", target, timeout=30)
+                if record is not None and self.handle(record) is False:
+                    STOP.wait(0.25)
                 delay = 1
             except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
                 event("reconnecting", code=getattr(error, "code", type(error).__name__))
