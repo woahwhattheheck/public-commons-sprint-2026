@@ -110,6 +110,10 @@ export class FlowableProductClient {
     });
   }
   status() { return this.view(); }
+  saveProgramme(input) { return this.call('saveProgramme', input); }
+  readProgramme(input) { return this.call('readProgramme', input); }
+  prepareProgrammeStep(input) { return this.call('prepareProgrammeStep', input); }
+  reviewProgramme(input) { return this.call('reviewProgramme', input); }
   listRecords(input = {}) { return this.call('listRecords', input); }
   getRecord(input) { return this.call('getRecord', input); }
   readPortfolio(input) { return this.call('readPortfolio', input); }

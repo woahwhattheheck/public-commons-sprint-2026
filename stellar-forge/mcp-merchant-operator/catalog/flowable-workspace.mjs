@@ -2,6 +2,10 @@
 import { FLOWABLE_WORKSPACE_ACTIONS } from '../../../stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs';
 export const FLOWABLE_AGENT_METHODS=Object.freeze({
   "merchant_flowable_status": "view",
+  "merchant_flowable_programme": "readProgramme",
+  "merchant_flowable_save_programme": "saveProgramme",
+  "merchant_flowable_prepare_programme_step": "prepareProgrammeStep",
+  "merchant_flowable_review_programme": "reviewProgramme",
   "merchant_flowable_records": "listRecords",
   "merchant_flowable_record": "getRecord",
   "merchant_flowable_portfolio": "readPortfolio",
