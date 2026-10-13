@@ -1,6 +1,6 @@
 import {mountMeasuredChemistry} from './chemistry.mjs';
-import {mountCollectionPanel} from './measured_collections.mjs';
-import {mountMeasurements} from './measured_observations.mjs';
+import {mountCollectionPanel} from './collections.mjs';
+import {mountMeasurements} from './workspace.js';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
   const {api,getWorkspace}=capabilities,chemistryMemory=new Map();
